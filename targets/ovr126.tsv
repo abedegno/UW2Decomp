@@ -1,0 +1,12 @@
+# segment ovr126 base 0x90730 size 0xFE4 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+LookAt	LookDescription_ovr126_75BD_0	0x0	0x36A
+do_mods	BuildObjectIdentificationString_ovr126_36A	0x36A	0xF5
+do_of	MagicItemDescription_ovr126_45F	0x45F	0x25D
+BookLook	LookAtReadableItems_ovr126_6BC	0x6BC	0x16F
+RectLook	MiscMajor5Minor2_ObjectUsage_ovr126_82B	0x82B	0x285
+BonesLook	LookAtBones_ovr126_AB0	0xAB0	0xF6
+KeyLook	LookAtKey_ovr126_BA6	0xBA6	0x42
+CritterLook	GetNPCDescription_ovr126_BE8	0xBE8	0x1F2
+SpecialLook	LookAtItem_ovr126_DDA	0xDDA	0xC1
+GetObjDesc	ObjectDescription_ovr126_E9B	0xE9B	0x149

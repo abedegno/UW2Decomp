@@ -5,6 +5,18 @@ import { cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, readdirSync } fr
 import { tmpdir } from "node:os";
 import { join, basename } from "node:path";
 const [outDir, opts, ...files] = process.argv.slice(2);
+// an OMF object is a chain of records (type, 16-bit length, body) ending in MODEND; the
+// emulator sometimes returns a file that is empty, zero-filled or cut short
+function wellFormed(b) {
+  let p = 0;
+  while (p + 3 <= b.length) {
+    const t = b[p], n = b[p + 1] | (b[p + 2] << 8);
+    if (t === 0 || n === 0) return false;
+    p += 3 + n;
+    if (t === 0x8a || t === 0x8b) return p <= b.length;
+  }
+  return false;
+}
 const here = new URL(".", import.meta.url).pathname;
 const stage = mkdtempSync(join(tmpdir(), "tcc-"));
 cpSync(process.env.UW2DECOMP_TC || join(here, "..", "TC"), stage, { recursive: true });
@@ -29,11 +41,11 @@ try {
   if (!done) empty = true;
   mkdirSync(outDir, { recursive: true });
   for (const n of [...names.map(n => n.replace(/\.C$/, ".OBJ")), "BUILD.LOG"]) {
-    try { const b = await be.fsRead(`C:/${n}`); if (!b.length && n.endsWith(".OBJ")) empty = true; writeFileSync(join(outDir, n), b); } catch (e) { console.log("missing", n); }
+    try { const b = await be.fsRead(`C:/${n}`); if (n.endsWith(".OBJ") && !wellFormed(b)) empty = true; writeFileSync(join(outDir, n), b); } catch (e) { console.log("missing", n); }
   }
 } finally { await be.shutdown(); }
 if (!empty) break;
-console.log("build did not finish or left an empty object, retrying");
+console.log("build did not finish or left a damaged object, retrying");
 }
 rmSync(stage, { recursive: true, force: true });
 console.log("done");

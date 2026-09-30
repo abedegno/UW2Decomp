@@ -74,7 +74,7 @@ ovr122	C	12	1980	8	4	0	0	Punt_player_inv_	RestorePlayerInv_
 ovr123	C	11	1703	10	1	0	0	add_rune_	player_cast_	
 ovr124	C	20	3754	17	1	0	2	RedisplayInvSlot_	ItemWeight_	
 ovr125	C	20	6738	18	2	0	0	load_inventory_pix_	FindInventoryHit_	
-ovr126	C	10	4065	10	0	0	0	LookAt_	GetObjDesc_	
+ovr126	C	10	4065	10	0	0	0	LookAt_	GetObjDesc_	yes
 ovr127	C	4	3086	1	3	0	0	CompressLZW_disk_	CompressLZW_disk_	
 ovr128	C	6	906	3	1	1	1	Map_Init_	Map_Save_	
 ovr130	C	2	138	0	2	0	0			

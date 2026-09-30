@@ -78,6 +78,8 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **A direct store to a global is reused without `-Z`**: `g = t >> 5; if ((g >> 1) == h)` keeps AL after `mov [g],al`. The forced reloads without `-Z` are after stores through pointers.
 - **`~` constants**: `(a & ~0x3F) + (b & ~0x3F)` tested for zero gives `add ax,dx; jne` with no `or ax,ax`; spelling the mask `0xFFC0` adds the `or`, although both emit `and ax,0FFC0h`.
 - **Pointer plus index keeps the source's operand order**: `base + (x + (y << 6))` and `base + ((y << 6) + x)` compile differently.
+- **`-d` merges string tails too**: `" "` can be the last byte of `"You see "`, and `"\n"` the tail of `".\n"`.
+- **A block-local initialised array** (`char num[3] = "00";`) puts its initialiser in `_DATA` where the function is.
 - **Static uninitialised data** goes in `_BSS`, which `verify.py` checks for a consistent base (no bytes to compare).
 - **`!c` against `c == 0` on a `char` parameter**: `!c` gives `mov al; cbw; or ax,ax`; `c == 0` gives `cmp byte [bp+N],0`.
 - **Far pointers compare by offset only** for `<`/`>=` (`mov ax,[bp+N]; cmp ax,[g]`), while `== 0` tests both halves (`or ax,dx`).
@@ -99,5 +101,10 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **An int also stored as a char stays on the stack** (SI and DI have no byte halves), even when DI is free.
 - **The first assignment and the loop step share a call tail**: `obj = f(&a->x); while (obj && c) obj = f(&obj->y);` jumps from the first call into the body's pushes. That is the compiler, not a `goto`.
 - **`sizeof` widened to long**: `farmalloc(sizeof(struct Bag))` pushes `6A 00, 6A 0C`. The runtime's `farmalloc`/`farfree` are in seg005.
+- **Odd-sized local arrays go after the scalars**: a `char x[11]` is placed after scalar locals declared after it, whatever the order; even-sized arrays keep declaration order. An 11-byte gap can be `char x[10]` plus a padding byte.
+- **Shared `return 0`**: several exits jumping to one `mov al,0` before the epilogue come from `if (...) { ...; return 1; } return 0;`, not from early returns, which each get their own `mov al,0; jmp`.
+- **`FP_SEG` of a computed near pointer re-evaluates it**: `movedata(..., FP_SEG(d), FP_OFF(d), ...)` with `d = s + strlen(s)` calls `strlen` twice and pushes `ds`; a stack array gives `push ss`.
+- **Two explicit `register int`s**: the first declared gets SI.
+- **Store and test in one expression**: `ok = (fd = open(...)) != -1` gives `mov [fd],ax; cmp ax,-1`; two statements compare the memory copy.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.
