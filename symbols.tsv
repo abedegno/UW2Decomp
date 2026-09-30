@@ -5,6 +5,8 @@ _background_color	DS:21C4	FM Towns
 _cFillFB	00B8:0C84	FM Towns
 _change_music_maybe	0088:2BB2	FM Towns
 _change_screen	0380:0061	FM Towns
+_change_state	DS:12B4	FM Towns
+_changed	DS:5DAC	FM Towns
 _clear_all_loretries	0370:0039	FM Towns
 _clear_fight_state	00D0:130F	FM Towns
 _copy_visible_to_hidden	0018:4B57	FM Towns
@@ -18,7 +20,9 @@ _display_screen	04B0:0020	FM Towns
 _do_teleport	0370:00BB	FM Towns
 _DoClosingDoors	0530:0070	FM Towns
 _DoWanderingMonsters	0530:009D	FM Towns
+_dsfx_playing	DS:010A	FM Towns
 _editchng	0068:00AE	FM Towns
+_editor_dispatch	DS:11F4	FM Towns
 _fadein3d	03B0:0043	FM Towns
 _fadeout3d	03B0:0052	FM Towns
 _FindObj	03E0:0052	FM Towns
@@ -34,6 +38,7 @@ _grfx_clear	03B0:007A	FM Towns
 _grSoftPageFlip	0018:46E6	FM Towns
 _hostile_creatures_near	0358:008E	FM Towns
 _inplist	DS:00E4	FM Towns
+_input_dispatch	1AB4:02A0	FM Towns
 _itoa	0030:1D1B	FM Towns
 _kill_all_effects	0088:20C1	FM Towns
 _Killorn_just_crashed	0370:00B1	FM Towns
@@ -47,6 +52,7 @@ _MapObj_Y	DS:24FA	FM Towns
 _mdetect	04E8:0039	FM Towns
 _memset	0030:1DCA	FM Towns
 _motionbits	DS:00D2	FM Towns
+_mouse_freereign	1B8F:03CD	FM Towns
 _mouse_get_input	0080:0594	FM Towns
 _mouse_hide	0080:00D6	FM Towns
 _move_along	0158:004E	FM Towns
@@ -56,6 +62,7 @@ _NewPlayerX	DS:5E06	FM Towns
 _NewPlayerY	DS:5E08	FM Towns
 _NewPlyFade	DS:12BA	FM Towns
 _NightCleanCritPages	03A8:002A	FM Towns
+_notdone	DS:5D68	FM Towns
 _npp_func	DS:12C2	FM Towns
 _obj_deal	0100:10BC	FM Towns
 _Obj_FindInMap	00F8:0CD4	FM Towns
@@ -73,6 +80,7 @@ _player_setup	0048:0AD8	FM Towns
 _playerdat	DS:828C	FM Towns
 _PlayerHeading	DS:8296	FM Towns
 _PlayerLevel	DS:8292	FM Towns
+_pmouseHandled	DS:073E	FM Towns
 _PN	DS:25DC	FM Towns
 _punt_all_digi_fx	0088:0284	FM Towns
 _put_at	00F0:1245	FM Towns
@@ -82,6 +90,7 @@ _real_death	0380:007A	FM Towns
 _render_FB	0110:02FD	FM Towns
 _restore_hp	04E0:00B1	FM Towns
 _restore_mana	04E0:00CF	FM Towns
+_scrnum	DS:5D66	FM Towns
 _scroll_clear	0458:0025	FM Towns
 _scroll_print	0168:01A0	FM Towns
 _send_FB	0138:16AA	FM Towns
@@ -102,6 +111,7 @@ _ThePlayer	DS:828E	FM Towns
 _trap_teleport_data	DS:1BB6	FM Towns
 _unforce_mouse_cursor	0080:06AF	FM Towns
 _update_all_critters_whilst_playe	0358:002A	FM Towns
+_update_digi_playback	1C86:0F2D	FM Towns
 _UseTrigger	0530:0039	FM Towns
 _wandering_monster_check	0358:0061	FM Towns
 F_LDIV@	0030:3525	library

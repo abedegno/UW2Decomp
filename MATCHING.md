@@ -3,6 +3,7 @@
 UW2.EXE was built with Borland Turbo C++ 1.01, medium model with 186 instructions. **The switches vary by source file**, so each file names its own in an `/* opts: ... */` comment (match.py defaults to `-mm -1 -G -O -Z`):
 
 - ovr154 (`PLAYER.C`): `-mm -1 -G -O -Y -d`. `-d` (merge duplicate strings) is proven by the data segment: each repeated literal is stored once. `-Y` is overlay code: taking the address of a far function in the same file is a fixup rather than `mov ..,cs`. No `-Z`, so the compiler reloads `mov bx,[player]` and `les bx,[...]` after every store through them.
+- seg012 (`SEG012.C`, resident): matches with `-mm -1 -G -O -d`; `-G` is proven, `-O`, `-Z` and `-Y` make no difference in that file.
 - The file holding CycleColours (file offset 0x802C4) needed `-Z` to match its register reuse.
 
 So if reloads differ in a way restructuring can't fix, try the file with and without `-Z`.
@@ -15,6 +16,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - Only functions present in the file are reported, so a work file can hold a subset.
 - Bytes written by fixups (addresses of globals, call targets, segment values) are masked. So extern names and the addresses of globals don't need to be right yet; their near/far-ness does.
 - `python3 tools/verify.py src/FILE.C` checks what match.py masks: fixup targets, overlay entries and the file's `_DATA`; `--update` merges the externs into `symbols.tsv`.
+- Target tables come from `python3 tools/targets.py SEGNAME > targets/SEGNAME.tsv`, built from `map/` (verified segment bases and function offsets, original names where the map confirms them). Code segments are byte-aligned, so a file starts at its first function, which may be a few bytes past the segment's paragraph; the table's `org` records that, and absolute code addresses (jump tables) count from the paragraph. The last function's size runs to the first far return after it, so it can be short if the function has an earlier `retf` or a `CB` byte in its code.
 - The IDA listing is `uw2_asm.asm` from [UWReverseEngineering](https://github.com/hankmorgan/UWReverseEngineering), expected at `~/UWReverseEngineering/uw2_asm.asm` (or set `UW2_ASM`) (use `command grep -a` on it; the default grep skips it as binary). Bytes are in `~/UWGOG/UW2/UW2.EXE` (or set `UW2_EXE`), at the segment base in the target table plus the function offset.
 - The FM Towns build has the original names and is a second witness for what the code means: `.venv/bin/python tools/fmt.py <name_>` disassembles a named function (32-bit Watcom register-call code) with calls and globals named. DOS is the authority on bytes.
 
@@ -34,7 +36,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Parameter types**: an `int` parameter built from a byte shows `mov ah,0`; a `char` parameter doesn't. A `char` return is `mov al,N`; an `int` return is `mov ax,N`.
 - **Control flow shape** changes register reuse: a nested `if` against a `continue` gives a different reload of ES or BX. When the instructions agree but the loads differ, try restructuring.
 - **Near data**: medium model, so globals are near (`mov bx,[828Ah]`) and DS equals SS (no `ss:` override on stack arrays). Anything reached through `les bx,[...]` is an explicit `far` pointer.
-- **Calls to functions in the same file**: a call to a function defined EARLIER in the file compiles to `push cs; call near` (`0E E8`, 4 bytes). A call to one defined LATER compiles to a 5-byte far call, which the linker rewrites to `nop; push cs; call near` (`90 0E E8`); match.py treats that as equal. So if the original shows `0E E8` without the `90`, the callee comes earlier in the file: in a work file, put a stub definition of it above your function. The near call's displacement is not a fixup and is not masked, so with a stub the instructions match but one or two displacement bytes still differ; only the merged file, with the real callee at its true offset, matches every byte.
+- **Calls to functions in the same file**: a call to a function defined EARLIER in the file compiles to `push cs; call near` (`0E E8`, 4 bytes). A call to one defined LATER compiles to a 5-byte far call. In an overlay the linker rewrites it to `nop; push cs; call near` (`90 0E E8`), which match.py treats as equal; in resident code it stays a far call to the segment's own paragraph. So if the original shows `0E E8` without the `90`, the callee comes earlier in the file: in a work file, put a stub definition of it above your function. The near call's displacement is not a fixup and is not masked, so with a stub the instructions match but one or two displacement bytes still differ; only the merged file, with the real callee at its true offset, matches every byte.
 - **Calls to other files** are far calls (`9A`, or `CD 3F` overlay thunks, both masked).
 - **Stack cleanup**: `-G` gives `add sp,N` (or `inc sp; inc sp` for two bytes) after calls, and `push bp; mov bp,sp; sub sp,N` rather than `enter`. `leave` is used at the end.
 - **Increment of an indexed byte**: `p->a[i]++` gives `inc byte [bx+N]`. The sequence `mov al,[bx+N]; inc al; push ax; <recompute bx>; pop ax; mov [bx+N],al` is `p->a[i] = p->a[i] + 1;`.
@@ -62,5 +64,8 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Shared call tails**: `if (c) f(0xF); else f(n + 0x15);` compiles to one call with two argument paths joined by a `jmp`. The ternary `f(c ? 0xF : n + 0x15)` does not.
 - **Callers reveal return types**: `!f()` compiling to `mov ah,0; neg ax; sbb ax,ax; inc ax` means `f` returns `unsigned char`; a `char` return gives `cbw`.
 - **A null far pointer argument** `0L` pushes two `6A 00`.
+- **Decrement-and-test of a byte global**: `if (--g == 0)` gives `mov al,[g]; add al,0FFh; mov [g],al; or al,al`, not `dec byte`.
+- **Clearing bits in a global**: `g = g & ~bit;` gives `not ax` then `and dx,ax` through registers; `g |= expr` gives `or [g],ax` directly.
+- **Far function-pointer table**: `if (tab[s][i]) tab[s][i]();` recomputes the index for the test (`mov ax,[bx]; or ax,[bx+2]`) and again for `call far [bx+tab]`.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

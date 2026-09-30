@@ -1,23 +1,29 @@
-"""Build a target table for one DOS segment from the IDA listing.
-usage: targets.py SEGNAME FILEBASE_HEX > targets/SEG.tsv
-Rows: cname  idaname  offset  size. cname defaults to the IDA name; replace it with the
-original (FM Towns) name when known. Sizes run to the next proc, the last to segment end."""
-import sys,re,os
-seg=sys.argv[1]; base=int(sys.argv[2],16)
-asm=os.path.expanduser(os.environ.get('UW2_ASM','~/UWReverseEngineering/uw2_asm.asm'))
-procs=[]; on=False; last=0
-for line in open(asm,encoding='latin1'):
-    if re.match(rf'^{seg}\s+segment\b',line): on=True; continue
-    if not on: continue
-    if re.match(rf'^{seg}\s+ends\b',line): break
-    m=re.match(rf'^((?:\w+_)?{seg}_([0-9A-F]+))\s+proc\b',line)
-    if m: procs.append((m.group(1),int(m.group(2),16)))
-    m=re.match(rf'^(?:\w+_)?{seg}_([0-9A-F]+):',line)
-    if m: last=int(m.group(1),16)
-# the segment end is not labelled: take the last label and walk the EXE to the far return
-exe=open(os.path.expanduser(os.environ.get('UW2_EXE','~/UWGOG/UW2/UW2.EXE')),'rb').read()
-end=exe.index(b'\xcb',base+last)-base+1
-print(f'# segment {seg} base 0x{base:X} size 0x{end:X}')
-for i,(n,o) in enumerate(procs):
-    nxt=procs[i+1][1] if i+1<len(procs) else end
-    print(f'{n}\t{n}\t0x{o:X}\t0x{nxt-o:X}')
+"""Build a target table for one DOS segment from the map.
+usage: targets.py SEGNAME > targets/SEGNAME.tsv
+Base from map/segments.tsv, verified proc offsets from map/procs.tsv, and each function's
+original name from map/functions.tsv where it is anchored or confirmed (otherwise the IDA
+name, to be replaced once known). Sizes run to the next proc; the last runs to the segment's
+final far return."""
+import sys, os
+root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+M = lambda p: [l.rstrip('\n').split('\t') for l in open(os.path.join(root, 'map', p)) if not l.startswith('#')]
+seg = sys.argv[1]
+base = next(int(r[1], 16) for r in M('segments.tsv') if r[0] == seg and r[1])
+procs = [(r[1], int(r[2], 16), r[3]) for r in M('procs.tsv') if r[0] == seg]
+names = {r[1]: (r[4].rstrip('_'), r[5]) for r in M('functions.tsv') if r[0] == seg}
+procs.sort(key=lambda p: p[1])
+exe = open(os.path.expanduser(os.environ.get('UW2_EXE', '~/UWGOG/UW2/UW2.EXE')), 'rb').read()
+if any(st == 'unverified' for _, _, st in procs):
+    print(f'# warning: unverified offsets in {seg}', file=sys.stderr)
+# segments are byte-aligned, so a file's code starts at its first function, possibly a few
+# bytes past the paragraph; offsets below are from that start, and org is the difference
+org = procs[0][1]
+last = procs[-1][1]
+end = exe.index(b'\xcb', base + last) - base + 1
+print(f'# segment {seg} base 0x{base + org:X} size 0x{end - org:X} org 0x{org:X}')
+print('# cname: original FM Towns name where the map anchors or confirms it, else the IDA name')
+for i, (ida, o, st) in enumerate(procs):
+    nxt = procs[i + 1][1] if i + 1 < len(procs) else end
+    orig, how = names.get(ida, ('', ''))
+    c = orig if orig and how in ('anchor', 'confirmed') else ida
+    print(f'{c}\t{ida}\t0x{o - org:X}\t0x{nxt - o:X}')

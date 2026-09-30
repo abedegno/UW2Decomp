@@ -1,0 +1,5 @@
+# segment seg012_1D31 base 0x1E041 size 0xB9 org 0x1
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+mainloop	MaybeGameLoop_seg012_1D31_1	0x0	0x1E
+do_changes	RunGameLoopFunctions_seg012_1D31_1F	0x1E	0x8F
+editchng	SetGameLoopBitField_seg012_1D31_AE	0xAD	0xC

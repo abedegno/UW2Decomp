@@ -10,9 +10,9 @@ seg008_1B09	C	16	5386	11	4	0	1	water_set_	hgt_change_
 seg009	C	11	1132	3	2	3	3	grs_which1_	pic_to_fbuf_	
 seg010_1CA1	C	7	1123	5	2	0	0	init_input_	input_dispatch_	
 seg011	C	4	1179	0	0	0	4			
-seg012_1D31	C	3	185	3	0	0	0	mainloop_	editchng_	
+seg012_1D31	C	3	185	3	0	0	0	mainloop_	editchng_	yes
 seg013_1D3C	C	5	448	0	0	1	4			
-seg014	C	6	579	5	0	0	1	term_icon_buttons_	do_option_shortcut_	
+seg014	C	6	579	5	0	0	1	term_icon_buttons_	do_option_shortcut_	yes
 seg015_1D7C	C	39	3944	31	7	1	0	init_mouse_	mouse_btns_	
 seg016_1E73	C	56	12382	30	11	13	2	load_digi_fx_	speech_available_	
 seg017_2179	C	14	953	0	1	8	5			
@@ -20,11 +20,11 @@ seg019_21BA	C	12	5045	0	2	2	8
 seg020	assembly	1	74	0	0	0	1			
 seg021_22FD	assembly	77	4210	0	10	35	32			
 seg022_2405	assembly	51	2365	0	4	28	19			
-seg023	C	2	330	2	0	0	0	rotate_bank_	cycle_colors_	
+seg023	C	2	330	2	0	0	0	rotate_bank_	cycle_colors_	yes
 seg024_24E9	C	21	7040	20	0	0	1	pickloc_	player_killed_a_	
-seg025_26A1	C	7	1877	7	0	0	0	remove_lock_	damage_object_	
+seg025_26A1	C	7	1877	7	0	0	0	remove_lock_	damage_object_	yes
 seg026_2716	C	23	5124	20	2	0	1	display_scr_	toggle_fightmode_	
-seg027_2856	C	8	3762	8	0	0	0	player_settr_	push_missile_	
+seg027_2856	C	8	3762	8	0	0	0	player_settr_	push_missile_	yes
 seg028_2941	C	15	5320	10	5	0	0	GetHgt_	drop_around_place_	
 seg029_2A8E	C	31	4754	27	3	0	1	Map_ObjFix_	ObjCrunch_	
 seg030_2BB7	C	11	5172	10	1	0	0	bounce_obj_	obj_deal_	
@@ -33,14 +33,14 @@ seg032_2E9B	C	21	4650	16	3	0	2	place_3d_view_	do_2dclip_
 seg033_2FBE	C	3	5349	1	0	2	0	do_obj_	do_obj_	
 seg034_310D	C	10	2530	4	6	0	0	do_partition_	do_objsort_	
 seg035_31AB	C	13	4071	11	2	0	0	player_mous_move_	set_effect_	
-seg036_32A9	C	2	356	2	0	0	0	Map_GetAddr_	CreateObj_	
+seg036_32A9	C	2	356	2	0	0	0	Map_GetAddr_	CreateObj_	yes
 seg037_32C0	C	32	5830	16	14	1	1	set_flask_	send_FB_	
-seg038_342C	C	3	603	3	0	0	0	skill_check_	panel_check_hpmp_	
+seg038_342C	C	3	603	3	0	0	0	skill_check_	panel_check_hpmp_	yes
 seg039_3452	C	19	2395	6	4	1	8	init_strings_	game_strings_3_	
 seg040_34E7	C	15	3828	13	2	0	0	UseObj_	useNSpellCharges_	
 seg041_35D7	C	4	355	2	1	1	0	mvcheck_	move_along_	
 seg042_35ED	C	8	701	2	1	3	2	free_mem_	release_workspace_	
-seg043_3619	C	13	1886	10	1	1	1	do_npc_scroll_	scroll_wrap_	
+seg043_3619	C	13	1886	10	1	1	1	do_npc_scroll_	scroll_wrap_	yes
 seg044_368F	C	17	4309	12	0	0	5	rem_anim_from_map_	get_animlen_	
 seg045_379C	assembly	7	783	0	0	1	6			
 seg046_37CD	assembly	43	7963	0	6	0	37			
@@ -104,7 +104,7 @@ ovr157	C	16	6977	14	2	0	0	study_monster_spells_	check_Guardian_magic_marker_
 ovr158	C	9	1383	8	1	0	0	sp_hdr_	panel_check_	
 ovr159	C	1	7	0	1	0	0			
 ovr162	C	1	23	0	1	0	0			
-ovr163	C	7	1679	7	0	0	0	drop_link_chain_	generate_inventory_	
+ovr163	C	7	1679	7	0	0	0	drop_link_chain_	generate_inventory_	yes
 ovr165	C	2	19	0	2	0	0			
 ovr166	C	27	12238	18	4	5	0	UseTrigger_	update_pplate_	
 ovr167	C	23	2292	0	6	17	0			

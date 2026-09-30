@@ -26,13 +26,13 @@ def publics(d):
     return pubs
 
 def load_targets(seg):
-    rows=[]; base=size=None
+    rows=[]; base=size=None; org=0
     for l in open(os.path.join(root,'targets',seg+'.tsv')):
-        m=re.match(r'# segment \S+ base 0x([0-9A-F]+) size 0x([0-9A-F]+)',l)
-        if m: base,size=int(m.group(1),16),int(m.group(2),16); continue
+        m=re.match(r'# segment \S+ base 0x([0-9A-F]+) size 0x([0-9A-F]+)(?: org 0x([0-9A-F]+))?',l)
+        if m: base,size=int(m.group(1),16),int(m.group(2),16); org=int(m.group(3) or '0',16); continue
         if l.startswith('#') or not l.strip(): continue
         c,ida,o,s=l.split('\t'); rows.append((c,ida,int(o,16),int(s,16)))
-    return base,size,rows
+    return base,size,rows,org
 
 def compare(b,m,o):
     b=bytearray(b); m=list(m)
@@ -65,7 +65,7 @@ def main():
     _,segs,data,mask,_=module_masked(d); pubs=publics(d)
     ci=[i for i,(sn,cn,ln) in enumerate(segs,1) if cn=='CODE'][0]
     code,cm=data[ci],mask[ci]
-    base,size,rows=load_targets(seg); exe=open(EXE,'rb').read()
+    base,size,rows,org=load_targets(seg); exe=open(EXE,'rb').read()
     whole=len(code)==size and not compare(code,cm,exe[base:base+size])
     total=done=0
     for c,ida,off,sz in rows:

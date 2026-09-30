@@ -24,8 +24,8 @@ def main():
     stem = os.path.splitext(os.path.basename(src))[0].upper()
     seg = re.search(r'/\*\s*target:\s*(\w+)\s*\*/', open(src, encoding='latin1').read()).group(1)
     o = fixups(open(os.path.join(root, 'build', stem, stem + '.OBJ'), 'rb').read())
-    exe = open(EXE, 'rb').read()
-    base, size, rows = load_targets(seg)
+    exe = open(EXE, 'rb').read(); hdr = struct.unpack_from('<H', exe, 8)[0] * 16
+    base, size, rows, org = load_targets(seg)
     segs = o['segs']
     code = next(i for i, s in enumerate(segs) if s and s[1] == 'CODE')
     datas = next(i for i, s in enumerate(segs) if s and s[0] == '_DATA')
@@ -53,19 +53,24 @@ def main():
         elif tm == 0 and ti == code:                    # this file's own code
             internal += 1
             if loc == 3:
-                # far call rewritten to nop; push cs; call near rel16
-                if exe[base + at - 1:base + at + 2] != b'\x90\x0e\xe8':
-                    problems.append(f'+{at:X}: far self-call not rewritten as expected')
-                else:
+                if exe[base + at - 1:base + at + 2] == b'\x90\x0e\xe8':
+                    # in an overlay the linker rewrites it to nop; push cs; call near rel16
                     dest = (at + 4 + word(exe, base + at + 2)) & 0xFFFF
                     if dest != add: problems.append(f'+{at:X}: call lands at +{dest:X}, object says +{add:X}')
+                else:
+                    # in resident code it stays a far call to this segment's own paragraph
+                    para = (base - org - hdr) // 16
+                    if word(exe, base + at) != add + org or word(exe, base + at + 2) != para:
+                        problems.append(f'+{at:X}: far self-call goes to {word(exe, base + at + 2):04X}:{word(exe, base + at):04X}, '
+                                        f'expected {para:04X}:{add + org:04X}')
             elif loc == 5:
                 # a far function's address taken in an overlay (-Y): the linker points it
                 # at the function's entry in the overlay's stub table, which it assigns
                 entries.setdefault(add, set()).add(word(exe, base + at))
             elif loc == 1:
-                if word(exe, base + at) != add:
-                    problems.append(f'+{at:X}: code offset {word(exe, base + at):X}, object says {add:X}')
+                # absolute code offsets count from the segment's paragraph, org bytes before the file
+                if word(exe, base + at) != add + org:
+                    problems.append(f'+{at:X}: code offset {word(exe, base + at):X}, object says {add + org:X}')
             elif loc == 2:
                 cs_values.add(word(exe, base + at))
         elif tm == 0 and ti == datas or tm == 1:       # this file's data, through DGROUP
