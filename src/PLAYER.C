@@ -164,6 +164,8 @@ void far restore_mana(struct Object far *who, char amount);
 void far panel_check(void);
 int far skill_check(int value, int target);
 void far clear_all_loretries(void);
+/* FM Towns game_stats calls set_font_size_ here, but the map pairs this DOS function
+   (IDA OpenFont, ovr118) with FM Towns grfx_quikfont_; the name is unsettled. */
 void far set_font_size(int size);
 int far string_width(char far *s);
 void far string_to_screen(char far *s, int x, int y);

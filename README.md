@@ -10,7 +10,18 @@ This is a fan research project, not affiliated with or endorsed by the rights ho
 |---|---|---|---|
 | ovr154 (skills, sleep, dreams, death, traps) | `src/PLAYER.C` | 26/26 | 6967/6967 code, 50/50 data; all 464 fixups verified |
 
-Function names come from the symbol table in the FM Towns release of UW2, which kept 3237 of Looking Glass's original names. Both builds list functions in the same order, which gives the original grouping of functions into source files.
+Overall: 1 of 99 C source files matched, about 7 KB of 337 KB of C (2%).
+
+## The map
+
+`map/` lays out the whole program. Turbo C puts each source file in its own code segment, so each DOS segment is one original source file. The Japanese FM Towns release kept 3237 of Looking Glass's original names, and it was linked from the same object list in the same order, so the two builds can be aligned function by function.
+
+- `map/files.tsv`: every DOS code segment, whether it is C (99 segments, about 1480 functions and 337 KB), assembly (7 segments, 88 KB: graphics, the 3D renderer and sound) or library, how much of it is named, and whether it is matched.
+- `map/functions.tsv`: every DOS function with its original name where one was found, and how: `anchor` (proven), `confirmed` (aligned, and its callers and callees agree with the FM Towns call graph), `size only`, or `size, calls disagree`.
+- 884 of the 1886 non-library functions have a confirmed original name. Tested by holding out known pairs, confirmed names were right 80 times out of 82, and both misses disagree with a hand-made anchor rather than a proven one.
+- The rest are mostly DOS-only code with no FM Towns counterpart: the assembly, a few DOS-specific C files (ovr095 and the small resident segments seg011 to seg019), and a stretch at the very end (ovr158 onwards) past the last anchor.
+
+Rebuild it with `tools/doslist.py`, `tools/callpairs.py`, `tools/anchors.py`, `tools/callgraphs.py`, `tools/align.py` and `tools/files.py`, in that order; each describes itself.
 
 `match.py` compares code bytes with fixups masked. `verify.py` then checks what that masks: every extern resolves to one address everywhere it is used and no two externs share one, every reference into the file's own code lands where it should, and the file's initialised data matches the EXE's data segment byte for byte. `symbols.tsv` is the resulting map of names to addresses in `UW2.EXE`, each marked as an original FM Towns name, a library routine or provisional.
 

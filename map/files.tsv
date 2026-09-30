@@ -1,0 +1,110 @@
+# segment	kind	functions	bytes	named	size only	calls disagree	unpaired	first named	last named	matched
+seg000	library	10	1256	0	0	0	0			
+seg001_023B	mixed	8	709	0	2	2	4			
+seg003_0272	assembly	145	39818	0	24	2	119			
+seg004_0849	assembly	78	33007	0	11	4	63			
+seg005_105F	library	166	29915	0	0	0	0			
+seg006_1413	C	30	14575	12	4	5	9	hyp_see_	try_to_open_door_	
+seg007_17A2	C	36	13945	31	5	0	0	change_or_inc_seq_	move_mobile_	
+seg008_1B09	C	16	5386	11	4	0	1	water_set_	hgt_change_	
+seg009	C	11	1132	3	2	3	3	grs_which1_	pic_to_fbuf_	
+seg010_1CA1	C	7	1123	5	2	0	0	init_input_	input_dispatch_	
+seg011	C	4	1179	0	0	0	4			
+seg012_1D31	C	3	185	3	0	0	0	mainloop_	editchng_	
+seg013_1D3C	C	5	448	0	0	1	4			
+seg014	C	6	579	5	0	0	1	term_icon_buttons_	do_option_shortcut_	
+seg015_1D7C	C	39	3944	31	7	1	0	init_mouse_	mouse_btns_	
+seg016_1E73	C	56	12382	30	11	13	2	load_digi_fx_	speech_available_	
+seg017_2179	C	14	953	0	1	8	5			
+seg019_21BA	C	12	5045	0	2	2	8			
+seg020	assembly	1	74	0	0	0	1			
+seg021_22FD	assembly	77	4210	0	10	35	32			
+seg022_2405	assembly	51	2365	0	4	28	19			
+seg023	C	2	330	2	0	0	0	rotate_bank_	cycle_colors_	
+seg024_24E9	C	21	7040	20	0	0	1	pickloc_	player_killed_a_	
+seg025_26A1	C	7	1877	7	0	0	0	remove_lock_	damage_object_	
+seg026_2716	C	23	5124	20	2	0	1	display_scr_	toggle_fightmode_	
+seg027_2856	C	8	3762	8	0	0	0	player_settr_	push_missile_	
+seg028_2941	C	15	5320	10	5	0	0	GetHgt_	drop_around_place_	
+seg029_2A8E	C	31	4754	27	3	0	1	Map_ObjFix_	ObjCrunch_	
+seg030_2BB7	C	11	5172	10	1	0	0	bounce_obj_	obj_deal_	
+seg031_2CFA	C	21	6675	15	5	0	1	do_physics_	check_positions_	
+seg032_2E9B	C	21	4650	16	3	0	2	place_3d_view_	do_2dclip_	
+seg033_2FBE	C	3	5349	1	0	2	0	do_obj_	do_obj_	
+seg034_310D	C	10	2530	4	6	0	0	do_partition_	do_objsort_	
+seg035_31AB	C	13	4071	11	2	0	0	player_mous_move_	set_effect_	
+seg036_32A9	C	2	356	2	0	0	0	Map_GetAddr_	CreateObj_	
+seg037_32C0	C	32	5830	16	14	1	1	set_flask_	send_FB_	
+seg038_342C	C	3	603	3	0	0	0	skill_check_	panel_check_hpmp_	
+seg039_3452	C	19	2395	6	4	1	8	init_strings_	game_strings_3_	
+seg040_34E7	C	15	3828	13	2	0	0	UseObj_	useNSpellCharges_	
+seg041_35D7	C	4	355	2	1	1	0	mvcheck_	move_along_	
+seg042_35ED	C	8	701	2	1	3	2	free_mem_	release_workspace_	
+seg043_3619	C	13	1886	10	1	1	1	do_npc_scroll_	scroll_wrap_	
+seg044_368F	C	17	4309	12	0	0	5	rem_anim_from_map_	get_animlen_	
+seg045_379C	assembly	7	783	0	0	1	6			
+seg046_37CD	assembly	43	7963	0	6	0	37			
+ovr091	C	2	44	0	0	0	2			
+ovr092	C	7	44	0	0	0	7			
+ovr093	C	13	3629	7	4	0	2	get_ulong_	check_arc_	
+ovr094	C	28	6350	20	3	2	3	AutoMap_	update_map_scraps_	
+ovr095	C	58	8859	0	6	13	39			
+ovr096	C	27	5202	11	13	1	2	babl_hack_	x_obj_pos_	
+ovr097	C	37	8598	18	5	4	10	setup_to_barter_	does_npc_like_	
+ovr099	C	7	38	0	7	0	0			
+ovr101	C	16	6377	11	4	1	0	init_char_	create_player_	
+ovr102	C	5	357	1	3	0	1	CombineObjs_	CombineObjs_	
+ovr103	C	32	7084	11	15	2	4	TalkTo_	switch_pic_	
+ovr104	C	5	665	2	3	0	0	creature_obj_init_	init_this_critter_	
+ovr106	C	2	1659	2	0	0	0	setup_converse_data_	update_converse_data_	
+ovr107	C	23	5677	16	7	0	0	change_critter_goal_	maybe_go_hang_out_	
+ovr108	C	76	13857	22	34	11	9	speech_over_	palette_fade_	
+ovr109	C	2	54	0	0	1	1			
+ovr110	C	68	20625	58	8	1	1	find_good_x_and_y_	Killorn_just_crashed_	
+ovr112	C	21	2446	13	5	0	3	main_	move_initial_files_	
+ovr113	C	31	3241	10	21	0	0	gronk_race_	Sched_DoEvent_	
+ovr114	C	4	412	2	1	0	1	first_punt_	pfatal_code_	
+ovr116	C	6	1190	0	1	0	5			
+ovr117	C	5	949	2	0	3	0	preload_cr_	PreLoadCritPages_	
+ovr118	C	19	1511	8	7	1	3	grfx_quikfont_	cameras_fade_	
+ovr119	C	25	3009	9	11	3	2	_ld_open_	load_doors_	
+ovr120	C	2	141	0	2	0	0			
+ovr121	C	13	4309	13	0	0	0	DoSpecialActions_	BagWeight_	
+ovr122	C	12	1980	8	4	0	0	Punt_player_inv_	RestorePlayerInv_	
+ovr123	C	11	1703	10	1	0	0	add_rune_	player_cast_	
+ovr124	C	20	3754	17	1	0	2	RedisplayInvSlot_	ItemWeight_	
+ovr125	C	20	6738	18	2	0	0	load_inventory_pix_	FindInventoryHit_	
+ovr126	C	10	4065	10	0	0	0	LookAt_	GetObjDesc_	
+ovr127	C	4	3086	1	3	0	0	CompressLZW_disk_	CompressLZW_disk_	
+ovr128	C	6	906	3	1	1	1	Map_Init_	Map_Save_	
+ovr130	C	2	138	0	2	0	0			
+ovr131	C	1	24	1	0	0	0	show_credits_	show_credits_	
+ovr132	C	1	7	0	0	0	1			
+ovr134	C	3	299	2	0	0	1	init_objects_	get_class_data_	
+ovr135	C	5	2001	5	0	0	0	dispel_spell_	set_curmagic_	
+ovr136	C	32	2301	21	8	0	3	is_really_button_	load_buttongroup_images_	
+ovr137	C	9	1027	8	1	0	0	pull_chain_	check_rest_	
+ovr138	C	25	7823	25	0	0	0	UseBonesOn_	UseUtil_	
+ovr139	C	9	2243	9	0	0	0	init_scroll_	scroll_clear_	
+ovr140	C	6	681	4	1	0	1	init_txtlib_	load_txtmaps_	
+ovr142	C	12	2927	7	4	0	1	save_player_data_	load_dl_	
+ovr143	C	15	4004	10	1	2	2	init_player_	chg_plyp_	
+ovr146	C	1	5	0	0	0	1			
+ovr147	C	10	2753	6	3	1	0	do_intro_scene_	do_journey_	
+ovr148	C	1	7	0	0	0	1			
+ovr149	C	14	2849	13	0	0	1	GetLevel_	do_level_hacks_	
+ovr150	C	2	295	2	0	0	0	display_screen_	disk_to_vid_	
+ovr151	C	17	1737	9	6	0	2	do_migrations_	Sched_Insert_	
+ovr152	C	4	502	1	0	2	1	set_light_	set_light_	
+ovr153	C	3	238	3	0	0	0	ac_setup_lzw_	ac_shrink_disk_	
+ovr154	C	26	6964	26	0	0	0	use_skill_	RemoveTrap_	yes
+ovr155	C	1	7	0	1	0	0			
+ovr156	C	36	7525	34	2	0	0	spend_mana_	damage_square_	
+ovr157	C	16	6977	14	2	0	0	study_monster_spells_	check_Guardian_magic_marker_	
+ovr158	C	9	1383	8	1	0	0	sp_hdr_	panel_check_	
+ovr159	C	1	7	0	1	0	0			
+ovr162	C	1	23	0	1	0	0			
+ovr163	C	7	1679	7	0	0	0	drop_link_chain_	generate_inventory_	
+ovr165	C	2	19	0	2	0	0			
+ovr166	C	27	12238	18	4	5	0	UseTrigger_	update_pplate_	
+ovr167	C	23	2292	0	6	17	0			
