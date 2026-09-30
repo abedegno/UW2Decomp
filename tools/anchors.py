@@ -1,5 +1,5 @@
 """Collect DOS proc <-> original name anchors and check they keep link order.
-Sources: targets/*.tsv (matched files), map/pairs_*.tsv (callpairs.py output), and the
+Sources: targets/*.tsv for the files in matched.txt, map/pairs_*.tsv (callpairs.py output), and the
 string anchors from UWReverseEngineering's 'UW2 FM Towns' folder. Writes map/anchors.tsv."""
 import os, re, glob
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -14,7 +14,10 @@ def add(ida, name, why):
     fmn = name if name.endswith('_') else name + '_'
     if ida not in dosidx or fmn not in fm: return
     anchors.setdefault(ida, (fmn, why))
+# only files that match and verify count; other target tables take their names from the map
+done = {l.strip() for l in open(os.path.join(root, 'matched.txt')) if l.strip()}
 for t in glob.glob(os.path.join(root, 'targets', '*.tsv')):
+    if os.path.splitext(os.path.basename(t))[0] not in done: continue
     for l in open(t):
         if not l.startswith('#'): c, ida = l.split('\t')[:2]; add(ida, c, 'matched')
 for p in glob.glob(os.path.join(root, 'map', 'pairs_*.tsv')):
