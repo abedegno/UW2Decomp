@@ -1,0 +1,10 @@
+# segment seg027_2856 base 0x2929C size 0xEB2 org 0xC
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+player_settr	InitPlayerProjectilesValues_seg027_2856_C	0x0	0x92
+player_fire	MissileRelease_seg027_9E	0x92	0x228
+critter_fire	NPCMissileLaunch_seg027_2856_2C6	0x2BA	0x7C
+spell_fire	ProjectileSpell_seg027_2856_342	0x336	0xF7
+ReturnObject	DropObjectByPlayer_seg027_2856_439	0x42D	0x41F
+trap_fire	ArrowTrap_seg027_2856_858	0x84C	0x82
+missile_fire	PrepareProjectileObject_seg027_2856_8DA	0x8CE	0x3F2
+push_missile	PlaceProjectileInWorld_seg027_2856_CCC	0xCC0	0x1F2

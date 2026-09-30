@@ -87,5 +87,8 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **An early `return` forces a reload**: `if (flag) return;` followed by more code reloads `les bx,[arg]`; `if (!flag) { ... }` reuses ES:BX from the condition.
 - **`i++` against `i = i + 1` on a byte local**: `i++` gives `inc byte [bp-N]`; `i = i + 1` gives load, `inc al`, store.
 - **A test both arms jump to** after an if/else sat after the else in the source.
+- **A doubled mask** such as `and dx,7; and dx,7` survives only if a cast separates the two, as in a macro `((unsigned)(v) & 7) << 13` called with `x & 7`; without the cast the compiler folds them.
+- **Assignment inside a condition**: `if ((x -= 16) > 0xD0)` gives `sub [x],10h; mov ax,[x]; cmp ax,...`; as two statements it becomes `cmp word [x],...`.
+- **Globals in another file's gap**: unnamed globals that FM Towns keeps as statics may be declared `extern` if their home file isn't matched yet; the bytes are the same, so note them as provisional.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.
