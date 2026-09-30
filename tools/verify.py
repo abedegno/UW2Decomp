@@ -143,6 +143,12 @@ def update(syms, problems):
         if n in known and known[n] != fmt(v):
             problems.append(f'{n}: symbols.tsv has {known[n]}, this file gives {fmt(v)}')
         known[n] = fmt(v)
+    # one address, one name, across every file merged so far
+    byaddr = {}
+    for n, v in known.items(): byaddr.setdefault(v, []).append(n)
+    for n, (v, _) in syms.items():
+        others = [m for m in byaddr[fmt(v)] if m != n]
+        if others: problems.append(f'{n} is at {fmt(v)}, which symbols.tsv already calls {", ".join(others)}')
     # names found in the FM Towns symbol table are the originals; the rest are provisional
     fm = os.path.join(root, 'fmtowns', 'syms.tsv'); orig = set()
     if os.path.exists(fm):

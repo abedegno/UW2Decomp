@@ -1,0 +1,7 @@
+# segment ovr135 base 0x92A00 size 0x7D2 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+dispel_spell	CancelActiveSpell_ovr135_0	0x0	0x131
+duration_check	PlayerUpdates_ovr135_131	0x131	0x3B2
+DegradeLights	UpdateInventoryLightSources_ovr135_4E3	0x4E3	0x10B
+sink_sink_sink	SwimmingSkillCheck_ovr135_5EE	0x5EE	0xDA
+set_curmagic	PlayerStatusEffectSpells_ovr135_6C8	0x6C8	0x10A

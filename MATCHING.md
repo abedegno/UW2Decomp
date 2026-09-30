@@ -17,7 +17,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - `--no-build` re-compares the last build.
 - Only functions present in the file are reported, so a work file can hold a subset.
 - Bytes written by fixups (addresses of globals, call targets, segment values) are masked. So extern names and the addresses of globals don't need to be right yet; their near/far-ness does.
-- `python3 tools/verify.py src/FILE.C` checks what match.py masks: fixup targets, overlay entries and the file's `_DATA`; `--update` merges the externs into `symbols.tsv`.
+- `python3 tools/verify.py src/FILE.C` checks what match.py masks: fixup targets, overlay entries and the file's `_DATA`; `--update` merges the externs into `symbols.tsv` and refuses an address that already has a different name there, or a name with a different address. Use FM Towns names, and when two files disagree, the FM Towns code decides.
 - Target tables come from `python3 tools/targets.py SEGNAME > targets/SEGNAME.tsv`, built from `map/` (verified segment bases and function offsets, original names where the map confirms them). Code segments are byte-aligned, so a file starts at its first function, which may be a few bytes past the segment's paragraph; the table's `org` records that, and absolute code addresses (jump tables) count from the paragraph. The last function's size runs to the first far return after it, so it can be short if the function has an earlier `retf` or a `CB` byte in its code.
 - The IDA listing is `uw2_asm.asm` from [UWReverseEngineering](https://github.com/hankmorgan/UWReverseEngineering), expected at `~/UWReverseEngineering/uw2_asm.asm` (or set `UW2_ASM`) (use `command grep -a` on it; the default grep skips it as binary). Bytes are in `~/UWGOG/UW2/UW2.EXE` (or set `UW2_EXE`), at the segment base in the target table plus the function offset.
 - The FM Towns build has the original names and is a second witness for what the code means: `.venv/bin/python tools/fmt.py <name_>` disassembles a named function (32-bit Watcom register-call code) with calls and globals named. DOS is the authority on bytes.
@@ -106,5 +106,10 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **`FP_SEG` of a computed near pointer re-evaluates it**: `movedata(..., FP_SEG(d), FP_OFF(d), ...)` with `d = s + strlen(s)` calls `strlen` twice and pushes `ds`; a stack array gives `push ss`.
 - **Two explicit `register int`s**: the first declared gets SI.
 - **Store and test in one expression**: `ok = (fd = open(...)) != -1` gives `mov [fd],ax; cmp ax,-1`; two statements compare the memory copy.
+- **`x = p->bitfield--`** folds the decrement into the masked word, writes through DI, and leaves an unbalanced `push bx` that `leave` hides; that stray push is the sign of this source.
+- **Assignment inside a condition** compares the register (`mov di,ax; cmp ax,1`, `or ax,dx` for a far pointer); as two statements it compares the variable.
+- **Identical store tails are shared** like call tails: one branch jumps into the other's matching final instructions.
+- **DI as scratch**: a free DI may be used for a temporary pointer, pushed and popped, so `push di` in the prologue alone doesn't prove a second register variable.
+- **Library inlines**: `abs()` from stdlib.h is `cwd; xor ax,dx; sub ax,dx`; `isdigit()` tests `_ctype` at DS:1BF6 (`test byte [bx+1BF7h],2`).
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

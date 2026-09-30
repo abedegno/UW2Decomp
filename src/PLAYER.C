@@ -138,10 +138,10 @@ extern int PlayerLevel;
 extern int PlayerHeading;
 extern struct Motion PN;
 extern unsigned char motionbits;
-extern unsigned long far *PITTimerGlobal;
+extern unsigned long far *Time;
 extern int player_name_handle;
-extern unsigned char far *foreground_color;
 extern unsigned char far *background_color;
+extern unsigned char far *foreground_color;
 extern struct FontInfo far *cur_font;
 extern struct Inplist near *inplist;
 extern int LeftPanel;
@@ -411,7 +411,7 @@ void far game_stats(void)
     register int x;
 
     set_font_size(2);
-    *background_color = *foreground_color = 0x52;
+    *foreground_color = *background_color = 0x52;
     str = get_string(player_name_handle);
     y = 0xAB;
     x = 0xA0 - string_width(str) / 2;
@@ -490,7 +490,7 @@ void far game_stats(void)
     {
         text[0] = 0;
         str_cat(text, get_string(0x2CE));
-        *background_color = *foreground_color = 0x1F;
+        *foreground_color = *background_color = 0x1F;
         string_to_screen(text, 0x32, 0x14);
     }
 }
@@ -538,8 +538,8 @@ unsigned char far dream(int sleepfactor)
         game_sprint(0x13 - sleepfactor);
         return 1;
     }
-    timer = *PITTimerGlobal;
-    while (timer + 0x180 > *PITTimerGlobal)
+    timer = *Time;
+    while (timer + 0x180 > *Time)
         ;
     game_sprint(0x13 - sleepfactor);
     return 0;

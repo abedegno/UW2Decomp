@@ -81,11 +81,11 @@ ovr130	C	2	138	0	2	0	0
 ovr131	C	1	24	1	0	0	0	show_credits_	show_credits_	
 ovr132	C	1	7	0	0	0	1			
 ovr134	C	3	299	2	0	0	1	init_objects_	get_class_data_	
-ovr135	C	5	2001	5	0	0	0	dispel_spell_	set_curmagic_	
+ovr135	C	5	2001	5	0	0	0	dispel_spell_	set_curmagic_	yes
 ovr136	C	32	2301	21	8	0	3	is_really_button_	load_buttongroup_images_	
 ovr137	C	9	1027	8	1	0	0	pull_chain_	check_rest_	
 ovr138	C	25	7823	25	0	0	0	UseBonesOn_	UseUtil_	
-ovr139	C	9	2243	9	0	0	0	init_scroll_	scroll_clear_	
+ovr139	C	9	2243	9	0	0	0	init_scroll_	scroll_clear_	yes
 ovr140	C	6	681	4	1	0	1	init_txtlib_	load_txtmaps_	
 ovr142	C	12	2927	7	4	0	1	save_player_data_	load_dl_	
 ovr143	C	15	4004	10	1	2	2	init_player_	chg_plyp_	

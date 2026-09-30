@@ -6,12 +6,17 @@ import { tmpdir } from "node:os";
 import { join, basename } from "node:path";
 const [outDir, opts, ...files] = process.argv.slice(2);
 // an OMF object is a chain of records (type, 16-bit length, body) ending in MODEND; the
-// emulator sometimes returns a file that is empty, zero-filled or cut short
+// emulator sometimes returns a file that is empty, zero-filled or cut short, so check the
+// structure and every record's checksum
 function wellFormed(b) {
   let p = 0;
   while (p + 3 <= b.length) {
     const t = b[p], n = b[p + 1] | (b[p + 2] << 8);
-    if (t === 0 || n === 0) return false;
+    if (t === 0 || n === 0 || p + 3 + n > b.length) return false;
+    // Turbo C writes a checksum byte that makes each record's bytes sum to zero
+    let sum = 0;
+    for (let i = p; i < p + 3 + n; i++) sum = (sum + b[i]) & 0xff;
+    if (sum !== 0) return false;
     p += 3 + n;
     if (t === 0x8a || t === 0x8b) return p <= b.length;
   }
@@ -39,6 +44,7 @@ try {
     try { await be.fsStat("C:/DONE.TXT"); done = true; } catch { }
   }
   if (!done) empty = true;
+  else await be.wait(1000);        // let DOS finish writing before the files are read
   mkdirSync(outDir, { recursive: true });
   for (const n of [...names.map(n => n.replace(/\.C$/, ".OBJ")), "BUILD.LOG"]) {
     try { const b = await be.fsRead(`C:/${n}`); if (n.endsWith(".OBJ") && !wellFormed(b)) empty = true; writeFileSync(join(outDir, n), b); } catch (e) { console.log("missing", n); }

@@ -1,0 +1,11 @@
+# segment ovr139 base 0x960B0 size 0x8C3 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+init_scroll	ovr139_0	0x0	0x29
+scroll_wait	LikelyWaitForMore_ovr139_29	0x29	0x94
+scroll_more	WriteTextWithMORE_ovr139_BD	0xBD	0x94
+pick_scroll	ovr139_151	0x151	0x1B
+wd_replace	PrintQTY_ovr139_16C	0x16C	0x77
+wd_bool	WriteYesorNo_ovr139_1E3	0x1E3	0x6E
+wdialog	PlayerTypedInput_ovr139_251	0x251	0x4F6
+wyorn	WaitForYesNoAnswer_ovr139_747	0x747	0xF5
+scroll_clear	ovr139_83C	0x83C	0x87

@@ -24,8 +24,8 @@ extern struct Player near *player;
 extern int PlayerLevel;
 extern unsigned char RightPanel;
 extern struct Inplist near *inplist;
-extern unsigned char far *foreground_color;
 extern unsigned char far *background_color;
+extern unsigned char far *foreground_color;
 extern int spsave[];                    /* DS:1B9F; FM Towns reads _spsave+4 */
 /* DS:8E1, levels by experience / 500. No FM Towns name (it sits just past
    _ShowStupidFirstPersonWeapon there), so this name is ours. */
@@ -106,7 +106,7 @@ void far panel_check_hpmp(void)
 {
     if (RightPanel == 2 && inplist->field8 == 1)
     {
-        *background_color = *foreground_color = 0xC4;
+        *foreground_color = *background_color = 0xC4;
         mouse_hide();
         set_font_size(4);
         if (spsave[1])
