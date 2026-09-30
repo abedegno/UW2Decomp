@@ -8,7 +8,7 @@ usage: verify.py src/FILE.C [--update]      (run match.py first; this reads its 
   tables. A function's address stored as data points at its overlay stub entry instead,
   which the linker assigns; those must be one per function.
 - References into this file's _DATA must agree on one base, and the _DATA bytes must equal
-  the EXE's data segment at that base.
+  the EXE's data segment at that base. References into _BSS must agree on one base.
 --update merges the resolved externs into symbols.tsv, refusing any conflict."""
 import sys, os, re, struct
 here = os.path.dirname(os.path.abspath(__file__)); root = os.path.dirname(here)
@@ -36,7 +36,8 @@ def main():
     segs = o['segs']
     code = next(i for i, s in enumerate(segs) if s and s[1] == 'CODE')
     datas = next(i for i, s in enumerate(segs) if s and s[0] == '_DATA')
-    syms = {}; problems = []; data_bases = set(); cs_values = set(); internal = 0; entries = {}
+    bss = next((i for i, s in enumerate(segs) if s and s[0] == '_BSS'), None)
+    syms = {}; problems = []; data_bases = set(); cs_values = set(); internal = 0; entries = {}; bss_bases = set()
 
     def note(name, val, where):
         prev = syms.setdefault(name, (val, where))
@@ -79,6 +80,9 @@ def main():
                     problems.append(f'+{at:X}: code offset {word(exe, base + at):X}, object says {add + org:X}')
             elif loc == 2:
                 cs_values.add(word(exe, base + at))
+        elif tm == 0 and ti == bss:                    # this file's uninitialised data
+            internal += 1
+            bss_bases.add((word(exe, base + at) - add) & 0xFFFF)
         elif tm == 0 and ti == datas or tm == 1:       # this file's data, through DGROUP
             internal += 1
             data_bases.add((word(exe, base + at) - add) & 0xFFFF)
@@ -91,6 +95,11 @@ def main():
         else: print(f'overlay entry: {name} at stub +{min(e):X}')
     flat = [min(e) for e in entries.values()]
     if len(set(flat)) < len(flat): problems.append('two functions share an overlay entry')
+    # _BSS has no bytes to compare; every reference must agree on one base
+    if len(bss_bases) > 1:
+        problems.append('_BSS references disagree on the base: ' + ', '.join(f'DS:{b:X}' for b in sorted(bss_bases)))
+    elif bss_bases:
+        print(f'_BSS: {segs[bss][2]} bytes at DS:{min(bss_bases):X}')
     if len(cs_values) > 1: problems.append(f'own segment referenced as {sorted(cs_values)}')
     data = bytes(o['data'][datas])
     if len(data_bases) > 1:

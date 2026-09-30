@@ -1,0 +1,4 @@
+# segment seg023 base 0x25A79 size 0x14A org 0x9
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+rotate_bank	seg023_9	0x0	0xA2
+cycle_colors	seg023_AB	0xA2	0xA8

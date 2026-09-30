@@ -10,6 +10,7 @@ _change_state	DS:12B4	FM Towns
 _changed	DS:5DAC	FM Towns
 _clear_all_loretries	64A5:0039	FM Towns
 _clear_fight_state	22FC:130F	FM Towns
+_ComObjData	DS:6B74	FM Towns
 _copy_visible_to_hidden	0085:4B57	FM Towns
 _CreateObj	30BC:0044	FM Towns
 _cur_font	DS:21CC	provisional
@@ -38,6 +39,7 @@ _get_string	3265:008E	FM Towns
 _grfx_clear	64E2:007A	FM Towns
 _grSoftPageFlip	0085:46E6	FM Towns
 _hostile_creatures_near	647E:008E	FM Towns
+_init_this_critter	6475:002A	FM Towns
 _inplist	DS:00E4	FM Towns
 _input_dispatch	1AB4:02A0	FM Towns
 _itoa	0E72:1D1B	FM Towns
@@ -47,8 +49,10 @@ _LeftPanel	DS:0384	FM Towns
 _level_table	DS:08E1	provisional
 _load_digi_fx	1C86:0260	FM Towns
 _load_new_music	1C86:174B	FM Towns
+_local_do_palette	1F8C:0220	FM Towns
 _ltoa	0E72:1D5C	FM Towns
 _Map_GetAddr	30BC:000F	FM Towns
+_mapdata	DS:1896	FM Towns
 _MapObj_X	DS:24F8	FM Towns
 _MapObj_Y	DS:24FA	FM Towns
 _mdetect	65B5:0039	FM Towns
@@ -67,12 +71,14 @@ _NewPlyFade	DS:12BA	FM Towns
 _NightCleanCritPages	64DE:002A	FM Towns
 _notdone	DS:5D68	FM Towns
 _npp_func	DS:12C2	FM Towns
+_Obj_Alloc	28A1:0471	FM Towns
 _obj_deal	29CA:10BC	FM Towns
 _Obj_FindInMap	28A1:0CD4	FM Towns
 _Obj_GarbageCollect	28A1:0354	FM Towns
 _Obj_InList	28A1:0B6B	FM Towns
 _Obj_IntTMem	28A1:0971	FM Towns
 _Obj_PtrTMem	28A1:08BE	FM Towns
+_palette	DS:21AC	provisional
 _panel_check	65BC:0048	FM Towns
 _pass_time	64A5:010B	FM Towns
 _PITTimerGlobal	DS:2158	provisional

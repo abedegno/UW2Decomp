@@ -5,6 +5,7 @@ UW2.EXE was built with Borland Turbo C++ 1.01, medium model with 186 instruction
 - ovr154 (`PLAYER.C`): `-mm -1 -G -O -Y -d`. `-d` (merge duplicate strings) is proven by the data segment: each repeated literal is stored once. `-Y` is overlay code: taking the address of a far function in the same file is a fixup rather than `mov ..,cs`. No `-Z`, so the compiler reloads `mov bx,[player]` and `les bx,[...]` after every store through them.
 - seg012 (`SEG012.C`, resident): matches with `-mm -1 -G -O -d`; `-G` is proven, `-O`, `-Z` and `-Y` make no difference in that file.
 - seg038 (`SEG038.C`, resident): `-mm -1 -G -O -d`, and no `-Z` is proven (with it `player_get_exp` comes out 8 bytes short).
+- seg023 and seg036 (resident): `-mm -1 -G -O -d`; seg023 proves `-G` and `-O` (without either, functions change size).
 - The file holding CycleColours (file offset 0x802C4) needed `-Z` to match its register reuse.
 
 So if reloads differ in a way restructuring can't fix, try the file with and without `-Z`.
@@ -47,7 +48,8 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Constant on the right of `|`**: `(i + 0x11) | 0x400` gives `or ax,400h`; `0x400 | (i + 0x11)` gives `mov dx,400h; or dx,ax`.
 - **A bitfield in the top bits of a word** is read with a byte load: `unsigned lo:13; unsigned cls:3;` gives `mov al,[bx+hi]; shr ax,5; and ax,7`.
 - **Chained assignment stores right to left**: `*a = *b = K` stores to `*b` first.
-- **One register variable, many jobs**: when SI or DI holds unrelated values in turn (a strlen result, then loop counters), the source reused one variable; a third int would have gone on the stack.
+- **One register variable, many jobs**: when SI or DI holds unrelated values in turn (a strlen result, then loop counters), the source reused one variable; a third int would usually have gone on the stack.
+- **CX as a third register variable**: in a function that makes no calls, a third int local can live in CX (`xor cx,cx ... inc cx`), with or without `register`.
 - **Testing a far pointer in a loop condition**: the store, reload and `or ax,[bp-6]` sequence comes from the comma form, `for (...; trig = f(...), trig; ...)`. `(trig = f()) != 0` gives the shorter `or ax,dx`.
 - **Bitfields versus macros**: a real bitfield reads shift-then-mask (`shr ax,N; and ax,M`), or as a byte load with no `mov ah,0` when it sits at bit 0. Mask-then-shift, including a telltale `shr ax,0`, is a macro written `((w & mask) >> shift)`. The object struct uses both.
 - **Argument forms**: a string literal passed as `char far *` is `push ds; push offset`; a local array is `push ss; lea ax; push ax`.
@@ -72,5 +74,10 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Early return against a nested block**: `if (x > K) return;` on an unsigned long gives `cmp hi; jb; jbe +3; jmp; cmp lo; ...`; wrapping the rest in `if (x <= K) {}` orders the branches differently.
 - **Comparing a call's result with a byte field**: `if ((v = f()) > p->b)` keeps the result in AX (`mov dl,[bx+N]; mov dh,0; cmp ax,dx`); assigning first and then comparing gives `mov al,[bx+N]; cmp ax,[bp-N]`.
 - **Prototypes were not shared everywhere**: seg038 calls `advance` with an `int` argument (`push si`, no conversion) although ovr154 defines `advance(char)`, so each file declared what it called for itself. Declare a callee the way the calling file's bytes show.
+- **The for-increment's comma order is kept**: `for (...; i++, p -= step)` gives `inc cx; sub [bp-4],di`; the same update written at the end of the body reverses them.
+- **A direct store to a global is reused without `-Z`**: `g = t >> 5; if ((g >> 1) == h)` keeps AL after `mov [g],al`. The forced reloads without `-Z` are after stores through pointers.
+- **`~` constants**: `(a & ~0x3F) + (b & ~0x3F)` tested for zero gives `add ax,dx; jne` with no `or ax,ax`; spelling the mask `0xFFC0` adds the `or`, although both emit `and ax,0FFC0h`.
+- **Pointer plus index keeps the source's operand order**: `base + (x + (y << 6))` and `base + ((y << 6) + x)` compile differently.
+- **Static uninitialised data** goes in `_BSS`, which `verify.py` checks for a consistent base (no bytes to compare).
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

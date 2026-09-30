@@ -1,0 +1,4 @@
+# segment seg036_32A9 base 0x337CF size 0x164 org 0xF
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+Map_GetAddr	GetTile_seg036_32A9_F	0x0	0x35
+CreateObj	PrepareNewObject_seg036_32A9_44	0x35	0x12F
