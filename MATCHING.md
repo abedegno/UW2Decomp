@@ -94,5 +94,10 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Split chained divisions**: `c = x / 26; c += 3 - y / 15 * 3;` keeps the first quotient in SI; one compound expression pushes and pops it.
 - **Shared call tails scale**: an if/else-if chain whose branches all end in the same call compiles to one physical call reached by jumps.
 - **A far function address as an argument** is two pushes with separate segment and offset fixups; `verify.py` combines them.
+- **Guard then loop**: `if (p == 0) return; while (...)` jumps straight into the loop test; `if (p != 0) { while ... }` adds a `jmp` and is 2 bytes longer.
+- **How a guard is written changes the byte test**: in `if (ptr != 0 && g)` a byte global is `cmp byte [g],0`; in `if (ptr == 0 || !g) return;` it is `mov al,[g]; mov ah,0; or ax,ax`.
+- **An int also stored as a char stays on the stack** (SI and DI have no byte halves), even when DI is free.
+- **The first assignment and the loop step share a call tail**: `obj = f(&a->x); while (obj && c) obj = f(&obj->y);` jumps from the first call into the body's pushes. That is the compiler, not a `goto`.
+- **`sizeof` widened to long**: `farmalloc(sizeof(struct Bag))` pushes `6A 00, 6A 0C`. The runtime's `farmalloc`/`farfree` are in seg005.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

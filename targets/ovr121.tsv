@@ -1,0 +1,15 @@
+# segment ovr121 base 0x8BB90 size 0x10D7 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+DoSpecialActions	PickupDropWorldorInventory_ovr121_0	0x0	0x1A2
+MakeBagClose	ChangeFClassToClosedContainer_ovr121_1A2	0x1A2	0x4D
+CloseAllBags	ovr121_1EF	0x1EF	0xA4
+FixBagArea	ovr121_293	0x293	0xC8
+CloseTheBag	ovr121_35B	0x35B	0xC9
+DisplayOpenBag	MaybeAnInventoryRedraw_ovr121_424	0x424	0xB4
+FixOpenBag	UpdateInventorySlots_ovr121_4D8	0x4D8	0x1DE
+OpenTheBag	UseClass2ContainerFromInventory_ovr121_6B6	0x6B6	0x3BD
+ScrollItemsUp	ovr121_A73	0xA73	0x25
+ScrollItemsDown	ovr121_A98	0xA98	0xDE
+PutObjectInBag	AddItemToContainer_ovr121_B76	0xB76	0x31B
+SwapItemsInBag	ovr121_E91	0xE91	0x188
+BagWeight	GetTotalMassOfObjectList_ovr121_1019	0x1019	0xBE
