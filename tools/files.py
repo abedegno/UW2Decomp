@@ -1,6 +1,6 @@
 """Summarise map/functions.tsv per DOS code segment (one segment = one source file).
 Classifies each segment as C or assembly by how many functions open with Turbo C's
-`push bp; mov bp,sp`, and counts progress against targets/*.tsv. Writes map/files.tsv."""
+`push bp; mov bp,sp`, and counts progress against matched.txt. Writes map/files.tsv."""
 import os, re, glob
 from collections import defaultdict
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,10 +26,8 @@ for (s, n), ins in first.items():
 rows = [l.rstrip('\n').split('\t') for l in open(os.path.join(root, 'map', 'functions.tsv')) if not l.startswith('#')]
 segs = defaultdict(list)
 for r in rows: segs[r[0]].append(r)
-done = {}
-for t in glob.glob(os.path.join(root, 'targets', '*.tsv')):
-    m = re.search(r'size 0x([0-9A-F]+)', open(t).readline())
-    done[os.path.splitext(os.path.basename(t))[0]] = int(m.group(1), 16)
+# segments whose source matches whole and verifies, listed by hand in matched.txt
+done = {l.strip() for l in open(os.path.join(root, 'matched.txt')) if l.strip() and not l.startswith('#')}
 
 out = open(os.path.join(root, 'map', 'files.tsv'), 'w')
 out.write('# segment\tkind\tfunctions\tbytes\tnamed\tsize only\tcalls disagree\tunpaired\tfirst named\tlast named\tmatched\n')
