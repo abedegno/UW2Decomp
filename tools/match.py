@@ -63,7 +63,11 @@ def main():
         if any('Error' in l or 'Fatal' in l for l in msgs): sys.exit(1)
     d=open(os.path.join(out,stem+'.OBJ'),'rb').read()
     _,segs,data,mask,_=module_masked(d); pubs=publics(d)
-    ci=[i for i,(sn,cn,ln) in enumerate(segs,1) if cn=='CODE'][0]
+    ci=[i for i,(sn,cn,ln) in enumerate(segs,1) if cn=='CODE']
+    if not ci and '--no-build' not in a and '--retried' not in a:
+        # the emulator occasionally returns a truncated object; build once more
+        print('object has no code segment; rebuilding'); sys.argv.append('--retried'); return main()
+    ci=ci[0]
     code,cm=data[ci],mask[ci]
     base,size,rows,org=load_targets(seg); exe=open(EXE,'rb').read()
     whole=len(code)==size and not compare(code,cm,exe[base:base+size])

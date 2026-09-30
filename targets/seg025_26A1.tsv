@@ -1,0 +1,9 @@
+# segment seg025_26A1 base 0x27743 size 0x755 org 0x3
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+remove_lock	RemoveDoorLock_seg025_26A1_3	0x0	0x92
+try_remove	RemoveObjectFromTile_seg025_26A1_95	0x92	0x3B
+remove_object	DamageObject_Destruction_seg025_D0	0xCD	0x374
+debris_type	GetObjectDebris_seg025_26A1_444	0x441	0x4F
+check_res	ScaleDamageAgainstObject_seg025_26A1_493	0x490	0x94
+damage_item	DamageObject_seg025_527	0x524	0x8D
+damage_object	DamageObjectOrDoor_seg025_26A1_5B4	0x5B1	0x1A4

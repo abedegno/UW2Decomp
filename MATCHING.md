@@ -79,5 +79,9 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **`~` constants**: `(a & ~0x3F) + (b & ~0x3F)` tested for zero gives `add ax,dx; jne` with no `or ax,ax`; spelling the mask `0xFFC0` adds the `or`, although both emit `and ax,0FFC0h`.
 - **Pointer plus index keeps the source's operand order**: `base + (x + (y << 6))` and `base + ((y << 6) + x)` compile differently.
 - **Static uninitialised data** goes in `_BSS`, which `verify.py` checks for a consistent base (no bytes to compare).
+- **`!c` against `c == 0` on a `char` parameter**: `!c` gives `mov al; cbw; or ax,ax`; `c == 0` gives `cmp byte [bp+N],0`.
+- **Far pointers compare by offset only** for `<`/`>=` (`mov ax,[bp+N]; cmp ax,[g]`), while `== 0` tests both halves (`or ax,dx`).
+- **`x > 0` on an unsigned bitfield** gives `or ax,ax; jbe`, not `je`, so the source said `> 0`.
+- **Statement order is kept** even for independent assignments, so two branches that set the same fields in different orders were written that way.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

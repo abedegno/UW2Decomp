@@ -8,6 +8,7 @@ _change_music_maybe	1C86:2BB2	FM Towns
 _change_screen	64BF:0061	FM Towns
 _change_state	DS:12B4	FM Towns
 _changed	DS:5DAC	FM Towns
+_checkTrap	32FA:0A95	FM Towns
 _clear_all_loretries	64A5:0039	FM Towns
 _clear_fight_state	22FC:130F	FM Towns
 _ComObjData	DS:6B74	FM Towns
@@ -15,6 +16,7 @@ _copy_visible_to_hidden	0085:4B57	FM Towns
 _CreateObj	30BC:0044	FM Towns
 _cur_font	DS:21CC	provisional
 _CursorObjPtr	DS:6B0C	FM Towns
+_damage_critter	15B5:333A	FM Towns
 _damage_item	24B4:0527	FM Towns
 _DegradeLights	653A:0020	FM Towns
 _delete_trap	65D5:0093	FM Towns
@@ -23,10 +25,12 @@ _do_teleport	64A5:00BB	FM Towns
 _DoClosingDoors	65D5:0070	FM Towns
 _DoWanderingMonsters	65D5:009D	FM Towns
 _dsfx_playing	DS:010A	FM Towns
+_DumpTheBag	654F:008E	FM Towns
 _editchng	1B44:00AE	FM Towns
 _editor_dispatch	DS:11F4	FM Towns
 _fadein3d	64E2:0043	FM Towns
 _fadeout3d	64E2:0052	FM Towns
+_fill_FB	64E2:0057	FM Towns
 _FindObj	650A:0052	FM Towns
 _finish_player	2FBE:05EB	FM Towns
 _FixPlayerEquips	6564:002F	FM Towns
@@ -42,6 +46,7 @@ _hostile_creatures_near	647E:008E	FM Towns
 _init_this_critter	6475:002A	FM Towns
 _inplist	DS:00E4	FM Towns
 _input_dispatch	1AB4:02A0	FM Towns
+_IsMobElem	28A1:0A87	FM Towns
 _itoa	0E72:1D1B	FM Towns
 _kill_all_effects	1C86:20C1	FM Towns
 _Killorn_just_crashed	64A5:00B1	FM Towns
@@ -73,16 +78,24 @@ _notdone	DS:5D68	FM Towns
 _npp_func	DS:12C2	FM Towns
 _Obj_Alloc	28A1:0471	FM Towns
 _obj_deal	29CA:10BC	FM Towns
+_Obj_Elem_Fate	28A1:0251	FM Towns
 _Obj_FindInMap	28A1:0CD4	FM Towns
+_Obj_Free	28A1:0508	FM Towns
+_Obj_FreeChain	28A1:0799	FM Towns
 _Obj_GarbageCollect	28A1:0354	FM Towns
 _Obj_InList	28A1:0B6B	FM Towns
 _Obj_IntTMem	28A1:0971	FM Towns
 _Obj_PtrTMem	28A1:08BE	FM Towns
+_Obj_Punt	28A1:0704	FM Towns
+_Obj_Rem	28A1:0684	FM Towns
+_objdata	DS:25B6	FM Towns
+_OpenDoor	654F:007F	FM Towns
 _palette	DS:21AC	provisional
 _panel_check	65BC:0048	FM Towns
 _pass_time	64A5:010B	FM Towns
 _PITTimerGlobal	DS:2158	provisional
 _player	DS:828A	FM Towns
+_player_did_bad	64A5:00FC	FM Towns
 _player_get_exp	323F:0045	FM Towns
 _player_name_handle	DS:8288	FM Towns
 _player_setup	191C:0AD8	FM Towns
@@ -93,6 +106,7 @@ _pmouseHandled	DS:073E	FM Towns
 _PN	DS:25DC	FM Towns
 _punt_all_digi_fx	1C86:0284	FM Towns
 _put_at	2754:1245	FM Towns
+_put_effect	34A2:0B8D	FM Towns
 _put_player_in_jail	64A5:0093	FM Towns
 _rand	0E72:0DE7	FM Towns
 _real_death	64BF:007A	FM Towns
@@ -101,6 +115,7 @@ _restore_hp	65A7:00B1	FM Towns
 _restore_mana	65A7:00CF	FM Towns
 _restore_rect	004E:025B	FM Towns
 _RightPanel	DS:079E	FM Towns
+_rollem	33EA:011F	FM Towns
 _scrnum	DS:5D66	FM Towns
 _scroll_clear	6559:0025	FM Towns
 _scroll_print	342C:01A0	FM Towns
@@ -127,8 +142,10 @@ _trap_teleport_data	DS:1BB6	FM Towns
 _unforce_mouse_cursor	1B8F:06AF	FM Towns
 _update_all_critters_whilst_playe	647E:002A	FM Towns
 _update_digi_playback	1C86:0F2D	FM Towns
+_UseCont	654F:003E	FM Towns
 _UseTrigger	65D5:0039	FM Towns
 _wandering_monster_check	647E:0061	FM Towns
+_Weapons	DS:6976	FM Towns
 F_LDIV@	0E72:3525	library
 F_LUDIV@	0E72:352C	library
 F_LXMUL@	0E72:350B	library
