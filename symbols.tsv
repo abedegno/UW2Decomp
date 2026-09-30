@@ -1,5 +1,6 @@
 # name	address	name source
 # address: DS:offset for near data, segment:offset for far code (load-relative paragraphs)
+_advance	6599:0043	FM Towns
 _area_spell_state	DS:1B0A	FM Towns
 _background_color	DS:21C4	FM Towns
 _cFillFB	00B8:0C84	FM Towns
@@ -43,6 +44,7 @@ _itoa	0030:1D1B	FM Towns
 _kill_all_effects	0088:20C1	FM Towns
 _Killorn_just_crashed	0370:00B1	FM Towns
 _LeftPanel	DS:0384	FM Towns
+_level_table	DS:08E1	provisional
 _load_digi_fx	0088:0260	FM Towns
 _load_new_music	0088:174B	FM Towns
 _ltoa	0030:1D5C	FM Towns
@@ -54,7 +56,8 @@ _memset	0030:1DCA	FM Towns
 _motionbits	DS:00D2	FM Towns
 _mouse_freereign	1B8F:03CD	FM Towns
 _mouse_get_input	0080:0594	FM Towns
-_mouse_hide	0080:00D6	FM Towns
+_mouse_hide	1B8F:00D6	FM Towns
+_mouse_show	1B8F:00C0	FM Towns
 _move_along	0158:004E	FM Towns
 _near_mob_put_at	00F0:1300	FM Towns
 _new_player_pos	0380:002F	FM Towns
@@ -70,7 +73,7 @@ _Obj_GarbageCollect	00F8:0354	FM Towns
 _Obj_InList	00F8:0B6B	FM Towns
 _Obj_IntTMem	00F8:0971	FM Towns
 _Obj_PtrTMem	00F8:08BE	FM Towns
-_panel_check	04F0:0048	FM Towns
+_panel_check	65BC:0048	FM Towns
 _pass_time	0370:010B	FM Towns
 _PITTimerGlobal	DS:2158	provisional
 _player	DS:828A	FM Towns
@@ -85,21 +88,27 @@ _PN	DS:25DC	FM Towns
 _punt_all_digi_fx	0088:0284	FM Towns
 _put_at	00F0:1245	FM Towns
 _put_player_in_jail	0370:0093	FM Towns
-_rand	0030:0DE7	FM Towns
+_rand	0E72:0DE7	FM Towns
 _real_death	0380:007A	FM Towns
 _render_FB	0110:02FD	FM Towns
 _restore_hp	04E0:00B1	FM Towns
 _restore_mana	04E0:00CF	FM Towns
+_restore_rect	004E:025B	FM Towns
+_RightPanel	DS:079E	FM Towns
 _scrnum	DS:5D66	FM Towns
 _scroll_clear	0458:0025	FM Towns
 _scroll_print	0168:01A0	FM Towns
 _send_FB	0138:16AA	FM Towns
-_set_font_size	03B0:004D	FM Towns
+_set_font_size	64E2:004D	FM Towns
 _set_new_music	0088:2B0C	FM Towns
 _set_random_walking_music	0088:2B1E	FM Towns
 _SetOffTrap	0530:0084	FM Towns
 _show_cutscene	0360:00F2	FM Towns
 _skill_check	0140:0009	FM Towns
+_sp_hp	65BC:0020	FM Towns
+_sp_mp	65BC:002A	FM Towns
+_sp_xp	65BC:002F	FM Towns
+_spsave	DS:1B9F	FM Towns
 _str_cat	0148:090B	provisional
 _str_copy	0098:013F	provisional
 _strcpy	0030:2891	FM Towns
@@ -115,7 +124,7 @@ _update_digi_playback	1C86:0F2D	FM Towns
 _UseTrigger	0530:0039	FM Towns
 _wandering_monster_check	0358:0061	FM Towns
 F_LDIV@	0030:3525	library
-F_LUDIV@	0030:352C	library
+F_LUDIV@	0E72:352C	library
 F_LXMUL@	0030:350B	library
-F_LXURSH@	0030:3614	library
+F_LXURSH@	0E72:3614	library
 F_SCOPY@	0030:36BD	library

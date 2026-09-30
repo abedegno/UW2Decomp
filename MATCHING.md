@@ -4,6 +4,7 @@ UW2.EXE was built with Borland Turbo C++ 1.01, medium model with 186 instruction
 
 - ovr154 (`PLAYER.C`): `-mm -1 -G -O -Y -d`. `-d` (merge duplicate strings) is proven by the data segment: each repeated literal is stored once. `-Y` is overlay code: taking the address of a far function in the same file is a fixup rather than `mov ..,cs`. No `-Z`, so the compiler reloads `mov bx,[player]` and `les bx,[...]` after every store through them.
 - seg012 (`SEG012.C`, resident): matches with `-mm -1 -G -O -d`; `-G` is proven, `-O`, `-Z` and `-Y` make no difference in that file.
+- seg038 (`SEG038.C`, resident): `-mm -1 -G -O -d`, and no `-Z` is proven (with it `player_get_exp` comes out 8 bytes short).
 - The file holding CycleColours (file offset 0x802C4) needed `-Z` to match its register reuse.
 
 So if reloads differ in a way restructuring can't fix, try the file with and without `-Z`.
@@ -67,5 +68,9 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Decrement-and-test of a byte global**: `if (--g == 0)` gives `mov al,[g]; add al,0FFh; mov [g],al; or al,al`, not `dec byte`.
 - **Clearing bits in a global**: `g = g & ~bit;` gives `not ax` then `and dx,ax` through registers; `g |= expr` gives `or [g],ax` directly.
 - **Far function-pointer table**: `if (tab[s][i]) tab[s][i]();` recomputes the index for the test (`mov ax,[bx]; or ax,[bx+2]`) and again for `call far [bx+tab]`.
+- **An explicit `register`** overrides the default choice: when the original has a loop counter in SI and a parameter in DI, the counter was declared `register int` after the plain locals.
+- **Early return against a nested block**: `if (x > K) return;` on an unsigned long gives `cmp hi; jb; jbe +3; jmp; cmp lo; ...`; wrapping the rest in `if (x <= K) {}` orders the branches differently.
+- **Comparing a call's result with a byte field**: `if ((v = f()) > p->b)` keeps the result in AX (`mov dl,[bx+N]; mov dh,0; cmp ax,dx`); assigning first and then comparing gives `mov al,[bx+N]; cmp ax,[bp-N]`.
+- **Prototypes were not shared everywhere**: seg038 calls `advance` with an `int` argument (`push si`, no conversion) although ovr154 defines `advance(char)`, so each file declared what it called for itself. Declare a callee the way the calling file's bytes show.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

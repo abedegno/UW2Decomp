@@ -1,0 +1,5 @@
+# segment seg038_342C base 0x34FF9 size 0x25B org 0x9
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+skill_check	SkillCheck_seg038_342C_9	0x0	0x3C
+player_get_exp	Experience_seg038_342C_45	0x3C	0x1BC
+panel_check_hpmp	RefreshPanels_seg038_342C_201	0x1F8	0x63
