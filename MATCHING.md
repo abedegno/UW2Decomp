@@ -111,5 +111,11 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Identical store tails are shared** like call tails: one branch jumps into the other's matching final instructions.
 - **DI as scratch**: a free DI may be used for a temporary pointer, pushed and popped, so `push di` in the prologue alone doesn't prove a second register variable.
 - **Library inlines**: `abs()` from stdlib.h is `cwd; xor ax,dx; sub ax,dx`; `isdigit()` tests `_ctype` at DS:1BF6 (`test byte [bx+1BF7h],2`).
+- **Even alignment after a `char` local**: an int or array declared after a `char` starts at an even offset, leaving a one-byte gap in the frame.
+- **A one-case `switch`** compiles to `cmp ax,K; je case; jmp short end` and reloads ES:BX at the case label; `if (x == K)` gives a single `jne`.
+- **Stores through a far pointer parameter** don't force a reload without `-Z`, except that an if/else whose arms both store through it makes the next statement reload `les bx`. Stores through near globals always force the reload.
+- **An empty-bodied `if`** keeps its test (`mov ah,0; or ax,ax`) with no jump after it.
+- **`+=`/`-=` on a word global**: an `unsigned` target gives `sub [g],ax`; an `int` target gives load, subtract, store.
+- **`if (c) f(A); else f(B);`** gives two push paths into one call; the ternary `f(c ? A : B)` gives `mov ax,imm; push ax`.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

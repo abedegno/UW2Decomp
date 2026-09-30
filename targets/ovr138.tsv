@@ -1,0 +1,27 @@
+# segment ovr138 base 0x94070 size 0x1E90 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+UseBonesOn	UseSkullsOnGravestone_ovr138_0	0x0	0x6D
+UseWatch	LookAtWatch_ovr138_6D	0x6D	0xE4
+UseCrystal	LookAtDataCrystal_ovr138_151	0x151	0x68
+UseKeyGem	BlackRockGemsUsedOnWorldGemovr138_1B9	0x1B9	0x148
+UsePoleOn	UsePoleOnObject_ovr138_301	0x301	0x4E
+UseAnvilOn	UseAnvil_ovr138_34F	0x34F	0x4C
+UseFood	EatingFoodAndDrinking_ovr138_39B	0x39B	0x623
+UseOilOn	UseOilFlask_ovr138_9BE	0x9BE	0x271
+UseBook	ReadBooksAndMaps_ovr138_C2F	0xC2F	0x28A
+UseLockpickOn	LockPicking_ovr138_EB9	0xEB9	0xD9
+UseKeyOn	UseKey_ovr138_F92	0xF92	0x59
+UseCont	UseContainer_ovr138_FEB	0xFEB	0xA4
+UseLight	LightUsage_ovr138_108F	0x108F	0x1B4
+UseUnique	MiscMajor4_Minor1_ObjectUsage_ovr138_1243	0x1243	0x9A
+moveDoor	TurnIntoMovingDoor_ovr138_12DD	0x12DD	0x61
+changeDoor	MovingDoorOpenCloseRelated_ovr138_133E	0x133E	0xEC
+OpenDoor	DoorOpen_ovr138_142A	0x142A	0x118
+CloseDoor	DoorClose_ovr138_1542	0x1542	0xEA
+ToggleDoor	DoorToggle_ovr138_162C	0x162C	0x38
+DumpTheBag	EmptyContainer_ovr138_1664	0x1664	0xC4
+UseRune	RuneTraps_ovr138_1728	0x1728	0x104
+UseRect	UseMajorClass5_Objects_ovr138_182C	0x182C	0x223
+UseMagic	Major4_Minor2_ObjectUsage_ovr138_1A4F	0x1A4F	0x19B
+UseRockHammerOn	RockHammerUsage_ovr138_1BEA	0x1BEA	0x1DE
+UseUtil	MiscClass3_ObjectUsages_ovr138_1DC8	0x1DC8	0xC8
