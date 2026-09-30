@@ -1,0 +1,8 @@
+{
+  "name": "uw2decomp",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "dos-mcp": "^0.3.0"
+  }
+}

@@ -1,0 +1,7 @@
+TC/
+build/
+__pycache__/
+.venv/
+*.OBJ
+fmtowns/
+node_modules/
