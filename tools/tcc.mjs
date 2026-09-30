@@ -14,23 +14,26 @@ writeFileSync(join(stage, "BUILD.BAT"), [
   "@echo off",
   ...names.map(n => `TCC -c ${opts} -IC:\\ ${n} >> BUILD.LOG`),
   "echo DONE > DONE.TXT", ""].join("\r\n"));
-// the emulator occasionally hands back empty files; retry the whole run once
+// the emulator occasionally hands back empty files or never finishes; retry the run
 for (let attempt = 0; attempt < 3; attempt++) {
 const be = new JsDosBackend({ headless: true });
 let empty = false;
 try {
   await be.loadBundle({ source: stage, autoexec: ["BUILD.BAT"] });
-  for (let i = 0; i < 120; i++) {
+  // several emulators at once can slow a build well past a minute, so allow five
+  let done = false;
+  for (let i = 0; i < 600 && !done; i++) {
     await be.wait(500);
-    try { await be.fsStat("C:/DONE.TXT"); break; } catch { }
+    try { await be.fsStat("C:/DONE.TXT"); done = true; } catch { }
   }
+  if (!done) empty = true;
   mkdirSync(outDir, { recursive: true });
   for (const n of [...names.map(n => n.replace(/\.C$/, ".OBJ")), "BUILD.LOG"]) {
     try { const b = await be.fsRead(`C:/${n}`); if (!b.length && n.endsWith(".OBJ")) empty = true; writeFileSync(join(outDir, n), b); } catch (e) { console.log("missing", n); }
   }
 } finally { await be.shutdown(); }
 if (!empty) break;
-console.log("empty object, retrying");
+console.log("build did not finish or left an empty object, retrying");
 }
 rmSync(stage, { recursive: true, force: true });
 console.log("done");

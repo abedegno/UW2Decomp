@@ -61,7 +61,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Bitfield writes**: setting a 1-bit field is a byte `and` or `or`; a field spanning two bytes is written with a word `and`/`or`.
 - **Reloads without `-Z`**: after any store through `player`, the next statement reloads `mov bx,[player]`. Within one statement, and from an `if` condition into its body, BX is reused.
 - **`x += y` against `x = x + y` on bytes**: with a byte target and a `char` right side, `+=` gives `add [bx+N],al`; the load, add, store form is `x = x + y`. With an `int` right side both give load, add, store, which reveals the right side's type.
-- **SI goes to the first register candidate declared**: moving a local to be declared first can swap SI and DI between it and a parameter without changing the stack layout.
+- **Which candidate gets SI is not a simple rule**: with a parameter among the candidates, the local declared first got SI (ovr154); with two plain int locals, the one declared second got SI (ovr163). Try both declaration orders; neither changes the stack layout.
 - **Mask tests on a byte global**: `(g & 0x16) == 0` gives `test byte [g],16h`; `!(g & 0x16)` loads and widens first.
 - **Bitfields straddle bytes**: Borland places each field in the 16-bit window starting at the byte holding the next free bit, so a field can be read as `mov ax,[bx+61h]; shr ax,6` from an odd address. Clearing a field whose mask has 0xFF in one byte becomes a byte `and`.
 - **Shared call tails**: `if (c) f(0xF); else f(n + 0x15);` compiles to one call with two argument paths joined by a `jmp`. The ternary `f(c ? 0xF : n + 0x15)` does not.
@@ -83,5 +83,9 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Far pointers compare by offset only** for `<`/`>=` (`mov ax,[bp+N]; cmp ax,[g]`), while `== 0` tests both halves (`or ax,dx`).
 - **`x > 0` on an unsigned bitfield** gives `or ax,ax; jbe`, not `je`, so the source said `> 0`.
 - **Statement order is kept** even for independent assignments, so two branches that set the same fields in different orders were written that way.
+- **`unsigned char` bitfields** are accepted and make the element one byte; a zero test on one gives `and ax,1; or al,al`, where an `unsigned` field gives `or ax,ax`.
+- **An early `return` forces a reload**: `if (flag) return;` followed by more code reloads `les bx,[arg]`; `if (!flag) { ... }` reuses ES:BX from the condition.
+- **`i++` against `i = i + 1` on a byte local**: `i++` gives `inc byte [bp-N]`; `i = i + 1` gives load, `inc al`, store.
+- **A test both arms jump to** after an if/else sat after the else in the source.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

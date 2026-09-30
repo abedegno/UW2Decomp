@@ -1,0 +1,9 @@
+# segment ovr163 base 0xA0BB0 size 0x690 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+drop_link_chain	SpillInventory_ovr163_0	0x0	0x1F1
+drop_some_objects	SpillCritterInventory_ovr163_1F1	0x1F1	0x2C
+generate_treasure	LootSpawnValuables_ovr163_21D	0x21D	0x179
+generate_food	LootSpawnFood_ovr163_396	0x396	0x66
+generate_weapons	LootSpawnArms_ovr163_3FC	0x3FC	0x121
+generate_equipment	LootSpawnOther_ovr163_51D	0x51D	0xEC
+generate_inventory	SpawnNPCLoot_ovr163_609	0x609	0x87

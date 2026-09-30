@@ -14,6 +14,7 @@ _clear_fight_state	22FC:130F	FM Towns
 _ComObjData	DS:6B74	FM Towns
 _copy_visible_to_hidden	0085:4B57	FM Towns
 _CreateObj	30BC:0044	FM Towns
+_Creature	DS:494C	FM Towns
 _cur_font	DS:21CC	provisional
 _CursorObjPtr	DS:6B0C	FM Towns
 _damage_critter	15B5:333A	FM Towns
@@ -55,6 +56,7 @@ _level_table	DS:08E1	provisional
 _load_digi_fx	1C86:0260	FM Towns
 _load_new_music	1C86:174B	FM Towns
 _local_do_palette	1F8C:0220	FM Towns
+_LootCreature	DS:863A	provisional
 _ltoa	0E72:1D5C	FM Towns
 _Map_GetAddr	30BC:000F	FM Towns
 _mapdata	DS:1896	FM Towns
@@ -62,6 +64,7 @@ _MapObj_X	DS:24F8	FM Towns
 _MapObj_Y	DS:24FA	FM Towns
 _mdetect	65B5:0039	FM Towns
 _memset	0E72:1DCA	FM Towns
+_Missile	DS:6946	FM Towns
 _motionbits	DS:00D2	FM Towns
 _mouse_freereign	1B8F:03CD	FM Towns
 _mouse_get_input	1B8F:0594	FM Towns
@@ -76,6 +79,7 @@ _NewPlyFade	DS:12BA	FM Towns
 _NightCleanCritPages	64DE:002A	FM Towns
 _notdone	DS:5D68	FM Towns
 _npp_func	DS:12C2	FM Towns
+_Obj_Add	28A1:058C	FM Towns
 _Obj_Alloc	28A1:0471	FM Towns
 _obj_deal	29CA:10BC	FM Towns
 _Obj_Elem_Fate	28A1:0251	FM Towns
@@ -85,6 +89,7 @@ _Obj_FreeChain	28A1:0799	FM Towns
 _Obj_GarbageCollect	28A1:0354	FM Towns
 _Obj_InList	28A1:0B6B	FM Towns
 _Obj_IntTMem	28A1:0971	FM Towns
+_Obj_MemTPtr	28A1:0927	FM Towns
 _Obj_PtrTMem	28A1:08BE	FM Towns
 _Obj_Punt	28A1:0704	FM Towns
 _Obj_Rem	28A1:0684	FM Towns
@@ -110,6 +115,7 @@ _put_effect	34A2:0B8D	FM Towns
 _put_player_in_jail	64A5:0093	FM Towns
 _rand	0E72:0DE7	FM Towns
 _real_death	64BF:007A	FM Towns
+_remove_lock	24B4:0003	FM Towns
 _render_FB	2CAE:02FD	FM Towns
 _restore_hp	65A7:00B1	FM Towns
 _restore_mana	65A7:00CF	FM Towns

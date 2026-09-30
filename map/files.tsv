@@ -104,7 +104,7 @@ ovr157	C	16	6977	14	2	0	0	study_monster_spells_	check_Guardian_magic_marker_
 ovr158	C	9	1383	8	1	0	0	sp_hdr_	panel_check_	
 ovr159	C	1	7	0	1	0	0			
 ovr162	C	1	23	0	1	0	0			
-ovr163	C	7	1679	7	0	0	0	drop_link_chain_	generate_inventory_	
+ovr163	C	7	1679	7	0	0	0	drop_link_chain_	generate_inventory_	yes
 ovr165	C	2	19	0	2	0	0			
 ovr166	C	27	12238	18	4	5	0	UseTrigger_	update_pplate_	
 ovr167	C	23	2292	0	6	17	0			
