@@ -1,5 +1,5 @@
 /* target: ovr154 */
-/* opts: -mm -1 -G -O -Y */
+/* opts: -mm -1 -G -O -Y -d */
 /* Skills, levelling, end-game statistics, sleep and dreams, eating, the void, death and
    traps: the whole of DOS overlay ovr154, in original order. Function and global names are
    the originals from the FM Towns symbol table; the source file's own name is not known. */
@@ -139,8 +139,6 @@ extern int PlayerHeading;
 extern struct Motion PN;
 extern unsigned char motionbits;
 extern unsigned long far *PITTimerGlobal;
-extern char level_string[];
-extern unsigned char skill_rng[];
 extern int player_name_handle;
 extern unsigned char far *foreground_color;
 extern unsigned char far *background_color;
@@ -154,7 +152,6 @@ extern int area_spell_state;
 extern struct Object far *CursorObjPtr;
 extern int GameInputMode;
 extern char NewPlyFade;
-extern struct VoidTile void_tiles[4];
 extern int MapObj_X, MapObj_Y;
 
 /* Elsewhere in the game. */
@@ -167,12 +164,11 @@ void far restore_mana(struct Object far *who, char amount);
 void far panel_check(void);
 int far skill_check(int value, int target);
 void far clear_all_loretries(void);
-void far set_font(int font);
+void far set_font_size(int size);
 int far string_width(char far *s);
 void far string_to_screen(char far *s, int x, int y);
 char far * far str_copy(char far *dst, char far *src);
 char far * far str_cat(char far *dst, char far *src);
-void far PlayCutscene(int n);
 void far damage_item(struct Object far *who, void far *source, int a, int b,
                      unsigned char damage, int type);
 void far FixPlayerEquips(void);
@@ -209,7 +205,6 @@ void far change_screen(int n);
 void far strt_demscr(void);
 void far Obj_FindInMap(int major, int minor, int type, int *x, int *y);
 void far move_along(int heading, int dist, int *x, int *y);
-void far RefreshPlayerStatus(void);
 void far set_new_music(int n);
 struct Tile far * far Map_GetAddr(int x, int y);
 struct Object far * far CreateObj(int id, int b);
@@ -282,7 +277,7 @@ void far player_compute(char restore)
 
 void far advance(char levels)
 {
-    register char *s = level_string;
+    register char *s = " 0\n";
 
     player->level = player->level + levels;
     if (player->level >= 10)
@@ -334,6 +329,9 @@ void far add_to_skill(int skill)
     if (player->skills[skill] > 30)
         player->skills[skill] = 30;
 }
+
+/* The divisor for the random bonus when a skill rises, by governing attribute. */
+static unsigned char skill_rng[3] = { 25, 30, 15 };
 
 char far get_skill(char skill)
 {
@@ -410,7 +408,7 @@ void far game_stats(void)
     register int i;
     register int x;
 
-    set_font(2);
+    set_font_size(2);
     *background_color = *foreground_color = 0x52;
     str = get_string(player_name_handle);
     y = 0xAB;
@@ -533,7 +531,7 @@ unsigned char far dream(int sleepfactor)
     }
     if (found >= 0)
     {
-        PlayCutscene(found + 0x18);
+        show_cutscene(found + 0x18);
         player->dreamflags ^= 1 << found;
         game_sprint(0x13 - sleepfactor);
         return 1;
@@ -821,7 +819,7 @@ void far do_gem(void)
     ThePlayer->anim = (ThePlayer->anim & 0xC0) | 1;
     player->poison = 0;
     player->active_spells = 0;
-    RefreshPlayerStatus();
+    FixPlayerEquips();
     set_new_music(10);
     tile = Map_GetAddr(x, y);
     if (tile->type == 1)
@@ -878,6 +876,9 @@ void far punt_void(void)
     game_sprint(0x19);
     editchng(0x7FFE);
 }
+
+/* Where the void dream can put the player. */
+static struct VoidTile void_tiles[4] = { { 32, 28 }, { 25, 13 }, { 38, 32 }, { 14, 40 } };
 
 void far go_void(void)
 {

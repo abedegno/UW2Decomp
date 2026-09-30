@@ -8,11 +8,11 @@ This is a fan research project, not affiliated with or endorsed by the rights ho
 
 | Segment | Source | Functions | Bytes matched |
 |---|---|---|---|
-| ovr154 (skills, sleep, dreams, death, traps) | `src/PLAYER.C` | 26/26 | 6967/6967, whole segment |
+| ovr154 (skills, sleep, dreams, death, traps) | `src/PLAYER.C` | 26/26 | 6967/6967 code, 50/50 data; all 464 fixups verified |
 
 Function names come from the symbol table in the FM Towns release of UW2, which kept 3237 of Looking Glass's original names. Both builds list functions in the same order, which gives the original grouping of functions into source files.
 
-Matching compares code bytes with fixups masked. Fixup targets (which global or function each address refers to) and the data segment (strings, initialised arrays) are not yet checked.
+`match.py` compares code bytes with fixups masked. `verify.py` then checks what that masks: every extern resolves to one address everywhere it is used and no two externs share one, every reference into the file's own code lands where it should, and the file's initialised data matches the EXE's data segment byte for byte. `symbols.tsv` is the resulting map of names to addresses in `UW2.EXE`, each marked as an original FM Towns name, a library routine or provisional.
 
 `src/THEME.C` and `src/CYCLE.C` are the first spike functions from other segments; they have no target tables yet.
 
@@ -26,4 +26,4 @@ Matching compares code bytes with fixups masked. Fixup targets (which global or 
 
 ## Use
 
-`.venv/bin/python tools/match.py src/PLAYER.C` compiles the file and reports every function as MATCH or where it differs. `--dis NAME` shows an instruction diff. See [MATCHING.md](MATCHING.md) for the compiler switches and what the compiler's output reveals about the original source.
+`.venv/bin/python tools/match.py src/PLAYER.C` compiles the file and reports every function as MATCH or where it differs. `--dis NAME` shows an instruction diff. `.venv/bin/python tools/verify.py src/PLAYER.C --update` then checks fixups and data, and merges the file's externs into `symbols.tsv`, refusing any conflict. See [MATCHING.md](MATCHING.md) for the compiler switches and what the compiler's output reveals about the original source.

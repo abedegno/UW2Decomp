@@ -2,7 +2,7 @@
 
 UW2.EXE was built with Borland Turbo C++ 1.01, medium model with 186 instructions. **The switches vary by source file**, so each file names its own in an `/* opts: ... */` comment (match.py defaults to `-mm -1 -G -O -Z`):
 
-- ovr154 (`PLAYER.C`): `-mm -1 -G -O -Y`. `-Y` is overlay code: taking the address of a far function in the same file is a fixup rather than `mov ..,cs`. No `-Z`, so the compiler reloads `mov bx,[player]` and `les bx,[...]` after every store through them.
+- ovr154 (`PLAYER.C`): `-mm -1 -G -O -Y -d`. `-d` (merge duplicate strings) is proven by the data segment: each repeated literal is stored once. `-Y` is overlay code: taking the address of a far function in the same file is a fixup rather than `mov ..,cs`. No `-Z`, so the compiler reloads `mov bx,[player]` and `les bx,[...]` after every store through them.
 - The file holding CycleColours (file offset 0x802C4) needed `-Z` to match its register reuse.
 
 So if reloads differ in a way restructuring can't fix, try the file with and without `-Z`.
@@ -14,8 +14,17 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - `--no-build` re-compares the last build.
 - Only functions present in the file are reported, so a work file can hold a subset.
 - Bytes written by fixups (addresses of globals, call targets, segment values) are masked. So extern names and the addresses of globals don't need to be right yet; their near/far-ness does.
+- `python3 tools/verify.py src/FILE.C` checks what match.py masks: fixup targets, overlay entries and the file's `_DATA`; `--update` merges the externs into `symbols.tsv`.
 - The IDA listing is `uw2_asm.asm` from [UWReverseEngineering](https://github.com/hankmorgan/UWReverseEngineering), expected at `~/UWReverseEngineering/uw2_asm.asm` (or set `UW2_ASM`) (use `command grep -a` on it; the default grep skips it as binary). Bytes are in `~/UWGOG/UW2/UW2.EXE` (or set `UW2_EXE`), at the segment base in the target table plus the function offset.
 - The FM Towns build has the original names and is a second witness for what the code means: `.venv/bin/python tools/fmt.py <name_>` disassembles a named function (32-bit Watcom register-call code) with calls and globals named. DOS is the authority on bytes.
+
+## Data
+
+- A file's `_DATA` holds its initialised data in definition order, including the initialisers of local arrays (emitted where the function is), and then the string-literal pool in order of first use. `verify.py` compares it with the EXE, so data the code reads by a fixed DS address may belong to the file itself: look at the bytes around it.
+- Static data doesn't appear in the FM Towns symbol table, so an unnamed table inside a file's data range was probably `static`.
+- A function's address stored as data in an overlay points at its entry in the overlay's stub table (for example `do_gem` is stub +25h), not at its code.
+- Turbo C keeps 32 characters of an identifier: `update_all_critters_whilst_player_snoozes` links as `_update_all_critters_whilst_playe`.
+- Two externs resolving to one address means one function was given two names; `verify.py` reports it. The FM Towns calls (`tools/fmt.py`) show the right one.
 
 ## What the compiler tells you about the source
 

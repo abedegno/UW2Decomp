@@ -83,4 +83,5 @@ def main():
             import difflib
             for t in difflib.unified_diff(dis(exe[base+off:base+off+sz]),dis(code[o:nxt]),'exe','obj',lineterm='',n=2): print('   ',t)
     print(f'-- {done}/{size} bytes of {seg} matched' + ('; WHOLE SEGMENT MATCHES' if whole else ''))
-main()
+if __name__ == "__main__":
+    main()
