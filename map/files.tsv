@@ -11,8 +11,8 @@ seg009	C	11	1132	3	2	3	3	grs_which1_	pic_to_fbuf_
 seg010_1CA1	C	7	1123	5	2	0	0	init_input_	input_dispatch_	
 seg011	C	4	1179	0	0	0	4			
 seg012_1D31	C	3	185	3	0	0	0	mainloop_	editchng_	yes
-seg013_1D3C	C	5	448	0	0	1	4			
-seg014	C	6	579	5	0	0	1	term_icon_buttons_	do_option_shortcut_	
+seg013_1D3C	C	5	448	0	0	0	5			
+seg014	C	6	579	6	0	0	0	setup_icon_buttons_	do_option_shortcut_	yes
 seg015_1D7C	C	39	3944	31	7	1	0	init_mouse_	mouse_btns_	
 seg016_1E73	C	56	12382	30	11	13	2	load_digi_fx_	speech_available_	
 seg017_2179	C	14	953	0	1	8	5			
@@ -58,7 +58,7 @@ ovr103	C	32	7084	11	15	2	4	TalkTo_	switch_pic_
 ovr104	C	5	665	2	3	0	0	creature_obj_init_	init_this_critter_	
 ovr106	C	2	1659	2	0	0	0	setup_converse_data_	update_converse_data_	
 ovr107	C	23	5677	16	7	0	0	change_critter_goal_	maybe_go_hang_out_	
-ovr108	C	76	13857	22	34	11	9	speech_over_	palette_fade_	
+ovr108	C	76	13857	23	34	10	9	speech_over_	palette_fade_	
 ovr109	C	2	54	0	0	1	1			
 ovr110	C	68	20625	58	8	1	1	find_good_x_and_y_	Killorn_just_crashed_	
 ovr112	C	21	2446	13	5	0	3	main_	move_initial_files_	

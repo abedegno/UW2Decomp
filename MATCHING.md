@@ -90,5 +90,9 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **A doubled mask** such as `and dx,7; and dx,7` survives only if a cast separates the two, as in a macro `((unsigned)(v) & 7) << 13` called with `x & 7`; without the cast the compiler folds them.
 - **Assignment inside a condition**: `if ((x -= 16) > 0xD0)` gives `sub [x],10h; mov ax,[x]; cmp ax,...`; as two statements it becomes `cmp word [x],...`.
 - **Globals in another file's gap**: unnamed globals that FM Towns keeps as statics may be declared `extern` if their home file isn't matched yet; the bytes are the same, so note them as provisional.
+- **`&&` with the success body first**: `if (c >= 0 && c < 6) return c; return -1;` shares one `return -1` tail; the De Morgan form `if (c < 0 || c >= 6) return -1; return c;` duplicates the epilogue and grows.
+- **Split chained divisions**: `c = x / 26; c += 3 - y / 15 * 3;` keeps the first quotient in SI; one compound expression pushes and pops it.
+- **Shared call tails scale**: an if/else-if chain whose branches all end in the same call compiles to one physical call reached by jumps.
+- **A far function address as an argument** is two pushes with separate segment and offset fixups; `verify.py` combines them.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

@@ -493,7 +493,7 @@ seg009	seg009_73	73	DD			0	0
 seg009	seg009_150	150	52	grs_unpack_	size only	1	1
 seg009	seg009_1A2	1A2	85	grs_fbplot_	size, calls disagree	1	2
 seg009	GetMouseIcon_seg009_227	227	44	grs_which1_	confirmed	4	4
-seg009	DrawCursorAtCoordinate_seg009_26B	26B	61	pic_to_screen_	confirmed	17	18
+seg009	DrawCursorAtCoordinate_seg009_26B	26B	61	pic_to_screen_	confirmed	18	19
 seg009	seg009_2CC	2CC	66			0	0
 seg009	seg009_332	332	21	pic_to_fbuf_	confirmed	4	4
 seg009	seg009_353	353	3F	mask_to_screen_	size only	1	1
@@ -501,7 +501,7 @@ seg009	seg009_392	392	60			0	0
 seg009	seg009_3F2	3F2	81	grs_scaledown_	size, calls disagree	0	1
 seg010_1CA1	seg010_1CA1_3	3	56	init_input_	confirmed	2	2
 seg010_1CA1	seg010_1CA1_59	59	29	free_input_	size only	1	1
-seg010_1CA1	RegisterClickArea_seg010_1CA1_82	82	82	input_addmouse_	confirmed	6	6
+seg010_1CA1	RegisterClickArea_seg010_1CA1_82	82	82	input_addmouse_	confirmed	7	7
 seg010_1CA1	RegisterEventHandler_seg010_1CA1_104	104	70	_input_addkey_	confirmed	4	5
 seg010_1CA1	seg010_1CA1_174	174	12C	input_del_	confirmed	5	5
 seg010_1CA1	ProcessCommands_seg010_1CA1_2A0	2A0	14C	input_dispatch_	confirmed	4	4
@@ -510,24 +510,24 @@ seg011	seg011_6	6	125			0	0
 seg011	seg011_12B	12B	8D			0	0
 seg011	JoyStickCalibration_seg011_1B8	1B8	10E			0	0
 seg011	seg011_2C6	2C6	1DB			0	0
-seg012_1D31	MaybeGameLoop_seg012_1D31_1	1	1E	mainloop_	confirmed	3	3
-seg012_1D31	RunGameLoopFunctions_seg012_1D31_1F	1F	8F	do_changes_	confirmed	5	5
+seg012_1D31	MaybeGameLoop_seg012_1D31_1	1	1E	mainloop_	anchor	3	3
+seg012_1D31	RunGameLoopFunctions_seg012_1D31_1F	1F	8F	do_changes_	anchor	5	5
 seg012_1D31	SetGameLoopBitField_seg012_1D31_AE	AE	C	editchng_	anchor	44	44
 seg013_1D3C	seg013_1D3C_A	A	A8			0	0
 seg013_1D3C	seg013_1D3C_B2	B2	15			0	0
 seg013_1D3C	MapMemory_seg013_1D3C_C7	C7	1D			0	0
-seg013_1D3C	seg013_1D3C_E4	E4	54	setup_icon_buttons_	size, calls disagree	0	8
+seg013_1D3C	seg013_1D3C_E4	E4	54			0	0
 seg013_1D3C	seg013_1D3C_138	138	92			0	0
-seg014	seg014_A	A	42			0	0
-seg014	seg014_4C	4C	10	term_icon_buttons_	confirmed	2	2
-seg014	seg014_5C	5C	53	get_iconreg_button_	confirmed	2	2
-seg014	seg014_AF	AF	6E	new_IconUnselect_	confirmed	6	6
-seg014	seg014_11D	11D	6E	new_IconSelect_	confirmed	7	7
-seg014	MaybeOptionsMenuEvents_seg014_18B	18B	C2	do_option_shortcut_	confirmed	4	4
+seg014	seg014_A	A	42	setup_icon_buttons_	anchor	5	5
+seg014	seg014_4C	4C	10	term_icon_buttons_	anchor	2	2
+seg014	seg014_5C	5C	53	get_iconreg_button_	anchor	2	2
+seg014	seg014_AF	AF	6E	new_IconUnselect_	anchor	6	6
+seg014	seg014_11D	11D	6E	new_IconSelect_	anchor	7	7
+seg014	MaybeOptionsMenuEvents_seg014_18B	18B	C2	do_option_shortcut_	anchor	4	4
 seg015_1D7C	seg015_1D7C_D	D	67	init_mouse_	confirmed	2	2
 seg015_1D7C	ProbablyClearMousePointer_seg015_1D7C_74	74	4C	_actual_mhide_	confirmed	3	3
-seg015_1D7C	LikelyDrawCursor_seg015_1D7C_C0	C0	16	mouse_show_	confirmed	55	56
-seg015_1D7C	seg015_1D7C_D6	D6	21	mouse_hide_	anchor	58	59
+seg015_1D7C	LikelyDrawCursor_seg015_1D7C_C0	C0	16	mouse_show_	confirmed	56	57
+seg015_1D7C	seg015_1D7C_D6	D6	21	mouse_hide_	anchor	59	60
 seg015_1D7C	seg015_1D7C_F7	F7	1D	mous_3d_set_	size only	1	1
 seg015_1D7C	seg015_1D7C_114	114	25	mous_in_3d_p_	confirmed	2	2
 seg015_1D7C	seg015_1D7C_139	139	BD	mous_3d_hide_	confirmed	2	2
@@ -568,8 +568,8 @@ seg016_1E73	seg016_1E73_1AF	1AF	B1	init_digi_fx_	size only	1	1
 seg016_1E73	LoadVOCSoundFile_seg016_1E73_260	260	24	load_digi_fx_	anchor	4	4
 seg016_1E73	seg016_1E73_284	284	6A	punt_all_digi_fx_	anchor	5	5
 seg016_1E73	seg016_1E73_2EE	2EE	89	free_dfx_ems_	size only	1	1
-seg016_1E73	seg016_1E73_377	377	262	load_dfx_page_	size, calls disagree	2	5
-seg016_1E73	LoadVocFile_seg016_5D9	5D9	7A8	digi_fx_play_	size, calls disagree	6	15
+seg016_1E73	seg016_1E73_377	377	262	load_dfx_page_	size, calls disagree	2	4
+seg016_1E73	LoadVocFile_seg016_5D9	5D9	7A8	digi_fx_play_	size, calls disagree	6	14
 seg016_1E73	CalculateSoundFallOffToPlayer_seg016_1E73_D81	D81	1AC	sound_move_	confirmed	3	3
 seg016_1E73	seg016_1E73_F2D	F2D	2E2	update_digi_playback_	size, calls disagree	4	9
 seg016_1E73	seg016_1E73_120F	120F	9F	stop_digi_file_	size, calls disagree	2	4
@@ -774,67 +774,67 @@ seg022_2405	seg022_2405_C99	C99	2A	_AIL_release_channel	size, calls disagree	0	1
 seg022_2405	seg022_2405_CC3	CC3	1E	_AIL_true_sequence_channel	size, calls disagree	0	6
 seg022_2405	seg022_2405_CE1	CE1	C	_AIL_register_fx	size, calls disagree	0	2
 seg022_2405	seg022_2405_CED	CED	A	_AIL_request_fx	size, calls disagree	0	4
-seg023	seg023_9	9	A2	rotate_bank_	confirmed	2	2
-seg023	seg023_AB	AB	A8	cycle_colors_	confirmed	2	3
-seg024_24E9	PickBodyHitPoint_seg024_24E9_3	3	79	pickloc_	confirmed	2	2
-seg024_24E9	TestForClosestAttackCollisionHit_seg024_24E9_7C	7C	24F	set_hitobj_	confirmed	3	3
-seg024_24E9	SpawnImpactAnimo_seg024_24E9_2CB	2CB	1B6	find_wall_coll_	confirmed	10	10
-seg024_24E9	CheckForAttackHit_seg024_24E9_481	481	253	resolve_attack_	confirmed	8	8
-seg024_24E9	CheckForPoisonableDamageWeapons_seg024_24E9_6D4	6D4	63	is_sharp_	confirmed	2	2
-seg024_24E9	CalculateAttackResults_seg024_24E9_737	737	24C	frp_check_	confirmed	7	8
-seg024_24E9	AttackerAppliesFinalDamage_seg024_24E9_983	983	3B6	do_damage_	confirmed	9	10
-seg024_24E9	CombatMissImpactSound_seg024_24E9_D39	D39	13B	do_miss_	confirmed	4	4
-seg024_24E9	CalcFlankingBonus_seg024_24E9_E74	E74	54	compute_hitangle_	confirmed	2	2
-seg024_24E9	ExecuteAttack_seg024_24E9_EC8	EC8	DD	do_attack_	confirmed	10	10
-seg024_24E9	CheckForAmmo_seg024_24E9_FA5	FA5	86	check_ammo_	confirmed	5	6
-seg024_24E9	SetCurrentWeaponDetails_seg024_24E9_102B	102B	114	GetPlayerWeapon_	confirmed	5	5
-seg024_24E9	CalculateAttackScorePlayer_seg024_24E9_113F	113F	165	DoPlayerWeapon_	confirmed	2	2
-seg024_24E9	EndCombatSwing_seg024_24E9_12A4	12A4	3C	missile_finish_	confirmed	3	3
-seg024_24E9	MaybeCancelWeaponSwingAnim_seg024_24E9_12E0	12E0	2F	fin_attack_	confirmed	3	3
+seg023	seg023_9	9	A2	rotate_bank_	anchor	2	2
+seg023	seg023_AB	AB	A8	cycle_colors_	anchor	2	3
+seg024_24E9	PickBodyHitPoint_seg024_24E9_3	3	79	pickloc_	anchor	2	2
+seg024_24E9	TestForClosestAttackCollisionHit_seg024_24E9_7C	7C	24F	set_hitobj_	anchor	3	3
+seg024_24E9	SpawnImpactAnimo_seg024_24E9_2CB	2CB	1B6	find_wall_coll_	anchor	10	10
+seg024_24E9	CheckForAttackHit_seg024_24E9_481	481	253	resolve_attack_	anchor	8	8
+seg024_24E9	CheckForPoisonableDamageWeapons_seg024_24E9_6D4	6D4	63	is_sharp_	anchor	2	2
+seg024_24E9	CalculateAttackResults_seg024_24E9_737	737	24C	frp_check_	anchor	7	8
+seg024_24E9	AttackerAppliesFinalDamage_seg024_24E9_983	983	3B6	do_damage_	anchor	9	10
+seg024_24E9	CombatMissImpactSound_seg024_24E9_D39	D39	13B	do_miss_	anchor	4	4
+seg024_24E9	CalcFlankingBonus_seg024_24E9_E74	E74	54	compute_hitangle_	anchor	2	2
+seg024_24E9	ExecuteAttack_seg024_24E9_EC8	EC8	DD	do_attack_	anchor	10	10
+seg024_24E9	CheckForAmmo_seg024_24E9_FA5	FA5	86	check_ammo_	anchor	5	6
+seg024_24E9	SetCurrentWeaponDetails_seg024_24E9_102B	102B	114	GetPlayerWeapon_	anchor	5	5
+seg024_24E9	CalculateAttackScorePlayer_seg024_24E9_113F	113F	165	DoPlayerWeapon_	anchor	2	2
+seg024_24E9	EndCombatSwing_seg024_24E9_12A4	12A4	3C	missile_finish_	anchor	3	3
+seg024_24E9	MaybeCancelWeaponSwingAnim_seg024_24E9_12E0	12E0	2F	fin_attack_	anchor	3	3
 seg024_24E9	CancelAttack_seg024_24E9_130F	130F	3C	clear_fight_state_	anchor	7	7
-seg024_24E9	PlayerCombat_seg024_24E9_134B	134B	515	player_attack_	confirmed	27	27
-seg024_24E9	MissileAttackHit_seg024_24E9_1860	1860	129	missile_thwack_	confirmed	7	7
-seg024_24E9	NPC_ExecuteAttack_seg024_24E9_1989	1989	13E	critter_attack_	confirmed	4	4
+seg024_24E9	PlayerCombat_seg024_24E9_134B	134B	515	player_attack_	anchor	27	27
+seg024_24E9	MissileAttackHit_seg024_24E9_1860	1860	129	missile_thwack_	anchor	7	7
+seg024_24E9	NPC_ExecuteAttack_seg024_24E9_1989	1989	13E	critter_attack_	anchor	4	4
 seg024_24E9	seg024_24E9_1AC7	1AC7	30			0	0
-seg024_24E9	AwardKillEXP_seg024_24E9_1AF7	1AF7	8C	player_killed_a_	confirmed	3	4
-seg025_26A1	RemoveDoorLock_seg025_26A1_3	3	92	remove_lock_	confirmed	5	5
-seg025_26A1	RemoveObjectFromTile_seg025_26A1_95	95	3B	try_remove_	confirmed	2	2
-seg025_26A1	DamageObject_Destruction_seg025_D0	D0	374	remove_object_	confirmed	16	17
-seg025_26A1	GetObjectDebris_seg025_26A1_444	444	4F	debris_type_	confirmed	3	3
-seg025_26A1	ScaleDamageAgainstObject_seg025_26A1_493	493	94	check_res_	confirmed	12	12
+seg024_24E9	AwardKillEXP_seg024_24E9_1AF7	1AF7	8C	player_killed_a_	anchor	3	4
+seg025_26A1	RemoveDoorLock_seg025_26A1_3	3	92	remove_lock_	anchor	5	5
+seg025_26A1	RemoveObjectFromTile_seg025_26A1_95	95	3B	try_remove_	anchor	2	2
+seg025_26A1	DamageObject_Destruction_seg025_D0	D0	374	remove_object_	anchor	16	17
+seg025_26A1	GetObjectDebris_seg025_26A1_444	444	4F	debris_type_	anchor	3	3
+seg025_26A1	ScaleDamageAgainstObject_seg025_26A1_493	493	94	check_res_	anchor	12	12
 seg025_26A1	DamageObject_seg025_527	527	8D	damage_item_	anchor	26	26
-seg025_26A1	DamageObjectOrDoor_seg025_26A1_5B4	5B4	1A4	damage_object_	confirmed	4	4
-seg026_2716	PlayerUpdateTick_seg026_2716_8	8	127	display_scr_	confirmed	8	8
-seg026_2716	ResetPaperInventoryPanel_seg026_2716_12F	12F	25	RedispInv_	confirmed	3	3
-seg026_2716	CheckIfPlayerCanReachAtDistance_seg026_2716_154	154	14B	InPickRange_	confirmed	4	4
-seg026_2716	GetHighestBridgeInTile_seg026_2716_29F	29F	5B	BridgeHeight_	confirmed	2	2
-seg026_2716	TestIfPlayerCanReachObjectTile_seg026_2716_2FA	2FA	229	BlockingTerrain_	confirmed	5	5
+seg025_26A1	DamageObjectOrDoor_seg025_26A1_5B4	5B4	1A4	damage_object_	anchor	4	4
+seg026_2716	PlayerUpdateTick_seg026_2716_8	8	127	display_scr_	anchor	8	8
+seg026_2716	ResetPaperInventoryPanel_seg026_2716_12F	12F	25	RedispInv_	anchor	3	3
+seg026_2716	CheckIfPlayerCanReachAtDistance_seg026_2716_154	154	14B	InPickRange_	anchor	4	4
+seg026_2716	GetHighestBridgeInTile_seg026_2716_29F	29F	5B	BridgeHeight_	anchor	2	2
+seg026_2716	TestIfPlayerCanReachObjectTile_seg026_2716_2FA	2FA	229	BlockingTerrain_	anchor	5	5
 seg026_2716	seg026_2716_523	523	C4	check_around_	size only	1	1
-seg026_2716	RayCast_seg026_2716_5E7	5E7	158	pick_3d_	confirmed	5	5
-seg026_2716	LookAtOrInteractWithSurface_seg026_2716_73F	73F	74	look_nothing_	confirmed	5	5
-seg026_2716	Pickup_seg026_2716_7B3	7B3	50	release_3d_	confirmed	4	4
-seg026_2716	Pickup_seg026_2716_803	803	2F8	player_3dget_	confirmed	18	18
-seg026_2716	TalkTo_seg026_2716_AFB	AFB	1E	player_3dtalk_	confirmed	3	3
-seg026_2716	LookAt_seg026_B19	B19	121	player_3dlook_	confirmed	11	11
-seg026_2716	UseObject_seg026_2716_C3A	C3A	7B	player_3duse_	confirmed	6	6
+seg026_2716	RayCast_seg026_2716_5E7	5E7	158	pick_3d_	anchor	5	5
+seg026_2716	LookAtOrInteractWithSurface_seg026_2716_73F	73F	74	look_nothing_	anchor	5	5
+seg026_2716	Pickup_seg026_2716_7B3	7B3	50	release_3d_	anchor	4	4
+seg026_2716	Pickup_seg026_2716_803	803	2F8	player_3dget_	anchor	18	18
+seg026_2716	TalkTo_seg026_2716_AFB	AFB	1E	player_3dtalk_	anchor	3	3
+seg026_2716	LookAt_seg026_B19	B19	121	player_3dlook_	anchor	11	11
+seg026_2716	UseObject_seg026_2716_C3A	C3A	7B	player_3duse_	anchor	6	6
 seg026_2716	Combat_seg026_2716_CB5	CB5	46	player_3dattack_	size only	1	1
-seg026_2716	HandleObjectOrTileClick_seg026_2716_CFB	CFB	179	mous_in_3d_	confirmed	10	10
-seg026_2716	LookAt_seg026_2716_E74	E74	124	inv_look_	confirmed	5	5
+seg026_2716	HandleObjectOrTileClick_seg026_2716_CFB	CFB	179	mous_in_3d_	anchor	10	10
+seg026_2716	LookAt_seg026_2716_E74	E74	124	inv_look_	anchor	5	5
 seg026_2716	seg026_2716_F98	F98	41			0	0
-seg026_2716	ProbablyInventoryPanelClick_seg026_2716_FD9	FD9	FD	mous_in_inv_	confirmed	4	4
-seg026_2716	ClickOnPanel_seg026_2716_10D6	10D6	54	mous_in_panel_	confirmed	3	3
-seg026_2716	SetInteractionMode_seg026_2716_112A	112A	1CC	deal_with_icons_	confirmed	11	11
-seg026_2716	DrawWeapon_seg026_2716_12F6	12F6	A0	pick_fightmode_	confirmed	7	7
-seg026_2716	PutWeaponAway_seg026_2716_1396	1396	4F	punt_fightmode_	confirmed	10	10
-seg026_2716	ClickOnWeaponInInventory_seg026_2716_13E5	13E5	27	toggle_fightmode_	confirmed	4	4
-seg027_2856	InitPlayerProjectilesValues_seg027_2856_C	C	92	player_settr_	confirmed	4	4
-seg027_2856	MissileRelease_seg027_9E	9E	228	player_fire_	confirmed	10	10
-seg027_2856	NPCMissileLaunch_seg027_2856_2C6	2C6	7C	critter_fire_	confirmed	3	3
-seg027_2856	ProjectileSpell_seg027_2856_342	342	F7	spell_fire_	confirmed	5	5
-seg027_2856	DropObjectByPlayer_seg027_2856_439	439	41F	ReturnObject_	confirmed	12	12
-seg027_2856	ArrowTrap_seg027_2856_858	858	82	trap_fire_	confirmed	3	3
-seg027_2856	PrepareProjectileObject_seg027_2856_8DA	8DA	3F2	missile_fire_	confirmed	13	13
-seg027_2856	PlaceProjectileInWorld_seg027_2856_CCC	CCC	1F2	push_missile_	confirmed	6	6
+seg026_2716	ProbablyInventoryPanelClick_seg026_2716_FD9	FD9	FD	mous_in_inv_	anchor	4	4
+seg026_2716	ClickOnPanel_seg026_2716_10D6	10D6	54	mous_in_panel_	anchor	3	3
+seg026_2716	SetInteractionMode_seg026_2716_112A	112A	1CC	deal_with_icons_	anchor	11	11
+seg026_2716	DrawWeapon_seg026_2716_12F6	12F6	A0	pick_fightmode_	anchor	7	7
+seg026_2716	PutWeaponAway_seg026_2716_1396	1396	4F	punt_fightmode_	anchor	10	10
+seg026_2716	ClickOnWeaponInInventory_seg026_2716_13E5	13E5	27	toggle_fightmode_	anchor	4	4
+seg027_2856	InitPlayerProjectilesValues_seg027_2856_C	C	92	player_settr_	anchor	4	4
+seg027_2856	MissileRelease_seg027_9E	9E	228	player_fire_	anchor	10	10
+seg027_2856	NPCMissileLaunch_seg027_2856_2C6	2C6	7C	critter_fire_	anchor	3	3
+seg027_2856	ProjectileSpell_seg027_2856_342	342	F7	spell_fire_	anchor	5	5
+seg027_2856	DropObjectByPlayer_seg027_2856_439	439	41F	ReturnObject_	anchor	12	12
+seg027_2856	ArrowTrap_seg027_2856_858	858	82	trap_fire_	anchor	3	3
+seg027_2856	PrepareProjectileObject_seg027_2856_8DA	8DA	3F2	missile_fire_	anchor	13	13
+seg027_2856	PlaceProjectileInWorld_seg027_2856_CCC	CCC	1F2	push_missile_	anchor	6	6
 seg028_2941	GetHeightAdjustedByTileType_seg028_2941_E	E	1A1	GetHgt_	confirmed	2	2
 seg028_2941	GetTileZOffset_seg028_2941_1AF	1AF	68	GetSlopeHgt_	size only	1	1
 seg028_2941	GetNeighbourTileDetails_seg028_2941_217	217	B0	SolvePnt_	confirmed	2	2
@@ -850,46 +850,46 @@ seg028_2941	TestIfObjectFitsInTile_seg028_2941_1021	1021	224	can_place_	confirme
 seg028_2941	MoveObjectToCoordinates_seg028_2941_1245	1245	BB	put_at_	anchor	14	15
 seg028_2941	PlaceObjectAtAnotherObjectPosition_seg028_2941_1300	1300	5A	near_mob_put_at_	anchor	7	7
 seg028_2941	MoveAndFitObjectToCoordinate_seg028_2941_135A	135A	17C	drop_around_place_	confirmed	8	8
-seg029_2A8E	ClearTilemap_seg029_2A8E_6	6	111	Map_ObjFix_	confirmed	3	3
-seg029_2A8E	CallFunctionOnObjectsInChain_seg029_2A8E_117	117	BA	Obj_Check_	confirmed	12	12
+seg029_2A8E	ClearTilemap_seg029_2A8E_6	6	111	Map_ObjFix_	anchor	3	3
+seg029_2A8E	CallFunctionOnObjectsInChain_seg029_2A8E_117	117	BA	Obj_Check_	anchor	12	12
 seg029_2A8E	ObjectCullingRngTest_2A8E_1D1	1D1	80	chkTenacious_	size only	1	1
-seg029_2A8E	ObjectCullingTest_seg029_2A8E_251	251	C3	Obj_Elem_Fate_	confirmed	9	9
-seg029_2A8E	CullingCheckOnObjectChain_seg029_2A8E_314	314	40	Obj_Fate_	confirmed	3	3
+seg029_2A8E	ObjectCullingTest_seg029_2A8E_251	251	C3	Obj_Elem_Fate_	anchor	9	9
+seg029_2A8E	CullingCheckOnObjectChain_seg029_2A8E_314	314	40	Obj_Fate_	anchor	3	3
 seg029_2A8E	CullObjects_seg029_2A8E_354	354	11D	Obj_GarbageCollect_	anchor	6	6
-seg029_2A8E	GetAvailableObjectAddress_seg029_2A8E_471	471	97	Obj_Alloc_	confirmed	14	14
-seg029_2A8E	AddToFreeObjectLists_seg029_2A8E_508	508	84	Obj_Free_	confirmed	38	39
-seg029_2A8E	InsertObjectToList_seg029_2A8E_58C	58C	6E	Obj_Add_	confirmed	39	39
-seg029_2A8E	LinkObjectToList_seg029_2A8E_5FA	5FA	8A	Obj_AddEnd_	confirmed	10	10
-seg029_2A8E	UnlinkObjectFromLinkedList_seg029_2A8E_684	684	80	Obj_Rem_	confirmed	37	38
-seg029_2A8E	RemoveObject_seg029_2A8E_704	704	95	Obj_Punt_	confirmed	22	22
-seg029_2A8E	ClearLinkedList_seg029_2A8E_799	799	C3	Obj_FreeChain_	confirmed	10	10
-seg029_2A8E	RemoveObjectAndChainFromLists_seg029_2A8E_85C	85C	62	Obj_FreeLinkChain_	confirmed	13	13
+seg029_2A8E	GetAvailableObjectAddress_seg029_2A8E_471	471	97	Obj_Alloc_	anchor	14	14
+seg029_2A8E	AddToFreeObjectLists_seg029_2A8E_508	508	84	Obj_Free_	anchor	38	39
+seg029_2A8E	InsertObjectToList_seg029_2A8E_58C	58C	6E	Obj_Add_	anchor	39	39
+seg029_2A8E	LinkObjectToList_seg029_2A8E_5FA	5FA	8A	Obj_AddEnd_	anchor	10	10
+seg029_2A8E	UnlinkObjectFromLinkedList_seg029_2A8E_684	684	80	Obj_Rem_	anchor	37	38
+seg029_2A8E	RemoveObject_seg029_2A8E_704	704	95	Obj_Punt_	anchor	22	22
+seg029_2A8E	ClearLinkedList_seg029_2A8E_799	799	C3	Obj_FreeChain_	anchor	10	10
+seg029_2A8E	RemoveObjectAndChainFromLists_seg029_2A8E_85C	85C	62	Obj_FreeLinkChain_	anchor	13	13
 seg029_2A8E	GetNextOrLinkedObject_seg029_2A8E_8BE	8BE	69	Obj_PtrTMem_	anchor	96	98
-seg029_2A8E	ReverseObjectLookup_seg029_2A8E_927	927	4A	Obj_MemTPtr_	confirmed	78	79
+seg029_2A8E	ReverseObjectLookup_seg029_2A8E_927	927	4A	Obj_MemTPtr_	anchor	78	79
 seg029_2A8E	LookupObjectByIndex_seg029_2A8E_971	971	41	Obj_IntTMem_	anchor	70	71
-seg029_2A8E	FindObjectListHeadObject_seg029_2A8E_9B2	9B2	D5	Obj_Find_	confirmed	7	7
-seg029_2A8E	TestIfStaticOrMobile_seg029_2A8E_A87	A87	1E	IsMobElem_	confirmed	22	22
+seg029_2A8E	FindObjectListHeadObject_seg029_2A8E_9B2	9B2	D5	Obj_Find_	anchor	7	7
+seg029_2A8E	TestIfStaticOrMobile_seg029_2A8E_A87	A87	1E	IsMobElem_	anchor	22	22
 seg029_2A8E	AddtoEndOfTileMapMobiles_seg029_2A8E_AA5	AA5	13	active_critter_	size only	1	1
 seg029_2A8E	RemoveFromMobilesList_seg029_2A8E_AB8	AB8	4C	free_critter_	size only	1	1
 seg029_2A8E	UNREFERENCED_seg029_2A8E_B04	B04	67			0	0
 seg029_2A8E	GetLinkedOrNextObjectWithFilter_seg029_2A8E_B6B	B6B	100	Obj_InList_	anchor	22	22
-seg029_2A8E	CheckIfItemID_Or_ContainsItemID_seg029_2A8E_C6B	C6B	69	HasOrIsObj_	confirmed	4	4
+seg029_2A8E	CheckIfItemID_Or_ContainsItemID_seg029_2A8E_C6B	C6B	69	HasOrIsObj_	anchor	4	4
 seg029_2A8E	FindItemInMapByClassWithPosition_seg029_2A8E_CD4	CD4	A5	Obj_FindInMap_	anchor	5	5
-seg029_2A8E	FindObjectWithSpecificProps_seg029_2A8E_D79	D79	34	Obj_FindInMapSquare_	confirmed	10	10
-seg029_2A8E	CheckWeightOnPressureTrigger_seg029_2A8E_DAD	DAD	130	check_weight_	confirmed	2	2
-seg029_2A8E	CountObjectsInChain_seg029_2A8E_EDD	EDD	BD	flog_list_	confirmed	4	4
-seg029_2A8E	CountObjects_seg029_2A8E_F9A	F9A	B9	count_list_	confirmed	4	4
-seg029_2A8E	CheckCountOfAllObjects_seg029_2A8E_1053	1053	1AD	Obj_ListOkay_	confirmed	3	3
+seg029_2A8E	FindObjectWithSpecificProps_seg029_2A8E_D79	D79	34	Obj_FindInMapSquare_	anchor	10	10
+seg029_2A8E	CheckWeightOnPressureTrigger_seg029_2A8E_DAD	DAD	130	check_weight_	anchor	2	2
+seg029_2A8E	CountObjectsInChain_seg029_2A8E_EDD	EDD	BD	flog_list_	anchor	4	4
+seg029_2A8E	CountObjects_seg029_2A8E_F9A	F9A	B9	count_list_	anchor	4	4
+seg029_2A8E	CheckCountOfAllObjects_seg029_2A8E_1053	1053	1AD	Obj_ListOkay_	anchor	3	3
 seg029_2A8E	CrunchObjectList_seg029_2A8E_1200	1200	98	ObjCrunch_	anchor	3	5
-seg030_2BB7	BounceOtherObject_seg030_2BB7_8	8	AA	bounce_obj_	confirmed	3	3
-seg030_2BB7	MissileImpact_seg030_2BB7_B2	B2	11C	missile_newhit_	confirmed	4	4
-seg030_2BB7	CollideObjects_seg030_2BB7_1CE	1CE	26F	do_objhit_	confirmed	6	6
-seg030_2BB7	InitMotionParams_seg030_2BB7_43D	43D	24C	get_phys_data_	confirmed	3	3
-seg030_2BB7	ApplyProjectileMotion_seg030_2BB7_689	689	483	set_phys_data_	confirmed	13	13
-seg030_2BB7	MoveObjectToMobileObjectList_seg030_2BB7_B0C	B0C	11B	static_to_mob_	confirmed	9	9
-seg030_2BB7	InitMobileObject_seg030_2BB7_C27	C27	135	mob_init_	confirmed	3	3
-seg030_2BB7	OilOnMud_seg030_D5C	D5C	83	do_filanium_	confirmed	5	5
-seg030_2BB7	ObjectHitsFloorTile_seg030_2BB7_DDF	DDF	29B	mob_to_static_	confirmed	12	12
+seg030_2BB7	BounceOtherObject_seg030_2BB7_8	8	AA	bounce_obj_	anchor	3	3
+seg030_2BB7	MissileImpact_seg030_2BB7_B2	B2	11C	missile_newhit_	anchor	4	4
+seg030_2BB7	CollideObjects_seg030_2BB7_1CE	1CE	26F	do_objhit_	anchor	6	6
+seg030_2BB7	InitMotionParams_seg030_2BB7_43D	43D	24C	get_phys_data_	anchor	3	3
+seg030_2BB7	ApplyProjectileMotion_seg030_2BB7_689	689	483	set_phys_data_	anchor	13	13
+seg030_2BB7	MoveObjectToMobileObjectList_seg030_2BB7_B0C	B0C	11B	static_to_mob_	anchor	9	9
+seg030_2BB7	InitMobileObject_seg030_2BB7_C27	C27	135	mob_init_	anchor	3	3
+seg030_2BB7	OilOnMud_seg030_D5C	D5C	83	do_filanium_	anchor	5	5
+seg030_2BB7	ObjectHitsFloorTile_seg030_2BB7_DDF	DDF	29B	mob_to_static_	anchor	12	12
 seg030_2BB7	seg030_2BB7_107A	107A	42	update_hack_vecs_	size only	1	1
 seg030_2BB7	PlacedObjectCollision_seg030_2BB7_10BC	10BC	380	obj_deal_	anchor	19	19
 seg031_2CFA	CalculateMotion_seg031_2CFA_C	C	87	do_physics_	confirmed	5	5
@@ -913,27 +913,27 @@ seg031_2CFA	DoTileCollisionMaybe_seg031_2CFA_179C	179C	CC	check_positions_	confi
 seg031_2CFA	JumpTrap_seg031_2CFA_1868	1868	A6	set_jmp_	size only	1	1
 seg031_2CFA	FindClosedDoorCollision_seg031_2CFA_190E	190E	E9	IsaDoor_	size only	1	1
 seg031_2CFA	GetCollisionObject_seg031_2CFA_19F7	19F7	28	CollObject_	size only	1	1
-seg032_2E9B	seg032_2E9B_F	F	8C	place_3d_view_	confirmed	2	2
+seg032_2E9B	seg032_2E9B_F	F	8C	place_3d_view_	anchor	2	2
 seg032_2E9B	seg032_2E9B_9B	9B	F0	set_cyb_	size only	1	1
 seg032_2E9B	seg032_2E9B_18B	18B	A			0	0
 seg032_2E9B	seg032_2E9B_195	195	6B			0	0
-seg032_2E9B	seg032_2E9B_200	200	4A	init_3d_	confirmed	2	2
-seg032_2E9B	SetObjectRendingDataPtr_seg032_2E9B_24A	24A	13	reset_db_	confirmed	3	3
-seg032_2E9B	seg032_2E9B_25D	25D	4D	send_db_	confirmed	4	5
-seg032_2E9B	seg032_2E9B_2AA	2AA	53	do_3d_grab_	confirmed	2	2
+seg032_2E9B	seg032_2E9B_200	200	4A	init_3d_	anchor	2	2
+seg032_2E9B	SetObjectRendingDataPtr_seg032_2E9B_24A	24A	13	reset_db_	anchor	3	3
+seg032_2E9B	seg032_2E9B_25D	25D	4D	send_db_	anchor	4	5
+seg032_2E9B	seg032_2E9B_2AA	2AA	53	do_3d_grab_	anchor	2	2
 seg032_2E9B	RenderScene_seg032_2E9B_2FD	2FD	58	render_FB_	anchor	9	9
-seg032_2E9B	DRAWWorld_seg032_2E9B_355	355	45	establish_view_	confirmed	5	6
-seg032_2E9B	PositionCamera_seg032_2E9B_39A	39A	115	setup_vars_	confirmed	4	4
+seg032_2E9B	DRAWWorld_seg032_2E9B_355	355	45	establish_view_	anchor	5	6
+seg032_2E9B	PositionCamera_seg032_2E9B_39A	39A	115	setup_vars_	anchor	4	4
 seg032_2E9B	ShadeCalcs_seg032_2E9B_4AF	4AF	109	preset_grid_	size only	1	1
 seg032_2E9B	SetRangeOfVisonParams_seg032_2E9B_5B8	5B8	CB	init_grid_	size only	1	1
-seg032_2E9B	GetNextVisionTilePositive_seg032_2E9B_683	683	26	incvec_	confirmed	4	4
-seg032_2E9B	GetNextVisionTileNegative_seg032_2E9B_6A9	6A9	26	decvec_	confirmed	3	3
-seg032_2E9B	MaybeTestVisibilityNextTile_seg032_2E9B_6CF	6CF	426	enc_n_chk_	confirmed	5	5
-seg032_2E9B	MaybeTestVisionIntoDarkness_seg032_2E9B_AF5	AF5	1A8	newdels_	confirmed	4	4
-seg032_2E9B	ProcessLOSArcsseg032_2E9B_C9D	C9D	377	move_to_next_	confirmed	4	4
-seg032_2E9B	TestVisionAndShade_seg032_2E9B_1014	1014	14E	fill_the_grid_	confirmed	4	4
-seg032_2E9B	GetViewDistances_seg032_2E9B_1162	1162	BC	build_grid_	confirmed	3	3
-seg032_2E9B	LikelyDoRender_seg032_2E9B_121E	121E	1B	do_2dclip_	confirmed	5	5
+seg032_2E9B	GetNextVisionTilePositive_seg032_2E9B_683	683	26	incvec_	anchor	4	4
+seg032_2E9B	GetNextVisionTileNegative_seg032_2E9B_6A9	6A9	26	decvec_	anchor	3	3
+seg032_2E9B	MaybeTestVisibilityNextTile_seg032_2E9B_6CF	6CF	426	enc_n_chk_	anchor	5	5
+seg032_2E9B	MaybeTestVisionIntoDarkness_seg032_2E9B_AF5	AF5	1A8	newdels_	anchor	4	4
+seg032_2E9B	ProcessLOSArcsseg032_2E9B_C9D	C9D	377	move_to_next_	anchor	4	4
+seg032_2E9B	TestVisionAndShade_seg032_2E9B_1014	1014	14E	fill_the_grid_	anchor	4	4
+seg032_2E9B	GetViewDistances_seg032_2E9B_1162	1162	BC	build_grid_	anchor	3	3
+seg032_2E9B	LikelyDoRender_seg032_2E9B_121E	121E	1B	do_2dclip_	anchor	5	5
 seg033_2FBE	RenderingObjects_seg033_2FBE_9	9	5D5	do_obj_	confirmed	5	7
 seg033_2FBE	Render3DObject_seg033_2FBE_5DE	5DE	915	do_rect_	size, calls disagree	2	4
 seg033_2FBE	RenderDoor_seg033_2FBE_EF3	EF3	5FB	do_door_	size, calls disagree	2	4
@@ -947,18 +947,18 @@ seg034_310D	StoreObjectPositionsInArray_seg034_310D_353	353	A4	set_sds_	size onl
 seg034_310D	seg034_310D_3F7	3F7	39	set_osum_	size only	1	1
 seg034_310D	seg034_310D_430	430	35	clear_objsort_	size only	1	1
 seg034_310D	RenderObjectList_seg034_310D_465	465	583	do_objsort_	confirmed	11	11
-seg035_31AB	LikelyMouseMove_seg035_31AB_8	8	4E	player_mous_move_	confirmed	4	4
-seg035_31AB	MoveInDirectionEvent_seg035_31AB_56	56	1A0	parse_playin_	confirmed	4	4
-seg035_31AB	ProcessMotionInputs_seg035_31AB_1F6	1F6	15A	do_player_keyboard_	confirmed	2	2
-seg035_31AB	EasyMoveTurnEvent_seg035_31AB_350	350	D2	player_simple_move_	confirmed	5	5
-seg035_31AB	ClockUpdate_seg035_31AB_422	422	112	check_physics_	confirmed	2	2
-seg035_31AB	GameObjectLoop_seg035_31AB_534	534	B7	move_physics_	confirmed	8	8
+seg035_31AB	LikelyMouseMove_seg035_31AB_8	8	4E	player_mous_move_	anchor	4	4
+seg035_31AB	MoveInDirectionEvent_seg035_31AB_56	56	1A0	parse_playin_	anchor	4	4
+seg035_31AB	ProcessMotionInputs_seg035_31AB_1F6	1F6	15A	do_player_keyboard_	anchor	2	2
+seg035_31AB	EasyMoveTurnEvent_seg035_31AB_350	350	D2	player_simple_move_	anchor	5	5
+seg035_31AB	ClockUpdate_seg035_31AB_422	422	112	check_physics_	anchor	2	2
+seg035_31AB	GameObjectLoop_seg035_31AB_534	534	B7	move_physics_	anchor	8	8
 seg035_31AB	RunPlayerMotions_seg035_31AB_5EB	5EB	40	finish_player_	anchor	2	2
-seg035_31AB	PlayerMotion_seg035_31AB_62B	62B	10F	move_player_	confirmed	6	6
-seg035_31AB	SurfaceFootsteps_seg035_31AB_73A	73A	22D	make_noise_	confirmed	3	3
+seg035_31AB	PlayerMotion_seg035_31AB_62B	62B	10F	move_player_	anchor	6	6
+seg035_31AB	SurfaceFootsteps_seg035_31AB_73A	73A	22D	make_noise_	anchor	3	3
 seg035_31AB	ApplyPlayerSneakScore_seg035_31AB_967	967	A5	set_sound_	size only	1	1
-seg035_31AB	WalkOnSurfaceTypes_seg035_31AB_A0C	A0C	297	parse_effect_	confirmed	6	6
-seg035_31AB	SetScreenShake_seg035_31AB_CA3	CA3	3C	set_effect_	confirmed	6	6
+seg035_31AB	WalkOnSurfaceTypes_seg035_31AB_A0C	A0C	297	parse_effect_	anchor	6	6
+seg035_31AB	SetScreenShake_seg035_31AB_CA3	CA3	3C	set_effect_	anchor	6	6
 seg035_31AB	PositionCameraAtObject_seg035_31AB_CDF	CDF	310	get_eye_	size only	1	1
 seg036_32A9	GetTile_seg036_32A9_F	F	35	Map_GetAddr_	anchor	85	90
 seg036_32A9	PrepareNewObject_seg036_32A9_44	44	12F	CreateObj_	anchor	25	26
@@ -996,7 +996,7 @@ seg037_32C0	ReturnFar_seg037_32C0_16BF	16BF	5	player_look_grave_	size, calls dis
 seg037_32C0	seg037_32C0_16C4	16C4	5	player_look_shaft_	size only	1	1
 seg038_342C	SkillCheck_seg038_342C_9	9	3C	skill_check_	anchor	19	20
 seg038_342C	Experience_seg038_342C_45	45	1BC	player_get_exp_	anchor	11	11
-seg038_342C	RefreshPanels_seg038_342C_201	201	63	panel_check_hpmp_	confirmed	11	13
+seg038_342C	RefreshPanels_seg038_342C_201	201	63	panel_check_hpmp_	anchor	11	13
 seg039_3452	BeginLoadStringsPak_seg039_4	4	80	init_strings_	confirmed	2	2
 seg039_3452	seg039_3452_84	84	A	free_strings_	size only	1	1
 seg039_3452	GetStringByID_seg039_3452_8E	8E	89	get_string_	anchor	44	50
@@ -1016,21 +1016,21 @@ seg039_3452	ToUpper_seg039_3452_814	814	43			0	0
 seg039_3452	seg039_3452_857	857	43			0	0
 seg039_3452	seg039_3452_89A	89A	71			0	0
 seg039_3452	AppendString_seg039_3452_90B	90B	54			0	0
-seg040_34E7	ObjectUse_seg040_34E7_F	F	374	UseObj_	confirmed	24	24
-seg040_34E7	RemoveUsedObject_seg040_34E7_383	383	131	using_punt_	confirmed	17	17
-seg040_34E7	CreateObjectInHand_seg040_34E7_4B4	4B4	60	place_new_	confirmed	3	3
-seg040_34E7	KeyLockpickUsage_seg040_34E7_514	514	46	UseKey_	confirmed	2	2
-seg040_34E7	UseObjectWithPrompt_seg040_35E7_55A	55A	95	UseThing_	confirmed	7	7
-seg040_34E7	WandUsage_seg040_34E7_5EF	5EF	EF	UseWand_	confirmed	7	7
+seg040_34E7	ObjectUse_seg040_34E7_F	F	374	UseObj_	anchor	24	24
+seg040_34E7	RemoveUsedObject_seg040_34E7_383	383	131	using_punt_	anchor	17	17
+seg040_34E7	CreateObjectInHand_seg040_34E7_4B4	4B4	60	place_new_	anchor	3	3
+seg040_34E7	KeyLockpickUsage_seg040_34E7_514	514	46	UseKey_	anchor	2	2
+seg040_34E7	UseObjectWithPrompt_seg040_35E7_55A	55A	95	UseThing_	anchor	7	7
+seg040_34E7	WandUsage_seg040_34E7_5EF	5EF	EF	UseWand_	anchor	7	7
 seg040_34E7	PotionDrink_seg040_34E7_6DE	6DE	42	UseReag_	size only	1	1
-seg040_34E7	ToggleSwitch_seg040_34E7_720	720	8F	flip_switch_	confirmed	5	5
-seg040_34E7	CharacterDoorLockAndKeyInteraction_seg040_34E7_7AF	7AF	1E9	checkLock_	confirmed	13	13
-seg040_34E7	CastSpellFromObject_seg040_34E7_998	998	FD	checkSpell_	confirmed	9	9
-seg040_34E7	TriggerObjectLink_seg040_34E7_A95	A95	1A3	checkTrap_	confirmed	17	17
-seg040_34E7	ReleaseSpell_seg040_34E7_C38	C38	31	BlastFunction_	confirmed	3	3
-seg040_34E7	GetItemEnchantment_seg040_34E7_C69	C69	175	decode_obj_spell_	confirmed	10	10
+seg040_34E7	ToggleSwitch_seg040_34E7_720	720	8F	flip_switch_	anchor	5	5
+seg040_34E7	CharacterDoorLockAndKeyInteraction_seg040_34E7_7AF	7AF	1E9	checkLock_	anchor	13	13
+seg040_34E7	CastSpellFromObject_seg040_34E7_998	998	FD	checkSpell_	anchor	9	9
+seg040_34E7	TriggerObjectLink_seg040_34E7_A95	A95	1A3	checkTrap_	anchor	17	17
+seg040_34E7	ReleaseSpell_seg040_34E7_C38	C38	31	BlastFunction_	anchor	3	3
+seg040_34E7	GetItemEnchantment_seg040_34E7_C69	C69	175	decode_obj_spell_	anchor	10	10
 seg040_34E7	ClearsEnchantmentFlag_seg040_34E7_DDE	DDE	33	remove_spell_	size only	1	1
-seg040_34E7	MagicObjectUpdateCharge_seg040_34E7_E11	E11	F2	useNSpellCharges_	confirmed	6	6
+seg040_34E7	MagicObjectUpdateCharge_seg040_34E7_E11	E11	F2	useNSpellCharges_	anchor	6	6
 seg041_35D7	ChangesLookupDown_seg041_35D7_3	3	4B	mvcheck_	confirmed	2	2
 seg041_35D7	GetCoordinateInDirection_seg041_35D7_4E	4E	9B	move_along_	anchor	10	10
 seg041_35D7	seg041_35D7_E9	E9	36	rollem_	size only	0	0
@@ -1040,21 +1040,21 @@ seg042_35ED	seg042_35ED_9B	9B	A	free_mem_	confirmed	2	2
 seg042_35ED	seg042_35ED_A5	A5	86	mem_setup_	size only	0	0
 seg042_35ED	seg042_35ED_12B	12B	26	get_workspace_	size, calls disagree	0	11
 seg042_35ED	AllocateMemory_seg042_35ED_151	151	25	set_workspace_	size, calls disagree	0	3
-seg042_35ED	seg042_35ED_176	176	68	release_workspace_	confirmed	10	14
-seg042_35ED	seg042_35ED_1DE	1DE	55	set_mouse_in_	size, calls disagree	0	27
+seg042_35ED	seg042_35ED_176	176	68	release_workspace_	confirmed	10	13
+seg042_35ED	seg042_35ED_1DE	1DE	55	set_mouse_in_	size, calls disagree	0	26
 seg042_35ED	seg042_35ED_233	233	90			0	0
 seg043_3619	seg043_3619_3	3	1F	do_main_scroll_	size, calls disagree	0	4
 seg043_3619	seg043_3619_22	22	16			0	0
-seg043_3619	seg043_3619_38	38	16	do_npc_scroll_	confirmed	5	5
-seg043_3619	seg043_3619_4E	4E	16	do_play_scroll_	confirmed	8	8
-seg043_3619	seg043_3619_64	64	54	draw_edges_	confirmed	4	4
-seg043_3619	seg043_3619_B8	B8	67	draw_conv_edges_	confirmed	3	3
-seg043_3619	seg043_3619_11F	11F	81	scroll_up_	confirmed	4	4
+seg043_3619	seg043_3619_38	38	16	do_npc_scroll_	anchor	5	5
+seg043_3619	seg043_3619_4E	4E	16	do_play_scroll_	anchor	8	8
+seg043_3619	seg043_3619_64	64	54	draw_edges_	anchor	4	4
+seg043_3619	seg043_3619_B8	B8	67	draw_conv_edges_	anchor	3	3
+seg043_3619	seg043_3619_11F	11F	81	scroll_up_	anchor	4	4
 seg043_3619	WriteTextToMessageScroll_seg043_3619_1A0	1A0	130	scroll_print_	anchor	56	60
-seg043_3619	RelatedToWritingToMessageScrollseg043_3619_2D0	2D0	52	scroll_print1_	confirmed	2	2
-seg043_3619	seg043_3619_322	322	53	scroll_print2_	confirmed	2	2
-seg043_3619	WriteTextToMessageScroll_seg043_3619_375	375	18A	scroll_print3_	confirmed	6	6
-seg043_3619	seg043_3619_4FF	4FF	119	scroll_wrap_	confirmed	2	2
+seg043_3619	RelatedToWritingToMessageScrollseg043_3619_2D0	2D0	52	scroll_print1_	anchor	2	2
+seg043_3619	seg043_3619_322	322	53	scroll_print2_	anchor	2	2
+seg043_3619	WriteTextToMessageScroll_seg043_3619_375	375	18A	scroll_print3_	anchor	6	6
+seg043_3619	seg043_3619_4FF	4FF	119	scroll_wrap_	anchor	2	2
 seg043_3619	seg043_3619_618	618	149	draw_scroll_	size only	1	1
 seg044_368F	RemoveCompletedAnimo_seg044_368F_1	1	7E	rem_anim_from_map_	confirmed	5	5
 seg044_368F	RemoveTheAnimationOverlay_seg044_368F_7F	7F	6B	rem_anim_from_list_	confirmed	2	2
@@ -1385,12 +1385,12 @@ ovr107	HackTrapMovePitWarriors_ovr107_11D7	11D7	126	maybe_rescue_guy_from_fire_	
 ovr107	DefeatLivingPitWarrior_ovr107_12FD	12FD	42	arena_opponent_runs_	size only	1	1
 ovr107	RunCastleSchedule_ovr107_133F	133F	CA	maybe_go_hang_out_	confirmed	3	3
 ovr107	CastleNPC_Schedule_ovr107_1409	1409	224	where_shall_we_hang_out_	size only	1	1
-ovr108	PlayCutsceneAudio_ovr108_0	0	32F	big_speech_play_	size, calls disagree	1	7
-ovr108	ovr108_32F	32F	279	update_big_speech_	size, calls disagree	3	7
+ovr108	PlayCutsceneAudio_ovr108_0	0	32F	big_speech_play_	size, calls disagree	1	6
+ovr108	ovr108_32F	32F	279	update_big_speech_	size, calls disagree	3	6
 ovr108	ovr108_5A8	5A8	4F	speech_over_	confirmed	2	3
 ovr108	ovr108_5F7	5F7	1C	cutoff_cutscene_speech_	confirmed	4	5
 ovr108	ovr108_613	613	10	get_cuts_ems_	size, calls disagree	1	2
-ovr108	ovr108_623	623	44	set_cuts_ems_	size, calls disagree	2	4
+ovr108	ovr108_623	623	44	set_cuts_ems_	confirmed	2	3
 ovr108	ovr108_667	667	A	free_cuts_ems_	size, calls disagree	0	2
 ovr108	ovr108_671	671	3C			0	0
 ovr108	ProbablyReadDescriptors_ovr108_6AD	6AD	A4	build_lptab_	size only	1	1
@@ -1595,7 +1595,7 @@ ovr116	ovr116_2A3	2A3	17D			0	0
 ovr116	ovr116_420	420	86			0	0
 ovr117	LoadCritterAnimations_ovr117_0	0	111	preload_cr_	anchor	2	4
 ovr117	ovr117_111	111	52	NightCleanCritPages_	size, calls disagree	0	1
-ovr117	CritterCRxxLoadRelated_ovr117_163	163	123	PreLoadCritPages_	anchor	1	2
+ovr117	CritterCRxxLoadRelated_ovr117_163	163	123	PreLoadCritPages_	anchor	1	1
 ovr117	ovr117_286	286	77	punt_idle_crpage_	size, calls disagree	0	1
 ovr117	ovr117_2FD	2FD	B8	grfx_init_	size, calls disagree	0	1
 ovr118	ovr118_0	0	34			0	0
@@ -1644,19 +1644,19 @@ ovr119	OpenArtFiles_ovr119_9E8	9E8	182	load_all_gr_	confirmed	6	6
 ovr119	LoadDoorArt_ovr119_B6A	B6A	57	load_doors_	confirmed	2	3
 ovr120	ReadObjectsDat_Part_1_ovr120_0	0	3A	hack_init_	size only	0	0
 ovr120	GetObjectDatForMajorClass0_ovr120_3A	3A	53	hack_class_data_	size only	0	0
-ovr121	PickupDropWorldorInventory_ovr121_0	0	1A2	DoSpecialActions_	confirmed	13	13
-ovr121	ChangeFClassToClosedContainer_ovr121_1A2	1A2	4D	MakeBagClose_	confirmed	3	3
-ovr121	ovr121_1EF	1EF	A4	CloseAllBags_	confirmed	3	3
-ovr121	ovr121_293	293	C8	FixBagArea_	confirmed	6	7
-ovr121	ovr121_35B	35B	C9	CloseTheBag_	confirmed	6	6
-ovr121	MaybeAnInventoryRedraw_ovr121_424	424	B4	DisplayOpenBag_	confirmed	14	14
-ovr121	UpdateInventorySlots_ovr121_4D8	4D8	1DE	FixOpenBag_	confirmed	12	12
-ovr121	UseClass2ContainerFromInventory_ovr121_6B6	6B6	3BD	OpenTheBag_	confirmed	11	12
-ovr121	ovr121_A73	A73	25	ScrollItemsUp_	confirmed	3	3
-ovr121	ovr121_A98	A98	DE	ScrollItemsDown_	confirmed	5	5
-ovr121	AddItemToContainer_ovr121_B76	B76	31B	PutObjectInBag_	confirmed	12	12
-ovr121	ovr121_E91	E91	188	SwapItemsInBag_	confirmed	10	10
-ovr121	GetTotalMassOfObjectList_ovr121_1019	1019	BC	BagWeight_	confirmed	4	4
+ovr121	PickupDropWorldorInventory_ovr121_0	0	1A2	DoSpecialActions_	anchor	13	13
+ovr121	ChangeFClassToClosedContainer_ovr121_1A2	1A2	4D	MakeBagClose_	anchor	3	3
+ovr121	ovr121_1EF	1EF	A4	CloseAllBags_	anchor	3	3
+ovr121	ovr121_293	293	C8	FixBagArea_	anchor	6	7
+ovr121	ovr121_35B	35B	C9	CloseTheBag_	anchor	6	6
+ovr121	MaybeAnInventoryRedraw_ovr121_424	424	B4	DisplayOpenBag_	anchor	14	14
+ovr121	UpdateInventorySlots_ovr121_4D8	4D8	1DE	FixOpenBag_	anchor	12	12
+ovr121	UseClass2ContainerFromInventory_ovr121_6B6	6B6	3BD	OpenTheBag_	anchor	11	12
+ovr121	ovr121_A73	A73	25	ScrollItemsUp_	anchor	3	3
+ovr121	ovr121_A98	A98	DE	ScrollItemsDown_	anchor	5	5
+ovr121	AddItemToContainer_ovr121_B76	B76	31B	PutObjectInBag_	anchor	12	12
+ovr121	ovr121_E91	E91	188	SwapItemsInBag_	anchor	10	10
+ovr121	GetTotalMassOfObjectList_ovr121_1019	1019	BC	BagWeight_	anchor	4	4
 ovr122	ovr122_0	0	22	Punt_player_inv_	confirmed	3	3
 ovr122	CopyPlayerObject_ovr122_22	22	15A	makePlayerInvCopy_	confirmed	4	4
 ovr122	SaveLoadPlayerDat_ovr122_17C	17C	DA	SavePlayerInv_	anchor	4	4
@@ -1720,16 +1720,16 @@ ovr125	ovr125_1730	1730	46	DisplayInventory_	confirmed	2	3
 ovr125	RedrawRangeOfSlots_ovr125_1776	1776	1BF	displayInventoryArray_	confirmed	10	11
 ovr125	UpdateWeightCapacityOnScreen_ovr125_1935	1935	85	displayEnc_	confirmed	2	3
 ovr125	ovr125_19BA	19BA	98	FindInventoryHit_	confirmed	2	2
-ovr126	LookDescription_ovr126_75BD_0	0	36A	LookAt_	confirmed	13	14
-ovr126	BuildObjectIdentificationString_ovr126_36A	36A	F5	do_mods_	confirmed	4	5
-ovr126	MagicItemDescription_ovr126_45F	45F	25D	do_of_	confirmed	4	5
-ovr126	LookAtReadableItems_ovr126_6BC	6BC	16F	BookLook_	confirmed	6	6
-ovr126	MiscMajor5Minor2_ObjectUsage_ovr126_82B	82B	285	RectLook_	confirmed	9	10
-ovr126	LookAtBones_ovr126_AB0	AB0	F6	BonesLook_	confirmed	3	4
-ovr126	LookAtKey_ovr126_BA6	BA6	42	KeyLook_	confirmed	3	3
-ovr126	GetNPCDescription_ovr126_BE8	BE8	1F2	CritterLook_	confirmed	3	4
-ovr126	LookAtItem_ovr126_DDA	DDA	C1	SpecialLook_	confirmed	5	5
-ovr126	ObjectDescription_ovr126_E9B	E9B	146	GetObjDesc_	confirmed	7	8
+ovr126	LookDescription_ovr126_75BD_0	0	36A	LookAt_	anchor	13	14
+ovr126	BuildObjectIdentificationString_ovr126_36A	36A	F5	do_mods_	anchor	4	5
+ovr126	MagicItemDescription_ovr126_45F	45F	25D	do_of_	anchor	4	5
+ovr126	LookAtReadableItems_ovr126_6BC	6BC	16F	BookLook_	anchor	6	6
+ovr126	MiscMajor5Minor2_ObjectUsage_ovr126_82B	82B	285	RectLook_	anchor	9	10
+ovr126	LookAtBones_ovr126_AB0	AB0	F6	BonesLook_	anchor	3	4
+ovr126	LookAtKey_ovr126_BA6	BA6	42	KeyLook_	anchor	3	3
+ovr126	GetNPCDescription_ovr126_BE8	BE8	1F2	CritterLook_	anchor	3	4
+ovr126	LookAtItem_ovr126_DDA	DDA	C1	SpecialLook_	anchor	5	5
+ovr126	ObjectDescription_ovr126_E9B	E9B	146	GetObjDesc_	anchor	7	8
 ovr127	DataCompressionSubFunction_ovr127_0	0	23C	InsertNode_	size only	1	1
 ovr127	DataCompressionRelatedFunction_ovr127_23C	23C	204	DeleteNode_	size only	1	1
 ovr127	DecompressArkData_ovr127_440	440	355	DecompressLZW_disk_	size only	1	1
@@ -1747,11 +1747,11 @@ ovr132	Interupt4_COM1_ovr132_0	0	7			0	0
 ovr134	LoadDatFiles_ovr134_0	0	EE	init_objects_	anchor	0	0
 ovr134	Return0_ovr134_EE	EE	7			0	0
 ovr134	GetObjectDatForItem_ovr134_F5	F5	36	get_class_data_	confirmed	2	2
-ovr135	CancelActiveSpell_ovr135_0	0	131	dispel_spell_	confirmed	3	3
-ovr135	PlayerUpdates_ovr135_131	131	3B2	duration_check_	confirmed	18	19
+ovr135	CancelActiveSpell_ovr135_0	0	131	dispel_spell_	anchor	3	3
+ovr135	PlayerUpdates_ovr135_131	131	3B2	duration_check_	anchor	18	19
 ovr135	UpdateInventoryLightSources_ovr135_4E3	4E3	10B	DegradeLights_	anchor	4	4
-ovr135	SwimmingSkillCheck_ovr135_5EE	5EE	DA	sink_sink_sink_	confirmed	5	6
-ovr135	PlayerStatusEffectSpells_ovr135_6C8	6C8	109	set_curmagic_	confirmed	3	4
+ovr135	SwimmingSkillCheck_ovr135_5EE	5EE	DA	sink_sink_sink_	anchor	5	6
+ovr135	PlayerStatusEffectSpells_ovr135_6C8	6C8	109	set_curmagic_	anchor	3	4
 ovr136	ovr136_0	0	2B	is_really_button_	confirmed	2	2
 ovr136	ovr136_2B	2B	64	better_mouse_release_	confirmed	6	6
 ovr136	ovr136_8F	8F	1A3	busywaiting_new_options_	confirmed	11	11
@@ -1787,46 +1787,46 @@ ovr136	ovr136_809	809	F4	load_buttongroup_images_	confirmed	6	6
 ovr137	SwitchInventoryAndStatsEvent_ovr137_0	0	23	pull_chain_	confirmed	2	2
 ovr137	PrintCompassPlayerStatus_ovr137_23	23	127	print_info_	confirmed	4	4
 ovr137	PrintFlaskHealthManaMessage_ovr137_14A	14A	15E	flask_info_	confirmed	5	6
-ovr137	ovr137_2A8	2A8	89	start_gameinp_	confirmed	2	2
+ovr137	ovr137_2A8	2A8	89	start_gameinp_	confirmed	3	3
 ovr137	ovr137_331	331	36	clear_gameinp_	confirmed	3	3
 ovr137	ovr137_367	367	42	init_gamedisp_	confirmed	5	6
 ovr137	ovr137_3A9	3A9	E	clear_gamedisp_	confirmed	2	2
 ovr137	ovr137_3B7	3B7	2F	check_save_	size only	1	1
 ovr137	ResetPlayerDoingSomething_ovr137_3E6	3E6	1D	check_rest_	confirmed	2	2
-ovr138	UseSkullsOnGravestone_ovr138_0	0	6D	UseBonesOn_	confirmed	3	3
-ovr138	LookAtWatch_ovr138_6D	6D	E4	UseWatch_	confirmed	3	5
-ovr138	LookAtDataCrystal_ovr138_151	151	68	UseCrystal_	confirmed	3	3
-ovr138	BlackRockGemsUsedOnWorldGemovr138_1B9	1B9	148	UseKeyGem_	confirmed	4	4
-ovr138	UsePoleOnObject_ovr138_301	301	4E	UsePoleOn_	confirmed	3	3
-ovr138	UseAnvil_ovr138_34F	34F	4C	UseAnvilOn_	confirmed	2	2
-ovr138	EatingFoodAndDrinking_ovr138_39B	39B	623	UseFood_	confirmed	21	21
-ovr138	UseOilFlask_ovr138_9BE	9BE	271	UseOilOn_	confirmed	7	7
-ovr138	ReadBooksAndMaps_ovr138_C2F	C2F	28A	UseBook_	confirmed	11	11
-ovr138	LockPicking_ovr138_EB9	EB9	D9	UseLockpickOn_	confirmed	6	6
-ovr138	UseKey_ovr138_F92	F92	59	UseKeyOn_	confirmed	3	3
-ovr138	UseContainer_ovr138_FEB	FEB	A4	UseCont_	confirmed	9	9
-ovr138	LightUsage_ovr138_108F	108F	1B4	UseLight_	confirmed	9	9
-ovr138	MiscMajor4_Minor1_ObjectUsage_ovr138_1243	1243	9A	UseUnique_	confirmed	5	5
-ovr138	TurnIntoMovingDoor_ovr138_12DD	12DD	61	moveDoor_	confirmed	4	4
-ovr138	MovingDoorOpenCloseRelated_ovr138_133E	133E	EC	changeDoor_	confirmed	4	4
-ovr138	DoorOpen_ovr138_142A	142A	118	OpenDoor_	confirmed	12	12
-ovr138	DoorClose_ovr138_1542	1542	EA	CloseDoor_	confirmed	10	10
-ovr138	DoorToggle_ovr138_162C	162C	38	ToggleDoor_	confirmed	4	4
-ovr138	EmptyContainer_ovr138_1664	1664	C4	DumpTheBag_	confirmed	7	7
-ovr138	RuneTraps_ovr138_1728	1728	104	UseRune_	confirmed	7	8
-ovr138	UseMajorClass5_Objects_ovr138_182C	182C	223	UseRect_	confirmed	14	14
-ovr138	Major4_Minor2_ObjectUsage_ovr138_1A4F	1A4F	19B	UseMagic_	confirmed	11	11
-ovr138	RockHammerUsage_ovr138_1BEA	1BEA	1DE	UseRockHammerOn_	confirmed	9	9
-ovr138	MiscClass3_ObjectUsages_ovr138_1DC8	1DC8	C7	UseUtil_	confirmed	4	4
-ovr139	ovr139_0	0	29	init_scroll_	confirmed	2	2
-ovr139	LikelyWaitForMore_ovr139_29	29	94	scroll_wait_	confirmed	8	9
-ovr139	WriteTextWithMORE_ovr139_BD	BD	94	scroll_more_	confirmed	3	3
-ovr139	ovr139_151	151	1B	pick_scroll_	confirmed	5	5
-ovr139	PrintQTY_ovr139_16C	16C	77	wd_replace_	confirmed	3	3
-ovr139	WriteYesorNo_ovr139_1E3	1E3	6E	wd_bool_	confirmed	5	5
-ovr139	PlayerTypedInput_ovr139_251	251	4F6	wdialog_	confirmed	8	8
-ovr139	WaitForYesNoAnswer_ovr139_747	747	F5	wyorn_	confirmed	11	11
-ovr139	ovr139_83C	83C	87	scroll_clear_	confirmed	4	5
+ovr138	UseSkullsOnGravestone_ovr138_0	0	6D	UseBonesOn_	anchor	3	3
+ovr138	LookAtWatch_ovr138_6D	6D	E4	UseWatch_	anchor	3	5
+ovr138	LookAtDataCrystal_ovr138_151	151	68	UseCrystal_	anchor	3	3
+ovr138	BlackRockGemsUsedOnWorldGemovr138_1B9	1B9	148	UseKeyGem_	anchor	4	4
+ovr138	UsePoleOnObject_ovr138_301	301	4E	UsePoleOn_	anchor	3	3
+ovr138	UseAnvil_ovr138_34F	34F	4C	UseAnvilOn_	anchor	2	2
+ovr138	EatingFoodAndDrinking_ovr138_39B	39B	623	UseFood_	anchor	21	21
+ovr138	UseOilFlask_ovr138_9BE	9BE	271	UseOilOn_	anchor	7	7
+ovr138	ReadBooksAndMaps_ovr138_C2F	C2F	28A	UseBook_	anchor	11	11
+ovr138	LockPicking_ovr138_EB9	EB9	D9	UseLockpickOn_	anchor	6	6
+ovr138	UseKey_ovr138_F92	F92	59	UseKeyOn_	anchor	3	3
+ovr138	UseContainer_ovr138_FEB	FEB	A4	UseCont_	anchor	9	9
+ovr138	LightUsage_ovr138_108F	108F	1B4	UseLight_	anchor	9	9
+ovr138	MiscMajor4_Minor1_ObjectUsage_ovr138_1243	1243	9A	UseUnique_	anchor	5	5
+ovr138	TurnIntoMovingDoor_ovr138_12DD	12DD	61	moveDoor_	anchor	4	4
+ovr138	MovingDoorOpenCloseRelated_ovr138_133E	133E	EC	changeDoor_	anchor	4	4
+ovr138	DoorOpen_ovr138_142A	142A	118	OpenDoor_	anchor	12	12
+ovr138	DoorClose_ovr138_1542	1542	EA	CloseDoor_	anchor	10	10
+ovr138	DoorToggle_ovr138_162C	162C	38	ToggleDoor_	anchor	4	4
+ovr138	EmptyContainer_ovr138_1664	1664	C4	DumpTheBag_	anchor	7	7
+ovr138	RuneTraps_ovr138_1728	1728	104	UseRune_	anchor	7	8
+ovr138	UseMajorClass5_Objects_ovr138_182C	182C	223	UseRect_	anchor	14	14
+ovr138	Major4_Minor2_ObjectUsage_ovr138_1A4F	1A4F	19B	UseMagic_	anchor	11	11
+ovr138	RockHammerUsage_ovr138_1BEA	1BEA	1DE	UseRockHammerOn_	anchor	9	9
+ovr138	MiscClass3_ObjectUsages_ovr138_1DC8	1DC8	C7	UseUtil_	anchor	4	4
+ovr139	ovr139_0	0	29	init_scroll_	anchor	2	2
+ovr139	LikelyWaitForMore_ovr139_29	29	94	scroll_wait_	anchor	8	9
+ovr139	WriteTextWithMORE_ovr139_BD	BD	94	scroll_more_	anchor	3	3
+ovr139	ovr139_151	151	1B	pick_scroll_	anchor	5	5
+ovr139	PrintQTY_ovr139_16C	16C	77	wd_replace_	anchor	3	3
+ovr139	WriteYesorNo_ovr139_1E3	1E3	6E	wd_bool_	anchor	5	5
+ovr139	PlayerTypedInput_ovr139_251	251	4F6	wdialog_	anchor	8	8
+ovr139	WaitForYesNoAnswer_ovr139_747	747	F5	wyorn_	anchor	11	11
+ovr139	ovr139_83C	83C	87	scroll_clear_	anchor	4	5
 ovr140	LoadTextures_ovr140_0	0	4F	init_txtlib_	confirmed	2	2
 ovr140	ovr140_4F	4F	50			0	0
 ovr140	LoadTextureMapData_ovr140_9F	9F	CD	Txm_Load_	confirmed	6	6
@@ -1886,8 +1886,8 @@ ovr149	CopySaveGameFiles_ovr149_771E_7FF	7FF	6F	copy_dir_	confirmed	3	3
 ovr149	PlayerUpdatesOnLevelChange_ovr149_86E	86E	95	ChangeLevel_	confirmed	8	8
 ovr149	OpenCloseDoorInTile_ovr149_903	903	7F	gruesome_door_hack_	confirmed	7	7
 ovr149	LevelChangeEvents_ovr149_982	982	19F	do_level_hacks_	confirmed	14	14
-ovr150	LoadBitMap_ovr150_0	0	4A	display_screen_	confirmed	3	4
-ovr150	LoadBitmapFromBytArk_ovr150_4A	4A	DD	disk_to_vid_	confirmed	8	9
+ovr150	LoadBitMap_ovr150_0	0	4A	display_screen_	anchor	3	4
+ovr150	LoadBitmapFromBytArk_ovr150_4A	4A	DD	disk_to_vid_	anchor	8	9
 ovr151	FindSCDRowsToExecute_ovr151_0	0	D3			0	0
 ovr151	SetSomeValuesInSCDRows_ovr151_D3	D3	59			0	0
 ovr151	ovr151_12C	12C	7A	do_migrations_	confirmed	4	4
@@ -1909,9 +1909,9 @@ ovr152	OpenDataFile_ovr152_0	0	4A	set_light_	anchor	0	2
 ovr152	OpenAndApplyShadesDat_ovr152_4A	4A	F7			0	0
 ovr152	LoadLightAndXFerDat_ovr152_141	141	2D	init_lighting_	size, calls disagree	1	2
 ovr152	ChangeShroomPaletteData_ovr152_16E	16E	88	random_light_	size, calls disagree	1	2
-ovr153	AllocateDataOffsetsForCompression_ovr153_0	0	2B	ac_setup_lzw_	confirmed	2	2
-ovr153	ReadCompressedArk_ovr153_2B	2B	61	ac_unshrink_disk_	confirmed	3	3
-ovr153	CompressData_ovr153_8C	8C	62	ac_shrink_disk_	confirmed	3	3
+ovr153	AllocateDataOffsetsForCompression_ovr153_0	0	2B	ac_setup_lzw_	anchor	2	2
+ovr153	ReadCompressedArk_ovr153_2B	2B	61	ac_unshrink_disk_	anchor	3	3
+ovr153	CompressData_ovr153_8C	8C	62	ac_shrink_disk_	anchor	3	3
 ovr154	UseDetectionSkills_ovr154_0	0	6E	use_skill_	anchor	5	5
 ovr154	TrackSkillEvent_ovr154_6E	6E	25	player_use_skill_	anchor	1	1
 ovr154	CalculateHealthManaWeightValues_ovr154_93	93	89	player_compute_	anchor	6	6
@@ -2002,13 +2002,13 @@ ovr158	ProbablyStatDisplayClick_ovr158_460	460	ED	mous_in_stat_	confirmed	6	7
 ovr158	RedrawStatPanel_ovr158_54D	54D	1A	panel_check_	anchor	4	4
 ovr159	SetsAXTo0_ovr159_0	0	7	stuff_class_data_	size only	0	0
 ovr162	ovr162_0	0	17	trap_save_	size only	0	0
-ovr163	SpillInventory_ovr163_0	0	1F1	drop_link_chain_	confirmed	8	8
-ovr163	SpillCritterInventory_ovr163_1F1	1F1	2C	drop_some_objects_	confirmed	3	3
-ovr163	LootSpawnValuables_ovr163_21D	21D	179	generate_treasure_	confirmed	3	4
-ovr163	LootSpawnFood_ovr163_396	396	66	generate_food_	confirmed	3	3
-ovr163	LootSpawnArms_ovr163_3FC	3FC	121	generate_weapons_	confirmed	3	3
-ovr163	LootSpawnOther_ovr163_51D	51D	EC	generate_equipment_	confirmed	3	3
-ovr163	SpawnNPCLoot_ovr163_609	609	86	generate_inventory_	confirmed	10	10
+ovr163	SpillInventory_ovr163_0	0	1F1	drop_link_chain_	anchor	8	8
+ovr163	SpillCritterInventory_ovr163_1F1	1F1	2C	drop_some_objects_	anchor	3	3
+ovr163	LootSpawnValuables_ovr163_21D	21D	179	generate_treasure_	anchor	3	4
+ovr163	LootSpawnFood_ovr163_396	396	66	generate_food_	anchor	3	3
+ovr163	LootSpawnArms_ovr163_3FC	3FC	121	generate_weapons_	anchor	3	3
+ovr163	LootSpawnOther_ovr163_51D	51D	EC	generate_equipment_	anchor	3	3
+ovr163	SpawnNPCLoot_ovr163_609	609	86	generate_inventory_	anchor	10	10
 ovr165	ovr165_0	0	E	strt_txtscr_	size only	0	0
 ovr165	ovr165_E	E	5	free_txtscr_	size only	0	0
 ovr166	LoadTriggerObjDat_ovr166_0	0	17	trap_init_	size only	0	0

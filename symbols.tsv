@@ -3,6 +3,7 @@
 _advance	6599:0043	FM Towns
 _area_spell_state	DS:1B0A	FM Towns
 _background_color	DS:21C4	FM Towns
+_busywaiting_new_options	653E:0093	FM Towns
 _can_place	2754:1021	FM Towns
 _cFillFB	2110:0C84	FM Towns
 _change_music_maybe	1C86:2BB2	FM Towns
@@ -23,6 +24,7 @@ _curP	DS:2562	FM Towns
 _CursorObjPtr	DS:6B0C	FM Towns
 _damage_critter	15B5:333A	FM Towns
 _damage_item	24B4:0527	FM Towns
+_deal_with_icons	2529:112A	FM Towns
 _DegradeLights	653A:0020	FM Towns
 _delete_trap	65D5:0093	FM Towns
 _display_screen	6588:0020	FM Towns
@@ -42,6 +44,7 @@ _FixPlayerEquips	6564:002F	FM Towns
 _foreground_color	DS:21C8	FM Towns
 _game_sprint	3265:04A4	FM Towns
 _GameInputMode	DS:2506	FM Towns
+_gameopts_done	DS:22E2	FM Towns
 _get_hp_back	65A7:00C0	FM Towns
 _get_name	3265:0327	FM Towns
 _get_string	3265:008E	FM Towns
@@ -52,6 +55,8 @@ _inanmMapX	DS:8638	FM Towns
 _inanmMapY	DS:8639	FM Towns
 _init_this_critter	6475:002A	FM Towns
 _inplist	DS:00E4	FM Towns
+_input_addmouse	1AB4:0082	FM Towns
+_input_del	1AB4:0174	FM Towns
 _input_dispatch	1AB4:02A0	FM Towns
 _IsMobElem	28A1:0A87	FM Towns
 _itoa	0E72:1D1B	FM Towns
@@ -86,8 +91,10 @@ _mouse_freereign	1B8F:03CD	FM Towns
 _mouse_get_input	1B8F:0594	FM Towns
 _mouse_getxy	1B8F:01FB	FM Towns
 _mouse_hide	1B8F:00D6	FM Towns
+_mouse_release	1B8F:02A9	FM Towns
 _mouse_show	1B8F:00C0	FM Towns
 _move_along	33EA:004E	FM Towns
+_music_opt	653E:00B1	FM Towns
 _near_mob_put_at	2754:1300	FM Towns
 _new_player_pos	64BF:002F	FM Towns
 _NewPlayerX	DS:5E06	FM Towns
@@ -117,6 +124,7 @@ _OpenDoor	654F:007F	FM Towns
 _palette	DS:21AC	provisional
 _panel_check	65BC:0048	FM Towns
 _pass_time	64A5:010B	FM Towns
+_pic_to_screen	1A6D:026B	FM Towns
 _PITTimerGlobal	DS:2158	provisional
 _play_effect_here	1C86:1DB2	FM Towns
 _play_effect_on_mobile	1C86:1E7E	FM Towns
@@ -144,9 +152,11 @@ _RemoveOneFromSlot	650A:0034	FM Towns
 _render_FB	2CAE:02FD	FM Towns
 _restore_hp	65A7:00B1	FM Towns
 _restore_mana	65A7:00CF	FM Towns
+_restore_opt	653E:00BB	FM Towns
 _restore_rect	004E:025B	FM Towns
 _RightPanel	DS:079E	FM Towns
 _rollem	33EA:011F	FM Towns
+_save_opt	653E:00A7	FM Towns
 _scrnum	DS:5D66	FM Towns
 _scroll_clear	6559:0025	FM Towns
 _scroll_print	342C:01A0	FM Towns
@@ -154,9 +164,11 @@ _send_FB	30D3:16AA	FM Towns
 _set_font_size	64E2:004D	FM Towns
 _set_new_music	1C86:2B0C	FM Towns
 _set_random_walking_music	1C86:2B1E	FM Towns
+_set_the_color	0085:48F4	FM Towns
 _SetOffTrap	65D5:0084	FM Towns
 _show_cutscene	6488:00F2	FM Towns
 _skill_check	323F:0009	FM Towns
+_sound_opt	653E:0061	FM Towns
 _sp_hp	65BC:0020	FM Towns
 _sp_mp	65BC:002A	FM Towns
 _sp_xp	65BC:002F	FM Towns
@@ -174,6 +186,7 @@ _trap_teleport_data	DS:1BB6	FM Towns
 _unforce_mouse_cursor	1B8F:06AF	FM Towns
 _update_all_critters_whilst_playe	647E:002A	FM Towns
 _update_digi_playback	1C86:0F2D	FM Towns
+_urectangle	0085:4D3C	FM Towns
 _UseCont	654F:003E	FM Towns
 _UseTrigger	65D5:0039	FM Towns
 _using_bow	DS:03B4	FM Towns

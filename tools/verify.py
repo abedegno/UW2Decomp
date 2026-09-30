@@ -37,7 +37,7 @@ def main():
     code = next(i for i, s in enumerate(segs) if s and s[1] == 'CODE')
     datas = next(i for i, s in enumerate(segs) if s and s[0] == '_DATA')
     bss = next((i for i, s in enumerate(segs) if s and s[0] == '_BSS'), None)
-    syms = {}; problems = []; data_bases = set(); cs_values = set(); internal = 0; entries = {}; bss_bases = set()
+    syms = {}; problems = []; data_bases = set(); cs_values = set(); internal = 0; entries = {}; bss_bases = set(); halves = {}
 
     def note(name, val, where):
         prev = syms.setdefault(name, (val, where))
@@ -51,8 +51,13 @@ def main():
         add = word(obj, at) + f['disp']
         if tm == 2:                                     # extern
             name = o['ext'][ti]
-            if loc in (1, 5):
+            if loc in (1, 5) and f['frame'] and f['frame'][0] == 5:
+                # the offset half of a far address used as data (say, a callback argument)
+                halves.setdefault(name, {})['off'] = ((word(exe, base + at) - add) & 0xFFFF, at)
+            elif loc in (1, 5):
                 note(name, ('DS', (word(exe, base + at) - add) & 0xFFFF), at)
+            elif loc == 2:
+                halves.setdefault(name, {})['seg'] = (para_of(word(exe, base + at)), at)
             elif loc == 3:
                 note(name, ('FAR', para_of(word(exe, base + at + 2)), (word(exe, base + at) - add) & 0xFFFF), at)
             else:
@@ -95,6 +100,9 @@ def main():
         else: print(f'overlay entry: {name} at stub +{min(e):X}')
     flat = [min(e) for e in entries.values()]
     if len(set(flat)) < len(flat): problems.append('two functions share an overlay entry')
+    for name, h in halves.items():
+        if 'off' in h and 'seg' in h: note(name, ('FAR', h['seg'][0], h['off'][0]), h['off'][1])
+        else: problems.append(f'{name}: only one half of its far address is referenced')
     # _BSS has no bytes to compare; every reference must agree on one base
     if len(bss_bases) > 1:
         problems.append('_BSS references disagree on the base: ' + ', '.join(f'DS:{b:X}' for b in sorted(bss_bases)))

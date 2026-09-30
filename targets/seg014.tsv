@@ -1,0 +1,8 @@
+# segment seg014 base 0x1E2BA size 0x243 org 0xA
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+setup_icon_buttons	seg014_A	0x0	0x42
+term_icon_buttons	seg014_4C	0x42	0x10
+get_iconreg_button	seg014_5C	0x52	0x53
+new_IconUnselect	seg014_AF	0xA5	0x6E
+new_IconSelect	seg014_11D	0x113	0x6E
+do_option_shortcut	MaybeOptionsMenuEvents_seg014_18B	0x181	0xC2
