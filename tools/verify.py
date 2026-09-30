@@ -24,12 +24,18 @@ def main():
     stem = os.path.splitext(os.path.basename(src))[0].upper()
     seg = re.search(r'/\*\s*target:\s*(\w+)\s*\*/', open(src, encoding='latin1').read()).group(1)
     o = fixups(open(os.path.join(root, 'build', stem, stem + '.OBJ'), 'rb').read())
+    word = lambda b, i: struct.unpack_from('<H', b, i)[0]
     exe = open(EXE, 'rb').read(); hdr = struct.unpack_from('<H', exe, 8)[0] * 16
+    # overlay code names other segments by their byte offset in the overlay manager's
+    # segment table (8-byte entries, the first word being the paragraph); the FBOV header
+    # after the load image gives the table's file offset
+    cblp, cp = struct.unpack_from('<HH', exe, 2); mzend = (cp - 1) * 512 + cblp
+    segtab = struct.unpack_from('<I', exe, mzend + 8)[0]
+    para_of = lambda v: word(exe, segtab + v) if base >= mzend else v
     base, size, rows, org = load_targets(seg)
     segs = o['segs']
     code = next(i for i, s in enumerate(segs) if s and s[1] == 'CODE')
     datas = next(i for i, s in enumerate(segs) if s and s[0] == '_DATA')
-    word = lambda b, i: struct.unpack_from('<H', b, i)[0]
     syms = {}; problems = []; data_bases = set(); cs_values = set(); internal = 0; entries = {}
 
     def note(name, val, where):
@@ -47,7 +53,7 @@ def main():
             if loc in (1, 5):
                 note(name, ('DS', (word(exe, base + at) - add) & 0xFFFF), at)
             elif loc == 3:
-                note(name, ('FAR', word(exe, base + at + 2), (word(exe, base + at) - add) & 0xFFFF), at)
+                note(name, ('FAR', para_of(word(exe, base + at + 2)), (word(exe, base + at) - add) & 0xFFFF), at)
             else:
                 problems.append(f'+{at:X}: {name} loc {loc} not handled')
         elif tm == 0 and ti == code:                    # this file's own code
