@@ -80,6 +80,7 @@ _background_color	DS:21C8	FM Towns
 _BagSaveHandles	DS:6A76	FM Towns
 _BagWeight	64F7:003E	FM Towns
 _BeginInventory	6513:0020	FM Towns
+_BitOperation_ovr166_298	65D5:0048	provisional
 _BlastFunction	32FA:0C38	FM Towns
 _blttodrive	65E0:006B	FM Towns
 _bmsegoff	4FAF:C784	FM Towns
@@ -110,7 +111,9 @@ _change_state	DS:12B4	FM Towns
 _changed	DS:5DAC	FM Towns
 _changeDoor	654F:0089	FM Towns
 _ChangeLevel	6581:003E	FM Towns
+_ChangeTile_ovr110_F37	64A5:0124	provisional
 _chdir	0E72:1683	FM Towns
+_check_alert	65D5:007F	FM Towns
 _check_ammo	22FC:0FA5	FM Towns
 _check_dirs	65E0:005C	FM Towns
 _check_fds	65E0:0043	FM Towns
@@ -187,6 +190,7 @@ _crithittime	DS:2284	FM Towns
 _critter_attack	22FC:1989	FM Towns
 _critter_fire	2669:02C6	FM Towns
 _critter_set_goal	15B5:313F	FM Towns
+_Critters_9_Race_dseg_4955	DS:4955	provisional
 _cSinCos	2110:0EAE	FM Towns
 _cSqRt	2110:0F3F	FM Towns
 _cst	DS:492C	FM Towns
@@ -223,6 +227,7 @@ _DecompressLZW_disk	6522:0020	FM Towns
 _defineMouseRegion	1B8F:05AE	FM Towns
 _DegradeLights	653A:0020	FM Towns
 _delete_trap	65D5:0093	FM Towns
+_DeleteSCDRecord_ovr151_5DB	658B:0034	provisional
 _deltatotheta	1226:2EC9	FM Towns
 _demo_mode	DS:2C5D	FM Towns
 _demous_player	656A:0066	FM Towns
@@ -499,6 +504,7 @@ _key_on	DS:2138	FM Towns
 _keyboard_mouse	1B8F:0DA7	FM Towns
 _kill_all_effects	1C86:20C1	FM Towns
 _kill_effect	1C86:1FFD	FM Towns
+_KillCritter_ovr110_3ABF	64A5:006B	provisional
 _Killorn_just_crashed	64A5:00B1	FM Towns
 _labs	0E72:0B1F	FM Towns
 _last_light	DS:19B9	FM Towns
@@ -649,6 +655,7 @@ _myypos	DS:225C	FM Towns
 _myypost	DS:226C	FM Towns
 _myzpos	DS:225D	FM Towns
 _near_mob_put_at	2754:1300	FM Towns
+_NestedSCDEventCodeJumps_dseg_67d	DS:1344	provisional
 _new_IconSelect	1B6B:011D	FM Towns
 _new_IconUnselect	1B6B:00AF	FM Towns
 _new_player_pos	64BF:002F	FM Towns
@@ -881,7 +888,10 @@ _SaveAutoMapLevel	641E:0039	FM Towns
 _saved_tmap_inpage	DS:0925	provisional
 _SaveHandles	DS:6ADC	FM Towns
 _SavePlayerInv	64FE:0020	FM Towns
+_SCD_dseg_67d6_8634	DS:8634	provisional
+_SCDEventCodeJumps_dseg_67d6_1364	DS:1364	provisional
 _Sched_Load	658B:0020	FM Towns
+_Sched_Migrate	658B:004D	FM Towns
 _Sched_Save	658B:0025	FM Towns
 _Sched_SetAllClocks	658B:0061	FM Towns
 _Sched_SetBuf	658B:0039	FM Towns
