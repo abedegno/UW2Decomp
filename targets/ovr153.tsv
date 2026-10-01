@@ -1,0 +1,5 @@
+# segment ovr153 base 0x9AC50 size 0xEE org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+ac_setup_lzw	AllocateDataOffsetsForCompression_ovr153_0	0x0	0x2B
+ac_unshrink_disk	ReadCompressedArk_ovr153_2B	0x2B	0x61
+ac_shrink_disk	CompressData_ovr153_8C	0x8C	0x62

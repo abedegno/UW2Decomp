@@ -1,0 +1,4 @@
+# segment ovr106 base 0x7DBC0 size 0x67F org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+setup_converse_data	ImportConversationVariables_ovr106_0	0x0	0x48F
+update_converse_data	RetrieveImportedVariablesAfterConversation_ovr106_48F	0x48F	0x1F0

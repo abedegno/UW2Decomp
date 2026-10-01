@@ -1,0 +1,4 @@
+# segment ovr150 base 0x9A1F0 size 0x128 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+display_screen	LoadBitMap_ovr150_0	0x0	0x4A
+disk_to_vid	LoadBitmapFromBytArk_ovr150_4A	0x4A	0xDE

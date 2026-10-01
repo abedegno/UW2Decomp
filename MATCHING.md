@@ -125,5 +125,8 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Struct assignment** of a fixed size calls `F_SCOPY@` with the size in CX.
 - **`unsigned char` parameter tests**: `if (c)` gives `cmp byte [bp+N],0`; `if (!c) return;` (or `!c` in an `&&` chain) gives `mov al; mov ah,0; or ax,ax`.
 - **Shared call tails cross `switch` cases** when two cases end in the same call with the same argument shapes.
+- **A mask macro with a ternary argument**: `b = b & 0x7F | ((v) & 1) << 7` with `cond ? 1 : 0` gives `mov al,1 / mov al,0`, then `and al,1; shl al,7; pop dx; or dl,al`; a bare `cond` gives `mov ax,1 / xor ax,ax`; a real bitfield store is `and byte [..],7Fh; shl ax,7; or [..],al`.
+- **`MK_FP` with an assignment inside**: `buf = MK_FP(ws = f(), 0)` stores the segment from AX; two statements store it from the register variable.
+- **A both-branches-jump-to-the-same-place test** (an empty `if`) keeps its compare, and its direction can't be recovered from the bytes; say so in a comment.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.
