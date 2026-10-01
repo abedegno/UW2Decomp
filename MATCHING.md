@@ -173,5 +173,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Calls merge only when what follows matches**: in `if (a) { if (c) f(2); else f(3); X; } else if (b) { ...; X; }` the `f` calls share one call only if the trailing statement X is written in both branches.
 - **`cbw` on an unsigned char global** in one place means the source cast it there, as in `(signed char)z - tz`.
 - **A file's `_BSS` is one unit**: if globals used only by another file sit between this file's globals, the block belongs to one of the two files; leave it extern until the other is matched.
+- **Always-true tests on unsigned values are still compiled**: `if (b < 0) continue;` on an `unsigned char` gives a `jae` over a `jmp`.
+- **A byte destination keeps the constant's spelling**: `x = w + 0xE1` gives `add al,0E1h`; `x = w - 0x1F` gives `sub al,1Fh`.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

@@ -1,18 +1,18 @@
 # segment ovr101 base 0x79EB0 size 0x18E9 org 0x0
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
 init_char	InitialisePlayer_ovr101_0	0x0	0x291
-GetSkillChoices_ovr101_291	GetSkillChoices_ovr101_291	0x291	0xEF
-StatsScreen_ovr101_380	StatsScreen_ovr101_380	0x380	0x150
+set_sklmnu	GetSkillChoices_ovr101_291	0x291	0xEF
+show_atts	StatsScreen_ovr101_380	0x380	0x150
 show_skills	ChargenPrintCurrentStatSkills_ovr101_4D0	0x4D0	0xBE
 set_skills	RollSkills_ovr101_58E	0x58E	0x2D
 roll_stats	CharGenInitClassSkills_ovr101_5BB	0x5BB	0xD9
 drawopt	PrintChargenOptions_ovr101_694	0x694	0x2EF
 selopt	MaybePrintChargenQuestion_ovr101_983	0x983	0x22C
-jname_input	ovr101_BAF	0xBAF	0x195
+mousopt	ovr101_BAF	0xBAF	0x195
 pickopt	LikelyChargenChoice_ovr101_D44	0xD44	0x334
 gen_char	CharGen_ovr101_1078	0x1078	0x54B
-MaybeAnImageDraw_ovr101_15C3	MaybeAnImageDraw_ovr101_15C3	0x15C3	0x22
-MaybeAnImageUnpack_ovr101_15E5	MaybeAnImageUnpack_ovr101_15E5	0x15E5	0x3F
+adr_chrpic	MaybeAnImageDraw_ovr101_15C3	0x15C3	0x22
+move_chrpic	MaybeAnImageUnpack_ovr101_15E5	0x15E5	0x3F
 strt_chargen	StartNewGame_ovr101_1624	0x1624	0x289
 create_player	ovr101_18AD	0x18AD	0x1E
 ovr101_18CB	ovr101_18CB	0x18CB	0x1E
