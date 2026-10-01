@@ -335,6 +335,7 @@ _drop_some_objects	65CB:003E	FM Towns
 _dseg_67d6_2C74	DS:2C74	provisional
 _dseg_67d6_6A96	DS:6A96	provisional
 _dseg_67d6_920	DS:0920	provisional
+_dseg_67d6_96	DS:0096	provisional
 _dsfx_playing	DS:010A	FM Towns
 _DumpTheBag	654F:008E	FM Towns
 _duration_check	653A:0034	FM Towns
@@ -369,6 +370,7 @@ _fbuf_setcolor	0085:5239	FM Towns
 _fclose	0E72:047D	FM Towns
 _fgets	0E72:05D5	FM Towns
 _filelength	0E72:1883	FM Towns
+_FileOperationFromParamsArray_seg	0E72:1B9D	provisional
 _FileReadMaybe	0E72:0AB0	provisional
 _FileWriteWithParams	65E0:008E	provisional
 _fill_FB	64E2:0057	FM Towns
@@ -662,6 +664,7 @@ _MapObj_Y	DS:24FA	FM Towns
 _mapptr	DS:2B58	FM Towns
 _maybe_cheat_arena_fire	647E:0070	FM Towns
 _MaybeAComparison_seg005_105F_282	0E72:282C	provisional
+_MaybeTryAndFindFile_seg005_105F_	0E72:2758	provisional
 _mbuttons	2110:09F0	FM Towns
 _mdetect	65B5:0039	FM Towns
 _mem_set	1F8C:00EE	provisional
@@ -1043,9 +1046,12 @@ _seg003_0272_4431	0085:4431	provisional
 _seg003_0272_4629	0085:4629	provisional
 _seg003_0272_4933	0085:4933	provisional
 _seg003_0272_4D86	0085:4D86	provisional
+_seg003_0272_4DC2	0085:4DC2	provisional
 _seg003_0272_5025	0085:5025	provisional
 _seg003_0272_51C8	0085:51C8	provisional
+_seg005_105F_16E5	0E72:16E5	provisional
 _seg005_105F_19D9	0E72:19D9	provisional
+_seg005_105F_4FD	0E72:04FD	provisional
 _seg009_392	1A6D:0392	provisional
 _seg009_7	1A6D:0007	provisional
 _seg011_2C6	1AFA:02C6	provisional
