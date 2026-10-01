@@ -23,6 +23,7 @@ _AnimObjInPipe	DS:2C7A	FM Towns
 _answer_x	DS:8186	provisional
 _anti_magic_p	65A7:0034	FM Towns
 _area_spell_state	DS:1B0A	FM Towns
+_Asc	DS:2148	FM Towns
 _AskHowMany	6513:003E	FM Towns
 _atk_charge	609E:0000	provisional
 _ATM_Strings	3CF5:468E	FM Towns
@@ -102,6 +103,7 @@ _CN2	DS:262C	FM Towns
 _CN4	DS:267C	FM Towns
 _coll_flag	DS:26A5	provisional
 _color_by_digit	DS:0947	provisional
+_Color_data_ptr	DS:21B8	FM Towns
 _combEfflen	DS:073F	FM Towns
 _CombineObjs	6465:0025	FM Towns
 _ComObjData	DS:6B74	FM Towns
@@ -193,6 +195,7 @@ _DisplayToSlot	DS:1784	FM Towns
 _do_3d_grab	2CAE:02AA	FM Towns
 _do_3d_pickup	1FCD:037E	FM Towns
 _do_3d_view	64BF:0039	FM Towns
+_do_changes	1B44:001F	FM Towns
 _do_crit_phys	1226:0D6A	FM Towns
 _do_escape_key	6469:0061	FM Towns
 _do_fbuf_bms	30D3:1567	FM Towns
@@ -248,6 +251,7 @@ _fadeout3d	64E2:0052	FM Towns
 _failed	DS:224E	FM Towns
 _farfree	0E72:325E	provisional
 _farmalloc	0E72:3344	provisional
+_fbuf_setcolor	0085:5239	FM Towns
 _fclose	0E72:047D	FM Towns
 _fgets	0E72:05D5	FM Towns
 _FileWriteWithParams	65E0:008E	provisional
@@ -343,6 +347,7 @@ _gronk_area	65A7:0020	FM Towns
 _gronk_gr	64EA:0098	FM Towns
 _grPageFlip	0085:46AA	FM Towns
 _grs_3dinf	4FAF:E049	FM Towns
+_grs_which1	1A6D:0227	FM Towns
 _grSoftPageFlip	0085:46E6	FM Towns
 _GrSq	DS:22A4	FM Towns
 _gvechead	DS:2C60	FM Towns
@@ -413,6 +418,7 @@ _ItemWeight	650A:004D	FM Towns
 _itoa	0E72:1D1B	FM Towns
 _j_LikelyWaitForMore_ovr139_29	6559:002A	provisional
 _j_WriteTextWithMORE_ovr139_BD	6559:0039	provisional
+_key	2110:0971	FM Towns
 _key_on	DS:2138	FM Towns
 _keyboard_mouse	1B8F:0DA7	FM Towns
 _kill_all_effects	1C86:20C1	FM Towns
@@ -469,6 +475,7 @@ _MapObj_X	DS:24F8	FM Towns
 _MapObj_Y	DS:24FA	FM Towns
 _mapptr	DS:2B58	FM Towns
 _MaybeAComparison_seg005_105F_282	0E72:282C	provisional
+_mbuttons	2110:09F0	FM Towns
 _mdetect	65B5:0039	FM Towns
 _mem_set	1F8C:00EE	provisional
 _memset	0E72:1DCA	FM Towns
@@ -504,6 +511,7 @@ _mous_in_panel	2529:10D6	FM Towns
 _mous_in_rune	6504:0034	FM Towns
 _mous_in_stat	65BC:0034	FM Towns
 _mous_player	656A:0043	FM Towns
+_mouse	2110:09AD	FM Towns
 _mouse_check_reg	1B8F:06F9	FM Towns
 _mouse_clearQ	1B8F:023A	FM Towns
 _mouse_constrain	1B8F:03B0	FM Towns
@@ -520,6 +528,9 @@ _mouse_putxy	1B8F:025A	FM Towns
 _mouse_Qgetxy	1B8F:0210	FM Towns
 _mouse_release	1B8F:02A9	FM Towns
 _mouse_show	1B8F:00C0	FM Towns
+_MouseDx	DS:214C	FM Towns
+_MouseDy	DS:2150	FM Towns
+_MouseOn	DS:2154	FM Towns
 _MousQUp	1B8F:0B30	FM Towns
 _move_along	33EA:004E	FM Towns
 _move_cam	656A:002A	FM Towns
@@ -631,6 +642,7 @@ _pFPS	DS:22A6	FM Towns
 _PHgt	DS:829C	FM Towns
 _phys_affect_player	191C:0D1D	FM Towns
 _phys_bounce_up	191C:120F	FM Towns
+_pic_to_fbuf	1A6D:0332	FM Towns
 _pic_to_screen	1A6D:026B	FM Towns
 _pick_inv	650A:0066	FM Towns
 _PickMap	DS:24F4	FM Towns
@@ -790,6 +802,9 @@ _seg003_0272_5025	0085:5025	provisional
 _seg003_0272_51C8	0085:51C8	provisional
 _seg009_392	1A6D:0392	provisional
 _seg009_3F2	1A6D:03F2	provisional
+_seg009_7	1A6D:0007	provisional
+_seg011_2C6	1AFA:02C6	provisional
+_seg011_6	1AFA:0006	provisional
 _seg016_1E73_2FCB	1C86:2FCB	provisional
 _seg039_3452_814	3265:0814	provisional
 _send_FB	30D3:16AA	FM Towns
@@ -828,6 +843,7 @@ _Shift	DS:2128	FM Towns
 _show	0085:4FC2	FM Towns
 _show_credits	652F:0020	FM Towns
 _show_cutscene	6488:00F2	FM Towns
+_ShowClip	370D:0DC4	FM Towns
 _ShowSaveRest	6581:0057	FM Towns
 _simple_fizix	191C:0225	FM Towns
 _skill_check	323F:0009	FM Towns
@@ -951,6 +967,7 @@ _UsPtr	DS:2C6E	FM Towns
 _ValidLightSlots	DS:161A	FM Towns
 _valloc	004E:004A	FM Towns
 _Valor	DS:0383	FM Towns
+_vcopyfb	0085:517B	FM Towns
 _victim	DS:228C	FM Towns
 _vort_rad	DS:33C8	FM Towns
 _vort_theta	DS:33CC	FM Towns
@@ -960,6 +977,7 @@ _vort_y	DS:33E7	FM Towns
 _wander_found	DS:554E	provisional
 _wandering_monster_check	647E:0061	FM Towns
 _watertime	DS:19E3	FM Towns
+_wbot	DS:21E0	FM Towns
 _wd_bool	6559:0034	FM Towns
 _wd_replace	6559:003E	FM Towns
 _wdialog	6559:002F	FM Towns
@@ -968,6 +986,9 @@ _Weapons	DS:6976	FM Towns
 _wframe	DS:3473	FM Towns
 _WhatsInSlot	650A:0043	FM Towns
 _WizEye	DS:0381	FM Towns
+_wleft	DS:21E8	FM Towns
+_wright	DS:21E4	FM Towns
+_wtop	DS:21DC	FM Towns
 _wyorn	6559:0043	FM Towns
 _xhgt	DS:26EC	FM Towns
 _XP	DS:2276	FM Towns

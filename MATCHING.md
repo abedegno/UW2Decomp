@@ -83,7 +83,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **A block-local initialised array** (`char num[3] = "00";`) puts its initialiser in `_DATA` where the function is.
 - **Pointer tables in data** (an initialised array of far function pointers) carry fixups inside `_DATA`; `verify.py` checks each pointer against the EXE and leaves those bytes out of the comparison.
 - **An empty string can be someone else's padding byte**: seg043 passes `push 98Dh` for `""`, an address inside another file's data, so the literal was merged by the linker and is declared there as an extern array.
-- **`_BSS` is laid out by name, not declaration order** (file-scope data only; function-level statics are placed where they are defined): Turbo C emits uninitialised variables in its symbol table's order, so renaming one moves it and reordering declarations doesn't (ties keep declaration order; ints are word-aligned). A static's name never reaches the linker, so when a static has no original name, choose one that lands where the EXE has it, and say in a comment that the name was chosen for layout. Public names are fixed by other files. To find a name that lands where you need it, compile a probe file of candidate public `char` names through `tools/tcc.mjs` and read their offsets from the object's PUBDEF records; similar names tend to share a bucket.
+- **`_BSS` is laid out by name, not declaration order** (file-scope data only; function-level statics are placed where they are defined): Turbo C emits them in ascending order of `(c[0] + 256*c[1] + 8*c[len-2] + 64*len) & 1023` over the name's characters (no underscore), ties keeping definition order; ints are word-aligned. `tools/bssorder.py` computes it. A static's name never reaches the linker, so when a static has no original name, choose one that lands where the EXE has it, and say in a comment that the name was chosen for layout. Public names are fixed by other files. Pick the name with `tools/bssorder.py`; probe compiles are no longer needed.
 - **Static uninitialised data** goes in `_BSS`, which `verify.py` checks for a consistent base (no bytes to compare).
 - **`!c` against `c == 0` on a `char` parameter**: `!c` gives `mov al; cbw; or ax,ax`; `c == 0` gives `cmp byte [bp+N],0`.
 - **Far pointers compare by offset only** for `<`/`>=` (`mov ax,[bp+N]; cmp ax,[g]`), while `== 0` tests both halves (`or ax,dx`).
@@ -119,7 +119,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **A one-case `switch`** compiles to `cmp ax,K; je case; jmp short end` and reloads ES:BX at the case label; `if (x == K)` gives a single `jne`.
 - **Stores through a far pointer parameter** don't force a reload without `-Z`, except that an if/else whose arms both store through it makes the next statement reload `les bx`. Stores through near globals always force the reload.
 - **An empty-bodied `if`** keeps its test (`mov ah,0; or ax,ax`) with no jump after it.
-- **`+=`/`-=` on a word global**: an `unsigned` target gives `sub [g],ax`; an `int` target gives load, subtract, store.
+- **`+=`/`-=` on a word global**: with an `int` right side, both `int` and `unsigned` targets give `add [g],ax` (seg015); with an unsigned bitfield on the right, an `int` target gives load, subtract, store (ovr138).
 - **`if (c) f(A); else f(B);`** gives two push paths into one call; the ternary `f(c ? A : B)` gives `mov ax,imm; push ax`.
 - **Same init and step**: `for (p->n--; p->n >= 0; p->n--)` jumps straight to the step; `while (--p->n >= 0)` gives `mov al; dec al; mov; or al,al`.
 - **An empty else-if arm forces a reload** of the pointer before the next test; folding it into the next condition reuses BX.
@@ -177,5 +177,6 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **A byte destination keeps the constant's spelling**: `x = w + 0xE1` gives `add al,0E1h`; `x = w - 0x1F` gives `sub al,1Fh`.
 - **`switch (a = b->m = c)`** reproduces chained stores followed by a switch on AX.
 - **The startup variables** `_heaplen`, `_stklen` and `_ovrbuffer` are initialised in `main`'s file (ovr112) and read by C0 and the overlay manager.
+- **A dead jump before an `else`** that lands on a jump to a shared return came from an explicit `return x;` at the end of the then-block.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.
