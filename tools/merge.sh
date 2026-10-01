@@ -11,6 +11,7 @@ $py tools/match.py "$src" > /tmp/merge-match.txt || { cat /tmp/merge-match.txt; 
 tail -1 /tmp/merge-match.txt
 grep -q "WHOLE SEGMENT MATCHES" /tmp/merge-match.txt || { echo "not a whole-segment match"; exit 1; }
 $py tools/verify.py "$src" > /dev/null || { $py tools/verify.py "$src" | grep -E "PROBLEM|^--"; exit 1; }
-$py tools/verify.py "$src" --update | tail -1
+$py tools/verify.py "$src" --update > /tmp/merge-update.txt || { grep -E "PROBLEM|^--" /tmp/merge-update.txt; exit 1; }
+tail -1 /tmp/merge-update.txt
 grep -qx "$seg" matched.txt || echo "$seg" >> matched.txt
 python3 tools/files.py | grep "matched bytes"

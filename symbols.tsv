@@ -144,6 +144,7 @@ _critter_fire	2669:02C6	FM Towns
 _critter_set_goal	15B5:313F	FM Towns
 _cSinCos	2110:0EAE	FM Towns
 _cSqRt	2110:0F3F	FM Towns
+_cst	DS:492C	FM Towns
 _CT1	DS:26BA	FM Towns
 _CT2	DS:26C6	FM Towns
 _CT4	DS:26DE	FM Towns
@@ -264,6 +265,7 @@ _fbshow	0085:5088	FM Towns
 _fbuf_setcolor	0085:5239	FM Towns
 _fclose	0E72:047D	FM Towns
 _fgets	0E72:05D5	FM Towns
+_FileReadMaybe	0E72:0AB0	provisional
 _FileWriteWithParams	65E0:008E	provisional
 _fill_FB	64E2:0057	FM Towns
 _find_anim	34A2:0E0A	FM Towns
@@ -434,6 +436,8 @@ _InvUpArrow	DS:179D	FM Towns
 _IsJoy	DS:8298	FM Towns
 _IsMobElem	28A1:0A87	FM Towns
 _ItemFitsSlot	6513:005C	FM Towns
+_ItemMinorClass	DS:554C	provisional
+_ItemSubClass	DS:492A	provisional
 _ItemWeight	650A:004D	FM Towns
 _itoa	0E72:1D1B	FM Towns
 _j_LikelyWaitForMore_ovr139_29	6559:002A	provisional
@@ -730,6 +734,7 @@ _preload_cr	64DE:0020	FM Towns
 _PreLoadCritPages	64DE:002F	FM Towns
 _pretty_panelagain	30D3:12F0	FM Towns
 _print_path_to	65E0:003E	FM Towns
+_Print_String_To_Console_seg017_D	1F8C:00DE	provisional
 _prison_alarm_check	64A5:00D4	FM Towns
 _process_area	65A7:0043	FM Towns
 _process_grid	1FCD:00D0	FM Towns

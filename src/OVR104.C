@@ -11,14 +11,14 @@ extern struct Creature Creature[64];
 extern struct Object far *ActiveObj;
 extern unsigned ItemMinorClass, ItemSubClass;
 extern struct Creature *cst;
-void far FileReadToAddress(void *address, int size, int count, int fd);
+void far fread(void *address, int size, int count, int fd);
 void far FileReadMaybe(void *address, int size, int count, int fd);
-int far RNG(void);
+int far rand(void);
 char far init_this_critter(struct Object far *obj);
 
 void far LoadCrittersObjectsDat_ovr104_0(int fd)
 {
-    FileReadToAddress(Creature, 0x30, 0x40, fd);
+    fread(Creature, 0x30, 0x40, fd);
 }
 
 void far ovr104_17(int fd)
@@ -52,7 +52,7 @@ char far init_this_critter(struct Object far *obj)
     obj->qn.f.quality = x;
     obj->ol.f.owner = y;
     cst = (struct Creature *)((char *)Creature + (obj->id & 0x3f) * 0x30);
-    ((unsigned char far *)obj)[8] = (cst->bytes[4] * (RNG() % 0x18 + 0x10)) / 0x20;
+    ((unsigned char far *)obj)[8] = (cst->bytes[4] * (rand() % 0x18 + 0x10)) / 0x20;
     ((unsigned char far *)obj)[9] = ((obj->pos & 0x380) >> 7) << 5;
     *(unsigned far *)((unsigned char far *)obj+0xb) = (*(unsigned far *)((unsigned char far *)obj+0xb) & 0xfff0) | 8;
     *(unsigned far *)((unsigned char far *)obj+0xb) = *(unsigned far *)((unsigned char far *)obj+0xb) & 0xf00f;
