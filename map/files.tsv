@@ -54,7 +54,7 @@ ovr097	C	37	8598	19	6	2	10	setup_to_barter_	does_npc_like_
 ovr099	C	7	38	0	7	0	0			
 ovr101	C	16	6377	15	0	1	0	init_char_	create_player_	yes
 ovr102	C	5	357	4	0	0	1	ObjsBeCombinable_	make_stew_	yes
-ovr103	C	32	7084	14	14	0	4	TalkTo_	switch_pic_	
+ovr103	C	32	7084	14	14	0	4	TalkTo_	switch_pic_	yes
 ovr104	C	5	665	2	3	0	0	creature_obj_init_	init_this_critter_	yes
 ovr106	C	2	1659	2	0	0	0	setup_converse_data_	update_converse_data_	yes
 ovr107	C	23	5677	23	0	0	0	change_critter_goal_	where_shall_we_hang_out_	yes
