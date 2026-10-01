@@ -88,7 +88,7 @@ ovr138	C	25	7823	25	0	0	0	UseBonesOn_	UseUtil_	yes
 ovr139	C	9	2243	9	0	0	0	init_scroll_	scroll_clear_	yes
 ovr140	C	6	681	4	1	0	1	init_txtlib_	load_txtmaps_	
 ovr142	C	12	2927	7	4	0	1	save_player_data_	load_dl_	
-ovr143	C	15	4004	10	1	2	2	init_player_	chg_plyp_	
+ovr143	C	15	4004	10	1	2	2	init_player_	chg_plyp_	yes
 ovr146	C	1	5	0	0	0	1			
 ovr147	C	10	2753	6	3	1	0	do_intro_scene_	do_journey_	
 ovr148	C	1	7	0	0	0	1			
