@@ -143,5 +143,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **`0xFFL - (unsigned)c`** gives `xor dx,dx; mov ax,0FFh; sub ax,bx; sbb dx,0`; without the cast, `cwd` and a full long subtract.
 - **Pointer increment**: `p = p + 1;` on a near int pointer gives load, `inc ax; inc ax`, store; `p++` gives `add word [bp-2],2`.
 - **`while (f()) if (a <= b) break;`** puts the compare before the call, the call's `jne` jumping back to it.
+- **Two `jmp`s in a row** come from a `return` at the end of an `if` block followed by `else if`: the return's jump plus a dead jump past the else chain, which a branch lands on and is not threaded through.
+- **An index minus one folds into the base**: `table[i - 1]` with 7-byte records gives `imul 7` and the base minus 7, so a DS address just before a table can be that table.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

@@ -99,7 +99,7 @@ ovr152	C	4	502	1	0	2	1	set_light_	set_light_
 ovr153	C	3	238	3	0	0	0	ac_setup_lzw_	ac_shrink_disk_	yes
 ovr154	C	26	6964	26	0	0	0	use_skill_	RemoveTrap_	yes
 ovr155	C	1	7	0	1	0	0			
-ovr156	C	36	7525	34	2	0	0	spend_mana_	damage_square_	
+ovr156	C	36	7525	34	2	0	0	spend_mana_	damage_square_	yes
 ovr157	C	16	6977	14	2	0	0	study_monster_spells_	check_Guardian_magic_marker_	
 ovr158	C	9	1383	8	1	0	0	sp_hdr_	panel_check_	
 ovr159	C	1	7	0	1	0	0			
