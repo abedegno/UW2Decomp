@@ -5,6 +5,7 @@ __dblen	4FAF:C77E	FM Towns
 __input_addkey	1AB4:0104	FM Towns
 _ac_shrink_disk	6596:0025	FM Towns
 _ac_unshrink_disk	6596:002A	FM Towns
+_acceptable_danger	15B5:30D1	FM Towns
 _access	0E72:0249	FM Towns
 _ActDoors	DS:2F96	FM Towns
 _active_spells	30D3:1141	FM Towns
@@ -189,9 +190,11 @@ _cmpbuf1_start	43A0:0000	FM Towns
 _cmpbuf2_start	43A0:5400	FM Towns
 _CN1	DS:2604	FM Towns
 _CN2	DS:262C	FM Towns
+_CN3	DS:2654	FM Towns
 _CN4	DS:267C	FM Towns
 _cnv_id	DS:0C70	FM Towns
 _coll_flag	DS:26A5	provisional
+_CollObject	2B0D:19F7	FM Towns
 _color_by_digit	DS:0947	provisional
 _Color_data_ptr	DS:21B8	FM Towns
 _combEfflen	DS:073F	FM Towns
@@ -228,6 +231,7 @@ _creature_class_data	6475:0034	FM Towns
 _creature_init	6475:0020	FM Towns
 _creature_obj_init	6475:002F	FM Towns
 _cRender	2110:0D7A	FM Towns
+_crit_drunkwalk	15B5:00C5	FM Towns
 _crit_fpage	4FAF:E4C9	FM Towns
 _crit_head_for_loc	1226:3008	FM Towns
 _crit_inpage	4FAF:E4CD	FM Towns
@@ -247,6 +251,7 @@ _cSqRt	2110:0F3F	FM Towns
 _cst	DS:492C	FM Towns
 _CT1	DS:26BA	FM Towns
 _CT2	DS:26C6	FM Towns
+_CT3	DS:26D2	FM Towns
 _CT4	DS:26DE	FM Towns
 _cTmBm	DS:2F82	FM Towns
 _cTmDm	DS:2F84	FM Towns
@@ -273,6 +278,7 @@ _damage_critter	15B5:333A	FM Towns
 _damage_item	24B4:0527	FM Towns
 _damage_square	65A7:002A	FM Towns
 _DamageInventory	650A:0025	FM Towns
+_DartSatelliteVectoring_ovr167_31	65E0:0084	provisional
 _DataDirectory	DS:1A78	FM Towns
 _DbEntry	DS:2C62	FM Towns
 _dbptr	DS:8720	FM Towns
@@ -436,6 +442,8 @@ _fizix_update	191C:1239	FM Towns
 _flat_case	DS:2F7B	FM Towns
 _flip_bool	65E0:0052	FM Towns
 _flip_switch	32FA:0720	FM Towns
+_flood_list0	608E:0000	provisional
+_flood_list1	6096:0000	provisional
 _flood_path	1226:1994	FM Towns
 _font_name	DS:14C5	provisional
 _font_suffixes	DS:14D2	provisional
@@ -606,6 +614,7 @@ _invRemoveObject	650A:003E	FM Towns
 _InvRemoveObject	650A:0039	FM Towns
 _InvRemoveOneObject	650A:0048	FM Towns
 _InvUpArrow	DS:179D	FM Towns
+_IsaDoor	2B0D:190E	FM Towns
 _IsJoy	DS:8298	FM Towns
 _IsMobElem	28A1:0A87	FM Towns
 _ItemFitsSlot	6513:005C	FM Towns
@@ -899,6 +908,7 @@ _parse_effect	2FBE:0A0C	FM Towns
 _parse_playin	2FBE:0056	FM Towns
 _pass_time	64A5:010B	FM Towns
 _pathlen	DS:225A	FM Towns
+_paths	6072:0000	FM Towns
 _pathsq	6062:0000	FM Towns
 _PBot	DS:8626	FM Towns
 _pfatal	64D4:002A	FM Towns
@@ -1149,6 +1159,7 @@ _set_compass	30D3:00A7	FM Towns
 _set_creatures_from_saved_game	647E:0020	FM Towns
 _set_creatures_to_saved_game	647E:0084	FM Towns
 _set_critter_vars	15B5:1F19	FM Towns
+_set_cur_seq_len	15B5:204B	FM Towns
 _set_curmagic	653A:002A	FM Towns
 _set_cuts_ems	6488:0179	FM Towns
 _set_cyb	2CAE:009B	FM Towns
@@ -1156,6 +1167,7 @@ _set_drugged	6564:004D	FM Towns
 _set_effect	2FBE:0CA3	FM Towns
 _set_flask	30D3:0003	FM Towns
 _set_graphics_level	1FCD:005B	FM Towns
+_set_htx	15B5:0089	FM Towns
 _set_jmp	2B0D:1868	FM Towns
 _set_light	6592:0025	FM Towns
 _set_loc	1226:2F51	FM Towns
