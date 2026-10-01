@@ -536,6 +536,7 @@ _grfx_quikpal	64E2:002F	FM Towns
 _gronk_area	65A7:0020	FM Towns
 _gronk_door	643D:002F	FM Towns
 _gronk_gr	64EA:0098	FM Towns
+_gronk_race	64C8:00B6	FM Towns
 _gronk_whoami	65A7:004D	FM Towns
 _gronkify_change_goal	64C8:0098	FM Towns
 _grPageFlip	0085:46AA	FM Towns
@@ -546,6 +547,7 @@ _grs_unpack	1A6D:0150	FM Towns
 _grs_which1	1A6D:0227	FM Towns
 _grSoftPageFlip	0085:46E6	FM Towns
 _GrSq	DS:22A4	FM Towns
+_gruesome_door_hack	6581:0039	FM Towns
 _gsize	DS:6734	FM Towns
 _gvechead	DS:2C60	FM Towns
 _gvecs	DS:2B5E	FM Towns
@@ -712,6 +714,7 @@ _MapObj_X	DS:24F8	FM Towns
 _MapObj_Y	DS:24FA	FM Towns
 _mapptr	DS:2B58	FM Towns
 _maybe_cheat_arena_fire	647E:0070	FM Towns
+_maybe_go_hang_out	647E:003E	FM Towns
 _MaybeAComparison_seg005_105F_282	0E72:282C	provisional
 _MaybeTryAndFindFile_seg005_105F_	0E72:2758	provisional
 _mbuttons	2110:09F0	FM Towns
@@ -818,6 +821,7 @@ _new_IconSelect	1B6B:011D	FM Towns
 _new_IconUnselect	1B6B:00AF	FM Towns
 _new_player_pos	64BF:002F	FM Towns
 _newFPS	191C:1252	FM Towns
+_NewPlayerLevel	DS:5E0A	FM Towns
 _NewPlayerX	DS:5E06	FM Towns
 _NewPlayerY	DS:5E08	FM Towns
 _newPlObj	DS:24FC	FM Towns
@@ -905,6 +909,7 @@ _panel_check_hpmp	323F:0201	FM Towns
 _panel_mouse_region	DS:6B0A	provisional
 _parse_aspells	6564:0025	FM Towns
 _parse_effect	2FBE:0A0C	FM Towns
+_parse_player_terr	191C:003F	FM Towns
 _parse_playin	2FBE:0056	FM Towns
 _pass_time	64A5:010B	FM Towns
 _pathlen	DS:225A	FM Towns
@@ -1085,6 +1090,7 @@ _RightPanel	DS:079E	FM Towns
 _RightPanelBeforeConversation	DS:47FC	provisional
 _rollem	33EA:011F	FM Towns
 _ruin_cure_potions	64A5:008E	FM Towns
+_running_away	DS:0BF8	FM Towns
 _save_opt	653E:00A7	FM Towns
 _save_player_data	6564:0043	FM Towns
 _save_rect	004E:01D5	FM Towns
@@ -1187,6 +1193,7 @@ _set_the_color	0085:48F4	FM Towns
 _set_the_window	0085:4AC1	FM Towns
 _set_workspace	3400:01DE	FM Towns
 _set_yoff	0000:01F9	FM Towns
+_SetAttitude_ovr113_A91	64C8:007F	provisional
 _SetCursorObj	6513:007A	FM Towns
 _SetOffTrap	65D5:0084	FM Towns
 _SetPnt	1FCD:000C	FM Towns
@@ -1376,6 +1383,7 @@ _UseTrigger	65D5:0039	FM Towns
 _UseUnique	654F:0070	FM Towns
 _UseUtil	654F:0034	FM Towns
 _UseWatch	654F:0039	FM Towns
+_using_altaras_dagger	DS:24DE	FM Towns
 _using_bow	DS:03B4	FM Towns
 _using_punt	32FA:0383	FM Towns
 _UsingPole	DS:19B4	FM Towns

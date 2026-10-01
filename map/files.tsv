@@ -60,7 +60,7 @@ ovr106	C	2	1659	2	0	0	0	setup_converse_data_	update_converse_data_	yes
 ovr107	C	23	5677	23	0	0	0	change_critter_goal_	where_shall_we_hang_out_	yes
 ovr108	C	76	13857	23	36	8	9	speech_over_	palette_fade_	
 ovr109	C	2	54	0	0	1	1			yes
-ovr110	C	68	20625	59	8	0	1	find_good_x_and_y_	Killorn_just_crashed_	
+ovr110	C	68	20625	59	8	0	1	find_good_x_and_y_	Killorn_just_crashed_	yes
 ovr112	C	21	2446	18	0	0	3	main_	move_initial_files_	yes
 ovr113	C	31	3241	10	21	0	0	gronk_race_	Sched_DoEvent_	yes
 ovr114	C	4	412	2	0	1	1	first_punt_	pfatal_code_	yes
