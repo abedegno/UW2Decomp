@@ -170,5 +170,8 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Decrementing a char by one**: on `unsigned char`, `x = x - 1` and `x -= 1` give `add al,0FFh`; on plain `char`, `dec al`.
 - **A 2D table index with offsets** folds them into the displacement: `dirs[a + 1][b + 1]` on `char[3][3]` gives `[bx+base+4]`, so a DS address inside a table can be the table indexed with +1.
 - **Addition operand order**: `a + (b << n)` pushes the shifted term and adds `a` after; `(b << n) + a` adds the other way round.
+- **Calls merge only when what follows matches**: in `if (a) { if (c) f(2); else f(3); X; } else if (b) { ...; X; }` the `f` calls share one call only if the trailing statement X is written in both branches.
+- **`cbw` on an unsigned char global** in one place means the source cast it there, as in `(signed char)z - tz`.
+- **A file's `_BSS` is one unit**: if globals used only by another file sit between this file's globals, the block belongs to one of the two files; leave it extern until the other is matched.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.
