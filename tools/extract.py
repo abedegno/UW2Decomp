@@ -20,6 +20,13 @@ What is extracted, and the evidence for each piece:
   Entries that a /* fardata */ source defines (src/FARDATA.ASM: the zero-filled buffers
   and small tables) are only declared here, empty, to keep the order; the source, linked
   right after XFAR, fills them, and each of its segments is compared with the EXE first.
+  Entries a C file defines (its own far segments, FILE<n>_FAR, placed and compared by
+  verify.py) are not declared at all: TLINK places a segment where it first sees its name,
+  so the C file's place in the link puts them where the EXE has them. The entries before
+  one of those that no C file defines are declared, empty, in a module linked just before
+  that C file (XFnnn), so that TLINK sees them first; XFAR, after the resident objects,
+  holds the bytes of the ones taken from the EXE (so their relocations stay where they
+  were in the relocation table) and declares the rest.
   Still taken from the EXE: entries 51, 58 and 71, the graphics and 3D modules' data.
 - DGROUP gaps: _DATA bytes and _BSS space between the objects' own data, as verify.py places
   it (or, for a file whose own code never refers to its data, as its publics' addresses in
@@ -117,6 +124,9 @@ for stem, ob in OBJS.items():
     ob['refs'] = {n: (a[0],) + tuple(a[1:]) for n, a in _captured.items()}
     for n, p in re.findall(r'^(\S+): segment ([0-9A-F]{4}) referenced on its own', v, re.M):
         ob['refs'].setdefault(n, ('SEG', int(p, 16)))
+    # the file's own far segments, where verify.py placed them
+    ob['far'] = [(n, int(p, 16), int(q, 16), int(ln)) for n, ln, p, q in
+                 re.findall(r'^(\S+): (\d+) bytes match at ([0-9A-F]{4}):([0-9A-F]{4})', v, re.M)]
 
 # A file whose own code never refers to its _DATA or _BSS (data defined for other files, such
 # as seg033's ActDoors) is placed by its publics instead: where other files' references and
@@ -250,6 +260,23 @@ for src in sorted(glob.glob(os.path.join(root, 'src', '*.ASM'))):
         for name, off in sorted(pubs_by_seg.get(si, []), key=lambda p: (p[0] not in _tsvnames, p[1], p[0])):
             define(('FAR', para, lo - file_of(para, 0) + off), name)
     OBJPUBS |= set(o['pubs'])
+
+# ---- far data the C sources define ------------------------------------------------------
+# Each far variable of a C file is a segment of its own; verify.py has placed it and compared
+# its bytes. It must be a whole entry of the segment table, and the files must be linked in
+# the order of their entries, since TLINK places each segment where it first sees it.
+FAROWN = {}      # segment table entry -> stem
+for stem, ob in OBJS.items():
+    o = ob['o']
+    for sn, para, off, ln in ob['far']:
+        hits = [s[0] for s in SEGS[50:79] if s[1] == para and s[2] == file_of(para, off) and s[3] is not None and s[3] - s[2] == ln]
+        if len(hits) != 1: sys.exit(f'{stem}: its far segment {sn} ({ln} bytes at {para:04X}:{off:04X}) is not an entry of the segment table')
+        i = hits[0]
+        if i in FARSRC or i in FAROWN: sys.exit(f'{stem}: FD{i} is also defined by {FARSRC.get(i) or FAROWN[i]}')
+        FAROWN[i] = stem
+        si = next(k for k in range(1, len(o['segs'])) if o['segs'][k][0] == sn)
+        for name, (psi, poff) in o['pubs'].items():
+            if psi == si: define(('FAR', para, off + poff), name)
 
 # ---- references: name -> address ---------------------------------------------------------
 REFS = {}
@@ -391,7 +418,7 @@ for i, pieces in GAPS.items():
     for a, b in pieces: RANGES.append((a, b, SEGS[i][1], CODE_GAPS[i][0]))
 for k, (i, a, b) in TAILS.items(): RANGES.append((a, b, SEGS[i][1], 'XT' + k[-3:]))
 for i, para, lo, hi, fl in FAR:
-    if hi is not None and hi > lo and i not in FARSRC: RANGES.append((lo, hi, para, 'XFAR'))
+    if hi is not None and hi > lo and i not in FARSRC and i not in FAROWN: RANGES.append((lo, hi, para, 'XFAR'))
 for a, b, slot in DPIECES + BPIECES: RANGES.append((DS_FILE + a, DS_FILE + b, DS_PARA, dname(slot)))
 RANGES.append((DS_FILE + LIBDATA_START, DS_FILE + LIBDATA_END, DS_PARA, 'XLIBD'))
 
@@ -596,21 +623,45 @@ for k, (i, a, b) in TAILS.items():
     RES.insert(RES.index(k) + 1, 'XT' + k[-3:])
 
 # far data
-m = module('XFAR')
+ALIGN = {}
 prev_end = SEGS[49][2]
 for i, para, lo, hi, fl in FAR:
     if hi is None or hi < lo: hi = lo
-    if lo == prev_end: align = 'byte'
-    elif lo % 2 == 0 and lo - prev_end == 1: align = 'word'
-    elif lo % 16 == 0: align = 'para'
+    if lo == prev_end: ALIGN[i] = 'byte'
+    elif lo % 2 == 0 and lo - prev_end == 1: ALIGN[i] = 'word'
+    elif lo % 16 == 0: ALIGN[i] = 'para'
     else: sys.exit(f'far segment {i}: cannot place at {lo:X} after {prev_end:X}')
+    prev_end = max(prev_end, hi)
+# the C files that define far data must be linked in the order of their entries
+_link = ['C0UW2'] + RES + OVL
+_owned = sorted(FAROWN)
+for a, b in zip(_owned, _owned[1:]):
+    if _link.index(FAROWN[a]) > _link.index(FAROWN[b]):
+        sys.exit(f'far data: entry {a} is {FAROWN[a]}\'s and entry {b} {FAROWN[b]}\'s, but {FAROWN[b]} is linked first')
+# entries before a resident C file's far data that no C file defines: declared, empty, just
+# before it, so that TLINK sees them first (those before an overlay's are declared in XFAR,
+# which comes after every resident object)
+for i, para, lo, hi, fl in FAR:
+    if i in FAROWN: continue
+    nxt = next((j for j in _owned if j > i), None)
+    if nxt is None or FAROWN[nxt] not in RES: continue
+    k = FAROWN[nxt]; name = 'XF' + sfx(k)
+    if name not in modules:
+        module(name).lines.append(f'; the far data segments before {k}\'s, declared so that TLINK places them first')
+        RES.insert(RES.index(k), name)
+    modules[name].lines += [f'FD{i:02d} segment {ALIGN[i]} public \'FAR_DATA\'', f'FD{i:02d} ends']
+m = module('XFAR')
+for i, para, lo, hi, fl in FAR:
+    if hi is None or hi < lo: hi = lo
+    align = ALIGN[i]
+    if i in FAROWN:
+        m.lines.append(f'; entry {i} is {FAROWN[i]}\'s own far segment'); continue
     m.lines.append(f'FD{i:02d} segment {align} public \'FAR_DATA\'')
     if i in FARSRC: m.lines.append(f'; {FARSRC[i]} fills this segment')
     else:
         if hi > lo: m.lines += seg_start_labels(m, para, i)
         m.lines += body(m, lo, hi, para, False)
     m.lines.append(f'FD{i:02d} ends')
-    prev_end = max(prev_end, hi)
 # the far data sources follow XFAR, which declares their segments in the EXE's order
 RES[RES.index('XFAR') + 1:RES.index('XFAR') + 1] = sorted(FAROBJS)
 

@@ -63,7 +63,6 @@ extern struct Eye far *cPlayer;
 extern int far *dbptr;
 extern int far *cPixXferStuff;
 extern unsigned char far *cLightTabs;
-extern unsigned char TxmCol[];
 extern unsigned TxmTerr[];
 extern unsigned char tile_walls[];
 extern int hgt_val[];
@@ -72,28 +71,49 @@ extern unsigned char trans_grid[4][16];
 extern struct GLoc glocs[][33];
 extern unsigned char PlayersMap[64][64];
 extern struct Tile far *mapptr;
-extern struct Tile far *mlowptr;
-extern struct Tile far *mhighptr;
-extern struct Tile far *tmptr;
-extern struct GLoc far *dseg_67d6_2C74;   /* no FM Towns name (it is _gr_wcall+4 there) */
-extern unsigned char *qdec;
 extern int mxY;
 extern signed char quad;
-extern int loopx, loopy;          /* loopy is _loopy in FM Towns */
 extern int PlayerLevel;
-extern unsigned char PickUp;
-extern unsigned char AnimObjInPipe;
-extern unsigned char flat_case;
-extern unsigned char sqmod;
-extern char tCacheOK;
-extern int pipeexp;
-extern int ptnuminq;
-extern int cWCol;
-extern int cTmBm, cTmDm, cTmSz, cTmHg;
 extern unsigned far bmhgtoff;
-extern FlrFn gr_fcall, gr_ccall;
-extern WalFn gr_wcall;
 extern int sd_xmod, sd_ymod;           /* _sd_xmod and _sd_ymod in FM Towns */
+
+/* This file's _BSS, DS:2C68..2F95 (seg032's xwid ends at 2C67; seg033's ActDoors
+   starts at 2F96), laid out by name (tools/bssorder.py): cWCol 27, loopx and loopy 44,
+   UsPtr 53, cTmSz 59, p_gloc 104, qdec 153, AnimObjInPipe 257, TxmCol 332, color_to_map
+   363, color_to_obj 371, PickUp 376, mlowptr 461, ptnuminq 480, pt_spare 512, mhighptr
+   525, sqmod 555, flat_case 574, tmptr 596, pipeexp 752, cTmBm 947, cTmDm 963, gr_fcall,
+   gr_ccall and gr_wcall 967, cTmHg 995, tCacheOK 1004.
+
+   color_to_map and color_to_obj are the FM Towns names: they are the tile and object of
+   each pickable thing in the view, by its colour in the pick buffer (do_obj sets them,
+   pick_3d reads them), 172 entries each as in FM Towns, and every use, there as here, is
+   at [colour - 1]: so they start at DS:2CBC and 2E14, after TxmCol's 64 bytes and a pad
+   byte. FM Towns has p_gloc as a static (_gr_wcall+4), so its name is provisional and
+   chosen for its key; pt_spare (DS:2F74, two bytes nothing refers to) likewise. */
+int cWCol;                              /* DS:2C68 */
+int loopx, loopy;                       /* DS:2C6A, 2C6C */
+struct Object far *UsPtr;               /* DS:2C6E */
+int cTmSz;                              /* DS:2C72 */
+static struct GLoc far *p_gloc;         /* DS:2C74 */
+unsigned char *qdec;                    /* DS:2C78 */
+unsigned char AnimObjInPipe;            /* DS:2C7A */
+unsigned char TxmCol[64];               /* DS:2C7B */
+int color_to_map[172];                  /* DS:2CBC */
+int color_to_obj[172];                  /* DS:2E14 */
+unsigned char PickUp;                   /* DS:2F6C */
+struct Tile far *mlowptr;               /* DS:2F6E */
+int ptnuminq;                           /* DS:2F72 */
+static char pt_spare[2];                /* DS:2F74 */
+struct Tile far *mhighptr;              /* DS:2F76 */
+unsigned char sqmod;                    /* DS:2F7A */
+unsigned char flat_case;                /* DS:2F7B */
+struct Tile far *tmptr;                 /* DS:2F7C */
+int pipeexp;                            /* DS:2F80 */
+int cTmBm, cTmDm;                       /* DS:2F82, 2F84 */
+FlrFn gr_fcall, gr_ccall;               /* DS:2F86, 2F8A */
+WalFn gr_wcall;                         /* DS:2F8E */
+int cTmHg;                              /* DS:2F92 */
+char tCacheOK;                          /* DS:2F94 */
 
 int far SetPnt(char x, char y, char z);
 void far Ref(int n, int a);
@@ -302,15 +322,15 @@ void far subprocess(void)
     sort_setup(-10);
     for (loopy = mxY; loopy >= 0; loopy--) {
         sort_setup(2);
-        for (loopx = 0, dseg_67d6_2C74 = gloc + loopx, tmptr = row + loopx * dx,
+        for (loopx = 0, p_gloc = gloc + loopx, tmptr = row + loopx * dx,
              i = idx + loopx * dx; loopx < 0x10;
-             loopx++, dseg_67d6_2C74++, tmptr += dx, i += dx)
+             loopx++, p_gloc++, tmptr += dx, i += dx)
             if (!(i & 0xF000))
                 grdb_elem(PlayersMap[0] + i);
         sort_setup(1);
-        for (loopx = 0x20, dseg_67d6_2C74 = gloc + loopx, tmptr = row + loopx * dx,
+        for (loopx = 0x20, p_gloc = gloc + loopx, tmptr = row + loopx * dx,
              i = idx + loopx * dx; loopx > 0x10;
-             loopx--, dseg_67d6_2C74--, tmptr -= dx, i -= dx)
+             loopx--, p_gloc--, tmptr -= dx, i -= dx)
             if (!(i & 0xF000))
                 grdb_elem(PlayersMap[0] + i);
         sort_setup(0);
@@ -480,7 +500,7 @@ void far grdb_elem(unsigned char *automap)
     register unsigned char *p;
     register unsigned char *wm;
 
-    if (!((flags = dseg_67d6_2C74->flags) & 0x80)) {
+    if (!((flags = p_gloc->flags) & 0x80)) {
         if (*automap == 0) {
             *automap = tile_mapcode[tmptr->type];
             pipeexp++;
@@ -490,7 +510,7 @@ void far grdb_elem(unsigned char *automap)
     }
     ptnuminq = 0xC8;
     ht = tmptr->height;
-    sqmod = dseg_67d6_2C74->sq & 0xF;
+    sqmod = p_gloc->sq & 0xF;
     if (sqmod < 8) {
         code = tmptr->type;
         code = code | TxmTerr[tmptr->floor] & 0xC0;
@@ -534,7 +554,7 @@ void far grdb_elem(unsigned char *automap)
         bit = bit >> 1;
         if (flags & bit) {
             wm = wallmodtab[w];
-            if (dseg_67d6_2C74->sq & bit2) {
+            if (p_gloc->sq & bit2) {
                 nh = tmptr[chgtable[quad][wall_nbr[w]]].height;
                 nt = trans_grid[quad][tmptr[chgtable[quad][wall_nbr[w]]].type];
                 if ((tile_walls[nt] & 0x20) == 0x20)

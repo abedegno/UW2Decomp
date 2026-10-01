@@ -97,12 +97,17 @@ extern struct ComObj ComObjData[];
 extern int PlayerLevel;
 extern unsigned char tile_walls[];
 extern unsigned char seq_lframe;
-extern struct PathSq far pathsq[];
+/* This file's far data. Turbo C gives each far variable a paragraph-aligned segment of
+   its own (SEG006n_FAR), in definition order, and TLINK places the segments in the order
+   it first sees them: so pathsq (6062:0000, 63 squares), paths (6072:0000, 16 paths),
+   flood_list0 (608E:0000) and flood_list1 (6096:0000) are the far segments that SEG006
+   defined, segment table entries 65 to 68, the first after those no C file defined. */
+struct PathSq far pathsq[63];
+struct PathRec far paths[16];
 extern struct StaticTile far stdat[64][64];
-/* The two flood fill frontiers, far segments 608E and 6096 (64 squares each); static
-   in FM Towns, provisional names. */
+/* The two flood fill frontiers (64 squares each); static in FM Towns, provisional names. */
 struct PathPt { unsigned char x, y; };
-extern struct PathPt far flood_list0[64], far flood_list1[64];
+static struct PathPt far flood_list0[64], far flood_list1[64];
 extern void far mem_set(void far *p, int value, int count);
 void far make_path_from_flood_data(unsigned char length, unsigned char x,
     unsigned char y);
@@ -145,7 +150,6 @@ static unsigned char path_turns[3][3] = {
 static unsigned char slope_for_dir[4] = { 6, 8, 7, 9 };
 extern unsigned TxmTerr[];
 extern struct Object far * far Obj_PtrTMem(struct Link far *link);
-extern struct PathRec far paths[];
 extern void far critter_set_goal(unsigned char goal, int target);
 extern void far crit_drunkwalk(void);
 extern unsigned char far acceptable_danger(void);

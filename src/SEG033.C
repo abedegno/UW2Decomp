@@ -74,8 +74,8 @@ extern unsigned char PickUp;
 extern struct Tile far *mlowptr;
 extern struct Tile far *tmptr;
 extern int mptrmod;
-extern int TileIndices[];
-extern int ObjectIndices[];
+extern int color_to_map[];
+extern int color_to_obj[];
 extern int far *dbptr;
 extern char quad;
 extern int objxloc, objyloc, objzloc;
@@ -194,8 +194,8 @@ void far do_obj(struct Object far *o)
     if (((o->id & 0x4000) >> 14) == 1)
         return;
     if (PickUp) {
-        TileIndices[PickUp] = (int)(tmptr - mlowptr) + mptrmod;
-        ObjectIndices[PickUp] = Obj_MemTPtr(o);
+        color_to_map[PickUp - 1] = (int)(tmptr - mlowptr) + mptrmod;
+        color_to_obj[PickUp - 1] = Obj_MemTPtr(o);
         *dbptr++ = 0xAE;
         *dbptr++ = PickUp;
         if (++PickUp >= 0xAC)

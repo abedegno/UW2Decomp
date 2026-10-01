@@ -161,8 +161,8 @@ unsigned far *releasePtr;
 int GameInputMode;
 
 /* No FM Towns names: the pick tables, indexed by the byte under the cursor. */
-extern int ObjectIndices[];
-extern int TileIndices[];
+extern int color_to_obj[];
+extern int color_to_map[];
 
 void far player_attack(int swing);
 void far set_screen_frame(int frame, int how);
@@ -405,14 +405,14 @@ struct Object far * far pick_3d(int how)
     idx = 0;
     pTxtId = 0;
     if (*p >= 1 && *p < PickUp) {
-        idx = ObjectIndices[*p];
-        PickMap = mlowptr + TileIndices[*p];
+        idx = color_to_obj[*p - 1];
+        PickMap = mlowptr + color_to_map[*p - 1];
     } else if (*p >= 0xAC && *p <= 0xFC || *p == 0) {
         if ((idx = check_around(stdat, inplist->x, inplist->y)) == 0)
             pTxtId = *p - 0xAB;
         else {
-            PickMap = mlowptr + TileIndices[idx];
-            idx = ObjectIndices[idx];
+            PickMap = mlowptr + color_to_map[idx - 1];
+            idx = color_to_obj[idx - 1];
         }
     }
     if (idx == 0)

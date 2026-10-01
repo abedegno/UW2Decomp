@@ -72,7 +72,10 @@ char *opcode_text[] = {
 extern unsigned cnv_id;
 extern int CutsceneOrConversationStringBlock;
 extern char far stdat[];
-extern char far seg066_0;
+/* 40h bytes, far, so its own segment (6384:0000, segment table entry 76); load_script
+   clears the first. FM Towns' load_script_ stores to it unnamed, so it was static;
+   provisional name. */
+static char far seg066_0[0x40];
 
 /* Far string routines (seg017 and seg039). */
 int far str_len(char far *s);
@@ -377,7 +380,7 @@ int far load_script(char *name, char far *work)
     char far *buffer;
     register int size;
     ovr095_0(work);
-    seg066_0 = 0;
+    seg066_0[0] = 0;
     file_name = name;
     if (open_arc(2, "DATA\\")) {
         if ((arc_buffer = bab_malloc(0x5000L)) == 0)

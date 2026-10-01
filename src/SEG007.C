@@ -181,12 +181,16 @@ struct MissileInfo {
     signed char ammo;
 };
 extern struct MissileInfo Missile[];
-/* The charge of a critter's blow, by attack frame. Static in FM Towns: provisional name. */
+/* The charge of a critter's blow, by attack frame. Static in FM Towns: provisional name.
+   A far variable, so its own segment (SEG0075_FAR, 609E:0000, segment table entry 69,
+   right after SEG006's four): only this file uses it. */
 struct AtkCharge {
     unsigned char charge;
     char b1;
 };
-extern struct AtkCharge far atk_charge[];
+static struct AtkCharge far atk_charge[16] = {
+    { 50, 0 }, { 60, 0 }, { 70, 0 }, { 80, 0 }, { 90, 0 }, { 100, 0 }, { 110, 0 }, { 120, 0 },
+    { 130, 0 }, { 140, 0 }, { 155, 0 }, { 170, 0 }, { 185, 0 }, { 205, 0 }, { 230, 0 }, { 255, 0 } };
 
 /* Uninitialised data, DS:222C..2299. This block is one module's _BSS (Turbo C lays a
    module's _BSS out by name), and variables only seg006 uses (DS:222E, 2236, 2238, 2240,

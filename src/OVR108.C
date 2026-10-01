@@ -119,8 +119,8 @@ extern unsigned char far sound_fpage;     /* DS:34AA: the first EMS page of the 
 /* The first EMS page of the speech being streamed: the one-byte far variable at 6388:0000.
    FM Towns has it as a static (_task_sofar+0x22, beside sp_npages and audio_inpage at +0x20
    and +0x21), so the name is provisional. cutsop_say passes sound_fpage instead, as FM
-   Towns' cutsop_say_ does (_sound_fpage). */
-extern unsigned char far speech_fpage;
+   Towns' cutsop_say_ does (_sound_fpage). Far, so its own segment (segment table entry 77). */
+static unsigned char far speech_fpage;
 extern char far dfx_buffer[];         /* the digital effects' buffer (SEG016.C) */
 void far MapMemory_seg013_1D3C_C7(int phys, int page);
 unsigned char far seg013_1D3C_E4(int bank, int page, int count);

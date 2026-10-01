@@ -14,6 +14,11 @@ usage: verify.py src/FILE.C [--update]      (run match.py first; this reads its 
   which the linker assigns; those must be one per function.
 - References into this file's _DATA must agree on one base, and the _DATA bytes must equal
   the EXE's data segment at that base. References into _BSS must agree on one base.
+- The file's own far segments (Turbo C gives each `far` variable a paragraph-aligned segment
+  of its own, FILE<n>_FAR, class FAR_DATA): every reference to one (segment words, offsets,
+  far pointers, in code and in _DATA) must agree on one address, and the segment's bytes
+  must equal the EXE's there. A far segment nothing in the file refers to is placed by its
+  publics' addresses in symbols.tsv.
 Names are always checked against symbols.tsv (one name per address, one address per
 name); --update also merges them in."""
 import sys, os, re, struct
@@ -43,6 +48,8 @@ def main():
     code = next(i for i, s in enumerate(segs) if s and s[1] == 'CODE')
     datas = next(i for i, s in enumerate(segs) if s and s[0] == '_DATA')
     bss = next((i for i, s in enumerate(segs) if s and s[0] == '_BSS'), None)
+    fars = {i for i, s in enumerate(segs) if s and s[1] == 'FAR_DATA'}
+    farref = {}; farfx = []     # far segment -> {'seg'|'off': [(value, where)]}; fixups inside them
     syms = {}; problems = []; data_bases = set(); cs_values = set(); internal = 0; entries = {}; bss_bases = set(); halves = {}; datafx = []; segonly = {}
 
     def note(name, val, where):
@@ -53,6 +60,8 @@ def main():
     for f in o['fixups']:
         if f['seg'] == datas:
             datafx.append(f); continue      # checked once the data base is known
+        if f['seg'] in fars:
+            farfx.append(f); continue       # checked once the far segment is placed
         if f['seg'] != code:
             problems.append(f'fixup in segment {segs[f["seg"]][0]} not checked'); continue
         at = f['off']; obj = o['data'][code]; loc = f['loc']; tm, ti = f['target']
@@ -103,6 +112,14 @@ def main():
         elif tm == 0 and ti == datas or tm == 1:       # this file's data, through DGROUP
             internal += 1
             data_bases.add((word(exe, base + at) - add) & 0xFFFF)
+        elif tm == 0 and ti in fars and loc in (1, 2, 3, 5):    # this file's own far data
+            internal += 1
+            r = farref.setdefault(ti, {})
+            if loc in (1, 5): r.setdefault('off', []).append(((word(exe, base + at) - add) & 0xFFFF, f'+{at:X}'))
+            elif loc == 2: r.setdefault('seg', []).append((para_of(word(exe, base + at)), f'+{at:X}'))
+            else:
+                r.setdefault('off', []).append(((word(exe, base + at) - add) & 0xFFFF, f'+{at:X}'))
+                r.setdefault('seg', []).append((para_of(word(exe, base + at + 2)), f'+{at:X}'))
         else:
             problems.append(f'+{at:X}: target {target_name(o, f["target"])} loc {loc} not handled')
 
@@ -158,6 +175,12 @@ def main():
                 internal += 1
                 if word(exe, here) != (db + add) & 0xFFFF:
                     problems.append(f'_DATA+{at:X}: points to DS:{word(exe, here):X}, expected DS:{(db + add) & 0xFFFF:X}')
+            elif tm == 0 and ti in fars and loc in (1, 2, 3, 5):
+                # a pointer into this file's own far data: placed with the code's references
+                internal += 1
+                r = farref.setdefault(ti, {})
+                if loc in (1, 3, 5): r.setdefault('off', []).append(((word(exe, here) - add) & 0xFFFF, f'_DATA+{at:X}'))
+                if loc in (2, 3): r.setdefault('seg', []).append((word(exe, here + (2 if loc == 3 else 0)), f'_DATA+{at:X}'))
             elif tm == 2 and loc == 3:
                 # DGROUP is resident, so segment words in data are real paragraphs
                 note(o['ext'][ti], ('FAR', word(exe, here + 2), (word(exe, here) - add) & 0xFFFF), at)
@@ -170,6 +193,8 @@ def main():
             problems.append(f'_DATA at DS:{db:X} differs at {len(bad)} bytes:\n    obj {data.hex(" ")}\n    exe {theirs.hex(" ")}')
         else:
             print(f'_DATA: {len(data)} bytes match at DS:{db:X}' + (f' ({len(datafx)} pointers checked)' if datafx else ''))
+
+    farat = place_far(o, fars, farref, farfx, exe, hdr, word, note, problems)
 
     for fn, e in sorted(entries.items()):
         name = next((r[0] for r in rows if r[2] == fn), f'+{fn:X}')
@@ -205,6 +230,7 @@ def main():
     for name, (si, off) in o['pubs'].items():
         if si == datas and db is not None: pubs[name] = ('DS', (db + off) & 0xFFFF)
         elif si == bss and len(bss_bases) == 1: pubs[name] = ('DS', (min(bss_bases) + off) & 0xFFFF)
+        elif si in farat: pubs[name] = ('FAR', farat[si][0], farat[si][1] + off)
         elif si == code and base < mzend: pubs[name] = ('FAR', para, org + off)
         elif si == code and stub:
             if off in stub[1]: pubs[name] = ('FAR', stub[0], stub[1][off])
@@ -218,6 +244,73 @@ def main():
     for p in problems: print('PROBLEM', p)
     print('-- fixups and data verified' if not problems else f'-- {len(problems)} problems')
     return 1 if problems else 0
+
+def place_far(o, fars, farref, farfx, exe, hdr, word, note, problems):
+    """Place each of the file's own far segments and compare its bytes with the EXE's.
+    Returns {segment index: (paragraph, offset)}. References give the address; a segment the
+    file never refers to is placed by its publics in symbols.tsv. Far data is resident, so
+    segment words are real paragraphs, and fixups inside it are checked and masked."""
+    segs = o['segs']; at = {}
+    known = {}
+    path = os.path.join(root, 'symbols.tsv')
+    if os.path.exists(path):
+        for l in open(path):
+            if not l.startswith('#') and l.strip(): n, v = l.split('\t')[:2]; known[n] = v
+    for si in sorted(fars):
+        name = segs[si][0]; r = farref.get(si, {}); got = {}
+        for half in ('seg', 'off'):
+            vals = sorted({v for v, _ in r.get(half, [])})
+            if len(vals) > 1:
+                problems.append(f'{name}: {half} references differ: ' + ', '.join(
+                    f'{v:04X} at ' + '/'.join(w for u, w in r[half] if u == v) for v in vals))
+            elif vals: got[half] = vals[0]
+        # what symbols.tsv says, through the segment's publics
+        tsv = set()
+        for n, (psi, off) in o['pubs'].items():
+            v = known.get(n)
+            if psi == si and v and ':' in v and not v.startswith('DS:'):
+                p, q = (int(x, 16) for x in v.split(':')); tsv.add((p, (q - off) & 0xFFFF))
+        if 'seg' in got:
+            para = got['seg']; off = got.get('off')
+            if off is None:
+                # only the segment is used: its offset is the segment's start in that paragraph
+                offs = {q for p, q in tsv if p == para}
+                off = min(offs) if len(offs) == 1 else 0
+            how = 'referenced'
+        elif len(tsv) == 1:
+            para, off = min(tsv); how = 'placed by symbols.tsv'
+        else:
+            if 'off' in got: problems.append(f'{name}: only the offset half of its address is referenced')
+            elif tsv: problems.append(f'{name}: its publics disagree in symbols.tsv')
+            elif segs[si][2]: problems.append(f'{name}: {segs[si][2]} bytes, but nothing places it (no reference, no public in symbols.tsv)')
+            continue
+        at[si] = (para, off)
+        data = bytes(o['data'][si]); lo = hdr + para * 16 + off; theirs = exe[lo:lo + len(data)]
+        masked = set()
+        for f in farfx:
+            if f['seg'] != si: continue
+            k = f['off']; loc = f['loc']; tm, ti = f['target']; add = word(data, k) + f['disp']; here = lo + k
+            masked.update(range(k, k + {0: 1, 1: 2, 2: 2, 3: 4, 4: 1, 5: 2}[loc]))
+            if tm == 2 and loc == 3:
+                note(o['ext'][ti], ('FAR', word(exe, here + 2), (word(exe, here) - add) & 0xFFFF), k)
+            else:
+                problems.append(f'{name}+{k:X}: fixup to {target_name(o, f["target"])} loc {loc} not handled')
+        # TLINK lists every segment in the overlay manager's segment table ({paragraph, end,
+        # flags, start}): the EXE's segment there must be exactly this long
+        cblp, cp = struct.unpack_from('<HH', exe, 2); mzend = (cp - 1) * 512 + cblp
+        segtab, nseg = struct.unpack_from('<II', exe, mzend + 8)
+        ent = [struct.unpack_from('<4H', exe, segtab + 8 * i) for i in range(nseg)]
+        # (empty segments share a paragraph with the next one: they are left out)
+        ext = [e[1] - e[3] for e in ent if e[0] == para and e[3] == off and e[1] != 0xFFFF and e[1] > e[3]]
+        if data and (len(ext) != 1 or ext[0] != len(data)):
+            problems.append(f'{name}: {len(data)} bytes, but the EXE\'s segment at {para:04X}:{off:04X} is ' +
+                            (f'{ext[0]:X}h bytes' if len(ext) == 1 else 'not in its segment table'))
+        bad = [k for k in range(len(data)) if k not in masked and (k >= len(theirs) or data[k] != theirs[k])]
+        if bad:
+            problems.append(f'{name} at {para:04X}:{off:04X} differs at {len(bad)} bytes, first at +{bad[0]:X}')
+        else:
+            print(f'{name}: {len(data)} bytes match at {para:04X}:{off:04X} ({how})')
+    return at
 
 def fmt(v):
     return f'DS:{v[1]:04X}' if v[0] == 'DS' else f'{v[1]:04X}:{v[2]:04X}'

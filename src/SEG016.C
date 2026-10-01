@@ -154,7 +154,9 @@ extern unsigned char far obj_inpage1;   /* the EMS page mapped into frame page 2
 extern unsigned far EmsBuff;            /* 4FAF:E4D2 */
 extern unsigned char far sound_fpage;   /* the first EMS page of the sounds */
 extern char far dfx_buffer[];           /* the digital buffers; name provisional */
-extern struct Effect far effects[];
+/* The effects table, 49 entries: far, so its own segment (60A0:0000, segment table entry
+   70, after SEG007's); SEG044.C and OVR108.C, its other users, are linked too late. */
+struct Effect far effects[49];
 
 extern unsigned char dsfx_playing;
 extern struct Object far *ThePlayer;

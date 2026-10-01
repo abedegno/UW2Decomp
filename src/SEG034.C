@@ -19,8 +19,7 @@ struct ComObj {
    laid out by name (tools/bssorder.py): holdmid 112, holdtmp 144, locsqmod 228,
    sortlist 267, sortdata 275, mptrmod 421, sd_xmod and sd_ymod 427, dirval 492,
    refugees 666, objxloc, objyloc and objzloc 935, objptrs 959. All FM Towns names: FM Towns
-   has objptrs, the same 60 entries, right after refugees. It is static here only because
-   symbols.tsv still calls DS:334E _ObjectsIn3DView; it should be public. */
+   has objptrs, the same 60 entries, right after refugees. */
 unsigned short holdmid[9], holdtmp[9];
 unsigned char locsqmod;
 signed char sortlist[60];
@@ -30,7 +29,7 @@ int sd_xmod, sd_ymod;
 signed char dirval;
 unsigned short refugees[33][9];               /* 0x252 bytes: the memset clears them all */
 int objxloc, objyloc, objzloc;
-static unsigned short objptrs[60];
+unsigned short objptrs[60];
 /* This file's _DATA, DS:06FE..073D: between seg033's data and seg035's, and only this
    file uses it (FM Towns has it right after seg033's dirtab, before seg035's tables). */
 signed char trans_pos_x[64] = {

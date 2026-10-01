@@ -9,14 +9,18 @@ struct StringBlock {
 };
 struct Object { unsigned id; char pad[0x18]; unsigned char whoami; };
 
-extern struct StringBlock far Strings[2];
 extern int CutsceneOrConversationStringBlock;
 struct StringNode { unsigned char value, pad, left, right; };
 extern struct StringNode far *StringsPak_Address_Indices;
 extern int StringsPak_NoOfNodes;
 extern int StringsPak_FileHandle;
 extern int string_bits;
-extern char far StringBuffer[];
+/* The string decoder's buffer and the two cached string blocks: far, so a segment each
+   (617D:0000 and 627D:0000, segment table entries 72 and 73), defined in this order. Only
+   this file uses them. FM Towns names the buffer str_buff (read_string_); its blocks
+   follow str_file (StringsPak_FileHandle here) unnamed, so they were static. */
+char far str_buff[0x1000];
+static struct StringBlock far Strings[2];
 
 int OutString = 0;
 int string_bits_used = 8;
@@ -214,7 +218,7 @@ char far * far read_string(int block, int string)
     int count, item, relative, string_count;
     long address;
     register int index, found;
-    result = StringBuffer + OutString;
+    result = str_buff + OutString;
     index = 0;
     fseek(StringsPak_FileHandle, (unsigned)(StringsPak_NoOfNodes << 2) + 2, 0);
     fread(&count, 2, 1, StringsPak_FileHandle);

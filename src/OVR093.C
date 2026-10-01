@@ -26,7 +26,9 @@ struct ArcFile {
     char name[0x50];                    /* 0x08, the file's path */
 };
 
-extern struct ArcFile far arcfile;
+/* The open archive: far, so its own segment (637E:0000, segment table entry 75). FM
+   Towns' open_arc_ stores to it unnamed, so it was static; provisional name. */
+static struct ArcFile far arcfile;
 extern char HomeDir[];
 extern char far stdat[];
 

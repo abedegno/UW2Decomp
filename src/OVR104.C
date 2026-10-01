@@ -12,15 +12,14 @@ extern struct Object far *ActiveObj;
 /* This file's _BSS, DS:492A..554D, laid out by name (tools/bssorder.py): cr_type 931, cst 955,
    cr_unused 971, Creature 979, cr_class 1019. cr_class and cr_type are the FM Towns names
    (its creature_class_data_ sets them as this one does), and their keys put them exactly
-   where UW2 has them, either side of Creature. They are static here only because
-   symbols.tsv still calls them _ItemMinorClass and _ItemSubClass: they should be public.
+   where UW2 has them, either side of Creature.
    Nothing uses DS:492E..494B, but it lies between cst and Creature. (DS:4928..4929, also
    never used, is left out: it may as well be ovr103's.) */
-static unsigned cr_type;                /* DS:492A, the creature's type within its class */
+unsigned cr_type;                       /* DS:492A, the creature's type within its class */
 struct Creature *cst;                   /* DS:492C */
 static char cr_unused[0x1E];            /* DS:492E, never used */
 struct Creature Creature[64];           /* DS:494C */
-static unsigned cr_class;               /* DS:554C, the creature's class */
+unsigned cr_class;                      /* DS:554C, the creature's class */
 void far fread(void *address, int size, int count, int fd);
 void far fwrite(void *address, int size, int count, int fd);
 int far rand(void);

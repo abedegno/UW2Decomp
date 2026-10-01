@@ -174,7 +174,6 @@ _aRb_4	DS:0906	provisional
 _arc_buffer	DS:4702	FM Towns
 _arc_read_tables	6417:0025	FM Towns
 _arc_write_tables	6417:002A	FM Towns
-_arcfile	637E:0000	provisional
 _arcstr	DS:09AE	FM Towns
 _area1_spells	DS:1B4B	FM Towns
 _area_spell_state	DS:1B0A	FM Towns
@@ -190,7 +189,6 @@ _AskInventory	650A:005C	FM Towns
 _asm_texture_map_from_draw_poly	065C:4F85	FM Towns
 _assess_value	6448:0075	FM Towns
 _aStrings_pak	DS:08FA	provisional
-_atk_charge	609E:0000	provisional
 _ATM_Strings	3CF5:468E	FM Towns
 _atol	0E72:1597	provisional
 _attach_eye	656A:0057	FM Towns
@@ -384,6 +382,8 @@ _code_pnt	065C:3A88	FM Towns
 _CollObject	2B0D:19F7	FM Towns
 _collobject	DS:2238	FM Towns
 _Color_data_ptr	DS:21B8	FM Towns
+_color_to_map	DS:2CBC	FM Towns
+_color_to_obj	DS:2E14	FM Towns
 _combEfflen	DS:073F	FM Towns
 _CombineObjs	6465:0025	FM Towns
 _ComObjData	DS:6B74	FM Towns
@@ -433,6 +433,8 @@ _cPerror	DS:215C	FM Towns
 _cPixXferStuff	DS:2184	FM Towns
 _cPlaceFB	2110:0D1D	FM Towns
 _cPlayer	DS:2168	FM Towns
+_cr_class	DS:554C	FM Towns
+_cr_type	DS:492A	FM Towns
 _creat_spell	65B5:002A	FM Towns
 _create_matrix	065C:0E15	FM Towns
 _create_player	645E:002A	FM Towns
@@ -827,7 +829,6 @@ _dsdata	DS:02BC	FM Towns
 _dseg_67d6_120	DS:0120	provisional
 _dseg_67d6_121	DS:0121	provisional
 _dseg_67d6_21F4	DS:21F4	provisional
-_dseg_67d6_2C74	DS:2C74	provisional
 _dseg_67d6_920	DS:0920	provisional
 _dsfx_playing	DS:010A	FM Towns
 _dtypes	DS:1B72	FM Towns
@@ -944,8 +945,6 @@ _flciel	DS:0503	FM Towns
 _flip_bool	65E0:0052	FM Towns
 _flip_switch	32FA:0720	FM Towns
 _flog_list	28A1:0EDD	FM Towns
-_flood_list0	608E:0000	provisional
-_flood_list1	6096:0000	provisional
 _flood_path	1226:1994	FM Towns
 _focus_x	DS:1078	FM Towns
 _focus_y	DS:107A	FM Towns
@@ -1234,8 +1233,6 @@ _IsaDoor	2B0D:190E	FM Towns
 _IsJoy	DS:8298	FM Towns
 _IsMobElem	28A1:0A87	FM Towns
 _ItemFitsSlot	6513:005C	FM Towns
-_ItemMinorClass	DS:554C	provisional
-_ItemSubClass	DS:492A	provisional
 _ItemWeight	650A:004D	FM Towns
 _itoa	0E72:1D1B	FM Towns
 _jiggle_weapon	30D3:0DB0	FM Towns
@@ -1602,10 +1599,9 @@ _ObjectActor	DS:24E8	FM Towns
 _ObjectActorArg	DS:24F2	FM Towns
 _ObjectCheck	2754:0C0E	FM Towns
 _ObjectCombineToSlot_ovr097_D30	6448:0098	provisional
-_ObjectIndices	DS:2E12	provisional
-_ObjectsIn3DView	DS:334E	provisional
 _ObjectToRunCodeAround_dseg_67d6_	DS:8640	provisional
 _objptr	DS:25A6	FM Towns
+_objptrs	DS:334E	FM Towns
 _ObjsBeCombinable	6465:002F	FM Towns
 _objtop	DS:259E	FM Towns
 _ObjWorn	650A:0070	FM Towns
@@ -2354,7 +2350,6 @@ _seg046_37CD_C1A	35E0:0C1A	provisional
 _seg046_37CD_CC1	35E0:0CC1	provisional
 _seg046_37CD_CF0	35E0:0CF0	provisional
 _seg052_519C_E4D4	4FAF:E4D4	provisional
-_seg066_0	6384:0000	provisional
 _self_modify	065C:34C5	FM Towns
 _selopt	645E:0048	FM Towns
 _send_db	2CAE:025D	FM Towns
@@ -2511,7 +2506,6 @@ _SpecialLook	651C:003E	FM Towns
 _SpecShadeMode	DS:053F	FM Towns
 _specweap	DS:24BE	FM Towns
 _speech_available	1C86:2F99	FM Towns
-_speech_fpage	6388:0000	provisional
 _speech_over	6488:00CF	FM Towns
 _speechok	DS:0297	FM Towns
 _spell_delay	DS:15DE	FM Towns
@@ -2546,6 +2540,7 @@ _stop_music	1C86:1BE9	FM Towns
 _store_path	1226:2934	FM Towns
 _store_targ	1226:02C7	FM Towns
 _StoreAnimationOverlaysToLevArk_o	6526:0020	provisional
+_str_buff	617D:0000	FM Towns
 _str_cat	3265:090B	provisional
 _str_cmp	1F8C:01F7	provisional
 _str_copy	1F8C:013F	provisional
@@ -2562,8 +2557,6 @@ _string_bits_used	DS:08F4	provisional
 _string_blocks	DS:08F6	provisional
 _string_to_screen	0085:446D	FM Towns
 _string_width	0085:454B	FM Towns
-_StringBuffer	617D:0000	provisional
-_Strings	627D:0000	provisional
 _StringsPak_Address_Indices	DS:349C	provisional
 _StringsPak_FileHandle	DS:34A2	provisional
 _StringsPak_NoOfNodes	DS:34A0	provisional
@@ -2621,7 +2614,6 @@ _thgt	DS:0592	FM Towns
 _thump_your_magic_twanger_froggie	65B5:006B	FM Towns
 _tile_to_five	DS:0513	FM Towns
 _tile_walls	DS:1BA6	FM Towns
-_TileIndices	DS:2CBA	provisional
 _time	0E72:0FF2	FM Towns
 _Time	DS:2158	FM Towns
 _timercount	DS:3576	FM Towns
