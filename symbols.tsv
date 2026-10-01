@@ -40,8 +40,10 @@ _camang	DS:33DA	FM Towns
 _campos	DS:33E0	FM Towns
 _can_place	2754:1021	FM Towns
 _CapsLock	DS:212C	provisional
+_cAtan2	2110:0EFB	FM Towns
 _cFBtoScreen	2110:0C7E	FM Towns
 _cFillFB	2110:0C84	FM Towns
+_cFstSinCos	2110:0E63	FM Towns
 _Change_AnimPtr	34A2:03CE	FM Towns
 _change_critter_goal	647E:0025	FM Towns
 _change_GrSq	191C:137B	FM Towns
@@ -196,6 +198,7 @@ _Food	DS:6B60	FM Towns
 _fopen	0E72:07FC	FM Towns
 _force_mouse_cursor	1B8F:067D	FM Towns
 _foreground_color	DS:21C4	FM Towns
+_ForwInpRate	DS:077C	FM Towns
 _free	0E72:36E0	FM Towns
 _FreePlayerInv	64FE:0039	FM Towns
 _frictionless	DS:229E	FM Towns
@@ -240,6 +243,7 @@ _gvecs	DS:2B5E	FM Towns
 _HasOrIsObj	28A1:0C6B	FM Towns
 _Hasted	DS:0380	FM Towns
 _hgt_change	191C:14B1	FM Towns
+_hgt_val	DS:1874	FM Towns
 _hit_critter_goal	65A7:0039	FM Towns
 _hit_obj	DS:26A4	provisional
 _home_cam	656A:0025	FM Towns
@@ -276,18 +280,23 @@ _kill_all_effects	1C86:20C1	FM Towns
 _kill_effect	1C86:1FFD	FM Towns
 _Killorn_just_crashed	64A5:00B1	FM Towns
 _labs	0E72:0B1F	FM Towns
+_last_light	DS:19B9	FM Towns
 _LastActiveMob	DS:258C	FM Towns
 _lastXeye	DS:2294	FM Towns
 _lastYeye	DS:2296	FM Towns
 _lcldblen	DS:26EA	FM Towns
 _LeftPanel	DS:0384	FM Towns
 _level_table	DS:08E1	provisional
+_light_act	DS:19B6	FM Towns
+_light_hi	DS:19B8	FM Towns
+_light_mod	DS:19B5	FM Towns
 _Lights	DS:6B40	FM Towns
 _load_digi_fx	1C86:0260	FM Towns
 _load_dl	6564:002A	FM Towns
 _load_inventory_pix	6513:0066	FM Towns
 _load_new_music	1C86:174B	FM Towns
 _load_weapcm	30D3:0FEB	FM Towns
+_loc_lght	DS:19B7	FM Towns
 _local_do_palette	1F8C:0220	FM Towns
 _loct	DS:2C61	FM Towns
 _look_nothing	2529:073F	FM Towns
@@ -379,6 +388,8 @@ _NightCleanCritPages	64DE:002A	FM Towns
 _notdone	DS:5D68	FM Towns
 _npc_scroll	DS:094D	FM Towns
 _npp_func	DS:12C2	FM Towns
+_nvokHgt	DS:2582	FM Towns
+_nvokTerr	DS:2586	FM Towns
 _Obj_Add	28A1:058C	FM Towns
 _Obj_AddEnd	28A1:05FA	FM Towns
 _Obj_Alloc	28A1:0471	FM Towns
@@ -462,9 +473,12 @@ _PlayerDat	DS:82A4	FM Towns
 _playerdat	DS:828C	FM Towns
 _PlayerFacing	DS:8294	FM Towns
 _PlayerHeading	DS:8296	FM Towns
+_PlayerInput	DS:0773	FM Towns
 _PlayerLevel	DS:8292	FM Towns
 _playerMod	DS:33CE	FM Towns
 _PlayerPitch	DS:33D6	FM Towns
+_PlayersMap	DS:36FC	FM Towns
+_PlayerTurn	DS:0775	FM Towns
 _PLeft	DS:829E	FM Towns
 _plyNotice	DS:19B2	FM Towns
 _plyregen	DS:190A	FM Towns
@@ -480,6 +494,7 @@ _process_objlist	2754:0ED8	FM Towns
 _PT	DS:26AA	FM Towns
 _pTxtId	DS:24E4	FM Towns
 _punt_all_digi_fx	1C86:0284	FM Towns
+_punt_fightmode	2529:1396	FM Towns
 _punt_void	6599:0070	FM Towns
 _put_arc	6417:004D	FM Towns
 _put_at	2754:1245	FM Towns
@@ -550,10 +565,12 @@ _set_curmagic	653A:002A	FM Towns
 _set_drugged	6564:004D	FM Towns
 _set_effect	2FBE:0CA3	FM Towns
 _set_font_size	64E2:004D	FM Towns
+_set_light	6592:0025	FM Towns
 _set_mouse_in	342C:0003	FM Towns
 _set_new_music	1C86:2B0C	FM Towns
 _set_player_phys_params	191C:07B2	FM Towns
 _set_random_walking_music	1C86:2B1E	FM Towns
+_set_resterr	2B0D:134B	FM Towns
 _set_runes	30D3:1098	FM Towns
 _set_screen_frame	30D3:02C8	FM Towns
 _set_the_color	0085:48F4	FM Towns
@@ -616,6 +633,7 @@ _Transparency	370D:0DC5	FM Towns
 _trap_obj_del	65D5:0034	FM Towns
 _trap_teleport_data	DS:1BB6	FM Towns
 _tries	DS:26B6	provisional
+_TurnInpRate	DS:077E	FM Towns
 _Txm_Load	655E:0025	FM Towns
 _Txm_Save	655E:0034	FM Towns
 _TxmID	DS:8208	FM Towns

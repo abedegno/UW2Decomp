@@ -164,5 +164,8 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **`if (x != K) continue;` at the top of a loop body** forces a reload at the fall-through label; the nested `if (x == K) {...}` form does not.
 - **Self-assignments survive `-O`**: `x = x;` on a char local is kept as a load and a store, so a load and store of the same slot inside an apparently empty test is that.
 - **`if (((c >> n) & 1) == 0)`** gives `test al,1`; `!((c >> n) & 1)` gives `test ax,1`.
+- **A stray `xor ax,ax` before a bitfield store** comes from a chained assignment such as `o->next = o->quality = 0;`.
+- **`lx *= K` against `lx = lx * K` on a long** puts the constant in CX:BX or DX:AX for `N_LXMUL@`.
+- **Unreachable code is dropped**: if both arms of an if/else return, a following `return` disappears (with a warning) and the function comes out short; a dead `jmp` to the epilogue after an else arm's return means the source had a reachable statement there.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.
