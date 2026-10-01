@@ -76,3 +76,5 @@ ovr132
 ovr118
 ovr151
 ovr116
+seg039_3452
+seg034_310D

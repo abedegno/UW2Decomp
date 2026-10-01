@@ -1,12 +1,12 @@
 # segment seg034_310D base 0x31E06 size 0x9E2 org 0x6
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
-InitSomeArrays_seg034_310D_6	InitSomeArrays_seg034_310D_6	0x0	0xE4
-seg034_310D_EA	seg034_310D_EA	0xE4	0x56
-seg034_310D_140	seg034_310D_140	0x13A	0x1B
+sort_setup	InitSomeArrays_seg034_310D_6	0x0	0xE4
+sort_obj	seg034_310D_EA	0xE4	0x56
+build_sort	seg034_310D_140	0x13A	0x1B
 do_partition	seg034_310D_15B	0x155	0xD5
 z_part	seg034_310D_230	0x22A	0x7B
 door_part	seg034_310D_2AB	0x2A5	0xA8
-StoreObjectPositionsInArray_seg034_310D_353	StoreObjectPositionsInArray_seg034_310D_353	0x34D	0xA4
-seg034_310D_3F7	seg034_310D_3F7	0x3F1	0x39
-seg034_310D_430	seg034_310D_430	0x42A	0x35
+set_sds	StoreObjectPositionsInArray_seg034_310D_353	0x34D	0xA4
+set_osum	seg034_310D_3F7	0x3F1	0x39
+clear_objsort	seg034_310D_430	0x42A	0x35
 do_objsort	RenderObjectList_seg034_310D_465	0x45F	0x583
