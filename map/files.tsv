@@ -46,7 +46,7 @@ seg045_379C	assembly	7	783	0	0	0	7
 seg046_37CD	assembly	43	7963	0	4	0	39			
 ovr091	C	2	44	0	0	0	2			
 ovr092	C	7	44	0	0	0	7			
-ovr093	C	13	3629	7	4	0	2	get_ulong_	check_arc_	
+ovr093	C	13	3629	7	4	0	2	get_ulong_	check_arc_	yes
 ovr094	C	28	6350	25	0	0	3	AutoMap_	make_terrain_unseen_	yes
 ovr095	C	58	8859	3	7	7	41	babl_setmem_	bab_var_out_	
 ovr096	C	27	5202	12	15	0	0	babl_hack_	x_obj_pos_	yes

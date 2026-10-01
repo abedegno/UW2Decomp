@@ -3,6 +3,8 @@
 __ctype	DS:1BF6	provisional
 __dblen	4FAF:C77E	FM Towns
 __input_addkey	1AB4:0104	FM Towns
+_ac_shrink_disk	6596:0025	FM Towns
+_ac_unshrink_disk	6596:002A	FM Towns
 _access	0E72:0249	FM Towns
 _ActDoors	DS:2F96	FM Towns
 _ActiveMob	DS:2596	FM Towns
@@ -22,6 +24,7 @@ _animobj_load	640F:0020	FM Towns
 _AnimObjInPipe	DS:2C7A	FM Towns
 _answer_x	DS:8186	provisional
 _anti_magic_p	65A7:0034	FM Towns
+_arcfile	637E:0000	provisional
 _area_spell_state	DS:1B0A	FM Towns
 _Asc	DS:2148	FM Towns
 _AskHowMany	6513:003E	FM Towns
@@ -776,6 +779,7 @@ _RemoveAfterCombine	6465:0020	FM Towns
 _removeFromSlot	650A:0020	FM Towns
 _RemoveOneFromSlot	650A:0034	FM Towns
 _RemoveTrap	6599:006B	FM Towns
+_rename	0E72:20A2	FM Towns
 _render_FB	2CAE:02FD	FM Towns
 _repair_item	64A5:0147	FM Towns
 _res_to_terr	DS:03E8	FM Towns
@@ -924,6 +928,7 @@ _tdisttsqr	DS:2250	FM Towns
 _tdx	DS:2230	FM Towns
 _tdy	DS:2232	FM Towns
 _teleport_critter	647E:002F	FM Towns
+_tell	0E72:1072	FM Towns
 _term_icon_buttons	1B6B:004C	FM Towns
 _terrain	DS:26A9	provisional
 _TerrainCheck	2754:0385	FM Towns
@@ -1021,6 +1026,7 @@ _WhatsInSlot	650A:0043	FM Towns
 _WizEye	DS:0381	FM Towns
 _wleft	DS:21E8	FM Towns
 _wright	DS:21E4	FM Towns
+_write	0E72:1458	FM Towns
 _wtop	DS:21DC	FM Towns
 _wyorn	6559:0043	FM Towns
 _xhgt	DS:26EC	FM Towns
