@@ -49,8 +49,9 @@ extern struct Font far *cur_font;                /* DS:21CC, provisional */
 extern unsigned long far *Time;                  /* DS:2158; SEG043.C calls it
                                                     PITTimerGlobal */
 extern struct Inplist near *inplist;             /* DS:E4 */
-extern int answer_x;                             /* DS:8186, where the answer starts;
-                                                    static in FM Towns, provisional */
+/* This file's _BSS, DS:8186: where the answer starts. Static in FM Towns, so static here;
+   provisional name. Only this file uses it. */
+static int answer_x;
 
 void far draw_scroll(int x, int y, int w, int h, char flag);
 void far draw_edges(void);

@@ -180,7 +180,6 @@ extern unsigned char far *key_on;
 extern int weap_frame;
 extern unsigned char wframe[];
 /* The player's own critter record. No FM Towns name: static there. */
-extern struct Creature PlayerCreature;
 
 /* Elsewhere in the game. */
 struct Object far * far Obj_IntTMem(int index);
@@ -1002,7 +1001,7 @@ char far critter_attack(struct Object far *npc, int swing, unsigned char charge,
     }
     result = do_attack();
     if (result && hitobj == 1 && player->poison < poison) {
-        if (rand() % (poison + 6) > PlayerCreature.armour[hitloc % 4] << 1) {
+        if (rand() % (poison + 6) > Creature[63].armour[hitloc % 4] << 1) {
             if (check_res(ThePlayer, 1, 0x10))
                 player->poison = poison;
         }

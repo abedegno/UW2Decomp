@@ -101,6 +101,12 @@ extern struct Player near *player;
 extern struct Object far *objdata;
 extern unsigned far bmhgtoff;
 
+/* This file's _BSS, DS:2F96..2F9B, though nothing here uses it: the level's door textures,
+   which ovr119 and ovr140 use. It lies between seg019's _BSS (keys rising to tCacheOK's 1004)
+   and seg034's (from holdmid's 112), and its key (209) fits neither run; FM Towns too has
+   it on its own between seg019's mhighptr and seg034's holdmid. */
+unsigned char ActDoors[6];
+
 /* Per model, as do_rect reads it: the flags (bits 0-2 the number of colours that
    follow, 0x08 an extra 0x4C command below the model, 0x10 a textured face, 0x20 the
    caller's texture colour, 0x40 turned by the object's own heading, 0x80 colours

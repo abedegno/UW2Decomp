@@ -46,8 +46,10 @@ extern char current_hilit_button;
 extern struct buttongroup gameopts_buttongroup;
 extern struct buttongroup quit_buttongroup;
 extern int gameopts_done;
-extern int save_rest;
-extern int music_sound;
+/* This file's _BSS, DS:8178..817B, by name: save_rest 843, music_sound 925. Only this file
+   uses them. (DS:8174..8177, after ovr134's ComObjData, is never referenced.) */
+int save_rest;
+int music_sound;
 extern int RightButtonThing;
 extern unsigned char mode_to_button[];
 extern unsigned char display_inventory_no_show;

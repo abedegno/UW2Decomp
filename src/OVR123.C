@@ -69,7 +69,9 @@ extern int PlayerLevel;
 extern char far Transparency;
 extern struct Spell far spells[];
 extern char mspell_mused;
-extern char dseg_67d6_6A96;     /* provisional: FM Towns keeps it unnamed */
+/* This file's _BSS, DS:6A96 (ovr122's ends at 6A95): only this file uses it, and FM Towns
+   keeps it unnamed, so it was static. */
+static char dseg_67d6_6A96;     /* provisional */
 
 void far Obj_Free(struct Object far *obj);
 void far pic_to_screen(int pic, int x, int y, int w, int h);

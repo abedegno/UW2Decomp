@@ -18,7 +18,8 @@ struct Object {
 };
 
 extern unsigned LastActiveMob;
-extern unsigned char Critters_9_Race_dseg_4955[];
+/* The creature table (ovr104's Creature, 0x30 bytes a type); only the race byte, +9, is read. */
+extern unsigned char Creature[][0x30];
 extern unsigned char far *ActiveMob;
 struct Object far * far Obj_IntTMem(int index);
 
@@ -32,7 +33,7 @@ void far gronk_race(int race, unsigned char loop, int param,
     while ((unsigned)list < LastActiveMob) {
         npc = Obj_IntTMem(*list);
         if (((npc->id & 0x1C0) >> 6) == 1 &&
-            Critters_9_Race_dseg_4955[(npc->id & 0x3F) * 0x30] == race &&
+            Creature[npc->id & 0x3F][9] == race &&
             !((npc->b0A & 0x80) >> 7)) {
             if (code(npc, param))
                 list--;
@@ -473,3 +474,19 @@ char far Sched_DoEvent(unsigned char far *row)
     }
     return result;
 }
+
+/* This file's _DATA, DS:1344..1393 (ovr112's data ends at 1343, odd; ovr114's starts at
+   1394): the schedule event handlers, by the event row's sub-code and code. */
+typedef char (far *SCDEventFn)(unsigned char far *);
+SCDEventFn NestedSCDEventCodeJumps_dseg_67d6_1344[8] = {
+    (SCDEventFn)SetAL_ToZero_ovr113_18F, (SCDEventFn)SCDRunVariableOperationOnNPCs_ovr113_800,
+    (SCDEventFn)SCDMoveNPCToRandom_ovr113_961, ev_freeze_hack, SCDFindAndCloseDoor_ovr113_A3A,
+    (SCDEventFn)SetAL_ToZero_ovr113_18F, (SCDEventFn)SCDChangeHeading_ovr113_6AC,
+    (SCDEventFn)SCDMoveNPCToTileRange_ovr113_775 };
+SCDEventFn SCDEventCodeJumps_dseg_67d6_1364[12] = {
+    (SCDEventFn)SetAL_ToZero_ovr113_18F, (SCDEventFn)SCDSetGoalAndGTARG_ovr113_1BA,
+    (SCDEventFn)SCDRunCodeOnNPCSToMoveTile_ovr113_3AB, (SCDEventFn)SCDRunCodeOnNPCAndKill_ovr113_48E,
+    SCDChangeQuest_ovr113_4F8, ev_trigger, (SCDEventFn)SetAL_ToZero_ovr113_18F,
+    (SCDEventFn)CallNestedSCDCodeJumps_ovr113_A62, (SCDEventFn)SCDSetAttitude_ovr113_ABD,
+    SCDOperationOnQuestOrVariables_ovr113_BD8, ev_checkvar,
+    (SCDEventFn)SCDRemoveObjectFromTile_ovr113_4C3 };

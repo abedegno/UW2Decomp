@@ -103,7 +103,15 @@ struct ComObj {
     char padA;
 };
 
-/* This file's data, in DS order from 0x384. */
+/* This file's data, in DS order from 0x37E. The six spell-effect flags lead it: they lie
+   between seg024's data and this file's in link order, and FM Towns keeps them with this
+   file's other variables (ObjectActor .. MapObj_X, quick_time, Valor). */
+unsigned char PoisonWeap = 0;           /* DS:037E */
+unsigned char TimeStop = 0;
+unsigned char Hasted = 0;
+unsigned char WizEye = 0;
+unsigned char Blessed = 0;
+unsigned char Valor = 0;                /* DS:0383 */
 int LeftPanel = 2;
 int PickDist = 0x90;
 unsigned char quick_time = 0;
@@ -124,23 +132,33 @@ extern unsigned char UsingPole;
 extern unsigned TxmTerr[];
 extern int TxmID[];
 extern struct Tile far *mlowptr;
-extern int MapObj_X, MapObj_Y;
 extern int xwid, xhgt;
 extern int PickUp;
 extern unsigned char far stdat[];
-extern int pTxtId;
-extern struct Tile far *PickMap;
-extern unsigned far *releasePtr;
-extern struct Object far *newPlObj;
 extern struct Object far *CursorObjPtr;
-extern int GameInputMode;
-extern int RightButtonThing;
-extern void (far *ObjectActor)(struct Object far *obj, int a, int b);
-extern int current_button;
 extern unsigned char button_to_mode[];
 extern unsigned char mode_to_button[];
 extern char gameopts_buttongroup[];
 extern int PWid, PHgt;
+
+/* This file's _BSS, DS:24E4..2507, laid out by name (tools/bssorder.py): the keys run
+   pTxtId 56, current_button 91, ObjectActor 135, ObjectActing 191, RightButtonThing 194,
+   ObjectActorArg 351, PickMap 536, MapObj_X and MapObj_Y 581, newPlObj 638, CrownTmap 907,
+   releasePtr 914, GameInputMode 935. CrownTmap is the FM Towns name in the same group with
+   a key that fits the unreferenced byte at DS:2500 (one byte in FM Towns too; DS:2501 is
+   padding, as Turbo C puts anything wider than a byte at an even offset). */
+int pTxtId;
+int current_button;
+void (far *ObjectActor)(struct Object far *obj, int a, int b);
+struct Object far *ObjectActing;
+int RightButtonThing;
+int ObjectActorArg;
+struct Tile far *PickMap;
+int MapObj_X, MapObj_Y;
+struct Object far *newPlObj;
+unsigned char CrownTmap;
+unsigned far *releasePtr;
+int GameInputMode;
 
 /* No FM Towns names: the pick tables, indexed by the byte under the cursor. */
 extern int ObjectIndices[];

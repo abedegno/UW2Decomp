@@ -16,7 +16,6 @@ static unsigned char gif_header[13] = {
 static unsigned char gif_image[10] = {
     ',',0,0,0,0,0x40,0x01,0xC8,0,7
 };
-extern unsigned char gif_trailer;
 
 /* GIF encoder state, DS:5E0C through DS:5E33. The field order follows the DOS offsets. */
 static struct {
@@ -69,11 +68,9 @@ void far save_screenshot(int seg)
     }
     write(fd, gif_image, 10);
     ovr116_2A3(fd, 8);
-    write(fd, &gif_trailer, 1);
+    write(fd, ";", 1);              /* the GIF trailer: the string pool's ";" at DS:1493, ending at 1495 */
     close(fd);
 }
-
-unsigned char gif_trailer = ';';
 
 static void far ovr116_149(int bits)
 {

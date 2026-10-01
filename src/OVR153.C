@@ -6,7 +6,9 @@
    name is not known. */
 
 extern char far stdat[];
-extern char far *globals;
+/* This file's _DATA, DS:1AD4 (ovr152's strings end there; PLAYER.C's data starts at 1AD8):
+   the LZSS work area, set up here and used by ovr127. */
+char far *globals = 0;
 
 /* Far-buffer file reads and writes in ovr167. FM Towns, being flat, calls the library's
    read() and write() here; DOS cannot (_read is the near-buffer library call at 0E72:1FCD),

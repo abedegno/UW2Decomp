@@ -132,7 +132,9 @@ extern long nextSpellTime;
 extern int MapObj_X, MapObj_Y;
 extern char ValidLightSlots[];
 extern int XP, YP;
-extern char door_type;
+/* This file's _BSS, DS:8184 (ovr137's ends there): of the files before ovr140's TxmTerr,
+   only this one uses it (seg044 does too). */
+char door_type;
 extern unsigned char quick_time;
 extern struct Motion PN;
 

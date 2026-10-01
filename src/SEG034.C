@@ -15,21 +15,37 @@ struct ComObj {
     char rest[9];
 };
 
-extern unsigned short refugees[21][9], holdmid[9], holdtmp[9];
-extern signed char sortlist[60];
-extern signed char sortdata[60][4];
-extern unsigned short ObjectsIn3DView[60];
-extern signed char trans_pos_x[64];
-extern signed char quad, dirval;
+/* This file's _BSS, DS:2F9C..33C5 (seg033's ActDoors ends at 2F9B; seg035's starts at 33C6),
+   laid out by name (tools/bssorder.py): holdmid 112, holdtmp 144, locsqmod 228,
+   sortlist 267, sortdata 275, mptrmod 421, sd_xmod and sd_ymod 427, dirval 492,
+   refugees 666, objxloc, objyloc and objzloc 935, objptrs 959. All FM Towns names: FM Towns
+   has objptrs, the same 60 entries, right after refugees. It is static here only because
+   symbols.tsv still calls DS:334E _ObjectsIn3DView; it should be public. */
+unsigned short holdmid[9], holdtmp[9];
+unsigned char locsqmod;
+signed char sortlist[60];
+signed char sortdata[60][4];
+int mptrmod;
+int sd_xmod, sd_ymod;
+signed char dirval;
+unsigned short refugees[33][9];               /* 0x252 bytes: the memset clears them all */
+int objxloc, objyloc, objzloc;
+static unsigned short objptrs[60];
+/* This file's _DATA, DS:06FE..073D: between seg033's data and seg035's, and only this
+   file uses it (FM Towns has it right after seg033's dirtab, before seg035's tables). */
+signed char trans_pos_x[64] = {
+    0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7, 0,
+    0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7,
+    7, 0, 6, 0, 5, 0, 4, 0, 3, 0, 2, 0, 1, 0, 0, 0,
+    0, 7, 0, 6, 0, 5, 0, 4, 0, 3, 0, 2, 0, 1, 0, 0 };
+extern signed char quad;
 extern int loopx, loopy;
 extern struct Camera far *cPlayer;
 extern struct ComObj ComObjData[];
-extern int objxloc, objyloc, objzloc;
-extern unsigned char PickUp, locsqmod;
+extern unsigned char PickUp;
 extern int far smooth_div;
 extern int far smooth_lowpass;
 extern unsigned char far smooth_base;
-extern int sd_xmod, sd_ymod, mptrmod;
 
 void far *far Obj_IntTMem(unsigned index);
 struct Object far *far Obj_PtrTMem(struct Object far *object);
@@ -106,7 +122,7 @@ void far do_partition(char reverse, int *point, int skip, int count,
     for (i = 0; i < count;) {
         if (i != skip) {
             if (from_data == 0)
-                value = ((struct Object far *)Obj_IntTMem(ObjectsIn3DView[i]))->pos & 0x7f;
+                value = ((struct Object far *)Obj_IntTMem(objptrs[i]))->pos & 0x7f;
             else
                 value = sortdata[i][from_data];
             side = value > height;
@@ -128,7 +144,7 @@ void far z_part(int index, int *point, int count)
 {
     struct Object far *object;
     int z;
-    object = Obj_IntTMem(ObjectsIn3DView[index]);
+    object = Obj_IntTMem(objptrs[index]);
     z = object->pos & 0x7f;
     if ((object->item & 0x1ff) == 0x158)
         z = z + ComObjData[object->item & 0x1ff].height;
@@ -139,7 +155,7 @@ void far door_part(int index, int *point, int count)
 {
     char reverse;
     int pos, axis;
-    if (!(((((struct Object far *)Obj_IntTMem(ObjectsIn3DView[index]))->pos & 0x380) >> 7) + quad * 2 & 3)) {
+    if (!(((((struct Object far *)Obj_IntTMem(objptrs[index]))->pos & 0x380) >> 7) + quad * 2 & 3)) {
         axis = 2;
         pos = sortdata[index][2];
         reverse = 1;
@@ -195,7 +211,7 @@ void far do_objsort(struct Object far *object)
     for (i = 1; (unsigned)i <= refugees[loopx][0] && n < 9; i++) {
         register signed char *data;
         word = refugees[loopx][i];
-        ObjectsIn3DView[n] = word & 0x3ff;
+        objptrs[n] = word & 0x3ff;
         next = Obj_IntTMem(word & 0x3ff);
         data = sortdata[n];
         set_sds(data, next);
@@ -258,7 +274,7 @@ void far do_objsort(struct Object far *object)
             if (held && item != 0x158) data[0] -= radius * 2;
             if ((item & 0x1c0) == 0x1c0) data[0]--;
             else if ((item & 0x1fe) == 0x16e) data[0] += 0x20;
-            ObjectsIn3DView[n] = ((struct ObjectIndex far *)object)->index;
+            objptrs[n] = ((struct ObjectIndex far *)object)->index;
             if (n < 60) n++;
         }
         object = (struct Object far *)((char far *)next + 4);
@@ -278,7 +294,7 @@ void far do_objsort(struct Object far *object)
     }
     for (i = 0; i < n; i++) {
         word = sortlist[i];
-        next = Obj_IntTMem(ObjectsIn3DView[word]);
+        next = Obj_IntTMem(objptrs[word]);
         objxloc = ((loopx - 16) << 8) + ((int)sortdata[word][1] << 5) + 16;
         objzloc = (loopy << 8) + ((int)sortdata[word][2] << 5) + 16;
         if (((next->item & 0x1c0) >> 6) == 1 || !IsMobElem(next))

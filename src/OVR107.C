@@ -153,8 +153,9 @@ extern unsigned char myxpos, myypos;
 extern int XP, YP;
 extern int MapObj_X, MapObj_Y;
 extern unsigned char stay_centered;
-extern char wander_found;               /* DS:554E, provisional: FM Towns has it as a static
-                                           after chroff, in a file not yet matched */
+/* This file's _BSS, DS:554E (ovr104's ends at 554D; ovr108's starts at 5550): only this file
+   uses it, and FM Towns has it as a static. Provisional name. */
+static char wander_found;
 extern char crithit;
 extern char typehit;
 extern long crithittime;

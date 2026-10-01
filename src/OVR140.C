@@ -9,8 +9,10 @@
 #include <stdio.h>
 #include <dos.h>
 
-extern int TxmID[0x40];                 /* the level's texture numbers */
-extern int TxmTerr[0x40];               /* each texture's terrain type */
+/* This file's _BSS, DS:8188..8287, by name: TxmTerr 420, TxmID 988. They follow ovr139's
+   answer_x (857) in a new run; this file loads them, with ActDoors, from the level. */
+int TxmID[0x40];                        /* the level's texture numbers */
+int TxmTerr[0x40];                      /* each texture's terrain type */
 extern unsigned char ActDoors[6];       /* the level's door textures */
 extern char HomeDir[];
 

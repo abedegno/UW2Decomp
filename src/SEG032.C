@@ -91,21 +91,25 @@ extern struct Inplist near *inplist;
 extern unsigned long far *Time;
 extern struct Eye far *cPlayer;
 extern int far *dbptr;
-extern int far *DbEntry;
-extern int lcldblen;
-extern int xwid, xhgt;
-extern char demo_mode;
-extern unsigned curZoom;
-extern char quad;
-extern char loct;
-extern unsigned char *trans;
-extern unsigned long strtime;
-extern struct Tile far *mapptr;
 extern int lastXeye, lastYeye;
-extern int mxY;
-extern struct Gloc glocs[17][33];
-extern struct Gvec gvecs[15];
-extern char gvechead;
+/* This file's _BSS, DS:26EA..2C67 (seg031's ends at 26E9; seg019's starts at 2C68 with
+   cWCol, key 27), laid out by name (tools/bssorder.py): lcldblen 148, xhgt 176, glocs 191,
+   mxY 237, quad 377, strtime 411, mapptr 653, curZoom 667, gvecs 703, demo_mode 708,
+   trans 804, gvechead 879, loct 900, DbEntry 916, xwid 960. All FM Towns names. */
+int lcldblen;
+int xwid, xhgt;
+char demo_mode;
+unsigned curZoom;
+char quad;
+char loct;
+unsigned char *trans;
+unsigned long strtime;
+struct Tile far *mapptr;
+int mxY;
+struct Gloc glocs[17][33];
+struct Gvec gvecs[15];
+char gvechead;
+int far *DbEntry;
 extern unsigned char tile_walls[];
 extern unsigned char SpecShadeMode;     /* DOS only, no FM Towns name */
 /* in the graphics data segment */

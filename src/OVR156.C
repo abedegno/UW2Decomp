@@ -126,7 +126,9 @@ extern struct Object far *ObjectActing;
 extern int ObjectActorArg;
 extern int GameInputMode;
 extern int PlayerLevel;
-extern unsigned char inanmMapX, inanmMapY;
+/* This file's _BSS, DS:8638..8639: after ovr151's SCD pointer (key 363) in a new run (41),
+   before ovr163's LootCreature; of the files between, only this one uses them. */
+unsigned char inanmMapX, inanmMapY;
 extern struct Creature Creature[];
 extern struct Spell far spells[];
 extern struct Inplist near *inplist;

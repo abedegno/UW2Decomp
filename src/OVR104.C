@@ -7,10 +7,20 @@ struct Object { unsigned id, pos;
     union { unsigned word; struct { unsigned owner:6, link:10; } f; } ol;
     unsigned char bytes[0x1B - 8]; };
 
-extern struct Creature Creature[64];
 extern struct Object far *ActiveObj;
-extern unsigned ItemMinorClass, ItemSubClass;
-extern struct Creature *cst;
+
+/* This file's _BSS, DS:492A..554D, laid out by name (tools/bssorder.py): cr_type 931, cst 955,
+   cr_unused 971, Creature 979, cr_class 1019. cr_class and cr_type are the FM Towns names
+   (its creature_class_data_ sets them as this one does), and their keys put them exactly
+   where UW2 has them, either side of Creature. They are static here only because
+   symbols.tsv still calls them _ItemMinorClass and _ItemSubClass: they should be public.
+   Nothing uses DS:492E..494B, but it lies between cst and Creature. (DS:4928..4929, also
+   never used, is left out: it may as well be ovr103's.) */
+static unsigned cr_type;                /* DS:492A, the creature's type within its class */
+struct Creature *cst;                   /* DS:492C */
+static char cr_unused[0x1E];            /* DS:492E, never used */
+struct Creature Creature[64];           /* DS:494C */
+static unsigned cr_class;               /* DS:554C, the creature's class */
 void far fread(void *address, int size, int count, int fd);
 void far fwrite(void *address, int size, int count, int fd);
 int far rand(void);
@@ -28,9 +38,9 @@ void far ovr104_17(int fd)
 
 struct Creature * far creature_class_data(void)
 {
-    ItemMinorClass = (ActiveObj->id & 0x30) >> 4;
-    ItemSubClass = ActiveObj->id & 0xF;
-    return (struct Creature *)((char *)Creature + (ItemMinorClass * 16 + ItemSubClass) * 0x30);
+    cr_class = (ActiveObj->id & 0x30) >> 4;
+    cr_type = ActiveObj->id & 0xF;
+    return (struct Creature *)((char *)Creature + (cr_class * 16 + cr_type) * 0x30);
 }
 
 void far creature_obj_init(void)

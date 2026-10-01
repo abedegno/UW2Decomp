@@ -7,12 +7,14 @@ extern long far *Time;
 extern unsigned char IsJoy;
 extern int PlayerInput;
 extern int ForwInpRate, TurnInpRate;
-extern int joy_center_x, joy_center_y;
-extern int joy_min_x, joy_max_x, joy_min_y, joy_max_y;
 extern int joymovecur, fauxright;
-extern long joy_last_tick;
-extern int joy_interval, joy_divisor, joy_limit, joy_gain, joy_clamp;
-extern int joy_filter_x, joy_filter_y;
+
+/* this file's _DATA, DS:00E8 to DS:0106, in definition order */
+int joy_center_x = 0, joy_center_y = 0;
+int joy_min_x = -127, joy_max_x = 127, joy_min_y = -127, joy_max_y = 127;
+int joy_divisor = 16, joy_interval = 5, joy_clamp = 16, joy_gain = 20, joy_limit = 40;
+int joy_filter_x = 0, joy_filter_y = 0;
+long joy_last_tick = 0;
 
 void far seg021_22FD_7CD(void);
 void far seg021_22FD_809(void);

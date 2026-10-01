@@ -104,14 +104,11 @@ extern int PlayerLevel;
 extern struct Motion PN;
 extern struct PhysThing PT;
 extern int far *cJoyInit;
-extern char IsJoy;
-extern char PlayerDat[];
 extern struct Player near *player;
 extern struct Creature near *playerdat;
 extern struct Creature Creature[];
 extern int player_name_handle;
 extern char mouse_hand;
-extern int PLeft, PBot, PWid, PHgt;
 extern int campos[3];
 extern int camang[3];
 extern struct Inplist near *inplist;
@@ -123,9 +120,27 @@ extern unsigned vort_rad;
 extern unsigned vort_timer;
 extern int vort_theta;
 
-/* The handles of the eight cursor regions over the 3D view. FM Towns keeps them as
-   statics, so the names are not known; these are provisional. */
-extern int rgn_ul, rgn_ur, rgn_up, rgn_left, rgn_right, rgn_down, rgn_dl, rgn_dr;
+/* This file's _BSS, DS:8298..8631 (ovr142's ends at 8297, ovr147's starts at 8632), laid
+   out by name (tools/bssorder.py): IsJoy 1, region_south 18, PHgt 136, PLeft 192, rgnh_ul 218,
+   rgnh_left 226, PlayerDat 408, curvrad 555, region_br 706, PBot 712, region_dl 722,
+   region_up 858, PWid 920, hrgn_ur 976, rgnh_r 1002. The eight are the handles of the cursor
+   regions over the 3D view: FM Towns keeps them as statics, so they are static here, with
+   provisional names chosen for their keys. */
+char IsJoy;
+static int region_south;                /* DS:829A, the region below the view */
+int PHgt;
+int PLeft;
+static int rgnh_ul;                     /* DS:82A0, up and left */
+static int rgnh_left;                   /* DS:82A2 */
+char PlayerDat[0x37E];
+int curvrad;
+static int region_br;                   /* DS:8624, down and right */
+int PBot;
+static int region_dl;                   /* DS:8628, down and left */
+static int region_up;                   /* DS:862A */
+int PWid;
+static int hrgn_ur;                     /* DS:862E, up and right */
+static int rgnh_r;                      /* DS:8630, right */
 
 /* Elsewhere in the game. */
 void far _input_addkey(int key, int a, int b, void (far *handler)());
@@ -291,28 +306,28 @@ void far mous_player(int left, register int bot, register int wid, int hgt)
     PWid = wid;
     PHgt = hgt;
     PMsHndle = input_addmouse(left, bot, left + wid - 1, bot + hgt - 1, 0, 0x1B, mous_in_3d);
-    rgn_ul = defineMouseRegion(left, bot, left + wid * 5 / 15, bot + hgt * 3 / 15, 0x106F);
-    rgn_ur = defineMouseRegion(left + wid - wid * 5 / 15, bot, left + wid - 1, bot + hgt * 3 / 15, 0x1070);
-    rgn_up = defineMouseRegion(left + wid * 5 / 15, bot, left + wid - wid * 5 / 15, bot + hgt * 3 / 15, 0x106E);
-    rgn_left = defineMouseRegion(left, bot + hgt * 3 / 15, left + wid * 5 / 15, bot + hgt * 6 / 15, 0x1071);
-    rgn_right = defineMouseRegion(left + wid - wid * 5 / 15, bot + hgt * 3 / 15, left + wid - 1, bot + hgt * 6 / 15, 0x1072);
-    rgn_down = defineMouseRegion(left + wid * 5 / 15, bot + hgt * 6 / 15, left + wid - wid * 5 / 15, bot + hgt - 1, 0x106D);
-    rgn_dl = defineMouseRegion(left, bot + hgt * 6 / 15, left + wid * 5 / 15, bot + hgt - 1, 0x1073);
-    rgn_dr = defineMouseRegion(left + wid - wid * 5 / 15, bot + hgt * 6 / 15, left + wid - 1, bot + hgt - 1, 0x1074);
+    rgnh_ul = defineMouseRegion(left, bot, left + wid * 5 / 15, bot + hgt * 3 / 15, 0x106F);
+    hrgn_ur = defineMouseRegion(left + wid - wid * 5 / 15, bot, left + wid - 1, bot + hgt * 3 / 15, 0x1070);
+    region_up = defineMouseRegion(left + wid * 5 / 15, bot, left + wid - wid * 5 / 15, bot + hgt * 3 / 15, 0x106E);
+    rgnh_left = defineMouseRegion(left, bot + hgt * 3 / 15, left + wid * 5 / 15, bot + hgt * 6 / 15, 0x1071);
+    rgnh_r = defineMouseRegion(left + wid - wid * 5 / 15, bot + hgt * 3 / 15, left + wid - 1, bot + hgt * 6 / 15, 0x1072);
+    region_south = defineMouseRegion(left + wid * 5 / 15, bot + hgt * 6 / 15, left + wid - wid * 5 / 15, bot + hgt - 1, 0x106D);
+    region_dl = defineMouseRegion(left, bot + hgt * 6 / 15, left + wid * 5 / 15, bot + hgt - 1, 0x1073);
+    region_br = defineMouseRegion(left + wid - wid * 5 / 15, bot + hgt * 6 / 15, left + wid - 1, bot + hgt - 1, 0x1074);
 }
 
 void far demous_player(void)
 {
     input_del(PMsHndle);
     PMsHndle = 0;
-    undefineMouseRegion(rgn_ul);
-    undefineMouseRegion(rgn_ur);
-    undefineMouseRegion(rgn_left);
-    undefineMouseRegion(rgn_right);
-    undefineMouseRegion(rgn_up);
-    undefineMouseRegion(rgn_down);
-    undefineMouseRegion(rgn_dl);
-    undefineMouseRegion(rgn_dr);
+    undefineMouseRegion(rgnh_ul);
+    undefineMouseRegion(hrgn_ur);
+    undefineMouseRegion(rgnh_left);
+    undefineMouseRegion(rgnh_r);
+    undefineMouseRegion(region_up);
+    undefineMouseRegion(region_south);
+    undefineMouseRegion(region_dl);
+    undefineMouseRegion(region_br);
 }
 
 /* Prints the level and the player's tile, each as two octal digits. FM Towns has a

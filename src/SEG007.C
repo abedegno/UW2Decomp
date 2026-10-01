@@ -169,10 +169,10 @@ extern unsigned char far *ActiveMob;
 extern unsigned char far *LastActiveMob;
 extern unsigned long far *Time;
 extern int freepaths;
-extern int lastXeye, lastYeye;
+int lastXeye, lastYeye;                 /* DS:2294, this file's _BSS (see below) */
 extern int XP, YP;
 extern int missile_try;
-extern long lastcombattime;
+long lastcombattime;                    /* DS:2280, this file's _BSS (see below) */
 
 /* A missile weapon: the ammunition it fires and the missile type. */
 struct MissileInfo {
@@ -207,15 +207,19 @@ extern int crit_terr;
 extern unsigned char failed, aligned;
 extern unsigned char hitwall, didhitobj, hitadoor, dontchangedz;
 extern unsigned char didmove;
-extern signed char curBin;
-/* The critter type last damaged, and where and when the player last hit a critter.
-   crithitz (DS:228A) is static in FM Towns (_seq_lframe+1 there, read by critter_mv_ for
-   set_loc beside _hitx and _hity), so it has no original name: provisional, after crithit
-   and crithittime, which damage_critter sets with it. FM Towns' _hitz is another variable,
-   seg024's combat height (DS:24CE). */
-extern struct Creature near *victim;
-extern unsigned long crithittime;
-extern unsigned char hitx, hity, crithitz;
+/* This file's _BSS, DS:2280..2299, laid out by name (tools/bssorder.py): lastcombattime 84,
+   crithittime 139, hitx and hity 520, hitpz 552, curBin 555, victim 574, seq_len 603,
+   seqptr 659, lastXeye and lastYeye 820, seq_lframe 859 (Turbo C puts anything wider than
+   a byte on an even offset, so DS:228F and DS:2299 are padding).
+   The critter type last damaged, and where and when the player last hit a critter.
+   hitpz (DS:228A) is static in FM Towns (_seq_lframe+1 there, read by critter_mv_ for
+   set_loc beside _hitx and _hity), so it has no original name: provisional, chosen for its
+   key. FM Towns' _hitz is another variable, seg024's combat height (DS:24CE). */
+unsigned long crithittime;
+unsigned char hitx, hity;
+static unsigned char hitpz;
+signed char curBin;
+struct Creature near *victim;
 /* Its target, set up by set_up_target. */
 extern struct Object far *mytarget;
 extern unsigned char txpos, typos;
@@ -224,7 +228,8 @@ extern unsigned txpost, typost;
 extern int tdx, tdy;
 extern unsigned tdistsqr;
 extern unsigned long tdisttsqr;
-extern unsigned char seq_len, seq_lframe;
+unsigned char seq_len;
+unsigned char seq_lframe;
 
 /* An animation sequence, 64 bytes, in the critter animation pages. */
 struct Seq {
@@ -232,7 +237,7 @@ struct Seq {
     unsigned char len;                  /* 0x07 */
     char pad8[0x40 - 8];
 };
-extern struct Seq far *seqptr;
+struct Seq far *seqptr;
 /* The segment of the EMS page frame, provisional name. */
 extern unsigned far EmsBuff;
 extern unsigned char pmouseHandled;
@@ -1320,7 +1325,7 @@ void far critter_mv(void)
         SET_B19_0(meptr, 1);
         if (GOAL(meptr) != 9 && GOAL(meptr) != 6) {
             critter_set_goal(5, B19_6(meptr) ? crithit : 1);
-            set_loc(hitx, hity, crithitz);
+            set_loc(hitx, hity, hitpz);
         }
     }
     if (meptr->last_hit > 0
@@ -1565,7 +1570,7 @@ unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
         crithit = Obj_MemTPtr(obj);
         hitx = OBJ_HOMEX(obj);
         hity = OBJ_HOMEY(obj);
-        crithitz = OBJ_Z(obj) >> 3;
+        hitpz = OBJ_Z(obj) >> 3;
         crithittime = player->hittime;
     }
     if (obj->hp <= damage) {

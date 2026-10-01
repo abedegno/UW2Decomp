@@ -24,8 +24,10 @@ struct ComObj {
     char pad8[0x0B - 0x08];
 };
 
-extern struct Object far *ActiveObj;
-extern struct ComObj ComObjData[];
+/* This file's _BSS, DS:6B70..8173, by name: ActiveObj 145, ComObjData 355. This file loads
+   ComObjData (0x1600 bytes, from comobj.dat) and finds the active object's class data. */
+struct Object far *ActiveObj;
+struct ComObj ComObjData[512];
 
 /* Each major class's part of OBJECTS.DAT; classes 3 to 5 have none. */
 void far hack_init(FILE *fp);

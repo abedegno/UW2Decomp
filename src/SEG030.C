@@ -179,13 +179,16 @@ extern unsigned char curBin;
 extern unsigned char res_to_terr[];
 extern int TxmID[];
 
-/* No FM Towns names (provisional): the first seven are inside FM Towns' static block
-   _Valor (+0x4F..+0x55, in a different order), the last two are _MP+0x20 and _MP+0x21. */
-extern unsigned char objhit_used;           /* DS:25BC */
-extern unsigned char objhit_x, objhit_y;    /* DS:25BD, the other object's tile */
-extern unsigned char objhit_myx, objhit_myy; /* DS:25BF, the moving object's tile */
-extern unsigned char deal_bounced;          /* DS:25C1 */
-extern unsigned char deal_blocked;          /* DS:25C2 */
+/* This file's _BSS, DS:25BC..25C2 (seg031's starts at 25C4, word-aligned). No FM Towns
+   names: FM Towns keeps them as statics (inside its static block after _Valor, +0x4F..+0x55,
+   in a different order), so they are static, with provisional names whose keys
+   (tools/bssorder.py) lay them out as UW2 has them: objhit_used 87, objhit_tilex and
+   objhit_tiley 151, objhit_myx and objhit_myy 183, deal_bounced and deal_blocked 908. */
+static unsigned char objhit_used;           /* DS:25BC */
+static unsigned char objhit_tilex, objhit_tiley;    /* DS:25BD, the other object's tile */
+static unsigned char objhit_myx, objhit_myy; /* DS:25BF, the moving object's tile */
+static unsigned char deal_bounced;          /* DS:25C1 */
+static unsigned char deal_blocked;          /* DS:25C2 */
 /* The movement parameters, defined in SEG031.C; this file uses only two fields. */
 struct MotionParams { char pad0[0x1C]; signed char hit; int item; };
 extern struct MotionParams MP;            /* DS:3FA; hit at DS:416, item at DS:417 */
@@ -238,8 +241,8 @@ int far bounce_obj(struct Object far *obj, struct Object far *other)
     int scale;
 
     if (other != 0) {
-        XP = objhit_x;
-        YP = objhit_y;
+        XP = objhit_tilex;
+        YP = objhit_tiley;
         get_phys_data(other, pp);
         if (pp->mass != 0) {
             scale = (CP->mass << 6) / pp->mass;
@@ -248,8 +251,8 @@ int far bounce_obj(struct Object far *obj, struct Object far *other)
             pp->heading = CP->heading;
             pp->speed = 0xEB;
             pp->pitch = CP->pitch * scale / 0x40;
-            XP = objhit_x;
-            YP = objhit_y;
+            XP = objhit_tilex;
+            YP = objhit_tiley;
             set_phys_data(other, pp);
         } else if (pp->speed != 0)
             pp->speed = 0;
@@ -283,8 +286,8 @@ void far missile_newhit(struct Object far *proj, struct Object far *hit)
             damage = damage * scale >> 8;
         }
         if (objhit_used) {
-            x = objhit_x;
-            y = objhit_y;
+            x = objhit_tilex;
+            y = objhit_tiley;
         } else {
             x = objhit_myx;
             y = objhit_myy;
@@ -319,9 +322,9 @@ int far do_objhit(int ci, int index)
     } else {
         other = Obj_IntTMem(oCollisions[ci].link.f.index);
         item = oCollisions[ci].tile & 0x3F;
-        objhit_x = objhit_myx + item & 0x3F;
-        item = objhit_x - objhit_myx;
-        objhit_y = objhit_myy + (oCollisions[ci].tile - item) / 0x40 & 0x3F;
+        objhit_tilex = objhit_myx + item & 0x3F;
+        item = objhit_tilex - objhit_myx;
+        objhit_tiley = objhit_myy + (oCollisions[ci].tile - item) / 0x40 & 0x3F;
         item = OBJ_ITEM(other);
         touch = ComObjData[item].touch;
         if (oCollisions[ci].link.f.index < 0x100 && index < 0x100) {
@@ -334,8 +337,8 @@ int far do_objhit(int ci, int index)
     }
     if (item != -1) {
         if (ComObjData[item].usable) {
-            MapObj_X = objhit_x;
-            MapObj_Y = objhit_y;
+            MapObj_X = objhit_tilex;
+            MapObj_Y = objhit_tiley;
             objhit_used = 0;
             UseObj(obj, other, 0);
         } else if ((ITEM_CLASS(item) & 0x1E) == 0x1A)

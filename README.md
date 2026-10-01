@@ -22,7 +22,7 @@ This is a fan research project, not affiliated with or endorsed by the rights ho
 - **Same-length source changes are safe.** The extracted modules keep literal DGROUP offsets, so a change that alters data sizes shifts data under them.
 - `--obj STEM=PATH` links a changed object in place of the matched one.
 
-Every byte of code now has source, including seg000 (the sprite module), seg018 (the divide-by-zero trap) and `SetPnt`; only the far data, the gaps between files' data and 15 zero bytes at the end of seg021 are taken from the EXE.
+Every byte of code now has source, including seg000 (the sprite module), seg018 (the divide-by-zero trap) and `SetPnt`. DGROUP's data is in the sources too, apart from nine small unreferenced gaps no evidence can attribute and the second library's data, which would need seg003, seg004 and seg021 split into their original modules. 19 of the 22 far data segments that hold bytes come from `src/FARDATA.ASM` (buffers, the rune spell table, the attack charges); the three left, about 83 KB, are the graphics and 3D modules' data, including the 3D object models, and are still taken from your EXE along with 15 zero bytes at the end of seg021.
 
 `matched.txt` lists the matched segments; `map/files.tsv` has per-file status.
 

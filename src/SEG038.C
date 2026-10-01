@@ -29,7 +29,10 @@ extern unsigned char far *foreground_color;
 extern int spsave[];                    /* DS:1B9F; FM Towns reads _spsave+4 */
 /* DS:8E1, levels by experience / 500. No FM Towns name (it sits just past
    _ShowStupidFirstPersonWeapon there), so this name is ours. */
-extern unsigned char level_table[];
+/* This file's _DATA, DS:08E2..08F1 (seg037's ends at 08E1, odd, so this starts a file): the
+   experience thresholds, in units of 500 points, for levels 2 to 16. FM Towns has it too,
+   unnamed (static), read the same way, one byte before the table. */
+static unsigned char level_table[16] = { 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 0 };
 
 void far panel_check(void);
 /* PLAYER.C defines advance(char); this file's caller pushes SI unconverted, so the
@@ -93,7 +96,7 @@ void far player_get_exp(int n)
     redraw = (player->exp >> 4) > redraw;
     levels = 0;
     points = player->exp / 500;
-    while (level_table[player->level + levels] <= points
+    while (level_table[player->level + levels - 1] <= points
            && player->level + levels < 16)
         levels++;
     if (levels)

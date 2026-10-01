@@ -118,16 +118,22 @@ extern struct MissileInfo Missile[];
 extern struct MotionCalc near *curP;
 extern int PlayerPitch;
 extern unsigned char inanmMapX, inanmMapY;
-extern unsigned char using_bow;
-extern unsigned char magical_missile;
-extern int missile_trx, missile_try;
 
-/* The missile being launched. No FM Towns names: static there. */
-extern int missile_type;
-extern int missile_x, missile_y;
-extern int missile_item;
-extern struct Object far *missile_src;
-extern int missile_heading;
+/* This file's _DATA, DS:03B4..03B5: it starts the word after seg026's strings end. */
+unsigned char using_bow = 0;
+unsigned char magical_missile = 0;
+
+/* This file's _BSS, DS:2508..2519, laid out by name (tools/bssorder.py). The missile being
+   launched: static in FM Towns (unnamed there, just after Valor), so static here, with
+   provisional names whose keys put them where UW2 has them: missile_class 69, missile_x
+   and missile_y 677, missile_item 917, then missile_src, missile_arc, missile_trx and
+   missile_try all 957, in definition order. */
+static int missile_class;               /* DS:2508 */
+static int missile_x, missile_y;        /* DS:250A, 250C */
+static int missile_item;                /* DS:250E */
+static struct Object far *missile_src;  /* DS:2510 */
+static int missile_arc;                 /* DS:2514, always 1 */
+int missile_trx, missile_try;           /* DS:2516, 2518 */
 
 /* Elsewhere in the game. */
 void far mouse_getxy(int *x, int *y);
@@ -191,11 +197,11 @@ void far player_fire(int weapon)
         using_bow = 0;
     if ((slot = check_ammo(weapon)) >= 0) {
         ammo = Missile[weapon].ammo;
-        missile_type = Missile[ammo].type;
+        missile_class = Missile[ammo].type;
         missile_item = ammo + 0x10;
         missile_x = OBJ_HOMEX(ThePlayer);
         missile_y = OBJ_HOMEY(ThePlayer);
-        missile_heading = 1;
+        missile_arc = 1;
         missile_src = ThePlayer;
         player_settr();
         if ((proj = missile_fire()) != 0) {
@@ -229,10 +235,10 @@ void far critter_fire(struct Object far *who, int item, int type)
     struct Object far *proj;
 
     missile_item = item + 0x10;
-    missile_type = type;
+    missile_class = type;
     missile_x = OBJ_HOMEX(who);
     missile_y = OBJ_HOMEY(who);
-    missile_heading = 1;
+    missile_arc = 1;
     missile_src = who;
     missile_trx = 0;
     using_bow = 1;
@@ -247,10 +253,10 @@ char far spell_fire(struct Object far *who, int spell)
     struct Object far *proj;
 
     missile_item = spell + 0x10;
-    missile_type = Missile[spell].type;
+    missile_class = Missile[spell].type;
     missile_x = OBJ_HOMEX(who);
     missile_y = OBJ_HOMEY(who);
-    missile_heading = 1;
+    missile_arc = 1;
     missile_src = who;
     if (who == ThePlayer)
         player_settr();
@@ -259,7 +265,7 @@ char far spell_fire(struct Object far *who, int spell)
             missile_x = inanmMapX;
             missile_y = inanmMapY;
             missile_try = 0;
-            missile_heading = 0;
+            missile_arc = 0;
         }
         missile_trx = 0;
     }
@@ -294,10 +300,10 @@ char far ReturnObject(struct Object far *obj, char message)
     missile_x = OBJ_HOMEX(ThePlayer);
     missile_y = OBJ_HOMEY(ThePlayer);
     if (inplist->field8 == 1 && player_settr()) {
-        missile_heading = 1;
+        missile_arc = 1;
         missile_src = ThePlayer;
         missile_item = OBJ_ITEM(obj);
-        missile_type = 0xF;
+        missile_class = 0xF;
         if ((thrown = missile_fire()) != 0) {
             SET_ISQUANT(thrown, OBJ_ISQUANT(obj));
             thrown->ol.f.link = obj->ol.f.link;
@@ -349,13 +355,13 @@ void far trap_fire(struct Object far *trap, int x, int y)
     struct Object far *proj;
 
     missile_item = trap->qn.f.quality << 5 | trap->ol.f.owner;
-    missile_type = 0x14;
+    missile_class = 0x14;
     missile_trx = 2;
     missile_try = 2;
     missile_x = x;
     missile_y = y;
     missile_src = trap;
-    missile_heading = 0;
+    missile_arc = 0;
     using_bow = 1;
     proj = missile_fire();
     using_bow = 0;
@@ -373,15 +379,15 @@ struct Object far * far missile_fire(void)
         proj->qn.f.next = 0;
         SET_ISQUANT(proj, 1);
         proj->ol.f.link = 1;
-        if (missile_heading)
-            missile_heading = missile_src->b18 & 0x1F;
-        missile_heading = missile_heading + (OBJ_HEADING(missile_src) << 5);
-        missile_heading += missile_trx;
-        missile_heading = (missile_heading + 0x100) & 0xFF;
+        if (missile_arc)
+            missile_arc = missile_src->b18 & 0x1F;
+        missile_arc = missile_arc + (OBJ_HEADING(missile_src) << 5);
+        missile_arc += missile_trx;
+        missile_arc = (missile_arc + 0x100) & 0xFF;
         mob_init(proj, missile_x, missile_y);
-        proj->pos = proj->pos & 0xFC7F | (missile_heading >> 5 & 7) << 7;
-        proj->b18 = proj->b18 & 0xE0 | ((unsigned char)missile_heading & 0x1F) << 0;
-        proj->heading = missile_heading;
+        proj->pos = proj->pos & 0xFC7F | (missile_arc >> 5 & 7) << 7;
+        proj->b18 = proj->b18 & 0xE0 | ((unsigned char)missile_arc & 0x1F) << 0;
+        proj->heading = missile_arc;
         SET_BIT13(proj, 0);
         SET_Z(proj, OBJ_Z(missile_src));
         SET_FINEX(proj, OBJ_FINEX(missile_src));
@@ -410,7 +416,7 @@ struct Object far * far missile_fire(void)
         }
         proj->b14 = proj->b14 & 7 | ((unsigned char)missile_try + 0x10 & 0x1F) << 3;
         proj->b14 = proj->b14 & 0xF8 | 1;
-        proj->b13 = proj->b13 & 0x80 | ((unsigned char)missile_type & 0x7F) << 0;
+        proj->b13 = proj->b13 & 0x80 | ((unsigned char)missile_class & 0x7F) << 0;
         if (ComObjData[missile_item].no_owner)
             proj->ol.f.owner = 0;
         Obj_Add(&Map_GetAddr(OBJ_HOMEX(proj), OBJ_HOMEY(proj))->objects, proj);

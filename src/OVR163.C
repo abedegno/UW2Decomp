@@ -73,7 +73,8 @@ extern int MapObj_X, MapObj_Y;
 extern struct Creature Creature[];
 extern struct ComObj ComObjData[];
 extern struct MissileDat Missile[];
-extern struct Creature near *LootCreature;
+/* This file's _BSS, DS:863A: only this file uses it; no FM Towns name, so static. */
+static struct Creature near *LootCreature;
 
 void far remove_lock(struct Object far *obj, int how);
 struct Object far * far Obj_PtrTMem(unsigned far *link);

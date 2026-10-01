@@ -114,11 +114,11 @@ extern struct FontInfo far *cur_font;
 extern char in_game;
 extern unsigned char far Transparency;
 extern unsigned char far stdat[][4];
-/* FM Towns names; DS:47B8, 47BA and 47BC. Declared extern, as their home file is not known
-   (they are not in name order, so probably not this file's _BSS). */
-extern int sknow;
-extern int *chroff;                     /* offsets of the button pictures in chrbuf */
-extern unsigned char far *chrbuf;
+/* This file's _BSS, DS:47B8..47BF (ovr097's ends at 47B8), by name: sknow 43, chroff 275,
+   chrbuf 395. FM Towns keeps the three together too. */
+int sknow;
+int *chroff;                            /* offsets of the button pictures in chrbuf */
+unsigned char far *chrbuf;
 
 void far set_graphics_level(void);
 int far rollem(int dice, int sides);

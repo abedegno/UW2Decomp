@@ -6,7 +6,9 @@
 source without disturbing the matched build).
 
 1. tools/extract.py writes the data-only modules, manifest.json and renames.json under
-   build/LINK (skip with --no-extract when they are current).
+   build/LINK (skip with --no-extract when they are current). Before it, a far data source
+   (an .ASM marked /* fardata */, src/FARDATA.ASM) is assembled into build/STEM when its
+   object is missing or older, since extract.py compares its segments with the EXE.
 2. C0UW2.ASM is Turbo C++'s own TC/C0.ASM with the changes UW2's startup code shows (see
    c0_source), assembled as BUILD-C0.BAT does for the medium model.
 3. The objects are copied to build/LINK/obj; an overlay's copy changes only in the order it
@@ -111,11 +113,27 @@ SOURCE_DEFECTS = {'bytealigned': 'its _DATA or _BSS starts at an odd address: a 
                   'retarget': 'one name used for two variables',
                   'addfix': 'a constant where UW2 has a segment relocation'}
 
+def build_fardata():
+    """Assemble each far data source (marked /* fardata */) whose object is missing or older."""
+    import glob
+    for src in sorted(glob.glob(os.path.join(root, 'src', '*.ASM'))):
+        text = open(src, encoding='latin1').read(3000)
+        if not re.search(r'/\*\s*fardata\s*\*/', text): continue
+        stem = os.path.splitext(os.path.basename(src))[0].upper()
+        outdir = os.path.join(root, 'build', stem); obj = os.path.join(outdir, stem + '.OBJ')
+        if os.path.exists(obj) and os.path.getmtime(obj) >= os.path.getmtime(src): continue
+        opts = re.search(r'/\*\s*opts:\s*([^*]+?)\s*\*/', text)
+        subprocess.run(['node', os.path.join(here, 'tcc.mjs'), outdir, opts.group(1) if opts else '/ml', src], check=True)
+        log = open(os.path.join(outdir, 'BUILD.LOG'), encoding='latin1').read()
+        if not re.search(r'Error messages:\s+None', log) or not os.path.exists(obj):
+            sys.exit(f'{stem}: assembly failed\n{log}')
+
 def main():
     a = sys.argv[1:]
     out = os.path.join(LINKDIR, 'out')
     if '--out' in a: out = a[a.index('--out') + 1]
     if '--no-extract' not in a:
+        build_fardata()
         subprocess.run([sys.executable, os.path.join(here, 'extract.py')], check=True)
     man = json.load(open(os.path.join(LINKDIR, 'manifest.json')))
     open(os.path.join(LINKDIR, 'C0UW2.ASM'), 'w', newline='').write(c0_source())

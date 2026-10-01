@@ -159,17 +159,21 @@ extern unsigned long nextstep;
 extern unsigned long watertime;
 /* DS:19B2, the noise and visibility the player's actions add up to. */
 extern char plyNotice[2];
-extern unsigned char doMod;
-extern int playerMod[4];
 extern int PlayerFacing;
-extern int PlayerPitch;
-extern int PlayerBank;
-extern int campos[3];
-extern int camang[3];
-extern int vort_rad;
-extern int vort_timer;
-extern int vort_theta;
-extern unsigned char vort_x, vort_y;
+/* This file's _BSS, DS:33C6..33E7 (seg034's ends at 33C5; seg037's starts at 33E8), laid
+   out by name (tools/bssorder.py): doMod 28, vort_rad 126, vort_timer 286, vort_theta 406,
+   playerMod and PlayerPitch 552, PlayerBank 576, camang 595, campos 603, vort_x and
+   vort_y 1006. All FM Towns names. */
+unsigned char doMod;
+int playerMod[4];
+int PlayerPitch;
+int PlayerBank;
+int campos[3];
+int camang[3];
+int vort_rad;
+int vort_timer;
+int vort_theta;
+unsigned char vort_x, vort_y;
 
 void far move_cam(int input);
 void far mouse_constrain(int left, int top, int right, int bottom);

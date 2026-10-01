@@ -3,7 +3,10 @@
 
 struct Object { unsigned id; };
 extern struct Object far *ActiveObj;
-extern char Containers[], Lights[], Food[];
+/* This file's _BSS, DS:6B10..6B6F, by name: Containers 339, Lights 620, Food 958. It follows
+   ovr125's run (to CursorObjPtr, 995) and ovr134's ActiveObj (145) starts another; of the
+   files between, only this one uses all three. */
+char Containers[0x30], Lights[0x20], Food[0x10];
 void far fread(void *address, int size, int count, int fd);
 
 /* FM Towns: misc_init, the class 2 loader named by init_objects. */

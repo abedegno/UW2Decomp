@@ -62,7 +62,6 @@ struct Mobile {
 #define OBJ_B19_6(o)    (((o)->b19 & 0x40) >> 6)
 
 extern struct Player near *player;
-extern struct Mobile far *talking_to;
 extern unsigned char TimeStop;
 extern unsigned char RightPanel, inv_refresh;
 extern unsigned char far *foreground_color, far *background_color;
@@ -74,22 +73,31 @@ extern void *inplist;
 extern unsigned char far *cur_font;
 extern int npc_assess;
 
-/* This file's own uninitialised data. The FM Towns build keeps all of it static, so
-   none of it has an original name; they stay extern here (provisional). */
-extern unsigned char RightPanelBeforeConversation;
-extern char far *PortraitImageDataPtr[];
-extern int babl_mode;
-extern char far *convoScreen;
-extern int convoWorkspace;
-extern char far *babl_askstring;
-extern int convoContinue;
-extern char far *PortraitData;
-extern int babl_line_option[10];
-extern int selected_conversation_option;
-extern char far *babl_options[20];
-extern char far *babl_display[20];
-extern int babl_option_ids[10];
-extern int babl_option_count;
+/* This file's own uninitialised data, DS:47FC..4927, in its _BSS with talking_to. The FM
+   Towns build keeps all of it static, so none of it has an original name and it is static
+   here, with provisional names chosen so that Turbo C's name order (tools/bssorder.py) lays
+   it out as UW2 has it: RightPanelSaved 58, convoPics 187, convo_mode 259, convoScreen 331,
+   convoWorkspace 507, convo_askstr 515, convoContinue 587, convo_facedata 643,
+   babl_unref4854 650, convo_line_option 795, babl_choice 826, babl_opts 834,
+   babl_display 874, talking_to 916, bablOptionIds 962, bablOptCount 978. Nothing reads or
+   writes DS:4854..4857, but it lies between two of this file's variables. (DS:4928..4929,
+   also never used, is left out: it may as well be ovr104's.) */
+static unsigned char RightPanelSaved;           /* DS:47FC, the right panel before the conversation */
+static char far *convoPics[17];                 /* DS:47FE, the portrait images */
+static int convo_mode;                          /* DS:4842 */
+static char far *convoScreen;                   /* DS:4844 */
+static int convoWorkspace;                      /* DS:4848 */
+static char far *convo_askstr;                  /* DS:484A */
+static int convoContinue;                       /* DS:484E */
+static char far *convo_facedata;                /* DS:4850, the portrait data */
+static char babl_unref4854[4];                  /* DS:4854, never used */
+static int convo_line_option[10];               /* DS:4858 */
+static int babl_choice;                         /* DS:486C, the selected option */
+static char far *babl_opts[20];                 /* DS:486E */
+static char far *babl_display[20];              /* DS:48BE */
+struct Mobile far *talking_to;                  /* DS:490E, FM Towns name */
+static int bablOptionIds[10];                   /* DS:4912 */
+static int bablOptCount;                        /* DS:4926 */
 
 /* Initialised data, in the order of the EXE. */
 static unsigned char convo_say_flag = 0;    /* set by respond, cleared by say */
@@ -270,15 +278,15 @@ ready:
 /* gronk_gr's allocator: the next n bytes of the portrait buffer */
 char far * far adr_convpic(int n)
 {
-    char far *old = PortraitData;
-    PortraitData += n;
+    char far *old = convo_facedata;
+    convo_facedata += n;
     return old;
 }
 
 /* gronk_gr's loader: note where portrait number `which` landed, past its 5-byte header */
 int far move_convpic(char far *image, int ok, int which)
 {
-    PortraitImageDataPtr[which] = image + 5;
+    convoPics[which] = image + 5;
     return ok != 0;
 }
 
@@ -294,7 +302,7 @@ void far strt_converse(void)
     mouse_hide();
     grSoftPageFlip();
     disk_to_vid(2, convoScreen);
-    RightPanelBeforeConversation = RightPanel;
+    RightPanelSaved = RightPanel;
     RightPanel = 0;
     inv_refresh = 0;
     BeginInventory();
@@ -305,11 +313,11 @@ void far strt_converse(void)
     do_npc_scroll();
     scroll_clear(0);
     grfx_quikfont(1);
-    PortraitData = convoScreen;
+    convo_facedata = convoScreen;
     if (!gronk_gr("heads", player->female * 5 + player->body, 1, adr_convpic, move_convpic))
         pfatal_code(0x3015);
-    show(0xa8, 0xc4, PortraitImageDataPtr[0], 0x46, 0x40, 0, 0);
-    PortraitData = convoScreen;
+    show(0xa8, 0xc4, convoPics[0], 0x46, 0x40, 0, 0);
+    convo_facedata = convoScreen;
     who = talking_to->whoami;
     if (who > 0)
         loaded = gronk_gr("charhead", who - 1, 1, adr_convpic, move_convpic);
@@ -318,7 +326,7 @@ void far strt_converse(void)
     if (!loaded)
         loaded = gronk_gr("ghed", 0, 1, adr_convpic, move_convpic);
     if (!loaded) pfatal_code(0x3015);
-    show(2, 0xc4, PortraitImageDataPtr[0], 0x46, 0x40, 0, 0);
+    show(2, 0xc4, convoPics[0], 0x46, 0x40, 0, 0);
     str_copy(name, get_string(player_name_handle));
     *background_color = *foreground_color = 0xc7;
     string_to_screen(name, 0xa4 - string_width(name), 0xc5);
@@ -349,7 +357,7 @@ void far free_converse(void)
         end_barter();
     }
     set_random_walking_music(-1);
-    RightPanel = RightPanelBeforeConversation;
+    RightPanel = RightPanelSaved;
     do_main_scroll();
     Sched_SetAllClocks(1);
     quick_time = 1;
@@ -423,7 +431,7 @@ void far Converse(unsigned char who, int subclass)
     bab_fun("teleport_talker", teleport_talker);
     bab_fun("switch_pic", switch_pic);
     setup_converse_data(talking_to);
-    babl_askstring = bab_malloc(0xa0L);
+    convo_askstr = bab_malloc(0xa0L);
     if (!OBJ_HAS_INV(talking_to))
         generate_inventory(talking_to);
     babl_run();
@@ -450,7 +458,7 @@ void far converse_event_loop(void)
             scroll_clear(1);
             set_workspace();
             i = 1;
-            while (i < babl_option_count) {
+            while (i < bablOptCount) {
                 line[0] = i + '0';
                 line[1] = '.';
                 line[2] = ' ';
@@ -475,27 +483,27 @@ int far babl_menu_ovr103_A13(int far *stack)
     char line[0xa0];
     register int row;
     register int lines;
-    babl_mode = 1;
-    babl_option_count = 1;
+    convo_mode = 1;
+    bablOptCount = 1;
     used = lines = 0;
     base = stack[-1];
     string_no = getmem(base);
     while (string_no != 0) {
-        babl_options[babl_option_count] = get_string(string_no);
-        babl_display[babl_option_count] = convert_string(babl_options[babl_option_count]);
-        if (babl_display[babl_option_count] == babl_options[babl_option_count]) {
-            babl_display[babl_option_count] = bab_malloc((long)(str_len(babl_options[babl_option_count]) + 1));
-            str_copy(babl_display[babl_option_count], babl_options[babl_option_count]);
+        babl_opts[bablOptCount] = get_string(string_no);
+        babl_display[bablOptCount] = convert_string(babl_opts[bablOptCount]);
+        if (babl_display[bablOptCount] == babl_opts[bablOptCount]) {
+            babl_display[bablOptCount] = bab_malloc((long)(str_len(babl_opts[bablOptCount]) + 1));
+            str_copy(babl_display[bablOptCount], babl_opts[bablOptCount]);
         }
-        babl_option_ids[babl_option_count] = string_no;
-        babl_option_count++;
-        string_no = getmem(base + babl_option_count - 1);
+        bablOptionIds[bablOptCount] = string_no;
+        bablOptCount++;
+        string_no = getmem(base + bablOptCount - 1);
     }
     do_play_scroll();
     scroll_clear(1);
     set_workspace();
-    for (i = 0; i < 10; i++) babl_line_option[i] = -1;
-    for (i = 1; i < babl_option_count; i++) {
+    for (i = 0; i < 10; i++) convo_line_option[i] = -1;
+    for (i = 1; i < bablOptCount; i++) {
         line[0] = i + '0';
         line[1] = '.';
         line[2] = ' ';
@@ -503,14 +511,14 @@ int far babl_menu_ovr103_A13(int far *stack)
         str_cat(line, "\n");
         lines = scroll_print(line);
         set_workspace();
-        for (row = used; row <= lines; row++) babl_line_option[row] = i;
+        for (row = used; row <= lines; row++) convo_line_option[row] = i;
         used = lines + 1;
     }
     do_play_scroll();
     convoContinue = 1;
     menus_active = 1;
     converse_event_loop();
-    return selected_conversation_option;
+    return babl_choice;
 }
 
 int far babl_fmenu_ovr103_BF2(int far *stack)
@@ -519,8 +527,8 @@ int far babl_fmenu_ovr103_BF2(int far *stack)
     char line[0xa0];
     register int row;
     register int lines;
-    babl_mode = 1;
-    babl_option_count = 1;
+    convo_mode = 1;
+    bablOptCount = 1;
     used = 0;
     base = stack[-1];
     value_base = stack[-2];
@@ -529,14 +537,14 @@ int far babl_fmenu_ovr103_BF2(int far *stack)
     i = 1;
     while (string_no != 0) {
         if (value != 0) {
-            babl_options[babl_option_count] = get_string(string_no);
-            babl_display[babl_option_count] = convert_string(babl_options[babl_option_count]);
-            if (babl_display[babl_option_count] == babl_options[babl_option_count]) {
-                babl_display[babl_option_count] = bab_malloc((long)(str_len(babl_options[babl_option_count]) + 1));
-                str_copy(babl_display[babl_option_count], babl_options[babl_option_count]);
+            babl_opts[bablOptCount] = get_string(string_no);
+            babl_display[bablOptCount] = convert_string(babl_opts[bablOptCount]);
+            if (babl_display[bablOptCount] == babl_opts[bablOptCount]) {
+                babl_display[bablOptCount] = bab_malloc((long)(str_len(babl_opts[bablOptCount]) + 1));
+                str_copy(babl_display[bablOptCount], babl_opts[bablOptCount]);
             }
-            babl_option_ids[babl_option_count] = string_no;
-            babl_option_count++;
+            bablOptionIds[bablOptCount] = string_no;
+            bablOptCount++;
         }
         i++;
         string_no = getmem(base + i - 1);
@@ -545,8 +553,8 @@ int far babl_fmenu_ovr103_BF2(int far *stack)
     do_play_scroll();
     scroll_clear(1);
     set_workspace();
-    for (i = 0; i < 10; i++) babl_line_option[i] = -1;
-    for (i = 1; i < babl_option_count; i++) {
+    for (i = 0; i < 10; i++) convo_line_option[i] = -1;
+    for (i = 1; i < bablOptCount; i++) {
         line[0] = i + '0';
         line[1] = '.';
         line[2] = ' ';
@@ -554,14 +562,14 @@ int far babl_fmenu_ovr103_BF2(int far *stack)
         str_cat(line, "\n");
         lines = scroll_print(line);
         set_workspace();
-        for (row = used; row <= lines; row++) babl_line_option[row] = i;
+        for (row = used; row <= lines; row++) convo_line_option[row] = i;
         used = lines + 1;
     }
     do_play_scroll();
     convoContinue = 1;
     menus_active = 1;
     converse_event_loop();
-    return babl_option_ids[selected_conversation_option];
+    return bablOptionIds[babl_choice];
 }
 
 void far conv_play_menu(int option)
@@ -569,15 +577,15 @@ void far conv_play_menu(int option)
     int y, row;
     register int i;
     register int selected;
-    if (babl_mode == 0) return;
+    if (convo_mode == 0) return;
     set_workspace();
     if (option == 0) {
         y = ((int *)inplist)[1] + 1;
         row = (0x1e - y) / *(int far *)(cur_font + 6);
-        selected = babl_line_option[row];
+        selected = convo_line_option[row];
     } else selected = option;
-    if (selected <= 0 || selected >= babl_option_count) return;
-    babl_mode = 0;
+    if (selected <= 0 || selected >= bablOptCount) return;
+    convo_mode = 0;
     convoContinue = 0;
     mouse_release(0);
     do_play_scroll();
@@ -585,12 +593,12 @@ void far conv_play_menu(int option)
     set_workspace();
     menus_active = 0;
     do_npc_scroll();
-    for (i = 1; i < babl_option_count; i++) {
+    for (i = 1; i < bablOptCount; i++) {
         if (i == selected) play_say(babl_display[i]);
-        if (babl_options[i] != babl_display[i]) bab_free(babl_display[i]);
+        if (babl_opts[i] != babl_display[i]) bab_free(babl_display[i]);
     }
     do_play_scroll();
-    selected_conversation_option = selected;
+    babl_choice = selected;
 }
 
 void far npc_say(char far *s)
@@ -661,11 +669,11 @@ int far babl_ask_ovr103_1117(void)
     wdialog(0, 0, response, 1, 0x32);
     scroll_print("\n");
     set_workspace();
-    str_copy(babl_askstring, response);
+    str_copy(convo_askstr, response);
     if (babl_ask_handle == 0)
-        babl_ask_handle = make_string(babl_askstring, 0x7c);
+        babl_ask_handle = make_string(convo_askstr, 0x7c);
     else if (get_string(babl_ask_handle) == 0)
-        replace_string(babl_askstring, babl_ask_handle);
+        replace_string(convo_askstr, babl_ask_handle);
     set_workspace();
     return babl_ask_handle;
 }
@@ -906,15 +914,15 @@ int far switch_pic(int far *stack)
     which = getmem(stack[-1]);
     loaded = 0;
     set_workspace();
-    PortraitData = bab_malloc(0x12c0L);
-    saved = PortraitData;
-    if (PortraitData == 0) return 0;
+    convo_facedata = bab_malloc(0x12c0L);
+    saved = convo_facedata;
+    if (convo_facedata == 0) return 0;
     if (which < 0x100)
         loaded = gronk_gr("charhead", which - 1, 1, adr_convpic, move_convpic);
     else if (which <= 0x140)
         loaded = gronk_gr("ghed", which - 0x100, 1, adr_convpic, move_convpic);
     if (!loaded) {
-        PortraitData = saved;
+        convo_facedata = saved;
         loaded = gronk_gr("ghed", 0, 1, adr_convpic, move_convpic);
     }
     if (loaded) {
@@ -923,7 +931,7 @@ int far switch_pic(int far *stack)
         if (which < 0x100) who.whoami = which;
         else who.id = who.id & 0xFFC0 | ((which - 0x100) & 0x3F) << 0;
         mouse_hide();
-        show(2, 0xc4, PortraitImageDataPtr[0], 0x46, 0x40, 0, 0);
+        show(2, 0xc4, convoPics[0], 0x46, 0x40, 0, 0);
         if (get_name(name, (struct Object far *)&who, 0, 0)) {
             set_the_color(1);
             urectangle(0x47, 0x81, 0x98, 0x7c);

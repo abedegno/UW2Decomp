@@ -3,9 +3,14 @@
 
 #include <dos.h>
 
-extern char far * near mapdata;
-/* FM Towns _MapDirty: its Map_Load_ and Map_Save_ clear it as these do. DS:189A, the first
-   byte of this file's _DATA (which holds DS:189B and is word-aligned). */
+/* This file's _DATA starts at DS:1874 (ovr126's strings end at 1873, odd). hgt_val and
+   mapdata lie between ovr126's data and MapDirty; of the two files there, ovr127 is
+   Okumura's LZSS.C and uses neither, this file loads the map mapdata points at. FM Towns
+   has hgt_val as the same 34 bytes, after ovr126's strings. */
+int hgt_val[17] = { 0x000, 0x040, 0x080, 0x0C0, 0x100, 0x140, 0x180, 0x1C0, 0x200,
+                    0x240, 0x280, 0x2C0, 0x300, 0x340, 0, 0, 0x400 };      /* DS:1874 */
+char far * near mapdata = 0;            /* DS:1896 */
+/* FM Towns _MapDirty: its Map_Load_ and Map_Save_ clear it as these do. DS:189A. */
 unsigned char MapDirty = 0;
 extern char far *ActiveMob;
 extern char far *LastActiveMob;

@@ -5,7 +5,7 @@
 
 extern int notdone;
 extern void *inplist;
-extern unsigned char dsfx_playing;
+unsigned char dsfx_playing = 0;      /* this file's _DATA: DS:010A */
 extern int changed;
 extern int scrnum;
 extern void (far *editor_dispatch[][16])(void);

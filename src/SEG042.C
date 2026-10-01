@@ -9,14 +9,18 @@ extern unsigned char far tmap_inpage;
 extern unsigned char far obj_inpage1;
 extern unsigned char far scrgr_fpage;
 extern unsigned char far tmap_fpage;
-extern unsigned char saved_tmap_inpage;
 extern unsigned far EmsBuff;
-extern unsigned char ws_active;
-extern unsigned char gfx_inpage;
-extern unsigned char obj_inpage2;
 extern unsigned char far sound_fpage;
 extern unsigned ems_frame;
-extern int dseg_67d6_920; /* DOS EMS page count; no confirmed FM Towns counterpart. */
+
+/* This file's _DATA starts at DS:0920 (seg040's ends at 091F, odd) with these, then its
+   string. Only this file uses all five; seg041, the other file between seg040's data and
+   this, uses none. */
+int dseg_67d6_920 = 0;                  /* DOS EMS page count; no confirmed FM Towns counterpart. */
+unsigned char ws_active = 0;            /* DS:0922 */
+unsigned char gfx_inpage = 0;           /* DS:0923 */
+unsigned char obj_inpage2 = 0;          /* DS:0924 */
+unsigned char saved_tmap_inpage = 0;    /* DS:0925 */
 
 int far rand(void);
 int far seg013_1D3C_A(int phys, int page);

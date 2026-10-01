@@ -36,24 +36,28 @@ struct Font {
     int height;                  /* 0x06 */
 };
 
-extern struct Scroll near *scroll;              /* DS:34B0, FM Towns _scroll */
-extern struct Scroll main_scroll;                /* DS:938, FM Towns _main_scroll */
-extern struct Scroll npc_scroll;                 /* DS:94D, FM Towns _npc_scroll */
-extern struct Scroll menu_scroll;                /* DS:962, FM Towns _menu_scroll */
-extern unsigned char mouse_in_scroll;             /* DS:34B2, FM Towns _mouse_in_scroll */
-extern int scroll_mode;                           /* DS:97E, FM Towns _scroll_mode */
-extern int start_line;                            /* DS:980, FM Towns _start_line */
-extern unsigned char menus_active;                /* DS:982, FM Towns _menus_active */
-extern unsigned char didMouseInput;               /* DS:983, FM Towns _didMouseInput */
-extern long click_time;                           /* DS:984, part of FM Towns _spec_col */
-extern int edge_phase;                            /* DS:988, part of FM Towns _spec_col */
-extern int conv_edge_phase;                       /* DS:98A, part of FM Towns _spec_col */
-extern char scroll_esc;                  /* DS:98C */
-/* DS:98D, the byte right after scroll_esc (alignment padding before the next
-   flag, which is 0). scroll_wrap passes its address as an empty string purely to trigger
-   scroll_print3's screen-full/MORE check without printing anything; with -d this merges
-   with any other file's "" literal, which is how the EXE's own copy lands here. */
-extern char empty_text[];
+/* This file's _BSS, DS:34B0..34B3 (seg044's starts at 34B4), by name: scroll 83,
+   mouse_in_scroll 653. It cannot start any lower than 34AC: the bytes below run up from
+   sound_fpage (key 363), which seg042 uses. */
+struct Scroll near *scroll;                      /* DS:34B0, FM Towns _scroll */
+unsigned char mouse_in_scroll;                   /* DS:34B2, FM Towns _mouse_in_scroll */
+/* This file's _DATA, DS:0938..098D, in definition order (seg042's data ends at 0937, odd;
+   seg044's starts at 098E). FM Towns has main_scroll, npc_scroll, menu_scroll and spec_col
+   together in this order and then unnamed space: click_time, edge_phase and
+   conv_edge_phase have no names there, so they were static. The pool holds one string,
+   the "" at DS:098D that scroll_wrap passes to scroll_print3. */
+struct Scroll main_scroll = { 0x1E, 1, 0x10, 0xDF, 0x10, 0x1E, 0x10, 0x1E, 0, 0, 0x76 };   /* DS:0938 */
+struct Scroll npc_scroll = { 0x78, 0x28, 0x15, 0xDA, 0x18, 0x76, 0x18, 0x76, 0, 0, 0x76 };  /* DS:094D */
+struct Scroll menu_scroll = { 0x1E, 1, 8, 0x137, 8, 0x1E, 8, 0x1E, 0, 0, 0x76 };            /* DS:0962 */
+unsigned char spec_col[7] = { 0x75, 0x68, 0x01, 0x02, 0x21, 0x50, 0x48 };    /* DS:0977, colours for \0..\6 */
+int scroll_mode = 0;                    /* DS:097E */
+int start_line = 0;                     /* DS:0980 */
+unsigned char menus_active = 0;         /* DS:0982 */
+unsigned char didMouseInput = 0;        /* DS:0983 */
+static long click_time = 0;             /* DS:0984 */
+static int edge_phase = 0;              /* DS:0988 */
+static int conv_edge_phase = 0;         /* DS:098A */
+char scroll_esc = 1;                    /* DS:098C */
 extern int scrmode;                               /* DS:5D60, FM Towns _scrmode (IDA's
                                                        label "InGameMode" here is wrong: a
                                                        different global, DS:2506, exists
@@ -62,8 +66,6 @@ extern unsigned char far *foreground_color;       /* DS:21C4, reused from SEG038
 extern unsigned char far *background_color;       /* DS:21C8, reused from SEG038.C */
 extern struct Font far *cur_font;                 /* DS:21CC */
 extern long far *Time;                  /* DS:2158 */
-extern unsigned char color_by_digit[];            /* DS:947, indexed by the raw '0'..'6'
-                                                       byte; no FM Towns name found. */
 
 char far mouse_check_reg(int top, int y0, int bottom, int x0);
 void far mouse_hide(void);
@@ -271,7 +273,7 @@ void far scroll_print3(char *text, int flag)
             break;
         default:
             if (*si >= '0' && *si <= '6')
-                *foreground_color = color_by_digit[*si];
+                *foreground_color = spec_col[*si - '0'];
             break;
         }
         scroll->font_color = *foreground_color;
@@ -329,7 +331,7 @@ void far scroll_wrap(char *text, int flag)
         saved = 0;
         if (scroll->cur_x >= scroll->bottom) {
             scroll->more_pending = 1;
-            scroll_print3(empty_text, flag);
+            scroll_print3("", flag);
             while (*si == ' ')
                 si++;
         }
@@ -341,7 +343,7 @@ void far scroll_wrap(char *text, int flag)
             }
             if (di == 0 || di == si) {
                 scroll->more_pending = 1;
-                scroll_print3(empty_text, flag);
+                scroll_print3("", flag);
                 while (*si == ' ')
                     si++;
                 di = si + strlen(si);

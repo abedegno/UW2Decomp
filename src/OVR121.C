@@ -91,9 +91,12 @@ extern struct Bag far *OpenBag;
 extern unsigned char InvUpArrow;
 extern unsigned char InvDownArrow;
 extern int SaveHandles[];
-extern int BagSaveHandles[];
+/* This file's _BSS, DS:6A76..6A85 (ovr122's starts at 6A86): only this file uses it. */
+int BagSaveHandles[8];
 extern struct InvRect InvDisplay[];
-extern unsigned char display_inventory_no_show;
+/* This file's _DATA, DS:15D0 (ovr119's strings end there; ovr122's data starts at 15D2):
+   of ovr120 and ovr121, the two files between, only this one uses it. */
+unsigned char display_inventory_no_show = 0;
 extern int scrmode;
 extern char RightPanel;
 extern struct Inplist near *inplist;

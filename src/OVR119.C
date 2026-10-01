@@ -26,14 +26,17 @@ static unsigned char ems_page = 4;  /* EMS logical page being filled */
 static char gr_ext[6][4] = { "", ".gr", ".tr", ".cr", ".sr", ".ar" };
 static int reload_base = -1;        /* object slot that reload_obj_ems starts at */
 
-extern char gsize;                  /* texture edge, from the .tr header */
-extern void far *constadr;          /* where read_gr_far puts its picture */
-extern unsigned char npals;
-extern unsigned long far *tmpoffs;  /* the open file's offset table */
-extern unsigned tmpcnt;             /* pictures in the open file */
-extern unsigned char Palettes[][16];
-extern FILE *grfp;
-extern unsigned *PalStore;
+/* This file's _BSS, DS:6734..6945, laid out by name (tools/bssorder.py): gsize 119,
+   constadr 131, npals 270, tmpoffs and tmpcnt 612, Palettes 632, grfp 663, PalStore 736;
+   ovr118's fade_buffer (846) before it and ovr120's Missile (621) after it start other runs. */
+char gsize;                         /* texture edge, from the .tr header */
+void far *constadr;                 /* where read_gr_far puts its picture */
+unsigned char npals;
+unsigned long far *tmpoffs;         /* the open file's offset table */
+unsigned tmpcnt;                    /* pictures in the open file */
+unsigned char Palettes[32][16];
+FILE *grfp;
+unsigned *PalStore;
 extern unsigned far *grs_off;       /* EMS page and paragraph, or video address, per slot */
 extern unsigned far *obj_tab;       /* two words per object; only the first is set here */
 extern unsigned char TxmCol[];

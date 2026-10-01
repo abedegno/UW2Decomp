@@ -27,15 +27,27 @@ struct DreamOpts { unsigned low:6, dream:3, active:1, high:6; };
 struct Creature { unsigned char armour[4]; unsigned char vitality, strength, dexterity, intelligence; char pad08[0x12-8]; unsigned char defence; };
 struct Object { unsigned id, pos; union { unsigned word; struct { unsigned quality:6, next:10; } f; } qn; unsigned owner; unsigned char hp; };
 struct Motion { int x,y,z; char pad06[0x25-6]; unsigned char state; };
-extern struct Player *player;
-extern struct Creature *playerdat;
-extern struct Object far *ThePlayer;
 extern struct Motion PN;
-extern int PlayerFacing, PlayerLevel;
+
+/* This file's _BSS, DS:8288..8297, laid out by name (tools/bssorder.py): player_name_handle
+   80, player 280, playerdat 440, ThePlayer 444, PlayerLevel 568, PlayerFacing 704,
+   PlayerHeading 768. It follows ovr140's TxmID (988) and ends where ovr143's IsJoy (1)
+   starts another run, and ovr143's run holds its own static region handles, so this run
+   is not ovr143's. */
+int player_name_handle;
+struct Player *player;
+struct Creature *playerdat;
+struct Object far *ThePlayer;
+int PlayerLevel;
+int PlayerFacing;
+int PlayerHeading;
 extern unsigned long lastDurCheck;
 extern unsigned char motionbits, TimeStop, Hasted, WizEye, PoisonWeap;
 extern unsigned char Blessed;
-extern unsigned char PlayerCommonObjDamageScaling;
+/* The common object properties, 11 bytes per item (ovr134 loads them). Only the
+   resistance byte of item 127, the player's own object type, is used here. */
+struct ComObj { char pad0[8]; unsigned char resist; char pad9[2]; };
+extern struct ComObj ComObjData[];
 extern unsigned char cmbModTH[4];
 extern unsigned char Valor, plyregen;
 extern unsigned PickDist;
@@ -125,7 +137,7 @@ void far read_player_data(int fd)
 
 void far init_spells(void)
 {
-    PlayerCommonObjDamageScaling = 0;
+    ComObjData[127].resist = 0;
     plyNotice[0] = 13 - player->sneak / 3;
     plyNotice[1] = 15 - player->sneak / 5;
     motionbits = 0;
@@ -190,7 +202,7 @@ unsigned char far player_affected_by(unsigned char major, unsigned char minor,
             if (minor == 4) *bonuses |= 2;
             break;
         case 4: case 5: case 6: case 7: case 8:
-            PlayerCommonObjDamageScaling |= damage_protection_flags[minor - 5];
+            ComObjData[127].resist |= damage_protection_flags[minor - 5];
             break;
         case 9:
             Valor = 10 + (*(unsigned char *)((char *)player + 0x2A)) / 5;

@@ -6,7 +6,9 @@
 
 #include <dos.h>
 
-extern char DataDirectory[];
+/* This file's _DATA, DS:1A78..1A7D (ovr149's data ends at 1A77, odd); ovr151's starts at
+   1A7E with scdBlockHasBeenModified, which only ovr151 uses, as only this file uses this. */
+char DataDirectory[] = "DATA\\";
 extern char far Transparency;
 
 void far grfx_clear(void);

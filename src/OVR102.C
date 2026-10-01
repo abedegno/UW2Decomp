@@ -13,9 +13,10 @@ struct Combination {
     unsigned first, second, output;
 };
 
-/* DOS DS:47C0. FM Towns calls the corresponding storage _chroff, which
-   conflicts with the chargen pointer of that name in the DOS sources. */
-extern struct Combination ObjectCombinations[10];
+/* This file's _BSS, DS:47C0..47FB: between ovr101's and ovr103's, and only this file uses
+   it. FM Towns has no name for it (its disassembly names the storage after _chroff, the
+   last of ovr101's variables before it), so it was static. */
+static struct Combination ObjectCombinations[10];
 void far LoadDATFile(char *name, void far *dest, int size);
 struct Object far * far CreateObj(unsigned id, int mobile);
 

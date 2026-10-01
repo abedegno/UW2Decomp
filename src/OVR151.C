@@ -18,9 +18,15 @@ struct SCDWork {
     struct SCDClock clocks[80];
     struct SCDRow record[1];
 };
-extern struct SCDWork far *SCD_dseg_67d6_8634;
+/* This file's _BSS, DS:8634..8637 (ovr147's ends at 8634): the schedule work area, which
+   Sched_SetBuf sets; ovr113 reads it too. inanmMapX (key 41) after it starts another run. */
+struct SCDWork far *SCD_dseg_67d6_8634;
 extern int PlayerLevel;
-extern unsigned char scdBlockHasBeenModified_dseg_67d6_1A7E;
+/* This file's _DATA, DS:1A7E..1AAA: scdBlockHasBeenModified, then the string pool, which
+   holds only two debugging formats that no code reads. ovr150's DataDirectory ends at 1A7D,
+   so this file starts at 1A7E; ovr152's data starts at 1AAC. */
+unsigned char scdBlockHasBeenModified_dseg_67d6_1A7E = 0;
+int far printf(const char *format, ...);
 extern char HomeDir[];
 struct PlayerClock { char pad[0x36d]; unsigned char clock[16]; };
 extern struct PlayerClock *player;
@@ -208,6 +214,10 @@ unsigned char far Sched_InsertLong(int count, struct SCDRow far *src, unsigned c
     if (count < 1) return 0;
     for (i = SCD_dseg_67d6_8634->rows - 1; i >= 0; i--) {
         v.tmp = SCD_dseg_67d6_8634->record[i].time;
+        /* compiled-out debugging: Turbo C drops the call but keeps the strings (DS:1A7F,
+           1A9B); where in the file they were is not known, only their order */
+        if (0) printf("i = %d comparison: %d < %d\n", i, src->time, v.tmp);
+        if (0) printf("looking at %lx\n", (long)i);
         if (src->time >= v.tmp) break;
         SCD_dseg_67d6_8634->record[i + count] = SCD_dseg_67d6_8634->record[i];
     }

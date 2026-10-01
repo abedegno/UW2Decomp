@@ -100,15 +100,21 @@ struct Inplist {
 extern struct Player near *player;
 extern struct PlayerStats PlayerDat;
 extern struct Object far *ThePlayer;
-extern struct Object far *CursorObjPtr;
 extern union Link Inventory[];
 extern struct ComObj ComObjData[];
 extern struct Container Containers[];
 extern struct Object far *ActiveObj;
-extern char invArmorObj[];
-extern char invArmorQ[];
-extern int SaveHandles[];
-extern int panel_mouse_region;          /* DS:6B0A, provisional */
+/* This file's _BSS, DS:6AD0..6B0F, laid out by name (tools/bssorder.py): invArmorObj and
+   invArmorQ 57, SaveHandles 827, panel_mouse 968, CursorObjPtr 995; ovr130's Containers
+   (339) starts the next run. panel_mouse (DS:6B0A) has no FM Towns name and only this file
+   uses it, so it is static, its provisional name chosen for its key. Inventory (DS:6A98,
+   key 25) may be this file's too, or ovr124's, which also uses it: not decided, so it
+   stays extern. */
+char invArmorObj[6];
+char invArmorQ[6];
+int SaveHandles[23];
+static int panel_mouse;                 /* DS:6B0A */
+struct Object far *CursorObjPtr;
 extern char far Transparency;
 extern char RightPanel;
 extern char far *foreground_color;
@@ -254,7 +260,7 @@ void far BeginInventory(void)
         }
         save_rect(SaveHandles[1], 0xEE, 0x7A, 0x4C, 0x2B);
         save_rect(SaveHandles[0], 0x12B, 0x90, 0x10, 0x0A);
-        panel_mouse_region = defineMouseRegion(0xF0, 0x51, 0x13B, 0xBE, 0x106C);
+        panel_mouse = defineMouseRegion(0xF0, 0x51, 0x13B, 0xBE, 0x106C);
         panel_input = input_addmouse(0xF0, 0x51, 0x13B, 0xBE, 0, 5, mous_in_panel);
     }
 }

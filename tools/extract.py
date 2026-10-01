@@ -17,9 +17,17 @@ What is extracted, and the evidence for each piece:
   entries 50 to 78), each with the alignment its start implies: para when it starts on a fresh
   paragraph after a gap, byte when it starts exactly where the previous one ended, word when
   it skips one byte to an even address. Empty entries are kept: the original link had them.
+  Entries that a /* fardata */ source defines (src/FARDATA.ASM: the zero-filled buffers
+  and small tables) are only declared here, empty, to keep the order; the source, linked
+  right after XFAR, fills them, and each of its segments is compared with the EXE first.
+  Still taken from the EXE: entries 51, 58 and 71, the graphics and 3D modules' data.
 - DGROUP gaps: _DATA bytes and _BSS space between the objects' own data, as verify.py places
-  it. Each gap becomes a byte-aligned module linked just before the next object whose data
-  follows it, so TLINK lays it where the EXE has it. The second library's _DATA (keyboard,
+  it (or, for a file whose own code never refers to its data, as its publics' addresses in
+  symbols.tsv and the other objects place it). A gap shrinks or disappears by itself as
+  sources define what is in it. What is left are bytes no source owns yet, mostly never
+  referenced at all. Each gap becomes a byte-aligned module linked just before the next
+  object whose data follows it, so TLINK lays it where the EXE has it. The second library's
+  _DATA (keyboard,
   mouse, palette and font globals, after the C library's) is XLIBD, which link.py puts into
   that library so that TLINK places it after the C library's data.
 - Empty overlays (ovr098, ovr100, ...): their stubs have no entries and codesize 0, so the
@@ -109,8 +117,31 @@ for stem, ob in OBJS.items():
     ob['refs'] = {n: (a[0],) + tuple(a[1:]) for n, a in _captured.items()}
     for n, p in re.findall(r'^(\S+): segment ([0-9A-F]{4}) referenced on its own', v, re.M):
         ob['refs'].setdefault(n, ('SEG', int(p, 16)))
-    if ob['datalen'] and ob['data'] is None: sys.exit(f'{stem}: verify.py did not place its _DATA')
-    if ob['bsslen'] and ob['bss'] is None: sys.exit(f'{stem}: verify.py did not place its _BSS')
+
+# A file whose own code never refers to its _DATA or _BSS (data defined for other files, such
+# as seg033's ActDoors) is placed by its publics instead: where other files' references and
+# symbols.tsv put them. They must agree on one base.
+def _place_by_publics():
+    known = {}
+    for l in open(os.path.join(root, 'symbols.tsv')):
+        if l.startswith('#') or not l.strip(): continue
+        n, a = l.split('\t')[:2]
+        if a.startswith('DS:'): known.setdefault(n, set()).add(int(a[3:], 16))
+    for ob in OBJS.values():
+        for n, a in ob['refs'].items():
+            if a[0] == 'DS': known.setdefault(n, set()).add(a[1])
+            elif a[0] == 'FAR' and a[1] == DS_PARA: known.setdefault(n, set()).add(a[2])
+    for stem, ob in OBJS.items():
+        for kind, sn in (('data', '_DATA'), ('bss', '_BSS')):
+            if not ob[kind + 'len'] or ob[kind] is not None: continue
+            o = ob['o']
+            bases = {(at - off) & 0xFFFF for n, (si, off) in o['pubs'].items()
+                     if si and o['segs'][si][0] == sn for at in known.get(n, ())}
+            if len(bases) != 1:
+                sys.exit(f'{stem}: verify.py did not place its {sn}, and its publics give ' +
+                         (', '.join(f'DS:{b:X}' for b in sorted(bases)) or 'no address'))
+            ob[kind] = bases.pop()
+_place_by_publics()
 
 # ---- libraries ------------------------------------------------------------------------
 def lib_modules(path):
@@ -186,6 +217,39 @@ for name, (si, off) in C0['pubs'].items():
 for name, off in (('__exitclean', 0x113), ('__exit', 0x133), ('__restorezero', 0x1B6), ('_abort', 0x22E),
                   ('DGROUP@', 0x245), ('__MMODEL', 0x247)):
     define(('FAR', TEXT_PARA, off), name)
+
+# ---- far data with a source -------------------------------------------------------------
+# A source marked /* fardata */ (src/FARDATA.ASM) defines whole far data segments, each
+# named FDnn after its segment table entry; link.py assembles it into build/STEM before
+# this runs. Each segment must equal the EXE's bytes, and holds no relocations. XFAR then
+# declares that entry empty (keeping the EXE's segment order) and the source fills it.
+FARSRC = {}      # segment table entry -> stem
+FAROBJS = {}     # stem -> object path
+_tsvnames = {l.split('\t')[0] for l in open(os.path.join(root, 'symbols.tsv')) if not l.startswith('#')}
+for src in sorted(glob.glob(os.path.join(root, 'src', '*.ASM'))):
+    if not re.search(r'/\*\s*fardata\s*\*/', open(src, encoding='latin1').read(3000)): continue
+    stem = os.path.splitext(os.path.basename(src))[0].upper()
+    obj = os.path.join(root, 'build', stem, stem + '.OBJ')
+    if not os.path.exists(obj) or os.path.getmtime(obj) < os.path.getmtime(src):
+        sys.exit(f'{stem}: build/{stem}/{stem}.OBJ is missing or older than its source (link.py builds it)')
+    o = fixups(open(obj, 'rb').read()); FAROBJS[stem] = obj
+    if o['fixups']: sys.exit(f'{stem}: far data with fixups is not handled yet')
+    pubs_by_seg = {}
+    for name, (si, off) in o['pubs'].items(): pubs_by_seg.setdefault(si, []).append((name, off))
+    for si in range(1, len(o['segs'])):
+        sn, cl, ln = o['segs'][si]
+        m_ = re.fullmatch(r'FD(\d\d)', sn)
+        if cl != 'FAR_DATA' or not m_ or not 50 <= int(m_.group(1)) <= 78:
+            sys.exit(f'{stem}: segment {sn} ({cl}) is not a far data segment FD50..FD78')
+        i = int(m_.group(1)); _, para, lo, hi, _ = SEGS[i]
+        if i in FARSRC: sys.exit(f'{stem}: FD{i} is also defined by {FARSRC[i]}')
+        if hi is None or hi - lo != ln or bytes(o['data'][si]) != exe[lo:hi]:
+            sys.exit(f'{stem}: FD{i} does not equal segment table entry {i} of the EXE')
+        FARSRC[i] = stem
+        # names in symbols.tsv first, so that a pointer or segment word gets that name
+        for name, off in sorted(pubs_by_seg.get(si, []), key=lambda p: (p[0] not in _tsvnames, p[1], p[0])):
+            define(('FAR', para, lo - file_of(para, 0) + off), name)
+    OBJPUBS |= set(o['pubs'])
 
 # ---- references: name -> address ---------------------------------------------------------
 REFS = {}
@@ -327,7 +391,7 @@ for i, pieces in GAPS.items():
     for a, b in pieces: RANGES.append((a, b, SEGS[i][1], CODE_GAPS[i][0]))
 for k, (i, a, b) in TAILS.items(): RANGES.append((a, b, SEGS[i][1], 'XT' + k[-3:]))
 for i, para, lo, hi, fl in FAR:
-    if hi is not None and hi > lo: RANGES.append((lo, hi, para, 'XFAR'))
+    if hi is not None and hi > lo and i not in FARSRC: RANGES.append((lo, hi, para, 'XFAR'))
 for a, b, slot in DPIECES + BPIECES: RANGES.append((DS_FILE + a, DS_FILE + b, DS_PARA, dname(slot)))
 RANGES.append((DS_FILE + LIBDATA_START, DS_FILE + LIBDATA_END, DS_PARA, 'XLIBD'))
 
@@ -541,10 +605,14 @@ for i, para, lo, hi, fl in FAR:
     elif lo % 16 == 0: align = 'para'
     else: sys.exit(f'far segment {i}: cannot place at {lo:X} after {prev_end:X}')
     m.lines.append(f'FD{i:02d} segment {align} public \'FAR_DATA\'')
-    if hi > lo: m.lines += seg_start_labels(m, para, i)
-    m.lines += body(m, lo, hi, para, False)
+    if i in FARSRC: m.lines.append(f'; {FARSRC[i]} fills this segment')
+    else:
+        if hi > lo: m.lines += seg_start_labels(m, para, i)
+        m.lines += body(m, lo, hi, para, False)
     m.lines.append(f'FD{i:02d} ends')
     prev_end = max(prev_end, hi)
+# the far data sources follow XFAR, which declares their segments in the EXE's order
+RES[RES.index('XFAR') + 1:RES.index('XFAR') + 1] = sorted(FAROBJS)
 
 # DGROUP gaps
 def dgroup_module(name, dgaps, bgaps):
@@ -600,7 +668,8 @@ manifest = dict(
     stuborder=STUBORDER,
     retarget=RETARGET,
     addfix=ADDFIX,
-    objects={k: os.path.relpath(o['obj'], root) for k, o in OBJS.items()},
+    objects={**{k: os.path.relpath(o['obj'], root) for k, o in OBJS.items()},
+             **{k: os.path.relpath(p, root) for k, p in FAROBJS.items()}},
     generated=sorted(modules))
 for fx in ADDFIX.values():
     for e in fx: e[1] = frame_name(e[2])

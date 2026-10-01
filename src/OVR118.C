@@ -10,7 +10,9 @@ extern struct FontHead far *cur_font;
 extern unsigned char far *palette;
 extern unsigned char far *bytefont;
 extern unsigned long far *Time;
-extern unsigned char fade_buffer[];
+/* This file's _BSS, DS:5E34..6733 (ovr116's ends at 5E33; ovr119's starts at 6734, its
+   keys starting again from gsize's 119): only this file uses it. */
+unsigned char fade_buffer[0x900];
 extern char far stdat;
 extern unsigned char ShowStupidFirstPersonWeapon;
 /* The file's _DATA, DS:14C4 to DS:14FE. FM Towns has these as statics after its public

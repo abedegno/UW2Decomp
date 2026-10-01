@@ -114,9 +114,7 @@ struct MotionParams {
     unsigned headings[8];               /* 0x27 */
 };
 
-extern struct MotionCalc Ppd;
 extern struct MotionCalc near *curP;
-extern struct Phys near *CP;
 /* The mover's handler, `TP`: which collision bits to ignore, which to pass to `special`,
    and which stop it climbing onto objects. */
 struct Handler {
@@ -127,18 +125,30 @@ struct Handler {
     unsigned char (far *special)(unsigned *state);  /* 0x08 */
 };
 
-extern struct Handler near *TP;
 extern struct Collision oCollisions[];
 extern struct ComObj ComObjData[];
 extern unsigned char motionbits;
 
-/* No FM Towns names (provisional): FM Towns keeps these as statics after _CT1. */
-extern signed char bounced;                 /* DS:25DB, _CT1+0xF */
-extern unsigned char hit_obj;               /* DS:26A4, _CT1+0x10 */
-extern unsigned char coll_flag;             /* DS:26A5, _CT1+0xD */
-extern unsigned char targ_ceil;             /* DS:26A8, _CT1+0x11 */
-extern unsigned char terrain;               /* DS:26A9, _CT1+0xE */
-extern unsigned char tries;                 /* DS:26B6, _CT1+0xC */
+/* This file's _BSS, DS:25C4..26E9 (seg030's ends at 25C3, seg032's starts at 26EA), laid
+   out by name (tools/bssorder.py): Ppd 144, bounce_flag 298, PN 336, CN1..CN4 371,
+   hit_obj 568, hit_flag 624, CP 731, targ_ceil 764, terr_type 820, PT 848, trycnt 868,
+   TP 884, CT1..CT4 931. FM Towns keeps TP, CP, CN4..CN1, PT, PN and CT4..CT1 together, and
+   the six without names as statics after _CT1 (+0xC..+0x11), so those are static here,
+   with provisional names chosen for their keys. PN, the CNs, PT and the CTs are used only
+   by other files (seg006, seg007, seg008, seg035 and overlays). */
+struct MotionCalc Ppd;                      /* DS:25C4 */
+static signed char bounce_flag;             /* DS:25DB, _CT1+0xF */
+struct Phys PN;                             /* DS:25DC */
+struct Phys CN1, CN2, CN3, CN4;             /* DS:2604, 262C, 2654, 267C */
+static unsigned char hit_obj;               /* DS:26A4, _CT1+0x10 */
+static unsigned char hit_flag;              /* DS:26A5, _CT1+0xD */
+struct Phys near *CP;                       /* DS:26A6 */
+static unsigned char targ_ceil;             /* DS:26A8, _CT1+0x11 */
+static unsigned char terr_type;             /* DS:26A9, _CT1+0xE */
+struct Handler PT;                          /* DS:26AA */
+static unsigned char trycnt;                /* DS:26B6, _CT1+0xC */
+struct Handler near *TP;                    /* DS:26B8 */
+struct Handler CT1, CT2, CT3, CT4;          /* DS:26BA, 26C6, 26D2, 26DE */
 
 unsigned char res_to_terr[18] = { 0, 0, 1, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4 };
 
@@ -175,13 +185,13 @@ void far do_physics(struct Phys *pp, struct Handler *tp)
     CP = pp;
     TP = tp;
     MP.vel = CP->vel;
-    terrain = CP->terrain;
-    bounced = 0;
-    tries = 0;
+    terr_type = CP->terrain;
+    bounce_flag = 0;
+    trycnt = 0;
     if (!space_to_motion(1, 1))
         return;
     while (MP.steps + 1 > MP.done) {
-        if (tries++ == 0x10)
+        if (trycnt++ == 0x10)
             goto stuck;
         if (grid_move(1))
             check_positions();
@@ -492,7 +502,7 @@ void far do_2dbounce(char how)
 {
     register int h;
 
-    if (bounced > 0)
+    if (bounce_flag > 0)
         grid_move(-1);
     else {
         if (how) {
@@ -505,7 +515,7 @@ void far do_2dbounce(char how)
         grid_move(-1);
         if (rehead(MP.headings[h])) {
             recalc_vecs(1);
-            bounced = 2;
+            bounce_flag = 2;
             return;
         }
     }
@@ -684,18 +694,18 @@ unsigned char far grid_move(int dir)
     if (dir == -1) {
         ObjectCheck(0, 0);
         set_targz(0);
-        CP->terrain = terrain;
-        if (coll_flag)
+        CP->terrain = terr_type;
+        if (hit_flag)
             check = 1;
     } else
-        bounced = bounced - 1;
+        bounce_flag = bounce_flag - 1;
     if (CP->vel[2] != 0)
         r = full_move(0, dir);
     else
         r = flat_move(0, dir);
     if (check) {
         state = get_pcoll();
-        terrain = CP->terrain;
+        terr_type = CP->terrain;
         CP->terrain = set_resterr(state);
     }
     return r;
@@ -730,7 +740,7 @@ int far get_pcoll(void)
     unsigned char step;
     unsigned char c6 = 0;
 
-    coll_flag = 0;
+    hit_flag = 0;
     TerrainCheck(CP->b24);
     ObjectCheck(0, 0);
     set_targz(0);
@@ -768,18 +778,18 @@ int far get_pcoll(void)
             state |= 0x100;
         if (ok && MP.targz + CP->height > 0x7F) {
             ok = 0;
-            coll_flag = 1;
+            hit_flag = 1;
             state |= 0x200;
         } else if (ok && MP.hit == -1 && MP.targz + CP->height > MP.f23) {
             ok = 0;
-            coll_flag = 1;
+            hit_flag = 1;
             state |= 0x400;
         }
         if (!(ok && state & 0x400) && ok && MP.hit != -1
             && (!ComObjData[MP.item].solid || !climb))
             ok = 0;
         if (ok) {
-            coll_flag = 1;
+            hit_flag = 1;
             MP.pos[2] = MP.targz;
             if (abs(MP.targz - Ppd.floor) <= CP->radius)
                 state |= 4;
@@ -790,7 +800,7 @@ int far get_pcoll(void)
         state |= 0x80;
         state &= ~4;
     }
-    if (coll_flag && ok) {
+    if (hit_flag && ok) {
         process_objlist();
         state &= ~0x400;
         for (i = 0; i < Ppd.b15; i++) {
@@ -822,7 +832,7 @@ void far check_positions(void)
     unsigned char bounce2d = 0;
 
     state = get_pcoll();
-    terrain = CP->terrain;
+    terr_type = CP->terrain;
     CP->terrain = set_resterr(state);
     if (state & 0xC000) {
         grid_move(-1);
