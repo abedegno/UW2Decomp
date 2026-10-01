@@ -70,7 +70,9 @@ def main():
     ci=ci[0]
     code,cm=data[ci],mask[ci]
     base,size,rows,org=load_targets(seg); exe=open(EXE,'rb').read()
-    whole=len(code)==size and not compare(code,cm,exe[base:base+size])
+    # the table's size ends at the last function's first far return, so it can miss a
+    # switch jump table after it; compiled code running past it counts if those bytes match too
+    whole=len(code)>=size and not compare(code,cm,exe[base:base+len(code)])
     total=done=0
     for c,ida,off,sz in rows:
         p=pubs.get(('_'+c)[:33])      # Turbo C keeps 32 characters of a name, after the underscore
@@ -78,8 +80,9 @@ def main():
         o=p[1]; total+=sz
         # a function's end in the object: the next public, or the end of the code
         nxt=min([q[1] for q in pubs.values() if q[0]==ci and q[1]>o]+[len(code)])
-        mine=nxt-o; bad=compare(code[o:nxt],cm[o:nxt],exe[base+off:base+off+sz])
-        ok=mine==sz and not bad
+        mine=nxt-o; last=nxt==len(code)
+        bad=compare(code[o:nxt],cm[o:nxt],exe[base+off:base+off+(mine if last and mine>sz else sz)])
+        ok=(mine==sz or last and mine>sz) and not bad
         if ok: done+=sz
         state='MATCH' if ok else (f'{len(bad)} bytes differ, first at +0x{bad[0]:X}' if bad else '')+('' if mine==sz else f'  size 0x{mine:X} want 0x{sz:X}')
         print(f'{c:22} {ida:45} {state}')

@@ -157,5 +157,8 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **A trampoline to a shared return**: when an `||` condition's body is a shared `return 0`, each term jumps short to a one-instruction `jmp`; a `goto` or empty body threads the jumps straight to the target instead.
 - **`atoi`** from stdlib.h links as `_atol`.
 - **Two bitfield-macro stores in an if/else** share one store tail, each arm folding its own mask (`and ax,7` against `add ax,8; and ax,0Fh`, then one `shl ax,9` and store).
+- **An empty if-body keeps its byte test with no jump**: `if ((x = f()) == 0) ;` gives `mov [x],al; or al,al` and falls through, which reads like a debug message compiled out (a `complain()` macro that expands to nothing).
+- **A call through an old-style declaration** (no parameter list) pushes an `int` argument as-is; with a `char` prototype in scope the same call gives `mov al,[x]; push ax`. A caller that pushes a whole int to a char parameter had no prototype.
+- **Switch jump tables can follow the last function**; the target table's size stops at its far return, and `match.py` accepts compiled code that runs on as long as those bytes match too.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

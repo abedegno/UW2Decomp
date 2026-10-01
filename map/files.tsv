@@ -71,7 +71,7 @@ ovr119	C	25	3009	9	11	3	2	_ld_open_	load_doors_
 ovr120	C	2	141	0	2	0	0			
 ovr121	C	13	4309	13	0	0	0	DoSpecialActions_	BagWeight_	yes
 ovr122	C	12	1980	8	4	0	0	Punt_player_inv_	RestorePlayerInv_	
-ovr123	C	11	1703	10	1	0	0	add_rune_	player_cast_	
+ovr123	C	11	1703	10	1	0	0	add_rune_	player_cast_	yes
 ovr124	C	20	3754	17	1	0	2	RedisplayInvSlot_	ItemWeight_	yes
 ovr125	C	20	6738	18	2	0	0	load_inventory_pix_	FindInventoryHit_	yes
 ovr126	C	10	4065	10	0	0	0	LookAt_	GetObjDesc_	yes
@@ -92,7 +92,7 @@ ovr143	C	15	4004	10	1	2	2	init_player_	chg_plyp_
 ovr146	C	1	5	0	0	0	1			
 ovr147	C	10	2753	6	3	1	0	do_intro_scene_	do_journey_	
 ovr148	C	1	7	0	0	0	1			
-ovr149	C	14	2849	13	0	0	1	GetLevel_	do_level_hacks_	
+ovr149	C	14	2849	13	0	0	1	GetLevel_	do_level_hacks_	yes
 ovr150	C	2	295	2	0	0	0	display_screen_	disk_to_vid_	yes
 ovr151	C	17	1737	9	6	0	2	do_migrations_	Sched_Insert_	
 ovr152	C	4	502	1	0	2	1	set_light_	set_light_	

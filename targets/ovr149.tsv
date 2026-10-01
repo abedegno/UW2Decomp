@@ -1,6 +1,6 @@
 # segment ovr149 base 0x99590 size 0xB22 org 0x0
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
-MaybeCreateSaveGameFolder_ovr149_0	MaybeCreateSaveGameFolder_ovr149_0	0x0	0x92
+init_save	MaybeCreateSaveGameFolder_ovr149_0	0x0	0x92
 GetLevel	LoadGameMap_ovr149_92	0x92	0xA1
 SaveLevel	SaveGame_ovr149_133	0x133	0xB3
 get_save_descs	EnumerateSaveGames_ovr149_1E6	0x1E6	0xDC
