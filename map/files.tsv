@@ -28,7 +28,7 @@ seg027_2856	C	8	3762	8	0	0	0	player_settr_	push_missile_	yes
 seg028_2941	C	15	5320	10	5	0	0	GetHgt_	drop_around_place_	
 seg029_2A8E	C	31	4754	27	3	0	1	Map_ObjFix_	ObjCrunch_	yes
 seg030_2BB7	C	11	5172	10	1	0	0	bounce_obj_	obj_deal_	yes
-seg031_2CFA	C	21	6675	15	5	0	1	do_physics_	check_positions_	
+seg031_2CFA	C	21	6675	15	5	0	1	do_physics_	check_positions_	yes
 seg032_2E9B	C	21	4650	16	3	0	2	place_3d_view_	do_2dclip_	yes
 seg033_2FBE	C	3	5349	1	0	2	0	do_obj_	do_obj_	
 seg034_310D	C	10	2530	4	6	0	0	do_partition_	do_objsort_	

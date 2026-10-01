@@ -186,8 +186,9 @@ extern unsigned char objhit_x, objhit_y;    /* DS:25BD, the other object's tile 
 extern unsigned char objhit_myx, objhit_myy; /* DS:25BF, the moving object's tile */
 extern unsigned char deal_bounced;          /* DS:25C1 */
 extern unsigned char deal_blocked;          /* DS:25C2 */
-extern signed char deal_hit;                /* DS:0416 */
-extern int deal_item;                       /* DS:0417 */
+/* The movement parameters, defined in SEG031.C; this file uses only two fields. */
+struct MotionParams { char pad0[0x1C]; signed char hit; int item; };
+extern struct MotionParams MP;            /* DS:3FA; hit at DS:416, item at DS:417 */
 
 /* Elsewhere in the game. */
 int far rand(void);
@@ -658,14 +659,14 @@ again:
         low = 0;
     ObjectCheck(low, 1);
     process_objlist();
-    deal_hit = 0xFF;
+    MP.hit = 0xFF;
     if (curP->b15 == 0 && curP->hit > 0 && curP->hit <= curP->count) {
         for (curP->hit--; curP->hit >= 0; curP->hit--) {
             if (oCollisions[curP->hit].z == curP->z) {
-                deal_hit = curP->hit;
-                deal_item = OBJ_ITEM(Obj_PtrTMem(&oCollisions[deal_hit].link.word));
-                if (ComObjData[deal_item].solid == 1) {
-                    if (oCollisions[deal_hit].link.f.flags & 0x10) {
+                MP.hit = curP->hit;
+                MP.item = OBJ_ITEM(Obj_PtrTMem(&oCollisions[MP.hit].link.word));
+                if (ComObjData[MP.item].solid == 1) {
+                    if (oCollisions[MP.hit].link.f.flags & 0x10) {
                         deal_blocked = 1;
                         break;
                     }
