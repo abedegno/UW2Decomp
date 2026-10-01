@@ -363,6 +363,8 @@ _draw_sprite	0000:00EB	FM Towns
 _drop_around_place	2754:135A	FM Towns
 _drop_link_chain	65CB:0034	FM Towns
 _drop_some_objects	65CB:003E	FM Towns
+_dseg_67d6_120	DS:0120	provisional
+_dseg_67d6_21F4	DS:21F4	provisional
 _dseg_67d6_2C74	DS:2C74	provisional
 _dseg_67d6_6A96	DS:6A96	provisional
 _dseg_67d6_920	DS:0920	provisional
@@ -1104,6 +1106,7 @@ _scroll_up	342C:011F	FM Towns
 _scroll_wait	6559:002A	FM Towns
 _sd_xmod	DS:30F0	FM Towns
 _sd_ymod	DS:30F2	FM Towns
+_seg001_023B_5A	004E:005A	provisional
 _seg001_023B_C	004E:000C	provisional
 _seg003_0272_4431	0085:4431	provisional
 _seg003_0272_4629	0085:4629	provisional
@@ -1133,6 +1136,7 @@ _seg039_3452_857	3265:0857	provisional
 _seg039_3452_89A	3265:089A	provisional
 _seg042_35ED_12B	3400:012B	provisional
 _seg046_37CD_8D7	35E0:08D7	provisional
+_seg052_519C_E4D4	4FAF:E4D4	provisional
 _seg066_0	6384:0000	provisional
 _selected_conversation_option	DS:486C	provisional
 _send_FB	30D3:16AA	FM Towns

@@ -11,11 +11,11 @@ seg009	C	11	1132	3	2	3	3	grs_which1_	pic_to_fbuf_	yes
 seg010_1CA1	C	7	1123	6	1	0	0	init_input_	input_dispatch_	yes
 seg011	C	4	1179	0	0	0	4			yes
 seg012_1D31	C	3	185	3	0	0	0	mainloop_	editchng_	yes
-seg013_1D3C	C	5	448	0	0	0	5			
+seg013_1D3C	C	5	448	0	0	0	5			yes
 seg014	C	6	579	6	0	0	0	setup_icon_buttons_	do_option_shortcut_	yes
 seg015_1D7C	C	39	3944	35	4	0	0	init_mouse_	mouse_btns_	yes
 seg016_1E73	C	56	12382	32	10	10	4	load_digi_fx_	music_over_	yes
-seg017_2179	C	14	953	1	1	6	6	local_do_palette_	local_do_palette_	
+seg017_2179	C	14	953	1	1	6	6	local_do_palette_	local_do_palette_	yes
 seg019_21BA	C	12	5045	0	2	3	7			yes
 seg020	assembly	1	74	0	0	0	1			
 seg021_22FD	assembly	77	4210	0	11	34	32			

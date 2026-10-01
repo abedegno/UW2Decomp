@@ -58,7 +58,8 @@ def main():
     if '--no-build' not in a:
         r=subprocess.run(['node',os.path.join(here,'tcc.mjs'),out,opts,src],capture_output=True,text=True)
         log=open(os.path.join(out,'BUILD.LOG'),encoding='latin1').read()
-        msgs=[l for l in log.splitlines() if re.search(r'(Error|Warning|Fatal)',l)]
+        # TASM's summary always reports 'Error messages: None', which is not an error
+        msgs=[l for l in log.splitlines() if re.search(r'(Error|Warning|Fatal)',l) and not re.search(r'messages:\s+None',l)]
         for l in msgs: print(l)
         if any('Error' in l or 'Fatal' in l for l in msgs): sys.exit(1)
     d=open(os.path.join(out,stem+'.OBJ'),'rb').read()

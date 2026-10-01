@@ -31,6 +31,9 @@ The assembly modules (seg003, seg004, seg020 to seg022, seg045, seg046, SetPnt i
 - Register-to-register forms are the `8B` (reg, r/m) encodings and the AX short forms (`05 imm16`) are used, as TASM does by default.
 - seg004 uses 386 instructions with 32-bit registers in 16-bit segments: `.386` with `segment use16`.
 
+- **C with inline assembly** (`#pragma inline`) goes through TASM, and shows it: a call to a later function in the same resident file becomes `push cs; call near; nop` (`0E E8 xx xx 90`), which TCC alone never produces. seg013 is mostly pseudo-registers (`_AH = ...; geninterrupt(0x67);`) with two short `asm` statements; prefer pseudo-registers wherever they reproduce the bytes (`_BX = 0` gives `xor bx,bx`, so a literal `mov bx,0` needs `asm`).
+- **Hand-written assembly modules** can sit where a C file was expected: seg017 is `src/SEG017.ASM` (its frames end `mov sp,bp; pop bp` with no locals, which neither TCC nor TASM's ARG/LOCAL produce). TASM 2.0 with `.186` makes `enter`/`leave` for ARG/LOCAL procs. An `extrn name:far` inside `.code` is taken as same-segment and called with `push cs; call near`, so declare externs outside it.
+
 ## Data
 
 - A file's `_DATA` holds its initialised data in definition order, including the initialisers of local arrays (emitted where the function is), and then the string-literal pool in order of first use. `verify.py` compares it with the EXE, so data the code reads by a fixed DS address may belong to the file itself: look at the bytes around it.
