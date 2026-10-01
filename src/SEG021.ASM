@@ -35,9 +35,9 @@
         extrn   _seg003_0272_764:far
         extrn   _seg003_0272_788:far
         extrn   _seg003_0272_7A8:far
-        extrn   _seg004_0849_3007:far
+        extrn   _render_3d:far
         extrn   _seg004_0849_7F0C:far
-        extrn   _seg004_0849_7F12:far
+        extrn   _update_cache:far
         extrn   dseg062_62a6:far
         extrn   seg052_519C:far
         extrn   seg_370D:far
@@ -107,7 +107,7 @@
         public  _mouse
         public  _mbuttons
         public  _SquareRoot_seg021_22FD_A30
-        public  _seg021_22FD_A34
+        public  _sincos
         public  _seg021_22FD_A38
         public  _seg021_22FD_A69
         public  _SquareRoot_seg021_22FD_A78
@@ -1620,11 +1620,11 @@ _SquareRoot_seg021_22FD_A30 proc far
         retf
 _SquareRoot_seg021_22FD_A30 endp
 
-; seg021_22FD_A34  (+A34)
-_seg021_22FD_A34 proc far
+; sincos  (+A34)
+_sincos proc far
         call    _seg021_22FD_A38
         retf
-_seg021_22FD_A34 endp
+_sincos endp
 
 ; HeadingLookupCalc_seg021_22FD_A38  (+A38)
 _seg021_22FD_A38 proc near
@@ -2119,9 +2119,9 @@ _cRender proc far
         mov     ax,2500h
         int     21h
         call    far ptr _seg003_0272_6E2
-        call    far ptr _seg004_0849_3007
+        call    far ptr _render_3d
         call    far ptr _seg003_0272_18
-        call    far ptr _seg004_0849_7F12
+        call    far ptr _update_cache
         cli
         mov     dx,word ptr cs:L0C24
         mov     ss,dx

@@ -8,9 +8,7 @@ This is a fan research project, not affiliated with or endorsed by the rights ho
 
 **All of UW2's C code is matched: 337,327 of 337,327 bytes, in 99 source files under `src/`.** Every file compiles with Turbo C++ 1.01 to the same machine code as the shipped `UW2.EXE`, and `tools/verify.py` confirms its fixups (every call and global reference), its initialised data and its uninitialised data layout. Function and global names are the originals from the FM Towns build wherever it has them.
 
-Also matched: seg013 (C with inline assembly, through Turbo Assembler 2.0) and the assembly modules seg001 (screen memory and rectangle save/restore), seg002 (a run/skip/dump decoder), seg003 (graphics), seg017, seg020, seg021 (startup and input), seg022 (the Miles AIL 2.0 sound API), seg045 (compiled C, kept as assembly for now) and seg046 (Borland's overlay manager from OVERLAY.LIB).
-
-Still to do: seg004, the 3D renderer (about 33 KB of 386 assembly). `tools/asmgen.py --fix` drafts it from the EXE. They match Turbo Assembler 2.0's output; see MATCHING.md.
+**All of the assembly is matched too: ten modules, 71,920 bytes, assembled with Turbo Assembler 2.0** and verified the same way. They are seg001 (screen memory and rectangle save/restore), seg002 (a run/skip/dump decoder), seg003 (graphics), seg004 (the 3D renderer, 386 code), seg017, seg020, seg021 (startup and input), seg022 (the Miles AIL 2.0 sound API), seg045 (compiled C, kept as assembly for now) and seg046 (Borland's overlay manager from OVERLAY.LIB). seg013 is C with inline assembly. Every code segment in `UW2.EXE` outside the C runtime library now rebuilds byte for byte.
 
 `matched.txt` lists the matched segments; `map/files.tsv` has per-file status.
 
@@ -18,7 +16,7 @@ Still to do: seg004, the 3D renderer (about 33 KB of 386 assembly). `tools/asmge
 
 `map/` lays out the whole program. Turbo C puts each source file in its own code segment, so each DOS segment is one original source file. The Japanese FM Towns release kept 3237 of Looking Glass's original names, and it was linked from the same object list in the same order, so the two builds can be aligned function by function.
 
-- `map/files.tsv`: every DOS code segment, whether it is C (99 segments, about 1480 functions and 337 KB), assembly (7 segments, 88 KB: graphics, the 3D renderer and sound) or library, how much of it is named, and whether it is matched.
+- `map/files.tsv`: every DOS code segment, whether it is C (99 segments, about 1480 functions and 337 KB), assembly (graphics, the 3D renderer and sound; `map/files.tsv` sizes come from IDA's function map and overstate them, the target tables have the true extents) or library, how much of it is named, and whether it is matched.
 - `map/functions.tsv`: every DOS function with its original name where one was found, and how: `anchor` (proven), `confirmed` (aligned, and its callers and callees agree with the FM Towns call graph), `size only`, or `size, calls disagree`.
 - 884 of the 1886 non-library functions have a confirmed original name. Tested by holding out known pairs, confirmed names were right 80 times out of 82, and both misses disagree with a hand-made anchor rather than a proven one.
 - The rest are mostly DOS-only code with no FM Towns counterpart: the assembly, a few DOS-specific C files (ovr095 and the small resident segments seg011 to seg019), and a stretch at the very end (ovr158 onwards) past the last anchor.

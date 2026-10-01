@@ -63,7 +63,7 @@ key	seg021_22FD_971	0x971	0x3C
 mouse	seg021_22FD_9AD	0x9AD	0x43
 mbuttons	Mouse_Button_Status_seg021_9F0	0x9F0	0x40
 SquareRoot_seg021_22FD_A30	SquareRoot_seg021_22FD_A30	0xA30	0x4
-seg021_22FD_A34	seg021_22FD_A34	0xA34	0x4
+sincos	sincos	0xA34	0x4
 seg021_22FD_A38	HeadingLookupCalc_seg021_22FD_A38	0xA38	0x31
 seg021_22FD_A69	LookupHeadingTable_seg021_22FD_A69	0xA69	0xF
 SquareRoot_seg021_22FD_A78	SquareRoot_seg021_22FD_A78	0xA78	0x100

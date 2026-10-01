@@ -2,7 +2,7 @@
 seg000	library	10	1256	0	0	0	0			
 seg001_023B	mixed	8	709	0	2	2	4			yes
 seg003_0272	assembly	145	39818	0	24	2	119			yes
-seg004_0849	assembly	78	33007	0	4	0	74			
+seg004_0849	assembly	78	33007	0	4	0	74			yes
 seg005_105F	library	166	29915	0	0	0	0			
 seg006_1413	C	30	14575	21	7	2	0	build_corpse_	try_to_open_door_	yes
 seg007_17A2	C	36	13945	36	0	0	0	change_or_inc_seq_	move_mobile_	yes

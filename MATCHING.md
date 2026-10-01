@@ -47,6 +47,8 @@ The assembly modules (seg003, seg004, seg020 to seg022, seg045, seg046, SetPnt i
 - **Padding:** `even` in a code segment pads with `90h`; `align 4` in a word-aligned segment errors ("Segment alignment not strict enough") and pads with `87 DB`. Single `00h` bytes between routines (ten in seg003) are not TASM output; probably linker padding between separately assembled word-aligned modules (unproven). Keep them as `db 0`.
 - **seg046 is Borland's VROOMM overlay manager**, the `_OVRTEXT_` code of five `OVERLAY.LIB` modules (OVRMAN, OVRSWAP, OVRDATA, OVRUSER, OVRDETEC, in link order), each equal to the library object outside its fixups. `OVERLAY.LIB` is in `XLIB.ZIP` on Disk03 of Turbo C++ 1.01. Its DS is `_OVRGROUP_`, not DGROUP, so its variables are equates at their link-time offsets and DGROUP names must not be used for them.
 - **Modules that switch DS** (seg003 uses seg_370D; seg021 its own data segment; seg046 `_OVRGROUP_`) need `asmgen.py --no-near-names`, or the draft names their data after unrelated DGROUP variables.
+- **`db N dup (x)` is emitted as an LIDATA record, which `tools/omf.py` ignores**, so a nonzero `dup` compares as zeros and shows as a false mismatch. Write nonzero runs out in full; zero `dup`s are fine. `align 16` in a TASM 2.0 code segment fills with `87 DB`/`90`, so zero runs between seg004's routines were written as data, not `align`.
+- `xlat cs:label` and `xlat byte ptr cs:[bx]` both give `2E D7`; writing `cs:label[bx]` gives a disp16 and the wrong instruction.
 
 ## Data
 

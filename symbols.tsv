@@ -8,6 +8,7 @@ __EXENAME__	63B5:0570	provisional
 __input_addkey	1AB4:0104	FM Towns
 __OverlayHalt	0E72:3B27	provisional
 __ovrbuffer	DS:12C0	provisional
+__OvrInitEms	35E0:08D7	provisional
 __OvrSize	DS:2220	provisional
 __psp	DS:0092	FM Towns
 _abort	0E72:022E	provisional
@@ -119,6 +120,7 @@ _blttodrive	65E0:006B	FM Towns
 _bmhgtoff	4FAF:C782	FM Towns
 _bmsegoff	4FAF:C784	FM Towns
 _bounced	DS:25DB	provisional
+_box	0085:4DC2	FM Towns
 _build_corpse	1226:0005	FM Towns
 _build_new_obj	65A7:00CA	FM Towns
 _busywaiting_new_options	653E:0093	FM Towns
@@ -185,6 +187,7 @@ _clear_gamedisp	654A:0048	FM Towns
 _clear_objsort	2F20:0430	FM Towns
 _clear_runes	6504:0039	FM Towns
 _clear_shelf	6504:003E	FM Towns
+_clear_window	0085:4D86	FM Towns
 _ClearAutoMap	641E:0066	FM Towns
 _ClearInventory	6513:0070	FM Towns
 _clearobj	64BF:003E	FM Towns
@@ -283,6 +286,7 @@ _curvrad	DS:8622	FM Towns
 _curZoom	DS:2B5C	FM Towns
 _CutsceneOrConversationStringBloc	DS:34A8	provisional
 _cWCol	DS:2C68	FM Towns
+_cXfer	0085:0E73	FM Towns
 _cycle_colors	22E7:00AB	FM Towns
 _cycle_floor	64A5:015B	FM Towns
 _cZoom	2110:0C34	FM Towns
@@ -596,10 +600,12 @@ _inanmMapY	DS:8639	FM Towns
 _init_3d	2CAE:0200	FM Towns
 _init_ai	1226:091C	FM Towns
 _init_babl	6429:0101	FM Towns
+_init_colors	0085:4933	FM Towns
 _init_combinables	6465:002A	FM Towns
 _init_cutscene	6488:0089	FM Towns
 _init_debug	64A2:0020	FM Towns
 _init_gamedisp	654A:0025	FM Towns
+_init_graphics	0085:4629	FM Towns
 _init_input	1AB4:0003	FM Towns
 _init_level_creature_stuff	647E:0089	FM Towns
 _init_lighting	6592:0020	FM Towns
@@ -1144,25 +1150,25 @@ _sd_xmod	DS:30F0	FM Towns
 _sd_ymod	DS:30F2	FM Towns
 _seg001_023B_5A	004E:005A	provisional
 _seg001_023B_C	004E:000C	provisional
+_seg003_0272_0	0085:0000	provisional
+_seg003_0272_10	0085:0010	provisional
 _seg003_0272_18	0085:0018	provisional
-_setup_font	0085:4431	FM Towns
-_init_graphics	0085:4629	FM Towns
-_init_colors	0085:4933	FM Towns
 _seg003_0272_49AE	0085:49AE	provisional
 _seg003_0272_4A3A	0085:4A3A	provisional
-_clear_window	0085:4D86	FM Towns
-_box	0085:4DC2	FM Towns
 _seg003_0272_5025	0085:5025	provisional
-_vcopy	0085:51C8	FM Towns
+_seg003_0272_5311	0085:5311	provisional
 _seg003_0272_5363	0085:5363	provisional
+_seg003_0272_536B	0085:536B	provisional
 _seg003_0272_6E2	0085:06E2	provisional
 _seg003_0272_6E4	0085:06E4	provisional
 _seg003_0272_764	0085:0764	provisional
 _seg003_0272_788	0085:0788	provisional
 _seg003_0272_7A8	0085:07A8	provisional
-_seg004_0849_3007	065C:3007	provisional
+_seg003_0272_8	0085:0008	provisional
+_seg003_0272_D1E	0085:0D1E	provisional
+_render_3d	065C:3007	FM Towns
 _seg004_0849_7F0C	065C:7F0C	provisional
-_seg004_0849_7F12	065C:7F12	provisional
+_update_cache	065C:7F12	FM Towns
 _seg005_105F_16E5	0E72:16E5	provisional
 _seg005_105F_19D9	0E72:19D9	provisional
 _seg005_105F_4FD	0E72:04FD	provisional
@@ -1174,16 +1180,18 @@ _seg013_1D3C_A	1B4F:000A	provisional
 _seg013_1D3C_B2	1B4F:00B2	provisional
 _seg013_1D3C_E4	1B4F:00E4	provisional
 _seg016_1E73_2FCB	1C86:2FCB	provisional
+_seg021_22FD_102B	2110:102B	provisional
 _seg021_22FD_755	2110:0755	provisional
 _seg021_22FD_791	2110:0791	provisional
 _seg021_22FD_7CD	2110:07CD	provisional
 _seg021_22FD_809	2110:0809	provisional
+_sincos	2110:0A34	FM Towns
 _seg021_22FD_C00	2110:0C00	provisional
+_seg021_22FD_C10	2110:0C10	provisional
 _seg039_3452_814	3265:0814	provisional
 _seg039_3452_857	3265:0857	provisional
 _seg039_3452_89A	3265:089A	provisional
 _seg042_35ED_12B	3400:012B	provisional
-__OvrInitEms	35E0:08D7	library
 _seg052_519C_E4D4	4FAF:E4D4	provisional
 _seg066_0	6384:0000	provisional
 _selected_conversation_option	DS:486C	provisional
@@ -1230,6 +1238,7 @@ _SetCursorObj	6513:007A	FM Towns
 _SetOffTrap	65D5:0084	FM Towns
 _SetPnt	1FCD:000C	FM Towns
 _setup_converse_data	647B:0025	FM Towns
+_setup_font	0085:4431	FM Towns
 _setup_icon_buttons	1B6B:000A	FM Towns
 _setup_to_barter	6448:003E	FM Towns
 _setvect	0E72:1B67	provisional
@@ -1273,6 +1282,7 @@ _spells	6389:0000	FM Towns
 _sphdriver	DS:02B8	FM Towns
 _spsave	DS:1B9F	FM Towns
 _sqmod	DS:2F7A	FM Towns
+_SquareRoot_seg021_22FD_A30	2110:0A30	provisional
 _srand	0E72:0DD6	FM Towns
 _sscanf	0E72:0F7F	provisional
 _standing_wave	64A5:014C	FM Towns
@@ -1427,6 +1437,7 @@ _uvline	0085:4CAB	FM Towns
 _ValidLightSlots	DS:161A	FM Towns
 _valloc	004E:004A	FM Towns
 _Valor	DS:0383	FM Towns
+_vcopy	0085:51C8	FM Towns
 _vcopyfb	0085:517B	FM Towns
 _vfree	004E:0105	FM Towns
 _victim	DS:228C	FM Towns
@@ -1461,7 +1472,6 @@ _x_obj_pos	643D:0052	FM Towns
 _x_obj_stuff	643D:005C	FM Towns
 _x_skills	643D:0048	FM Towns
 _x_traps	643D:003E	FM Towns
-_cXfer	0085:0E73	FM Towns
 _xhgt	DS:26EC	FM Towns
 _xorread	65E0:0020	FM Towns
 _xorwrite	65E0:0039	FM Towns
