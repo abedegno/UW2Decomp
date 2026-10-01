@@ -442,6 +442,7 @@ _main_scroll	DS:0938	FM Towns
 _mainloop	1B44:0001	FM Towns
 _make_stew	6465:0034	FM Towns
 _make_string	3265:0117	FM Towns
+_malloc	0E72:37AF	FM Towns
 _map_crit_pages	3400:0151	provisional
 _Map_GetAddr	30BC:000F	FM Towns
 _Map_Init	6526:002A	FM Towns
@@ -499,6 +500,7 @@ _mouse_hand	DS:0285	FM Towns
 _mouse_hide	1B8F:00D6	FM Towns
 _mouse_in_scroll	DS:34B2	FM Towns
 _mouse_putxy	1B8F:025A	FM Towns
+_mouse_Qgetxy	1B8F:0210	FM Towns
 _mouse_release	1B8F:02A9	FM Towns
 _mouse_show	1B8F:00C0	FM Towns
 _MousQUp	1B8F:0B30	FM Towns
@@ -701,6 +703,7 @@ _ReadFileToAddress	65E0:0066	provisional
 _real_death	64BF:007A	FM Towns
 _real_start	6578:004D	FM Towns
 _realDScheck	DS:038F	FM Towns
+_realloc	0E72:3908	FM Towns
 _rectangle	0085:4CF2	FM Towns
 _RectLook	651C:0043	FM Towns
 _RedispInv	2529:012F	FM Towns

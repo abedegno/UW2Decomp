@@ -8,7 +8,7 @@ seg006_1413	C	30	14575	21	7	2	0	build_corpse_	try_to_open_door_
 seg007_17A2	C	36	13945	36	0	0	0	change_or_inc_seq_	move_mobile_	yes
 seg008_1B09	C	16	5386	15	0	0	1	water_set_	hgt_change_	yes
 seg009	C	11	1132	3	2	3	3	grs_which1_	pic_to_fbuf_	
-seg010_1CA1	C	7	1123	6	1	0	0	init_input_	input_dispatch_	
+seg010_1CA1	C	7	1123	6	1	0	0	init_input_	input_dispatch_	yes
 seg011	C	4	1179	0	0	0	4			
 seg012_1D31	C	3	185	3	0	0	0	mainloop_	editchng_	yes
 seg013_1D3C	C	5	448	0	0	0	5			

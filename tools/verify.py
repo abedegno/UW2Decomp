@@ -135,6 +135,13 @@ def main():
                     problems.append(f'_DATA+{at:X}: pointer to {word(exe, here + 2):04X}:{word(exe, here):04X}, expected {para:04X}:{add + org:04X}')
                 elif base >= mzend:
                     entries.setdefault(add, set()).add(word(exe, here))
+            elif tm == 0 and ti == bss and loc in (1, 5):
+                # a pointer into this file's own _BSS, as in `p = &static_var`
+                internal += 1
+                if len(bss_bases) != 1:
+                    problems.append(f'_DATA+{at:X}: points into _BSS, whose base is not known')
+                elif word(exe, here) != (min(bss_bases) + add) & 0xFFFF:
+                    problems.append(f'_DATA+{at:X}: points to DS:{word(exe, here):X}, expected DS:{(min(bss_bases) + add) & 0xFFFF:X}')
             elif tm == 0 and ti == datas and loc in (1, 5):
                 internal += 1
                 if word(exe, here) != (db + add) & 0xFFFF:
