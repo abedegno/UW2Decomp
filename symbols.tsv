@@ -313,7 +313,6 @@ _changeDoor	654F:0089	FM Towns
 _ChangeLevel	6581:003E	FM Towns
 _channel_punt	DS:02C8	FM Towns
 _channel_sem	DS:02C9	FM Towns
-_CharacterThatTriggeredTrap_dseg_	DS:8644	provisional
 _charge_object	65B5:0057	FM Towns
 _chargeable	65B5:0043	FM Towns
 _chdir	0E72:1683	FM Towns
@@ -1655,7 +1654,6 @@ _ObjectActing	DS:24EC	FM Towns
 _ObjectActor	DS:24E8	FM Towns
 _ObjectActorArg	DS:24F2	FM Towns
 _ObjectCheck	2754:0C0E	FM Towns
-_ObjectToRunCodeAround_dseg_67d6_	DS:8640	provisional
 _objptr	DS:25A6	FM Towns
 _objptrs	DS:334E	FM Towns
 _ObjsBeCombinable	6465:002F	FM Towns
