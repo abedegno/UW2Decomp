@@ -38,7 +38,7 @@ seg037_32C0	C	32	5830	21	9	0	2	set_flask_	player_look_shaft_
 seg038_342C	C	3	603	3	0	0	0	skill_check_	panel_check_hpmp_	yes
 seg039_3452	C	19	2395	8	3	0	8	init_strings_	game_strings_3_	
 seg040_34E7	C	15	3828	15	0	0	0	UseObj_	useNSpellCharges_	yes
-seg041_35D7	C	4	355	3	0	0	1	mvcheck_	rollem_	
+seg041_35D7	C	4	355	3	0	0	1	mvcheck_	rollem_	yes
 seg042_35ED	C	8	701	5	1	0	2	init_mem_	release_workspace_	
 seg043_3619	C	13	1886	13	0	0	0	set_mouse_in_	draw_scroll_	yes
 seg044_368F	C	17	4309	15	0	0	2	rem_anim_from_map_	rem_timer_obj_	yes
@@ -80,13 +80,13 @@ ovr128	C	6	906	3	1	1	1	Map_Init_	Map_Save_
 ovr130	C	2	138	0	2	0	0			
 ovr131	C	1	24	1	0	0	0	show_credits_	show_credits_	
 ovr132	C	1	7	0	0	0	1			
-ovr134	C	3	299	2	0	0	1	init_objects_	get_class_data_	
+ovr134	C	3	299	2	0	0	1	init_objects_	get_class_data_	yes
 ovr135	C	5	2001	5	0	0	0	dispel_spell_	set_curmagic_	yes
 ovr136	C	32	2301	21	8	0	3	is_really_button_	load_buttongroup_images_	yes
-ovr137	C	9	1027	8	1	0	0	pull_chain_	check_rest_	
+ovr137	C	9	1027	8	1	0	0	pull_chain_	check_rest_	yes
 ovr138	C	25	7823	25	0	0	0	UseBonesOn_	UseUtil_	yes
 ovr139	C	9	2243	9	0	0	0	init_scroll_	scroll_clear_	yes
-ovr140	C	6	681	4	1	0	1	init_txtlib_	load_txtmaps_	
+ovr140	C	6	681	4	1	0	1	init_txtlib_	load_txtmaps_	yes
 ovr142	C	12	2927	7	4	0	1	save_player_data_	load_dl_	
 ovr143	C	15	4004	13	0	0	2	InitPlayerRec_	chg_plyp_	yes
 ovr146	C	1	5	0	0	0	1			
@@ -101,7 +101,7 @@ ovr154	C	26	6964	26	0	0	0	use_skill_	RemoveTrap_	yes
 ovr155	C	1	7	0	1	0	0			
 ovr156	C	36	7525	36	0	0	0	spend_mana_	damage_square_	yes
 ovr157	C	16	6977	16	0	0	0	study_monster_spells_	check_Guardian_magic_marker_	yes
-ovr158	C	9	1383	8	1	0	0	sp_hdr_	panel_check_	
+ovr158	C	9	1383	8	1	0	0	sp_hdr_	panel_check_	yes
 ovr159	C	1	7	0	1	0	0			
 ovr162	C	1	23	0	1	0	0			
 ovr163	C	7	1679	7	0	0	0	drop_link_chain_	generate_inventory_	yes

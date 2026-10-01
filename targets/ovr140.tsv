@@ -5,4 +5,4 @@ ovr140_4F	ovr140_4F	0x4F	0x50
 Txm_Load	LoadTextureMapData_ovr140_9F	0x9F	0xCD
 Txm_Save	SaveTextureMapsToArk_ovr140_16C	0x16C	0xCB
 load_txtmaps	LoadT64AndDoorsGR_ovr140_237	0x237	0x14
-LoadTerrainDat_ovr140_24B	LoadTerrainDat_ovr140_24B	0x24B	0x61
+Load_Terrains	LoadTerrainDat_ovr140_24B	0x24B	0x61

@@ -1,7 +1,7 @@
 # segment ovr158 base 0xA0590 size 0x568 org 0x0
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
 sp_hdr	PrintCharNameClassLevel_ovr158_0	0x0	0xF3
-PrintPlayerAttribute_ovr158_F3	PrintPlayerAttribute_ovr158_F3	0xF3	0x5C
+sp_att	PrintPlayerAttribute_ovr158_F3	0xF3	0x5C
 sp_hp	PrintAHPString_ovr158_14F	0x14F	0x74
 sp_mp	PrintAManaString_ovr158_1C3	0x1C3	0x73
 sp_xp	PrintEXPString_ovr158_236	0x236	0x4E

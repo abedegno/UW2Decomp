@@ -43,3 +43,8 @@ ovr122
 ovr147
 ovr136
 seg010_1CA1
+ovr158
+ovr137
+ovr140
+ovr134
+seg041_35D7

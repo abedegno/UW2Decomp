@@ -7,5 +7,5 @@ start_gameinp	ovr137_2A8	0x2A8	0x89
 clear_gameinp	ovr137_331	0x331	0x36
 init_gamedisp	ovr137_367	0x367	0x42
 clear_gamedisp	ovr137_3A9	0x3A9	0xE
-ovr137_3B7	ovr137_3B7	0x3B7	0x2F
+check_save	ovr137_3B7	0x3B7	0x2F
 check_rest	ResetPlayerDoingSomething_ovr137_3E6	0x3E6	0x1D
