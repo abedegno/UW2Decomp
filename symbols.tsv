@@ -141,6 +141,9 @@ _cLightTabs	DS:2178	FM Towns
 _close	0E72:02FE	FM Towns
 _close_arc	6417:0039	FM Towns
 _CloseDoor	654F:0084	FM Towns
+_CmapCache	4FAF:E3C9	FM Towns
+_CmapFrm	4FAF:E2C9	FM Towns
+_CmaptoPg	4FAF:E0C9	FM Towns
 _CN1	DS:2604	FM Towns
 _CN2	DS:262C	FM Towns
 _CN4	DS:267C	FM Towns
@@ -725,6 +728,7 @@ _PBot	DS:8626	FM Towns
 _pfatal	64D4:002A	FM Towns
 _pfatal_code	64D4:0025	FM Towns
 _pFPS	DS:22A6	FM Towns
+_PgtoCmap	4FAF:E1C9	FM Towns
 _PHgt	DS:829C	FM Towns
 _phys_affect_player	191C:0D1D	FM Towns
 _phys_bounce_up	191C:120F	FM Towns
