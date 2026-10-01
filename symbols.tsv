@@ -468,6 +468,7 @@ _load_new_music	1C86:174B	FM Towns
 _load_tr_ems	64EA:004D	FM Towns
 _load_txtmaps	655E:002A	FM Towns
 _load_weapcm	30D3:0FEB	FM Towns
+_LoadDATFile	65E0:007A	provisional
 _loc_lght	DS:19B7	FM Towns
 _local_do_palette	1F8C:0220	FM Towns
 _loct	DS:2C61	FM Towns
@@ -632,6 +633,7 @@ _ObjectActing	DS:24EC	FM Towns
 _ObjectActor	DS:24E8	FM Towns
 _ObjectActorArg	DS:24F2	FM Towns
 _ObjectCheck	2754:0C0E	FM Towns
+_ObjectCombinations	DS:47C0	provisional
 _ObjectIndices	DS:2E12	provisional
 _objhit_myx	DS:25BF	provisional
 _objhit_myy	DS:25C0	provisional

@@ -5,3 +5,4 @@ __pycache__/
 *.OBJ
 fmtowns/
 node_modules/
+build/queue/

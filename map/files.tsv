@@ -53,7 +53,7 @@ ovr096	C	27	5202	12	15	0	0	babl_hack_	x_obj_pos_	yes
 ovr097	C	37	8598	19	6	2	10	setup_to_barter_	does_npc_like_	
 ovr099	C	7	38	0	7	0	0			
 ovr101	C	16	6377	15	0	1	0	init_char_	create_player_	yes
-ovr102	C	5	357	4	0	0	1	ObjsBeCombinable_	make_stew_	
+ovr102	C	5	357	4	0	0	1	ObjsBeCombinable_	make_stew_	yes
 ovr103	C	32	7084	14	14	0	4	TalkTo_	switch_pic_	
 ovr104	C	5	665	2	3	0	0	creature_obj_init_	init_this_critter_	
 ovr106	C	2	1659	2	0	0	0	setup_converse_data_	update_converse_data_	yes
