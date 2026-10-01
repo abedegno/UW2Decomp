@@ -1,0 +1,23 @@
+# segment seg032_2E9B base 0x2F6EF size 0x122A org 0xF
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+place_3d_view	seg032_2E9B_F	0x0	0x8C
+set_cyb	seg032_2E9B_9B	0x8C	0xF0
+seg032_2E9B_18B	seg032_2E9B_18B	0x17C	0xA
+seg032_2E9B_195	seg032_2E9B_195	0x186	0x6B
+init_3d	seg032_2E9B_200	0x1F1	0x4A
+reset_db	SetObjectRendingDataPtr_seg032_2E9B_24A	0x23B	0x13
+send_db	seg032_2E9B_25D	0x24E	0x4D
+do_3d_grab	seg032_2E9B_2AA	0x29B	0x53
+render_FB	RenderScene_seg032_2E9B_2FD	0x2EE	0x58
+establish_view	DRAWWorld_seg032_2E9B_355	0x346	0x45
+setup_vars	PositionCamera_seg032_2E9B_39A	0x38B	0x115
+preset_grid	ShadeCalcs_seg032_2E9B_4AF	0x4A0	0x109
+init_grid	SetRangeOfVisonParams_seg032_2E9B_5B8	0x5A9	0xCB
+incvec	GetNextVisionTilePositive_seg032_2E9B_683	0x674	0x26
+decvec	GetNextVisionTileNegative_seg032_2E9B_6A9	0x69A	0x26
+enc_n_chk	MaybeTestVisibilityNextTile_seg032_2E9B_6CF	0x6C0	0x426
+newdels	MaybeTestVisionIntoDarkness_seg032_2E9B_AF5	0xAE6	0x1A8
+move_to_next	ProcessLOSArcsseg032_2E9B_C9D	0xC8E	0x377
+fill_the_grid	TestVisionAndShade_seg032_2E9B_1014	0x1005	0x14E
+build_grid	GetViewDistances_seg032_2E9B_1162	0x1153	0xBC
+do_2dclip	LikelyDoRender_seg032_2E9B_121E	0x120F	0x1B

@@ -139,5 +139,9 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Bitfield runs take only the bytes they need**: `unsigned b:1` followed by a char array puts the array at +1, not +2.
 - **Copying between bitfields**: an `unsigned char x:4` from a char gives `and ax,0Fh` with no `mov ah,0`; between two `unsigned` bitfields the `and ax,0Fh` appears twice.
 - **Operand order in a multiply**: `a * (f() - 0x40)` gives `push; mov al,a; cbw; pop dx; imul dx`; the other order gives `mov dx,ax; pop ax; imul dx`.
+- **Char register variables**: in a function with no calls, char locals can live in CL and DL; the first char assigned takes CL.
+- **`0xFFL - (unsigned)c`** gives `xor dx,dx; mov ax,0FFh; sub ax,bx; sbb dx,0`; without the cast, `cwd` and a full long subtract.
+- **Pointer increment**: `p = p + 1;` on a near int pointer gives load, `inc ax; inc ax`, store; `p++` gives `add word [bp-2],2`.
+- **`while (f()) if (a <= b) break;`** puts the compare before the call, the call's `jne` jumping back to it.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

@@ -1,6 +1,7 @@
 # name	address	name source
 # address: DS:offset for near data, segment:offset for far code (load-relative paragraphs)
 __ctype	DS:1BF6	provisional
+__dblen	4FAF:C77E	FM Towns
 _add_animobj	34A2:043E	FM Towns
 _add_rune	6504:002F	FM Towns
 _AddTogether	6513:0057	FM Towns
@@ -18,12 +19,14 @@ _backfire	65A7:009D	FM Towns
 _background_color	DS:21C8	FM Towns
 _BagSaveHandles	DS:6A76	FM Towns
 _BlastFunction	32FA:0C38	FM Towns
+_bmsegoff	4FAF:C784	FM Towns
 _busywaiting_new_options	653E:0093	FM Towns
 _button_to_mode	DS:0123	FM Towns
 _camang	DS:33DA	FM Towns
 _campos	DS:33E0	FM Towns
 _can_place	2754:1021	FM Towns
 _CapsLock	DS:212C	provisional
+_cFBtoScreen	2110:0C7E	FM Towns
 _cFillFB	2110:0C84	FM Towns
 _Change_AnimPtr	34A2:03CE	FM Towns
 _change_critter_goal	647E:0025	FM Towns
@@ -37,6 +40,7 @@ _check_res	24B4:0493	FM Towns
 _checkLock	32FA:07AF	FM Towns
 _checkSpell	32FA:0998	FM Towns
 _checkTrap	32FA:0A95	FM Towns
+_cInit3d	2110:0E1A	FM Towns
 _clear_all_loretries	64A5:0039	FM Towns
 _clear_fight_state	22FC:130F	FM Towns
 _click_time	DS:0984	provisional
@@ -50,21 +54,28 @@ _conv_edge_phase	DS:098A	provisional
 _conv_inv_special	6448:0093	FM Towns
 _copy_visible_to_hidden	0085:4B57	FM Towns
 _CP	DS:26A6	FM Towns
+_cPlaceFB	2110:0D1D	FM Towns
 _cPlayer	DS:2168	FM Towns
 _CreateObj	30BC:0044	FM Towns
 _Creature	DS:494C	FM Towns
+_cRender	2110:0D7A	FM Towns
 _critdata	DS:2588	FM Towns
 _cSinCos	2110:0EAE	FM Towns
+_cSqRt	2110:0F3F	FM Towns
 _Ctrl	DS:2134	FM Towns
 _cur_font	DS:21CC	provisional
 _curBin	DS:228B	FM Towns
 _curP	DS:2562	FM Towns
 _current_button	DS:24E6	FM Towns
 _CursorObjPtr	DS:6B0C	FM Towns
+_curZoom	DS:2B5C	FM Towns
 _cycle_colors	22E7:00AB	FM Towns
+_cZoom	2110:0C34	FM Towns
 _damage_critter	15B5:333A	FM Towns
 _damage_item	24B4:0527	FM Towns
 _DataDirectory	DS:1A78	FM Towns
+_DbEntry	DS:2C62	FM Towns
+_dbptr	DS:8720	FM Towns
 _deal_blocked	DS:25C2	provisional
 _deal_bounced	DS:25C1	provisional
 _deal_hit	DS:0416	provisional
@@ -74,6 +85,7 @@ _decode_obj_spell	32FA:0C69	FM Towns
 _DecompressLZW_disk	6522:0020	FM Towns
 _DegradeLights	653A:0020	FM Towns
 _delete_trap	65D5:0093	FM Towns
+_demo_mode	DS:2C5D	FM Towns
 _DetectedTrap	6599:0084	FM Towns
 _didMouseInput	DS:0983	FM Towns
 _display_inventory_no_show	DS:15D0	FM Towns
@@ -85,6 +97,8 @@ _DisplayInvObject	6513:0025	FM Towns
 _DisplayInvSpecial	6513:002A	FM Towns
 _DisplayToSlot	DS:1784	FM Towns
 _do_3d_grab	2CAE:02AA	FM Towns
+_do_3d_pickup	1FCD:037E	FM Towns
+_do_fbuf_bms	30D3:1567	FM Towns
 _do_main_scroll	342C:0022	FM Towns
 _do_physics	2B0D:000C	FM Towns
 _do_play_scroll	342C:004E	FM Towns
@@ -102,6 +116,7 @@ _draw_conv_edges	342C:00B8	FM Towns
 _draw_edges	342C:0064	FM Towns
 _draw_scroll	342C:0618	FM Towns
 _drop_link_chain	65CB:0034	FM Towns
+_dseg_67d6_53F	DS:053F	provisional
 _dsfx_playing	DS:010A	FM Towns
 _DumpTheBag	654F:008E	FM Towns
 _duration_check	653A:0034	FM Towns
@@ -138,17 +153,25 @@ _gameopts_done	DS:22E2	FM Towns
 _get_animlen	34A2:0E56	FM Towns
 _get_arc	6417:0048	FM Towns
 _get_current_music	1C86:1AB6	FM Towns
+_get_eye	2FBE:0CDF	FM Towns
 _get_hp_back	65A7:00C0	FM Towns
 _get_iconreg_button	1B6B:005C	FM Towns
 _get_name	3265:0327	FM Towns
 _get_string	3265:008E	FM Towns
 _get_workspace	3400:0176	FM Towns
 _globals	DS:1AD4	FM Towns
+_glocs	DS:26EE	FM Towns
 _go_fish	64A5:0066	FM Towns
+_gr_entry	35AF:00CB	FM Towns
+_gr_putlab	35AF:0213	FM Towns
+_gr_tostrt	35AF:00D6	FM Towns
+_grdb_blank	35AF:0006	FM Towns
 _grfx_clear	64E2:007A	FM Towns
 _grfx_quikpal	64E2:002F	FM Towns
 _grPageFlip	0085:46AA	FM Towns
 _grSoftPageFlip	0085:46E6	FM Towns
+_gvechead	DS:2C60	FM Towns
+_gvecs	DS:2B5E	FM Towns
 _HasOrIsObj	28A1:0C6B	FM Towns
 _Hasted	DS:0380	FM Towns
 _hgt_change	191C:14B1	FM Towns
@@ -177,6 +200,9 @@ _key_on	DS:2138	FM Towns
 _kill_all_effects	1C86:20C1	FM Towns
 _kill_effect	1C86:1FFD	FM Towns
 _Killorn_just_crashed	64A5:00B1	FM Towns
+_lastXeye	DS:2294	FM Towns
+_lastYeye	DS:2296	FM Towns
+_lcldblen	DS:26EA	FM Towns
 _LeftPanel	DS:0384	FM Towns
 _level_table	DS:08E1	provisional
 _Lights	DS:6B40	FM Towns
@@ -184,6 +210,7 @@ _load_digi_fx	1C86:0260	FM Towns
 _load_inventory_pix	6513:0066	FM Towns
 _load_new_music	1C86:174B	FM Towns
 _local_do_palette	1F8C:0220	FM Towns
+_loct	DS:2C61	FM Towns
 _look_nothing	2529:073F	FM Towns
 _LookAt	651C:0048	FM Towns
 _LootCreature	DS:863A	provisional
@@ -196,6 +223,7 @@ _Map_GetAddr	30BC:000F	FM Towns
 _mapdata	DS:1896	FM Towns
 _MapObj_X	DS:24F8	FM Towns
 _MapObj_Y	DS:24FA	FM Towns
+_mapptr	DS:2B58	FM Towns
 _MaybeAComparison_seg005_105F_282	0E72:282C	provisional
 _mdetect	65B5:0039	FM Towns
 _memset	0E72:1DCA	FM Towns
@@ -216,8 +244,12 @@ _mlowptr	DS:2F6E	FM Towns
 _mob_init	29CA:0C27	FM Towns
 _mode_to_button	DS:0129	FM Towns
 _motionbits	DS:00D2	FM Towns
+_mous_3d_hide	1B8F:0139	FM Towns
+_mous_3d_set	1B8F:00F7	FM Towns
+_mous_3d_show	1B8F:01F6	FM Towns
 _mous_in_rune	6504:0034	FM Towns
 _mous_in_stat	65BC:0034	FM Towns
+_mous_player	656A:0043	FM Towns
 _mouse_check_reg	1B8F:06F9	FM Towns
 _mouse_clearQ	1B8F:023A	FM Towns
 _mouse_constrain	1B8F:03B0	FM Towns
@@ -230,6 +262,7 @@ _mouse_hide	1B8F:00D6	FM Towns
 _mouse_in_scroll	DS:34B2	FM Towns
 _mouse_release	1B8F:02A9	FM Towns
 _mouse_show	1B8F:00C0	FM Towns
+_MousQUp	1B8F:0B30	FM Towns
 _move_along	33EA:004E	FM Towns
 _move_cam	656A:002A	FM Towns
 _move_mobile	15B5:359F	FM Towns
@@ -237,6 +270,7 @@ _MoveCrits	DS:19DC	FM Towns
 _movedata	0E72:1DF9	provisional
 _mts_doanim	34A2:0AB4	FM Towns
 _music_opt	653E:00B1	FM Towns
+_mxY	DS:2B50	FM Towns
 _near_mob_put_at	2754:1300	FM Towns
 _new_IconSelect	1B6B:011D	FM Towns
 _new_IconUnselect	1B6B:00AF	FM Towns
@@ -332,6 +366,7 @@ _plyregen	DS:190A	FM Towns
 _pmouseHandled	DS:073E	FM Towns
 _PN	DS:25DC	FM Towns
 _Ppd	DS:25C4	FM Towns
+_process_grid	1FCD:00D0	FM Towns
 _process_objlist	2754:0ED8	FM Towns
 _PT	DS:26AA	FM Towns
 _pTxtId	DS:24E4	FM Towns
@@ -341,6 +376,7 @@ _put_at	2754:1245	FM Towns
 _put_effect	34A2:0B8D	FM Towns
 _put_player_in_jail	64A5:0093	FM Towns
 _PWid	DS:862C	FM Towns
+_quad	DS:2B52	FM Towns
 _quick_time	DS:0388	FM Towns
 _rand	0E72:0DE7	FM Towns
 _read	0E72:1FCD	FM Towns
@@ -402,6 +438,9 @@ _show_cutscene	6488:00F2	FM Towns
 _simple_fizix	191C:0225	FM Towns
 _skill_check	323F:0009	FM Towns
 _SlotToDisplay	DS:1768	FM Towns
+_smooth_base	370D:064E	FM Towns
+_smooth_div	370D:064C	FM Towns
+_smooth_lowpass	370D:0650	FM Towns
 _sound_opt	653E:0061	FM Towns
 _sp_hp	65BC:0020	FM Towns
 _sp_mp	65BC:002A	FM Towns
@@ -418,13 +457,16 @@ _string_to_screen	0085:446D	FM Towns
 _string_width	0085:454B	FM Towns
 _strlen	0E72:28B5	FM Towns
 _strt_demscr	64BF:0052	FM Towns
+_strtime	DS:2B54	FM Towns
 _TalkTo	6469:0052	FM Towns
 _TerrainCheck	2754:0385	FM Towns
 _ThePlayer	DS:828E	FM Towns
+_tile_walls	DS:1BA6	FM Towns
 _TileIndices	DS:2CBA	provisional
 _Time	DS:2158	FM Towns
 _TimeStop	DS:037F	FM Towns
 _toggle_fightmode	2529:13E5	FM Towns
+_trans	DS:2C5E	FM Towns
 _Transparency	370D:0DC5	FM Towns
 _trap_teleport_data	DS:1BB6	FM Towns
 _TxmID	DS:8208	FM Towns
