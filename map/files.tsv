@@ -21,7 +21,7 @@ seg020	assembly	1	74	0	0	0	1
 seg021_22FD	assembly	77	4210	0	10	35	32			
 seg022_2405	assembly	51	2365	0	4	28	19			
 seg023	C	2	330	2	0	0	0	rotate_bank_	cycle_colors_	yes
-seg024_24E9	C	21	7040	20	0	0	1	pickloc_	player_killed_a_	
+seg024_24E9	C	21	7040	20	0	0	1	pickloc_	player_killed_a_	yes
 seg025_26A1	C	7	1877	7	0	0	0	remove_lock_	damage_object_	yes
 seg026_2716	C	23	5124	20	2	0	1	display_scr_	toggle_fightmode_	yes
 seg027_2856	C	8	3762	8	0	0	0	player_settr_	push_missile_	yes

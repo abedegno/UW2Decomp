@@ -22,6 +22,7 @@ _background_color	DS:21C8	FM Towns
 _BagSaveHandles	DS:6A76	FM Towns
 _BlastFunction	32FA:0C38	FM Towns
 _bmsegoff	4FAF:C784	FM Towns
+_build_new_obj	65A7:00CA	FM Towns
 _busywaiting_new_options	653E:0093	FM Towns
 _button_to_mode	DS:0123	FM Towns
 _camang	DS:33DA	FM Towns
@@ -77,6 +78,8 @@ _cycle_colors	22E7:00AB	FM Towns
 _cZoom	2110:0C34	FM Towns
 _damage_critter	15B5:333A	FM Towns
 _damage_item	24B4:0527	FM Towns
+_damage_square	65A7:002A	FM Towns
+_DamageInventory	650A:0025	FM Towns
 _DataDirectory	DS:1A78	FM Towns
 _DbEntry	DS:2C62	FM Towns
 _dbptr	DS:8720	FM Towns
@@ -164,6 +167,7 @@ _get_hp_back	65A7:00C0	FM Towns
 _get_iconreg_button	1B6B:005C	FM Towns
 _get_name	3265:0327	FM Towns
 _get_string	3265:008E	FM Towns
+_get_wfr	30D3:151E	FM Towns
 _get_workspace	3400:0176	FM Towns
 _GetObjDesc	651C:004D	FM Towns
 _globals	DS:1AD4	FM Towns
@@ -256,6 +260,7 @@ _motionbits	DS:00D2	FM Towns
 _mous_3d_hide	1B8F:0139	FM Towns
 _mous_3d_set	1B8F:00F7	FM Towns
 _mous_3d_show	1B8F:01F6	FM Towns
+_mous_in_3d_p	1B8F:0114	FM Towns
 _mous_in_rune	6504:0034	FM Towns
 _mous_in_stat	65BC:0034	FM Towns
 _mous_player	656A:0043	FM Towns
@@ -313,6 +318,7 @@ _Obj_MemTPtr	28A1:0927	FM Towns
 _Obj_PtrTMem	28A1:08BE	FM Towns
 _Obj_Punt	28A1:0704	FM Towns
 _Obj_Rem	28A1:0684	FM Towns
+_obj_spells	65A7:002F	FM Towns
 _objdata	DS:25B6	FM Towns
 _ObjectActing	DS:24EC	FM Towns
 _ObjectActor	DS:24E8	FM Towns
@@ -354,6 +360,7 @@ _player	DS:828A	FM Towns
 _player_attack	22FC:134B	FM Towns
 _player_did_bad	64A5:00FC	FM Towns
 _player_eat	6599:0052	FM Towns
+_player_fire	2669:009E	FM Towns
 _player_get_exp	323F:0045	FM Towns
 _player_grabbed	647E:007A	FM Towns
 _player_is_dead	6599:0075	FM Towns
@@ -364,6 +371,7 @@ _player_name_handle	DS:8288	FM Towns
 _player_setup	191C:0AD8	FM Towns
 _player_sleep	6599:005C	FM Towns
 _PlayerBank	DS:33D8	FM Towns
+_PlayerCreature	DS:551C	provisional
 _PlayerDat	DS:82A4	FM Towns
 _playerdat	DS:828C	FM Towns
 _PlayerFacing	DS:8294	FM Towns
@@ -376,6 +384,7 @@ _plyNotice	DS:19B2	FM Towns
 _plyregen	DS:190A	FM Towns
 _pmouseHandled	DS:073E	FM Towns
 _PN	DS:25DC	FM Towns
+_PoisonWeap	DS:037E	FM Towns
 _Ppd	DS:25C4	FM Towns
 _process_grid	1FCD:00D0	FM Towns
 _process_objlist	2754:0ED8	FM Towns
@@ -456,10 +465,12 @@ _smooth_div	370D:064C	FM Towns
 _smooth_lowpass	370D:0650	FM Towns
 _sound_opt	653E:0061	FM Towns
 _sp_enchant	65B5:004D	FM Towns
+_sp_hold	65A7:005C	FM Towns
 _sp_hp	65BC:0020	FM Towns
 _sp_mp	65BC:002A	FM Towns
 _sp_study_monster	0000:0066	FM Towns
 _sp_true_sight	0000:0061	FM Towns
+_sp_ward_undead	65A7:00A2	FM Towns
 _sp_xp	65BC:002F	FM Towns
 _spell_fire	2669:0342	FM Towns
 _spells	6389:0000	FM Towns
@@ -518,6 +529,7 @@ _UsingPole	DS:19B4	FM Towns
 _UsPtr	DS:2C6E	FM Towns
 _ValidLightSlots	DS:161A	FM Towns
 _valloc	004E:004A	FM Towns
+_Valor	DS:0383	FM Towns
 _vort_rad	DS:33C8	FM Towns
 _vort_theta	DS:33CC	FM Towns
 _vort_timer	DS:33CA	FM Towns
@@ -526,7 +538,9 @@ _vort_y	DS:33E7	FM Towns
 _wandering_monster_check	647E:0061	FM Towns
 _watertime	DS:19E3	FM Towns
 _wd_bool	6559:0034	FM Towns
+_weap_frame	DS:07A8	FM Towns
 _Weapons	DS:6976	FM Towns
+_wframe	DS:3473	FM Towns
 _WhatsInSlot	650A:0043	FM Towns
 _WizEye	DS:0381	FM Towns
 _wyorn	6559:0043	FM Towns

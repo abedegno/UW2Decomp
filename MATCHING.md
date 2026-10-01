@@ -82,6 +82,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **A block-local initialised array** (`char num[3] = "00";`) puts its initialiser in `_DATA` where the function is.
 - **Pointer tables in data** (an initialised array of far function pointers) carry fixups inside `_DATA`; `verify.py` checks each pointer against the EXE and leaves those bytes out of the comparison.
 - **An empty string can be someone else's padding byte**: seg043 passes `push 98Dh` for `""`, an address inside another file's data, so the literal was merged by the linker and is declared there as an extern array.
+- **`_BSS` is laid out by name, not declaration order**: Turbo C emits uninitialised variables in its symbol table's order, so renaming one moves it and reordering declarations doesn't (ties keep declaration order; ints are word-aligned). A static's name never reaches the linker, so when a static has no original name, choose one that lands where the EXE has it, and say in a comment that the name was chosen for layout. Public names are fixed by other files.
 - **Static uninitialised data** goes in `_BSS`, which `verify.py` checks for a consistent base (no bytes to compare).
 - **`!c` against `c == 0` on a `char` parameter**: `!c` gives `mov al; cbw; or ax,ax`; `c == 0` gives `cmp byte [bp+N],0`.
 - **Far pointers compare by offset only** for `<`/`>=` (`mov ax,[bp+N]; cmp ax,[g]`), while `== 0` tests both halves (`or ax,dx`).
@@ -145,5 +146,8 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **`while (f()) if (a <= b) break;`** puts the compare before the call, the call's `jne` jumping back to it.
 - **Two `jmp`s in a row** come from a `return` at the end of an `if` block followed by `else if`: the return's jump plus a dead jump past the else chain, which a branch lands on and is not threaded through.
 - **An index minus one folds into the base**: `table[i - 1]` with 7-byte records gives `imul 7` and the base minus 7, so a DS address just before a table can be that table.
+- **`register` on a parameter** can be needed to put it in DI.
+- **`int += long - long`** needs `(int)(...)` to give `sub ax,[lo]; add [mem],ax`.
+- **`return f(0);`** of a char returns the callee's AL with no move.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.
