@@ -70,6 +70,8 @@ _check_fds	65E0:0043	FM Towns
 _check_physics	2FBE:0422	FM Towns
 _check_pplate	65D5:0089	FM Towns
 _check_res	24B4:0493	FM Towns
+_check_rest	654A:002F	FM Towns
+_check_save	654A:0034	FM Towns
 _checkLock	32FA:07AF	FM Towns
 _checkSpell	32FA:0998	FM Towns
 _checkTrap	32FA:0A95	FM Towns
@@ -138,6 +140,8 @@ _curBin	DS:228B	FM Towns
 _curelem	DS:0C0C	FM Towns
 _curP	DS:2562	FM Towns
 _current_button	DS:24E6	FM Towns
+_current_buttongroup	DS:0265	FM Towns
+_current_hilit_button	DS:0122	FM Towns
 _CursorObjPtr	DS:6B0C	FM Towns
 _curvrad	DS:8622	FM Towns
 _curZoom	DS:2B5C	FM Towns
@@ -182,6 +186,7 @@ _DisplayOpenBag	64F7:0052	FM Towns
 _DisplayToSlot	DS:1784	FM Towns
 _do_3d_grab	2CAE:02AA	FM Towns
 _do_3d_pickup	1FCD:037E	FM Towns
+_do_3d_view	64BF:0039	FM Towns
 _do_crit_phys	1226:0D6A	FM Towns
 _do_escape_key	6469:0061	FM Towns
 _do_fbuf_bms	30D3:1567	FM Towns
@@ -203,6 +208,7 @@ _DoInventoryMouse	6513:0061	FM Towns
 _doMod	DS:33C6	FM Towns
 _dontchangedz	DS:2246	FM Towns
 _door_type	DS:8184	FM Towns
+_DoSaveRest	6581:002F	FM Towns
 _DoSpecialActions	64F7:0039	FM Towns
 _DoWanderingMonsters	65D5:009D	FM Towns
 _draw_conv_edges	342C:00B8	FM Towns
@@ -218,6 +224,7 @@ _DumpTheBag	654F:008E	FM Towns
 _duration_check	653A:0034	FM Towns
 _edge_phase	DS:0988	provisional
 _editchng	1B44:00AE	FM Towns
+_editexit	64BF:0043	FM Towns
 _editor_dispatch	DS:11F4	FM Towns
 _empty_text	DS:098D	provisional
 _ems_seg	4FAF:E4D2	provisional
@@ -277,6 +284,8 @@ _free_world	64BF:0025	FM Towns
 _freepaths	DS:00B4	FM Towns
 _FreePlayerInv	64FE:0039	FM Towns
 _frictionless	DS:229E	FM Towns
+_fx_available	1C86:1AE8	FM Towns
+_fx_is_on	1C86:1AD3	FM Towns
 _game_sprint	3265:04A4	FM Towns
 _GameInputMode	DS:2506	FM Towns
 _gameopts_buttongroup	DS:012F	FM Towns
@@ -505,7 +514,10 @@ _MP	DS:03FA	FM Towns
 _mpos	65E0:0034	FM Towns
 _mspell_mused	DS:1B0C	FM Towns
 _mts_doanim	34A2:0AB4	FM Towns
+_music_available	1C86:1AF0	FM Towns
+_music_is_on	1C86:1ABE	FM Towns
 _music_opt	653E:00B1	FM Towns
+_music_sound	DS:817A	FM Towns
 _mvcheck	33EA:0003	FM Towns
 _mxY	DS:2B50	FM Towns
 _mycst	DS:2254	FM Towns
@@ -715,6 +727,7 @@ _restore_hp	65A7:00B1	FM Towns
 _restore_mana	65A7:00CF	FM Towns
 _restore_opt	653E:00BB	FM Towns
 _restore_rect	004E:025B	FM Towns
+_restore_sliding_panel	30D3:14FC	FM Towns
 _RestoreGame	6581:005C	FM Towns
 _RestorePlayerInv	64FE:002A	FM Towns
 _ReturnObject	2669:0439	FM Towns
@@ -732,6 +745,7 @@ _rollem	33EA:011F	FM Towns
 _save_opt	653E:00A7	FM Towns
 _save_player_data	6564:0043	FM Towns
 _save_rect	004E:01D5	FM Towns
+_save_rest	DS:8178	FM Towns
 _save_screenshot	64DA:0020	provisional
 _SaveAutoMapLevel	641E:0039	FM Towns
 _SaveHandles	DS:6ADC	FM Towns
@@ -787,6 +801,7 @@ _Shift	DS:2128	FM Towns
 _show	0085:4FC2	FM Towns
 _show_credits	652F:0020	FM Towns
 _show_cutscene	6488:00F2	FM Towns
+_ShowSaveRest	6581:0057	FM Towns
 _simple_fizix	191C:0225	FM Towns
 _skill_check	323F:0009	FM Towns
 _sknow	DS:47B8	FM Towns
@@ -856,6 +871,8 @@ _trap_teleport_data	DS:1BB6	FM Towns
 _tremEfflen	DS:0740	FM Towns
 _tries	DS:26B6	provisional
 _try_cast	6504:0020	FM Towns
+_turn_fx	1C86:1B95	FM Towns
+_turn_music	1C86:1AF8	FM Towns
 _TurnInpRate	DS:077E	FM Towns
 _Txm_Load	655E:0025	FM Towns
 _Txm_Save	655E:0034	FM Towns
