@@ -1,4 +1,4 @@
 # segment ovr091 base 0x717B0 size 0x2C org 0x0
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
-LoadAnimationObjectDat_ovr091_0	LoadAnimationObjectDat_ovr091_0	0x0	0x17
-MajorClass7_ovr091_17	MajorClass7_ovr091_17	0x17	0x15
+animobj_load	LoadAnimationObjectDat_ovr091_0	0x0	0x17
+animobj_class_data	MajorClass7_ovr091_17	0x17	0x15

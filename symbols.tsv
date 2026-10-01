@@ -56,6 +56,7 @@ _aligned	DS:2242	FM Towns
 _Alt	DS:2130	FM Towns
 _always_decode	DS:090E	FM Towns
 _anim_overlays	DS:3578	provisional
+_animclassd	DS:34B6	FM Towns
 _animcount	DS:34B4	FM Towns
 _animobj_class_data	640F:0025	FM Towns
 _animobj_load	640F:0020	FM Towns
@@ -64,6 +65,7 @@ _answer_x	DS:8186	provisional
 _anti_magic_p	65A7:0034	FM Towns
 _arcfile	637E:0000	provisional
 _area_spell_state	DS:1B0A	FM Towns
+_Armor	DS:69F6	FM Towns
 _Asc	DS:2148	FM Towns
 _AskHowMany	6513:003E	FM Towns
 _atk_charge	609E:0000	provisional
@@ -480,6 +482,7 @@ _input_dispatch	1AB4:02A0	FM Towns
 _int0_sp	1FC7:0013	provisional
 _int0_ss	1FC7:0011	provisional
 _int0_trap	1FC7:0019	provisional
+_Interupt4_COM1_ovr132_0	6532:0020	provisional
 _inv_look	2529:0E74	FM Towns
 _inv_refresh	DS:17A0	FM Towns
 _invArmorObj	DS:6AD0	FM Towns
@@ -499,6 +502,7 @@ _ItemWeight	650A:004D	FM Towns
 _itoa	0E72:1D1B	FM Towns
 _j_LikelyWaitForMore_ovr139_29	6559:002A	provisional
 _j_WriteTextWithMORE_ovr139_BD	6559:0039	provisional
+_JoyStickCalibration_seg011_1B8	1AFA:01B8	provisional
 _key	2110:0971	FM Towns
 _key_on	DS:2138	FM Towns
 _keyboard_mouse	1B8F:0DA7	FM Towns
@@ -1048,6 +1052,7 @@ _trap_obj_del	65D5:0034	FM Towns
 _trap_teleport_data	DS:1BB6	FM Towns
 _tremEfflen	DS:0740	FM Towns
 _tries	DS:26B6	provisional
+_TriggerObjectDatTable	DS:864C	provisional
 _try_cast	6504:0020	FM Towns
 _try_clear	6504:0052	FM Towns
 _turn_fx	1C86:1B95	FM Towns

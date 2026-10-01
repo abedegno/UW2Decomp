@@ -1,4 +1,4 @@
 # segment ovr120 base 0x8BAF0 size 0x8D org 0x0
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
-ReadObjectsDat_Part_1_ovr120_0	ReadObjectsDat_Part_1_ovr120_0	0x0	0x3A
-GetObjectDatForMajorClass0_ovr120_3A	GetObjectDatForMajorClass0_ovr120_3A	0x3A	0x53
+hack_init	ReadObjectsDat_Part_1_ovr120_0	0x0	0x3A
+hack_class_data	GetObjectDatForMajorClass0_ovr120_3A	0x3A	0x53
