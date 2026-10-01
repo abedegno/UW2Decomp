@@ -7,8 +7,8 @@ extern unsigned char MonoOrLightShadeRelated_dseg_67d6_1AAC;
 extern unsigned char far *cLightTabs;
 
 extern unsigned curvrad;
-extern unsigned UnkShades_dseg_67d6_536;
-extern unsigned UnkShades_dseg_67d6_534;
+extern unsigned distpoly;
+extern unsigned dist8;
 extern unsigned char far XFERDATA_seg003_0272_E73[];
 extern unsigned char far ModelData_seg052_519C_2600;
 extern unsigned far smooth_div;
@@ -67,8 +67,8 @@ void far set_light(signed char lightLevel)
     smooth_base = ShadesDataRow_var_C[1];
     smooth_lowpass = ShadesDataRow_var_C[2];
     curvrad = ShadesDataRow_var_C[3];
-    UnkShades_dseg_67d6_536 = ShadesDataRow_var_C[4];
-    UnkShades_dseg_67d6_534 = ShadesDataRow_var_C[5];
+    distpoly = ShadesDataRow_var_C[4];
+    dist8 = ShadesDataRow_var_C[5];
     close(handle);
     ShadeCalcs_seg032_2E9B_4AF(curvrad);
     editchng(2);

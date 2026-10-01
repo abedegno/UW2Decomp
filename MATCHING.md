@@ -190,5 +190,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Constants move to the end of an addition chain**: `a + b + 0x10 + c` adds `c` before `0x10`; `(int)(a + b + 0x10) + c` keeps the source order.
 - **A register variable used in two separate blocks** may need to be a block-scoped `register int` in each block to land in the same register as the original.
 - **A jump into the middle of another arm's stores** means the statements after that point came after the if/else in the source, so both paths run them.
+- **`p += n` on a far pointer** gives `add [bp-6],ax`; `p = p + n` reloads and stores both halves.
+- **An assembly routine can share a C file's segment**: seg019 starts with SetPnt, an assembly module called with far calls from the C (a same-file C function would get `push cs; call near`). Its target table starts at the first C function (org 0x41).
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

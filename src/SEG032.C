@@ -107,7 +107,7 @@ extern struct Gloc glocs[17][33];
 extern struct Gvec gvecs[15];
 extern char gvechead;
 extern unsigned char tile_walls[];
-extern unsigned char dseg_67d6_53F;     /* DOS only, no FM Towns name */
+extern unsigned char SpecShadeMode;     /* DOS only, no FM Towns name */
 /* in the graphics data segment */
 extern unsigned far bmsegoff;
 extern int far _dblen;
@@ -213,7 +213,7 @@ void far seg032_2E9B_195(int on)
     register unsigned char old;
     register unsigned char want;
 
-    old = dseg_67d6_53F;
+    old = SpecShadeMode;
     if (on == -1)
         want = !old;
     else
@@ -221,12 +221,12 @@ void far seg032_2E9B_195(int on)
     if (want != old) {
         p = (int far *)&bmsegoff;
         p = MK_FP(FP_SEG(&bmsegoff), bmsegoff);
-        if (dseg_67d6_53F) {
+        if (SpecShadeMode) {
             p[4] = 0x5DFD;
             p[12] = 0x5DFD;
             p[20] = 0x5DFD;
         }
-        dseg_67d6_53F = !dseg_67d6_53F;
+        SpecShadeMode = !SpecShadeMode;
     }
 }
 
