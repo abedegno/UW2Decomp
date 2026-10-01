@@ -575,7 +575,7 @@ void far SomethingWithDataFolders_ovr112_839(void)
     register int j;
 
     for (i = 0; environ[i] != 0; i++) {
-        if (strncmp("UWHOME", environ[i], 6) == 0) {
+        if (strnicmp("UWHOME", environ[i], 6) == 0) {
             j = 6;
             while (environ[i][j++] != '=')
                 ;

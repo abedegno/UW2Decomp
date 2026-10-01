@@ -1310,7 +1310,7 @@ _StringsPak_Address_Indices	DS:349C	provisional
 _StringsPak_FileHandle	DS:34A2	provisional
 _StringsPak_NoOfNodes	DS:34A0	provisional
 _strlen	0E72:28B5	FM Towns
-_strncmp	0E72:28FB	provisional
+_strnicmp	0E72:28FB	library
 _strncpy	0E72:28CF	FM Towns
 _strt_converse	6469:00AC	FM Towns
 _strt_demscr	64BF:0052	FM Towns
