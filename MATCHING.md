@@ -136,5 +136,8 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Unreferenced helper functions** with no FM Towns counterpart can sit inside a neighbour's range in the target table; define them `static` where they fall.
 - **`switch` fallthrough for a shared tail**: `case 'p': v = 0x190; case 'P': v += 0xC8; f(v); break;` reproduces two cases sharing one call; an if/else chain duplicating the call spills a temporary.
 - **Fold a trailing break into the loop test**: `while (A && B) i++;` gives the compact test-first layout; `while (A) { if (!B) break; i++; }` lays out differently.
+- **Bitfield runs take only the bytes they need**: `unsigned b:1` followed by a char array puts the array at +1, not +2.
+- **Copying between bitfields**: an `unsigned char x:4` from a char gives `and ax,0Fh` with no `mov ah,0`; between two `unsigned` bitfields the `and ax,0Fh` appears twice.
+- **Operand order in a multiply**: `a * (f() - 0x40)` gives `push; mov al,a; cbw; pop dx; imul dx`; the other order gives `mov dx,ax; pop ax; imul dx`.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

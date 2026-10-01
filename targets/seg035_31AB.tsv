@@ -1,0 +1,15 @@
+# segment seg035_31AB base 0x327E8 size 0xFE7 org 0x8
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+player_mous_move	LikelyMouseMove_seg035_31AB_8	0x0	0x4E
+parse_playin	MoveInDirectionEvent_seg035_31AB_56	0x4E	0x1A0
+do_player_keyboard	ProcessMotionInputs_seg035_31AB_1F6	0x1EE	0x15A
+player_simple_move	EasyMoveTurnEvent_seg035_31AB_350	0x348	0xD2
+check_physics	ClockUpdate_seg035_31AB_422	0x41A	0x112
+move_physics	GameObjectLoop_seg035_31AB_534	0x52C	0xB7
+finish_player	RunPlayerMotions_seg035_31AB_5EB	0x5E3	0x40
+move_player	PlayerMotion_seg035_31AB_62B	0x623	0x10F
+make_noise	SurfaceFootsteps_seg035_31AB_73A	0x732	0x22D
+set_sound	ApplyPlayerSneakScore_seg035_31AB_967	0x95F	0xA5
+parse_effect	WalkOnSurfaceTypes_seg035_31AB_A0C	0xA04	0x297
+set_effect	SetScreenShake_seg035_31AB_CA3	0xC9B	0x3C
+get_eye	PositionCameraAtObject_seg035_31AB_CDF	0xCD7	0x310

@@ -32,7 +32,7 @@ seg031_2CFA	C	21	6675	15	5	0	1	do_physics_	check_positions_
 seg032_2E9B	C	21	4650	16	3	0	2	place_3d_view_	do_2dclip_	
 seg033_2FBE	C	3	5349	1	0	2	0	do_obj_	do_obj_	
 seg034_310D	C	10	2530	4	6	0	0	do_partition_	do_objsort_	
-seg035_31AB	C	13	4071	11	2	0	0	player_mous_move_	set_effect_	
+seg035_31AB	C	13	4071	11	2	0	0	player_mous_move_	set_effect_	yes
 seg036_32A9	C	2	356	2	0	0	0	Map_GetAddr_	CreateObj_	yes
 seg037_32C0	C	32	5830	16	14	1	1	set_flask_	send_FB_	
 seg038_342C	C	3	603	3	0	0	0	skill_check_	panel_check_hpmp_	yes
