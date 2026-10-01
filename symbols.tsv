@@ -369,6 +369,8 @@ _draw_sprite	0000:00EB	FM Towns
 _drop_around_place	2754:135A	FM Towns
 _drop_link_chain	65CB:0034	FM Towns
 _drop_some_objects	65CB:003E	FM Towns
+_dsbuf	DS:23EC	FM Towns
+_dsdata	DS:02BC	FM Towns
 _dseg_67d6_120	DS:0120	provisional
 _dseg_67d6_21F4	DS:21F4	provisional
 _dseg_67d6_2C74	DS:2C74	provisional
@@ -460,6 +462,7 @@ _free_input	1AB4:0059	FM Towns
 _free_mem	3400:009B	FM Towns
 _free_scrgr	30D3:02BE	FM Towns
 _free_sounds	1C86:2AEC	FM Towns
+_free_speech_stuff	1C86:2FBA	FM Towns
 _free_strings	3265:0084	FM Towns
 _free_timers	1C86:29C5	FM Towns
 _free_world	64BF:0025	FM Towns
@@ -531,8 +534,10 @@ _grfx_clear	64E2:007A	FM Towns
 _grfx_close	64E2:0034	FM Towns
 _grfx_driver	DS:14B8	FM Towns
 _grfx_init	64E2:0075	FM Towns
+_grfx_palrange	64E2:003E	FM Towns
 _grfx_quikfont	64E2:004D	FM Towns
 _grfx_quikpal	64E2:002F	FM Towns
+_grfx_setpal	64E2:0020	FM Towns
 _gronk_area	65A7:0020	FM Towns
 _gronk_door	643D:002F	FM Towns
 _gronk_gr	64EA:0098	FM Towns
@@ -647,6 +652,7 @@ _JoyStickCalibration_seg011_1B8	1AFA:01B8	provisional
 _key	2110:0971	FM Towns
 _key_on	DS:2138	FM Towns
 _keyboard_mouse	1B8F:0DA7	FM Towns
+_kill_all_digi_effects	1C86:218F	FM Towns
 _kill_all_effects	1C86:20C1	FM Towns
 _kill_effect	1C86:1FFD	FM Towns
 _KillCritter_ovr110_3ABF	64A5:006B	provisional
@@ -1089,6 +1095,7 @@ _RightButtonThing	DS:24F0	FM Towns
 _RightPanel	DS:079E	FM Towns
 _RightPanelBeforeConversation	DS:47FC	provisional
 _rollem	33EA:011F	FM Towns
+_rotate_bank	22E7:0009	FM Towns
 _ruin_cure_potions	64A5:008E	FM Towns
 _running_away	DS:0BF8	FM Towns
 _save_opt	653E:00A7	FM Towns
@@ -1127,6 +1134,7 @@ _seg001_023B_C	004E:000C	provisional
 _seg003_0272_4431	0085:4431	provisional
 _seg003_0272_4629	0085:4629	provisional
 _seg003_0272_4933	0085:4933	provisional
+_seg003_0272_4A3A	0085:4A3A	provisional
 _seg003_0272_4D86	0085:4D86	provisional
 _seg003_0272_4DC2	0085:4DC2	provisional
 _seg003_0272_5025	0085:5025	provisional
@@ -1235,8 +1243,10 @@ _sp_xp	65BC:002F	FM Towns
 _spec_class_data	65A4:0020	FM Towns
 _SpecShadeMode	DS:053F	FM Towns
 _speech_available	1C86:2F99	FM Towns
+_speechok	DS:0297	FM Towns
 _spell_fire	2669:0342	FM Towns
 _spells	6389:0000	FM Towns
+_sphdriver	DS:02B8	FM Towns
 _spsave	DS:1B9F	FM Towns
 _sqmod	DS:2F7A	FM Towns
 _srand	0E72:0DD6	FM Towns
@@ -1247,6 +1257,7 @@ _static_free_list	DS:25A2	provisional
 _static_free_ptr	DS:25A6	provisional
 _stay_centered	DS:03D1	FM Towns
 _stdat	3CF5:0000	FM Towns
+_stop_music	1C86:1BE9	FM Towns
 _str_cat	3265:090B	provisional
 _str_cmp	1F8C:01F7	provisional
 _str_copy	1F8C:013F	provisional
@@ -1400,6 +1411,7 @@ _vort_theta	DS:33CC	FM Towns
 _vort_timer	DS:33CA	FM Towns
 _vort_x	DS:33E6	FM Towns
 _vort_y	DS:33E7	FM Towns
+_vscreen_focus	0085:4A7F	FM Towns
 _wander_found	DS:554E	provisional
 _wandering_monster_check	647E:0061	FM Towns
 _watertime	DS:19E3	FM Towns
@@ -1434,6 +1446,7 @@ _xt_spells	65B5:003E	FM Towns
 _xwid	DS:2C66	FM Towns
 _yearly_checkup	647E:0034	FM Towns
 _YP	DS:227A	FM Towns
+_Ytab	DS:21F8	FM Towns
 F_LDIV@	0E72:3525	library
 F_LUDIV@	0E72:352C	library
 F_LUMOD@	0E72:353C	library

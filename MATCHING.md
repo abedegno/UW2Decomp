@@ -210,5 +210,9 @@ The assembly modules (seg003, seg004, seg020 to seg022, seg045, seg046, SetPnt i
 - **Recognise library code**: ovr127 is Haruhiko Okumura's 1989 LZSS.C almost line for line, with its globals moved into one far work area. Well-known public code is worth looking for before reconstructing from scratch.
 - **`jne L; mov; jmp X; L: jmp X`** (a conditional jump onto an unshortened `jmp`) comes from the same last statement written in both arms of an if/else, which `-O` merges into one copy; goto, continue and `else ;` don't reproduce it.
 - **Arrays indexed `[side][slot]`**: when two sides of a trade or similar are handled by one loop, the original used 2-D arrays; separate arrays can't reproduce the indexing.
+- **A three-deep chained bitfield assignment** (`s.b0 = s.b1 = s.b6 = 0;`) stores an uninitialised DX into the middle field; two-deep chains don't. Reproduce it as written.
+- **`FP_OFF(MK_FP(seg, off))`** evaluates the segment and throws it away, leaving a redundant load.
+- **The index's signedness changes far-pointer indexing**: `p[i - 1]` with an int index gives `mov bx,cx; mov es,[seg]; add bx,[off]`; with an unsigned index, `les bx; add bx,cx`.
+- **`outportb()` compiles inline** to `mov dx,port; mov al,v; out dx,al`.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.
