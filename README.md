@@ -6,11 +6,13 @@ This is a fan research project, not affiliated with or endorsed by the rights ho
 
 ## Status
 
-| Segment | Source | Functions | Bytes matched |
-|---|---|---|---|
-| ovr154 (skills, sleep, dreams, death, traps) | `src/PLAYER.C` | 26/26 | 6967/6967 code, 50/50 data; all 464 fixups verified |
+**All of UW2's C code is matched: 337,327 of 337,327 bytes, in 99 source files under `src/`.** Every file compiles with Turbo C++ 1.01 to the same machine code as the shipped `UW2.EXE`, and `tools/verify.py` confirms its fixups (every call and global reference), its initialised data and its uninitialised data layout. Function and global names are the originals from the FM Towns build wherever it has them.
 
-Overall: 1 of 99 C source files matched, about 7 KB of 337 KB of C (2%).
+Also matched: seg013 (C with inline assembly, through Turbo Assembler 2.0) and seg017 (a hand-written assembly module).
+
+Still to do: the remaining assembly modules (seg003, seg004, seg020, seg021, seg022, seg045, seg046 and part of seg001, about 88 KB). They match Turbo Assembler 2.0's output; see MATCHING.md.
+
+`matched.txt` lists the matched segments; `map/files.tsv` has per-file status.
 
 ## The map
 
