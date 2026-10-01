@@ -1,0 +1,994 @@
+/* target: ovr094 */
+/* opts: -mm -1 -G -O -Y -d */
+/* The automap: drawing the player's map of each level, the map notes the player writes on
+   it, the gem that picks a level, and map scraps that reveal parts of other levels. The
+   whole of DOS overlay ovr094, in original order. Function and global names are the
+   originals from the FM Towns symbol table where it has them; the source file's own name
+   is not known. */
+
+#include <dos.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+/* The player's record, reached through the near pointer `player`. */
+struct Player {
+    char pad0[0x60];
+    unsigned b60:1;                     /* word 0x60, bit 0 */
+    unsigned b60_1:15;
+    unsigned b62_0:4;
+    unsigned automap:1;                 /* word 0x62, bit 4 */
+    unsigned b62_5:11;
+    char pad1[0xF3 - 0x64];
+    unsigned char gems;                 /* 0xF3, one bit per gem part found */
+    char pad2[0xF8 - 0xF4];
+    unsigned char map_scrap;            /* 0xF8 */
+};
+
+struct Tile {
+    unsigned type:4;
+    unsigned height:4;
+    unsigned b8:2;
+    unsigned floor:4;                   /* bits 10-13 */
+    unsigned b14:2;
+    unsigned objects;                   /* 0x02, head of the tile's object list */
+};
+
+struct Object {
+    unsigned id;
+    unsigned pos;
+    union {
+        unsigned word;
+        struct { unsigned quality:6, next:10; } f;
+    } qn;
+    union {
+        unsigned word;
+        struct { unsigned owner:6, link:10; } f;
+    } ol;
+    char pad8[0x16 - 8];
+    unsigned tilepos;                   /* 0x16, a mobile object's tile */
+};
+
+#define OBJ_ID(o)       ((o)->id & 0x1FF)
+#define OBJ_TYPE(o)     ((o)->id & 0xF)
+#define OBJ_CLASS(o)    (((o)->id & 0x1F0) >> 4)
+#define DOOR_STATE(o)   (((o)->id & 0x1E00) >> 9)
+#define OBJ_OWNER(o)    ((o)->ol.f.owner)
+#define TILE_X(o)       (((o)->tilepos & 0xFC00) >> 10)
+#define TILE_Y(o)       (((o)->tilepos & 0x3F0) >> 4)
+
+/* The mouse and keyboard state handed to an input handler. */
+struct Inplist {
+    int x, y;
+    char pad4[2];
+    int cmd;                            /* 0x06 */
+};
+
+/* One map note: its text and where it sits on the map, 0x36 bytes. */
+struct ATM {
+    char text[0x32];
+    int x;                              /* 0x32, -1 once erased */
+    int y;                              /* 0x34 */
+};
+
+extern struct Player near *player;
+extern struct Object far *ThePlayer;
+extern struct Inplist near *inplist;
+extern int PlayerLevel;
+extern unsigned TxmTerr[];
+extern unsigned char tile_walls[];
+extern char HomeDir[];
+extern unsigned char far *foreground_color;
+extern unsigned char far *background_color;
+extern unsigned char far *pixel_color;          /* provisional: DS:21F0 */
+extern unsigned char far Transparency;
+extern struct ATM far ATM_Strings[100];
+
+void far _input_addkey(int key, int a, int b, void (far *handler)(int));
+int far input_addmouse(int a, int b, int c, int d, int buttons, int mode, void (far *handler)(void));
+void far newscr(int n);
+void far kill_all_effects(void);
+unsigned char far get_current_music(void);
+void far set_random_walking_music(int n);
+void far change_music_maybe(void);
+void far set_new_music(int n);
+void far loop_music_maybe(void);
+void far fadeout(int a, int b, int c, int d);
+void far mouse_constrain(int left, int top, int right, int bottom);
+void far mouse_hide(void);
+void far mouse_show(void);
+void far mouse_freereign(void);
+void far force_mouse_cursor(int id);
+void far unforce_mouse_cursor(int n);
+void far mouse_release(int n);
+int far mouse_get_input_sp(void);
+void far keyboard_mouse(int key);
+void far mouse_getxy(int *x, int *y);
+void far mouse_putxy(int x, int y);
+int far mouse_getbut(int *b);
+int far do_keyboard_input(int n);
+unsigned char far open_arc(int arc, char *dir);
+unsigned far get_arc(int arc, int blk, char far *buf);
+unsigned char far put_arc(int arc, int blk, char far *buf, unsigned len);
+void far close_arc(int arc);
+struct Tile far * far Map_GetAddr(int x, int y);
+struct Object far * far Obj_PtrTMem(unsigned far *link);
+void far grfx_clear(void);
+void far grfx_quikpal(int pal);
+void far set_font_size(int size);
+void far set_the_color(int c);
+void far rectangle(int x0, int y0, int x1, int y1);
+int far string_width(char far *s);
+void far string_to_screen(char far *s, int x, int y);
+char far * far str_copy(char far *dst, char far *src);
+unsigned char far gr_read_pixel(int x, int y);  /* provisional: 0085:475E */
+void far gr_pixel(int x, int y, int color);     /* provisional: 1F8C:0255 */
+int far octant(char x, char y);
+void far pic_to_screen(int pic, int x, int y, int w, int h);
+unsigned far get_workspace(void);
+int far set_workspace(void);
+void far release_workspace(void);
+void far grPageFlip(void);
+void far grSoftPageFlip(void);
+void far copy_hidden_to_visible(void);
+char far disk_to_vid(int blk, char far *buf);
+void far player_get_exp(int n);
+
+/* Initialised data, DS:09EE. None of it has an FM Towns name, so it was static. */
+
+/* How each solid tile type is shaded, a 3x3 pattern per type: 1 shades the pixel with the
+   tile's terrain, 2 darkens it. */
+static unsigned char tile_pattern[5][3][3] = {
+    { { 1, 1, 1 }, { 1, 1, 1 }, { 1, 1, 1 } },
+    { { 2, 1, 1 }, { 0, 2, 1 }, { 0, 0, 2 } },
+    { { 1, 1, 2 }, { 1, 2, 0 }, { 2, 0, 0 } },
+    { { 0, 0, 2 }, { 0, 2, 1 }, { 2, 1, 1 } },
+    { { 2, 0, 0 }, { 1, 2, 0 }, { 1, 1, 2 } },
+};
+static int registered = 0;              /* the automap's input handlers are in place */
+static signed char diag_side[4] = { 1, 2, 0, 3 };
+static signed char door_dy[4] = { -1, 0, -1, 1 };
+static signed char door_dx[4] = { 0, -1, -1, -1 };
+
+/* Uninitialised data, DS:36F8. Turbo C lays _BSS out in an order set by the names, so the
+   static names (none has an FM Towns name) were chosen by compiling probes to land where
+   the EXE has them: door_dir, notes_dirty, level, old_strings, num_words and map_mouse
+   are ours. */
+static signed char door_dir;
+static unsigned char notes_dirty;
+static int level;
+unsigned char PlayersMap[64][64];
+static int old_strings;
+static int num_words;
+static int map_mouse;
+
+void far ManageDungeonMap(void);
+unsigned char far SaveAutoMapLevel(int flags, int lev);
+unsigned char far GetAutoMapLevel(int flags, int lev);
+void far ShowDungeonMap(void);
+void far DoTile(int type, int x, int y);
+void far DoDoorTile(int x, int y, int px, int py);
+void far SaveTheWords(int lev);
+void far ShowAutoMapLevel(int lev);
+void far RedisplayStrings(void);
+
+void far AutoMap(void)
+{
+    char noauto;
+
+    noauto = !player->automap;
+    if (!registered) {
+        _input_addkey(0x1B, 1, 2, newscr);
+        map_mouse = input_addmouse(0, 0, 0x13F, 0xC7, 0, 2, ManageDungeonMap);
+        registered = 1;
+    }
+    kill_all_effects();
+    if (get_current_music() < 8 || get_current_music() > 0xF) {
+        set_random_walking_music(0);
+        change_music_maybe();
+    }
+    SaveAutoMapLevel(0, PlayerLevel);
+    if (noauto) {
+        level = player->map_scrap;
+        GetAutoMapLevel(0, level);
+    } else
+        level = PlayerLevel;
+    if (player->map_scrap & 0x80) {
+        SaveAutoMapLevel(0, level);
+        player->map_scrap = ~player->map_scrap;
+        level = player->map_scrap;
+        GetAutoMapLevel(0, level);
+    }
+    fadeout(0, 0, 0, 0);
+    ShowAutoMapLevel(level);
+    mouse_constrain(9, 3, 0x13F, 0xC7);
+    mouse_hide();
+    force_mouse_cursor(0x1078);
+    mouse_show();
+    notes_dirty = 0;
+}
+
+void far automap_area(int x0, int y0, int x1, int y1, int *arg,
+                      char (far *fn)(int x, int y, int *arg))
+{
+    int y;
+    unsigned char terr;
+    struct Tile far *tile;
+    unsigned far *link;
+    struct Object far *obj;
+    register int x;
+    register int t;
+
+    for (y = y0; y <= y1; y++) {
+        for (x = x0; x <= x1; x++) {
+            if (fn(x, y, arg) == 0)
+                continue;
+            if (x < 1)
+                x = 1;
+            if (x >= 0x3F)
+                break;
+            if (y < 1)
+                break;
+            if (y >= 0x3F)
+                break;
+            tile = Map_GetAddr(x, y);
+            terr = tile->type;
+            terr |= TxmTerr[tile->floor] & 0xC0;
+            for (link = &tile->objects; (obj = Obj_PtrTMem(link)) != 0; link = &obj->qn.word) {
+                if (OBJ_ID(obj) == 0x164 && DOOR_STATE(obj) < 2)
+                    terr = terr;
+                if (OBJ_CLASS(obj) == 0x14)
+                    terr = terr;
+                if (OBJ_TYPE(obj) == 0xE || OBJ_TYPE(obj) == 0xF) {
+                    t = TxmTerr[OBJ_OWNER(obj)] & 7;
+                    if (t == 3)
+                        terr = terr;
+                    if (t == 4)
+                        terr = terr;
+                }
+            }
+            PlayersMap[y][x] = terr;
+        }
+    }
+}
+
+/* DOS only: automap_area's callback for the whole level. */
+char far SetALTo1_ovr094_2A1(int x, int y, int *arg)
+{
+    return 1;
+}
+
+/* DOS only: map the whole level and draw it. */
+void far ovr094_2A8(void)
+{
+    automap_area(1, 1, 0x3F, 0x3F, 0, SetALTo1_ovr094_2A1);
+    mouse_hide();
+    ShowDungeonMap();
+    mouse_show();
+}
+
+unsigned char far SaveAutoMapLevel(int flags, int lev)
+{
+    unsigned char ok = 0;
+
+    if (!(flags & 4) && !open_arc(1, HomeDir))
+        return ok;
+    ok = put_arc(1, lev + 0x9F, (char far *)PlayersMap, 0x1000);
+    if (!(flags & 4))
+        close_arc(1);
+    return ok;
+}
+
+unsigned char far GetAutoMapLevel(int flags, int lev)
+{
+    unsigned char ok = 0;
+    register int n;
+
+    if (!(flags & 4) && !open_arc(1, HomeDir))
+        memset(PlayersMap, 0, 0x1000);
+    else {
+        n = get_arc(1, lev + 0x9F, (char far *)PlayersMap);
+        ok = n == 0 || n == 0x1000;
+        if (!(flags & 4))
+            close_arc(1);
+    }
+    return ok;
+}
+
+void far ExitAutoMap(void)
+{
+    mouse_hide();
+    unforce_mouse_cursor(0);
+    SaveTheWords(level);
+    player->map_scrap = level;
+    if (level != PlayerLevel)
+        GetAutoMapLevel(0, PlayerLevel);
+    if (player->b60) {
+        set_new_music(5);
+        change_music_maybe();
+    }
+    grfx_clear();
+    grfx_quikpal(0);
+    mouse_freereign();
+    mouse_show();
+}
+
+void far ClearAutoMap(void)
+{
+    memset(PlayersMap, 0, 0x1000);
+}
+
+void far PixelDarken(int x, register int y, int base, unsigned n);
+char far ShadeSide(int side, int x, int y);
+
+void far ShowDungeonMap(void)
+{
+    int x;
+    int y;
+    int t;
+    int px;
+    int py;
+    char side[4];
+    register int i;
+    register int d;
+
+    for (y = 1; y < 0x3F; y++) {
+        for (x = 1; x < 0x3F; x++) {
+            t = PlayersMap[y][x] & 0xF;
+            if (t <= 0 || t >= 10)
+                continue;
+            DoTile(t, x, y);
+            memset(side, 0, 4);
+            if (tile_walls[t] & 1) {
+                d = t - 2;
+                d = diag_side[d];
+                side[d] = ShadeSide(d, x, y);
+                d = (d + 1) & 3;
+                side[d] = ShadeSide(d, x, y);
+            } else {
+                for (i = 0; i < 4; i++)
+                    side[i] = ShadeSide(i, x, y);
+            }
+            px = x * 3 + 10;
+            py = y * 3 + 7;
+            for (i = 0; i < 4; i++)
+                if (side[i] && side[(i + 1) & 3])
+                    PixelDarken(px - ((i & 2) << 1), py - ((i & 2) << 1), 3, 2);
+        }
+    }
+}
+
+char far ShadeSide(int side, int x, int y)
+{
+    int t;
+    int px;
+    int a;
+    int b;
+    register int i;
+    register int py;
+
+    px = (x - 1) * 3 + 10;
+    py = (y - 1) * 3 + 7;
+    switch (side) {
+    case 0: y++; break;
+    case 1: x++; break;
+    case 2: y--; break;
+    case 3: x--; break;
+    }
+    t = PlayersMap[y][x] & 0xF;
+    if (t > 0 && t < 10)
+        return 0;
+    if (t == 11) {
+        a = 0;
+        b = 4;
+    } else {
+        a = 6;
+        b = 2;
+    }
+    switch (side) {
+    case 0:
+        py += 4;
+    case 2:
+        py--;
+        for (i = 0; i < 3; i++)
+            PixelDarken(px + i, py, a, b);
+        break;
+    case 1:
+        px += 4;
+    case 3:
+        px--;
+        for (i = 0; i < 3; i++)
+            PixelDarken(px, py + i, a, b);
+        break;
+    }
+    return 1;
+}
+
+void far PixelDarken(int x, register int y, int base, unsigned n)
+{
+    register int d;
+
+    d = 0x7FFF / n;
+    *pixel_color = gr_read_pixel(x, y);
+    *pixel_color += base + rand() / d;
+    gr_pixel(x, y, base + rand() / d + gr_read_pixel(x, y));
+}
+
+void far DoTile(int type, int x, int y)
+{
+    int px;
+    int py;
+    unsigned char shade;
+    unsigned char kind;
+    unsigned char b;
+    register unsigned j;
+    register unsigned i;
+
+    b = PlayersMap[y][x];
+    shade = b >> 6;
+    kind = b & 0x30;
+    if (kind == 0x30 || kind == 0x20)
+        shade = 0;
+    px = (x - 1) * 3 + 10;
+    py = (y - 1) * 3 + 7;
+    if (type >= 6)
+        type = 1;
+    type--;
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++) {
+            switch (tile_pattern[type][j][i]) {
+            case 1:
+                switch (shade) {
+                case 0:
+                    PixelDarken(px + i, py + j, 2, 3);
+                    break;
+                case 1:
+                    gr_pixel(px + i, py + j, rand() % 3 + 0xB1);
+                    break;
+                case 2:
+                    gr_pixel(px + i, py + j, rand() % 3 + 0xB5);
+                    break;
+                case 3:
+                    gr_pixel(px + i, py + j, rand() % 3 + 0xB9);
+                    break;
+                }
+                break;
+            case 2:
+                PixelDarken(px + i, py + j, 6, 2);
+                break;
+            }
+        }
+    }
+    switch (kind) {
+    case 0x30:
+    case 0x40:
+        for (i = 0; i < 3; i++)
+            for (j = 0; j < 3; j++)
+                PixelDarken(px + i, py + j, 6, 3);
+        break;
+    case 0x20:
+        for (j = 0; j < 3; j++)
+            for (i = 0; i < 3; i++)
+                gr_pixel(px + i, py + j, (int)((long)rand() * 3 / 0x8000L) + 0xE9);
+        break;
+    case 0x10:
+        DoDoorTile(x, y, px, py);
+        break;
+    }
+}
+
+void far DoDoorTile(int x, int y, register int px, register int py)
+{
+    PixelDarken(++px, ++py, 6, 3);
+    for (door_dir = 0; door_dir < 4; door_dir++) {
+        if ((PlayersMap[y + door_dy[door_dir]][x + door_dx[door_dir]] & 0xF) == 1
+            || (PlayersMap[y - door_dy[door_dir]][x - door_dx[door_dir]] & 0xF) == 1) {
+            PixelDarken(px + door_dy[door_dir], py + door_dx[door_dir], 6, 3);
+            PixelDarken(px - door_dy[door_dir], py - door_dx[door_dir], 6, 3);
+            break;
+        }
+    }
+}
+
+/* DOS only, and nothing calls it: darken the pixel at one corner of a tile. */
+void far ovr094_9D2(int corner, int x, int y)
+{
+    register int px;
+    register int py;
+
+    px = x * 3 + 10 - (((corner + 1) & 1) << 2);
+    py = (y - 1) * 3 + (corner >> 1 << 1) + 7;
+    PixelDarken(px, py, 6, 2);
+}
+
+/* Of two notes under the mouse, the one whose middle is nearer. */
+struct ATM far * far DetermineBetterHit(struct ATM far *a, struct ATM far *b, int x, int y)
+{
+    int ax;
+    int bx;
+    int ay;
+    register int w;
+    register int by;
+    char buf[50];
+
+    if (a == 0)
+        return b;
+    if (b == 0)
+        return a;
+    str_copy(buf, a->text);
+    w = string_width(buf);
+    ax = abs(a->x + w / 2 - x);
+    ay = abs(a->y - 2 - y);
+    str_copy(buf, b->text);
+    w = string_width(buf);
+    bx = abs(b->x + w / 2 - x);
+    by = abs(b->y - 2 - y);
+    if (by < ay)
+        return b;
+    if (bx < ax)
+        return b;
+    return a;
+}
+
+/* Which part of the gem the mouse is over: 0 the middle, 1 to 8 round the edge. */
+int far true_gem_region(int x, int y)
+{
+    register int region = 0;
+
+    x -= 0x116;
+    y -= 0x77;
+    x += 3;
+    y++;
+    if (abs(y) > abs(x) * 2)
+        region = y > 0 ? 1 : 5;
+    else if (abs(x) > abs(y) + 9)
+        region = x > 0 ? 3 : 7;
+    else
+        region = ((4 - (octant(x, y) >> 1)) & 3) * 2 + 2;
+    if (region & 1) {
+        if (abs(x) <= 0xF && abs(y) <= 0xF)
+            region = 0;
+    } else if (abs(x) + abs(y) <= 0x15)
+        region = 0;
+    return region;
+}
+
+void far ChangeAutoMapLevel(int lev);
+
+void far ManageDungeonMap(void)
+{
+    int mx;
+    int my;
+    int w;
+    int i;
+    int but;
+    int key;
+    struct ATM far *note;
+    struct ATM far *best;
+    char ch[2];
+    int curx;
+    int hit;
+    int gem;
+    int lev;
+    char text[50];
+    register int cmd;
+    register int len;
+
+    gem = -1;
+    *foreground_color = 0x4E;
+    *background_color = 0x4E;
+    mx = inplist->x - 0x13;
+    my = inplist->y - 7;
+    cmd = inplist->cmd;
+    if (cmd >= 4)
+        return;
+    mouse_release(1);
+    if (mx > 0xFC && mx < 0x140 && my > 0x1B && my < 0x3B) {
+        cmd = 0xFF;
+        newscr(1);
+    } else if (mx > 0xFC && mx < 0x140 && my > 0x3B && my < 0x5A) {
+        cmd = 0xFD;
+        mouse_constrain(0, 0, 0x13F, 0xC7);
+        mouse_hide();
+        force_mouse_cursor(0x1079);
+        mouse_show();
+        do {
+            key = mouse_get_input_sp();
+            if (key > 3)
+                keyboard_mouse(key);
+        } while (key < 1 || key > 3);
+        mouse_getxy(&mx, &my);
+        mouse_constrain(9, 3, 0x13F, 0xC7);
+        unforce_mouse_cursor(1);
+    } else if (mx > 0x10C && mx < 0x140 && my > 0xAC && my < 0xC7)
+        cmd = 0xFC;
+    else if (mx > 0x10C && mx < 0x140 && my > 0 && my < 0x1B)
+        cmd = 0xFB;
+    else if (mx > 0xFC && mx < 0x131 && my > 0x5D && my < 0x92) {
+        gem = true_gem_region(mx, my);
+        if ((gem & 6) == 6)
+            gem = 0xD - gem;
+        cmd = 0xFA;
+    } else if (mx < 0 || my > 0xC7)
+        return;
+    else
+        cmd = 0xFE;
+    switch (cmd) {
+    case 0xFE:
+        ch[1] = 0;
+        if (num_words != 100) {
+            note = &ATM_Strings[num_words];
+            set_font_size(0);
+            force_mouse_cursor(0x107A);
+            note->x = mx + 2;
+            note->y = my + 2;
+            text[0] = 0;
+            len = -1;
+            curx = note->x - 1;
+            mouse_putxy(curx + 9, my + 0xF);
+            for (;;) {
+                while ((cmd = do_keyboard_input(0)) < 0)
+                    if ((cmd = mouse_getbut(&but)) > 0)
+                        break;
+                if (cmd == 0xD || cmd == 0x1B || cmd < 4)
+                    break;
+                if (cmd >= 0x20 && cmd <= 0x7A) {
+                    ch[0] = toupper(cmd);
+                    len++;
+                    w = string_width(text) + string_width(ch);
+                    if (note->x + w > 0x13B)
+                        len--;
+                    else if (len > 0x2D)
+                        len = 0x2D;
+                    else
+                        text[len] = ch[0];
+                } else if (cmd == 8) {
+                    if (--len < -1)
+                        len = -1;
+                    w = string_width(text);
+                    if (w > 0) {
+                        set_the_color(0x106);
+                        rectangle(note->x, note->y, note->x + w, note->y - 6);
+                    }
+                }
+                text[len + 1] = 0;
+                curx = note->x + string_width(text) - 1;
+                mouse_putxy(curx + 9, my + 0xF);
+                string_to_screen(text, note->x, note->y);
+            }
+            set_font_size(1);
+            if (text[0]) {
+                notes_dirty = 1;
+                str_copy(note->text, text);
+                num_words++;
+            }
+        }
+        mouse_hide();
+        RedisplayStrings();
+        mouse_putxy(curx + 0x13, my + 7);
+        unforce_mouse_cursor(2);
+        break;
+    case 0xFD:
+        if (num_words > 0) {
+            best = 0;
+            my -= 5;
+            for (i = 0; i < num_words; i++) {
+                note = &ATM_Strings[i];
+                str_copy(text, note->text);
+                w = string_width(text);
+                if (note->x <= mx && note->x + w >= mx && note->y - 5 <= my && note->y >= my) {
+                    best = DetermineBetterHit(best, note, mx, my);
+                    if (best == note)
+                        hit = i;
+                }
+            }
+            if (best) {
+                notes_dirty = 1;
+                str_copy(text, best->text);
+                w = string_width(text);
+                set_the_color(0x106);
+                rectangle(best->x, best->y, best->x + w, best->y - 5);
+                if (num_words - 1 == hit)
+                    num_words--;
+                else
+                    ATM_Strings[hit].x = -1;
+                RedisplayStrings();
+            }
+        }
+        mouse_show();
+        break;
+    case 0xFC:
+        if ((level & 7) != 1)
+            ChangeAutoMapLevel(level - 1);
+        break;
+    case 0xFB:
+        if (level & 7)
+            ChangeAutoMapLevel(level + 1);
+        break;
+    case 0xFA:
+        if (gem != -1) {
+            lev = ((level - 1) & 7) + (gem << 3) + 1;
+            ChangeAutoMapLevel(lev);
+        }
+        break;
+    }
+    mouse_release(1);
+}
+
+void far RedisplayStrings(void)
+{
+    char buf[50];
+    register int i;
+
+    set_font_size(0);
+    *foreground_color = 0x4E;
+    *background_color = 0x4E;
+    for (i = 0; i < num_words; i++) {
+        str_copy(buf, ATM_Strings[i].text);
+        if (ATM_Strings[i].x >= 0) {
+            str_copy(buf, ATM_Strings[i].text);
+            string_to_screen(buf, ATM_Strings[i].x, ATM_Strings[i].y);
+        }
+    }
+    set_font_size(1);
+}
+
+void far SaveTheWords(int lev)
+{
+    register int i;
+
+    if (!notes_dirty)
+        return;
+    if (!(num_words | old_strings))
+        return;
+    for (i = 0; i < num_words; i++) {
+        if (ATM_Strings[i].x < 0) {
+            movedata(FP_SEG(&ATM_Strings[i + 1]), FP_OFF(&ATM_Strings[i + 1]),
+                     FP_SEG(&ATM_Strings[i]), FP_OFF(&ATM_Strings[i]),
+                     (100 - i) * sizeof(struct ATM));
+            num_words--;
+        }
+    }
+    if (open_arc(1, HomeDir)) {
+        if (!put_arc(1, lev + 0xEF, (char far *)ATM_Strings, num_words * sizeof(struct ATM)))
+            ;
+        close_arc(1);
+    }
+}
+
+unsigned char far GetTheWords(int lev)
+{
+    old_strings = num_words = 0;
+    if (open_arc(1, HomeDir)) {
+        old_strings = num_words = get_arc(1, lev + 0xEF, (char far *)ATM_Strings) / sizeof(struct ATM);
+        close_arc(1);
+        return 1;
+    }
+    return 0;
+}
+
+void far show_a_part(register int part, int how)
+{
+    struct { unsigned char x, y; } pos[9] = {
+        { 0x0B, 0x8D }, { 0x1B, 0x8C }, { 0x23, 0x83 }, { 0x1B, 0x71 }, { 0x0B, 0x69 },
+        { 0x00, 0x83 }, { 0x01, 0x71 }, { 0x01, 0x8D }, { 0x07, 0x85 }
+    };
+    register int pic = part + 0x107F;
+
+    if (how) {
+        if (how == 2)
+            pic += 8;
+        pic_to_screen(pic, pos[part].x + 0x101, pos[part].y, 0, 0);
+    }
+}
+
+void far show_gem_parts(int lev)
+{
+    int i;
+    int old;
+    register int k;
+
+    old = Transparency;
+    Transparency = 1;
+    for (i = 0; i < 8; i++)
+        if (player->gems & (1 << i))
+            show_a_part(i, 1);
+    k = (lev - 1) / 8;
+    if (k == 0)
+        k = 8;
+    else
+        k--;
+    show_a_part(k, 2);
+    Transparency = old;
+}
+
+void far ShowAutoMapLevel(int lev)
+{
+    int px;
+    char num[2];
+    char far *buf;
+    char ok;
+    register int py;
+    register unsigned ws;
+
+    mouse_hide();
+    ws = get_workspace();
+    if (ws == 0)
+        return;
+    buf = MK_FP(ws, 0);
+    grSoftPageFlip();
+    set_workspace();
+    ok = disk_to_vid(0, buf);
+    release_workspace();
+    if (ok) {
+        ShowDungeonMap();
+        show_gem_parts(lev);
+        if (lev == PlayerLevel && player->automap) {
+            px = (TILE_X(ThePlayer) - 1) * 3 + 10 - 1;
+            py = (TILE_Y(ThePlayer) - 1) * 3 + 12;
+            Transparency = 1;
+            pic_to_screen(0x103F, px, py, 5, 8);
+            Transparency = 0;
+        }
+        level = lev;
+        grPageFlip();
+        grfx_quikpal(1);
+        grSoftPageFlip();
+        copy_hidden_to_visible();
+        if (GetTheWords(lev))
+            RedisplayStrings();
+        *foreground_color = 0x4E;
+        *background_color = 0x4E;
+        set_font_size(3);
+        num[0] = (lev - 1 & 7) + '1';
+        num[1] = 0;
+        string_to_screen(num, 0x115, 0xBF);
+        set_font_size(1);
+    } else {
+        grSoftPageFlip();
+        mouse_show();
+        ExitAutoMap();
+    }
+    release_workspace();
+    mouse_show();
+}
+
+void far ChangeAutoMapLevel(register int lev)
+{
+    SaveTheWords(level);
+    ClearAutoMap();
+    if (lev < 0x50 && lev != 0x47)
+        GetAutoMapLevel(0, lev);
+    ShowAutoMapLevel(lev);
+}
+
+/* IDA ChangeThemeToBrittania_ovr094_158E: FM Towns automap_scr_ sits at this position and
+   is the same one call, to loop_music_maybe_. */
+void far automap_scr(void)
+{
+    loop_music_maybe();
+}
+
+/* IDA GetMapPieceSegmentNo_ovr094_1598: FM Towns map_section_ at this position is the same
+   code. Which of the map's eight sections (1 to 7, round the middle) a point lies in. */
+int far map_section(register int x, register int y)
+{
+    int t;
+    register int s = 0;
+
+    if (x * x + y * y <= 0x51)
+        return 0;
+    if (y < 0) {
+        y = -y;
+        x = -x;
+        s = 0x1C;
+    }
+    if (x < 0) {
+        t = y;
+        y = -x;
+        x = t;
+        s += 0xE;
+    }
+    if (y < x)
+        s += y * 7 / x;
+    else
+        s += 0xE - x * 7 / y;
+    s = s / 8 + 1;
+    if (s > 7)
+        return 7;
+    return s;
+}
+
+void far update_map_scraps(int scrap, int lev, unsigned char sections)
+{
+    unsigned char far *buf;
+    int sect;
+    unsigned char flag;
+    unsigned char old;
+    unsigned char cur;
+    int count;
+    int xp;
+    struct ATM far *note;
+    int nx;
+    int ny;
+    register int x;
+    register int y;
+
+    xp = 0;
+    SaveAutoMapLevel(0, PlayerLevel);
+    GetAutoMapLevel(0, scrap);
+    if (!get_workspace())
+        return;
+    buf = MK_FP(set_workspace(), 0);
+    for (y = 0x3F; y >= 1; y--) {
+        for (x = 1; x <= 0x3F; x++) {
+            sect = map_section(x - 0x20, y - 0x20);
+            if (((sections >> sect) & 1) == 0) {
+                cur = 0xF & PlayersMap[y][x];
+                if (cur >= 6 && cur <= 9)
+                    cur = 0xB;
+                else if (cur <= 5)
+                    cur = cur + 0xA;
+                PlayersMap[y][x] |= cur;
+            }
+        }
+    }
+    movedata(FP_SEG(PlayersMap), FP_OFF(PlayersMap), FP_SEG(buf), FP_OFF(buf), 0x1000);
+    GetAutoMapLevel(0, lev);
+    for (y = 0x3F; y >= 1; y--) {
+        for (x = 1; x < 0x3F; x++) {
+            old = 0xF & (buf + (y << 6))[x];
+            cur = 0xF & PlayersMap[y][x];
+            flag = 0;
+            if (cur == 0)
+                flag = 1;
+            else if (old < 0xA && cur >= 0xA)
+                flag = 1;
+            if (flag) {
+                xp += lev / 8 + 1;
+                PlayersMap[y][x] = (buf + (y << 6))[x];
+            }
+        }
+    }
+    player_get_exp(xp / 20);
+    SaveAutoMapLevel(0, lev);
+    GetTheWords(scrap);
+    count = num_words;
+    movedata(FP_SEG(ATM_Strings), FP_OFF(ATM_Strings), FP_SEG(buf), FP_OFF(buf),
+             count * sizeof(struct ATM));
+    GetTheWords(lev);
+    for (x = 0; x < count; x++) {
+        note = (struct ATM far *)buf + x;
+        nx = (note->x - 10) / 3;
+        ny = (note->y - 7) / 3;
+        sect = map_section(nx - 0x20, ny - 0x20);
+        if ((sections >> sect) & 1 && num_words < 100) {
+            ATM_Strings[num_words] = *note;
+            num_words++;
+            notes_dirty = 1;
+        }
+    }
+    SaveTheWords(lev);
+    GetAutoMapLevel(0, PlayerLevel);
+    release_workspace();
+}
+
+/* IDA AutoMapTrap_ovr094_1878: FM Towns make_terrain_unseen_ at this position is the same
+   code. Marks a block of the map as not seen. */
+void far make_terrain_unseen(int x, int y, unsigned w, unsigned h)
+{
+    unsigned char hi;
+    register int i;
+    register int j;
+    unsigned char t;
+
+    for (i = x; i <= x + w; i++) {
+        for (j = y; j <= y + h; j++) {
+            t = 0xF & PlayersMap[j][i];
+            hi = 0xF0 & PlayersMap[j][i];
+            if (t <= 5)
+                t = t + 0xA;
+            PlayersMap[j][i] = hi | t & 0xF;
+        }
+    }
+}

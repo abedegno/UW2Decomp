@@ -2,6 +2,7 @@
 # address: DS:offset for near data, segment:offset for far code (load-relative paragraphs)
 __ctype	DS:1BF6	provisional
 __dblen	4FAF:C77E	FM Towns
+__input_addkey	1AB4:0104	FM Towns
 _access	0E72:0249	FM Towns
 _ActiveMob	DS:2596	FM Towns
 _ActiveObj	DS:6B70	FM Towns
@@ -17,6 +18,7 @@ _AnimObjInPipe	DS:2C7A	FM Towns
 _answer_x	DS:8186	provisional
 _area_spell_state	DS:1B0A	FM Towns
 _AskHowMany	6513:003E	FM Towns
+_ATM_Strings	3CF5:468E	FM Towns
 _atol	0E72:1597	provisional
 _attach_eye	656A:0057	FM Towns
 _automap_area	641E:0098	FM Towns
@@ -73,6 +75,7 @@ _CompressLZW_disk	6522:0025	FM Towns
 _Containers	DS:6B10	FM Towns
 _conv_edge_phase	DS:098A	provisional
 _conv_inv_special	6448:0093	FM Towns
+_copy_hidden_to_visible	0085:4B1B	FM Towns
 _copy_visible_to_hidden	0085:4B57	FM Towns
 _CP	DS:26A6	FM Towns
 _cPlaceFB	2110:0D1D	FM Towns
@@ -116,6 +119,7 @@ _demo_mode	DS:2C5D	FM Towns
 _destroy_floatskull	64A5:00A2	FM Towns
 _DetectedTrap	6599:0084	FM Towns
 _didMouseInput	DS:0983	FM Towns
+_disk_to_vid	6588:0025	FM Towns
 _dispel_spell	653A:002F	FM Towns
 _display_inventory_no_show	DS:15D0	FM Towns
 _display_scr	2529:0008	FM Towns
@@ -130,6 +134,7 @@ _DisplayToSlot	DS:1784	FM Towns
 _do_3d_grab	2CAE:02AA	FM Towns
 _do_3d_pickup	1FCD:037E	FM Towns
 _do_fbuf_bms	30D3:1567	FM Towns
+_do_keyboard_input	1B8F:04AE	FM Towns
 _do_main_scroll	342C:0022	FM Towns
 _do_mstone	6599:0039	FM Towns
 _do_physics	2B0D:000C	FM Towns
@@ -161,6 +166,7 @@ _empty_text	DS:098D	provisional
 _EncumCheck	650A:0075	FM Towns
 _errmsg	65E0:0089	FM Towns
 _fadein3d	64E2:0043	FM Towns
+_fadeout	64E2:0066	FM Towns
 _fadeout3d	64E2:0052	FM Towns
 _farfree	0E72:325E	provisional
 _farmalloc	0E72:3344	provisional
@@ -214,7 +220,9 @@ _globals	DS:1AD4	FM Towns
 _glocs	DS:26EE	FM Towns
 _go_fish	64A5:0066	FM Towns
 _gr_entry	35AF:00CB	FM Towns
+_gr_pixel	1F8C:0255	provisional
 _gr_putlab	35AF:0213	FM Towns
+_gr_read_pixel	0085:475E	provisional
 _gr_tostrt	35AF:00D6	FM Towns
 _grdb_blank	35AF:0006	FM Towns
 _grfx_clear	64E2:007A	FM Towns
@@ -258,6 +266,7 @@ _itoa	0E72:1D1B	FM Towns
 _j_LikelyWaitForMore_ovr139_29	6559:002A	provisional
 _j_WriteTextWithMORE_ovr139_BD	6559:0039	provisional
 _key_on	DS:2138	FM Towns
+_keyboard_mouse	1B8F:0DA7	FM Towns
 _kill_all_effects	1C86:20C1	FM Towns
 _kill_effect	1C86:1FFD	FM Towns
 _Killorn_just_crashed	64A5:00B1	FM Towns
@@ -277,6 +286,7 @@ _local_do_palette	1F8C:0220	FM Towns
 _loct	DS:2C61	FM Towns
 _look_nothing	2529:073F	FM Towns
 _LookAt	651C:0048	FM Towns
+_loop_music_maybe	1C86:2B73	FM Towns
 _LootCreature	DS:863A	provisional
 _lseek	0E72:1C75	FM Towns
 _ltoa	0E72:1D5C	FM Towns
@@ -327,10 +337,12 @@ _mouse_constrain	1B8F:03B0	FM Towns
 _mouse_dragged	1B8F:0326	FM Towns
 _mouse_freereign	1B8F:03CD	FM Towns
 _mouse_get_input	1B8F:0594	FM Towns
+_mouse_get_input_sp	1B8F:05A1	FM Towns
 _mouse_getbut	1B8F:0287	FM Towns
 _mouse_getxy	1B8F:01FB	FM Towns
 _mouse_hide	1B8F:00D6	FM Towns
 _mouse_in_scroll	DS:34B2	FM Towns
+_mouse_putxy	1B8F:025A	FM Towns
 _mouse_release	1B8F:02A9	FM Towns
 _mouse_show	1B8F:00C0	FM Towns
 _MousQUp	1B8F:0B30	FM Towns
@@ -393,6 +405,7 @@ _objhit_x	DS:25BD	provisional
 _objhit_y	DS:25BE	provisional
 _ObjsBeCombinable	6465:002F	FM Towns
 _oCollisions	DS:2520	FM Towns
+_octant	65E0:0025	FM Towns
 _open	0E72:1E46	FM Towns
 _open_arc	6417:002F	FM Towns
 _OpenBag	DS:1622	FM Towns
@@ -415,6 +428,7 @@ _pic_to_screen	1A6D:026B	FM Towns
 _pick_inv	650A:0066	FM Towns
 _PickMap	DS:24F4	FM Towns
 _PickUp	DS:2F6C	FM Towns
+_pixel_color	DS:21F0	provisional
 _place_new	32FA:04B4	FM Towns
 _play_effect	1C86:1C50	FM Towns
 _play_effect_here	1C86:1DB2	FM Towns
@@ -460,6 +474,7 @@ _PT	DS:26AA	FM Towns
 _pTxtId	DS:24E4	FM Towns
 _punt_all_digi_fx	1C86:0284	FM Towns
 _punt_void	6599:0070	FM Towns
+_put_arc	6417:004D	FM Towns
 _put_at	2754:1245	FM Towns
 _put_effect	34A2:0B8D	FM Towns
 _put_player_in_jail	64A5:0093	FM Towns
@@ -585,6 +600,7 @@ _timercount	DS:3576	FM Towns
 _TimeStop	DS:037F	FM Towns
 _toast_animobj	34A2:00EA	FM Towns
 _toggle_fightmode	2529:13E5	FM Towns
+_toupper	0E72:142C	FM Towns
 _trans	DS:2C5E	FM Towns
 _Transparency	370D:0DC5	FM Towns
 _trap_obj_del	65D5:0034	FM Towns

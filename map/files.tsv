@@ -47,7 +47,7 @@ seg046_37CD	assembly	43	7963	0	6	0	37
 ovr091	C	2	44	0	0	0	2			
 ovr092	C	7	44	0	0	0	7			
 ovr093	C	13	3629	7	4	0	2	get_ulong_	check_arc_	
-ovr094	C	28	6350	20	3	2	3	AutoMap_	update_map_scraps_	
+ovr094	C	28	6350	20	3	2	3	AutoMap_	update_map_scraps_	yes
 ovr095	C	58	8859	0	6	13	39			
 ovr096	C	27	5202	11	13	1	2	babl_hack_	x_obj_pos_	
 ovr097	C	37	8598	18	5	4	10	setup_to_barter_	does_npc_like_	

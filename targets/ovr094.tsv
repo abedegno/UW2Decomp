@@ -14,8 +14,8 @@ PixelDarken	ovr094_661	0x661	0x6C
 DoTile	PossiblyDrawAutomap_ovr094_6CD	0x6CD	0x20D
 DoDoorTile	ovr094_8DA	0x8DA	0xF8
 ovr094_9D2	ovr094_9D2	0x9D2	0x47
-ovr094_A19	ovr094_A19	0xA19	0xF8
-ovr094_B11	ovr094_B11	0xB11	0xCE
+DetermineBetterHit	ovr094_A19	0xA19	0xF8
+true_gem_region	ovr094_B11	0xB11	0xCE
 ManageDungeonMap	AutomapRelated_ovr094_BDF	0xBDF	0x568
 RedisplayStrings	WriteMapNotesToScreen_ovr094_1147	0x1147	0xBA
 SaveTheWords	MoveMapNotes_ovr094_1201	0x1201	0xC5
@@ -24,7 +24,7 @@ show_a_part	ovr094_1317	0x1317	0x62
 show_gem_parts	ovr094_1379	0x1379	0x82
 ShowAutoMapLevel	DisplayAutomapText_ovr094_13FB	0x13FB	0x160
 ChangeAutoMapLevel	ovr094_155B	0x155B	0x33
-ChangeThemeToBrittania_ovr094_158E	ChangeThemeToBrittania_ovr094_158E	0x158E	0xA
-GetMapPieceSegmentNo_ovr094_1598	GetMapPieceSegmentNo_ovr094_1598	0x1598	0x8A
+automap_scr	ChangeThemeToBrittania_ovr094_158E	0x158E	0xA
+map_section	GetMapPieceSegmentNo_ovr094_1598	0x1598	0x8A
 update_map_scraps	CopyMapPiece_ovr094_1622	0x1622	0x256
-AutoMapTrap_ovr094_1878	AutoMapTrap_ovr094_1878	0x1878	0x63
+make_terrain_unseen	AutoMapTrap_ovr094_1878	0x1878	0x63

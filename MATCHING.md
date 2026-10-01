@@ -162,5 +162,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Switch jump tables can follow the last function**; the target table's size stops at its far return, and `match.py` accepts compiled code that runs on as long as those bytes match too.
 - **A `goto`** shows as a jump straight past later code, with reloads at its label; when nothing else explains a jump over a following test, try `goto`.
 - **`if (x != K) continue;` at the top of a loop body** forces a reload at the fall-through label; the nested `if (x == K) {...}` form does not.
+- **Self-assignments survive `-O`**: `x = x;` on a char local is kept as a load and a store, so a load and store of the same slot inside an apparently empty test is that.
+- **`if (((c >> n) & 1) == 0)`** gives `test al,1`; `!((c >> n) & 1)` gives `test ax,1`.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.
