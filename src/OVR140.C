@@ -23,7 +23,7 @@ void far load_doors(void);
 /* seg009, no FM Towns counterpart known: the first returns a segment for a picture
    number, the second takes a far pointer, two sizes and a count and returns one. */
 unsigned far seg009_392(int n);
-unsigned char far * far seg009_3F2(unsigned char far *p, int w, int h, int n);
+unsigned char far * far grs_scaledown(unsigned char far *p, int w, int h, int n);
 void far show(int x, int y, unsigned char far *buf, int h, int w, int a, int b);
 
 void far load_txtmaps(void);
@@ -50,7 +50,7 @@ void far ovr140_4F(int n, int x, int y)
     unsigned char far *p;
 
     p = MK_FP(seg009_392(n), 0);
-    p = seg009_3F2(p, 0x40, 0x40, 4);
+    p = grs_scaledown(p, 0x40, 0x40, 4);
     show(x, y, p, 0x10, 0x10, 0, 0);
 }
 

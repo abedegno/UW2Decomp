@@ -55,7 +55,7 @@ void far DRAW_RELATED_seg017_2179_2A2();
 void far DRAW_RELATED_seg017_2179_361();
 void far seg042_35ED_12B(void);
 void far mem_set(void far *destination, int value, unsigned count);
-unsigned char far *far seg009_3F2();
+unsigned char far *far grs_scaledown();
 unsigned char far preload_cr();
 
 unsigned char far get_pals(void)
@@ -318,7 +318,7 @@ unsigned char far load_tr_ems(char *art)
     return i == 0x40;
 }
 
-/* DOS only: all 256 textures, each reduced by seg009_3F2 to 256 bytes, into destination. */
+/* DOS only: all 256 textures, each reduced by grs_scaledown to 256 bytes, into destination. */
 int far LoadArtFile_ovr119_804(char *art, void far *destination, int unused)
 {
     void far *dst;
@@ -336,7 +336,7 @@ int far LoadArtFile_ovr119_804(char *art, void far *destination, int unused)
             mem_set(cmpbuf1_start, 0, bytes);
         else if (ReadFileToAddress(grfp->fd, cmpbuf1_start, bytes) != bytes)
             break;
-        source = seg009_3F2(cmpbuf1_start, gsize, gsize, 4);
+        source = grs_scaledown(cmpbuf1_start, gsize, gsize, 4);
         movedata(FP_SEG(source), FP_OFF(source), FP_SEG(dst), FP_OFF(dst), 0x100);
         *((unsigned *)&dst) += 0x100;
         i++;

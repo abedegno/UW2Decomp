@@ -161,6 +161,7 @@ _CmapFrm	4FAF:E2C9	FM Towns
 _CmaptoPg	4FAF:E0C9	FM Towns
 _cmbModTH	DS:24CA	FM Towns
 _cmpbuf1_start	43A0:0000	FM Towns
+_cmpbuf2_start	43A0:5400	FM Towns
 _CN1	DS:2604	FM Towns
 _CN2	DS:262C	FM Towns
 _CN4	DS:267C	FM Towns
@@ -309,6 +310,7 @@ _draw_conv_edges	342C:00B8	FM Towns
 _draw_edges	342C:0064	FM Towns
 _draw_mask	0000:0120	FM Towns
 _DRAW_RELATED_seg017_2179_2A2	1F8C:02A2	provisional
+_DRAW_RELATED_seg017_2179_320	1F8C:0320	provisional
 _DRAW_RELATED_seg017_2179_361	1F8C:0361	provisional
 _draw_scroll	342C:0618	FM Towns
 _draw_sprite	0000:00EB	FM Towns
@@ -368,8 +370,10 @@ _finish_player	2FBE:05EB	FM Towns
 _fire_trigger_at	64A5:0034	FM Towns
 _fireball_effect	34A2:08EA	FM Towns
 _first_anim	4FAF:D030	FM Towns
+_first_button	DS:1500	FM Towns
 _first_punt	64D4:002F	FM Towns
 _first_tmobj	DS:1502	FM Towns
+_first_vram	DS:1504	FM Towns
 _fix_name_string	3265:03ED	FM Towns
 _FixBagArea	64F7:004D	FM Towns
 _FixOpenBag	64F7:0048	FM Towns
@@ -470,6 +474,7 @@ _gronk_whoami	65A7:004D	FM Towns
 _grPageFlip	0085:46AA	FM Towns
 _grs_3dinf	4FAF:E049	FM Towns
 _grs_off	DS:2194	FM Towns
+_grs_scaledown	1A6D:03F2	FM Towns
 _grs_unpack	1A6D:0150	FM Towns
 _grs_which1	1A6D:0227	FM Towns
 _grSoftPageFlip	0085:46E6	FM Towns
@@ -550,6 +555,24 @@ _ItemWeight	650A:004D	FM Towns
 _itoa	0E72:1D1B	FM Towns
 _j_LikelyWaitForMore_ovr139_29	6559:002A	provisional
 _j_WriteTextWithMORE_ovr139_BD	6559:0039	provisional
+_joy_button_x	DS:027C	provisional
+_joy_button_y	DS:027E	provisional
+_joy_buttons	DS:2120	provisional
+_joy_center_x	DS:00E8	provisional
+_joy_center_y	DS:00EA	provisional
+_joy_clamp	DS:00F8	provisional
+_joy_divisor	DS:00F4	provisional
+_joy_filter_x	DS:00FE	provisional
+_joy_filter_y	DS:0100	provisional
+_joy_gain	DS:00FA	provisional
+_joy_interval	DS:00F6	provisional
+_joy_last_tick	DS:0102	provisional
+_joy_limit	DS:00FC	provisional
+_joy_max_x	DS:00EE	provisional
+_joy_max_y	DS:00F2	provisional
+_joy_min_x	DS:00EC	provisional
+_joy_min_y	DS:00F0	provisional
+_joy_position	DS:211C	provisional
 _JoyStickCalibration_seg011_1B8	1AFA:01B8	provisional
 _key	2110:0971	FM Towns
 _key_on	DS:2138	FM Towns
@@ -994,7 +1017,6 @@ _seg003_0272_5025	0085:5025	provisional
 _seg003_0272_51C8	0085:51C8	provisional
 _seg005_105F_19D9	0E72:19D9	provisional
 _seg009_392	1A6D:0392	provisional
-_seg009_3F2	1A6D:03F2	provisional
 _seg009_7	1A6D:0007	provisional
 _seg011_2C6	1AFA:02C6	provisional
 _seg011_6	1AFA:0006	provisional
@@ -1004,6 +1026,9 @@ _seg013_1D3C_E4	1B4F:00E4	provisional
 _seg016_1E73_2FCB	1C86:2FCB	provisional
 _seg021_22FD_755	2110:0755	provisional
 _seg021_22FD_791	2110:0791	provisional
+_seg021_22FD_7CD	2110:07CD	provisional
+_seg021_22FD_809	2110:0809	provisional
+_seg021_22FD_F83	2110:0F83	provisional
 _seg039_3452_814	3265:0814	provisional
 _seg042_35ED_12B	3400:012B	provisional
 _seg046_37CD_8D7	35E0:08D7	provisional
