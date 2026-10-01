@@ -1,0 +1,7 @@
+# segment ovr117 base 0x8A410 size 0x3A9 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+preload_cr	LoadCritterAnimations_ovr117_0	0x0	0x111
+ovr117_111	ovr117_111	0x111	0x52
+PreLoadCritPages	CritterCRxxLoadRelated_ovr117_163	0x163	0x123
+ovr117_286	ovr117_286	0x286	0x77
+ovr117_2FD	ovr117_2FD	0x2FD	0xAC

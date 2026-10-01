@@ -1,0 +1,6 @@
+# segment seg011 base 0x1DBA6 size 0x49B org 0x6
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+seg011_6	seg011_6	0x0	0x125
+seg011_12B	seg011_12B	0x125	0x8D
+JoyStickCalibration_seg011_1B8	JoyStickCalibration_seg011_1B8	0x1B2	0x10E
+seg011_2C6	seg011_2C6	0x2C0	0x1DB

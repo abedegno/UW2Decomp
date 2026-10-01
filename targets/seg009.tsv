@@ -1,0 +1,13 @@
+# segment seg009 base 0x1D2D7 size 0x46C org 0x7
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+seg009_7	seg009_7	0x0	0x6C
+seg009_73	seg009_73	0x6C	0xDD
+seg009_150	seg009_150	0x149	0x52
+seg009_1A2	seg009_1A2	0x19B	0x85
+grs_which1	GetMouseIcon_seg009_227	0x220	0x44
+pic_to_screen	DrawCursorAtCoordinate_seg009_26B	0x264	0x61
+seg009_2CC	seg009_2CC	0x2C5	0x66
+pic_to_fbuf	seg009_332	0x32B	0x21
+seg009_353	seg009_353	0x34C	0x3F
+seg009_392	seg009_392	0x38B	0x60
+seg009_3F2	seg009_3F2	0x3EB	0x81

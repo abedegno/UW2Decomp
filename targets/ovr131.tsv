@@ -1,0 +1,3 @@
+# segment ovr131 base 0x92870 size 0x18 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+show_credits	PlayCredits_ovr131_0	0x0	0x18

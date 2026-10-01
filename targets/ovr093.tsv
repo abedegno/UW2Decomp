@@ -1,0 +1,15 @@
+# segment ovr093 base 0x71830 size 0xE2F org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+SeekToOffset_ovr093_0	SeekToOffset_ovr093_0	0x0	0x128
+ovr093_128	ovr093_128	0x128	0xF4
+get_ulong	ReadDataBlockHeaderValue_ovr093_21C	0x21C	0x52
+WriteFourBytesToFileAtLocation_ovr093_26E	WriteFourBytesToFileAtLocation_ovr093_26E	0x26E	0x4C
+decode_ark	BuildArkDataFileName_ovr093_779D_2BA	0x2BA	0x7F
+CopyDataToFile_ovr093_339	CopyDataToFile_ovr093_339	0x339	0x6D
+open_arc	OpenArkFile_ovr093_779D_3A6	0x3A6	0xD9
+close_arc	CloseLevArk_ovr093_779D_47F	0x47F	0x32
+put_arc	WriteDataToARKFile_ovr093_779D_4B1	0x4B1	0x782
+get_arc	ReadArkFileBlock_ovr093_C33	0xC33	0x115
+check_arc	ReadDataFileBlock_ovr093_D48	0xD48	0x74
+ovr093_DBC	ovr093_DBC	0xDBC	0x5
+ovr093_DC1	ovr093_DC1	0xDC1	0x6E

@@ -1,0 +1,19 @@
+# segment ovr151 base 0x9A340 size 0x6C9 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+FindSCDRowsToExecute_ovr151_0	FindSCDRowsToExecute_ovr151_0	0x0	0xD3
+SetSomeValuesInSCDRows_ovr151_D3	SetSomeValuesInSCDRows_ovr151_D3	0xD3	0x59
+do_migrations	ovr151_12C	0x12C	0x7A
+Sched_SetBuf	SCD_AllocatePointer_ovr151_1A6	0x1A6	0x1B
+Sched_Load	LoadScdArkData_ovr151_1C1	0x1C1	0x57
+Sched_Should_Save	SaveScdArkRelated_ovr151_218	0x218	0x74
+Sched_Save	SaveSCD_ovr151_28C	0x28C	0x14
+GetSCDOffset_ovr151_2A0	GetSCDOffset_ovr151_2A0	0x2A0	0x1D
+Sched_SetTime	ProcessGeneralSCDBlock_ovr151_2BD	0x2BD	0x71
+Sched_WrapTime	SCD_ProcessBlock0_ovr151_32E	0x32E	0x78
+Sched_SetAllClocks	ProcessSCDARK_ovr151_3A6	0x3A6	0xB1
+ovr151_457	ovr151_457	0x457	0x25
+ovr151_47C	ovr151_47C	0x47C	0x15F
+DeleteSCDRecord_ovr151_5DB	DeleteSCDRecord_ovr151_5DB	0x5DB	0x8B
+ProbablyCopyEventRow_ovr151_666	ProbablyCopyEventRow_ovr151_666	0x666	0x3D
+Sched_Insert	ovr151_6A3	0x6A3	0x18
+ovr151_6BB	ovr151_6BB	0x6BB	0xE

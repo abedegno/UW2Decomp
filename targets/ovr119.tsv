@@ -1,0 +1,27 @@
+# segment ovr119 base 0x8AEA0 size 0xBC2 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+ovr119_0	ovr119_0	0x0	0x89
+_ld_open	LoadArtFileData_ovr119_89	0x89	0x14C
+_ld_close	ovr119_1D5	0x1D5	0x10
+ReadArtDataToLocation_ovr119_1E5	ReadArtDataToLocation_ovr119_1E5	0x1E5	0xBD
+ImageUnpackFunction_ovr119_2A2	ImageUnpackFunction_ovr119_2A2	0x2A2	0x54
+ovr119_2F6	ovr119_2F6	0x2F6	0x41
+ovr119_337	ovr119_337	0x337	0x40
+LoadIconsRelated_ovr119_377	LoadIconsRelated_ovr119_377	0x377	0x6F
+LoadIconsRelated_ovr119_3E6	LoadIconsRelated_ovr119_3E6	0x3E6	0x75
+ReturnSegment_3EE2_0_ovr119_45B	ReturnSegment_3EE2_0_ovr119_45B	0x45B	0xB
+GetArtResourceDST_ovr119_466	GetArtResourceDST_ovr119_466	0x466	0xC
+ovr119_472	ovr119_472	0x472	0x7D
+ProbablyArtUnpackCode_ovr119_4EF	ProbablyArtUnpackCode_ovr119_4EF	0x4EF	0x59
+gronk_gr	LoadArtImage_ovr119_548	0x548	0xD5
+load_gr_ems	LoadArtFile_ovr119_61D	0x61D	0x2E
+load_obj_ems	ovr119_64B	0x64B	0x24
+reload_obj_ems	ovr119_66F	0x66F	0x26
+LoadTextureFile_ovr119_695	LoadTextureFile_ovr119_695	0x695	0x16F
+LoadArtFile_ovr119_804	LoadArtFile_ovr119_804	0x804	0x117
+load_gr_video	LoadGRFile_ovr119_91B	0x91B	0x2E
+ovr119_949	ovr119_949	0x949	0x3D
+reload_gr_vpic	LoadArtFile_ovr119_986	0x986	0x37
+LoadPanelsResource_ovr119_9BD	LoadPanelsResource_ovr119_9BD	0x9BD	0x2B
+load_all_gr	OpenArtFiles_ovr119_9E8	0x9E8	0x182
+load_doors	LoadDoorArt_ovr119_B6A	0xB6A	0x58

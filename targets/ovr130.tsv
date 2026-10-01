@@ -1,0 +1,4 @@
+# segment ovr130 base 0x927E0 size 0x8A org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+ObjectDatFileReads_ovr130_0	ObjectDatFileReads_ovr130_0	0x0	0x3A
+MajorClass2_ovr130_3A	MajorClass2_ovr130_3A	0x3A	0x50

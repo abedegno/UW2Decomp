@@ -1,0 +1,16 @@
+# segment seg017_2179 base 0x224C4 size 0x3B2 org 0x4
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+DRAW_RELATED_seg017_2179_4	DRAW_RELATED_seg017_2179_4	0x0	0xDA
+Print_String_To_Console_seg017_DE	Print_String_To_Console_seg017_DE	0xDA	0x10
+ClearData_seg017_2179_EE	ClearData_seg017_2179_EE	0xEA	0x1B
+StrLen_seg017_2179_109	StrLen_seg017_2179_109	0x105	0x16
+CopySubstring_seg017_2179_11F	CopySubstring_seg017_2179_11F	0x11B	0x20
+CopyStringToLocation_seg017_2179_13F	CopyStringToLocation_seg017_2179_13F	0x13B	0x35
+FindStringDelimiter_seg017_2179_174	FindStringDelimiter_seg017_2179_174	0x170	0x28
+seg017_2179_19C	seg017_2179_19C	0x198	0x5B
+StringCompare_seg017_2179_1F7	StringCompare_seg017_2179_1F7	0x1F3	0x29
+local_do_palette	ApplyPalette_seg017_2179_220	0x21C	0x35
+DRAW_RELATED_seg017_2179_255	DRAW_RELATED_seg017_2179_255	0x251	0x4D
+DRAW_RELATED_seg017_2179_2A2	DRAW_RELATED_seg017_2179_2A2	0x29E	0x7E
+DRAW_RELATED_seg017_2179_320	DRAW_RELATED_seg017_2179_320	0x31C	0x41
+DRAW_RELATED_seg017_2179_361	DRAW_RELATED_seg017_2179_361	0x35D	0x55

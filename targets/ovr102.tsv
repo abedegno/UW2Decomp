@@ -1,0 +1,7 @@
+# segment ovr102 base 0x7B910 size 0x165 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+LoadCMB_DAT_ovr102_0	LoadCMB_DAT_ovr102_0	0x0	0x16
+ObjsBeCombinable	FindObjectCombination_ovr102_16	0x16	0xF0
+CombineObjs	CreateObjectCombinationOutput_ovr102_106	0x106	0x1F
+RemoveAfterCombine	CanDoObjectCombination_ovr102_125	0x125	0x39
+make_stew	SetsALtoZero_ovr102_15E	0x15E	0x7

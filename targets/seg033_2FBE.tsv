@@ -1,0 +1,5 @@
+# segment seg033_2FBE base 0x30919 size 0x14E5 org 0x9
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+do_obj	RenderingObjects_seg033_2FBE_9	0x0	0x5D5
+do_rect	Render3DObject_seg033_2FBE_5DE	0x5D5	0x915
+do_door	RenderDoor_seg033_2FBE_EF3	0xEEA	0x5FB

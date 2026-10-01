@@ -1,0 +1,25 @@
+# segment ovr167 base 0xA4420 size 0x8F4 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+NOT_ovr167_0	NOT_ovr167_0	0x0	0x17
+ovr167_17	ovr167_17	0x17	0x65
+mpos	TurnVectorsIntoHeading_ovr167_7C	0x7C	0x85
+octant	GetPitWarriorPositionOffset_ovr167_101	0x101	0x76
+postodir	GetHeadingBetweenPoints_ovr167_177	0x177	0x1A
+print_path_to	GetDetectedCreatureDirections_ovr167_191	0x191	0xC1
+ovr167_252	ovr167_252	0x252	0xC1
+DartSatelliteVectoring_ovr167_313	DartSatelliteVectoring_ovr167_313	0x313	0xAE
+PrintErrorToMessageScroll_ovr167_3C1	PrintErrorToMessageScroll_ovr167_3C1	0x3C1	0x35
+ListFiles_ovr167_3F6	ListFiles_ovr167_3F6	0x3F6	0x2B
+ovr167_421	ovr167_421	0x421	0x42
+ovr167_463	ovr167_463	0x463	0x26
+DeleteTempFiles_ovr167_489	DeleteTempFiles_ovr167_489	0x489	0xA8
+ovr167_531	ovr167_531	0x531	0x56
+LoadDatFile_ovr167_587	LoadDatFile_ovr167_587	0x587	0x53
+FileReadToAddress_ovr167_5DA	FileReadToAddress_ovr167_5DA	0x5DA	0x4D
+FileWriteWithParams_ovr167_627	FileWriteWithParams_ovr167_627	0x627	0x4D
+ovr167_674	ovr167_674	0x674	0x9B
+SaveDecrypt_ovr167_70F	SaveDecrypt_ovr167_70F	0x70F	0x5A
+DecryptPlayerDat_ovr167_769	DecryptPlayerDat_ovr167_769	0x769	0x74
+SaveFileEncryption_ovr167_7DD	SaveFileEncryption_ovr167_7DD	0x7DD	0x7D
+LoadStringsPakToTable_ovr167_85A	LoadStringsPakToTable_ovr167_85A	0x85A	0x35
+OpenDataFile_ovr167_88F	OpenDataFile_ovr167_88F	0x88F	0x65

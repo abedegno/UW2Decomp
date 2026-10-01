@@ -1,0 +1,10 @@
+# segment seg042_35ED base 0x36C06 size 0x2BD org 0x6
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+init_mem	EMM_seg042_35ED_6	0x0	0x95
+free_mem	seg042_35ED_9B	0x95	0xA
+seg042_35ED_A5	seg042_35ED_A5	0x9F	0x86
+seg042_35ED_12B	seg042_35ED_12B	0x125	0x26
+AllocateMemory_seg042_35ED_151	AllocateMemory_seg042_35ED_151	0x14B	0x25
+get_workspace	seg042_35ED_176	0x170	0x68
+set_workspace	seg042_35ED_1DE	0x1D8	0x55
+release_workspace	seg042_35ED_233	0x22D	0x90

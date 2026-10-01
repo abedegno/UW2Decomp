@@ -1,0 +1,14 @@
+# segment seg019_21BA base 0x228DC size 0x13B5 org 0xC
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+seg019_21BA_C	seg019_21BA_C	0x0	0x35
+seg019_21BA_41	seg019_21BA_41	0x35	0x1A
+UpdateDetailLevelIndirectFunctions_seg019_21BA_5B	UpdateDetailLevelIndirectFunctions_seg019_21BA_5B	0x4F	0x75
+RenderingFunctions_seg019_21BA_D0	RenderingFunctions_seg019_21BA_D0	0xC4	0x2AE
+seg019_21BA_37E	seg019_21BA_37E	0x372	0x1E4
+GetTilesToRender_seg019_21BA_562	GetTilesToRender_seg019_21BA_562	0x556	0x279
+FloorRender_seg019_21BA_7DB	FloorRender_seg019_21BA_7DB	0x7CF	0xE9
+seg019_21BA_8C4	seg019_21BA_8C4	0x8B8	0xE7
+WallRender_seg019_21BA_9AB	WallRender_seg019_21BA_9AB	0x99F	0xE9
+FloorRender_seg019_21BA_A94	FloorRender_seg019_21BA_A94	0xA88	0x173
+WallRender_seg019_21BA_C07	WallRender_seg019_21BA_C07	0xBFB	0x135
+StartDrawingTileAndUpdatingAutomapTile_seg019_21BA_D3C	StartDrawingTileAndUpdatingAutomapTile_seg019_21BA_D3C	0xD30	0x685

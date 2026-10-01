@@ -1,0 +1,7 @@
+# segment ovr104 base 0x7D900 size 0x2A8 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+LoadCrittersObjectsDat_ovr104_0	LoadCrittersObjectsDat_ovr104_0	0x0	0x17
+ovr104_17	ovr104_17	0x17	0x17
+GetObjectDatForMajorClass1_ovr104_2E	GetObjectDatForMajorClass1_ovr104_2E	0x2E	0x30
+creature_obj_init	InitCritter_ovr104_5E	0x5E	0x15
+init_this_critter	InitialiseCritterValues_ovr104_73	0x73	0x235

@@ -1,0 +1,7 @@
+# segment seg013_1D3C base 0x1E0FA size 0x143 org 0xA
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+seg013_1D3C_A	seg013_1D3C_A	0x0	0xA8
+seg013_1D3C_B2	seg013_1D3C_B2	0xA8	0x15
+MapMemory_seg013_1D3C_C7	MapMemory_seg013_1D3C_C7	0xBD	0x1D
+seg013_1D3C_E4	seg013_1D3C_E4	0xDA	0x54
+seg013_1D3C_138	seg013_1D3C_138	0x12E	0x15

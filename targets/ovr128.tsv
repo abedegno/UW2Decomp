@@ -1,0 +1,8 @@
+# segment ovr128 base 0x92410 size 0x38B org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+Map_Init	InitialiseEmptyTileMapData_ovr128_0	0x0	0x37
+OverwriteAllTiles_ovr128_37	OverwriteAllTiles_ovr128_37	0x37	0x3F
+Map_Load	LoadLevARK_ovr128_76	0x76	0xF1
+Map_Save	SaveLEVARK_ovr128_167	0x167	0x10A
+LoadAnimationOverlays_ovr128_271	LoadAnimationOverlays_ovr128_271	0x271	0x97
+StoreAnimationOverlaysToLevArk_ovr128_308	StoreAnimationOverlaysToLevArk_ovr128_308	0x308	0x83
