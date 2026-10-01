@@ -1,0 +1,23 @@
+# segment seg031_2CFA base 0x2DCDC size 0x1A13 org 0xC
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+do_physics	CalculateMotion_seg031_2CFA_C	0x0	0x87
+CopyMotionValsFromInitialToBase25C4_seg031_2CFA_93	CopyMotionValsFromInitialToBase25C4_seg031_2CFA_93	0x87	0x7B
+set_targz	SetCollisionTarget_seg031_2CFA_10E	0x102	0x304
+space_to_motion	InitialMotionCalc_seg031_2CFA_412	0x406	0x378
+recalc_vecs	seg031_2CFA_78A	0x77E	0x35
+stop_me	ZeroiseMotionValues_seg031_2CFA_7BF	0x7B3	0x41
+back_to_space	StoreNewXYZH_seg031_2CFA_800	0x7F4	0xA6
+flat_move	LikelyTranslateXY_seg031_2CFA_8A6	0x89A	0x199
+seg031_2CFA_A3F	seg031_2CFA_A3F	0xA33	0xA
+rehead	HeadingRelated_seg031_2CFA_A49	0xA3D	0x213
+do_2dbounce	seg031_2CFA_C5C	0xC50	0x6A
+MaybeReflection_seg031_2CFA_CC6	MaybeReflection_seg031_2CFA_CC6	0xCBA	0x59
+do_zbounce	DoCollision_seg031_2CFA_D1F	0xD13	0x419
+full_move	MAYBEGRAVITYZ_seg031_2CFA_1138	0x112C	0x180
+grid_move	ProcessCollisions_seg031_2CFA_12B8	0x12AC	0x93
+set_resterr	GetTileState_seg031_2CFA_134B	0x133F	0x67
+get_pcoll	GetCollisionHeightState_seg031_2CFA_13B2	0x13A6	0x3EA
+check_positions	DoTileCollisionMaybe_seg031_2CFA_179C	0x1790	0xCC
+JumpTrap_seg031_2CFA_1868	JumpTrap_seg031_2CFA_1868	0x185C	0xA6
+FindClosedDoorCollision_seg031_2CFA_190E	FindClosedDoorCollision_seg031_2CFA_190E	0x1902	0xE9
+GetCollisionObject_seg031_2CFA_19F7	GetCollisionObject_seg031_2CFA_19F7	0x19EB	0x28

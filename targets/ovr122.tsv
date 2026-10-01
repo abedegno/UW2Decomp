@@ -1,0 +1,14 @@
+# segment ovr122 base 0x8CD30 size 0x7BD org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+Punt_player_inv	ovr122_0	0x0	0x22
+makePlayerInvCopy	CopyPlayerObject_ovr122_22	0x22	0x15A
+SavePlayerInv	SaveLoadPlayerDat_ovr122_17C	0x17C	0xDA
+InvSaveNexts	ProbablyCopyObjectLists_ovr122_256	0x256	0xE0
+ovr122_336	ovr122_336	0x336	0x54
+ovr122_38A	ovr122_38A	0x38A	0x1A
+ovr122_3A4	ovr122_3A4	0x3A4	0x22
+ovr122_3C6	ovr122_3C6	0x3C6	0x55
+InvRestoreNexts	CopyObjectToSlot_ovr122_41B	0x41B	0xF3
+FreePlayerInv	ClearObjectList_ovr122_50E	0x50E	0xB9
+getPlayerInvCopy	CopyPlayerObject_ovr122_5C7	0x5C7	0xC6
+RestorePlayerInv	LoadPlayerDat_ovr122_68D	0x68D	0x130

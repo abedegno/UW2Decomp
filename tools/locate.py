@@ -26,7 +26,9 @@ for l in open(asm, encoding='latin1'):
     if m: seg = m.group(1); order.append(seg); segs[seg] = []; continue
     m = re.match(r'^(\w+)\s+proc\b', l)
     if m and seg:
-        mo = re.search(r'_([0-9A-F]{1,5})$', m.group(1))
+        # the offset ends the IDA name; a few names carry a word after it
+        mo = (re.search(r'_([0-9A-F]{1,5})$', m.group(1))
+              or re.search(r'(?:seg\d{3}(?:_[0-9A-F]{4})?|ovr\d{3})_([0-9A-F]{1,5})_', m.group(1)))
         cur = [m.group(1), int(mo.group(1), 16) if mo else None, []]; segs[seg].append(cur); continue
     if re.match(r'^\w+\s+endp\b', l): cur = None; continue
     m = cur and len(cur[2]) < 6 and re.match(r'^\s*([a-z]{2,7})(?:\s|$)', l)

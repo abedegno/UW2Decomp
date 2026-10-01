@@ -1,0 +1,13 @@
+# segment ovr123 base 0x8D550 size 0x6A8 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+add_rune	AddRuneStonesToRuneBag_ovr123_0	0x0	0x64
+ClearRuneBag_ovr123_64	ClearRuneBag_ovr123_64	0x64	0x19
+ShowRune	DrawRunestoneAtPoint_ovr123_7D	0x7D	0x58
+RedispRune	DrawRunebagContents_ovr123_D5	0xD5	0x61
+clear_shelf	ClearSelectedRunes_ovr123_136	0x136	0x2E
+mous_in_rune	ProablyRunePanelClick_ovr123_164	0x164	0x142
+not_a_spell	NotASpellMessage_ovr123_2A6	0x2A6	0x11
+try_clear	ClickOnActiveSpell_ovr123_2B7	0x2B7	0xD0
+try_cast	PlayerAttemptsSpellCast_ovr123_387	0x387	0xEA
+fail_spell	PrintSpellFailureReason_ovr123_471	0x471	0x23
+player_cast	PlayerCastsValidSpell_ovr123_494	0x494	0x214

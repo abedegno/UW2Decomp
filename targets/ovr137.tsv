@@ -1,0 +1,11 @@
+# segment ovr137 base 0x93C00 size 0x403 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+pull_chain	SwitchInventoryAndStatsEvent_ovr137_0	0x0	0x23
+print_info	PrintCompassPlayerStatus_ovr137_23	0x23	0x127
+flask_info	PrintFlaskHealthManaMessage_ovr137_14A	0x14A	0x15E
+start_gameinp	ovr137_2A8	0x2A8	0x89
+clear_gameinp	ovr137_331	0x331	0x36
+init_gamedisp	ovr137_367	0x367	0x42
+clear_gamedisp	ovr137_3A9	0x3A9	0xE
+ovr137_3B7	ovr137_3B7	0x3B7	0x2F
+check_rest	ResetPlayerDoingSomething_ovr137_3E6	0x3E6	0x1D

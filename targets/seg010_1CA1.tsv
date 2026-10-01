@@ -1,0 +1,9 @@
+# segment seg010_1CA1 base 0x1D743 size 0x463 org 0x3
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+init_input	seg010_1CA1_3	0x0	0x56
+seg010_1CA1_59	seg010_1CA1_59	0x56	0x29
+input_addmouse	RegisterClickArea_seg010_1CA1_82	0x7F	0x82
+_input_addkey	RegisterEventHandler_seg010_1CA1_104	0x101	0x70
+input_del	seg010_1CA1_174	0x171	0x12C
+input_dispatch	ProcessCommands_seg010_1CA1_2A0	0x29D	0x14C
+ProcessEventHandlers_seg010_1CA1_3EC	ProcessEventHandlers_seg010_1CA1_3EC	0x3E9	0x7A

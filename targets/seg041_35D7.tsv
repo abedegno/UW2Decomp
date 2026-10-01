@@ -1,0 +1,6 @@
+# segment seg041_35D7 base 0x36AA3 size 0x163 org 0x3
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+mvcheck	ChangesLookupDown_seg041_35D7_3	0x0	0x4B
+move_along	GetCoordinateInDirection_seg041_35D7_4E	0x4B	0x9B
+seg041_35D7_E9	seg041_35D7_E9	0xE6	0x36
+DiceRoll_seg041_35D7_11F	DiceRoll_seg041_35D7_11F	0x11C	0x47

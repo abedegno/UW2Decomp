@@ -1,0 +1,16 @@
+# segment ovr149 base 0x99590 size 0xB22 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+MaybeCreateSaveGameFolder_ovr149_0	MaybeCreateSaveGameFolder_ovr149_0	0x0	0x92
+GetLevel	LoadGameMap_ovr149_92	0x92	0xA1
+SaveLevel	SaveGame_ovr149_133	0x133	0xB3
+get_save_descs	EnumerateSaveGames_ovr149_1E6	0x1E6	0xDC
+ShowSaveRest	ListSaveGamesInScroll_ovr149_771E_2C2	0x2C2	0x96
+DoSaveRest	LikeylSelectSaveSlot_ovr149_358	0x358	0xC3
+RestoreGame	OpenSaveGame_ovr149_771E_41B	0x41B	0xC9
+SaveGame	SaveGame_ovr149_771E_4E4	0x4E4	0x187
+clear_dir	DeleteFilesInFolder_ovr149_66B	0x66B	0x83
+copy_file	CopyFile_ovr149_771E_6EE	0x6EE	0x111
+copy_dir	CopySaveGameFiles_ovr149_771E_7FF	0x7FF	0x6F
+ChangeLevel	PlayerUpdatesOnLevelChange_ovr149_86E	0x86E	0x95
+gruesome_door_hack	OpenCloseDoorInTile_ovr149_903	0x903	0x7F
+do_level_hacks	LevelChangeEvents_ovr149_982	0x982	0x1A0

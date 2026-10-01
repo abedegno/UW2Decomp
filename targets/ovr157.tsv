@@ -1,0 +1,18 @@
+# segment ovr157 base 0x9E900 size 0x1B42 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+study_monster_spells	StudyMonsterSpellDetailsAndProperties_ovr157_0	0x0	0x1D8
+sp_study_monster	SpellCode_StudyMonster_ovr157_1D8	0x1D8	0x319
+CanObjectBeEnchanted_ovr157_4F1	CanObjectBeEnchanted_ovr157_4F1	0x4F1	0x5E
+sp_enchant_faildestroymess	EnchantmentFailureExplosion_ovr157_54F	0x54F	0xEF
+charge_object	ChargeObjectSpellWithEffectID_ovr157_63E	0x63E	0x142
+sp_enchant_destroy	FailEnchantment_ovr157_780	0x780	0x6B
+sp_enchant	EnchantObject_ovr157_7EB	0x7EB	0x385
+CanObjectBeRepaired_ovr157_B70	CanObjectBeRepaired_ovr157_B70	0xB70	0x85
+sp_true_sight	RevealSpell_ovr157_BF5	0xBF5	0xB6
+creat_spell	Class8Summoning_Spells_ovr157_CAB	0xCAB	0x4E7
+print_monster	DetectCreatureString_ovr157_1192	0x1192	0x51
+mdetect	DetectMonsters_ovr157_11E3	0x11E3	0x2F1
+tremor_area	QuakeSpell_ovr157_14D4	0x14D4	0x144
+xt_spells	ClassB_Spells_ovr157_1618	0x1618	0x399
+thump_your_magic_twanger_froggie	AltarasWand_ovr157_19B1	0x19B1	0x59
+check_Guardian_magic_marker	AltarasWand_ovr157_1A0A	0x1A0A	0x138

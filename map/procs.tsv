@@ -838,7 +838,7 @@ seg027_2856	PlaceProjectileInWorld_seg027_2856_CCC	CCC	ok
 seg028_2941	GetHeightAdjustedByTileType_seg028_2941_E	E	ok
 seg028_2941	GetTileZOffset_seg028_2941_1AF	1AF	ok
 seg028_2941	GetNeighbourTileDetails_seg028_2941_217	217	ok
-seg028_2941	seg028_2941_2CF_terrainrelated	None	unverified
+seg028_2941	seg028_2941_2CF_terrainrelated	2CF	ok
 seg028_2941	ProcessMotionTileHeights_seg028_2941_385	385	ok
 seg028_2941	seg028_2941_803	803	ok
 seg028_2941	GetTileAttribute8_seg028_2941_A6D	A6D	ok

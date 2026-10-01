@@ -1,0 +1,8 @@
+# segment ovr140 base 0x96A10 size 0x2AC org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+init_txtlib	LoadTextures_ovr140_0	0x0	0x4F
+ovr140_4F	ovr140_4F	0x4F	0x50
+Txm_Load	LoadTextureMapData_ovr140_9F	0x9F	0xCD
+Txm_Save	SaveTextureMapsToArk_ovr140_16C	0x16C	0xCB
+load_txtmaps	LoadT64AndDoorsGR_ovr140_237	0x237	0x14
+LoadTerrainDat_ovr140_24B	LoadTerrainDat_ovr140_24B	0x24B	0x61

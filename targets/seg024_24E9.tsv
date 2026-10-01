@@ -1,0 +1,23 @@
+# segment seg024_24E9 base 0x25BC3 size 0x1B80 org 0x3
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+pickloc	PickBodyHitPoint_seg024_24E9_3	0x0	0x79
+set_hitobj	TestForClosestAttackCollisionHit_seg024_24E9_7C	0x79	0x24F
+find_wall_coll	SpawnImpactAnimo_seg024_24E9_2CB	0x2C8	0x1B6
+resolve_attack	CheckForAttackHit_seg024_24E9_481	0x47E	0x253
+is_sharp	CheckForPoisonableDamageWeapons_seg024_24E9_6D4	0x6D1	0x63
+frp_check	CalculateAttackResults_seg024_24E9_737	0x734	0x24C
+do_damage	AttackerAppliesFinalDamage_seg024_24E9_983	0x980	0x3B6
+do_miss	CombatMissImpactSound_seg024_24E9_D39	0xD36	0x13B
+compute_hitangle	CalcFlankingBonus_seg024_24E9_E74	0xE71	0x54
+do_attack	ExecuteAttack_seg024_24E9_EC8	0xEC5	0xDD
+check_ammo	CheckForAmmo_seg024_24E9_FA5	0xFA2	0x86
+GetPlayerWeapon	SetCurrentWeaponDetails_seg024_24E9_102B	0x1028	0x114
+DoPlayerWeapon	CalculateAttackScorePlayer_seg024_24E9_113F	0x113C	0x165
+missile_finish	EndCombatSwing_seg024_24E9_12A4	0x12A1	0x3C
+fin_attack	MaybeCancelWeaponSwingAnim_seg024_24E9_12E0	0x12DD	0x2F
+clear_fight_state	CancelAttack_seg024_24E9_130F	0x130C	0x3C
+player_attack	PlayerCombat_seg024_24E9_134B	0x1348	0x515
+missile_thwack	MissileAttackHit_seg024_24E9_1860	0x185D	0x129
+critter_attack	NPC_ExecuteAttack_seg024_24E9_1989	0x1986	0x13E
+seg024_24E9_1AC7	seg024_24E9_1AC7	0x1AC4	0x30
+player_killed_a	AwardKillEXP_seg024_24E9_1AF7	0x1AF4	0x8C

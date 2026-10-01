@@ -1,0 +1,12 @@
+# segment ovr147 base 0x98A10 size 0xAC2 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+ovr147_0	ovr147_0	0x0	0x22
+ovr147_22	ovr147_22	0x22	0x72
+do_intro_scene	PlayIntroIfNoSaveGames_ovr147_94	0x94	0x38
+draw_start_buttons	DrawMainMenuLoadScreen_ovr147_CC	0xCC	0x14C
+real_start	MainMenu_ovr147_218	0x218	0x327
+parse_start_mouse	ovr147_53F	0x53F	0x1ED
+parse_start_input	MainMenuInputHandler_ovr147_76EE_72C	0x72C	0x1B7
+do_journey	MainMenuListSaveGames_ovr147_76EE_W_8E3	0x8E3	0x173
+UnknownAutomapLoop_ovr147_A56	UnknownAutomapLoop_ovr147_A56	0xA56	0x1D
+UnknownCallBackFunctionForAutomap_ovr147_A73	UnknownCallBackFunctionForAutomap_ovr147_A73	0xA73	0x4F

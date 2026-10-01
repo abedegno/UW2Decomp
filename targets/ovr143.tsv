@@ -1,0 +1,17 @@
+# segment ovr143 base 0x978D0 size 0xFA4 org 0x0
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+InitPlayerObject_ovr143_0	InitPlayerObject_ovr143_0	0x0	0xB0
+init_player	InitPlayerAndRegisterKeys_ovr143_B0	0xB0	0x672
+mous_player	ovr143_722	0x722	0x25D
+demous_player	ovr143_97F	0x97F	0x6E
+PrintPlayerPosition_ovr143_9ED	PrintPlayerPosition_ovr143_9ED	0x9ED	0x7A
+show_version	PrintGameVersion_ovr143_A67	0xA67	0x1B
+home_cam	SetCameraViewObjectDefaults_ovr143_A82	0xA82	0xC9
+move_cam	RoamingSightInput_ovr143_B4B	0xB4B	0x102
+attach_eye	ChangeReferenceToCameraObject_ovr143_C4D	0xC4D	0xF9
+release_camera	MakeObjectTheCamera_ovr143_D46	0xD46	0x16
+HackTrapCamera_ovr143_D5C	HackTrapCamera_ovr143_D5C	0xD5C	0xAD
+LaunchPlayerAtMoongate_ovr143_E09	LaunchPlayerAtMoongate_ovr143_E09	0xE09	0xF4
+chg_plys	LookUpDown_ovr143_EFD	0xEFD	0x5B
+ChangeCameraRoll_ovr143_F58	ChangeCameraRoll_ovr143_F58	0xF58	0x25
+chg_plyp	LookUpDown_ovr143_F7D	0xF7D	0x27
