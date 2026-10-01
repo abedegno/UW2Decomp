@@ -1,0 +1,4 @@
+FileWriteWithParams_stub167_8E	FileWriteWithParams
+ReadFileToAddress_stub167_66	ReadFileToAddress
+j_DataCompression_ovr127_795	CompressLZW_disk
+j_DecompressArkData_ovr127_440	DecompressLZW_disk

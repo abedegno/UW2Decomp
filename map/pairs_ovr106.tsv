@@ -1,0 +1,6 @@
+Divide32BitNumbers_cx1_seg005_105F_352C	F_LUDIV@
+Experience_seg038_342C_45	player_get_exp
+ModulusDivision_seg005_105F_353C	F_LUMOD@
+j_ImportConversationVariable_ovr095_20AD	bab_var
+j_RetrieveConversationVariable_ovr095_214A	bab_var_out
+j_SetGoalAndGTargForNPC_ovr107_0	change_critter_goal

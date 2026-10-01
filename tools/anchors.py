@@ -1,5 +1,5 @@
 """Collect DOS proc <-> original name anchors and check they keep link order.
-Sources: targets/*.tsv for the files in matched.txt, map/pairs_*.tsv (callpairs.py output), and the
+Sources: targets/*.tsv for the files in matched.txt, far functions in symbols.tsv,, map/pairs_*.tsv (callpairs.py output), and the
 string anchors from UWReverseEngineering's 'UW2 FM Towns' folder. Writes map/anchors.tsv."""
 import os, re, glob
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -22,6 +22,30 @@ for t in glob.glob(os.path.join(root, 'targets', '*.tsv')):
         if not l.startswith('#'): c, ida = l.split('\t')[:2]; add(ida, c, 'matched')
 for p in glob.glob(os.path.join(root, 'map', 'pairs_*.tsv')):
     for l in open(p): ida, n = l.rstrip('\n').split('\t'); add(ida, n, 'call')
+# far functions in symbols.tsv with original names: a resident address is a paragraph and an
+# offset, which the located segments and verified proc offsets turn straight into a DOS proc
+import struct
+exe = open(os.path.expanduser(os.environ.get('UW2_EXE', '~/UWGOG/UW2/UW2.EXE')), 'rb').read()
+hdr = struct.unpack_from('<H', exe, 8)[0] * 16
+para = {}
+for l in open(os.path.join(root, 'map', 'segments.tsv')):
+    if l.startswith('#'): continue
+    sg, b = l.rstrip('\n').split('\t')[:2]
+    if b and not sg.startswith('ovr'): para[(int(b, 16) - hdr) // 16] = sg
+at = {}
+for l in open(os.path.join(root, 'map', 'procs.tsv')):
+    if l.startswith('#'): continue
+    sg, n, o = l.rstrip('\n').split('\t')[:3]
+    if o != 'None': at[(sg, int(o, 16))] = n
+sym = os.path.join(root, 'symbols.tsv')
+if os.path.exists(sym):
+    for l in open(sym):
+        if l.startswith('#'): continue
+        n, v, src = l.rstrip('\n').split('\t')
+        if src != 'FM Towns' or v.startswith('DS:'): continue
+        pg, off = (int(x, 16) for x in v.split(':'))
+        if pg in para and (para[pg], off) in at:
+            add(at[(para[pg], off)], n.lstrip('_'), 'symbol')
 sa = os.path.expanduser('~/UWReverseEngineering/UW2 FM Towns/dos_to_fmtowns_anchors.tsv')
 for l in open(sa).readlines()[1:]:
     d, f = l.split('\t')[:2]; add(d, f, 'string')
