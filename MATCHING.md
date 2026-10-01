@@ -180,5 +180,6 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **A dead jump before an `else`** that lands on a jump to a shared return came from an explicit `return x;` at the end of the then-block.
 - **A register copy of a parameter**: when the parameter is in SI but one use reads it from the stack, the source had an explicit copy such as `register int f = which;`.
 - **`&=` with a large constant**: on an int global, `x &= 0xFF7F` gives load, AND, store (the constant is unsigned); `x &= ~0x80` gives `and word [x],0FF7Fh`.
+- **`return 0` against `break` in a switch case**: a `jcc` to a lone `jmp` in front of the final `return 0` means the case said `return 0;`; with `break` the jumps are threaded straight to the shared return and the function grows.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.
