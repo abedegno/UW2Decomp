@@ -153,6 +153,7 @@ _CloseDoor	654F:0084	FM Towns
 _CmapCache	4FAF:E3C9	FM Towns
 _CmapFrm	4FAF:E2C9	FM Towns
 _CmaptoPg	4FAF:E0C9	FM Towns
+_cmpbuf1_start	43A0:0000	FM Towns
 _CN1	DS:2604	FM Towns
 _CN2	DS:262C	FM Towns
 _CN4	DS:267C	FM Towns
@@ -164,6 +165,7 @@ _CombineObjs	6465:0025	FM Towns
 _ComObjData	DS:6B74	FM Towns
 _CompressLZW_disk	6522:0025	FM Towns
 _ComputeHeading	2754:0803	FM Towns
+_constadr	DS:6736	FM Towns
 _Containers	DS:6B10	FM Towns
 _control	DS:2234	FM Towns
 _conv_edge_phase	DS:098A	provisional
@@ -289,6 +291,8 @@ _DoWanderingMonsters	65D5:009D	FM Towns
 _draw_conv_edges	342C:00B8	FM Towns
 _draw_edges	342C:0064	FM Towns
 _draw_mask	0000:0120	FM Towns
+_DRAW_RELATED_seg017_2179_2A2	1F8C:02A2	provisional
+_DRAW_RELATED_seg017_2179_361	1F8C:0361	provisional
 _draw_scroll	342C:0618	FM Towns
 _draw_sprite	0000:00EB	FM Towns
 _drop_around_place	2754:135A	FM Towns
@@ -346,6 +350,7 @@ _FindStringDelimiter	1F8C:0174	provisional
 _finish_player	2FBE:05EB	FM Towns
 _fire_trigger_at	64A5:0034	FM Towns
 _fireball_effect	34A2:08EA	FM Towns
+_first_anim	4FAF:D030	FM Towns
 _first_punt	64D4:002F	FM Towns
 _fix_name_string	3265:03ED	FM Towns
 _FixBagArea	64F7:004D	FM Towns
@@ -378,6 +383,7 @@ _FreePlayerInv	64FE:0039	FM Towns
 _frictionless	DS:229E	FM Towns
 _fseek	0E72:0A07	FM Towns
 _fstat	0E72:18C4	FM Towns
+_ftell	0E72:0A6D	FM Towns
 _fx_available	1C86:1AE8	FM Towns
 _fx_is_on	1C86:1AD3	FM Towns
 _game_sprint	3265:04A4	FM Towns
@@ -419,6 +425,7 @@ _globals	DS:1AD4	FM Towns
 _glocs	DS:26EE	FM Towns
 _go_fish	64A5:0066	FM Towns
 _gr_entry	35AF:00CB	FM Towns
+_gr_offs	43A0:A800	FM Towns
 _gr_pixel	1F8C:0255	provisional
 _gr_putlab	35AF:0213	FM Towns
 _gr_read_pixel	0085:475E	provisional
@@ -427,6 +434,7 @@ _grab	1F8C:0004	FM Towns
 _grant_skill_advance	6599:0057	FM Towns
 _grdb_blank	35AF:0006	FM Towns
 _greed	DS:4754	FM Towns
+_grfp	DS:6942	FM Towns
 _grfx_clear	64E2:007A	FM Towns
 _grfx_close	64E2:0034	FM Towns
 _grfx_driver	DS:14B8	FM Towns
@@ -438,10 +446,12 @@ _gronk_gr	64EA:0098	FM Towns
 _gronk_whoami	65A7:004D	FM Towns
 _grPageFlip	0085:46AA	FM Towns
 _grs_3dinf	4FAF:E049	FM Towns
+_grs_off	DS:2194	FM Towns
 _grs_unpack	1A6D:0150	FM Towns
 _grs_which1	1A6D:0227	FM Towns
 _grSoftPageFlip	0085:46E6	FM Towns
 _GrSq	DS:22A4	FM Towns
+_gsize	DS:6734	FM Towns
 _gvechead	DS:2C60	FM Towns
 _gvecs	DS:2B5E	FM Towns
 _hack_class_data	64F4:0020	FM Towns
@@ -692,6 +702,7 @@ _nextSpellTime	DS:090A	FM Towns
 _nextstep	DS:19DF	FM Towns
 _NightCleanCritPages	64DE:002A	FM Towns
 _notdone	DS:5D68	FM Towns
+_npals	DS:673A	FM Towns
 _npc_barter	6448:007A	FM Towns
 _npc_scroll	DS:094D	FM Towns
 _npp_func	DS:12C2	FM Towns
@@ -720,6 +731,7 @@ _Obj_PtrTMem	28A1:08BE	FM Towns
 _Obj_Punt	28A1:0704	FM Towns
 _Obj_Rem	28A1:0684	FM Towns
 _obj_spells	65A7:002F	FM Towns
+_obj_tab	DS:2198	FM Towns
 _ObjCrunch	28A1:1200	FM Towns
 _objdata	DS:25B6	FM Towns
 _ObjectActing	DS:24EC	FM Towns
@@ -750,6 +762,7 @@ _ovr167_463	65E0:0061	provisional
 _palette	DS:21AC	provisional
 _Palettes	DS:6742	FM Towns
 _pals_name	DS:14F5	provisional
+_PalStore	DS:6944	FM Towns
 _panel_check	65BC:0048	FM Towns
 _panel_check_hpmp	323F:0201	FM Towns
 _panel_mouse_region	DS:6B0A	provisional
@@ -1083,6 +1096,8 @@ _timer_triggers	DS:34F6	provisional
 _timercount	DS:3576	FM Towns
 _TimeStop	DS:037F	FM Towns
 _tmap_inpage	4FAF:E4CE	FM Towns
+_tmpcnt	DS:6740	FM Towns
+_tmpoffs	DS:673C	FM Towns
 _toast_animobj	34A2:00EA	FM Towns
 _toggle_fightmode	2529:13E5	FM Towns
 _ToggleDoor	654F:0075	FM Towns
@@ -1109,6 +1124,7 @@ _turn_music	1C86:1AF8	FM Towns
 _TurnInpRate	DS:077E	FM Towns
 _Txm_Load	655E:0025	FM Towns
 _Txm_Save	655E:0034	FM Towns
+_TxmCol	DS:2C7B	FM Towns
 _TxmID	DS:8208	FM Towns
 _TxmTerr	DS:8188	FM Towns
 _txpos	DS:223E	FM Towns

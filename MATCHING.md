@@ -84,6 +84,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Pointer tables in data** (an initialised array of far function pointers) carry fixups inside `_DATA`; `verify.py` checks each pointer against the EXE and leaves those bytes out of the comparison.
 - **An empty string can be someone else's padding byte**: seg043 passes `push 98Dh` for `""`, an address inside another file's data, so the literal was merged by the linker and is declared there as an extern array.
 - **`_BSS` is laid out by name, not declaration order** (file-scope data only; function-level statics are placed where they are defined): Turbo C emits them in ascending order of `(c[0] + 256*c[1] + 8*c[len-2] + 64*len) & 1023` over the name's characters (no underscore), ties keeping definition order; ints are word-aligned. `tools/bssorder.py` computes it. A static's name never reaches the linker, so when a static has no original name, choose one that lands where the EXE has it, and say in a comment that the name was chosen for layout. Public names are fixed by other files. Pick the name with `tools/bssorder.py`; probe compiles are no longer needed.
+- **`_DATA` items are not word-aligned** between one another: an int can follow a 24-byte char table at an odd address.
 - **Static uninitialised data** goes in `_BSS`, which `verify.py` checks for a consistent base (no bytes to compare).
 - **`!c` against `c == 0` on a `char` parameter**: `!c` gives `mov al; cbw; or ax,ax`; `c == 0` gives `cmp byte [bp+N],0`.
 - **Far pointers compare by offset only** for `<`/`>=` (`mov ax,[bp+N]; cmp ax,[g]`), while `== 0` tests both halves (`or ax,dx`).
@@ -184,5 +185,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **`return !x;`** on an unsigned register variable gives `mov ax,di; neg ax; sbb ax,ax; inc ax`; `return x == 0;` gives a branch and `mov ax,1` / `xor ax,ax`.
 - **Testing an `unsigned char` return**: only `!f()` widens it (`mov ah,0; or ax,ax`); `f()`, `f() != 0`, `(int)f()` and `f() ? 1 : 0` all give `or al,al`.
 - **A repeated store or tail becomes a jump**: in `if (a) x = 0; else if (b) x = e; else x = 0;` the first `x = 0` turns into a jump to the shared final store; a whole else block repeating the function's tail becomes one `jmp` to it.
+- **Build far pointers with `MK_FP` from `<dos.h>`**: Turbo C defines it as `(void _seg *)(seg) + (void near *)(ofs)`, which evaluates the offset before the segment. No hand-written `((unsigned long)seg << 16) | off` form does that in either operand order.
+- **`= i++` folded into a char store** lets a `register int` take SI; as a separate `i++` it stayed on the stack.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

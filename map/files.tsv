@@ -67,7 +67,7 @@ ovr114	C	4	412	2	0	1	1	first_punt_	pfatal_code_	yes
 ovr116	C	6	1190	0	1	0	5			yes
 ovr117	C	5	949	2	1	2	0	preload_cr_	PreLoadCritPages_	yes
 ovr118	C	19	1511	9	7	0	3	grfx_quikfont_	cameras_fade_	yes
-ovr119	C	25	3009	10	10	3	2	_ld_open_	load_doors_	
+ovr119	C	25	3009	10	10	3	2	_ld_open_	load_doors_	yes
 ovr120	C	2	141	0	2	0	0			yes
 ovr121	C	13	4309	13	0	0	0	DoSpecialActions_	BagWeight_	yes
 ovr122	C	12	1980	12	0	0	0	Punt_player_inv_	RestorePlayerInv_	yes
