@@ -8,7 +8,7 @@ FindSlot	FindObjectInInventorySlot_ovr124_14A	0x14A	0xD2
 FindObj	SearchInventoryForItem_ovr124_21C	0x21C	0x230
 find_obj	FindObjectInObjectList_ovr124_44C	0x44C	0xF3
 pick_inv	MaybeGetObjectClickedOn_ovr124_53F	0x53F	0x65
-GetObjectAtSlot_ovr124_5A4	GetObjectAtSlot_ovr124_5A4	0x5A4	0x17
+AskInventory	GetObjectAtSlot_ovr124_5A4	0x5A4	0x17
 InvRemoveObject	RemoveObjectFromInventory_ovr124_5BB	0x5BB	0x15
 InvRemoveOneObject	RemoveQty1FromPlayerInventory_ovr124_5D0	0x5D0	0x15
 invRemoveObject	RemoveQtyOfObjectFromPlayerInventory_ovr124_5E5	0x5E5	0x1BA
@@ -19,4 +19,4 @@ takeFromSlot	FindAndRemoveQTYOfObject_ovr124_8DF	0x8DF	0x2DA
 ObjWorn	CheckIfEquipmentInValidSlot_ovr124_BB9	0xBB9	0x6D
 DamageInventory	EquipmentDamage_ovr124_C26	0xC26	0x1CC
 ItemWeight	GetObjectMass_ovr124_DF2	0xDF2	0x97
-CheckifWeightCanBeCarried_ovr124_E89	CheckifWeightCanBeCarried_ovr124_E89	0xE89	0x22
+EncumCheck	CheckifWeightCanBeCarried_ovr124_E89	0xE89	0x22

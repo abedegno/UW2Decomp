@@ -107,7 +107,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Odd-sized local arrays go after the scalars**: a `char x[11]` is placed after scalar locals declared after it, whatever the order; even-sized arrays keep declaration order. An 11-byte gap can be `char x[10]` plus a padding byte.
 - **Shared `return 0`**: several exits jumping to one `mov al,0` before the epilogue come from `if (...) { ...; return 1; } return 0;`, not from early returns, which each get their own `mov al,0; jmp`.
 - **`FP_SEG` of a computed near pointer re-evaluates it**: `movedata(..., FP_SEG(d), FP_OFF(d), ...)` with `d = s + strlen(s)` calls `strlen` twice and pushes `ds`; a stack array gives `push ss`.
-- **Two explicit `register int`s**: the first declared gets SI.
+- **Two explicit `register` locals**: sometimes the first declared gets SI (ovr126), sometimes the second (ovr124, a pointer and an int). Try both orders.
 - **Store and test in one expression**: `ok = (fd = open(...)) != -1` gives `mov [fd],ax; cmp ax,-1`; two statements compare the memory copy.
 - **`x = p->bitfield--`** folds the decrement into the masked word, writes through DI, and leaves an unbalanced `push bx` that `leave` hides; that stray push is the sign of this source.
 - **Assignment inside a condition** compares the register (`mov di,ax; cmp ax,1`, `or ax,dx` for a far pointer); as two statements it compares the variable.
@@ -149,5 +149,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **`register` on a parameter** can be needed to put it in DI.
 - **`int += long - long`** needs `(int)(...)` to give `sub ax,[lo]; add [mem],ax`.
 - **`return f(0);`** of a char returns the callee's AL with no move.
+- **`jcc +2; jmp short` to a shared `return 0`** is a separate early-return statement whose body was replaced by a jump, not part of an `&&` chain.
+- **Byte-identical functions with two FM Towns names at one address**: FM Towns' linker folded them, so which DOS copy carries which name can't be proven; say so in a comment.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

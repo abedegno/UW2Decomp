@@ -20,6 +20,7 @@ _bab_var_out	6429:010B	FM Towns
 _backfire	65A7:009D	FM Towns
 _background_color	DS:21C8	FM Towns
 _BagSaveHandles	DS:6A76	FM Towns
+_BagWeight	64F7:003E	FM Towns
 _BlastFunction	32FA:0C38	FM Towns
 _bmsegoff	4FAF:C784	FM Towns
 _build_new_obj	65A7:00CA	FM Towns
@@ -88,6 +89,7 @@ _deal_bounced	DS:25C1	provisional
 _deal_hit	DS:0416	provisional
 _deal_item	DS:0417	provisional
 _deal_with_icons	2529:112A	FM Towns
+_debris_type	24B4:0444	FM Towns
 _decode_obj_spell	32FA:0C69	FM Towns
 _DecompressLZW_disk	6522:0020	FM Towns
 _DegradeLights	653A:0020	FM Towns
@@ -103,6 +105,7 @@ _DisplayInventory	6513:0034	FM Towns
 _displayInventoryArray	6513:0048	FM Towns
 _DisplayInvObject	6513:0025	FM Towns
 _DisplayInvSpecial	6513:002A	FM Towns
+_DisplayOpenBag	64F7:0052	FM Towns
 _DisplayToSlot	DS:1784	FM Towns
 _do_3d_grab	2CAE:02AA	FM Towns
 _do_3d_pickup	1FCD:037E	FM Towns
@@ -148,6 +151,7 @@ _FindSlot	650A:0061	FM Towns
 _finish_player	2FBE:05EB	FM Towns
 _fireball_effect	34A2:08EA	FM Towns
 _fix_name_string	3265:03ED	FM Towns
+_FixOpenBag	64F7:0048	FM Towns
 _FixPlayerEquips	6564:002F	FM Towns
 _fiz_update	DS:00D3	FM Towns
 _flip_switch	32FA:0720	FM Towns
