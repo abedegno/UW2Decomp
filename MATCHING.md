@@ -81,6 +81,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **`-d` merges string tails too**: `" "` can be the last byte of `"You see "`, and `"\n"` the tail of `".\n"`.
 - **A block-local initialised array** (`char num[3] = "00";`) puts its initialiser in `_DATA` where the function is.
 - **Pointer tables in data** (an initialised array of far function pointers) carry fixups inside `_DATA`; `verify.py` checks each pointer against the EXE and leaves those bytes out of the comparison.
+- **An empty string can be someone else's padding byte**: seg043 passes `push 98Dh` for `""`, an address inside another file's data, so the literal was merged by the linker and is declared there as an extern array.
 - **Static uninitialised data** goes in `_BSS`, which `verify.py` checks for a consistent base (no bytes to compare).
 - **`!c` against `c == 0` on a `char` parameter**: `!c` gives `mov al; cbw; or ax,ax`; `c == 0` gives `cmp byte [bp+N],0`.
 - **Far pointers compare by offset only** for `<`/`>=` (`mov ax,[bp+N]; cmp ax,[g]`), while `== 0` tests both halves (`or ax,dx`).
@@ -133,5 +134,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Indexing a far byte array**: `(map + y * w)[x + 2]` gives `les bx; add bx,ax; mov al,es:[bx+di+2]`; `map[y * w + x + 2]` adds in AX and loads ES separately.
 - **An unsigned mask against a signed int** compares unsigned (`jbe`); a signed `jle` needs `(int)` on the masked value.
 - **Unreferenced helper functions** with no FM Towns counterpart can sit inside a neighbour's range in the target table; define them `static` where they fall.
+- **`switch` fallthrough for a shared tail**: `case 'p': v = 0x190; case 'P': v += 0xC8; f(v); break;` reproduces two cases sharing one call; an if/else chain duplicating the call spills a temporary.
+- **Fold a trailing break into the loop test**: `while (A && B) i++;` gives the compact test-first layout; `while (A) { if (!B) break; i++; }` lays out differently.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

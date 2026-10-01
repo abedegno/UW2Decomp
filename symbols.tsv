@@ -35,11 +35,14 @@ _checkSpell	32FA:0998	FM Towns
 _checkTrap	32FA:0A95	FM Towns
 _clear_all_loretries	64A5:0039	FM Towns
 _clear_fight_state	22FC:130F	FM Towns
+_click_time	DS:0984	provisional
 _close	0E72:02FE	FM Towns
 _close_arc	6417:0039	FM Towns
 _CloseDoor	654F:0084	FM Towns
+_color_by_digit	DS:0947	provisional
 _ComObjData	DS:6B74	FM Towns
 _CompressLZW_disk	6522:0025	FM Towns
+_conv_edge_phase	DS:098A	provisional
 _conv_inv_special	6448:0093	FM Towns
 _copy_visible_to_hidden	0085:4B57	FM Towns
 _CP	DS:26A6	FM Towns
@@ -64,6 +67,7 @@ _DecompressLZW_disk	6522:0020	FM Towns
 _DegradeLights	653A:0020	FM Towns
 _delete_trap	65D5:0093	FM Towns
 _DetectedTrap	6599:0084	FM Towns
+_didMouseInput	DS:0983	FM Towns
 _display_inventory_no_show	DS:15D0	FM Towns
 _display_screen	6588:0020	FM Towns
 _displayEnc	6513:0075	FM Towns
@@ -90,8 +94,10 @@ _drop_link_chain	65CB:0034	FM Towns
 _dsfx_playing	DS:010A	FM Towns
 _DumpTheBag	654F:008E	FM Towns
 _duration_check	653A:0034	FM Towns
+_edge_phase	DS:0988	provisional
 _editchng	1B44:00AE	FM Towns
 _editor_dispatch	DS:11F4	FM Towns
+_empty_text	DS:098D	provisional
 _EncumCheck	650A:0075	FM Towns
 _fadein3d	64E2:0043	FM Towns
 _fadeout3d	64E2:0052	FM Towns
@@ -100,6 +106,7 @@ _farmalloc	0E72:3344	provisional
 _FileWriteWithParams	65E0:008E	provisional
 _fill_FB	64E2:0057	FM Towns
 _find_obj	650A:0057	FM Towns
+_FindInString_seg005_105F_103F	0E72:103F	provisional
 _FindInventoryHit	6513:002F	FM Towns
 _FindObj	650A:0052	FM Towns
 _FindSlot	650A:0061	FM Towns
@@ -151,6 +158,8 @@ _IsMobElem	28A1:0A87	FM Towns
 _ItemFitsSlot	6513:005C	FM Towns
 _ItemWeight	650A:004D	FM Towns
 _itoa	0E72:1D1B	FM Towns
+_j_LikelyWaitForMore_ovr139_29	6559:002A	provisional
+_j_WriteTextWithMORE_ovr139_BD	6559:0039	provisional
 _kill_all_effects	1C86:20C1	FM Towns
 _Killorn_just_crashed	64A5:00B1	FM Towns
 _LeftPanel	DS:0384	FM Towns
@@ -172,8 +181,11 @@ _Map_GetAddr	30BC:000F	FM Towns
 _mapdata	DS:1896	FM Towns
 _MapObj_X	DS:24F8	FM Towns
 _MapObj_Y	DS:24FA	FM Towns
+_MaybeAComparison_seg005_105F_282	0E72:282C	provisional
 _mdetect	65B5:0039	FM Towns
 _memset	0E72:1DCA	FM Towns
+_menu_scroll	DS:0962	FM Towns
+_menus_active	DS:0982	FM Towns
 _Missile	DS:6946	FM Towns
 _missile_heading	DS:2514	provisional
 _missile_item	DS:250E	provisional
@@ -191,6 +203,7 @@ _mode_to_button	DS:0129	FM Towns
 _motionbits	DS:00D2	FM Towns
 _mous_in_rune	6504:0034	FM Towns
 _mous_in_stat	65BC:0034	FM Towns
+_mouse_check_reg	1B8F:06F9	FM Towns
 _mouse_dragged	1B8F:0326	FM Towns
 _mouse_freereign	1B8F:03CD	FM Towns
 _mouse_get_input	1B8F:0594	FM Towns
@@ -337,6 +350,7 @@ _scroll_esc	DS:098C	FM Towns
 _scroll_mode	DS:097E	FM Towns
 _scroll_print	342C:01A0	FM Towns
 _scroll_up	342C:011F	FM Towns
+_seg003_0272_51C8	0085:51C8	provisional
 _send_FB	30D3:16AA	FM Towns
 _set_animlen	34A2:0E82	FM Towns
 _set_effect	2FBE:0CA3	FM Towns

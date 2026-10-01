@@ -40,7 +40,7 @@ seg039_3452	C	19	2395	6	4	1	8	init_strings_	game_strings_3_
 seg040_34E7	C	15	3828	13	2	0	0	UseObj_	useNSpellCharges_	yes
 seg041_35D7	C	4	355	2	1	1	0	mvcheck_	move_along_	
 seg042_35ED	C	8	701	2	1	3	2	free_mem_	release_workspace_	
-seg043_3619	C	13	1886	10	1	1	1	do_npc_scroll_	scroll_wrap_	
+seg043_3619	C	13	1886	10	1	1	1	do_npc_scroll_	scroll_wrap_	yes
 seg044_368F	C	17	4309	12	0	0	5	rem_anim_from_map_	get_animlen_	
 seg045_379C	assembly	7	783	0	0	1	6			
 seg046_37CD	assembly	43	7963	0	6	0	37			
