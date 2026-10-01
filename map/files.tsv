@@ -39,7 +39,7 @@ seg038_342C	C	3	603	3	0	0	0	skill_check_	panel_check_hpmp_	yes
 seg039_3452	C	19	2395	8	3	0	8	init_strings_	game_strings_3_	
 seg040_34E7	C	15	3828	15	0	0	0	UseObj_	useNSpellCharges_	yes
 seg041_35D7	C	4	355	3	0	0	1	mvcheck_	rollem_	yes
-seg042_35ED	C	8	701	5	1	0	2	init_mem_	release_workspace_	
+seg042_35ED	C	8	701	5	1	0	2	init_mem_	release_workspace_	yes
 seg043_3619	C	13	1886	13	0	0	0	set_mouse_in_	draw_scroll_	yes
 seg044_368F	C	17	4309	15	0	0	2	rem_anim_from_map_	rem_timer_obj_	yes
 seg045_379C	assembly	7	783	0	0	0	7			
@@ -76,7 +76,7 @@ ovr124	C	20	3754	18	0	0	2	RedisplayInvSlot_	EncumCheck_	yes
 ovr125	C	20	6738	20	0	0	0	load_inventory_pix_	FindInventoryHit_	yes
 ovr126	C	10	4065	10	0	0	0	LookAt_	GetObjDesc_	yes
 ovr127	C	4	3086	2	2	0	0	DecompressLZW_disk_	CompressLZW_disk_	
-ovr128	C	6	906	3	1	1	1	Map_Init_	Map_Save_	
+ovr128	C	6	906	3	1	1	1	Map_Init_	Map_Save_	yes
 ovr130	C	2	138	0	2	0	0			
 ovr131	C	1	24	1	0	0	0	show_credits_	show_credits_	
 ovr132	C	1	7	0	0	0	1			

@@ -57,3 +57,5 @@ ovr114
 ovr104
 seg016_1E73
 ovr152
+seg042_35ED
+ovr128
