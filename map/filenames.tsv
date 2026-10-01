@@ -1,0 +1,111 @@
+# segment	source now	candidate name	tier	evidence
+# Candidate original file names. strong: a shared function name and the same job in the System Shock source
+# (Looking Glass, 1994, built on the Underworld engine); plausible: same job and shared vocabulary; blank: no candidate.
+# These are lineage names from a later game, not recovered UW2 names. Nothing is renamed on their strength yet.
+seg001_023B		valloc.c	strong	valloc and vfree are in the 2D library VALLOC.C
+seg003_0272				
+seg004_0849		interp (asm)	plausible	the 3D model interpreter: System Shock 3D library INTERP.C has the same do_* opcode handlers (do_defres, do_jnorm, do_setshade...); UW1 has its shade handler in seg004, so UW2 seg004 is the likely home, unverified
+seg006_1413	SEG006.C	pathfind.c	plausible	path finding; vocabulary matches System Shock PATHFIND.C
+seg007_17A2	SEG007.C	ai.c	plausible	critter movement and AI; vocabulary matches System Shock AI.C
+seg008_1B09	SEG008.C	physics.c	plausible	player physics; vocabulary matches System Shock PHYSICS.C
+seg009	SEG009.C			
+seg010_1CA1	SEG010.C	input.c	strong	init_input is in System Shock INPUT.C
+seg011	SEG011.C			
+seg012_1D31	SEG012.C			
+seg013_1D3C	SEG013.C			
+seg014	SEG014.C			
+seg015_1D7C	SEG015.C	mouse.c	plausible	the mouse; System Shock keeps it in the INPUT library
+seg016_1E73	SEG016.C			
+seg017_2179	SEG017.ASM			
+seg019_21BA	SEG019.C			
+seg020				
+seg021_22FD				
+seg022_2405				
+seg023	SEG023.C			
+seg024_24E9	SEG024.C			
+seg025_26A1	SEG025.C	damage.c	strong	damage_object is in System Shock DAMAGE.C
+seg026_2716	SEG026.C			
+seg027_2856	SEG027.C			
+seg028_2941	SEG028.C			
+seg029_2A8E	SEG029.C			
+seg030_2BB7	SEG030.C			
+seg031_2CFA	SEG031.C			
+seg032_2E9B	SEG032.C			
+seg033_2FBE	SEG033.C			
+seg034_310D	SEG034.C	gamesort.c	plausible	object sorting; vocabulary matches System Shock GAMESORT.C
+seg035_31AB	SEG035.C			
+seg036_32A9	SEG036.C			
+seg037_32C0	SEG037.C			
+seg038_342C	SEG038.C			
+seg039_3452	SEG039.C	gamestrn.c	strong	get_string and init_strings are in System Shock GAMESTRN.C
+seg040_34E7	SEG040.C			
+seg041_35D7	SEG041.C			
+seg042_35ED	SEG042.C	tmpalloc.c	plausible	workspace memory; vocabulary matches System Shock TMPALLOC.C
+seg043_3619	SEG043.C			
+seg044_368F	SEG044.C	effect.c	plausible	animated objects and effects; vocabulary matches System Shock EFFECT.C
+seg045_379C				
+seg046_37CD				
+ovr091	OVR091.C			
+ovr092	OVR092.C			
+ovr093	OVR093.C			
+ovr094	OVR094.C	automap.c	plausible	automap code; vocabulary matches System Shock AUTOMAP.C
+ovr095	OVR095.C			
+ovr096	OVR096.C			
+ovr097	OVR097.C			
+ovr099	OVR099.C			
+ovr101	OVR101.C			
+ovr102	OVR102.C			
+ovr103	OVR103.C			
+ovr104	OVR104.C			
+ovr106	OVR106.C			
+ovr107	OVR107.C			
+ovr108	OVR108.C			
+ovr109	OVR109.C			
+ovr110	OVR110.C			
+ovr112	OVR112.C			
+ovr113	OVR113.C			
+ovr114	OVR114.C			
+ovr116	OVR116.C			
+ovr117	OVR117.C			
+ovr118	OVR118.C			
+ovr119	OVR119.C			
+ovr120	OVR120.C			
+ovr121	OVR121.C			
+ovr122	OVR122.C			
+ovr123	OVR123.C			
+ovr124	OVR124.C			
+ovr125	OVR125.C			
+ovr126	OVR126.C			
+ovr127	OVR127.C			
+ovr128	OVR128.C			
+ovr130	OVR130.C			
+ovr131	OVR131.C			
+ovr132	OVR132.C			
+ovr134	OVR134.C			
+ovr135	OVR135.C			
+ovr136	OVR136.C	wrapper.c	strong	draw_button is in System Shock WRAPPER.C, its options screens
+ovr137	OVR137.C			
+ovr138	OVR138.C			
+ovr139	OVR139.C			
+ovr140	OVR140.C			
+ovr142	OVR142.C			
+ovr143	OVR143.C			
+ovr146	OVR146.C			
+ovr147	OVR147.C			
+ovr148	OVR148.C			
+ovr149	OVR149.C	gamewrap.c	strong	copy_file is in System Shock GAMEWRAP.C, its save and load file
+ovr150	OVR150.C			
+ovr151	OVR151.C	gamesys.c	plausible	event scheduler; vocabulary matches System Shock GAMESYS.C
+ovr152	OVR152.C			
+ovr153	OVR153.C			
+ovr154	PLAYER.C			
+ovr155	OVR155.C			
+ovr156	OVR156.C			
+ovr157	OVR157.C			
+ovr158	OVR158.C			
+ovr159	OVR159.C			
+ovr162	OVR162.C			
+ovr163	OVR163.C			
+ovr165	OVR165.C			
+ovr166	OVR166.C	trigger.c	plausible	triggers and traps; vocabulary matches System Shock TRIGGER.C
+ovr167	OVR167.C			

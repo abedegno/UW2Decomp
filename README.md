@@ -21,6 +21,8 @@ Overall: 1 of 99 C source files matched, about 7 KB of 337 KB of C (2%).
 - 884 of the 1886 non-library functions have a confirmed original name. Tested by holding out known pairs, confirmed names were right 80 times out of 82, and both misses disagree with a hand-made anchor rather than a proven one.
 - The rest are mostly DOS-only code with no FM Towns counterpart: the assembly, a few DOS-specific C files (ovr095 and the small resident segments seg011 to seg019), and a stretch at the very end (ovr158 onwards) past the last anchor.
 
+`map/filenames.tsv` proposes original file names from the System Shock source release (Looking Glass, 1994, built on the Underworld engine): six strong candidates where a function name and the file's job both agree, eleven plausible ones. They are lineage names, not recovered ones, so the sources keep their segment names for now.
+
 Rebuild it with `tools/doslist.py`, `tools/callpairs.py`, `tools/anchors.py`, `tools/callgraphs.py`, `tools/align.py` and `tools/files.py`, in that order; each describes itself.
 
 `match.py` compares code bytes with fixups masked. `verify.py` then checks what that masks: every extern resolves to one address everywhere it is used and no two externs share one, every reference into the file's own code lands where it should, and the file's initialised data matches the EXE's data segment byte for byte. `symbols.tsv` is the resulting map of names to addresses in `UW2.EXE`, each marked as an original FM Towns name, a library routine or provisional.
