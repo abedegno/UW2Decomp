@@ -106,5 +106,5 @@ ovr159	C	1	7	0	1	0	0			yes
 ovr162	C	1	23	0	1	0	0			yes
 ovr163	C	7	1679	7	0	0	0	drop_link_chain_	generate_inventory_	yes
 ovr165	C	2	19	0	2	0	0			yes
-ovr166	C	27	12238	22	5	0	0	UseTrigger_	check_for_sunken_moongate_	
+ovr166	C	27	12238	22	5	0	0	UseTrigger_	check_for_sunken_moongate_	yes
 ovr167	C	23	2292	4	6	13	0	mpos_	print_path_to_	

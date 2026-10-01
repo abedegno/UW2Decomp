@@ -192,5 +192,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **A jump into the middle of another arm's stores** means the statements after that point came after the if/else in the source, so both paths run them.
 - **`p += n` on a far pointer** gives `add [bp-6],ax`; `p = p + n` reloads and stores both halves.
 - **An assembly routine can share a C file's segment**: seg019 starts with SetPnt, an assembly module called with far calls from the C (a same-file C function would get `push cs; call near`). Its target table starts at the first C function (org 0x41).
+- **A first assignment duplicated before a loop**: `item = f(); while (!g(item)) item = f();` tail-merges the two copies, leaving `jge L; mov; jmp X; L: jmp X` after a preceding `if`.
+- **A grouped `switch` against an `||` chain**: `case 2: case 3:` compares AX twice without reloading; `if (b->q == 2 || b->q == 3)` reloads the bitfield.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.
