@@ -31,13 +31,13 @@ static struct {
     int next;
 } gif;
 
-void far ovr116_149(int bits);
+static void far ovr116_149(int bits);
 void far ovr116_194(int fd, char size);
-void far ovr116_1C3(int fd, int code);
+static void far ovr116_1C3(int fd, int code);
 void far ovr116_2A3(int fd, int bits);
 int far ovr116_420(void);
 
-void far SaveScreenshot_ovr116_0(int seg)
+void far save_screenshot(int seg)
 {
     int number = 0;
     unsigned char c;
@@ -75,7 +75,7 @@ void far SaveScreenshot_ovr116_0(int seg)
 
 unsigned char gif_trailer = ';';
 
-void far ovr116_149(int bits)
+static void far ovr116_149(int bits)
 {
     register int i;
     gif.codebits = bits + 1;
@@ -92,7 +92,7 @@ void far ovr116_194(int fd, char size)
     FileWriteWithParams(fd, gif.bytes, (unsigned char)size);
 }
 
-void far ovr116_1C3(int fd, int code)
+static void far ovr116_1C3(int fd, int code)
 {
     long value;
     gif.bytepos = gif.bitpos >> 3;

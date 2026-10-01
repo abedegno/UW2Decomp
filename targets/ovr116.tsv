@@ -1,6 +1,6 @@
 # segment ovr116 base 0x89F40 size 0x4A7 org 0x0
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
-SaveScreenshot_ovr116_0	SaveScreenshot_ovr116_0	0x0	0x149
+save_screenshot	SaveScreenshot_ovr116_0	0x0	0x149
 ovr116_149	ovr116_149	0x149	0x4B
 ovr116_194	ovr116_194	0x194	0x2F
 ovr116_1C3	ovr116_1C3	0x1C3	0xE0

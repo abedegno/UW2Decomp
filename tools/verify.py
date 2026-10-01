@@ -2,7 +2,12 @@
 usage: verify.py src/FILE.C [--update]      (run match.py first; this reads its build)
 
 - An extern must resolve to one address everywhere it is used: a DS offset for near data,
-  segment:offset for far calls. Two externs resolving to one address are reported too.
+  segment:offset for far calls. Two externs resolving to one address are reported too. Each
+  segment word and each offset word of a far address is checked, not just one of each.
+- The file's own publics are placed too (_DATA and _BSS from their bases, resident code at
+  its paragraph, overlay code at its stub entry) and checked against symbols.tsv like the
+  externs, so one name cannot mean two addresses in two files. A public of an overlay that
+  the EXE's stub table has no entry for was static in the original.
 - A reference into this file's own code must land where the object file says: calls to
   functions later in the file (rewritten by the linker to nop; push cs; call near) and jump
   tables. A function's address stored as data points at its overlay stub entry instead,
@@ -56,11 +61,11 @@ def main():
             name = o['ext'][ti]
             if loc in (1, 5) and f['frame'] and f['frame'][0] == 5:
                 # the offset half of a far address used as data (say, a callback argument)
-                halves.setdefault(name, {})['off'] = ((word(exe, base + at) - add) & 0xFFFF, at)
+                halves.setdefault(name, {}).setdefault('off', []).append(((word(exe, base + at) - add) & 0xFFFF, at))
             elif loc in (1, 5):
                 note(name, ('DS', (word(exe, base + at) - add) & 0xFFFF), at)
             elif loc == 2:
-                halves.setdefault(name, {})['seg'] = (para_of(word(exe, base + at)), at)
+                halves.setdefault(name, {}).setdefault('seg', []).append((para_of(word(exe, base + at)), at))
             elif loc == 3:
                 note(name, ('FAR', para_of(word(exe, base + at + 2)), (word(exe, base + at) - add) & 0xFFFF), at)
             else:
@@ -102,10 +107,16 @@ def main():
             problems.append(f'+{at:X}: target {target_name(o, f["target"])} loc {loc} not handled')
 
     for name, h in halves.items():
-        if 'off' in h and 'seg' in h: note(name, ('FAR', h['seg'][0], h['off'][0]), h['off'][1])
+        # every half must agree: one name used for two variables shows up here
+        for half in ('seg', 'off'):
+            vals = sorted({v for v, _ in h.get(half, [])})
+            if len(vals) > 1:
+                problems.append(f'{name}: {half} halves differ: ' + ', '.join(
+                    f'{v:04X} at +' + '/+'.join(f'{w:X}' for u, w in h[half] if u == v) for v in vals))
+        if 'off' in h and 'seg' in h: note(name, ('FAR', h['seg'][0][0], h['off'][0][0]), h['off'][0][1])
         elif 'seg' in h:
             # only the segment is used, as in FP_SEG(x) + 1: check it against the map
-            segonly[name] = h['seg'][0]
+            segonly[name] = h['seg'][0][0]
         else: problems.append(f'{name}: only the offset half of its far address is referenced')
     # _BSS has no bytes to compare; every reference must agree on one base
     if len(bss_bases) > 1:
@@ -182,8 +193,27 @@ def main():
                 problems.append(f'{name}: segment {para:04X} referenced, but its address is {v}')
             else:
                 print(f'{name}: segment {para:04X} referenced on its own' + (f', agreeing with {v}' if v else ''))
-    print(f'{len(o["fixups"])} fixups: {len(syms)} externs resolved, {internal} internal references')
-    # without --update, still check the names against symbols.tsv, read-only
+    # the file's own publics, where the EXE has them
+    pubs = {}
+    para = (base - org - hdr) // 16
+    stub = None
+    if base >= mzend and re.fullmatch(r'ovr\d{3}', seg):
+        # the overlay's stub: segment table entry N for ovrN, entries of INT 3Fh, offset, 0 after 0x20
+        n = int(seg[3:]); sp, smax = struct.unpack_from('<HH', exe, segtab + 8 * n)
+        lo = hdr + sp * 16
+        stub = (sp, {word(exe, lo + e + 2): e for e in range(0x20, smax, 5) if exe[lo + e:lo + e + 2] == b'\xcd\x3f'})
+    for name, (si, off) in o['pubs'].items():
+        if si == datas and db is not None: pubs[name] = ('DS', (db + off) & 0xFFFF)
+        elif si == bss and len(bss_bases) == 1: pubs[name] = ('DS', (min(bss_bases) + off) & 0xFFFF)
+        elif si == code and base < mzend: pubs[name] = ('FAR', para, org + off)
+        elif si == code and stub:
+            if off in stub[1]: pubs[name] = ('FAR', stub[0], stub[1][off])
+            else: problems.append(f'{name} is public, but the overlay stub has no entry for +{off:X}: UW2 had it static')
+    print(f'{len(o["fixups"])} fixups: {len(syms)} externs resolved, {internal} internal references, {len(pubs)} publics placed')
+    # without --update, still check the names against symbols.tsv, read-only. The publics
+    # go through a global so that update keeps the signature other tools replace it with.
+    global PUBS
+    PUBS = pubs
     update(syms, problems, write='--update' in a)
     for p in problems: print('PROBLEM', p)
     print('-- fixups and data verified' if not problems else f'-- {len(problems)} problems')
@@ -192,15 +222,23 @@ def main():
 def fmt(v):
     return f'DS:{v[1]:04X}' if v[0] == 'DS' else f'{v[1]:04X}:{v[2]:04X}'
 
+PUBS = {}       # the verified file's publics, set by main for update
+
 def update(syms, problems, write=True):
-    path = os.path.join(root, 'symbols.tsv'); known = {}
+    path = os.path.join(root, 'symbols.tsv'); known = {}; label = {}
     if os.path.exists(path):
         for l in open(path):
             if l.startswith('#') or not l.strip(): continue
-            n, v = l.rstrip('\n').split('\t')[:2]; known[n] = v
+            f = l.rstrip('\n').split('\t'); known[f[0]] = f[1]; label[f[0]] = f[2] if len(f) > 2 else ''
     for n, (v, _) in syms.items():
         if n in known and known[n] != fmt(v):
             problems.append(f'{n}: symbols.tsv has {known[n]}, this file gives {fmt(v)}')
+        known[n] = fmt(v)
+    # this file's publics: the same rules, and merged too
+    for n, v in PUBS.items():
+        if n in known and known[n] != fmt(v):
+            problems.append(f'{n}: symbols.tsv has {known[n]}, but this file defines it at {fmt(v)}')
+        if n not in syms: syms = dict(syms); syms[n] = (v, None)
         known[n] = fmt(v)
     # one address, one name, across every file merged so far
     byaddr = {}
@@ -220,7 +258,8 @@ def update(syms, problems, write=True):
         f.write('# name\taddress\tname source\n# address: DS:offset for near data, segment:offset for far code (load-relative paragraphs)\n')
         for n in sorted(known, key=str.lower):
             # Turbo C keeps 32 characters of an identifier
-            src = 'FM Towns' if n in orig or len(n) >= 32 and any(o.startswith(n) for o in orig) else ('library' if n[:2] in ('F_', 'N_') or n.endswith('@') else 'provisional')
+            # (a C library name marked 'library' by hand keeps that mark)
+            src = 'FM Towns' if n in orig or len(n) >= 32 and any(o.startswith(n) for o in orig) else ('library' if n[:2] in ('F_', 'N_') or n.endswith('@') or label.get(n) == 'library' else 'provisional')
             f.write(f'{n}\t{known[n]}\t{src}\n')
 
 if __name__ == '__main__':

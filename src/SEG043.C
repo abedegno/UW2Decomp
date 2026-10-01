@@ -73,12 +73,10 @@ void far pic_to_screen(int pic, int x, int y, int w, int h);
 void far set_the_color(int color);
 void far rectangle(int top, int mid, int bottom, int count);
 unsigned far str_len(char far *s);
-char far * far FindInString_seg005_105F_103F(char *s, char c);
-char far * far MaybeAComparison_seg005_105F_282C(char *s, char c);
 int far string_width(char far *s);
 void far string_to_screen(char far *s, int x, int y);
 void far scroll_wait(int ticks, int also);
-void far j_WriteTextWithMORE_ovr139_BD(void);
+void far scroll_more(void);
 /* A 6-int call in a different file; FM Towns vcopy_ matches the first four parameters
    exactly (by position and value) but takes only four, so this probably is not it.
    Unresolved; kept under its DOS label. */
@@ -192,7 +190,7 @@ int far scroll_print(char far *s)
     while (remaining > 0x31) {
         movedata(FP_SEG(s), FP_OFF(s), FP_SEG(copy), FP_OFF(copy), 0x31);
         sentinel = 0;
-        found = (char *)FindInString_seg005_105F_103F(copy, ' ');
+        found = strrchr(copy, ' ');
         if (found == 0)
             found = &sentinel;
         saved = *found;
@@ -218,7 +216,7 @@ void far scroll_print1(char *text, int flag)
     char *found;
 
     di = text;
-    while ((found = (char *)MaybeAComparison_seg005_105F_282C(di + 1, '\\')) != 0) {
+    while ((found = strchr(di + 1, '\\')) != 0) {
         *found = 0;
         if (found[2] != 0 || found[1] == 'm')
             scroll_print2(di, 1);
@@ -237,7 +235,7 @@ void far scroll_print2(char *text, int flag)
     char *di;
 
     di = text;
-    while ((si = (char *)MaybeAComparison_seg005_105F_282C(di, '\n')) != 0) {
+    while ((si = strchr(di, '\n')) != 0) {
         if (si[1] == 0)
             break;
         saved = si[1];
@@ -269,7 +267,7 @@ void far scroll_print3(char *text, int flag)
             scroll_wait(code_val, 1);
             break;
         case 'm':
-            j_WriteTextWithMORE_ovr139_BD();
+            scroll_more();
             break;
         default:
             if (*si >= '0' && *si <= '6')
@@ -284,7 +282,7 @@ void far scroll_print3(char *text, int flag)
         y = scroll->cur_y - cur_font->height;
         if (start_line - flag < 0) {
             if (y - cur_font->height < scroll->y0 - 1) {
-                j_WriteTextWithMORE_ovr139_BD();
+                scroll_more();
                 y = scroll->cur_y;
             } else {
                 scroll->start_line++;
@@ -336,7 +334,7 @@ void far scroll_wrap(char *text, int flag)
                 si++;
         }
         if (scroll->cur_x + string_width(si) >= scroll->bottom) {
-            di = (char *)FindInString_seg005_105F_103F(si, ' ');
+            di = strrchr(si, ' ');
             if (di != 0) {
                 while (di[-1] == ' ' && di > si)
                     di--;
@@ -369,4 +367,27 @@ void far draw_scroll(int x, int y, int w, int h, char flag)
     }
     set_the_color(0x71);
     rectangle(x, y, w, h);
+}
+
+/* The segment's last function (342C:0669). Nothing in UW2.EXE calls it and FM Towns has no
+   counterpart, so the name is provisional. It draws the four corner pictures 1068h-106Bh
+   transparent, then two nested boxes and a filled rectangle. It belongs to this file: the
+   EXE's relocations for it run in one descending sequence with this file's last record. */
+extern unsigned char far Transparency;          /* 370D:0DC5 */
+void far box(int x0, int y0, int x1, int y1);
+
+void far seg043_3619_669(int x, int y, int r, int b)
+{
+    Transparency = 1;
+    pic_to_screen(0x1068, x, y, 10, 0x28);
+    pic_to_screen(0x106A, r - 0x28, y, 10, 0x28);
+    pic_to_screen(0x1069, x, b + 10, 10, 0x28);
+    pic_to_screen(0x106B, r - 0x28, b + 10, 10, 0x28);
+    Transparency = 0;
+    set_the_color(0x74);
+    box(x + 0xD, y, r - 0xD, b);
+    set_the_color(0x72);
+    box(x + 0xE, y - 1, r - 0xE, b + 1);
+    set_the_color(0x71);
+    rectangle(x + 0xF, y - 2, r - 0xF, b + 2);
 }

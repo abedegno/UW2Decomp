@@ -34,7 +34,7 @@ unsigned far get_workspace(void);
 void far release_workspace(void);
 void far movedata(unsigned, unsigned, unsigned, unsigned, unsigned);
 
-unsigned char far FindSCDRowsToExecute_ovr151_0(unsigned char mode)
+static unsigned char far FindSCDRowsToExecute_ovr151_0(unsigned char mode)
 {
     unsigned char result;
     register int i;
@@ -61,7 +61,7 @@ unsigned char far FindSCDRowsToExecute_ovr151_0(unsigned char mode)
     return 0;
 }
 
-unsigned char far SetSomeValuesInSCDRows_ovr151_D3(unsigned char mode)
+static unsigned char far SetSomeValuesInSCDRows_ovr151_D3(unsigned char mode)
 {
     register int i = SCD_dseg_67d6_8634->clocks[PlayerLevel].next;
     while (i > 0) {
@@ -156,6 +156,11 @@ unsigned char far Sched_SetTime(register unsigned time, unsigned char mode)
 done:
     return result;
 }
+
+/* Declared here because TLINK numbers the overlay's stub entries in the order Turbo C lists
+   the publics, which for names with the same hash key is the order they were first seen:
+   the EXE's stub has Sched_IncrTime before Sched_WrapTime. */
+unsigned char far Sched_IncrTime(unsigned n, unsigned char mode);
 
 unsigned char far Sched_WrapTime(register unsigned time, unsigned span, unsigned char mode)
 {

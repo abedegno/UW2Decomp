@@ -1,7 +1,7 @@
 /* target: ovr155 */
 /* opts: -mm -1 -G -O -Y -d */
 
-int far SetsAXTo0_ovr155_0(void)
+int far spec_class_data(void)
 {
     return 0;
 }

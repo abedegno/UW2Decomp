@@ -9,7 +9,7 @@ extern int PlayerInput;
 extern int ForwInpRate, TurnInpRate;
 extern int joy_center_x, joy_center_y;
 extern int joy_min_x, joy_max_x, joy_min_y, joy_max_y;
-extern int joy_button_x, joy_button_y;
+extern int joymovecur, fauxright;
 extern long joy_last_tick;
 extern int joy_interval, joy_divisor, joy_limit, joy_gain, joy_clamp;
 extern int joy_filter_x, joy_filter_y;
@@ -37,9 +37,9 @@ void far seg011_6(void)
     if (y > 127) y = 127;
     else if (y < -127) y = -127;
     seg021_22FD_809();
-    joy_button_x = joy_buttons[0];
-    joy_button_y = joy_buttons[1];
-    if (joy_button_x == 0) {
+    joymovecur = joy_buttons[0];
+    fauxright = joy_buttons[1];
+    if (joymovecur == 0) {
         if (y > 20) {
             PlayerInput = 8;
             ForwInpRate = TurnInpRate = 0;

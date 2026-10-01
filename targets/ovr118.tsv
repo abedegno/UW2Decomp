@@ -1,9 +1,9 @@
 # segment ovr118 base 0x8A830 size 0x5E7 org 0x0
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
-ovr118_0	ovr118_0	0x0	0x34
+grfx_init	ovr118_0	0x0	0x34
 grfx_load_font	OpenDataFileByParam_ovr118_772B_34	0x34	0x67
 grfx_quikfont	OpenFont_ovr118_772BW_9B	0x9B	0x38
-ovr118_D3	ovr118_D3	0xD3	0xF
+grfx_close	ovr118_D3	0xD3	0xF
 grfx_clear	ProbablyResetScreen_ovr118_E2	0xE2	0x2F
 read_quikpal	OpenPalsDat_ovr118_772B_111	0x111	0x60
 grfx_quikpal	SetPalette_ovr118_171	0x171	0x2E

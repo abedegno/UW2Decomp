@@ -17,12 +17,12 @@ This is a fan research project, not affiliated with or endorsed by the rights ho
 - **What the repo does not contain is taken from your own EXE at build time.** `tools/extract.py` writes data-only TASM modules under `build/LINK` (never committed) for the far data segments, the DGROUP gaps between files, and the code that has no source yet. Their publics are the names in `symbols.tsv`, and each relocation in them becomes a `dd`/`dw seg` fixup.
 - **The link order comes from the EXE.** TLINK writes relocations module by module and lists every segment in the overlay manager's segment table, so both record the original order. seg000 to seg004 precede C0's `_TEXT`, and seg003, seg004 and seg045 come from a second library linked after `CM.LIB`.
 - **TLINK stores some of its environment in the EXE.** The output name must be `uwedit.exe` (written into `__EXENAME__`) and the DOS date 12 May 1993 (`__EXEDATE__`). UW2's start-up code is `C0.ASM` with three small changes, which `link.py` applies to a copy.
-- **Objects are adjusted only in what they tell the linker**, on copies: library routines still under IDA names, names that differ between files, overlay functions UW2 had as `static`, overlay public order and alignment. `link.py` prints each adjustment, and each one marks a source to correct.
+- **Objects link as they are**, with one exception: `link.py` reorders publics in copies of 21 overlay objects. TLINK numbers overlay stub entries in the order Turbo C lists publics, which follows a hash of each name (the same key as `_BSS`), so the EXE's stub order constrains the names; the 21 files break it mostly through provisional names. Any other defect `extract.py` finds (an unknown name, a public UW2 had `static`, a missing relocation) stops the link with the source to correct.
 - **Remaining differences:** the relocation table lists the same 2791 addresses in a different order, because seg003, seg004, seg015, seg021 and seg045 were each several modules originally; and the segment table's code flag for seg003 and seg004 is 1 where UW2 has 0 (probably a mixed-case class name that this TLINK, 3.01, keeps apart; unproven).
 - **Same-length source changes are safe.** The extracted modules keep literal DGROUP offsets, so a change that alters data sizes shifts data under them.
 - `--obj STEM=PATH` links a changed object in place of the matched one.
 
-**Code with no source yet:** seg000 (about 1.2 KB of game assembly), seg018, `SetPnt` in seg019, and a 0xF8-byte function at the end of seg043; the link extracts them from the EXE for now.
+Every byte of code now has source, including seg000 (the sprite module), seg018 (the divide-by-zero trap) and `SetPnt`; only the far data, the gaps between files' data and 15 zero bytes at the end of seg021 are taken from the EXE.
 
 `matched.txt` lists the matched segments; `map/files.tsv` has per-file status.
 

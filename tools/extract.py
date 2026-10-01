@@ -7,12 +7,12 @@ The modules hold game bytes, so they live under build/ and are never committed.
 
 What is extracted, and the evidence for each piece:
 
-- Code with no source: seg000 (file 0x2C00-0x30EA), seg018 (the divide-by-zero trap),
-  SetPnt (the assembly routine at the start of seg019's segment), a 0xF8-byte function at
-  the end of seg043 that seg043's target table does not list, and 15 zero bytes ending
-  seg021's segment. Found by subtracting what the objects cover from the segment extents in
-  the overlay manager's segment table (__SEGTABLE__: 0xAE entries of {paragraph, end, flags,
-  start} that TLINK writes for every segment, in order).
+- Code with no source: only the 15 zero bytes ending seg021's segment (XT021). Found by
+  subtracting what the objects cover from the segment extents in the overlay manager's
+  segment table (__SEGTABLE__: 0xAE entries of {paragraph, end, flags, start} that TLINK
+  writes for every segment, in order). seg000 (SEG000.ASM), seg018 (SEG018.ASM), SetPnt at
+  the start of seg019's segment (SETPNT.ASM) and the function ending seg043's segment
+  (SEG043B.C) used to be extracted here too; they now have sources.
 - The 29 far data segments between C0's _FARDATA and the overlay manager's data (segment table
   entries 50 to 78), each with the alignment its start implies: para when it starts on a fresh
   paragraph after a gap, byte when it starts exactly where the previous one ended, word when
@@ -24,7 +24,7 @@ What is extracted, and the evidence for each piece:
   that library so that TLINK places it after the C library's data.
 - Empty overlays (ovr098, ovr100, ...): their stubs have no entries and codesize 0, so the
   original had modules with an empty code segment in the overlay list.
-- XORDER and the tail of XSEG018 declare empty code segments early, because TLINK places
+- XORDER and XSEG020 declare empty code segments early, because TLINK places
   segments in the order it first sees their names: seg000..seg004 must come before C0's
   _TEXT, seg003, seg004, seg021 and seg022 start on paragraphs, and segment table entries 5
   and 18 are empty code segments that the original link had.
@@ -241,9 +241,16 @@ for stem, ob in OBJS.items():
 # seg045 interleaved (a second library: their _DATA follows the C library's and seg045's
 # _BSS is the last in DGROUP), then the overlay manager. seg001 and seg002 carry no data and
 # seg002 and seg020 no relocations, so their places are free; they go next to their code.
-RES = ['SEG%03d' % n for n in range(6, 17)] + ['XEMPTY18', 'SEG017', 'XSEG018', 'SEG020', 'XSEG000', 'SEG021',
+# SEG018 (one relocation, its far call) and SETPNT (none, but it must declare seg019's segment
+# before XSEG020 declares seg020's) sit where XSEG018, the extracted module that held both, was;
+# SEG000 where its relocations put it; SEG043B, the end of seg043's segment, right after SEG043.
+RES = ['SEG%03d' % n for n in range(6, 17)] + ['XEMPTY18', 'SEG017', 'SEG018', 'SETPNT', 'XSEG020', 'SEG020', 'SEG000', 'SEG021',
        'SEG001', 'SEG002', 'SEG022'] + ['SEG%03d' % n for n in range(23, 33)] + ['SEG019'] + \
-      ['SEG%03d' % n for n in range(33, 44)] + ['XSEG043', 'SEG044', 'XFAR']
+      ['SEG%03d' % n for n in range(33, 44)] + ['SEG043B', 'SEG044', 'XFAR']
+# SEG043B.C is the function ending seg043's segment, and its relocations show it was the last
+# function of seg043's own source (they fall inside the run of SEG043's, in the same record):
+# once it is moved into SEG043.C and SEG043B.C removed, it simply drops out of the list.
+if 'SEG043B' not in OBJS: RES.remove('SEG043B')
 OVLNUMS = list(range(91, 168))
 LATE = ['SEG003', 'SEG004', 'SEG045']          # the second library, after the C library
 def ovl_module(n):
@@ -262,8 +269,10 @@ def uncovered(lo, hi):
         at = max(at, b)
     if at < hi: pieces.append((at, hi))
     return pieces
-CODE_GAPS = {0: ('XSEG000', 'SEG000_TEXT'), 20: ('XSEG018', 'SEG018_TEXT'), 21: ('XSEG018', 'SEG019_TEXT'),
-             45: ('XSEG043', 'SEG043_TEXT')}
+# segment index -> (module, segment name) for code with no source, extracted from the EXE;
+# empty now that seg000, seg018, SetPnt and the end of seg043 have sources (an uncovered range
+# anywhere else in the resident code stops the tool below, as a tail of the object before it)
+CODE_GAPS = {}
 GAPS = {}; TAILS = {}
 for i, para, lo, hi, fl in SEGS[:48]:
     if i in (5, 6) or hi is None or hi <= lo: continue        # C0 and the C library: _TEXT
@@ -505,12 +514,13 @@ for i, (mname, segname) in CODE_GAPS.items():
         if a == SEGS[i][2]: m.lines += seg_start_labels(m, SEGS[i][1], i)
         m.lines += body(m, a, b, SEGS[i][1], True)
         m.lines.append(f'{segname} ends')
-    if i == 21:
-        m.lines += ['; seg020 starts at an odd address and seg021 and seg022 on paragraphs: declare them',
-                    '; here, before their objects. (seg020\'s object is word-aligned; link.py patches it.)',
-                    'SEG020_TEXT segment byte public \'CODE\'', 'SEG020_TEXT ends',
-                    'SEG021_TEXT segment para public \'CODE\'', 'SEG021_TEXT ends',
-                    'SEG022_TEXT segment para public \'CODE\'', 'SEG022_TEXT ends']
+m = module('XSEG020')
+m.lines += ['; seg020 starts at an odd address and seg021 and seg022 on paragraphs: declare them',
+            '; here, after SetPnt (seg019\'s segment) and before their objects. (seg020\'s object',
+            '; is word-aligned; link.py patches it.)',
+            'SEG020_TEXT segment byte public \'CODE\'', 'SEG020_TEXT ends',
+            'SEG021_TEXT segment para public \'CODE\'', 'SEG021_TEXT ends',
+            'SEG022_TEXT segment para public \'CODE\'', 'SEG022_TEXT ends']
 m = module('XEMPTY18')
 m.lines += ['; segment table entry 18: an empty byte-aligned code segment between seg016 and seg017',
             'XEMPTY18 segment byte public \'CODE\'', 'XEMPTY18 ends']

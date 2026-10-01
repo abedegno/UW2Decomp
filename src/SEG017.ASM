@@ -27,7 +27,7 @@
         .code
 
         public  _grab
-        public  _Print_String_To_Console_seg017_DE
+        public  _PrintStringToConsole_seg017_DE
         public  _mem_set
         public  _str_len
         public  _str_ncopy
@@ -164,8 +164,8 @@ grab_up_plane:
         ret
 _grab   endp
 
-; void far Print_String_To_Console_seg017_DE(char far *s)    DOS print, '$' terminated
-_Print_String_To_Console_seg017_DE proc far
+; void far PrintStringToConsole_seg017_DE(char far *s)    DOS print, '$' terminated
+_PrintStringToConsole_seg017_DE proc far
         push    bp
         mov     bp,sp
         push    dx
@@ -177,7 +177,7 @@ _Print_String_To_Console_seg017_DE proc far
         pop     dx
         pop     bp
         ret
-_Print_String_To_Console_seg017_DE endp
+_PrintStringToConsole_seg017_DE endp
 
 ; void far mem_set(void far *dst, char value, unsigned count)
 _mem_set proc   far

@@ -141,7 +141,7 @@ int far Length_ovr095_E8D(int far *args);
 int far Val_ovr095_EB2(int far *args);
 
 /* The whole work area starts as one free block. A static in the FM Towns build. */
-void far ovr095_0(char far *work)
+static void far ovr095_0(char far *work)
 {
     free_list = (struct BabBlock far *)work;
     free_list->size = 0xfbffL;
@@ -722,7 +722,7 @@ void far CopyConversationCode_ovr095_14B1(void)
         (unsigned)code_size << 1);
 }
 
-void far ExitConversation_ovr095_14D4(void)
+static void far ExitConversation_ovr095_14D4(void)
 {
     clear_dynamics(0x7c);
     bab_put_globals(mem, babl_nvars);

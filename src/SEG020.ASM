@@ -10,13 +10,19 @@
 ; The routine starts at seg020:0001 (IDA put its proc at +24, inside it); nothing calls
 ; it directly, so it has neither an FM Towns nor a symbols.tsv name.
 
-        .model  medium
+; The segments are declared by hand, not with .model medium and .code: seg020 starts at an
+; odd address in the EXE, right after seg019's code, so its code segment was byte-aligned,
+; and .model medium declares SEG020_TEXT word-aligned (and refuses another alignment).
 
-
-        .data
+SEG020_TEXT segment byte public 'CODE'
+SEG020_TEXT ends
+DGROUP  group   _DATA
+_DATA   segment word public 'DATA'
         extrn   _Ytab:byte
+_DATA   ends
 
-        .code
+SEG020_TEXT segment byte public 'CODE'
+        assume  cs:SEG020_TEXT, ds:DGROUP
 
         public  _seg020_1
 
@@ -80,4 +86,5 @@ L0069:
         retf
 _seg020_1 endp
 
+SEG020_TEXT ends
         end

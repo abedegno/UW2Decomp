@@ -117,7 +117,7 @@ int far DartSatelliteVectoring_ovr167_313(int sx, int sy, int x, int y)
     return result;
 }
 
-void far PrintErrorToMessageScroll_ovr167_3C1(char *a, char *b)
+void far errmsg(char *a, char *b)
 {
     scroll_print("Error: ");
     scroll_print(a);
@@ -125,12 +125,11 @@ void far PrintErrorToMessageScroll_ovr167_3C1(char *a, char *b)
     scroll_print(b);
 }
 
-int far MaybeTryAndFindFile_seg005_105F_2758(char *name, void *data);
 char far ListFiles_ovr167_3F6(char *name)
 {
-    char data[30];
-    if (MaybeTryAndFindFile_seg005_105F_2758(name, data) == -1) return 0;
-    if (*(int *)(data + 4) & 0x4000) return 1;
+    struct stat st;
+    if (stat(name, &st) == -1) return 0;
+    if (st.st_mode & S_IFDIR) return 1;
     return 0;
 }
 
@@ -144,11 +143,11 @@ void far check_dirs(void)
     if (!ok) first_punt(0x3001);
 }
 
-unsigned far seg005_105F_16E5(void);
-unsigned long far seg005_105F_4FD(void);
+unsigned far coreleft(void);
+unsigned long far farcoreleft(void);
 int far ovr167_463(void)
 {
-    if (seg005_105F_16E5() >= 0x898 && seg005_105F_4FD() >= 0x5DCL) return 1;
+    if (coreleft() >= 0x898 && farcoreleft() >= 0x5DCL) return 1;
     return 0;
 }
 
@@ -197,35 +196,33 @@ char far LoadDATFile(char *name, void far *buf, unsigned n)
     return ok;
 }
 
-void far FileOperationFromParamsArray_seg005_105F_1B9D(void *op, void *result, void *esds);
-extern int dseg_67d6_96;
 int far ReadFileToAddress(int fd, void far *buf, unsigned n)
 {
-    char esds[8];
-    int op[8];
-    int result[8];
-    op[0] = 0x3F00;
-    op[1] = fd;
-    op[2] = n;
-    op[3] = FP_OFF(buf);
-    *(int *)(esds + 6) = FP_SEG(buf);
-    FileOperationFromParamsArray_seg005_105F_1B9D(op, result, esds);
-    if (result[6]) { dseg_67d6_96 = result[0]; return -1; }
-    return result[0];
+    struct SREGS sregs;
+    union REGS in;
+    union REGS out;
+    in.x.ax = 0x3F00;
+    in.x.bx = fd;
+    in.x.cx = n;
+    in.x.dx = FP_OFF(buf);
+    sregs.ds = FP_SEG(buf);
+    intdosx(&in, &out, &sregs);
+    if (out.x.cflag) { errno = out.x.ax; return -1; }
+    return out.x.ax;
 }
 int far FileWriteWithParams(int fd, void far *buf, unsigned n)
 {
-    char esds[8];
-    int op[8];
-    int result[8];
-    op[0] = 0x4000;
-    op[1] = fd;
-    op[2] = n;
-    op[3] = FP_OFF(buf);
-    *(int *)(esds + 6) = FP_SEG(buf);
-    FileOperationFromParamsArray_seg005_105F_1B9D(op, result, esds);
-    if (result[6]) { dseg_67d6_96 = result[0]; return -1; }
-    return result[0];
+    struct SREGS sregs;
+    union REGS in;
+    union REGS out;
+    in.x.ax = 0x4000;
+    in.x.bx = fd;
+    in.x.cx = n;
+    in.x.dx = FP_OFF(buf);
+    sregs.ds = FP_SEG(buf);
+    intdosx(&in, &out, &sregs);
+    if (out.x.cflag) { errno = out.x.ax; return -1; }
+    return out.x.ax;
 }
 
 void far build_xor_table(unsigned char key, unsigned char *tab)
@@ -297,7 +294,7 @@ void far LoadStringsPakToTable(char *name, int mode)
     fopen(path, mode);
 }
 extern char HomeDir[];
-int far OpenDataFile_ovr167_88F(char *name, int directory, int mode)
+int far our_open(char *name, int directory, int mode)
 {
     char path[0x50];
     register int flags;

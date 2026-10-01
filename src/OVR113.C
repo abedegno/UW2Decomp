@@ -81,7 +81,7 @@ void far gronk_critid(int params, unsigned char all, int row,
 
 char far SetAL_ToZero_ovr113_18F(void) { return 0; }
 
-char far SetGoalAndGTargFromArray_ovr113_196(struct Object far *npc, char *row)
+char far gronkify_change_goal(struct Object far *npc, char *row)
 {
     change_critter_goal(npc, row[7], (unsigned char)row[8]);
     return 0;
@@ -92,7 +92,7 @@ char far SCDSetGoalAndGTARG_ovr113_1BA(char far *row)
     char copy[16];
     movedata(FP_SEG(row), FP_OFF(row), FP_SEG(copy), FP_OFF(copy), 16);
     gronk_critid(*(unsigned *)(copy + 5), 1, (int)copy,
-                 (char (far *)(struct Object far *, int))SetGoalAndGTargFromArray_ovr113_196);
+                 (char (far *)(struct Object far *, int))gronkify_change_goal);
     return 0;
 }
 
@@ -170,7 +170,7 @@ int far gronkify_remove(struct Object far *obj)
 
 extern struct Object far *talking_to;
 extern unsigned char far *SCD_dseg_67d6_8634;
-void far KillCritter_ovr110_3ABF(struct Object far *npc);
+void far instant_kill(struct Object far *npc);
 
 char far SCDKillCNPC_ovr113_433(struct Object far *npc, unsigned char *row)
 {
@@ -179,7 +179,7 @@ char far SCDKillCNPC_ovr113_433(struct Object far *npc, unsigned char *row)
             player->xclock15++;
         return 0;
     }
-    KillCritter_ovr110_3ABF(npc);
+    instant_kill(npc);
     return 1;
 }
 
@@ -412,7 +412,7 @@ char far SCDSetAttitude_ovr113_ABD(char far *row)
 }
 
 int far get_numbered_variable(int index);
-int far BitOperation_ovr166_298(int value, int op, int right);
+int far do_math_op(int value, int op, int right);
 char far Sched_DoEvent(unsigned char far *row);
 
 char far ev_checkvar(unsigned char far *row)
@@ -425,7 +425,7 @@ char far ev_checkvar(unsigned char far *row)
     upper = index + params[7] - 1;
     for (value = get_numbered_variable(index);
          (++index, index) <= upper;
-         value = BitOperation_ovr166_298(value, params[8],
+         value = do_math_op(value, params[8],
                                           get_numbered_variable(index))) ;
     if ((value != *(int far *)(params + 10)) == !params[9])
         return 0;
@@ -453,7 +453,7 @@ char far SCDOperationOnQuestOrVariables_ovr113_BD8(unsigned char far *row)
 }
 
 extern char (far *SCDEventCodeJumps_dseg_67d6_1364[])(unsigned char far *);
-void far DeleteSCDRecord_ovr151_5DB(unsigned char far *row);
+void far Sched_Delete(unsigned char far *row);
 
 char far Sched_DoEvent(unsigned char far *row)
 {
@@ -468,7 +468,7 @@ char far Sched_DoEvent(unsigned char far *row)
         return 6;
     result = SCDEventCodeJumps_dseg_67d6_1364[(signed char)row[4]](row);
     if (row[3]) {
-        DeleteSCDRecord_ovr151_5DB(row);
+        Sched_Delete(row);
         return 4;
     }
     return result;

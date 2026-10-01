@@ -81,8 +81,16 @@ struct Inplist {
     int x, y;                           /* the mouse position */
 };
 
-extern unsigned long nextstep;
-extern unsigned long watertime;
+/* The file's _DATA starts with these, DS:19DC to DS:19E6, where ovr142's data ends: the
+   string after them is at the odd DS:19E7, so this file's word-aligned _DATA starts earlier,
+   and watertime (to DS:19E6) began at DS:19E3, nextstep at DS:19DF, PMsHndle at DS:19DD,
+   leaving DS:19DC. FM Towns has the four together too, as PMsHndle, MoveCrits, nextstep,
+   watertime. */
+unsigned char MoveCrits = 1;            /* seg035 moves critters only while set */
+int PMsHndle = 0;                       /* input_addmouse's handle for the 3D view */
+unsigned long nextstep = 0;
+unsigned long watertime = 0;            /* *Time when seg035 last applied water_eff */
+
 extern struct Object far *critdata;
 extern struct Object far *ThePlayer;
 extern struct Object far *UsPtr;
@@ -95,7 +103,6 @@ extern int PlayerBank;
 extern int PlayerLevel;
 extern struct Motion PN;
 extern struct PhysThing PT;
-extern int PMsHndle;
 extern int far *cJoyInit;
 extern char IsJoy;
 extern char PlayerDat[];

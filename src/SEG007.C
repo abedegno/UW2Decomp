@@ -209,10 +209,13 @@ extern unsigned char hitwall, didhitobj, hitadoor, dontchangedz;
 extern unsigned char didmove;
 extern signed char curBin;
 /* The critter type last damaged, and where and when the player last hit a critter.
-   hitz is static in FM Towns (_seq_lframe+1 there): provisional name. */
+   crithitz (DS:228A) is static in FM Towns (_seq_lframe+1 there, read by critter_mv_ for
+   set_loc beside _hitx and _hity), so it has no original name: provisional, after crithit
+   and crithittime, which damage_critter sets with it. FM Towns' _hitz is another variable,
+   seg024's combat height (DS:24CE). */
 extern struct Creature near *victim;
 extern unsigned long crithittime;
-extern unsigned char hitx, hity, hitz;
+extern unsigned char hitx, hity, crithitz;
 /* Its target, set up by set_up_target. */
 extern struct Object far *mytarget;
 extern unsigned char txpos, typos;
@@ -1317,7 +1320,7 @@ void far critter_mv(void)
         SET_B19_0(meptr, 1);
         if (GOAL(meptr) != 9 && GOAL(meptr) != 6) {
             critter_set_goal(5, B19_6(meptr) ? crithit : 1);
-            set_loc(hitx, hity, hitz);
+            set_loc(hitx, hity, crithitz);
         }
     }
     if (meptr->last_hit > 0
@@ -1562,7 +1565,7 @@ unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
         crithit = Obj_MemTPtr(obj);
         hitx = OBJ_HOMEX(obj);
         hity = OBJ_HOMEY(obj);
-        hitz = OBJ_Z(obj) >> 3;
+        crithitz = OBJ_Z(obj) >> 3;
         crithittime = player->hittime;
     }
     if (obj->hp <= damage) {

@@ -58,10 +58,6 @@ extern int GameInputMode;
 extern struct Object far *CursorObjPtr;
 extern int NewPlayerX, NewPlayerY;
 
-/* strrchr, named after its address in seg005 */
-char far * far FindInString_seg005_105F_103F(char *s, char c);
-#define str_rchr(s, c) ((char *)FindInString_seg005_105F_103F(s, c))
-
 char far SavePlayerInv(char *dir);
 char far RestorePlayerInv(char *dir);
 void far FreePlayerInv(unsigned far *list);
@@ -169,6 +165,11 @@ int far GetLevel(int level)
     return ok;
 }
 
+/* Declared here because TLINK numbers the overlay's stub entries in the order Turbo C lists
+   the publics, which for names with the same hash key is the order they were first seen:
+   the EXE's stub has SaveGame before SaveLevel. */
+int far SaveGame();
+
 char far SaveLevel(int level)
 {
     char ok;
@@ -203,7 +204,7 @@ void far get_save_descs(char descs[][40], int *found)
     FILE *fp;
 
     strcpy(path, HomeDir);
-    num = str_rchr(path, '0');
+    num = strrchr(path, '0');
     strcat(path, "desc");
     *found = 0;
     for (i = 0; i < 4; i++) {
@@ -240,7 +241,6 @@ void far ShowSaveRest(void)
 }
 
 char far RestoreGame();
-int far SaveGame();
 
 void far DoSaveRest(int restore, int slot)
 {
@@ -280,7 +280,7 @@ char far RestoreGame(char slot)
     char *p;
 
     strcpy(path, HomeDir);
-    p = str_rchr(path, '0');
+    p = strrchr(path, '0');
     *p = slot + '0';
     game_sprint(0xB5);
     if (clear_dir(HomeDir)) {
@@ -324,7 +324,7 @@ int far SaveGame(char slot, char *desc)
     strcat(path, "desc");
     if (!blttodrive(desc, path, strlen(desc)))
         goto fail;
-    p = str_rchr(path, '0');
+    p = strrchr(path, '0');
     *p = slot + '0';
     p[1] = 0;
     if (access(path, 0) < 0 && mkdir(path) < 0)

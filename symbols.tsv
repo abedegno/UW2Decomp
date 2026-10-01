@@ -1,7 +1,7 @@
 # name	address	name source
 # address: DS:offset for near data, segment:offset for far code (load-relative paragraphs)
 __BootHandler	63B0:003F	provisional
-__ctype	DS:1BF6	provisional
+__ctype	DS:1BF6	library
 __dblen	4FAF:C77E	FM Towns
 __envseg	DS:008E	provisional
 __EXENAME__	63B5:0570	provisional
@@ -67,12 +67,13 @@ _AIL_timbre_status	2218:0C69	FM Towns
 _aligned	DS:2242	FM Towns
 _Alt	DS:2130	FM Towns
 _always_decode	DS:090E	FM Towns
-_anim_overlays	DS:3578	provisional
 _animclassd	DS:34B6	FM Towns
 _animcount	DS:34B4	FM Towns
+_animlist	DS:3578	FM Towns
 _animobj_class_data	640F:0025	FM Towns
 _animobj_load	640F:0020	FM Towns
 _AnimObjInPipe	DS:2C7A	FM Towns
+_anm_sound_callback	6488:00B6	FM Towns
 _answer_x	DS:8186	provisional
 _anti_magic_p	65A7:0034	FM Towns
 _arcfile	637E:0000	provisional
@@ -111,7 +112,6 @@ _BagSaveHandles	DS:6A76	FM Towns
 _BagWeight	64F7:003E	FM Towns
 _barter_init	6448:00A7	FM Towns
 _BeginInventory	6513:0020	FM Towns
-_BitOperation_ovr166_298	65D5:0048	provisional
 _black_gem_rotate	64A5:0020	FM Towns
 _black_gem_trip	64A5:011F	FM Towns
 _BlastFunction	32FA:0C38	FM Towns
@@ -230,6 +230,7 @@ _convoWorkspace	DS:4848	provisional
 _copy_file	6581:002A	FM Towns
 _copy_hidden_to_visible	0085:4B1B	FM Towns
 _copy_visible_to_hidden	0085:4B57	FM Towns
+_coreleft	0E72:16E5	library
 _courtyard_hacking	64A5:0106	FM Towns
 _CP	DS:26A6	FM Towns
 _cPerror	DS:215C	FM Towns
@@ -252,9 +253,12 @@ _crit_head_for_loc	1226:3008	FM Towns
 _crit_inpage	4FAF:E4CD	FM Towns
 _crit_nlpages	4FAF:E4CB	FM Towns
 _crit_terr	DS:222C	FM Towns
+_critbot	DS:25AE	FM Towns
 _critdata	DS:2588	FM Towns
 _crithit	DS:00C5	FM Towns
 _crithittime	DS:2284	FM Towns
+_crithitz	DS:228A	provisional
+_critptr	DS:25B2	FM Towns
 _critter_attack	22FC:1989	FM Towns
 _critter_fire	2669:02C6	FM Towns
 _critter_set_goal	15B5:313F	FM Towns
@@ -274,6 +278,7 @@ _cTmHg	DS:2F92	FM Towns
 _cTmSz	DS:2C72	FM Towns
 _Ctrl	DS:2134	FM Towns
 _cur_font	DS:21CC	provisional
+_cur_light_level	DS:1AAC	FM Towns
 _curautocode	DS:053E	FM Towns
 _curBin	DS:228B	FM Towns
 _curelem	DS:0C0C	FM Towns
@@ -308,11 +313,11 @@ _DecompressLZW_disk	6522:0020	FM Towns
 _defineMouseRegion	1B8F:05AE	FM Towns
 _DegradeLights	653A:0020	FM Towns
 _delete_trap	65D5:0093	FM Towns
-_DeleteSCDRecord_ovr151_5DB	658B:0034	provisional
 _deltatotheta	1226:2EC9	FM Towns
 _demo_mode	DS:2C5D	FM Towns
 _demous_player	656A:0066	FM Towns
 _destroy_floatskull	64A5:00A2	FM Towns
+_destroy_sprite	0000:0073	FM Towns
 _DetectedTrap	6599:0084	FM Towns
 _dfx_buffer	4EAF:0000	provisional
 _didhitobj	DS:2269	FM Towns
@@ -333,6 +338,7 @@ _DisplayOpenBag	64F7:0052	FM Towns
 _DisplayToSlot	DS:1784	FM Towns
 _dist8	DS:0534	FM Towns
 _distpoly	DS:0536	FM Towns
+_DivideByZeroError_ovr112_661	64BF:007F	provisional
 _do_3d_grab	2CAE:02AA	FM Towns
 _do_3d_pickup	1FCD:037E	FM Towns
 _do_3d_view	64BF:0039	FM Towns
@@ -349,6 +355,7 @@ _do_judgement	6448:0061	FM Towns
 _do_keyboard_input	1B8F:04AE	FM Towns
 _do_level_hacks	6581:0043	FM Towns
 _do_main_scroll	342C:0022	FM Towns
+_do_math_op	65D5:0048	FM Towns
 _do_mods	651C:0025	FM Towns
 _do_mstone	6599:0039	FM Towns
 _do_npc_scroll	342C:0038	FM Towns
@@ -393,7 +400,6 @@ _dseg_67d6_21F4	DS:21F4	provisional
 _dseg_67d6_2C74	DS:2C74	provisional
 _dseg_67d6_6A96	DS:6A96	provisional
 _dseg_67d6_920	DS:0920	provisional
-_dseg_67d6_96	DS:0096	provisional
 _dsfx_playing	DS:010A	FM Towns
 _DumpTheBag	654F:008E	FM Towns
 _duration_check	653A:0034	FM Towns
@@ -413,6 +419,7 @@ _environ	DS:204C	FM Towns
 _eof	0E72:17BB	FM Towns
 _erase_sprite	0000:0155	FM Towns
 _errmsg	65E0:0089	FM Towns
+_errno	DS:0096	FM Towns
 _establish_view	2CAE:0355	FM Towns
 _exit	0E72:032C	FM Towns
 _ExitAutoMap	641E:0061	FM Towns
@@ -422,15 +429,16 @@ _fadein3d	64E2:0043	FM Towns
 _fadeout	64E2:0066	FM Towns
 _fadeout3d	64E2:0052	FM Towns
 _failed	DS:224E	FM Towns
+_farcoreleft	0E72:04FD	library
 _farfree	0E72:325E	provisional
 _farmalloc	0E72:3344	provisional
+_fauxright	DS:027E	FM Towns
 _fbshow	0085:5088	FM Towns
 _fbuf_setcolor	0085:5239	FM Towns
 _fclose	0E72:047D	FM Towns
+_fgetc	0E72:19D9	FM Towns
 _fgets	0E72:05D5	FM Towns
 _filelength	0E72:1883	FM Towns
-_FileOperationFromParamsArray_seg	0E72:1B9D	provisional
-_FileReadMaybe	0E72:0AB0	provisional
 _FileWriteWithParams	65E0:008E	provisional
 _fill_FB	64E2:0057	FM Towns
 _find_and_gronk_force_field	64A5:0133	FM Towns
@@ -438,7 +446,6 @@ _find_anim	34A2:0E0A	FM Towns
 _find_good_x_and_y	64A5:005C	FM Towns
 _find_obj	650A:0057	FM Towns
 _findfirst	0E72:1823	provisional
-_FindInString_seg005_105F_103F	0E72:103F	provisional
 _FindInventoryHit	6513:002F	FM Towns
 _findnext	0E72:1856	provisional
 _FindObj	650A:0052	FM Towns
@@ -490,6 +497,7 @@ _fseek	0E72:0A07	FM Towns
 _fstat	0E72:18C4	FM Towns
 _ftell	0E72:0A6D	FM Towns
 _fudge	DS:0BFE	FM Towns
+_fwrite	0E72:0AB0	FM Towns
 _fx_available	1C86:1AE8	FM Towns
 _fx_is_on	1C86:1AD3	FM Towns
 _game_sprint	3265:04A4	FM Towns
@@ -549,7 +557,6 @@ _greed	DS:4754	FM Towns
 _grfp	DS:6942	FM Towns
 _grfx_clear	64E2:007A	FM Towns
 _grfx_close	64E2:0034	FM Towns
-_grfx_driver	DS:14B8	FM Towns
 _grfx_init	64E2:0075	FM Towns
 _grfx_palrange	64E2:003E	FM Towns
 _grfx_quikfont	64E2:004D	FM Towns
@@ -586,7 +593,7 @@ _hitadoor	DS:226F	FM Towns
 _hitwall	DS:225E	FM Towns
 _hitx	DS:2288	FM Towns
 _hity	DS:2289	FM Towns
-_hitz	DS:228A	FM Towns
+_hitz	DS:24CE	FM Towns
 _hold_scrgr	30D3:02A6	FM Towns
 _holdmid	DS:2F9C	FM Towns
 _holdtmp	DS:2FAE	FM Towns
@@ -625,9 +632,11 @@ _inplist	DS:00E4	FM Towns
 _input_addmouse	1AB4:0082	FM Towns
 _input_del	1AB4:0174	FM Towns
 _input_dispatch	1AB4:02A0	FM Towns
+_instant_kill	64A5:006B	FM Towns
 _int0_sp	1FC7:0013	provisional
 _int0_ss	1FC7:0011	provisional
 _int0_trap	1FC7:0019	provisional
+_intdosx	0E72:1B9D	library
 _Interupt4_COM1_ovr132_0	6532:0020	provisional
 _inv_look	2529:0E74	FM Towns
 _inv_refresh	DS:17A0	FM Towns
@@ -648,9 +657,6 @@ _ItemMinorClass	DS:554C	provisional
 _ItemSubClass	DS:492A	provisional
 _ItemWeight	650A:004D	FM Towns
 _itoa	0E72:1D1B	FM Towns
-_j_WriteTextWithMORE_ovr139_BD	6559:0039	provisional
-_joy_button_x	DS:027C	provisional
-_joy_button_y	DS:027E	provisional
 _joy_buttons	DS:2120	provisional
 _joy_center_x	DS:00E8	provisional
 _joy_center_y	DS:00EA	provisional
@@ -667,6 +673,7 @@ _joy_max_y	DS:00F2	provisional
 _joy_min_x	DS:00EC	provisional
 _joy_min_y	DS:00F0	provisional
 _joy_position	DS:211C	provisional
+_joymovecur	DS:027C	FM Towns
 _JoyStickCalibration_seg011_1B8	1AFA:01B8	provisional
 _key	2110:0971	FM Towns
 _key_on	DS:2138	FM Towns
@@ -674,7 +681,6 @@ _keyboard_mouse	1B8F:0DA7	FM Towns
 _kill_all_digi_effects	1C86:218F	FM Towns
 _kill_all_effects	1C86:20C1	FM Towns
 _kill_effect	1C86:1FFD	FM Towns
-_KillCritter_ovr110_3ABF	64A5:006B	provisional
 _Killorn_just_crashed	64A5:00B1	FM Towns
 _labs	0E72:0B1F	FM Towns
 _last_light	DS:19B9	FM Towns
@@ -715,7 +721,6 @@ _loop_music_maybe	1C86:2B73	FM Towns
 _loopx	DS:2C6A	FM Towns
 _loopy	DS:2C6C	FM Towns
 _LootCreature	DS:863A	provisional
-_LowerCaseCharacterTable	DS:1BF7	provisional
 _lseek	0E72:1C75	FM Towns
 _lstime	DS:15DF	FM Towns
 _ltoa	0E72:1D5C	FM Towns
@@ -727,21 +732,20 @@ _make_string	3265:0117	FM Towns
 _make_terrain_unseen	641E:004D	FM Towns
 _malloc	0E72:37AF	FM Towns
 _map_crit_pages	3400:0151	provisional
-_map_dirty	DS:189A	provisional
 _Map_GetAddr	30BC:000F	FM Towns
 _Map_Init	6526:002A	FM Towns
 _Map_Load	6526:0025	FM Towns
 _Map_ObjFix	28A1:0006	FM Towns
 _Map_Save	6526:0034	FM Towns
 _mapdata	DS:1896	FM Towns
+_MapDirty	DS:189A	FM Towns
 _MapMemory_seg013_1D3C_C7	1B4F:00C7	provisional
 _MapObj_X	DS:24F8	FM Towns
 _MapObj_Y	DS:24FA	FM Towns
 _mapptr	DS:2B58	FM Towns
+_mask_to_screen	1A6D:0353	FM Towns
 _maybe_cheat_arena_fire	647E:0070	FM Towns
 _maybe_go_hang_out	647E:003E	FM Towns
-_MaybeAComparison_seg005_105F_282	0E72:282C	provisional
-_MaybeTryAndFindFile_seg005_105F_	0E72:2758	provisional
 _mbuttons	2110:09F0	FM Towns
 _mdetect	65B5:0039	FM Towns
 _mem_set	1F8C:00EE	provisional
@@ -769,11 +773,8 @@ _mkdir	0E72:1DE3	FM Towns
 _mlowptr	DS:2F6E	FM Towns
 _mob_init	29CA:0C27	FM Towns
 _mob_to_static	29CA:0DDF	FM Towns
-_mobile_free_list	DS:25AE	provisional
-_mobile_free_ptr	DS:25B2	provisional
 _mode_to_button	DS:0129	FM Towns
 _ModelData_seg052_519C_2600	4FAF:2600	provisional
-_MonoOrLightShadeRelated_dseg_67d	DS:1AAC	provisional
 _motionbits	DS:00D2	FM Towns
 _mous_3d_hide	1B8F:0139	FM Towns
 _mous_3d_set	1B8F:00F7	FM Towns
@@ -895,6 +896,7 @@ _Obj_Punt	28A1:0704	FM Towns
 _Obj_Rem	28A1:0684	FM Towns
 _obj_spells	65A7:002F	FM Towns
 _obj_tab	DS:2198	FM Towns
+_objbot	DS:25A2	FM Towns
 _ObjCrunch	28A1:1200	FM Towns
 _objdata	DS:25B6	FM Towns
 _ObjectActing	DS:24EC	FM Towns
@@ -910,6 +912,7 @@ _objhit_myy	DS:25C0	provisional
 _objhit_used	DS:25BC	provisional
 _objhit_x	DS:25BD	provisional
 _objhit_y	DS:25BE	provisional
+_objptr	DS:25A6	FM Towns
 _ObjsBeCombinable	6465:002F	FM Towns
 _ObjWorn	650A:0070	FM Towns
 _objxloc	DS:3348	FM Towns
@@ -1019,10 +1022,11 @@ _PortraitImageDataPtr	DS:47FE	provisional
 _Ppd	DS:25C4	FM Towns
 _preload_cr	64DE:0020	FM Towns
 _PreLoadCritPages	64DE:002F	FM Towns
+_preset_grid	2CAE:04AF	FM Towns
 _pretty_panelagain	30D3:12F0	FM Towns
 _print_path_to	65E0:003E	FM Towns
-_Print_String_To_Console_seg017_D	1F8C:00DE	provisional
 _printf	0E72:0B47	FM Towns
+_PrintStringToConsole_seg017_DE	1F8C:00DE	provisional
 _prison_alarm_check	64A5:00D4	FM Towns
 _process_area	65A7:0043	FM Towns
 _process_grid	1FCD:00D0	FM Towns
@@ -1087,6 +1091,7 @@ _RemoveOneFromSlot	650A:0034	FM Towns
 _RemoveTrap	6599:006B	FM Towns
 _RemoveTrapFlags_dseg_67d6_863E	DS:863E	provisional
 _rename	0E72:20A2	FM Towns
+_render_3d	065C:3007	FM Towns
 _render_FB	2CAE:02FD	FM Towns
 _repair_item	64A5:0147	FM Towns
 _replace_string	3265:021B	FM Towns
@@ -1094,6 +1099,7 @@ _res_to_terr	DS:03E8	FM Towns
 _reset_arrow_pillars	64A5:00C0	FM Towns
 _reset_game	64BF:0070	FM Towns
 _reset_scrgr	30D3:0103	FM Towns
+_resize_sprite	0000:01C2	FM Towns
 _restore_hp	65A7:00B1	FM Towns
 _restore_mana	65A7:00CF	FM Towns
 _restore_opt	653E:00BB	FM Towns
@@ -1129,6 +1135,7 @@ _SavePlayerInv	64FE:0020	FM Towns
 _SCD_dseg_67d6_8634	DS:8634	provisional
 _scdBlockHasBeenModified_dseg_67d	DS:1A7E	provisional
 _SCDEventCodeJumps_dseg_67d6_1364	DS:1364	provisional
+_Sched_Delete	658B:0034	FM Towns
 _Sched_DoEvent	64C8:008E	FM Towns
 _Sched_Load	658B:0020	FM Towns
 _Sched_Migrate	658B:004D	FM Towns
@@ -1143,9 +1150,14 @@ _scroll	DS:34B0	FM Towns
 _scroll_clear	6559:0025	FM Towns
 _scroll_esc	DS:098C	FM Towns
 _scroll_mode	DS:097E	FM Towns
+_scroll_more	6559:0039	FM Towns
 _scroll_print	342C:01A0	FM Towns
+_scroll_print1	342C:02D0	FM Towns
+_scroll_print2	342C:0322	FM Towns
+_scroll_print3	342C:0375	FM Towns
 _scroll_up	342C:011F	FM Towns
 _scroll_wait	6559:002A	FM Towns
+_scroll_wrap	342C:04FF	FM Towns
 _sd_xmod	DS:30F0	FM Towns
 _sd_ymod	DS:30F2	FM Towns
 _seg001_023B_5A	004E:005A	provisional
@@ -1166,12 +1178,7 @@ _seg003_0272_788	0085:0788	provisional
 _seg003_0272_7A8	0085:07A8	provisional
 _seg003_0272_8	0085:0008	provisional
 _seg003_0272_D1E	0085:0D1E	provisional
-_render_3d	065C:3007	FM Towns
 _seg004_0849_7F0C	065C:7F0C	provisional
-_update_cache	065C:7F12	FM Towns
-_seg005_105F_16E5	0E72:16E5	provisional
-_seg005_105F_19D9	0E72:19D9	provisional
-_seg005_105F_4FD	0E72:04FD	provisional
 _seg009_392	1A6D:0392	provisional
 _seg009_7	1A6D:0007	provisional
 _seg011_2C6	1AFA:02C6	provisional
@@ -1185,13 +1192,13 @@ _seg021_22FD_755	2110:0755	provisional
 _seg021_22FD_791	2110:0791	provisional
 _seg021_22FD_7CD	2110:07CD	provisional
 _seg021_22FD_809	2110:0809	provisional
-_sincos	2110:0A34	FM Towns
 _seg021_22FD_C00	2110:0C00	provisional
 _seg021_22FD_C10	2110:0C10	provisional
 _seg039_3452_814	3265:0814	provisional
 _seg039_3452_857	3265:0857	provisional
 _seg039_3452_89A	3265:089A	provisional
 _seg042_35ED_12B	3400:012B	provisional
+_seg043_3619_669	342C:0669	provisional
 _seg052_519C_E4D4	4FAF:E4D4	provisional
 _seg066_0	6384:0000	provisional
 _selected_conversation_option	DS:486C	provisional
@@ -1243,7 +1250,6 @@ _setup_icon_buttons	1B6B:000A	FM Towns
 _setup_to_barter	6448:003E	FM Towns
 _setvect	0E72:1B67	provisional
 _sex	643D:0057	FM Towns
-_ShadeCalcs_seg032_2E9B_4AF	2CAE:04AF	provisional
 _Shift	DS:2128	FM Towns
 _show	0085:4FC2	FM Towns
 _show_credits	652F:0020	FM Towns
@@ -1252,6 +1258,7 @@ _ShowClip	370D:0DC4	FM Towns
 _ShowSaveRest	6581:0057	FM Towns
 _ShowStupidFirstPersonWeapon	DS:08B6	FM Towns
 _simple_fizix	191C:0225	FM Towns
+_sincos	2110:0A34	FM Towns
 _skill_check	323F:0009	FM Towns
 _sknow	DS:47B8	FM Towns
 _skup_ductosnore	64A5:00F7	FM Towns
@@ -1276,6 +1283,7 @@ _sp_xp	65BC:002F	FM Towns
 _spec_class_data	65A4:0020	FM Towns
 _SpecShadeMode	DS:053F	FM Towns
 _speech_available	1C86:2F99	FM Towns
+_speech_fpage	6388:0000	provisional
 _speechok	DS:0297	FM Towns
 _spell_fire	2669:0342	FM Towns
 _spells	6389:0000	FM Towns
@@ -1287,8 +1295,7 @@ _srand	0E72:0DD6	FM Towns
 _sscanf	0E72:0F7F	provisional
 _standing_wave	64A5:014C	FM Towns
 _start_line	DS:0980	FM Towns
-_static_free_list	DS:25A2	provisional
-_static_free_ptr	DS:25A6	provisional
+_stat	0E72:2758	FM Towns
 _stay_centered	DS:03D1	FM Towns
 _stdat	3CF5:0000	FM Towns
 _stop_music	1C86:1BE9	FM Towns
@@ -1299,6 +1306,7 @@ _str_len	1F8C:0109	provisional
 _str_ncopy	1F8C:011F	provisional
 _str_str	1F8C:019C	provisional
 _strcat	0E72:27F3	FM Towns
+_strchr	0E72:282C	FM Towns
 _strcmp	0E72:2862	FM Towns
 _strcpy	0E72:2891	FM Towns
 _string_bits	DS:34A4	provisional
@@ -1310,13 +1318,13 @@ _StringsPak_Address_Indices	DS:349C	provisional
 _StringsPak_FileHandle	DS:34A2	provisional
 _StringsPak_NoOfNodes	DS:34A0	provisional
 _strlen	0E72:28B5	FM Towns
-_strnicmp	0E72:28FB	library
 _strncpy	0E72:28CF	FM Towns
+_strnicmp	0E72:28FB	FM Towns
+_strrchr	0E72:103F	FM Towns
 _strt_converse	6469:00AC	FM Towns
 _strt_demscr	64BF:0052	FM Towns
 _strtime	DS:2B54	FM Towns
 _strupr	0E72:2940	FM Towns
-_stub108_B6	6488:00B6	provisional
 _stuff_class_data	65C1:0020	FM Towns
 _SwapItemsInBag	64F7:002A	FM Towns
 _switch_flip_hack	64A5:00ED	FM Towns
@@ -1345,8 +1353,8 @@ _tile_walls	DS:1BA6	FM Towns
 _TileIndices	DS:2CBA	provisional
 _time	0E72:0FF2	FM Towns
 _Time	DS:2158	FM Towns
-_timer_triggers	DS:34F6	provisional
 _timercount	DS:3576	FM Towns
+_timerlist	DS:34F6	FM Towns
 _TimeStop	DS:037F	FM Towns
 _tmap_fpage	4FAF:E4CF	FM Towns
 _tmap_inpage	4FAF:E4CE	FM Towns
@@ -1404,6 +1412,7 @@ _unforce_mouse_cursor	1B8F:06AF	FM Towns
 _unlink	0E72:2BC0	FM Towns
 _update_all_critters_whilst_playe	647E:002A	FM Towns
 _update_animobj	34A2:0719	FM Towns
+_update_cache	065C:7F12	FM Towns
 _update_converse_data	647B:0020	FM Towns
 _update_digi_playback	1C86:0F2D	FM Towns
 _update_map_scraps	641E:002A	FM Towns
@@ -1489,3 +1498,6 @@ F_LXMUL@	0E72:350B	library
 F_LXRSH@	0E72:35F4	library
 F_LXURSH@	0E72:3614	library
 F_SCOPY@	0E72:36BD	library
+restore_rect	004E:0268	FM Towns
+save_rect	004E:01EF	FM Towns
+sp_inf_tab	5EFD:0000	FM Towns

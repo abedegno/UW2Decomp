@@ -110,6 +110,10 @@ extern unsigned char tile_walls[];
 extern unsigned char SpecShadeMode;     /* DOS only, no FM Towns name */
 /* in the graphics data segment */
 extern unsigned far bmsegoff;
+/* The 4 KB far buffer at 5DFD:0000 (segment table entry 60) that seg004's texture loader
+   copies a bitmap into; seg032_2E9B_195 points the bitmap table's segments back at it.
+   DOS only, no FM Towns name: IDA's segment name. */
+extern unsigned char far seg_5DFD[];
 extern int far _dblen;
 extern int far smooth_div;
 extern int far smooth_base;
@@ -222,9 +226,9 @@ void far seg032_2E9B_195(int on)
         p = (int far *)&bmsegoff;
         p = MK_FP(FP_SEG(&bmsegoff), bmsegoff);
         if (SpecShadeMode) {
-            p[4] = 0x5DFD;
-            p[12] = 0x5DFD;
-            p[20] = 0x5DFD;
+            p[4] = FP_SEG(seg_5DFD);
+            p[12] = FP_SEG(seg_5DFD);
+            p[20] = FP_SEG(seg_5DFD);
         }
         SpecShadeMode = !SpecShadeMode;
     }

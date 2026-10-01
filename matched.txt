@@ -106,3 +106,6 @@ seg046_37CD
 seg002
 seg001_023B
 seg004_0849
+seg000
+seg018_21B4
+seg019_21BA_C

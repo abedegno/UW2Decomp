@@ -52,7 +52,6 @@ extern struct Critter near *playerdat;
 extern struct Inplist near *inplist;
 extern struct Motion PN;
 extern unsigned long far *Time;
-extern unsigned char RightPanel;
 extern unsigned char inv_refresh;
 extern unsigned char WizEye;
 extern char demo_mode;
@@ -135,6 +134,10 @@ char far do_panel_frame(void);
 int far get_wfr(int f);
 void far do_fbuf_bms(void);
 
+/* The panel showing on the right, an index into panel_dispatch (FM Towns _RightPanel).
+   DS:79E, the first byte of this file's _DATA: seg035's data ends at 79E and this file's
+   word-aligned _DATA holds DS:79F, so the byte is ours. */
+unsigned char RightPanel = 0;
 /* Which screen elements to redraw: now, on every 32nd tick, and on every 64th tick. One
    bit per element, by its index in `adjust`. Static (no FM Towns names); ours. */
 static int slow_adjust = 0;             /* DS:79F */

@@ -3,7 +3,10 @@
 
 #include <dos.h>
 
-extern unsigned char MonoOrLightShadeRelated_dseg_67d6_1AAC;
+/* The light level set_light last loaded, 5 for mono.dat; FM Towns _cur_light_level, which
+   its set_light_ tests the same way. DS:1AAC, the first byte of this file's _DATA (which
+   holds DS:1AAD and is word-aligned). */
+unsigned char cur_light_level = 0xFF;
 extern unsigned char far *cLightTabs;
 
 extern unsigned curvrad;
@@ -20,7 +23,7 @@ int far ReadFileToAddress(int fd, void far *buf, unsigned n);
 void far close(int fd);
 long far lseek(int fd, long offset, int origin);
 int far read(int fd, void *buf, unsigned n);
-void far ShadeCalcs_seg032_2E9B_4AF(int shade);
+void far preset_grid(int shade);
 void far editchng(int bit);
 void far movedata(unsigned srcseg, unsigned srcoff,
                                          unsigned dstseg, unsigned dstoff,
@@ -48,14 +51,14 @@ void far set_light(signed char lightLevel)
     int handle;
     int diValue;
 
-    if ((MonoOrLightShadeRelated_dseg_67d6_1AAC) == lightLevel)
+    if (cur_light_level == lightLevel)
         return;
-    if (MonoOrLightShadeRelated_dseg_67d6_1AAC == 5) {
+    if (cur_light_level == 5) {
         lget("light.dat", FP_OFF(cLightTabs), FP_SEG(cLightTabs), 0x1000);
     } else if (lightLevel == 5) {
         lget("mono.dat", FP_OFF(cLightTabs), FP_SEG(cLightTabs), 0x1000);
     }
-    MonoOrLightShadeRelated_dseg_67d6_1AAC = lightLevel;
+    cur_light_level = lightLevel;
     if ((handle = our_open("shades.dat", 1, 0)) < 0)
         return;
     diValue = (int)lightLevel * 12;
@@ -70,7 +73,7 @@ void far set_light(signed char lightLevel)
     distpoly = ShadesDataRow_var_C[4];
     dist8 = ShadesDataRow_var_C[5];
     close(handle);
-    ShadeCalcs_seg032_2E9B_4AF(curvrad);
+    preset_grid(curvrad);
     editchng(2);
 }
 
@@ -98,7 +101,7 @@ void far random_light(char enabled)
             ((char far *)MK_FP(FP_SEG(cLightTabs), FP_OFF(cLightTabs)))[i * 256 + 1] = 0;
         }
     } else {
-        lget(MonoOrLightShadeRelated_dseg_67d6_1AAC != 5 ?
+        lget(cur_light_level != 5 ?
                              "light.dat" : "mono.dat",
                              FP_OFF(cLightTabs), FP_SEG(cLightTabs), 0x1000);
     }

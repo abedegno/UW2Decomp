@@ -115,7 +115,12 @@ extern unsigned char far obj_inpage1;
 extern unsigned char far tmap_fpage;
 extern unsigned far EmsBuff;
 extern unsigned ems_frame;
-extern unsigned char far sound_fpage;
+extern unsigned char far sound_fpage;     /* DS:34AA: the first EMS page of the sounds */
+/* The first EMS page of the speech being streamed: the one-byte far variable at 6388:0000.
+   FM Towns has it as a static (_task_sofar+0x22, beside sp_npages and audio_inpage at +0x20
+   and +0x21), so the name is provisional. cutsop_say passes sound_fpage instead, as FM
+   Towns' cutsop_say_ does (_sound_fpage). */
+extern unsigned char far speech_fpage;
 extern char far dfx_buffer[];         /* the digital effects' buffer (SEG016.C) */
 void far MapMemory_seg013_1D3C_C7(int phys, int page);
 unsigned char far seg013_1D3C_E4(int bank, int page, int count);
@@ -287,7 +292,7 @@ unsigned char far big_speech_play(unsigned char file, unsigned char volume,
     if ((audio_fd = open(name, 0x8001)) == -1) goto fail;
     if (fstat(audio_fd, &sb) == -1) goto fail;
     voc_length = sb.st_size;
-    sound_fpage = page;
+    speech_fpage = page;
     sp_npages = pages;
     sp_nread = 0;
     for (i = 0; i < pages; i++) {
@@ -342,7 +347,7 @@ void far update_big_speech(void)
             page = sp_pos >> 14;
             if (page != audio_inpage) {
                 if (sp_nread < voc_length) {
-                    MapMemory_seg013_1D3C_C7(2, sound_fpage + audio_inpage % sp_npages);
+                    MapMemory_seg013_1D3C_C7(2, speech_fpage + audio_inpage % sp_npages);
                     sp_nread += ReadFileToAddress(audio_fd, SPEECH_BUF(0), 0x4000);
                     RESTORE_EMS();
                     if (sp_nread >= voc_length) {
@@ -353,7 +358,7 @@ void far update_big_speech(void)
                 audio_inpage = page;
             }
             page = page % sp_npages;
-            MapMemory_seg013_1D3C_C7(2, sound_fpage + page);
+            MapMemory_seg013_1D3C_C7(2, speech_fpage + page);
             amount = voc_left > 0x800 ? 0x800 : voc_left;
             movedata(FP_SEG(SPEECH_BUF(off)), FP_OFF(SPEECH_BUF(off)), FP_SEG(dsdata[i]),
                 FP_OFF(dsdata[i]), amount);

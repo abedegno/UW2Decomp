@@ -1,5 +1,6 @@
 /* target: seg039_3452 */
 /* opts: -mm -1 -G -O -Y -d */
+#include <ctype.h>
 
 struct StringBlock {
     int block;
@@ -16,7 +17,6 @@ extern int StringsPak_NoOfNodes;
 extern int StringsPak_FileHandle;
 extern int string_bits;
 extern char far StringBuffer[];
-extern unsigned char LowerCaseCharacterTable[];
 
 int OutString = 0;
 int string_bits_used = 8;
@@ -53,7 +53,7 @@ void far farfree(void far *p);
 int far LoadStringsPakToTable(char *name, char *mode);
 int far fread(void *p, int size, int count, int file);
 int far fseek(int file, long offset, int whence);
-int far seg005_105F_19D9(int file);
+int far fgetc(int file);
 
 unsigned char far init_strings(void)
 {
@@ -249,7 +249,7 @@ int far seg039_3452_781(int file)
 {
     int bit;
     if (string_bits_used == 8) {
-        string_bits = seg005_105F_19D9(file);
+        string_bits = fgetc(file);
         string_bits_used = 0;
     }
     bit = string_bits & 0x80;
@@ -274,14 +274,14 @@ int far seg039_3452_7B2(int file, int index)
 char far * far seg039_3452_814(char far *s)
 {
     char far *start = s;
-    while (*s) { if (LowerCaseCharacterTable[(signed char)*s] & 8) *s = *s - 0x20; s++; }
+    while (*s) { if (islower(*s)) *s = *s - 0x20; s++; }
     return start;
 }
 
 char far * far seg039_3452_857(char far *s)
 {
     char far *start = s;
-    while (*s) { if (LowerCaseCharacterTable[(signed char)*s] & 4) *s = *s + 0x20; s++; }
+    while (*s) { if (isupper(*s)) *s = *s + 0x20; s++; }
     return start;
 }
 

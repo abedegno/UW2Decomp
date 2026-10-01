@@ -12,12 +12,17 @@ extern unsigned char far *bytefont;
 extern unsigned long far *Time;
 extern unsigned char fade_buffer[];
 extern char far stdat;
-extern unsigned char grfx_driver[];
 extern unsigned char ShowStupidFirstPersonWeapon;
-extern unsigned char font_name[];
-extern char font_suffixes[][5];
-extern char sys_suffix[];
-extern char pals_name[];
+/* The file's _DATA, DS:14C4 to DS:14FE. FM Towns has these as statics after its public
+   _grfx_driver (font_name is _grfx_driver+0xD there, font_suffixes +0x1A), which is FM
+   Towns' own graphics driver block; DOS has no such block, and its first 12 bytes would
+   overlap ovr117's data. The byte grfx_load_font sets (_grfx_driver+0xC in FM Towns) is
+   the first byte of this file's data: a static with no recovered name. */
+static unsigned char font_loaded = 0;
+unsigned char font_name[13] = "font????.sys";
+char font_suffixes[6][5] = { "4x5p", "5x6p", "char", "big", "5x6i", "butn" };
+char sys_suffix[] = ".sys";
+char pals_name[] = "pals.dat";
 void far seg021_22FD_755(void);
 void far init_graphics(void);
 void far set_the_window(int, int, int, int);
@@ -35,7 +40,7 @@ void far close(int);
 void far lseek(int, long, int);
 void far movedata(unsigned, unsigned, unsigned, unsigned, unsigned);
 void far local_do_palette(int, char);
-void far stub108_B6(void);
+void far anm_sound_callback(void);
 void far send_FB(void);
 void far cFillFB(int);
 unsigned far get_workspace(void);
@@ -49,7 +54,7 @@ void far attach_eye(int);
 void far mouse_release(int);
 
 void far grfx_quikfont(int n);
-void far ovr118_0(void)
+void far grfx_init(void)
 {
     seg021_22FD_755();
     init_graphics();
@@ -63,7 +68,7 @@ unsigned char far grfx_load_font(char *name)
 {
     register int fd;
     if ((fd = our_open(name, 1, 0)) < 0) return 0;
-    grfx_driver[12] = 1;
+    font_loaded = 1;
     ReadFileToAddress(fd, cur_font, 12);
     ReadFileToAddress(fd, bytefont, (cur_font->height + cur_font->width) << 7);
     close(fd);
@@ -79,7 +84,7 @@ void far grfx_quikfont(int n)
     grfx_load_font((char *)font_name);
 }
 
-void far ovr118_D3(void)
+void far grfx_close(void)
 {
     mouse_hide();
     seg021_22FD_791();
@@ -139,7 +144,7 @@ void far fadeout(unsigned char far *src, int count, int pump)
     buf = fade_buffer;
     acc = (unsigned far *)(buf + 0x300);
     start = *Time;
-    if (pump) stub108_B6();
+    if (pump) anm_sound_callback();
     if (scale == 0) {
         for (i = 0; i < 0x300; i++) buf[i] = 0;
         grfx_setpal(buf);
@@ -151,7 +156,7 @@ void far fadeout(unsigned char far *src, int count, int pump)
                 acc[i] -= src[i];
                 buf[i] = acc[i] / (unsigned)scale;
             }
-            if (pump) stub108_B6();
+            if (pump) anm_sound_callback();
             while (*Time - start < 8) ;
             grfx_setpal(buf);
             start = *Time;
@@ -170,7 +175,7 @@ void far fadein(unsigned char far *src, int count, int pump)
     buf = fade_buffer;
     acc = (unsigned far *)(buf + 0x300);
     start = *Time;
-    if (pump) stub108_B6();
+    if (pump) anm_sound_callback();
     if (scale == 0) grfx_setpal(src);
     else {
         for (i = 0; i < 0x300; i++) acc[i] = 0;
@@ -180,7 +185,7 @@ void far fadein(unsigned char far *src, int count, int pump)
                 acc[i] += src[i];
                 buf[i] = acc[i] / (unsigned)scale;
             }
-            if (pump) stub108_B6();
+            if (pump) anm_sound_callback();
             while (*Time - start < 8) ;
             grfx_setpal(buf);
             start = *Time;

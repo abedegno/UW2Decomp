@@ -8,7 +8,7 @@ postodir	GetHeadingBetweenPoints_ovr167_177	0x177	0x1A
 print_path_to	GetDetectedCreatureDirections_ovr167_191	0x191	0xC1
 ovr167_252	ovr167_252	0x252	0xC1
 DartSatelliteVectoring_ovr167_313	DartSatelliteVectoring_ovr167_313	0x313	0xAE
-PrintErrorToMessageScroll_ovr167_3C1	PrintErrorToMessageScroll_ovr167_3C1	0x3C1	0x35
+errmsg	PrintErrorToMessageScroll_ovr167_3C1	0x3C1	0x35
 ListFiles_ovr167_3F6	ListFiles_ovr167_3F6	0x3F6	0x2B
 check_dirs	ovr167_421	0x421	0x42
 ovr167_463	ovr167_463	0x463	0x26
@@ -22,4 +22,4 @@ xor_xor_table	SaveDecrypt_ovr167_70F	0x70F	0x5A
 xorread	DecryptPlayerDat_ovr167_769	0x769	0x74
 xorwrite	SaveFileEncryption_ovr167_7DD	0x7DD	0x7D
 LoadStringsPakToTable	LoadStringsPakToTable_ovr167_85A	0x85A	0x35
-OpenDataFile_ovr167_88F	OpenDataFile_ovr167_88F	0x88F	0x65
+our_open	OpenDataFile_ovr167_88F	0x88F	0x65

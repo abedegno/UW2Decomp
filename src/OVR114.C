@@ -10,7 +10,7 @@
 extern int far *cPerror;
 extern char far *cExitMessage;
 
-void far Print_String_To_Console_seg017_DE(char far *text);
+void far PrintStringToConsole_seg017_DE(char far *text);
 void far exit(int code);
 void far free_mem(void);
 void far free_timers(void);
@@ -24,22 +24,22 @@ void far error_code(int code)
 {
     char error_code[0x28];
 
-    Print_String_To_Console_seg017_DE("Cannot run Underworld.\r\n$");
+    PrintStringToConsole_seg017_DE("Cannot run Underworld.\r\n$");
     switch ((code & 0xF000) >> 12) {
     case 1:
-        Print_String_To_Console_seg017_DE("Out of Low Memory.$");
+        PrintStringToConsole_seg017_DE("Out of Low Memory.$");
         break;
     case 2:
-        Print_String_To_Console_seg017_DE("Out of EMS Memory.$");
+        PrintStringToConsole_seg017_DE("Out of EMS Memory.$");
         break;
     case 3:
-        Print_String_To_Console_seg017_DE("Could not read data.$");
+        PrintStringToConsole_seg017_DE("Could not read data.$");
         break;
     case 4:
-        Print_String_To_Console_seg017_DE("Could not write data.$");
+        PrintStringToConsole_seg017_DE("Could not write data.$");
         break;
     default:
-        Print_String_To_Console_seg017_DE("Resource problem or internal error.$");
+        PrintStringToConsole_seg017_DE("Resource problem or internal error.$");
         break;
     }
     strcpy(error_code, " Error code XXXX\r\n$");
@@ -48,7 +48,7 @@ void far error_code(int code)
     error_code[0x0D] = ((code >> 6) & 7) + '0';
     error_code[0x0E] = ((code >> 3) & 7) + '0';
     error_code[0x0F] = (code & 7) + '0';
-    Print_String_To_Console_seg017_DE((char far *)error_code);
+    PrintStringToConsole_seg017_DE((char far *)error_code);
 }
 
 void far first_punt(int code)

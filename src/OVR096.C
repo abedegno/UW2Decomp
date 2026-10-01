@@ -185,8 +185,9 @@ char running_away = 0;
    the conversation is over; -1 for nothing pending. */
 static char tele_level = -1, tele_x = 0, tele_y = 0;
 static char talker_x = -1, talker_y = -1;
-/* A trade adjustment set by a conversation, read when bartering. */
-char fudge = 0;
+/* A trade adjustment set by a conversation, read when bartering. Defined in ovr097: it is
+   the byte at DS:BFE, and ovr097's word-aligned _DATA starts there. */
+extern char fudge;
 
 /* Run on the next level change: the player is now in the arena. */
 void far set_me_inarena(void)

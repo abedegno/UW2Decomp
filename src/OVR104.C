@@ -12,21 +12,21 @@ extern struct Object far *ActiveObj;
 extern unsigned ItemMinorClass, ItemSubClass;
 extern struct Creature *cst;
 void far fread(void *address, int size, int count, int fd);
-void far FileReadMaybe(void *address, int size, int count, int fd);
+void far fwrite(void *address, int size, int count, int fd);
 int far rand(void);
 char far init_this_critter(struct Object far *obj);
 
-void far LoadCrittersObjectsDat_ovr104_0(int fd)
+void far creature_init(int fd)
 {
     fread(Creature, 0x30, 0x40, fd);
 }
 
 void far ovr104_17(int fd)
 {
-    FileReadMaybe(Creature, 0x30, 0x40, fd);
+    fwrite(Creature, 0x30, 0x40, fd);
 }
 
-struct Creature * far GetObjectDatForMajorClass1_ovr104_2E(void)
+struct Creature * far creature_class_data(void)
 {
     ItemMinorClass = (ActiveObj->id & 0x30) >> 4;
     ItemSubClass = ActiveObj->id & 0xF;

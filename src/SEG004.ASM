@@ -30,6 +30,9 @@
 ;   _asm_texture_map_v and _asm_texture_map as FM's does; the clip_polygon and clip_vertex
 ;   routines by who calls whom; the four scanline routines by the choice that picks them.
 ; - the page cache (update_cache .. parse_cpg, foundfreepage) instruction for instruction.
+; do_obj (+49C, an opcode handler) is FM's assembly label do_obj, without the C
+; underscore: FM has it beside the C function do_obj_ (seg033's _do_obj here), so the two
+; names never met, and nothing outside this module refers to the handler.
 ; 3007 is FM render_3d, 7F12 FM update_cache and 7F0C a thunk to uncmp_tab; they keep the
 ; provisional names symbols.tsv gives them, because seg021 links against those.
 ; The rest keep IDA or provisional names.
@@ -53,7 +56,7 @@
         extrn   seg003_0272:far
         extrn   seg052_519C:far
         extrn   seg_370D:far
-        extrn   seg_5DFD:far
+        extrn   _seg_5DFD:far
 
         .code
 
@@ -68,7 +71,7 @@
         public  _seg004_0849_194
         public  _sphere_check
         public  _get_dist
-        public  _do_obj
+        public  do_obj
         public  _smooth_closure
         public  _seg004_0849_798
         public  _seg004_0849_7FC
@@ -892,7 +895,7 @@ L0496:
 _get_dist endp
 
 ; seg004_0849_49C  (+49C)
-_do_obj proc near
+do_obj proc near
         mov     word ptr ds:[25E2h],0
         lodsw
         mov     di,ax
@@ -1079,7 +1082,7 @@ L05F2:
         xchg    bx,ax
         jmp     word ptr [bx+24F4h]
         db      5 dup (0)
-_do_obj endp
+do_obj endp
 
 ; seg004_0849_600  (+600)
 _smooth_closure proc near
@@ -12084,7 +12087,7 @@ _do_settmobj proc near
         mov     bx,ax
         dec     ax
         stosw
-        mov     ax,seg seg_5DFD
+        mov     ax,seg _seg_5DFD
         stosw
         mov     al,byte ptr ds:[1]
         mov     cl,8
@@ -12103,7 +12106,7 @@ L7DDD:
         mov     si,5
         mov     ds,dx
         mov     di,0
-        mov     ax,seg seg_5DFD
+        mov     ax,seg _seg_5DFD
         mov     es,ax
         rep movsb
         pop     si

@@ -19,7 +19,7 @@ extern struct Combination ObjectCombinations[10];
 void far LoadDATFile(char *name, void far *dest, int size);
 struct Object far * far CreateObj(unsigned id, int mobile);
 
-void far LoadCMB_DAT(void)
+void far init_combinables(void)
 {
     LoadDATFile("DATA\\cmb.dat", ObjectCombinations, 0x3C);
 }

@@ -320,6 +320,11 @@ void far UseAnvilOn(struct Object far *obj, unsigned char how, unsigned char oth
     repair_item(obj, player->skills[14], 1);
 }
 
+/* Declared here because TLINK numbers the overlay's stub entries in the order Turbo C lists
+   the publics, which for names with the same hash key is the order they were first seen:
+   the EXE's stub has UseBook before UseFood. */
+void far UseBook(struct Object far *obj, unsigned char how);
+
 int far UseFood(struct Object far *who, struct Object far *food, unsigned char how)
 {
     int qty;

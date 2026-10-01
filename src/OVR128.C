@@ -4,17 +4,19 @@
 #include <dos.h>
 
 extern char far * near mapdata;
-extern unsigned char map_dirty;
+/* FM Towns _MapDirty: its Map_Load_ and Map_Save_ clear it as these do. DS:189A, the first
+   byte of this file's _DATA (which holds DS:189B and is word-aligned). */
+unsigned char MapDirty = 0;
 extern char far *ActiveMob;
 extern char far *LastActiveMob;
-extern char far *static_free_list;
-extern char far *static_free_ptr;
-extern char far *mobile_free_list;
-extern char far *mobile_free_ptr;
+extern char far *objbot;
+extern char far *objptr;
+extern char far *critbot;
+extern char far *critptr;
 extern char animcount;
-extern unsigned char timer_triggers[];
+extern unsigned char timerlist[];
 extern char timercount;
-extern unsigned char anim_overlays[];
+extern unsigned char animlist[];
 struct OverlayWord { unsigned pad:6; unsigned id:10; };
 
 extern char HomeDir[];
@@ -56,7 +58,7 @@ void far OverwriteAllTiles_ovr128_37(unsigned long *tile)
         *p = *tile;
         p++;
     }
-    map_dirty = 1;
+    MapDirty = 1;
 }
 
 unsigned char far Map_Load(int arc, int level, int folderType)
@@ -74,13 +76,13 @@ unsigned char far Map_Load(int arc, int level, int folderType)
     if (*(unsigned far *)end != 0x7577) {
         pfatal_code(3);
     } else {
-        mobile_free_ptr = (char far *)mobile_free_list
+        critptr = (char far *)critbot
             + *(unsigned far *)(end - 4) * 2;
-        static_free_ptr = (char far *)static_free_list
+        objptr = (char far *)objbot
             + *(unsigned far *)(end - 2) * 2;
         LastActiveMob =
             (char far *)ActiveMob + *(unsigned far *)(end - 6);
-        map_dirty = 0;
+        MapDirty = 0;
     }
     LoadAnimationOverlays_ovr128_271((char far *)mapdata + 0x7C08);
     return 1;
@@ -94,12 +96,12 @@ char far Map_Save(int arc, int level, int folderType)
 
     end = (unsigned char far *)mapdata + 0x7C06;
     *(unsigned far *)(end - 6) = LastActiveMob - ActiveMob;
-    *(unsigned far *)(end - 4) = ((long)FP_OFF(mobile_free_ptr)
-        - (long)FP_OFF(mobile_free_list)) / 2L;
-    *(unsigned far *)(end - 2) = ((long)FP_OFF(static_free_ptr)
-        - (long)FP_OFF(static_free_list)) / 2L;
+    *(unsigned far *)(end - 4) = ((long)FP_OFF(critptr)
+        - (long)FP_OFF(critbot)) / 2L;
+    *(unsigned far *)(end - 2) = ((long)FP_OFF(objptr)
+        - (long)FP_OFF(objbot)) / 2L;
     *(unsigned far *)end = 0x7577;
-    map_dirty = 0;
+    MapDirty = 0;
     StoreAnimationOverlaysToLevArk_ovr128_308((char far *)mapdata + 0x7C08);
     if (!ObjCrunch(0)) {
         answer = 0;
@@ -123,17 +125,17 @@ char far LoadAnimationOverlays_ovr128_271(char far *source)
 
     animcount = 0;
     timercount = 0;
-    movedata(FP_SEG(source), FP_OFF(source), FP_SEG(anim_overlays),
-                                    FP_OFF(anim_overlays), 0x180);
-    movedata(FP_SEG(source + 0x180), FP_OFF(source + 0x180), FP_SEG(timer_triggers),
-                                    FP_OFF(timer_triggers), 0x80);
+    movedata(FP_SEG(source), FP_OFF(source), FP_SEG(animlist),
+                                    FP_OFF(animlist), 0x180);
+    movedata(FP_SEG(source + 0x180), FP_OFF(source + 0x180), FP_SEG(timerlist),
+                                    FP_OFF(timerlist), 0x80);
     for (count = 0; count < 0x40; count++)
-        if (((struct OverlayWord *)(anim_overlays + count * 6))->id == 0)
+        if (((struct OverlayWord *)(animlist + count * 6))->id == 0)
             break;
     animcount = count;
     count = 0;
     while (count < 0x40) {
-        if (*(unsigned *)(timer_triggers + count * 2) == 0)
+        if (*(unsigned *)(timerlist + count * 2) == 0)
             break;
         count++;
     }
@@ -143,15 +145,15 @@ char far LoadAnimationOverlays_ovr128_271(char far *source)
 
 char far StoreAnimationOverlaysToLevArk_ovr128_308(char far *destination)
 {
-    mem_set((char far *)anim_overlays
+    mem_set((char far *)animlist
                              + animcount * 6, 0,
                              0x180 - animcount * 6);
-    mem_set(timer_triggers
+    mem_set(timerlist
                              + timercount * 2, 0,
                              0x80 - timercount * 2);
-    movedata(FP_SEG(anim_overlays), FP_OFF(anim_overlays),
+    movedata(FP_SEG(animlist), FP_OFF(animlist),
                                     FP_SEG(destination), FP_OFF(destination), 0x180);
-    movedata(FP_SEG(timer_triggers), FP_OFF(timer_triggers),
+    movedata(FP_SEG(timerlist), FP_OFF(timerlist),
                                     FP_SEG(destination + 0x180), FP_OFF(destination + 0x180), 0x80);
     return 1;
 }

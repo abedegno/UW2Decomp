@@ -1,0 +1,3 @@
+# segment seg018_21B4 base 0x2287D size 0x5F org 0xD
+# cname: int0_trap is the provisional symbols.tsv name (no FM Towns counterpart); the 12 bytes before it are its variables
+int0_trap	seg018_21b4_18	0xC	0x53

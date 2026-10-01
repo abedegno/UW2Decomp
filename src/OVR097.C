@@ -56,7 +56,10 @@ struct Player {
 extern struct Player near *player;
 extern struct Creature near *playerdat;
 extern int PlayerLevel;
-extern char fudge;
+/* A trade adjustment set by a conversation (ovr096), read when bartering. DS:BFE, the
+   first byte of this file's _DATA: its string at DS:BFF follows ovr096's data, which ends
+   at an even address, so this byte is ours. */
+char fudge = 0;
 extern struct Object far *talking_to;
 extern struct Object far *ThePlayer;
 extern struct Object far *CursorObjPtr;
@@ -118,7 +121,7 @@ void far change_critter_goal(struct Object far *npc, char goal, int gtarg);
 
 void far RedrawTradeSlot_ovr097_A91(int side, int slot);
 void far SomethingWithTradeSlot_ovr097_E83(int side, int slot);
-void far ReturnTradeObjectsToNPC_ovr097_F76(int only_unselected);
+static void far ReturnTradeObjectsToNPC_ovr097_F76(int only_unselected);
 void far LikelySlotInteractionRelated_ovr097_6E8(int side, int slot, int *content,
                                                  unsigned char *active);
 void far SetObjectInHand_ovr097_C39(int slot, int *content, unsigned char split);
@@ -312,7 +315,7 @@ int far npc_slot_hit_abs(int x, int y)
 /* Which slot of either side is at x, y: 1 with the side, slot and that side's arrays
    filled in, or 0. Unnamed (static) in the FM Towns build, which has it straight
    after npc_slot_hit_abs. */
-int far ovr097_5F0(int x, int y, int *side, int *slot,
+static int far ovr097_5F0(int x, int y, int *side, int *slot,
                    int **content, register unsigned char **active)
 {
     register int i;
@@ -565,7 +568,7 @@ void far SomethingWithTradeSlot_ovr097_E83(int side, int slot)
 
 /* Put the NPC's slot items back in its inventory: all of them, or with only_unselected
    just those not selected. */
-void far ReturnTradeObjectsToNPC_ovr097_F76(int only_unselected)
+static void far ReturnTradeObjectsToNPC_ovr097_F76(int only_unselected)
 {
     struct Object far *obj;
     register int slot;
@@ -590,7 +593,7 @@ void far ReturnTradeObjectsToNPC_ovr097_F76(int only_unselected)
 
 /* Hand the NPC every selected item of the player's that it doesn't dislike, adding
    coins to a pile it already has. */
-void far probablyTradeObjects_ovr097_100A(void)
+static void far probablyTradeObjects_ovr097_100A(void)
 {
     struct Object far *obj;
     struct Object far *other;

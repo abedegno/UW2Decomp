@@ -79,6 +79,12 @@ void far init_scroll(void)
     draw_edges();
 }
 
+/* Declared here because TLINK numbers the overlay's stub entries in the order Turbo C lists
+   the publics, which for names with the same hash key is the order they were first seen:
+   the EXE's stub has scroll_clear and wdialog before scroll_wait and wd_bool. */
+void far scroll_clear(char redraw);
+int far wdialog(char *prompt, char *initial, char *result, char anychar, int maxlen);
+
 void far scroll_wait(int ticks, char mouse)
 {
     unsigned long end;

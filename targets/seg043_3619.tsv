@@ -1,4 +1,4 @@
-# segment seg043_3619 base 0x36EC3 size 0x666 org 0x3
+# segment seg043_3619 base 0x36EC3 size 0x75E org 0x3
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
 set_mouse_in	seg043_3619_3	0x0	0x1F
 do_main_scroll	seg043_3619_22	0x1F	0x16
@@ -13,3 +13,4 @@ scroll_print2	seg043_3619_322	0x31F	0x53
 scroll_print3	WriteTextToMessageScroll_seg043_3619_375	0x372	0x18A
 scroll_wrap	seg043_3619_4FF	0x4FC	0x119
 draw_scroll	seg043_3619_618	0x615	0x51
+seg043_3619_669	seg043_3619_618	0x666	0xF8
