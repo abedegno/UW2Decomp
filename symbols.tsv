@@ -12,6 +12,7 @@ _advance	6599:0043	FM Towns
 _Alt	DS:2130	FM Towns
 _always_decode	DS:090E	FM Towns
 _animcount	DS:34B4	FM Towns
+_AnimObjInPipe	DS:2C7A	FM Towns
 _answer_x	DS:8186	provisional
 _area_spell_state	DS:1B0A	FM Towns
 _AskHowMany	6513:003E	FM Towns
@@ -42,6 +43,7 @@ _change_music_maybe	1C86:2BB2	FM Towns
 _change_screen	64BF:0061	FM Towns
 _change_state	DS:12B4	FM Towns
 _changed	DS:5DAC	FM Towns
+_changeDoor	654F:0089	FM Towns
 _check_ammo	22FC:0FA5	FM Towns
 _check_pplate	65D5:0089	FM Towns
 _check_res	24B4:0493	FM Towns

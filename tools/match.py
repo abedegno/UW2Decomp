@@ -73,7 +73,7 @@ def main():
     whole=len(code)==size and not compare(code,cm,exe[base:base+size])
     total=done=0
     for c,ida,off,sz in rows:
-        p=pubs.get(('_'+c)[:32])      # Turbo C keeps 32 characters of a name
+        p=pubs.get(('_'+c)[:33])      # Turbo C keeps 32 characters of a name, after the underscore
         if p is None: continue
         o=p[1]; total+=sz
         # a function's end in the object: the next public, or the end of the code

@@ -28,7 +28,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - A file's `_DATA` holds its initialised data in definition order, including the initialisers of local arrays (emitted where the function is), and then the string-literal pool in order of first use. `verify.py` compares it with the EXE, so data the code reads by a fixed DS address may belong to the file itself: look at the bytes around it.
 - Static data doesn't appear in the FM Towns symbol table, so an unnamed table inside a file's data range was probably `static`.
 - A function's address stored as data in an overlay points at its entry in the overlay's stub table (for example `do_gem` is stub +25h), not at its code.
-- Turbo C keeps 32 characters of an identifier: `update_all_critters_whilst_player_snoozes` links as `_update_all_critters_whilst_playe`.
+- Turbo C keeps 32 characters of an identifier (33 with the leading underscore; `match.py` looks names up the same way): `update_all_critters_whilst_player_snoozes` links as `_update_all_critters_whilst_playe`.
 - Two externs resolving to one address means one function was given two names; `verify.py` reports it. The FM Towns calls (`tools/fmt.py`) show the right one.
 
 ## What the compiler tells you about the source
@@ -156,5 +156,6 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **`x++; if (x >= n)`** compares the register directly; `if (++x >= n)` copies to AX first.
 - **A trampoline to a shared return**: when an `||` condition's body is a shared `return 0`, each term jumps short to a one-instruction `jmp`; a `goto` or empty body threads the jumps straight to the target instead.
 - **`atoi`** from stdlib.h links as `_atol`.
+- **Two bitfield-macro stores in an if/else** share one store tail, each arm folding its own mask (`and ax,7` against `add ax,8; and ax,0Fh`, then one `shl ax,9` and store).
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.
