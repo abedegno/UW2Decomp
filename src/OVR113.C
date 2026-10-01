@@ -354,7 +354,7 @@ char far SCDMoveNPCToRandom_ovr113_961(char far *row)
     return 0;
 }
 
-void far ChangeTile_ovr110_F37(int x, int y, int wall, int floor, int height,
+void far change_terrain(int x, int y, int wall, int floor, int height,
                                int type, int a, int b, int c);
 struct TileFlags { unsigned shape:4, height:4, wall:2, floor:4; };
 char far ev_freeze_hack(unsigned char far *row)
@@ -368,7 +368,7 @@ char far ev_freeze_hack(unsigned char far *row)
             tile = Map_GetAddr(x, y);
             if (((struct TileFlags far *)tile)->floor == ((unsigned char *)&values)[0] &&
                 rand() % 2 == 1) {
-                ChangeTile_ovr110_F37(x, y, 0x3F, ((unsigned char *)&values)[1],
+                change_terrain(x, y, 0x3F, ((unsigned char *)&values)[1],
                     ((struct TileFlags far *)tile)->height + (int)(values >> 16),
                     0x10, 0, 0, 0);
             }

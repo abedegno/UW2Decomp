@@ -8,9 +8,9 @@ This is a fan research project, not affiliated with or endorsed by the rights ho
 
 **All of UW2's C code is matched: 337,327 of 337,327 bytes, in 99 source files under `src/`.** Every file compiles with Turbo C++ 1.01 to the same machine code as the shipped `UW2.EXE`, and `tools/verify.py` confirms its fixups (every call and global reference), its initialised data and its uninitialised data layout. Function and global names are the originals from the FM Towns build wherever it has them.
 
-Also matched: seg013 (C with inline assembly, through Turbo Assembler 2.0) and seg017 (a hand-written assembly module).
+Also matched: seg013 (C with inline assembly, through Turbo Assembler 2.0) and the assembly modules seg017, seg020, seg021 (startup and input), seg022 (the Miles AIL 2.0 sound API) and seg045 (compiled C, kept as assembly for now).
 
-Still to do: the remaining assembly modules (seg003, seg004, seg020, seg021, seg022, seg045, seg046 and part of seg001, about 88 KB). They match Turbo Assembler 2.0's output; see MATCHING.md.
+Still to do: the remaining assembly modules (seg003, seg004, seg046 and part of seg001, about 82 KB). `tools/asmgen.py --fix` drafts them from the EXE. They match Turbo Assembler 2.0's output; see MATCHING.md.
 
 `matched.txt` lists the matched segments; `map/files.tsv` has per-file status.
 

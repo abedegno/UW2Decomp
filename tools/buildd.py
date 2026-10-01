@@ -2,7 +2,9 @@
 Run outside the sandbox:  .venv/bin/python tools/buildd.py
 An agent writes build/queue/<id>.req holding one line, "match src/FILE.C [--dis NAME]"
 or "verify src/FILE.C", and waits for build/queue/<id>.out (tools/remote.sh does both).
-Only those two commands, src/NAME.C paths and the --dis/--no-build options are accepted."""
+Only those two commands, src/NAME.C paths and the --dis/--no-build options are accepted.
+A per-file budget caps match builds: build/queue/budget/<NAME>.C holds the number left
+(default 30 when the file is first seen); at zero further builds are refused."""
 import os, re, subprocess, time, glob
 from concurrent.futures import ThreadPoolExecutor
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); q = os.path.join(root, 'build', 'queue')
@@ -17,6 +19,14 @@ def run(req):
         text = f'rejected: {line!r}\n'
     else:
         cmd, src, opts = m.groups()
+        if cmd == 'match' and '--no-build' not in opts:
+            bf = os.path.join(q, 'budget', os.path.basename(src))
+            os.makedirs(os.path.dirname(bf), exist_ok=True)
+            left = int(open(bf).read()) if os.path.exists(bf) else 30
+            if left <= 0:
+                text = f'build budget for {src} is used up; stop and write your final report\n[exit 3]\n'
+                open(out + '.tmp', 'w').write(text); os.replace(out + '.tmp', out); os.remove(req); return
+            open(bf, 'w').write(str(left - 1))
         tool = 'match.py' if cmd == 'match' else 'verify.py'
         if cmd == 'verify': opts = ''
         r = subprocess.run([py, os.path.join('tools', tool), src] + opts.split(), cwd=root,

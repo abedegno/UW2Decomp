@@ -8,7 +8,11 @@ from match import publics, load_targets
 src = sys.argv[1]; stem = os.path.splitext(os.path.basename(src))[0].upper()
 seg = re.search(r'/\*\s*target:\s*(\w+)\s*\*/', open(src, encoding='latin1').read()).group(1)
 pubs = publics(open(os.path.join(root, 'build', stem, stem + '.OBJ'), 'rb').read())
-at = {o: n[1:] if n.startswith('_') else n for n, (s, o) in pubs.items()}
+# only publics in the code segment name functions; a data public can share an offset
+from omf import module_masked
+_, segs, _, _, _ = module_masked(open(os.path.join(root, 'build', stem, stem + '.OBJ'), 'rb').read())
+code = next(i for i, x in enumerate(segs, 1) if x[1] == 'CODE')
+at = {o: n[1:] if n.startswith('_') else n for n, (s, o) in pubs.items() if s == code}
 t = os.path.join(root, 'targets', seg + '.tsv'); lines = open(t).read().split('\n')
 for j, l in enumerate(lines):
     if not l or l.startswith('#'): continue

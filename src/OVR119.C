@@ -40,8 +40,8 @@ extern unsigned char TxmCol[];
 extern int TxmID[];
 extern unsigned char ActDoors[6];
 extern unsigned far first_anim;
-extern unsigned far ems_seg;
-extern unsigned char far TextureLogicalPage;
+extern unsigned far EmsBuff;
+extern unsigned char far tmap_fpage;
 extern char far stdat;
 /* the 3D engine's buffers: gr_offs holds 570 offsets (FM Towns _gr_end follows it) */
 extern unsigned long far gr_offs[];
@@ -146,7 +146,7 @@ void far *far adrnew_ems(unsigned size)
         MapMemory_seg013_1D3C_C7(2, ems_page);
         mapped_page = ems_page;
     }
-    return MK_FP(ems_seg + ems_off + 0x800, 0);
+    return MK_FP(EmsBuff + ems_off + 0x800, 0);
 }
 
 void far *far adrold_ems(void)
@@ -154,7 +154,7 @@ void far *far adrold_ems(void)
     unsigned address = grs_off[gr_index];
     MapMemory_seg013_1D3C_C7(2, address >> 12);
     ems_off = address & 0xFFF;
-    return MK_FP(ems_seg + ems_off + 0x800, 0);
+    return MK_FP(EmsBuff + ems_off + 0x800, 0);
 }
 
 unsigned char far movenew_ems(void far *image, int size, int index)
@@ -296,7 +296,7 @@ unsigned char far load_tr_ems(char *art)
     gsize = 0x40;
     ems_off = 0;
     bytes = gsize * gsize;
-    ems_page = TextureLogicalPage;
+    ems_page = tmap_fpage;
     MapMemory_seg013_1D3C_C7(3, ems_page);
     for (i = 0; i < 0x40; i++) {
         if (fseek(grfp, tmpoffs[TxmID[i]], 0))
@@ -307,11 +307,11 @@ unsigned char far load_tr_ems(char *art)
             MapMemory_seg013_1D3C_C7(3, ems_page);
         }
         if (tmpoffs[TxmID[i]] == tmpoffs[TxmID[i] + 1])
-            mem_set(MK_FP(ems_seg + ems_off + 0xC00, 0), 0, bytes);
-        else if (ReadFileToAddress(grfp->fd, MK_FP(ems_seg + ems_off + 0xC00, 0),
+            mem_set(MK_FP(EmsBuff + ems_off + 0xC00, 0), 0, bytes);
+        else if (ReadFileToAddress(grfp->fd, MK_FP(EmsBuff + ems_off + 0xC00, 0),
                                    bytes) != bytes)
             break;
-        TxmCol[i] = *(unsigned char far *)MK_FP(ems_seg + 0xC00, ems_off << 4);
+        TxmCol[i] = *(unsigned char far *)MK_FP(EmsBuff + 0xC00, ems_off << 4);
         ems_off += bytes >> 4;
     }
     _ld_close();

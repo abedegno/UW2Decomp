@@ -11,7 +11,7 @@ extern unsigned char far CmapFrm[];    /* 4FAF:E2C9 */
 extern unsigned char far CmapCache[];  /* 4FAF:E3C9 */
 extern unsigned far crit_fpage;
 extern unsigned far crit_nlpages;
-extern unsigned far ems_seg;
+extern unsigned far EmsBuff;
 extern unsigned char far grs_3dinf[];
 void far seg042_35ED_12B(void);
 void far seg013_1D3C_E4(int a, int b, int c);
@@ -34,7 +34,7 @@ unsigned char far preload_cr(unsigned char load_map)
     close(fd);
     if ((fd = open("CRIT\\cr.an", 0x8001)) < 0) return 0;
     map_crit_pages();
-    ReadFileToAddress(fd, MK_FP(ems_seg + 0xC00, 0), 0x4000);
+    ReadFileToAddress(fd, MK_FP(EmsBuff + 0xC00, 0), 0x4000);
     close(fd);
     seg042_35ED_12B();
     if (!load_map) return 1;
@@ -83,7 +83,7 @@ void far PreLoadCritPages(void)
                 name[strlen(name) - 1] = j + '0';
                 name[strlen(name) - 5] = (cr >> 6) + '0';
                 name[strlen(name) - 4] = ((cr >> 3) & 7) + '0';
-                LoadDATFile(name, MK_FP(ems_seg, 0), 0x7FFF);
+                LoadDATFile(name, MK_FP(EmsBuff, 0), 0x7FFF);
             }
         }
     }

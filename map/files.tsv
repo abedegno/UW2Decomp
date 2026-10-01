@@ -17,9 +17,9 @@ seg015_1D7C	C	39	3944	35	4	0	0	init_mouse_	mouse_btns_	yes
 seg016_1E73	C	56	12382	32	10	10	4	load_digi_fx_	music_over_	yes
 seg017_2179	C	14	953	1	1	6	6	local_do_palette_	local_do_palette_	yes
 seg019_21BA	C	12	5045	0	2	3	7			yes
-seg020	assembly	1	74	0	0	0	1			
-seg021_22FD	assembly	77	4210	0	11	34	32			
-seg022_2405	assembly	51	2365	0	4	28	19			
+seg020	assembly	1	74	0	0	0	1			yes
+seg021_22FD	assembly	77	4210	0	11	34	32			yes
+seg022_2405	assembly	51	2365	0	4	28	19			yes
 seg023	C	2	330	2	0	0	0	rotate_bank_	cycle_colors_	yes
 seg024_24E9	C	21	7040	20	0	0	1	pickloc_	player_killed_a_	yes
 seg025_26A1	C	7	1877	7	0	0	0	remove_lock_	damage_object_	yes
@@ -42,7 +42,7 @@ seg041_35D7	C	4	355	3	0	0	1	mvcheck_	rollem_	yes
 seg042_35ED	C	8	701	5	1	0	2	init_mem_	release_workspace_	yes
 seg043_3619	C	13	1886	13	0	0	0	set_mouse_in_	draw_scroll_	yes
 seg044_368F	C	17	4309	15	0	0	2	rem_anim_from_map_	rem_timer_obj_	yes
-seg045_379C	assembly	7	783	0	0	0	7			
+seg045_379C	assembly	7	783	0	0	0	7			yes
 seg046_37CD	assembly	43	7963	0	4	0	39			
 ovr091	C	2	44	0	0	0	2			yes
 ovr092	C	7	44	0	0	0	7			yes

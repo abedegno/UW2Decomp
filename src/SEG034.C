@@ -21,15 +21,15 @@ extern signed char sortdata[60][4];
 extern unsigned short ObjectsIn3DView[60];
 extern signed char trans_pos_x[64];
 extern signed char quad, dirval;
-extern int loopx, LikelyDist;
+extern int loopx, loopy;
 extern struct Camera far *cPlayer;
 extern struct ComObj ComObjData[];
-extern int ObjWorldX, ObjWorldZ, ObjWorldY;
-extern unsigned char PickUp, Shade;
+extern int objxloc, objyloc, objzloc;
+extern unsigned char PickUp, locsqmod;
 extern int far smooth_div;
 extern int far smooth_lowpass;
 extern unsigned char far smooth_base;
-extern int trans_x, trans_y, ambient;
+extern int sd_xmod, sd_ymod, mptrmod;
 
 void far *far Obj_IntTMem(unsigned index);
 struct Object far *far Obj_PtrTMem(struct Object far *object);
@@ -279,29 +279,29 @@ void far do_objsort(struct Object far *object)
     for (i = 0; i < n; i++) {
         word = sortlist[i];
         next = Obj_IntTMem(ObjectsIn3DView[word]);
-        ObjWorldX = ((loopx - 16) << 8) + ((int)sortdata[word][1] << 5) + 16;
-        ObjWorldY = (LikelyDist << 8) + ((int)sortdata[word][2] << 5) + 16;
+        objxloc = ((loopx - 16) << 8) + ((int)sortdata[word][1] << 5) + 16;
+        objzloc = (loopy << 8) + ((int)sortdata[word][2] << 5) + 16;
         if (((next->item & 0x1c0) >> 6) == 1 || !IsMobElem(next))
-            ObjWorldZ = (next->pos & 0x7f) << 3;
+            objyloc = (next->pos & 0x7f) << 3;
         else
-            ObjWorldZ = *(int far *)((char far *)next + 15);
+            objyloc = *(int far *)((char far *)next + 15);
         if (PickUp) {
-            ambient = (sortdata[word][2] / 8) * trans_y;
-            ambient += ((sortdata[word][1] + 64) / 8 - 8) * trans_x;
+            mptrmod = (sortdata[word][2] / 8) * sd_ymod;
+            mptrmod += ((sortdata[word][1] + 64) / 8 - 8) * sd_xmod;
         } else {
-            temp = (ObjWorldX - (cPlayer->x & 0xff)) >> 5;
+            temp = (objxloc - (cPlayer->x & 0xff)) >> 5;
             distance = temp * temp;
-            temp = (ObjWorldY - (cPlayer->y & 0xff)) >> 5;
+            temp = (objzloc - (cPlayer->y & 0xff)) >> 5;
             distance += temp * temp;
-            temp = (ObjWorldZ - cPlayer->z) >> 5;
+            temp = (objyloc - cPlayer->z) >> 5;
             distance += temp * temp;
             if (distance > 0) temp = cSqRt(distance);
             else temp = 0;
             distance = temp * smooth_div >> 6;
             distance += smooth_lowpass;
             if (distance < 0) distance = 0;
-            Shade = distance + smooth_base;
-            if (Shade > 14) Shade = 14;
+            locsqmod = distance + smooth_base;
+            if (locsqmod > 14) locsqmod = 14;
         }
         do_obj(next);
     }

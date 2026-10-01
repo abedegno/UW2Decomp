@@ -71,7 +71,7 @@ struct Tile {
 #define SET_HEADING(o, v) ((o)->pos = (o)->pos & 0xFC7F | ((v) & 7) << 7)
 #define SET_FINEX(o, v)   ((o)->pos = (o)->pos & 0x1FFF | ((v) & 7) << 13)
 #define SET_FINEY(o, v)   ((o)->pos = (o)->pos & 0xE3FF | ((v) & 7) << 10)
-extern unsigned char TriggerObjectDatTable[16];
+extern unsigned char Triggers[16];
 extern struct Object far *ActiveObj;
 extern struct Object far *ThePlayer;
 void far fread(void near *dest, int count, int size, int handle);
@@ -80,7 +80,7 @@ void far fread(void near *dest, int count, int size, int handle);
    fread of 16 bytes into the trigger type table. */
 void far trap_init(int handle)
 {
-    fread(TriggerObjectDatTable, 1, 16, handle);
+    fread(Triggers, 1, 16, handle);
 }
 
 /* IDA: MajorClass6TriggerType. FM Towns' trap_class_data: the same minor-class test on
@@ -88,7 +88,7 @@ void far trap_init(int handle)
 unsigned char near * far trap_class_data(void)
 {
     if (((ActiveObj->id & 0x30) >> 4) & 2)
-        return TriggerObjectDatTable + (ActiveObj->id & 0xF);
+        return Triggers + (ActiveObj->id & 0xF);
     return 0;
 }
 
@@ -117,7 +117,7 @@ int far UseTrigger(struct Object far *who, struct Object far *start,
             trig = Obj_PtrTMem(&trig->qn.word);
             return UseTrigger(who, start, trig, type);
         }
-        if (TriggerObjectDatTable[sub] != type) return 2;
+        if (Triggers[sub] != type) return 2;
         if ((who->id & 0x1FF) == 0x7F) {
             if (!(trig->id & 0x800)) return 2;
             if (type == 5 && (trig->pos & 0x7F) > 0 &&
@@ -242,7 +242,7 @@ extern int trap_teleport_data;
 void far trap_fire(struct Object far *trap, int x, int y);
 void far do_sfx(int quality, int owner);
 int far do_teleport(struct Object far *who, int x, int y, int level);
-int far ChangeTile_ovr110_F37(int x, int y, int wall, int floor, int height,
+int far change_terrain(int x, int y, int wall, int floor, int height,
                               int type, int dx, int dy, int extra);
 void far set_jmp(int quality, int owner, int heading);
 void far do_change_grokking(struct Object far *trap, struct Object far *obj, int x, int y);
@@ -349,7 +349,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
             i = 10;
         e = OBJ_FINEX(trap);
         f = OBJ_FINEY(trap);
-        result = ChangeTile_ovr110_F37(x, y, d, c, b, i, e, f, 0);
+        result = change_terrain(x, y, d, c, b, i, e, f, 0);
         break;
     case 18:
         set_jmp(trap->qn.f.quality, trap->ol.f.owner, OBJ_HEADING(trap));
@@ -455,7 +455,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
             break;
         }
         if (trap->qn.f.quality <= now && trap->ol.f.owner >= now)
-            ChangeTile_ovr110_F37(x, y, wall, floor, height, type, 0, 0, 4);
+            change_terrain(x, y, wall, floor, height, type, 0, 0, 4);
         if (i == 1) {
             if (trap->ol.f.owner == now && trap->qn.f.quality < limit)
                 SET_FINEX(trap, OBJ_FINEX(trap) & 6);
@@ -483,7 +483,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
             g = 1;
         else
             g = 0x3F;
-        ChangeTile_ovr110_F37(x, y, 0x3F, b, i, g, 0, 0, 4);
+        change_terrain(x, y, 0x3F, b, i, g, 0, 0, 4);
         break;
     case 24: {
         int bx = x;
@@ -747,7 +747,7 @@ void far kill_triggers(unsigned far *head)
         if (((obj->id & 0x1C0) >> 6) == 6 &&
             ((obj->id & 0x30) >> 4) >= 2 &&
             obj->ol.f.link == TrapIndexToRemove_dseg_67d6_863C) {
-            if (TriggerObjectDatTable[obj->id & 0xF] == 10)
+            if (Triggers[obj->id & 0xF] == 10)
                 rem_timer_obj(Obj_MemTPtr(obj));
             if (Obj_Rem(head, obj)) Obj_Free(obj);
             obj->ol.word &= 0x3F;
@@ -1024,7 +1024,7 @@ void far trigger_obj_del(unsigned far *head, struct Object far *obj)
         linked->id = linked->id & 0xE1FF | (((flags - 1) & 0xF) << 9);
         Obj_Free(obj);
     }
-    if (TriggerObjectDatTable[obj->id & 0xF] == 10)
+    if (Triggers[obj->id & 0xF] == 10)
         rem_timer_obj(Obj_MemTPtr(obj));
 }
 void far trap_obj_del(unsigned far *head, struct Object far *obj)
@@ -1141,10 +1141,10 @@ char far check_pplate(struct Object far *who, struct Tile far *tile, int z, int 
     trig = Obj_PtrTMem(&TriggerChainTileData_dseg_67d6_1BB9->objects.word);
     while (trig != 0) {
         if (((((trig->id & 0x1F0) >> 4) & 0x1E) == 0x1A)) {
-            if (TriggerObjectDatTable[trig->id & 0xF] == type && (type & 7) == 6)
+            if (Triggers[trig->id & 0xF] == type && (type & 7) == 6)
                 UseTrigger(who, 0, trig, type);
             if ((type & 7) == 6) type++;
-            if ((type & 7) == 7 && TriggerObjectDatTable[trig->id & 0xF] == type) {
+            if ((type & 7) == 7 && Triggers[trig->id & 0xF] == type) {
                     result = 1;
                     if ((trig->pos & 0x7F) != z) goto advance_pressure;
                     {
@@ -1161,7 +1161,7 @@ char far check_pplate(struct Object far *who, struct Tile far *tile, int z, int 
                         }
                     }
             } else if ((type & 7) == 7 &&
-                       (TriggerObjectDatTable[trig->id & 0xF] & 7) == 7)
+                       (Triggers[trig->id & 0xF] & 7) == 7)
                 previous = trig;
         }
 advance_pressure:
@@ -1192,7 +1192,7 @@ void far update_pplate(struct Object far *trig)
     next = Obj_PtrTMem(&TriggerChainTileData_dseg_67d6_1BB9->objects.word);
     while (next != 0) {
         if (((((next->id & 0x1F0) >> 4) & 0x1E) == 0x1A) &&
-            ((TriggerObjectDatTable[next->id & 0xF] & 7) == 7))
+            ((Triggers[next->id & 0xF] & 7) == 7))
             next->pos = next->pos & 0xE3FF |
                 ((notset + (((next->pos & 0x1C00) >> 10) & 6)) & 7) << 10;
         next = Obj_PtrTMem(&next->qn.word);
@@ -1219,7 +1219,7 @@ void far do_ice_hack(struct Object far *trap)
     skill_result = skill_check(player->skills[17], weight > 20 ? weight : 0);
     if (tile->floor == trap->ol.f.owner && skill_result < 0) {
         if (height < 0) height = 0;
-        ChangeTile_ovr110_F37((ThePlayer->home & 0xFC00) >> 10,
+        change_terrain((ThePlayer->home & 0xFC00) >> 10,
                                (ThePlayer->home & 0x3F0) >> 4,
                                0x3F, texture, height, 0x10, 0, 0, 0);
     }
@@ -1289,7 +1289,7 @@ void far check_for_sunken_moongate(void)
 {
     struct Tile far *tile = Map_GetAddr(0x18, 2);
     if (tile->height) {
-        ChangeTile_ovr110_F37(0x18, 2, 0x17, 4, 0, 1, 6, 5, 0);
-        ChangeTile_ovr110_F37(2, 0x15, 0x14, 4, 4, 1, 0, 0, 0);
+        change_terrain(0x18, 2, 0x17, 4, 0, 1, 6, 5, 0);
+        change_terrain(2, 0x15, 0x14, 4, 4, 1, 0, 0, 0);
     }
 }

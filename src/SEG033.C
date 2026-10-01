@@ -73,19 +73,19 @@ extern struct Object far *ThePlayer;
 extern unsigned char PickUp;
 extern struct Tile far *mlowptr;
 extern struct Tile far *tmptr;
-extern int ambient;
+extern int mptrmod;
 extern int TileIndices[];
 extern int ObjectIndices[];
 extern int far *dbptr;
 extern char quad;
-extern int ObjWorldX, ObjWorldZ, ObjWorldY;
+extern int objxloc, objyloc, objzloc;
 extern struct ComObj ComObjData[];
 extern char AnimObjInPipe;
 extern struct Eye far *cPlayer;
 extern unsigned headmod[4];
 extern struct Grs3d far grs_3dinf[];
-extern unsigned far ems_seg;
-extern unsigned char Shade;
+extern unsigned far EmsBuff;
+extern unsigned char locsqmod;
 extern int lighton;
 extern int tmapson;
 extern unsigned first_tmobj;
@@ -188,7 +188,7 @@ void far do_obj(struct Object far *o)
     if (((o->id & 0x4000) >> 14) == 1)
         return;
     if (PickUp) {
-        TileIndices[PickUp] = (int)(tmptr - mlowptr) + ambient;
+        TileIndices[PickUp] = (int)(tmptr - mlowptr) + mptrmod;
         ObjectIndices[PickUp] = Obj_MemTPtr(o);
         *dbptr++ = 0xAE;
         *dbptr++ = PickUp;
@@ -216,8 +216,8 @@ void far do_obj(struct Object far *o)
             x = fy;
             break;
         }
-        ObjWorldX = (ObjWorldX & 0xFF00) + x;
-        ObjWorldY = (ObjWorldY & 0xFF00) + y;
+        objxloc = (objxloc & 0xFF00) + x;
+        objzloc = (objzloc & 0xFF00) + y;
     }
     type = ComObjData[o->id & 0x1FF].b9_0;
     if (((o->id & 0x1C0) >> 6) == 7) {
@@ -248,16 +248,16 @@ void far do_obj(struct Object far *o)
         return;
     case 1:
         *dbptr++ = 0x7A;
-        *dbptr++ = ObjWorldX;
-        *dbptr++ = ObjWorldY;
-        *dbptr++ = ObjWorldZ;
+        *dbptr++ = objxloc;
+        *dbptr++ = objzloc;
+        *dbptr++ = objyloc;
         *dbptr++ = 0x7F8;
         frame = o->b15 & 0x3F;
         dir = dirtab[((((o->pos & 0x380) >> 7) << 2) + 0x20
                       - ((cPlayer->heading + headmod[quad]) >> 11)) % 0x20];
         crit = grs_3dinf[item & 0x3F].page;
         frame = ((((crit << 3) + (o->b15 & 0x3F) << 3) + dir) << 3) + ((o->w0B & 0xF000) >> 12);
-        pix = *(unsigned char far *)MK_FP(ems_seg + 0xC00, frame);
+        pix = *(unsigned char far *)MK_FP(EmsBuff + 0xC00, frame);
         is15 = ((o->w0B & 0xF) >> 0) == 0xF;
         if (pix == 0xFF)
             return;
@@ -266,7 +266,7 @@ void far do_obj(struct Object far *o)
         *dbptr++ = 0x5A;
         *dbptr++ = item & 0x3F;
         *dbptr++ = is15;
-        *dbptr++ = Shade * lighton;
+        *dbptr++ = locsqmod * lighton;
         *dbptr++ = pix;
         *dbptr++ = 0x7F8;
         break;
@@ -274,13 +274,13 @@ void far do_obj(struct Object far *o)
         if ((item & 0x1E0) == 0xE0 && (item & 0x18))
             item = 0xE0;
         *dbptr++ = 0x7A;
-        *dbptr++ = ObjWorldX;
-        *dbptr++ = ObjWorldY;
-        *dbptr++ = ObjWorldZ;
+        *dbptr++ = objxloc;
+        *dbptr++ = objzloc;
+        *dbptr++ = objyloc;
         *dbptr++ = 0x7F8;
         *dbptr++ = 0x3A;
         *dbptr++ = item;
-        *dbptr++ = Shade * lighton;
+        *dbptr++ = locsqmod * lighton;
         *dbptr++ = 0x7F8;
         break;
     case 3:
@@ -339,7 +339,7 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
     flags = rect_cols[model][0];
     *dbptr++ = 2;
     *dbptr++ = Clk(0xA);
-    *dbptr++ = Shade * lighton;
+    *dbptr++ = locsqmod * lighton;
     if (flags & 0x20) {
         unsigned char col;
 
@@ -417,7 +417,7 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
         if (tex >= 0) {
             *dbptr++ = 0xC0;
             *dbptr++ = tex;
-            *dbptr++ = Shade * lighton;
+            *dbptr++ = locsqmod * lighton;
         }
         tCacheOK = 0xE0;
     }
@@ -456,7 +456,7 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
         *dbptr++ = colour;
     }
     if (flags & 8) {
-        i = 0x400 - ObjWorldZ;
+        i = 0x400 - objyloc;
         *dbptr++ = 0x4C;
         *dbptr++ = 0;
         *dbptr++ = 0;
@@ -467,12 +467,12 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
         *dbptr++ = i * 2 - 1;
     }
     *dbptr++ = 0x18;
-    *dbptr++ = ObjWorldX & 0xFFFF;
-    *dbptr++ = ObjWorldX >> 16;
-    *dbptr++ = ObjWorldZ & 0xFFFF;
-    *dbptr++ = ObjWorldZ >> 16;
-    *dbptr++ = ObjWorldY & 0xFFFF;
-    *dbptr++ = ObjWorldY >> 16;
+    *dbptr++ = objxloc & 0xFFFF;
+    *dbptr++ = objxloc >> 16;
+    *dbptr++ = objyloc & 0xFFFF;
+    *dbptr++ = objyloc >> 16;
+    *dbptr++ = objzloc & 0xFFFF;
+    *dbptr++ = objzloc >> 16;
     if (heading < 0)
         head = ((((o->pos & 0x380) >> 7) + 8 - quad * 2) % 8) << 13;
     else
@@ -536,8 +536,8 @@ void far do_door(unsigned char item, struct Object far *o)
     curautocode = 1;
     if ((item & 7) == 6) {
         dir = 0;
-        z = ObjWorldZ;
-        oldz = ObjWorldZ - (((o->id & 0x1E00) >> 9) & 7) * 0x30;
+        z = objyloc;
+        oldz = objyloc - (((o->id & 0x1E00) >> 9) & 7) * 0x30;
         vis = 1;
         h = 0x400 - oldz - 0xD0;
         first = 1;
@@ -553,9 +553,9 @@ void far do_door(unsigned char item, struct Object far *o)
     }
     else {
         if ((((o->id & 0x1E00) >> 9) & 7) || ((o->id & 0x1C0) >> 6) == 7)
-            ObjWorldZ -= 0xC0;
+            objyloc -= 0xC0;
         dir = (((o->id & 0x1E00) >> 9) & 7) * (((o->id & 0x2000) >> 13) * 2 - 1);
-        h = 0x400 - ObjWorldZ - 0xD0;
+        h = 0x400 - objyloc - 0xD0;
         *dbptr++ = 2;
         *dbptr++ = Clk(5);
         *dbptr++ = dir << 12;
@@ -582,8 +582,8 @@ void far do_door(unsigned char item, struct Object far *o)
 
         q = (((o->pos & 0x380) >> 7) - quad * 2) & 7;
         q3 = q & 3;
-        ddx = ObjWorldX - cPlayer->x;
-        dy = ObjWorldY - cPlayer->y;
+        ddx = objxloc - cPlayer->x;
+        dy = objzloc - cPlayer->y;
         switch (q3) {
         case 0:
             k = dy < 0;
@@ -610,7 +610,7 @@ void far do_door(unsigned char item, struct Object far *o)
     for (pass = first; pass <= 1 && pass >= 0; pass += step) {
         if (pass == 0) {
             if (tCacheOK < 1)
-                txtwal(0, Shade, ObjWorldZ >> 6, tmptr->wall);
+                txtwal(0, locsqmod, objyloc >> 6, tmptr->wall);
             *dbptr++ = 2;
             *dbptr++ = bmhgtoff + (cTmBm << 3);
             *dbptr++ = (cTmDm * cTmDm >> 8) * h - 1;
@@ -634,9 +634,9 @@ void far do_door(unsigned char item, struct Object far *o)
                 *dbptr++ = PickUp - 1;
             }
             if (z >= 0) {
-                ObjWorldZ = z;
+                objyloc = z;
                 do_rect(0xC, o, ((o->pos & 0x380) >> 7) << 1, 0);
-                ObjWorldZ = oldz;
+                objyloc = oldz;
             }
             else {
                 register int k;
@@ -644,7 +644,7 @@ void far do_door(unsigned char item, struct Object far *o)
                 k = item & 7;
                 if (k == 7) {
                     if (tCacheOK < 1)
-                        txtwal(0, Shade, ObjWorldZ >> 6, tmptr->wall);
+                        txtwal(0, locsqmod, objyloc >> 6, tmptr->wall);
                     *dbptr++ = 0xB2;
                     *dbptr++ = cTmBm;
                     *dbptr++ = 2;

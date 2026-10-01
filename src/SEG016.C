@@ -151,7 +151,7 @@ char far seg013_1D3C_E4(int a, int b, int c);
 void far seg042_35ED_12B(void);
 extern char ws_active;                  /* DS:0922, set while the workspace is mapped */
 extern unsigned char far obj_inpage1;   /* the EMS page mapped into frame page 2 */
-extern unsigned far ems_seg;            /* 4FAF:E4D2 */
+extern unsigned far EmsBuff;            /* 4FAF:E4D2 */
 extern unsigned char far sound_fpage;   /* the first EMS page of the sounds */
 extern char far dfx_buffer[];           /* the digital buffers; name provisional */
 extern struct Effect far effects[];
@@ -379,7 +379,7 @@ unsigned char far load_dfx_page(int chan, int page, long off, int buf)
 
     MapMemory_seg013_1D3C_C7(2, sound_fpage + ds_sounds_in_ems[ds_channel_info[chan].slot].pages[page]);
     len = ds_channel_info[chan].remaining > 0x800 ? 0x800L : ds_channel_info[chan].remaining;
-    movedata(FP_SEG(MK_FP(ems_seg + 0x800, (unsigned)off)), FP_OFF(MK_FP(ems_seg + 0x800, (unsigned)off)),
+    movedata(FP_SEG(MK_FP(EmsBuff + 0x800, (unsigned)off)), FP_OFF(MK_FP(EmsBuff + 0x800, (unsigned)off)),
              FP_SEG(dsdata[buf]), FP_OFF(dsdata[buf]), (unsigned)len);
     RESTORE_EMS();
     if (page == 0 && off == 0) {
@@ -501,7 +501,7 @@ load:
     eof_hit = 0;
     for (i = 0, j = 0; i < count; i++) {
         MapMemory_seg013_1D3C_C7(2, sound_fpage + list[i]);
-        total += ReadFileToAddress(fd, MK_FP(ems_seg + 0x800, 0), 0x4000);
+        total += ReadFileToAddress(fd, MK_FP(EmsBuff + 0x800, 0), 0x4000);
         RESTORE_EMS();
         ds_sounds_in_ems[slot].pages[j] = list[i];
         ds_page_status |= 1 << list[i];

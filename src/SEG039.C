@@ -43,7 +43,7 @@ void far scroll_print(char far *s);
 char far * far str_copy(char far *dst, char far *src);
 char far * far FindStringDelimiter(char far *s, int c);
 int far str_len(char far *s);
-int far Stub_OpenDataFile_seg005_2891(char *name, int folder, int mode);
+int far our_open(char *name, int folder, int mode);
 int far read(int file, void *p, int count);
 void far * far farmalloc(unsigned long size);
 int far ReadFileToAddress(int file, void far *p, int count);
@@ -188,7 +188,7 @@ void far game_strings_3(int first, int second, int third)
 int far LoadFileStringsPak_seg039_547(void)
 {
     int file;
-    if ((file = Stub_OpenDataFile_seg005_2891(aStrings_pak, 1, 0)) == -1) return 0x3002;
+    if ((file = our_open(aStrings_pak, 1, 0)) == -1) return 0x3002;
     read(file, &StringsPak_NoOfNodes, 2);
     StringsPak_Address_Indices = farmalloc((unsigned)(StringsPak_NoOfNodes << 2));
     if (!StringsPak_Address_Indices) {

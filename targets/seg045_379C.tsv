@@ -1,0 +1,12 @@
+# segment seg045_379C base 0x386F6 size 0x30F org 0x6
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+grdb_blank	seg045_379C_6	0x0	0x97
+grdb_size	seg045_379C_6	0x97	0x1A
+Clk	seg045_379C_B7	0xB1	0x14
+gr_entry	seg045_379C_CB	0xC5	0xB
+gr_tostrt	seg045_379C_D6	0xD0	0xF
+Ref	seg045_379C_E5	0xDF	0xF6
+gr_getpre	seg045_379C_1DB	0x1D5	0x18
+gr_getlab	seg045_379C_1DB	0x1ED	0x20
+gr_putlab	seg045_379C_213	0x20D	0xC3
+gr_freelab	seg045_379C_2D6	0x2D0	0x3F

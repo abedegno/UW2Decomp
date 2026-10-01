@@ -1,0 +1,3 @@
+# segment seg020 base 0x23C91 size 0x6D org 0x1
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+seg020_1	seg020_24	0x0	0x6D

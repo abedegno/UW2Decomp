@@ -8,9 +8,9 @@ extern unsigned char far crit_inpage;
 extern unsigned char far tmap_inpage;
 extern unsigned char far obj_inpage1;
 extern unsigned char far scrgr_fpage;
-extern unsigned char far TextureLogicalPage;
+extern unsigned char far tmap_fpage;
 extern unsigned char saved_tmap_inpage;
-extern unsigned far ems_seg;
+extern unsigned far EmsBuff;
 extern unsigned char ws_active;
 extern unsigned char gfx_inpage;
 extern unsigned char obj_inpage2;
@@ -62,10 +62,10 @@ void far mem_setup(int page)
     crit_inpage = 0xFF;
     obj_inpage1 = 0xFF;
     scrgr_fpage = 0x0A;
-    TextureLogicalPage = scrgr_fpage + 2;
-    sound_fpage = TextureLogicalPage + 0x10;
+    tmap_fpage = scrgr_fpage + 2;
+    sound_fpage = tmap_fpage + 0x10;
     tmap_inpage = 0xFF;
-    ems_seg = ems_frame;
+    EmsBuff = ems_frame;
 }
 
 void far seg042_35ED_12B(void)

@@ -33,6 +33,16 @@ The assembly modules (seg003, seg004, seg020 to seg022, seg045, seg046, SetPnt i
 
 - **C with inline assembly** (`#pragma inline`) goes through TASM, and shows it: a call to a later function in the same resident file becomes `push cs; call near; nop` (`0E E8 xx xx 90`), which TCC alone never produces. seg013 is mostly pseudo-registers (`_AH = ...; geninterrupt(0x67);`) with two short `asm` statements; prefer pseudo-registers wherever they reproduce the bytes (`_BX = 0` gives `xor bx,bx`, so a literal `mov bx,0` needs `asm`).
 - **Hand-written assembly modules** can sit where a C file was expected: seg017 is `src/SEG017.ASM` (its frames end `mov sp,bp; pop bp` with no locals, which neither TCC nor TASM's ARG/LOCAL produce). TASM 2.0 with `.186` makes `enter`/`leave` for ARG/LOCAL procs. An `extrn name:far` inside `.code` is taken as same-segment and called with `push cs; call near`, so declare externs outside it.
+- **`tools/asmgen.py SEG --fix`** drafts a module from the EXE bytes, the IDA listing and symbols.tsv, then assembles, compares and rewrites until it matches, falling back to `db` (with the instruction as a comment) where TASM cannot produce the bytes. Resident segments only. Read every `db ...; instr` line: each one is either an encoding TASM never makes or a sign the source was not what the draft guessed.
+- **8086 mode (no `.186`):** TASM 2.0 writes `push imm` as `50 55 8B EC C7 46 02 iw 5D`, so that sequence proves the module was assembled without `.186` (seg022).
+- **`.386` makes constants 32-bit:** `cmp cx,0FFFCh` gives the `81` form and `push 0FFFCh` gives `68`; write `-4` to get `83` / `6A`. Under `.186`, `0FFFCh` already gives `83`.
+- **AX with an immediate** always takes the short form (`05`/`3D`/`25`), even when the constant fits in a byte.
+- **TASM always shortens within the segment:** a backward `jmp near ptr` becomes `EB`, a forward one `EB 90`; `call` or `call far ptr` into the same segment becomes `push cs; call near` (plus a `nop` when forward); `jmp far ptr` into the same segment becomes `EB`. So `9A`/`EA` into the module's own segment, or a backward `E9` that would fit in a byte, means raw bytes or compiled C (seg046 has `9A` self-calls, Turbo C's call to a later function).
+- **A forward call to a far proc** without `far ptr` is an error ("Forward reference needs override").
+- **Displacements:** a relocatable label always takes disp16 (so `8A A7 10 00` is a data label, not a number); a forward numeric equate gives disp8 plus `nop`.
+- **`ret` in a `proc far`** assembles as `CB`; write `retn` for `C3`.
+- **Names:** TASM keeps long names whole, but match.py looks up 32 characters, so keep table names to 32 or fewer.
+- **A module can define its own `.data?`** (`_BSS`); verify.py checks its base. seg045 does, and its nine globals fall in exactly the order `tools/bssorder.py` predicts, with Turbo C idioms throughout: it is compiled C kept as assembly for now, and a C version would be the truer source.
 
 ## Data
 

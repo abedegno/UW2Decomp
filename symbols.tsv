@@ -126,6 +126,9 @@ _can_place	2754:1021	FM Towns
 _CapsLock	DS:212C	provisional
 _cast	65A7:0066	FM Towns
 _cAtan2	2110:0EFB	FM Towns
+_cDbase	DS:216C	FM Towns
+_cDbbase	DS:2180	FM Towns
+_cEntryStrt	DS:2170	FM Towns
 _cExitMessage	DS:2160	FM Towns
 _cFBtoScreen	2110:0C7E	FM Towns
 _cFillFB	2110:0C84	FM Towns
@@ -361,6 +364,7 @@ _DoWanderingMonsters	65D5:009D	FM Towns
 _draw_conv_edges	342C:00B8	FM Towns
 _draw_edges	342C:0064	FM Towns
 _draw_mask	0000:0120	FM Towns
+_DRAW_RELATED_seg003_0272_7F9	0085:07F9	provisional
 _DRAW_RELATED_seg017_2179_2A2	1F8C:02A2	provisional
 _DRAW_RELATED_seg017_2179_320	1F8C:0320	provisional
 _DRAW_RELATED_seg017_2179_361	1F8C:0361	provisional
@@ -1131,6 +1135,7 @@ _sd_xmod	DS:30F0	FM Towns
 _sd_ymod	DS:30F2	FM Towns
 _seg001_023B_5A	004E:005A	provisional
 _seg001_023B_C	004E:000C	provisional
+_seg003_0272_18	0085:0018	provisional
 _seg003_0272_4431	0085:4431	provisional
 _seg003_0272_4629	0085:4629	provisional
 _seg003_0272_4933	0085:4933	provisional
@@ -1139,6 +1144,15 @@ _seg003_0272_4D86	0085:4D86	provisional
 _seg003_0272_4DC2	0085:4DC2	provisional
 _seg003_0272_5025	0085:5025	provisional
 _seg003_0272_51C8	0085:51C8	provisional
+_seg003_0272_5363	0085:5363	provisional
+_seg003_0272_6E2	0085:06E2	provisional
+_seg003_0272_6E4	0085:06E4	provisional
+_seg003_0272_764	0085:0764	provisional
+_seg003_0272_788	0085:0788	provisional
+_seg003_0272_7A8	0085:07A8	provisional
+_seg004_0849_3007	065C:3007	provisional
+_seg004_0849_7F0C	065C:7F0C	provisional
+_seg004_0849_7F12	065C:7F12	provisional
 _seg005_105F_16E5	0E72:16E5	provisional
 _seg005_105F_19D9	0E72:19D9	provisional
 _seg005_105F_4FD	0E72:04FD	provisional
@@ -1154,7 +1168,7 @@ _seg021_22FD_755	2110:0755	provisional
 _seg021_22FD_791	2110:0791	provisional
 _seg021_22FD_7CD	2110:07CD	provisional
 _seg021_22FD_809	2110:0809	provisional
-_seg021_22FD_F83	2110:0F83	provisional
+_cFrmtoRaw	2110:0F83	FM Towns
 _seg039_3452_814	3265:0814	provisional
 _seg039_3452_857	3265:0857	provisional
 _seg039_3452_89A	3265:089A	provisional

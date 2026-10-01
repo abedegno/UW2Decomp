@@ -124,7 +124,7 @@ void far do_play_scroll(void);
 void far do_npc_scroll(void);
 void far do_main_scroll(void);
 void far scroll_clear(int);
-void far j_LikelyWaitForMore_ovr139_29(int, int);
+void far scroll_wait(int, int);
 void far grfx_quikfont(int);
 unsigned char far gronk_gr(char *, int, int, char far *(far *)(int),
                            int (far *)(char far *, int, int));
@@ -430,7 +430,7 @@ void far Converse(unsigned char who, int subclass)
     wait_time = 0x1f4;
     if (update_converse_data(talking_to) != 0 || convo_say_flag == 0)
         wait_time = 0;
-    j_LikelyWaitForMore_ovr139_29(wait_time, 0);
+    scroll_wait(wait_time, 0);
 }
 
 /* FM Towns converse_event_loop_ is this loop (loop_music_maybe, do_changes, the menu,
@@ -445,7 +445,7 @@ void far converse_event_loop(void)
         do_changes();
         if (menus_active != 0) goto dispatch;
         {
-            j_LikelyWaitForMore_ovr139_29(0x1f4, 0);
+            scroll_wait(0x1f4, 0);
             do_play_scroll();
             scroll_clear(1);
             set_workspace();
@@ -650,7 +650,7 @@ int far pause_ovr103_10DD(int far *stack)
     register int duration;
     duration = getmem(stack[-1]);
     mouse_release(0);
-    j_LikelyWaitForMore_ovr139_29(duration * 0x1f4, 0);
+    scroll_wait(duration * 0x1f4, 0);
     set_workspace();
     return 1;
 }

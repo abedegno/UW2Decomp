@@ -71,7 +71,7 @@ extern unsigned ems_frame;
    page last mapped for objects, which is spoiled by any other mapping. */
 extern unsigned char far scrgr_fpage;
 extern unsigned char far obj_inpage1;
-extern unsigned far ems_seg;
+extern unsigned far EmsBuff;
 
 /* This file's _BSS, DS:33E8-349A. Turbo C lays it out by name: the static that FM Towns
    keeps just after `setting` (the low byte of *Time at the last redraw) has no original
@@ -786,7 +786,7 @@ void far init_panelflip(int panel)
     int old;
 
     MapMemory_seg013_1D3C_C7(2, scrgr_fpage + 1);
-    buf = MK_FP(ems_seg + 0x800, 0);
+    buf = MK_FP(EmsBuff + 0x800, 0);
     obj_inpage1 = 0xFF;
     if (!read_gr_far("panels", panel, buf))
         pfatal_code(0x300E);
@@ -911,7 +911,7 @@ void far do_fbuf_bms(void)
         f = wframe[n] & 0x1F;
         if (f < 0x1F && weap_offs[f] != weap_offs[f + 1]) {
             MapMemory_seg013_1D3C_C7(2, scrgr_fpage);
-            wbuf.buf = MK_FP(ems_seg + 0x800, weap_offs[f]);
+            wbuf.buf = MK_FP(EmsBuff + 0x800, weap_offs[f]);
             obj_inpage1 = 0xFF;
             p = grs_unpack(wbuf.buf);
             fbshow(p, weap_x[f] + wxo, weap_y[f], wbuf.buf[1], wbuf.buf[2]);
