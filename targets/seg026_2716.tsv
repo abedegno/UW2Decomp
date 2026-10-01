@@ -1,0 +1,25 @@
+# segment seg026_2716 base 0x27E98 size 0x1404 org 0x8
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+display_scr	PlayerUpdateTick_seg026_2716_8	0x0	0x127
+RedispInv	ResetPaperInventoryPanel_seg026_2716_12F	0x127	0x25
+InPickRange	CheckIfPlayerCanReachAtDistance_seg026_2716_154	0x14C	0x14B
+BridgeHeight	GetHighestBridgeInTile_seg026_2716_29F	0x297	0x5B
+BlockingTerrain	TestIfPlayerCanReachObjectTile_seg026_2716_2FA	0x2F2	0x229
+check_around	seg026_2716_523	0x51B	0xC4
+pick_3d	RayCast_seg026_2716_5E7	0x5DF	0x158
+look_nothing	LookAtOrInteractWithSurface_seg026_2716_73F	0x737	0x74
+release_3d	Pickup_seg026_2716_7B3	0x7AB	0x50
+player_3dget	Pickup_seg026_2716_803	0x7FB	0x2F8
+player_3dtalk	TalkTo_seg026_2716_AFB	0xAF3	0x1E
+player_3dlook	LookAt_seg026_B19	0xB11	0x121
+player_3duse	UseObject_seg026_2716_C3A	0xC32	0x7B
+player_3dattack	Combat_seg026_2716_CB5	0xCAD	0x46
+mous_in_3d	HandleObjectOrTileClick_seg026_2716_CFB	0xCF3	0x179
+inv_look	LookAt_seg026_2716_E74	0xE6C	0x124
+seg026_2716_F98	seg026_2716_F98	0xF90	0x41
+mous_in_inv	ProbablyInventoryPanelClick_seg026_2716_FD9	0xFD1	0xFD
+mous_in_panel	ClickOnPanel_seg026_2716_10D6	0x10CE	0x54
+deal_with_icons	SetInteractionMode_seg026_2716_112A	0x1122	0x1CC
+pick_fightmode	DrawWeapon_seg026_2716_12F6	0x12EE	0xA0
+punt_fightmode	PutWeaponAway_seg026_2716_1396	0x138E	0x4F
+toggle_fightmode	ClickOnWeaponInInventory_seg026_2716_13E5	0x13DD	0x27

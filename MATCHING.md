@@ -80,6 +80,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Pointer plus index keeps the source's operand order**: `base + (x + (y << 6))` and `base + ((y << 6) + x)` compile differently.
 - **`-d` merges string tails too**: `" "` can be the last byte of `"You see "`, and `"\n"` the tail of `".\n"`.
 - **A block-local initialised array** (`char num[3] = "00";`) puts its initialiser in `_DATA` where the function is.
+- **Pointer tables in data** (an initialised array of far function pointers) carry fixups inside `_DATA`; `verify.py` checks each pointer against the EXE and leaves those bytes out of the comparison.
 - **Static uninitialised data** goes in `_BSS`, which `verify.py` checks for a consistent base (no bytes to compare).
 - **`!c` against `c == 0` on a `char` parameter**: `!c` gives `mov al; cbw; or ax,ax`; `c == 0` gives `cmp byte [bp+N],0`.
 - **Far pointers compare by offset only** for `<`/`>=` (`mov ax,[bp+N]; cmp ax,[g]`), while `== 0` tests both halves (`or ax,dx`).
@@ -128,5 +129,9 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **A mask macro with a ternary argument**: `b = b & 0x7F | ((v) & 1) << 7` with `cond ? 1 : 0` gives `mov al,1 / mov al,0`, then `and al,1; shl al,7; pop dx; or dl,al`; a bare `cond` gives `mov ax,1 / xor ax,ax`; a real bitfield store is `and byte [..],7Fh; shl ax,7; or [..],al`.
 - **`MK_FP` with an assignment inside**: `buf = MK_FP(ws = f(), 0)` stores the segment from AX; two statements store it from the register variable.
 - **A both-branches-jump-to-the-same-place test** (an empty `if`) keeps its compare, and its direction can't be recovered from the bytes; say so in a comment.
+- **Far pointer subtraction is long division**: `tile - base` on far struct pointers subtracts offsets into DX:AX and calls `F_LDIV@` by the element size; `(int)(tile - base) >> 6` is needed for a plain `sar`.
+- **Indexing a far byte array**: `(map + y * w)[x + 2]` gives `les bx; add bx,ax; mov al,es:[bx+di+2]`; `map[y * w + x + 2]` adds in AX and loads ES separately.
+- **An unsigned mask against a signed int** compares unsigned (`jbe`); a signed `jle` needs `(int)` on the masked value.
+- **Unreferenced helper functions** with no FM Towns counterpart can sit inside a neighbour's range in the target table; define them `static` where they fall.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

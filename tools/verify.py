@@ -37,7 +37,7 @@ def main():
     code = next(i for i, s in enumerate(segs) if s and s[1] == 'CODE')
     datas = next(i for i, s in enumerate(segs) if s and s[0] == '_DATA')
     bss = next((i for i, s in enumerate(segs) if s and s[0] == '_BSS'), None)
-    syms = {}; problems = []; data_bases = set(); cs_values = set(); internal = 0; entries = {}; bss_bases = set(); halves = {}
+    syms = {}; problems = []; data_bases = set(); cs_values = set(); internal = 0; entries = {}; bss_bases = set(); halves = {}; datafx = []
 
     def note(name, val, where):
         prev = syms.setdefault(name, (val, where))
@@ -45,8 +45,10 @@ def main():
             problems.append(f'{name}: {fmt(prev[0])} at +{prev[1]:X} but {fmt(val)} at +{where:X}')
 
     for f in o['fixups']:
+        if f['seg'] == datas:
+            datafx.append(f); continue      # checked once the data base is known
         if f['seg'] != code:
-            problems.append(f'fixup in non-code segment {segs[f["seg"]][0]} not checked'); continue
+            problems.append(f'fixup in segment {segs[f["seg"]][0]} not checked'); continue
         at = f['off']; obj = o['data'][code]; loc = f['loc']; tm, ti = f['target']
         add = word(obj, at) + f['disp']
         if tm == 2:                                     # extern
@@ -112,12 +114,41 @@ def main():
     data = bytes(o['data'][datas])
     if len(data_bases) > 1:
         problems.append('_DATA references disagree on the base: ' + ', '.join(f'DS:{b:X}' for b in sorted(data_bases)))
-    elif data_bases:
-        db = data_bases.pop(); theirs = exe[DS_FILE + db:DS_FILE + db + len(data)]
-        if theirs != data:
-            problems.append(f'_DATA at DS:{db:X} differs:\n    obj {data.hex(" ")}\n    exe {theirs.hex(" ")}')
+    db = None
+    if len(data_bases) == 1:
+        db = min(data_bases)
+    elif datafx and not data_bases:
+        problems.append('_DATA holds fixups but nothing in the code locates it')
+    if db is not None:
+        theirs = exe[DS_FILE + db:DS_FILE + db + len(data)]
+        # fixups inside the data (pointer tables): check each, then leave its bytes out
+        masked = set()
+        para = (base - org - hdr) // 16
+        for f in datafx:
+            at = f['off']; loc = f['loc']; tm, ti = f['target']; add = word(data, at) + f['disp']
+            here = DS_FILE + db + at
+            masked.update(range(at, at + {0: 1, 1: 2, 2: 2, 3: 4, 4: 1, 5: 2}[loc]))
+            if tm == 0 and ti == code and loc == 3:
+                internal += 1
+                if base < mzend and (word(exe, here) != add + org or word(exe, here + 2) != para):
+                    problems.append(f'_DATA+{at:X}: pointer to {word(exe, here + 2):04X}:{word(exe, here):04X}, expected {para:04X}:{add + org:04X}')
+                elif base >= mzend:
+                    entries.setdefault(add, set()).add(word(exe, here))
+            elif tm == 0 and ti == datas and loc in (1, 5):
+                internal += 1
+                if word(exe, here) != (db + add) & 0xFFFF:
+                    problems.append(f'_DATA+{at:X}: points to DS:{word(exe, here):X}, expected DS:{(db + add) & 0xFFFF:X}')
+            elif tm == 2 and loc == 3:
+                note(o['ext'][ti], ('FAR', para_of(word(exe, here + 2)), (word(exe, here) - add) & 0xFFFF), at)
+            elif tm == 2 and loc in (1, 5):
+                note(o['ext'][ti], ('DS', (word(exe, here) - add) & 0xFFFF), at)
+            else:
+                problems.append(f'_DATA+{at:X}: fixup to {target_name(o, f["target"])} loc {loc} not handled')
+        bad = [k for k in range(len(data)) if k not in masked and (k >= len(theirs) or data[k] != theirs[k])]
+        if bad:
+            problems.append(f'_DATA at DS:{db:X} differs at {len(bad)} bytes:\n    obj {data.hex(" ")}\n    exe {theirs.hex(" ")}')
         else:
-            print(f'_DATA: {len(data)} bytes match at DS:{db:X}')
+            print(f'_DATA: {len(data)} bytes match at DS:{db:X}' + (f' ({len(datafx)} pointers checked)' if datafx else ''))
 
     byval = {}
     for n, (v, _) in syms.items(): byval.setdefault(v, []).append(n)
