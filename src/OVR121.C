@@ -129,7 +129,7 @@ int far ItemWeight(struct Object far *obj);
 int far ItemFitsSlot(struct Object far *obj, int slot);
 char far AddTogether(struct Object far *obj, struct Object far *onto);
 char far displayEnc(int how);
-void far set_font_size(int size);
+void far grfx_quikfont(int size);
 void far SetCursorObj(int slot, int how);
 
 void far CloseTheBag(void);
@@ -536,7 +536,7 @@ char far PutObjectInBag(struct Object far *obj, int slot)
         FixOpenBag();
         displayInventoryArray(0xC, 0x13);
     } else if (displayEnc(1))
-        set_font_size(1);
+        grfx_quikfont(1);
     if (OBJ_ID(obj) >= 0x94 && OBJ_ID(obj) < 0x98)
         obj->id = obj->id & 0xFFF0 | ((obj->id & 0xF) - 4) & 0xF;
     return 1;

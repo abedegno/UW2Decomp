@@ -37,7 +37,7 @@ void far panel_check(void);
 void far advance(int levels);
 void far mouse_hide(void);
 void far mouse_show(void);
-void far set_font_size(int size);
+void far grfx_quikfont(int size);
 void far restore_rect(int which);
 void far sp_hp(void);
 void far sp_mp(void);
@@ -108,13 +108,13 @@ void far panel_check_hpmp(void)
     {
         *foreground_color = *background_color = 0xC4;
         mouse_hide();
-        set_font_size(4);
+        grfx_quikfont(4);
         if (spsave[1])
             restore_rect(spsave[1]);
         sp_hp();
         sp_mp();
         sp_xp();
-        set_font_size(1);
+        grfx_quikfont(1);
         mouse_show();
     }
 }

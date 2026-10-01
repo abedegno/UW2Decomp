@@ -568,8 +568,8 @@ _player_sqhandler	191C:104D	FM Towns
 _player_use_skill	6599:009D	FM Towns
 _PlayerBank	DS:33D8	FM Towns
 _PlayerCreature	DS:551C	provisional
-_PlayerDat	DS:82A4	FM Towns
 _playerdat	DS:828C	FM Towns
+_PlayerDat	DS:82A4	FM Towns
 _PlayerFacing	DS:8294	FM Towns
 _PlayerHeading	DS:8296	FM Towns
 _PlayerInput	DS:0773	FM Towns
@@ -681,7 +681,6 @@ _set_curmagic	653A:002A	FM Towns
 _set_cuts_ems	6488:0179	FM Towns
 _set_drugged	6564:004D	FM Towns
 _set_effect	2FBE:0CA3	FM Towns
-_set_font_size	64E2:004D	FM Towns
 _set_graphics_level	1FCD:005B	FM Towns
 _set_light	6592:0025	FM Towns
 _set_loc	1226:2F51	FM Towns

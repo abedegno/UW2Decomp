@@ -189,6 +189,8 @@ def update(syms, problems):
     if os.path.exists(fm):
         for l in open(fm):
             n = l.split('\t')[0]; orig.add(n); orig.add('_' + n.rstrip('_'))
+    if problems:
+        print('symbols.tsv not updated: fix the problems first'); return
     with open(path, 'w') as f:
         f.write('# name\taddress\tname source\n# address: DS:offset for near data, segment:offset for far code (load-relative paragraphs)\n')
         for n in sorted(known, key=str.lower):

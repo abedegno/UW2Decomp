@@ -130,7 +130,7 @@ void far grSoftPageFlip(void);
 void far set_the_color(int c);
 void far rectangle(int x0, int y0, int x1, int y1);
 void far mouse_show(void);
-void far set_font_size(int size);
+void far grfx_quikfont(int size);
 void far string_to_screen(char far *s, int x, int y);
 int far string_width(char far *s);
 struct Object far * far Obj_PtrTMem(unsigned far *link);
@@ -491,7 +491,7 @@ void far DisplayInvSpecial(void)
             rectangle(0xF0, 0xBE, 0x13B, 0x51);
         }
         if (displayEnc(1))
-            set_font_size(1);
+            grfx_quikfont(1);
         mouse_show();
     }
 }
@@ -932,7 +932,7 @@ void far displayInventoryArray(int from, int to)
     }
     Transparency = 0;
     if (any_qty) {
-        set_font_size(0);
+        grfx_quikfont(0);
         *foreground_color = 2;
         font_set = 1;
         for (i = from; i <= to; i++)
@@ -940,7 +940,7 @@ void far displayInventoryArray(int from, int to)
                 string_to_screen(itoa(n, buf, 10), InvDisplay[i].x + 3, InvDisplay[i].y - 1);
     }
     if (font_set)
-        set_font_size(1);
+        grfx_quikfont(1);
     displayEnc(0);
     mouse_show();
 }

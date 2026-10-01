@@ -115,7 +115,7 @@ struct Tile far * far Map_GetAddr(int x, int y);
 struct Object far * far Obj_PtrTMem(unsigned far *link);
 void far grfx_clear(void);
 void far grfx_quikpal(int pal);
-void far set_font_size(int size);
+void far grfx_quikfont(int size);
 void far set_the_color(int c);
 void far rectangle(int x0, int y0, int x1, int y1);
 int far string_width(char far *s);
@@ -618,7 +618,7 @@ void far ManageDungeonMap(void)
         ch[1] = 0;
         if (num_words != 100) {
             note = &ATM_Strings[num_words];
-            set_font_size(0);
+            grfx_quikfont(0);
             force_mouse_cursor(0x107A);
             note->x = mx + 2;
             note->y = my + 2;
@@ -656,7 +656,7 @@ void far ManageDungeonMap(void)
                 mouse_putxy(curx + 9, my + 0xF);
                 string_to_screen(text, note->x, note->y);
             }
-            set_font_size(1);
+            grfx_quikfont(1);
             if (text[0]) {
                 notes_dirty = 1;
                 str_copy(note->text, text);
@@ -720,7 +720,7 @@ void far RedisplayStrings(void)
     char buf[50];
     register int i;
 
-    set_font_size(0);
+    grfx_quikfont(0);
     *foreground_color = 0x4E;
     *background_color = 0x4E;
     for (i = 0; i < num_words; i++) {
@@ -730,7 +730,7 @@ void far RedisplayStrings(void)
             string_to_screen(buf, ATM_Strings[i].x, ATM_Strings[i].y);
         }
     }
-    set_font_size(1);
+    grfx_quikfont(1);
 }
 
 void far SaveTheWords(int lev)
@@ -839,11 +839,11 @@ void far ShowAutoMapLevel(int lev)
             RedisplayStrings();
         *foreground_color = 0x4E;
         *background_color = 0x4E;
-        set_font_size(3);
+        grfx_quikfont(3);
         num[0] = (lev - 1 & 7) + '1';
         num[1] = 0;
         string_to_screen(num, 0x115, 0xBF);
-        set_font_size(1);
+        grfx_quikfont(1);
     } else {
         grSoftPageFlip();
         mouse_show();
