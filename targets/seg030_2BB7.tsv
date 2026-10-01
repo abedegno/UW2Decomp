@@ -1,0 +1,13 @@
+# segment seg030_2BB7 base 0x2C8A8 size 0x1434 org 0x8
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+bounce_obj	BounceOtherObject_seg030_2BB7_8	0x0	0xAA
+missile_newhit	MissileImpact_seg030_2BB7_B2	0xAA	0x11C
+do_objhit	CollideObjects_seg030_2BB7_1CE	0x1C6	0x26F
+get_phys_data	InitMotionParams_seg030_2BB7_43D	0x435	0x24C
+set_phys_data	ApplyProjectileMotion_seg030_2BB7_689	0x681	0x483
+static_to_mob	MoveObjectToMobileObjectList_seg030_2BB7_B0C	0xB04	0x11B
+mob_init	InitMobileObject_seg030_2BB7_C27	0xC1F	0x135
+do_filanium	OilOnMud_seg030_D5C	0xD54	0x83
+mob_to_static	ObjectHitsFloorTile_seg030_2BB7_DDF	0xDD7	0x29B
+update_hack_vecs	seg030_2BB7_107A	0x1072	0x42
+obj_deal	PlacedObjectCollision_seg030_2BB7_10BC	0x10B4	0x380

@@ -16,12 +16,14 @@ _BagSaveHandles	DS:6A76	FM Towns
 _busywaiting_new_options	653E:0093	FM Towns
 _can_place	2754:1021	FM Towns
 _cFillFB	2110:0C84	FM Towns
+_Change_AnimPtr	34A2:03CE	FM Towns
 _change_music_maybe	1C86:2BB2	FM Towns
 _change_screen	64BF:0061	FM Towns
 _change_state	DS:12B4	FM Towns
 _changed	DS:5DAC	FM Towns
 _check_ammo	22FC:0FA5	FM Towns
 _check_pplate	65D5:0089	FM Towns
+_check_res	24B4:0493	FM Towns
 _checkLock	32FA:07AF	FM Towns
 _checkSpell	32FA:0998	FM Towns
 _checkTrap	32FA:0A95	FM Towns
@@ -31,13 +33,19 @@ _close	0E72:02FE	FM Towns
 _ComObjData	DS:6B74	FM Towns
 _conv_inv_special	6448:0093	FM Towns
 _copy_visible_to_hidden	0085:4B57	FM Towns
+_CP	DS:26A6	FM Towns
 _CreateObj	30BC:0044	FM Towns
 _Creature	DS:494C	FM Towns
 _cur_font	DS:21CC	provisional
+_curBin	DS:228B	FM Towns
 _curP	DS:2562	FM Towns
 _CursorObjPtr	DS:6B0C	FM Towns
 _damage_critter	15B5:333A	FM Towns
 _damage_item	24B4:0527	FM Towns
+_deal_blocked	DS:25C2	provisional
+_deal_bounced	DS:25C1	provisional
+_deal_hit	DS:0416	provisional
+_deal_item	DS:0417	provisional
 _deal_with_icons	2529:112A	FM Towns
 _decode_obj_spell	32FA:0C69	FM Towns
 _DegradeLights	653A:0020	FM Towns
@@ -93,6 +101,7 @@ _go_fish	64A5:0066	FM Towns
 _grfx_clear	64E2:007A	FM Towns
 _grSoftPageFlip	0085:46E6	FM Towns
 _HasOrIsObj	28A1:0C6B	FM Towns
+_hgt_change	191C:14B1	FM Towns
 _hit_critter_goal	65A7:0039	FM Towns
 _hostile_creatures_near	647E:008E	FM Towns
 _inanimate_spell	64A5:00B6	FM Towns
@@ -137,6 +146,7 @@ _Missile	DS:6946	FM Towns
 _missile_heading	DS:2514	provisional
 _missile_item	DS:250E	provisional
 _missile_src	DS:2510	provisional
+_missile_thwack	22FC:1860	FM Towns
 _missile_trx	DS:2516	FM Towns
 _missile_try	DS:2518	FM Towns
 _missile_type	DS:2508	provisional
@@ -153,6 +163,7 @@ _mouse_release	1B8F:02A9	FM Towns
 _mouse_show	1B8F:00C0	FM Towns
 _move_along	33EA:004E	FM Towns
 _movedata	0E72:1DF9	provisional
+_mts_doanim	34A2:0AB4	FM Towns
 _music_opt	653E:00B1	FM Towns
 _near_mob_put_at	2754:1300	FM Towns
 _new_player_pos	64BF:002F	FM Towns
@@ -184,6 +195,12 @@ _Obj_Rem	28A1:0684	FM Towns
 _objdata	DS:25B6	FM Towns
 _ObjectActing	DS:24EC	FM Towns
 _ObjectCheck	2754:0C0E	FM Towns
+_objhit_myx	DS:25BF	provisional
+_objhit_myy	DS:25C0	provisional
+_objhit_used	DS:25BC	provisional
+_objhit_x	DS:25BD	provisional
+_objhit_y	DS:25BE	provisional
+_oCollisions	DS:2520	FM Towns
 _open	0E72:1E46	FM Towns
 _OpenBag	DS:1622	FM Towns
 _OpenBagList	DS:161E	FM Towns
@@ -216,6 +233,7 @@ _PlayerPitch	DS:33D6	FM Towns
 _plyregen	DS:190A	FM Towns
 _pmouseHandled	DS:073E	FM Towns
 _PN	DS:25DC	FM Towns
+_Ppd	DS:25C4	FM Towns
 _process_objlist	2754:0ED8	FM Towns
 _punt_all_digi_fx	1C86:0284	FM Towns
 _punt_void	6599:0070	FM Towns
@@ -234,6 +252,7 @@ _remove_lock	24B4:0003	FM Towns
 _RemoveOneFromSlot	650A:0034	FM Towns
 _render_FB	2CAE:02FD	FM Towns
 _repair_item	64A5:0147	FM Towns
+_res_to_terr	DS:03E8	FM Towns
 _restore_hp	65A7:00B1	FM Towns
 _restore_mana	65A7:00CF	FM Towns
 _restore_opt	653E:00BB	FM Towns
@@ -292,6 +311,7 @@ _Time	DS:2158	FM Towns
 _TimeStop	DS:037F	FM Towns
 _toggle_fightmode	2529:13E5	FM Towns
 _trap_teleport_data	DS:1BB6	FM Towns
+_TxmID	DS:8208	FM Towns
 _TxmTerr	DS:8188	FM Towns
 _unforce_mouse_cursor	1B8F:06AF	FM Towns
 _update_all_critters_whilst_playe	647E:002A	FM Towns

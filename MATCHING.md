@@ -117,5 +117,11 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **An empty-bodied `if`** keeps its test (`mov ah,0; or ax,ax`) with no jump after it.
 - **`+=`/`-=` on a word global**: an `unsigned` target gives `sub [g],ax`; an `int` target gives load, subtract, store.
 - **`if (c) f(A); else f(B);`** gives two push paths into one call; the ternary `f(c ? A : B)` gives `mov ax,imm; push ax`.
+- **Same init and step**: `for (p->n--; p->n >= 0; p->n--)` jumps straight to the step; `while (--p->n >= 0)` gives `mov al; dec al; mov; or al,al`.
+- **An empty else-if arm forces a reload** of the pointer before the next test; folding it into the next condition reuses BX.
+- **CX for a block-scoped `register int`** in a block without calls, even if the function calls elsewhere; at function level it stays on the stack.
+- **`x *= K`** gives `mov dx,K; mov ax,[x]; imul dx`; `x = x * K` loads x first.
+- **Subtracting a constant** often compiles as adding its negative (`add ax,0FDA8h` for `- 600`).
+- **Struct assignment** of a fixed size calls `F_SCOPY@` with the size in CX.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.
