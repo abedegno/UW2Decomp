@@ -1,5 +1,6 @@
 // Compile C files with Turbo C++ 1.01 in DOS (dos-mcp js-dos, headless) and copy the
-// resulting .OBJ files back.   node tcc.mjs <outDir> "<tcc options>" FILE.C [FILE2.C ...]
+// resulting .OBJ files back.   node tcc.mjs <outDir> "<options>" FILE.C|FILE.ASM [...]
+// .ASM files go to TASM with the options given (for example "/ml"), .C files to TCC -c.
 import { JsDosBackend } from "dos-mcp/dist/backend/jsdos.js";
 import { cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -25,11 +26,15 @@ function wellFormed(b) {
 const here = new URL(".", import.meta.url).pathname;
 const stage = mkdtempSync(join(tmpdir(), "tcc-"));
 cpSync(process.env.UW2DECOMP_TC || join(here, "..", "TC"), stage, { recursive: true });
+// TASM 2.0, when present, sits beside TCC: .ASM files are assembled with it, and TCC needs it
+// for C files with inline asm
+const tasmDir = process.env.UW2DECOMP_TASM || join(here, "..", "TASM");
+try { cpSync(join(tasmDir, "TASM.EXE"), join(stage, "TASM.EXE")); } catch { }
 for (const f of files) cpSync(f, join(stage, basename(f).toUpperCase()));
 const names = files.map(f => basename(f).toUpperCase());
 writeFileSync(join(stage, "BUILD.BAT"), [
   "@echo off",
-  ...names.map(n => `TCC -c ${opts} -IC:\\ ${n} >> BUILD.LOG`),
+  ...names.map(n => n.endsWith(".ASM") ? `TASM ${opts} ${n} >> BUILD.LOG` : `TCC -c ${opts} -IC:\\ ${n} >> BUILD.LOG`),
   "echo DONE > DONE.TXT", ""].join("\r\n"));
 // the emulator occasionally hands back empty files or never finishes; retry the run
 for (let attempt = 0; attempt < 3; attempt++) {
@@ -46,7 +51,7 @@ try {
   if (!done) empty = true;
   else await be.wait(1000);        // let DOS finish writing before the files are read
   mkdirSync(outDir, { recursive: true });
-  for (const n of [...names.map(n => n.replace(/\.C$/, ".OBJ")), "BUILD.LOG"]) {
+  for (const n of [...names.map(n => n.replace(/\.(C|ASM)$/, ".OBJ")), "BUILD.LOG"]) {
     try { const b = await be.fsRead(`C:/${n}`); if (n.endsWith(".OBJ") && !wellFormed(b)) empty = true; writeFileSync(join(outDir, n), b); } catch (e) { console.log("missing", n); }
   }
 } finally { await be.shutdown(); }

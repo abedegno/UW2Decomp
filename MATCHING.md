@@ -23,6 +23,14 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - The IDA listing is `uw2_asm.asm` from [UWReverseEngineering](https://github.com/hankmorgan/UWReverseEngineering), expected at `~/UWReverseEngineering/uw2_asm.asm` (or set `UW2_ASM`) (use `command grep -a` on it; the default grep skips it as binary). Bytes are in `~/UWGOG/UW2/UW2.EXE` (or set `UW2_EXE`), at the segment base in the target table plus the function offset.
 - The FM Towns build has the original names and is a second witness for what the code means: `.venv/bin/python tools/fmt.py <name_>` disassembles a named function (32-bit Watcom register-call code) with calls and globals named. DOS is the authority on bytes.
 
+## Assembly
+
+The assembly modules (seg003, seg004, seg020 to seg022, seg045, seg046, SetPnt in seg019) were assembled with something that behaves exactly like **Turbo Assembler 2.0 in its default single-pass mode**: a routine from seg004 rebuilds byte for byte with it (`tools/setup-tasm.sh`; `tools/tcc.mjs` assembles `.ASM` files with TASM, options such as `/ml`). MASM 5.1 is also single-pass and has not been ruled out.
+
+- **The padding tells you what the source said.** With `.386`, a forward conditional jump written without `short` is reserved as a 4-byte near jump and, when the target turns out close, becomes the 2-byte jump plus `nop nop`; a forward `jmp` likewise becomes `EB xx 90`. Forward jumps with no padding were written `short`. Backward jumps are never padded. So write plain `jcc label` where the original has the `nop`s (and drop them from the source), and `jcc short label` where it doesn't.
+- Register-to-register forms are the `8B` (reg, r/m) encodings and the AX short forms (`05 imm16`) are used, as TASM does by default.
+- seg004 uses 386 instructions with 32-bit registers in 16-bit segments: `.386` with `segment use16`.
+
 ## Data
 
 - A file's `_DATA` holds its initialised data in definition order, including the initialisers of local arrays (emitted where the function is), and then the string-literal pool in order of first use. `verify.py` compares it with the EXE, so data the code reads by a fixed DS address may belong to the file itself: look at the bytes around it.
