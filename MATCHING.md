@@ -106,7 +106,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **The first assignment and the loop step share a call tail**: `obj = f(&a->x); while (obj && c) obj = f(&obj->y);` jumps from the first call into the body's pushes. That is the compiler, not a `goto`.
 - **`sizeof` widened to long**: `farmalloc(sizeof(struct Bag))` pushes `6A 00, 6A 0C`. The runtime's `farmalloc`/`farfree` are in seg005.
 - **Odd-sized local arrays go after the scalars**: a `char x[11]` is placed after scalar locals declared after it, whatever the order; even-sized arrays keep declaration order. An 11-byte gap can be `char x[10]` plus a padding byte.
-- **Shared `return 0`**: several exits jumping to one `mov al,0` before the epilogue come from `if (...) { ...; return 1; } return 0;`, not from early returns, which each get their own `mov al,0; jmp`.
+- **Shared `return 0`**: several exits jumping to one `mov al,0` before the epilogue need the function's last statement to be a reachable `return 0;`; then early `return 0`s merge into it too (ovr125). Without a reachable final one, each early return gets its own `mov al,0; jmp`.
 - **`FP_SEG` of a computed near pointer re-evaluates it**: `movedata(..., FP_SEG(d), FP_OFF(d), ...)` with `d = s + strlen(s)` calls `strlen` twice and pushes `ds`; a stack array gives `push ss`.
 - **Two explicit `register` locals**: sometimes the first declared gets SI (ovr126), sometimes the second (ovr124, a pointer and an int). Try both orders.
 - **Store and test in one expression**: `ok = (fd = open(...)) != -1` gives `mov [fd],ax; cmp ax,-1`; two statements compare the memory copy.
@@ -154,5 +154,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **Byte-identical functions with two FM Towns names at one address**: FM Towns' linker folded them, so which DOS copy carries which name can't be proven; say so in a comment.
 - **`a = b = expr` with far pointers** stores both from DX:AX; `a = expr; b = a;` reloads.
 - **`x++; if (x >= n)`** compares the register directly; `if (++x >= n)` copies to AX first.
+- **A trampoline to a shared return**: when an `||` condition's body is a shared `return 0`, each term jumps short to a one-instruction `jmp`; a `goto` or empty body threads the jumps straight to the target instead.
+- **`atoi`** from stdlib.h links as `_atol`.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

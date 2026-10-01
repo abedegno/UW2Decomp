@@ -2,11 +2,11 @@
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
 load_inventory_pix	ProbablyResetPaperdoll_ovr125_0	0x0	0x48
 BeginInventory	ProbablyInitConversationUI_ovr125_48	0x48	0x19E
-DoesNothing_ovr125_1E6	DoesNothing_ovr125_1E6	0x1E6	0x5
+EndInventory	DoesNothing_ovr125_1E6	0x1E6	0x5
 ClearInventory	ClearPaperDollSlots_ovr125_1EB	0x1EB	0x57
 DoInventoryMouse	TradeInventorySlotClick_ovr125_242	0x242	0x372
 DoInventoryDrag	ovr125_5B4	0x5B4	0xD7
-LoadMaleOrFemaleArmourArt_ovr125_68B	LoadMaleOrFemaleArmourArt_ovr125_68B	0x68B	0x3A
+load_inv_pic	LoadMaleOrFemaleArmourArt_ovr125_68B	0x68B	0x3A
 DisplayInvSpecial	ProbablyRedrawInventory_ovr125_6C5	0x6C5	0x23F
 DisplayInvObject	InventorySlotRedraw_ovr125_904	0x904	0xBE
 SetCursorObj	SwapTradeSlotObject_ovr125_9C2	0x9C2	0xBA
