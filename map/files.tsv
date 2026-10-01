@@ -61,7 +61,7 @@ ovr107	C	23	5677	16	7	0	0	change_critter_goal_	maybe_go_hang_out_	yes
 ovr108	C	76	13857	23	34	10	9	speech_over_	palette_fade_	
 ovr109	C	2	54	0	0	1	1			
 ovr110	C	68	20625	58	8	1	1	find_good_x_and_y_	Killorn_just_crashed_	
-ovr112	C	21	2446	13	5	0	3	main_	move_initial_files_	
+ovr112	C	21	2446	13	5	0	3	main_	move_initial_files_	yes
 ovr113	C	31	3241	10	21	0	0	gronk_race_	Sched_DoEvent_	
 ovr114	C	4	412	2	1	0	1	first_punt_	pfatal_code_	
 ovr116	C	6	1190	0	1	0	5			

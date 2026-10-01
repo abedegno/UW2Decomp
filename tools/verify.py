@@ -37,7 +37,7 @@ def main():
     code = next(i for i, s in enumerate(segs) if s and s[1] == 'CODE')
     datas = next(i for i, s in enumerate(segs) if s and s[0] == '_DATA')
     bss = next((i for i, s in enumerate(segs) if s and s[0] == '_BSS'), None)
-    syms = {}; problems = []; data_bases = set(); cs_values = set(); internal = 0; entries = {}; bss_bases = set(); halves = {}; datafx = []
+    syms = {}; problems = []; data_bases = set(); cs_values = set(); internal = 0; entries = {}; bss_bases = set(); halves = {}; datafx = []; segonly = {}
 
     def note(name, val, where):
         prev = syms.setdefault(name, (val, where))
@@ -100,15 +100,12 @@ def main():
         else:
             problems.append(f'+{at:X}: target {target_name(o, f["target"])} loc {loc} not handled')
 
-    for fn, e in sorted(entries.items()):
-        name = next((r[0] for r in rows if r[2] == fn), f'+{fn:X}')
-        if len(e) > 1: problems.append(f'{name} has several overlay entries: {sorted(e)}')
-        else: print(f'overlay entry: {name} at stub +{min(e):X}')
-    flat = [min(e) for e in entries.values()]
-    if len(set(flat)) < len(flat): problems.append('two functions share an overlay entry')
     for name, h in halves.items():
         if 'off' in h and 'seg' in h: note(name, ('FAR', h['seg'][0], h['off'][0]), h['off'][1])
-        else: problems.append(f'{name}: only one half of its far address is referenced')
+        elif 'seg' in h:
+            # only the segment is used, as in FP_SEG(x) + 1: check it against the map
+            segonly[name] = h['seg'][0]
+        else: problems.append(f'{name}: only the offset half of its far address is referenced')
     # _BSS has no bytes to compare; every reference must agree on one base
     if len(bss_bases) > 1:
         problems.append('_BSS references disagree on the base: ' + ', '.join(f'DS:{b:X}' for b in sorted(bss_bases)))
@@ -143,7 +140,8 @@ def main():
                 if word(exe, here) != (db + add) & 0xFFFF:
                     problems.append(f'_DATA+{at:X}: points to DS:{word(exe, here):X}, expected DS:{(db + add) & 0xFFFF:X}')
             elif tm == 2 and loc == 3:
-                note(o['ext'][ti], ('FAR', para_of(word(exe, here + 2)), (word(exe, here) - add) & 0xFFFF), at)
+                # DGROUP is resident, so segment words in data are real paragraphs
+                note(o['ext'][ti], ('FAR', word(exe, here + 2), (word(exe, here) - add) & 0xFFFF), at)
             elif tm == 2 and loc in (1, 5):
                 note(o['ext'][ti], ('DS', (word(exe, here) - add) & 0xFFFF), at)
             else:
@@ -154,11 +152,28 @@ def main():
         else:
             print(f'_DATA: {len(data)} bytes match at DS:{db:X}' + (f' ({len(datafx)} pointers checked)' if datafx else ''))
 
+    for fn, e in sorted(entries.items()):
+        name = next((r[0] for r in rows if r[2] == fn), f'+{fn:X}')
+        if len(e) > 1: problems.append(f'{name} has several overlay entries: {sorted(e)}')
+        else: print(f'overlay entry: {name} at stub +{min(e):X}')
+    flat = [min(e) for e in entries.values()]
+    if len(set(flat)) < len(flat): problems.append('two functions share an overlay entry')
     byval = {}
     for n, (v, _) in syms.items(): byval.setdefault(v, []).append(n)
     for v, ns in byval.items():
         if len(ns) > 1: problems.append(f'{", ".join(ns)} all resolve to {fmt(v)}')
 
+    if segonly:
+        path = os.path.join(root, 'symbols.tsv'); known = {}
+        if os.path.exists(path):
+            for l in open(path):
+                if not l.startswith('#') and l.strip(): n, v = l.split('\t')[:2]; known[n] = v
+        for name, para in segonly.items():
+            v = known.get(name) or (fmt(syms[name][0]) if name in syms else None)
+            if v and ':' in v and not v.startswith('DS:') and int(v.split(':')[0], 16) != para:
+                problems.append(f'{name}: segment {para:04X} referenced, but its address is {v}')
+            else:
+                print(f'{name}: segment {para:04X} referenced on its own' + (f', agreeing with {v}' if v else ''))
     print(f'{len(o["fixups"])} fixups: {len(syms)} externs resolved, {internal} internal references')
     if '--update' in a: update(syms, problems)
     for p in problems: print('PROBLEM', p)

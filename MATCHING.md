@@ -175,5 +175,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **A file's `_BSS` is one unit**: if globals used only by another file sit between this file's globals, the block belongs to one of the two files; leave it extern until the other is matched.
 - **Always-true tests on unsigned values are still compiled**: `if (b < 0) continue;` on an `unsigned char` gives a `jae` over a `jmp`.
 - **A byte destination keeps the constant's spelling**: `x = w + 0xE1` gives `add al,0E1h`; `x = w - 0x1F` gives `sub al,1Fh`.
+- **`switch (a = b->m = c)`** reproduces chained stores followed by a switch on AX.
+- **The startup variables** `_heaplen`, `_stklen` and `_ovrbuffer` are initialised in `main`'s file (ovr112) and read by C0 and the overlay manager.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.
