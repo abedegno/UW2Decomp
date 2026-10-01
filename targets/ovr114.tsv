@@ -1,6 +1,6 @@
 # segment ovr114 base 0x89D70 size 0x19E org 0x0
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
-ErrorHandler_ovr114_0	ErrorHandler_ovr114_0	0x0	0xAB
+error_code	ErrorHandler_ovr114_0	0x0	0xAB
 first_punt	MaybeErrorHandler_ovr114_AB	0xAB	0x26
 pfatal_code	ErrorCanNoLongerRun_ovr114_D1	0xD1	0x8C
-ExitWithError_ovr114_15D	ExitWithError_ovr114_15D	0x15D	0x41
+pfatal	ExitWithError_ovr114_15D	0x15D	0x41
