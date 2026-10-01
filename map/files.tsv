@@ -48,7 +48,7 @@ ovr091	C	2	44	0	0	0	2			yes
 ovr092	C	7	44	0	0	0	7			yes
 ovr093	C	13	3629	7	4	0	2	get_ulong_	check_arc_	yes
 ovr094	C	28	6350	25	0	0	3	AutoMap_	make_terrain_unseen_	yes
-ovr095	C	58	8859	3	7	7	41	babl_setmem_	bab_var_out_	
+ovr095	C	58	8859	3	7	7	41	babl_setmem_	bab_var_out_	yes
 ovr096	C	27	5202	12	15	0	0	babl_hack_	x_obj_pos_	yes
 ovr097	C	37	8598	19	6	2	10	setup_to_barter_	does_npc_like_	yes
 ovr099	C	7	38	0	7	0	0			

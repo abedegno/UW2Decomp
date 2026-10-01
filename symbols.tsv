@@ -166,6 +166,7 @@ _cInit3d	2110:0E1A	FM Towns
 _cJoyInit	DS:2124	FM Towns
 _clear_all_loretries	64A5:0039	FM Towns
 _clear_dir	6581:0034	FM Towns
+_clear_dynamics	3265:0296	FM Towns
 _clear_fight_state	22FC:130F	FM Towns
 _clear_gamedisp	654A:0048	FM Towns
 _clear_objsort	2F20:0430	FM Towns
@@ -189,6 +190,7 @@ _cmpbuf2_start	43A0:5400	FM Towns
 _CN1	DS:2604	FM Towns
 _CN2	DS:262C	FM Towns
 _CN4	DS:267C	FM Towns
+_cnv_id	DS:0C70	FM Towns
 _coll_flag	DS:26A5	provisional
 _color_by_digit	DS:0947	provisional
 _Color_data_ptr	DS:21B8	FM Towns
@@ -1127,8 +1129,11 @@ _seg021_22FD_7CD	2110:07CD	provisional
 _seg021_22FD_809	2110:0809	provisional
 _seg021_22FD_F83	2110:0F83	provisional
 _seg039_3452_814	3265:0814	provisional
+_seg039_3452_857	3265:0857	provisional
+_seg039_3452_89A	3265:089A	provisional
 _seg042_35ED_12B	3400:012B	provisional
 _seg046_37CD_8D7	35E0:08D7	provisional
+_seg066_0	6384:0000	provisional
 _selected_conversation_option	DS:486C	provisional
 _send_FB	30D3:16AA	FM Towns
 _seq_len	DS:228E	FM Towns
@@ -1220,8 +1225,11 @@ _static_free_ptr	DS:25A6	provisional
 _stay_centered	DS:03D1	FM Towns
 _stdat	3CF5:0000	FM Towns
 _str_cat	3265:090B	provisional
+_str_cmp	1F8C:01F7	provisional
 _str_copy	1F8C:013F	provisional
 _str_len	1F8C:0109	provisional
+_str_ncopy	1F8C:011F	provisional
+_str_str	1F8C:019C	provisional
 _strcat	0E72:27F3	FM Towns
 _strcmp	0E72:2862	FM Towns
 _strcpy	0E72:2891	FM Towns
@@ -1283,6 +1291,7 @@ _toggle_fightmode	2529:13E5	FM Towns
 _toggle_object_height	64A5:0160	FM Towns
 _toggle_pillars_hack	64A5:0138	FM Towns
 _ToggleDoor	654F:0075	FM Towns
+_tolower	0E72:1400	FM Towns
 _toupper	0E72:142C	FM Towns
 _TP	DS:26B8	FM Towns
 _tp_act	DS:223C	FM Towns
