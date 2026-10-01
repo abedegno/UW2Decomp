@@ -107,7 +107,7 @@ void far fbshow(unsigned char far *p, int x, int y, int w, int h);
 void far set_the_window(int l, int t, int r, int b);
 void far set_the_color(int c);
 void far rectangle(int x1, int y1, int x2, int y2);
-void far seg003_0272_51C8(int a, int b, int c, int d, int e, int f);
+void far vcopy(int a, int b, int c, int d, int e, int f);
 void far grab(unsigned char far *buf, int x, int y, int w, int h);
 void far cFBtoScreen(void);
 unsigned char far read_gr_far(char *name, int n, unsigned char far *buf);
@@ -845,7 +845,7 @@ char far do_panel_frame(void)
             pic_to_screen(frame, 0x110, 0x50, 1, 1);
     }
     if (pbuf.frame <= 10)
-        seg003_0272_51C8(0xEC, 0xC0, 0x43, 0x70, 0xF4, 0xC0);
+        vcopy(0xEC, 0xC0, 0x43, 0x70, 0xF4, 0xC0);
     else {
         MapMemory_seg013_1D3C_C7(2, scrgr_fpage + 1);
         buf = MK_FP(ems_frame, 0x8000);

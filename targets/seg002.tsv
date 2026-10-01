@@ -1,0 +1,3 @@
+# segment seg002 base 0x33B2 size 0x92 org 0x2
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+seg002_2	seg002_2	0x0	0x92

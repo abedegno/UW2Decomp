@@ -83,7 +83,7 @@ void far print_path_to(char far *s, int px, int py, int ignored,
 }
 
 void far set_the_color(int a);
-void far seg003_0272_4DC2(int a, int b, int c, int d);
+void far box(int a, int b, int c, int d);
 void far ovr167_252(int x, int y, int t, int cx, int cy, int n)
 {
     register int xx = cx + x / 2;
@@ -95,7 +95,7 @@ void far ovr167_252(int x, int y, int t, int cx, int cy, int n)
         xx += (x / 3) * (1 - ((t >> 2) << 1));
     }
     set_the_color(n);
-    seg003_0272_4DC2(xx - 1, yy - 1, xx + 1, yy + 1);
+    box(xx - 1, yy - 1, xx + 1, yy + 1);
 }
 
 long far cSqRt(long n);

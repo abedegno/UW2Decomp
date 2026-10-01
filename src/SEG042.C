@@ -23,7 +23,6 @@ int far seg013_1D3C_A(int phys, int page);
 void far seg013_1D3C_B2(void);
 void far MapMemory_seg013_1D3C_C7(int phys, int page);
 unsigned char far seg013_1D3C_E4(int a, int b, int c);
-void far seg046_37CD_8D7(int a, int b, int c);
 void far Print_String_To_Console_seg017_DE(char far *s);
 void far first_punt(int code);
 void far pfatal_code(int code);
@@ -47,7 +46,7 @@ void far init_mem(void)
         }
         mem_setup(dseg_67d6_920);
         Print_String_To_Console_seg017_DE("EMS allocated\r\n$");
-        seg046_37CD_8D7(0, 0, 0);
+        _OvrInitEms(0, 0, 0);
     } else {
         first_punt(0x2001);
     }

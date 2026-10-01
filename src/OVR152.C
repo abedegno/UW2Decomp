@@ -9,7 +9,7 @@ extern unsigned char far *cLightTabs;
 extern unsigned curvrad;
 extern unsigned distpoly;
 extern unsigned dist8;
-extern unsigned char far XFERDATA_seg003_0272_E73[];
+extern unsigned char far cXfer[];
 extern unsigned char far ModelData_seg052_519C_2600;
 extern unsigned far smooth_div;
 extern unsigned far smooth_base;
@@ -78,8 +78,8 @@ void far set_light(signed char lightLevel)
 void far init_lighting(void)
 {
     lget("light.dat", FP_OFF(cLightTabs), FP_SEG(cLightTabs), 0x1000);
-    lget("xfer.dat", (unsigned)XFERDATA_seg003_0272_E73,
-                         (unsigned)FP_SEG(XFERDATA_seg003_0272_E73), 0x500);
+    lget("xfer.dat", (unsigned)cXfer,
+                         (unsigned)FP_SEG(cXfer), 0x500);
 }
 
 /* FM Towns random_light_: replaces light data and clears two bytes per row. */

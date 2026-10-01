@@ -19,15 +19,15 @@ extern char font_suffixes[][5];
 extern char sys_suffix[];
 extern char pals_name[];
 void far seg021_22FD_755(void);
-void far seg003_0272_4629(void);
+void far init_graphics(void);
 void far set_the_window(int, int, int, int);
 void far grSoftPageFlip(void);
-void far seg003_0272_4933(void);
-void far seg003_0272_4431(void);
+void far init_colors(void);
+void far setup_font(void);
 void far mouse_hide(void);
 void far seg021_22FD_791(void);
 void far set_the_color(int);
-void far seg003_0272_4D86(void);
+void far clear_window(void);
 void far mouse_show(void);
 int far our_open(char *, int, int);
 int far ReadFileToAddress(int, void far *, unsigned);
@@ -52,10 +52,10 @@ void far grfx_quikfont(int n);
 void far ovr118_0(void)
 {
     seg021_22FD_755();
-    seg003_0272_4629();
+    init_graphics();
     set_the_window(0, 0xC7, 0x13F, 0);
     grSoftPageFlip();
-    seg003_0272_4933();
+    init_colors();
     grfx_quikfont(1);
 }
 
@@ -67,7 +67,7 @@ unsigned char far grfx_load_font(char *name)
     ReadFileToAddress(fd, cur_font, 12);
     ReadFileToAddress(fd, bytefont, (cur_font->height + cur_font->width) << 7);
     close(fd);
-    seg003_0272_4431();
+    setup_font();
     return 1;
 }
 
@@ -90,7 +90,7 @@ void far grfx_clear(void)
     mouse_hide();
     set_the_window(0, 0xC7, 0x13F, 0);
     set_the_color(0);
-    seg003_0272_4D86();
+    clear_window();
     mouse_show();
 }
 

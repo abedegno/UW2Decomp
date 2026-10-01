@@ -1,0 +1,8 @@
+# segment seg001_023B base 0x30EA size 0x2C7 org 0xA
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+seg001_023B_C	seg001_023B_C	0x2	0x3E
+valloc	seg001_023B_4A	0x40	0x10
+seg001_023B_5A	seg001_023B_5A	0x50	0xAB
+vfree	seg001_023B_105	0xFB	0xD0
+save_rect	seg001_023B_1D5	0x1CB	0x1A
+restore_rect	MaybeRedrawSlot_seg001_023B_25B	0x251	0xD

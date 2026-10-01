@@ -82,7 +82,7 @@ void far j_WriteTextWithMORE_ovr139_BD(void);
 /* A 6-int call in a different file; FM Towns vcopy_ matches the first four parameters
    exactly (by position and value) but takes only four, so this probably is not it.
    Unresolved; kept under its DOS label. */
-void far seg003_0272_51C8(int p1, int p2, int p3, int p4, int p5, int p6);
+void far vcopy(int p1, int p2, int p3, int p4, int p5, int p6);
 
 void far scroll_up(int n);
 void far scroll_print1(char *s, int flag);
@@ -146,7 +146,7 @@ void far draw_conv_edges(void)
 
 void far scroll_up(int n)
 {
-    seg003_0272_51C8(scroll->top, scroll->last_y - cur_font->height,
+    vcopy(scroll->top, scroll->last_y - cur_font->height,
           scroll->bottom - scroll->top + 1, scroll->last_y - cur_font->height - n + 1,
           scroll->top, scroll->last_y);
     set_the_color(0x71);

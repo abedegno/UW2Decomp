@@ -1,7 +1,7 @@
 # segment	kind	functions	bytes	named	size only	calls disagree	unpaired	first named	last named	matched
 seg000	library	10	1256	0	0	0	0			
-seg001_023B	mixed	8	709	0	2	2	4			
-seg003_0272	assembly	145	39818	0	24	2	119			
+seg001_023B	mixed	8	709	0	2	2	4			yes
+seg003_0272	assembly	145	39818	0	24	2	119			yes
 seg004_0849	assembly	78	33007	0	4	0	74			
 seg005_105F	library	166	29915	0	0	0	0			
 seg006_1413	C	30	14575	21	7	2	0	build_corpse_	try_to_open_door_	yes
@@ -43,7 +43,7 @@ seg042_35ED	C	8	701	5	1	0	2	init_mem_	release_workspace_	yes
 seg043_3619	C	13	1886	13	0	0	0	set_mouse_in_	draw_scroll_	yes
 seg044_368F	C	17	4309	15	0	0	2	rem_anim_from_map_	rem_timer_obj_	yes
 seg045_379C	assembly	7	783	0	0	0	7			yes
-seg046_37CD	assembly	43	7963	0	4	0	39			
+seg046_37CD	assembly	43	7963	0	4	0	39			yes
 ovr091	C	2	44	0	0	0	2			yes
 ovr092	C	7	44	0	0	0	7			yes
 ovr093	C	13	3629	7	4	0	2	get_ulong_	check_arc_	yes

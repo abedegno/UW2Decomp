@@ -81,7 +81,7 @@ void far turn_fx(int on);
 unsigned char far music_is_on(void);
 unsigned char far fx_is_on(void);
 /* FM Towns vcopy_ (four register and two stack arguments, the same six as here). */
-void far seg003_0272_51C8(int sx, int sy, int w, int h, int x, int y);
+void far vcopy(int sx, int sy, int w, int h, int x, int y);
 void far set_the_color(int c);
 void far rectangle(int x0, int y0, int x1, int y1);
 
@@ -465,7 +465,7 @@ void far copy_rectangle(int x, int y, int w, int h, int sx, int sy, int how)
     grSoftPageFlip();
     if (how == 0x63)
         grSoftPageFlip();
-    seg003_0272_51C8(sx, sy, w, h, x, y);
+    vcopy(sx, sy, w, h, x, y);
     grSoftPageFlip();
     set_the_color(0x106);
     if (how == 0)
