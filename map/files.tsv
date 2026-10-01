@@ -37,7 +37,7 @@ seg036_32A9	C	2	356	2	0	0	0	Map_GetAddr_	CreateObj_	yes
 seg037_32C0	C	32	5830	16	14	1	1	set_flask_	send_FB_	
 seg038_342C	C	3	603	3	0	0	0	skill_check_	panel_check_hpmp_	yes
 seg039_3452	C	19	2395	6	4	1	8	init_strings_	game_strings_3_	
-seg040_34E7	C	15	3828	13	2	0	0	UseObj_	useNSpellCharges_	
+seg040_34E7	C	15	3828	13	2	0	0	UseObj_	useNSpellCharges_	yes
 seg041_35D7	C	4	355	2	1	1	0	mvcheck_	move_along_	
 seg042_35ED	C	8	701	2	1	3	2	free_mem_	release_workspace_	
 seg043_3619	C	13	1886	10	1	1	1	do_npc_scroll_	scroll_wrap_	

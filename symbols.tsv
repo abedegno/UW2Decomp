@@ -30,6 +30,7 @@ _checkTrap	32FA:0A95	FM Towns
 _clear_all_loretries	64A5:0039	FM Towns
 _clear_fight_state	22FC:130F	FM Towns
 _close	0E72:02FE	FM Towns
+_CloseDoor	654F:0084	FM Towns
 _ComObjData	DS:6B74	FM Towns
 _conv_inv_special	6448:0093	FM Towns
 _copy_visible_to_hidden	0085:4B57	FM Towns
@@ -145,6 +146,7 @@ _memset	0E72:1DCA	FM Towns
 _Missile	DS:6946	FM Towns
 _missile_heading	DS:2514	provisional
 _missile_item	DS:250E	provisional
+_missile_newhit	29CA:00B2	FM Towns
 _missile_src	DS:2510	provisional
 _missile_thwack	22FC:1860	FM Towns
 _missile_trx	DS:2516	FM Towns
@@ -182,9 +184,11 @@ _Obj_Alloc	28A1:0471	FM Towns
 _obj_deal	29CA:10BC	FM Towns
 _Obj_Elem_Fate	28A1:0251	FM Towns
 _Obj_Find	28A1:09B2	FM Towns
+_Obj_Find_Head	DS:2590	FM Towns
 _Obj_FindInMap	28A1:0CD4	FM Towns
 _Obj_Free	28A1:0508	FM Towns
 _Obj_FreeChain	28A1:0799	FM Towns
+_Obj_FreeLinkChain	28A1:085C	FM Towns
 _Obj_GarbageCollect	28A1:0354	FM Towns
 _Obj_InList	28A1:0B6B	FM Towns
 _Obj_IntTMem	28A1:0971	FM Towns
@@ -194,6 +198,8 @@ _Obj_Punt	28A1:0704	FM Towns
 _Obj_Rem	28A1:0684	FM Towns
 _objdata	DS:25B6	FM Towns
 _ObjectActing	DS:24EC	FM Towns
+_ObjectActor	DS:24E8	FM Towns
+_ObjectActorArg	DS:24F2	FM Towns
 _ObjectCheck	2754:0C0E	FM Towns
 _objhit_myx	DS:25BF	provisional
 _objhit_myy	DS:25C0	provisional
@@ -247,6 +253,7 @@ _real_death	64BF:007A	FM Towns
 _rectangle	0085:4CF2	FM Towns
 _RectLook	651C:0043	FM Towns
 _RedisplayInvSlot	650A:002A	FM Towns
+_release_missile	65A7:003E	FM Towns
 _release_workspace	3400:0233	FM Towns
 _remove_lock	24B4:0003	FM Towns
 _RemoveOneFromSlot	650A:0034	FM Towns
@@ -318,10 +325,22 @@ _update_all_critters_whilst_playe	647E:002A	FM Towns
 _update_digi_playback	1C86:0F2D	FM Towns
 _update_map_scraps	641E:002A	FM Towns
 _urectangle	0085:4D3C	FM Towns
+_UseBook	654F:0048	FM Towns
 _UseCont	654F:003E	FM Towns
+_UseCrystal	654F:0061	FM Towns
+_UseFood	654F:004D	FM Towns
+_UseKeyOn	654F:0098	FM Towns
+_UseLight	654F:0052	FM Towns
+_UseLockpickOn	654F:006B	FM Towns
+_UseMagic	654F:0057	FM Towns
 _UseObj	32FA:000F	FM Towns
+_UseRect	654F:0025	FM Towns
+_UseRune	654F:0043	FM Towns
 _UseThing	32FA:055A	FM Towns
 _UseTrigger	65D5:0039	FM Towns
+_UseUnique	654F:0070	FM Towns
+_UseUtil	654F:0034	FM Towns
+_UseWatch	654F:0039	FM Towns
 _using_bow	DS:03B4	FM Towns
 _using_punt	32FA:0383	FM Towns
 _UsingPole	DS:19B4	FM Towns

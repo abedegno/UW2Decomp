@@ -123,5 +123,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **`x *= K`** gives `mov dx,K; mov ax,[x]; imul dx`; `x = x * K` loads x first.
 - **Subtracting a constant** often compiles as adding its negative (`add ax,0FDA8h` for `- 600`).
 - **Struct assignment** of a fixed size calls `F_SCOPY@` with the size in CX.
+- **`unsigned char` parameter tests**: `if (c)` gives `cmp byte [bp+N],0`; `if (!c) return;` (or `!c` in an `&&` chain) gives `mov al; mov ah,0; or ax,ax`.
+- **Shared call tails cross `switch` cases** when two cases end in the same call with the same argument shapes.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

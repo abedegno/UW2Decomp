@@ -1,0 +1,17 @@
+# segment seg040_34E7 base 0x35BAF size 0xEF4 org 0xF
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name
+UseObj	ObjectUse_seg040_34E7_F	0x0	0x374
+using_punt	RemoveUsedObject_seg040_34E7_383	0x374	0x131
+place_new	CreateObjectInHand_seg040_34E7_4B4	0x4A5	0x60
+UseKey	KeyLockpickUsage_seg040_34E7_514	0x505	0x46
+UseThing	UseObjectWithPrompt_seg040_35E7_55A	0x54B	0x95
+UseWand	WandUsage_seg040_34E7_5EF	0x5E0	0xEF
+UseReag	PotionDrink_seg040_34E7_6DE	0x6CF	0x42
+flip_switch	ToggleSwitch_seg040_34E7_720	0x711	0x8F
+checkLock	CharacterDoorLockAndKeyInteraction_seg040_34E7_7AF	0x7A0	0x1E9
+checkSpell	CastSpellFromObject_seg040_34E7_998	0x989	0xFD
+checkTrap	TriggerObjectLink_seg040_34E7_A95	0xA86	0x1A3
+BlastFunction	ReleaseSpell_seg040_34E7_C38	0xC29	0x31
+decode_obj_spell	GetItemEnchantment_seg040_34E7_C69	0xC5A	0x175
+remove_spell	ClearsEnchantmentFlag_seg040_34E7_DDE	0xDCF	0x33
+useNSpellCharges	MagicObjectUpdateCharge_seg040_34E7_E11	0xE02	0xF2
