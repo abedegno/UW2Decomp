@@ -87,7 +87,7 @@ ovr137	C	9	1027	8	1	0	0	pull_chain_	check_rest_	yes
 ovr138	C	25	7823	25	0	0	0	UseBonesOn_	UseUtil_	yes
 ovr139	C	9	2243	9	0	0	0	init_scroll_	scroll_clear_	yes
 ovr140	C	6	681	4	1	0	1	init_txtlib_	load_txtmaps_	yes
-ovr142	C	12	2927	7	4	0	1	save_player_data_	load_dl_	
+ovr142	C	12	2927	7	4	0	1	save_player_data_	load_dl_	yes
 ovr143	C	15	4004	13	0	0	2	InitPlayerRec_	chg_plyp_	yes
 ovr146	C	1	5	0	0	0	1			yes
 ovr147	C	10	2753	8	0	1	1	adr_opbtn_	do_journey_	yes

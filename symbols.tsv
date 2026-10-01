@@ -7,6 +7,7 @@ _ac_shrink_disk	6596:0025	FM Towns
 _ac_unshrink_disk	6596:002A	FM Towns
 _access	0E72:0249	FM Towns
 _ActDoors	DS:2F96	FM Towns
+_active_spells	30D3:1141	FM Towns
 _ActiveMob	DS:2596	FM Towns
 _ActiveObj	DS:6B70	FM Towns
 _add_animobj	34A2:043E	FM Towns
@@ -85,6 +86,7 @@ _BagWeight	64F7:003E	FM Towns
 _BeginInventory	6513:0020	FM Towns
 _BitOperation_ovr166_298	65D5:0048	provisional
 _BlastFunction	32FA:0C38	FM Towns
+_Blessed	DS:0382	FM Towns
 _blttodrive	65E0:006B	FM Towns
 _bmsegoff	4FAF:C784	FM Towns
 _bounced	DS:25DB	provisional
@@ -153,6 +155,7 @@ _CloseDoor	654F:0084	FM Towns
 _CmapCache	4FAF:E3C9	FM Towns
 _CmapFrm	4FAF:E2C9	FM Towns
 _CmaptoPg	4FAF:E0C9	FM Towns
+_cmbModTH	DS:24CA	FM Towns
 _cmpbuf1_start	43A0:0000	FM Towns
 _CN1	DS:2604	FM Towns
 _CN2	DS:262C	FM Towns
@@ -357,6 +360,7 @@ _FixBagArea	64F7:004D	FM Towns
 _FixOpenBag	64F7:0048	FM Towns
 _FixPlayerEquips	6564:002F	FM Towns
 _fiz_update	DS:00D3	FM Towns
+_fizix_update	191C:1239	FM Towns
 _flip_bool	65E0:0052	FM Towns
 _flip_switch	32FA:0720	FM Towns
 _flood_path	1226:1994	FM Towns
@@ -559,6 +563,7 @@ _load_new_music	1C86:174B	FM Towns
 _load_tr_ems	64EA:004D	FM Towns
 _load_txtmaps	655E:002A	FM Towns
 _load_weapcm	30D3:0FEB	FM Towns
+_load_weapon	30D3:0B8F	FM Towns
 _LoadDATFile	65E0:007A	provisional
 _LoadStringsPakToTable	65E0:0075	provisional
 _loc_lght	DS:19B7	FM Towns
@@ -750,6 +755,7 @@ _ObjsBeCombinable	6465:002F	FM Towns
 _ObjWorldX	DS:3348	provisional
 _ObjWorldY	DS:334C	provisional
 _ObjWorldZ	DS:334A	provisional
+_ObjWorn	650A:0070	FM Towns
 _oCollisions	DS:2520	FM Towns
 _octant	65E0:0025	FM Towns
 _open	0E72:1E46	FM Towns
@@ -783,6 +789,7 @@ _phys_bounce_up	191C:120F	FM Towns
 _pic_to_fbuf	1A6D:0332	FM Towns
 _pic_to_screen	1A6D:026B	FM Towns
 _pick_inv	650A:0066	FM Towns
+_PickDist	DS:0386	FM Towns
 _PickMap	DS:24F4	FM Towns
 _PickUp	DS:2F6C	FM Towns
 _pixel_color	DS:21F0	provisional
@@ -818,6 +825,7 @@ _player_sleep	6599:005C	FM Towns
 _player_sqhandler	191C:104D	FM Towns
 _player_use_skill	6599:009D	FM Towns
 _PlayerBank	DS:33D8	FM Towns
+_PlayerCommonObjDamageScaling	DS:70F1	provisional
 _PlayerCreature	DS:551C	provisional
 _playerdat	DS:828C	FM Towns
 _PlayerDat	DS:82A4	FM Towns
@@ -866,6 +874,7 @@ _quad	DS:2B52	FM Towns
 _quick_time	DS:0388	FM Towns
 _quit_buttongroup	DS:01AB	FM Towns
 _rand	0E72:0DE7	FM Towns
+_random_light	6592:002F	FM Towns
 _read	0E72:1FCD	FM Towns
 _read_gr_far	64EA:008E	FM Towns
 _read_player_data	6564:003E	FM Towns
@@ -891,6 +900,7 @@ _reload_gr_vpic	64EA:0020	FM Towns
 _rem_anim_from_list	34A2:007F	FM Towns
 _remove_lock	24B4:0003	FM Towns
 _remove_opponent	64A5:0061	FM Towns
+_remove_spell	32FA:0DDE	FM Towns
 _remove_TK_wand	64A5:003E	FM Towns
 _RemoveAfterCombine	6465:0020	FM Towns
 _removeFromSlot	650A:0020	FM Towns
@@ -982,6 +992,7 @@ _set_creatures_to_saved_game	647E:0084	FM Towns
 _set_critter_vars	15B5:1F19	FM Towns
 _set_curmagic	653A:002A	FM Towns
 _set_cuts_ems	6488:0179	FM Towns
+_set_cyb	2CAE:009B	FM Towns
 _set_drugged	6564:004D	FM Towns
 _set_effect	2FBE:0CA3	FM Towns
 _set_flask	30D3:0003	FM Towns
@@ -1197,6 +1208,8 @@ _wtop	DS:21DC	FM Towns
 _wyorn	6559:0043	FM Towns
 _XFERDATA_seg003_0272_E73	0085:0E73	provisional
 _xhgt	DS:26EC	FM Towns
+_xorread	65E0:0020	FM Towns
+_xorwrite	65E0:0039	FM Towns
 _XP	DS:2276	FM Towns
 _xt_spells	65B5:003E	FM Towns
 _xwid	DS:2C66	FM Towns
