@@ -9,8 +9,10 @@
    bab_var_clear). The whole of DOS overlay ovr095, in original order.
 
    Function names are the originals from the FM Towns symbol table where the FM Towns
-   build has the function at the same place (it keeps the string built-ins, the opcodes
-   and the header reader as statics, so those keep their IDA names). */
+   build has the function at the same place. It keeps the string built-ins, the opcodes
+   and the header reader as statics, so their names are provisional ones, chosen for their keys: Turbo C lists a file's publics by the tools/bssorder.py key of
+   each name and TLINK numbers overlay stub entries from the last one listed, so these names
+   reproduce the EXE's stub order (the target table keeps IDA's names). */
 
 #include <dos.h>
 #include <io.h>
@@ -92,8 +94,8 @@ int far make_string(char far *s, int block);
 void far clear_dynamics(int block);
 
 int far our_open(char *name, int mode, int flags);
-int far ReadFileToAddress(int fd, void far *buf, int n);
-int far FileWriteWithParams(int fd, void far *buf, int n);
+int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, int n);
+int far FarWrite_ovr167_627(int fd, void far *buf, int n);
 unsigned char far open_arc(int arc, char *dir);
 int far get_arc(int arc, int blk, char far *buf);
 void far close_arc(int arc);
@@ -101,47 +103,47 @@ int far scroll_print(char far *s);
 void far pfatal_code(int code);
 
 /* This file's functions called before their definitions. */
-int far ReadConversationHeader_ovr095_12C3(void);
-void far CopyConversationCode_ovr095_14B1(void);
+int far DoReadHeader_ovr095_12C3(void);
+void far DoCopyCode_ovr095_14B1(void);
 char far * far convert_string(char far *s);
-int far GetStringReplacementNumberValue_ovr095_11C0(char far **s);
-void far OPADD_ovr095_18CF(void);
-void far OPNEG_ovr095_1908(void);
-void far OPMUL_ovr095_192C(void);
-void far OPSUB_ovr095_1965(void);
-void far OPDIV_ovr095_199E(void);
-void far OPMOD_ovr095_19EE(void);
-void far OPOR_ovr095_1A3E(void);
-void far OPAND_ovr095_1A83(void);
-void far TSTGT_ovr095_1AC8(void);
-void far TSTGE_ovr095_1B0A(void);
-void far TSTLT_ovr095_1B4C(void);
-void far TSTLE_ovr095_1B8E(void);
-void far TSTEQ_ovr095_1BD0(void);
-void far TSTNE_ovr095_1C12(void);
-void far CALL_ovr095_1C54(void);
-int far RET_ovr095_1C82(void);
-void far FETCHM_ovr095_1CAA(void);
-void far OFFSET_ovr095_1CD7(void);
-void far STO_ovr095_1D11(void);
-void far CallImportedFunction_ovr095_1D44(void);
-void far STRCMP_ovr095_1DC1(void);
-void far SAY_OP_ovr095_1EA2(void);
-void far RESPOND_OP_ovr095_1F4A(void);
+int far AtIndex_ovr095_11C0(char far **s);
+void far vmAdd_ovr095_18CF(void);
+void far babl_neg_ovr095_1908(void);
+void far MUL_OPCODE_ovr095_192C(void);
+void far subOpcode_ovr095_1965(void);
+void far BABL_DIV_ovr095_199E(void);
+void far BablMod_ovr095_19EE(void);
+void far babBitOr_ovr095_1A3E(void);
+void far babl_and_ovr095_1A83(void);
+void far VM_GT_ovr095_1AC8(void);
+void far vmTstge_ovr095_1B0A(void);
+void far vmTstlt_ovr095_1B4C(void);
+void far VmTstle_ovr095_1B8E(void);
+void far ExecTsteq_ovr095_1BD0(void);
+void far opcode_tstne_ovr095_1C12(void);
+void far babl_call_ovr095_1C54(void);
+int far bab_ret_ovr095_1C82(void);
+void far exec_fetchm_ovr095_1CAA(void);
+void far vmOffset_ovr095_1CD7(void);
+void far BABL_STORE_ovr095_1D11(void);
+void far talk_calli_ovr095_1D44(void);
+void far vm_strcmp_ovr095_1DC1(void);
+void far vmSay_ovr095_1EA2(void);
+void far babl_respond_ovr095_1F4A(void);
 int far getmem(int addr);
-int far GetValueAtBasePTRPlusArg0_ovr095_2030(int addr);
+int far conv_local_ovr095_2030(int addr);
 void far bab_fun(char *name, void (far *fn)());
 void far bab_var_clear(void);
-int far do_input_wait_ovr095_A54(void);
-int far Random_ovr095_A5B(int far *args);
-int far Compare_ovr095_A8B(int far *args);
-int far Plural_ovr095_B95(int far *args);
-int far Contains_ovr095_BDB(int far *args);
-int far Append_ovr095_D0A(int far *args);
-int far Copy_ovr095_DC7(int far *args);
-int far ovr095_E36(int far *args);
-int far Length_ovr095_E8D(int far *args);
-int far Val_ovr095_EB2(int far *args);
+int far unbound(void);
+int far BabRand_ovr095_A5B(int far *args);
+int far bab_compare_ovr095_A8B(int far *args);
+int far babPluralize_ovr095_B95(int far *args);
+int far StringContains_ovr095_BDB(int far *args);
+int far babl_str_append_ovr095_D0A(int far *args);
+int far STRING_COPY_ovr095_DC7(int far *args);
+int far conv_find_ovr095_E36(int far *args);
+int far conv_length_ovr095_E8D(int far *args);
+int far DoVal_ovr095_EB2(int far *args);
 
 /* The whole work area starts as one free block. A static in the FM Towns build. */
 static void far ovr095_0(char far *work)
@@ -317,7 +319,7 @@ int far init_babl(void)
             if (write(dest, &block, 4) != 4)
                 good = 0;
             else
-                good = FileWriteWithParams(dest, stdat, size << 1) == size << 1;
+                good = FarWrite_ovr167_627(dest, stdat, size << 1) == size << 1;
         }
         close(source);
         close(dest);
@@ -341,7 +343,7 @@ void far bab_get_globals(int far *memory, int count)
             }
             if (block == cnv_id) {
                 if (count < size) size = count;
-                if (ReadFileToAddress(handle, memory, size << 1) <
+                if (intoFarBuffer_ovr167_5DA(handle, memory, size << 1) <
                     (unsigned)(size << 1)) done = 1;
             } else
                 lseek(handle, (unsigned long)(unsigned)(size << 1), 1);
@@ -365,7 +367,7 @@ void far bab_put_globals(int far *memory, int count)
             }
             if (block == cnv_id) {
                 if (count < size) size = count;
-                FileWriteWithParams(handle, memory, size << 1);
+                FarWrite_ovr167_627(handle, memory, size << 1);
                 done = 1;
             } else
                 lseek(handle, (unsigned long)(unsigned)(size << 1), 1);
@@ -394,8 +396,8 @@ int far load_script(char *name, char far *work)
         }
     } else
         pfatal_code(0x300a);
-    if (ReadConversationHeader_ovr095_12C3() < 0) return -1;
-    CopyConversationCode_ovr095_14B1();
+    if (DoReadHeader_ovr095_12C3() < 0) return -1;
+    DoCopyCode_ovr095_14B1();
     bab_free(buffer);
     mem = (int far *)bab_malloc((long)((babl_nvars + 0x800) * sizeof(int)));
     bab_get_globals(mem, babl_nvars);
@@ -405,28 +407,28 @@ int far load_script(char *name, char far *work)
     *empty = 0;
     empty_string = make_string(empty, 0x7c);
     bab_var_clear();
-    bab_fun("compare", (void (far *)())Compare_ovr095_A8B);
-    bab_fun("random", (void (far *)())Random_ovr095_A5B);
-    bab_fun("plural", (void (far *)())Plural_ovr095_B95);
-    bab_fun("contains", (void (far *)())Contains_ovr095_BDB);
-    bab_fun("append", (void (far *)())Append_ovr095_D0A);
-    bab_fun("copy", (void (far *)())Copy_ovr095_DC7);
-    bab_fun("find", (void (far *)())ovr095_E36);
-    bab_fun("length", (void (far *)())Length_ovr095_E8D);
-    bab_fun("val", (void (far *)())Val_ovr095_EB2);
+    bab_fun("compare", (void (far *)())bab_compare_ovr095_A8B);
+    bab_fun("random", (void (far *)())BabRand_ovr095_A5B);
+    bab_fun("plural", (void (far *)())babPluralize_ovr095_B95);
+    bab_fun("contains", (void (far *)())StringContains_ovr095_BDB);
+    bab_fun("append", (void (far *)())babl_str_append_ovr095_D0A);
+    bab_fun("copy", (void (far *)())STRING_COPY_ovr095_DC7);
+    bab_fun("find", (void (far *)())conv_find_ovr095_E36);
+    bab_fun("length", (void (far *)())conv_length_ovr095_E8D);
+    bab_fun("val", (void (far *)())DoVal_ovr095_EB2);
     return 1;
 }
 
 /* What an import the game never bound calls. */
-int far do_input_wait_ovr095_A54(void) { return 0; }
+int far unbound(void) { return 0; }
 
-int far Random_ovr095_A5B(int far *args)
+int far BabRand_ovr095_A5B(int far *args)
 {
     return (int)(((long)rand() *
         getmem(args[-1])) / 0x8000L) + 1;
 }
 
-int far Compare_ovr095_A8B(int far *args)
+int far bab_compare_ovr095_A8B(int far *args)
 {
     char far *str1;
     char far *str2;
@@ -449,7 +451,7 @@ int far Compare_ovr095_A8B(int far *args)
     return result == 0;
 }
 
-int far Plural_ovr095_B95(int far *args)
+int far babPluralize_ovr095_B95(int far *args)
 {
     int count;
     register int plural;
@@ -462,7 +464,7 @@ int far Plural_ovr095_B95(int far *args)
 }
 
 /* Does the first string contain the second as a whole word? */
-int far Contains_ovr095_BDB(int far *args)
+int far StringContains_ovr095_BDB(int far *args)
 {
     char far *str1;
     char far *str2;
@@ -485,7 +487,7 @@ int far Contains_ovr095_BDB(int far *args)
     return 0;
 }
 
-int far Append_ovr095_D0A(int far *args)
+int far babl_str_append_ovr095_D0A(int far *args)
 {
     int len1, length;
     char far *s1, far *s2, far *out;
@@ -503,7 +505,7 @@ int far Append_ovr095_D0A(int far *args)
     return id;
 }
 
-int far Copy_ovr095_DC7(int far *args)
+int far STRING_COPY_ovr095_DC7(int far *args)
 {
     char far *source, far *out;
     register int length;
@@ -517,7 +519,7 @@ int far Copy_ovr095_DC7(int far *args)
 }
 
 /* The script's "find": the 1-based position of a value in an array, or 0. */
-int far ovr095_E36(int far *args)
+int far conv_find_ovr095_E36(int far *args)
 {
     int value, count;
     register int i;
@@ -532,12 +534,12 @@ int far ovr095_E36(int far *args)
     return 0;
 }
 
-int far Length_ovr095_E8D(int far *args)
+int far conv_length_ovr095_E8D(int far *args)
 {
     return str_len(get_string(getmem(args[-1])));
 }
 
-int far Val_ovr095_EB2(int far *args)
+int far DoVal_ovr095_EB2(int far *args)
 {
     return seg039_3452_89A(get_string(getmem(args[-1])));
 }
@@ -596,16 +598,16 @@ char far * far convert_string(char far *text)
                     else break;
                 }
                 if (*s == 'G' || *s == 'S' || *s == 'P' || *s == 'C')
-                    extra = GetStringReplacementNumberValue_ovr095_11C0(&s) - 1;
+                    extra = AtIndex_ovr095_11C0(&s) - 1;
                 else
                     extra = 0;
                 if (kind == 'G')
                     value = getmem(number + extra);
                 else if (kind == 'P')
                     value = getmem(
-                        GetValueAtBasePTRPlusArg0_ovr095_2030(number) + extra);
+                        conv_local_ovr095_2030(number) + extra);
                 else if (kind == 'S')
-                    value = GetValueAtBasePTRPlusArg0_ovr095_2030(number + extra);
+                    value = conv_local_ovr095_2030(number + extra);
                 else
                     value = number;
                 if (type == 'I') {
@@ -631,7 +633,7 @@ char far * far convert_string(char far *text)
 }
 
 /* Reads the index part of an @-variable, which is itself a variable. */
-int far GetStringReplacementNumberValue_ovr095_11C0(register char far **s)
+int far AtIndex_ovr095_11C0(register char far **s)
 {
     char kind, type;
     int parsed, extra;
@@ -648,21 +650,21 @@ int far GetStringReplacementNumberValue_ovr095_11C0(register char far **s)
         else break;
     }
     if (**s == 'G' || **s == 'S' || **s == 'P' || **s == 'C')
-        extra = GetStringReplacementNumberValue_ovr095_11C0(s) - 1;
+        extra = AtIndex_ovr095_11C0(s) - 1;
     else extra = 0;
     if (kind == 'G')
         result = getmem(parsed + extra);
     else if (kind == 'P')
         result = getmem(
-            GetValueAtBasePTRPlusArg0_ovr095_2030(parsed) + extra);
+            conv_local_ovr095_2030(parsed) + extra);
     else if (kind == 'S')
-        result = GetValueAtBasePTRPlusArg0_ovr095_2030(parsed + extra);
+        result = conv_local_ovr095_2030(parsed + extra);
     else result = parsed;
     return result;
 }
 
 /* Reads the script header and its import table from arc_buffer. */
-int far ReadConversationHeader_ovr095_12C3(void)
+int far DoReadHeader_ovr095_12C3(void)
 {
     int nimports;
     int index;
@@ -715,11 +717,11 @@ int far ReadConversationHeader_ovr095_12C3(void)
         funcs = (void (far * far *)())bab_malloc(
             (long)(func_count * sizeof(void (far *)())));
     for (i = 0; i < func_count; i++)
-        funcs[i] = (void (far *)())do_input_wait_ovr095_A54;
+        funcs[i] = (void (far *)())unbound;
     return 1;
 }
 
-void far CopyConversationCode_ovr095_14B1(void)
+void far DoCopyCode_ovr095_14B1(void)
 {
     movedata(FP_SEG(arc_buffer), FP_OFF(arc_buffer), FP_SEG(code), FP_OFF(code),
         (unsigned)code_size << 1);
@@ -746,27 +748,27 @@ int far babl_run(void)
             pc++;
             break;
         case 0x01:
-            OPADD_ovr095_18CF();
+            vmAdd_ovr095_18CF();
             pc++;
             break;
         case 0x02:
-            OPMUL_ovr095_192C();
+            MUL_OPCODE_ovr095_192C();
             pc++;
             break;
         case 0x03:
-            OPSUB_ovr095_1965();
+            subOpcode_ovr095_1965();
             pc++;
             break;
         case 0x04:
-            OPDIV_ovr095_199E();
+            BABL_DIV_ovr095_199E();
             pc++;
             break;
         case 0x05:
-            OPMOD_ovr095_19EE();
+            BablMod_ovr095_19EE();
             pc++;
             break;
         case 0x29:
-            OPNEG_ovr095_1908();
+            babl_neg_ovr095_1908();
             pc++;
             break;
         case 0x0F:      /* JMP */
@@ -776,11 +778,11 @@ int far babl_run(void)
             pc = code[pc + 1] + pc + 1;
             break;
         case 0x06:
-            OPOR_ovr095_1A3E();
+            babBitOr_ovr095_1A3E();
             pc++;
             break;
         case 0x07:
-            OPAND_ovr095_1A83();
+            babl_and_ovr095_1A83();
             pc++;
             break;
         case 0x08:      /* OPNOT */
@@ -788,27 +790,27 @@ int far babl_run(void)
             pc++;
             break;
         case 0x09:
-            TSTGT_ovr095_1AC8();
+            VM_GT_ovr095_1AC8();
             pc++;
             break;
         case 0x0A:
-            TSTGE_ovr095_1B0A();
+            vmTstge_ovr095_1B0A();
             pc++;
             break;
         case 0x0B:
-            TSTLT_ovr095_1B4C();
+            vmTstlt_ovr095_1B4C();
             pc++;
             break;
         case 0x0C:
-            TSTLE_ovr095_1B8E();
+            VmTstle_ovr095_1B8E();
             pc++;
             break;
         case 0x0D:
-            TSTEQ_ovr095_1BD0();
+            ExecTsteq_ovr095_1BD0();
             pc++;
             break;
         case 0x0E:
-            TSTNE_ovr095_1C12();
+            opcode_tstne_ovr095_1C12();
             pc++;
             break;
         case 0x10:      /* BEQ */
@@ -818,10 +820,10 @@ int far babl_run(void)
                 pc += 2;
             break;
         case 0x13:
-            CALL_ovr095_1C54();
+            babl_call_ovr095_1C54();
             break;
         case 0x15:
-            running = RET_ovr095_1C82();
+            running = bab_ret_ovr095_1C82();
             break;
         case 0x11:      /* BNE */
             if (stack[sp--] != 0)
@@ -834,11 +836,11 @@ int far babl_run(void)
             pc++;
             break;
         case 0x1F:
-            FETCHM_ovr095_1CAA();
+            exec_fetchm_ovr095_1CAA();
             pc++;
             break;
         case 0x21:
-            OFFSET_ovr095_1CD7();
+            vmOffset_ovr095_1CD7();
             pc++;
             break;
         case 0x22:      /* START */
@@ -878,7 +880,7 @@ int far babl_run(void)
             pc += 2;
             break;
         case 0x20:
-            STO_ovr095_1D11();
+            BABL_STORE_ovr095_1D11();
             pc++;
             break;
         case 0x17:      /* PUSHI_EFF */
@@ -887,7 +889,7 @@ int far babl_run(void)
             pc += 2;
             break;
         case 0x14:      /* CALLI */
-            CallImportedFunction_ovr095_1D44();
+            talk_calli_ovr095_1D44();
             break;
         case 0x23:      /* SAVE_REG */
             reg = stack[sp];
@@ -899,18 +901,18 @@ int far babl_run(void)
             pc++;
             break;
         case 0x25:
-            STRCMP_ovr095_1DC1();
+            vm_strcmp_ovr095_1DC1();
             pc++;
             break;
         case 0x26:      /* EXIT_OP */
             running = 0;
             break;
         case 0x27:
-            SAY_OP_ovr095_1EA2();
+            vmSay_ovr095_1EA2();
             pc++;
             break;
         case 0x28:
-            RESPOND_OP_ovr095_1F4A();
+            babl_respond_ovr095_1F4A();
             pc++;
             break;
         default:
@@ -921,29 +923,29 @@ int far babl_run(void)
     return 1;
 }
 
-void far OPADD_ovr095_18CF(void)
+void far vmAdd_ovr095_18CF(void)
 {
     int result = stack[sp] + stack[sp - 1];
     sp--;
     stack[sp] = result;
 }
-void far OPNEG_ovr095_1908(void)
+void far babl_neg_ovr095_1908(void)
 {
     stack[sp] = -stack[sp];
 }
-void far OPMUL_ovr095_192C(void)
+void far MUL_OPCODE_ovr095_192C(void)
 {
     int result = stack[sp] * stack[sp - 1];
     sp--;
     stack[sp] = result;
 }
-void far OPSUB_ovr095_1965(void)
+void far subOpcode_ovr095_1965(void)
 {
     int result = stack[sp - 1] - stack[sp];
     sp--;
     stack[sp] = result;
 }
-void far OPDIV_ovr095_199E(void)
+void far BABL_DIV_ovr095_199E(void)
 {
     int result;
     if (stack[sp] != 0)
@@ -952,7 +954,7 @@ void far OPDIV_ovr095_199E(void)
     sp--;
     stack[sp] = result;
 }
-void far OPMOD_ovr095_19EE(void)
+void far BablMod_ovr095_19EE(void)
 {
     int result;
     if (stack[sp] != 0)
@@ -961,61 +963,61 @@ void far OPMOD_ovr095_19EE(void)
     sp--;
     stack[sp] = result;
 }
-void far OPOR_ovr095_1A3E(void)
+void far babBitOr_ovr095_1A3E(void)
 {
     int result = stack[sp - 1] || stack[sp];
     sp--;
     stack[sp] = result;
 }
-void far OPAND_ovr095_1A83(void)
+void far babl_and_ovr095_1A83(void)
 {
     int result = stack[sp - 1] && stack[sp];
     sp--;
     stack[sp] = result;
 }
-void far TSTGT_ovr095_1AC8(void)
+void far VM_GT_ovr095_1AC8(void)
 {
     int result = stack[sp - 1] > stack[sp];
     sp--;
     stack[sp] = result;
 }
-void far TSTGE_ovr095_1B0A(void)
+void far vmTstge_ovr095_1B0A(void)
 {
     int result = stack[sp - 1] >= stack[sp];
     sp--;
     stack[sp] = result;
 }
-void far TSTLT_ovr095_1B4C(void)
+void far vmTstlt_ovr095_1B4C(void)
 {
     int result = stack[sp - 1] < stack[sp];
     sp--;
     stack[sp] = result;
 }
-void far TSTLE_ovr095_1B8E(void)
+void far VmTstle_ovr095_1B8E(void)
 {
     int result = stack[sp - 1] <= stack[sp];
     sp--;
     stack[sp] = result;
 }
-void far TSTEQ_ovr095_1BD0(void)
+void far ExecTsteq_ovr095_1BD0(void)
 {
     int result = stack[sp - 1] == stack[sp];
     sp--;
     stack[sp] = result;
 }
-void far TSTNE_ovr095_1C12(void)
+void far opcode_tstne_ovr095_1C12(void)
 {
     int result = stack[sp - 1] != stack[sp];
     sp--;
     stack[sp] = result;
 }
 
-void far CALL_ovr095_1C54(void)
+void far babl_call_ovr095_1C54(void)
 {
     stack[++sp] = pc + 2;
     pc = code[pc + 1];
 }
-int far RET_ovr095_1C82(void)
+int far bab_ret_ovr095_1C82(void)
 {
     if (sp > 0) {
         pc = stack[sp];
@@ -1024,22 +1026,22 @@ int far RET_ovr095_1C82(void)
     }
     return 0;
 }
-void far FETCHM_ovr095_1CAA(void)
+void far exec_fetchm_ovr095_1CAA(void)
 {
     stack[sp] = mem[stack[sp]];
 }
-void far OFFSET_ovr095_1CD7(void)
+void far vmOffset_ovr095_1CD7(void)
 {
     int result = stack[sp] + stack[sp - 1] - 1;
     sp--;
     stack[sp] = result;
 }
-void far STO_ovr095_1D11(void)
+void far BABL_STORE_ovr095_1D11(void)
 {
     mem[stack[sp - 1]] = stack[sp];
     sp -= 2;
 }
-void far CallImportedFunction_ovr095_1D44(void)
+void far talk_calli_ovr095_1D44(void)
 {
     int (far *fn)(int far *);
     register int result;
@@ -1050,7 +1052,7 @@ void far CallImportedFunction_ovr095_1D44(void)
     reg = stack[sp];
     pc += 2;
 }
-void far STRCMP_ovr095_1DC1(void)
+void far vm_strcmp_ovr095_1DC1(void)
 {
     char far *s1;
     char far *s2;
@@ -1070,7 +1072,7 @@ void far STRCMP_ovr095_1DC1(void)
     else
         stack[sp] = 0;
 }
-void far SAY_OP_ovr095_1EA2(void)
+void far vmSay_ovr095_1EA2(void)
 {
     struct BablImport far *entry;
     char far *source;
@@ -1088,7 +1090,7 @@ void far SAY_OP_ovr095_1EA2(void)
     }
     if (text != source) bab_free(text);
 }
-void far RESPOND_OP_ovr095_1F4A(void)
+void far babl_respond_ovr095_1F4A(void)
 {
     struct BablImport far *entry;
     char far *source;
@@ -1118,7 +1120,7 @@ void far babl_setmem(int addr, int value)
 {
     mem[addr] = value;
 }
-int far GetValueAtBasePTRPlusArg0_ovr095_2030(int addr)
+int far conv_local_ovr095_2030(int addr)
 {
     return stack[bp + addr];
 }
@@ -1200,4 +1202,4 @@ void far bab_var_clear(void)
         entry++;
     }
 }
-void far ovr095_2296(void) { }
+void far bab_nothing_ovr095_2296(void) { }

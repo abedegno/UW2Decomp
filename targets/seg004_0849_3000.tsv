@@ -1,0 +1,26 @@
+# segment seg004_0849_3000 base 0xC1C0 size 0xCEC org 0x3000
+# cname: as in targets/seg004_0849.tsv; SEG004 split at +3000..+3CEC
+# far FD71 60B9:05A5
+seg004_0849_3000	seg004_0849_3000	0x0	0x7
+render_3d	render_3d	0x7	0xD5
+scale_matrix	seg004_0849_30DC	0xDC	0x332
+check_flat	seg004_0849_340E	0x40E	0xB6
+set_accept	seg004_0849_34C4	0x4C4	0x1
+self_modify	seg004_0849_34C5	0x4C5	0x2D
+mini_xlate_rotate_pnt	seg004_0849_34F2	0x4F2	0x28
+load_xlate_rotate_pnt	seg004_0849_351A	0x51A	0x1A
+mxmul	seg004_0849_3534	0x534	0xCB
+seg004_0849_35FF	seg004_0849_35FF	0x5FF	0x51
+instance_vvars_head	seg004_0849_3650	0x650	0x3D
+instance_head	seg004_0849_368D	0x68D	0x12B
+instance_vvars_pitch	seg004_0849_37B8	0x7B8	0x3D
+instance_pitch	seg004_0849_37F5	0x7F5	0x12B
+instance_vvars_bank	seg004_0849_3920	0x920	0x3D
+instance_bank	seg004_0849_395D	0x95D	0x12B
+code_pnt	seg004_0849_3A88	0xA88	0x7C
+mm9x9	seg004_0849_3B04	0xB04	0x3D
+mm3x9_bpsi	seg004_0849_3B41	0xB41	0xA7
+mm3x9t	seg004_0849_3BE8	0xBE8	0xA9
+overflow_handler_reg	seg004_0849_3C91	0xC91	0x24
+overflow_handler_mem	seg004_0849_3CB5	0xCB5	0x16
+overflow_handler_special_bp	seg004_0849_3CCB	0xCCB	0x21

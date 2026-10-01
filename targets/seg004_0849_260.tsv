@@ -1,0 +1,5 @@
+# segment seg004_0849_260 base 0x9420 size 0x39B org 0x260
+# cname: as in targets/seg004_0849.tsv; SEG004 split at +260..+5FB
+sphere_check	seg004_0849_260	0x0	0x1AF
+get_dist	seg004_0849_40F	0x1AF	0x8D
+do_obj	seg004_0849_49C	0x23C	0x15F

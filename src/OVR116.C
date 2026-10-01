@@ -7,7 +7,7 @@
 #include <string.h>
 
 extern unsigned char far *palette;
-int far FileWriteWithParams(int fd, void far *buf, unsigned n);
+int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n);
 void far grab(void far *dst, int x, int y, int w, int h);
 
 static unsigned char gif_header[13] = {
@@ -34,7 +34,7 @@ static void far ovr116_149(int bits);
 void far ovr116_194(int fd, char size);
 static void far ovr116_1C3(int fd, int code);
 void far ovr116_2A3(int fd, int bits);
-int far ovr116_420(void);
+int far GifPixel_ovr116_420(void);
 
 void far save_screenshot(int seg)
 {
@@ -86,7 +86,7 @@ static void far ovr116_149(int bits)
 void far ovr116_194(int fd, char size)
 {
     write(fd, &size, 1);
-    FileWriteWithParams(fd, gif.bytes, (unsigned char)size);
+    FarWrite_ovr167_627(fd, gif.bytes, (unsigned char)size);
 }
 
 static void far ovr116_1C3(int fd, int code)
@@ -122,8 +122,8 @@ void far ovr116_2A3(int fd, int bits)
     gif.bitpos = 0;
     ovr116_149(bits);
     ovr116_1C3(fd, gif.clear);
-    prefix = ovr116_420();
-    while ((next = ovr116_420()) != -1) {
+    prefix = GifPixel_ovr116_420();
+    while ((next = GifPixel_ovr116_420()) != -1) {
         slot = (prefix ^ (next << 5)) % 0x138B;
         step = 1;
         for (;;) {
@@ -164,7 +164,9 @@ void far ovr116_2A3(int fd, int bits)
     ovr116_194(fd, 0);
 }
 
-int far ovr116_420(void)
+/* The next pixel for the GIF encoder, or -1 at the end; the name is provisional (IDA's ovr116_420), chosen so that its tools/bssorder.py key
+   puts it in the EXE's overlay stub order. */
+int far GifPixel_ovr116_420(void)
 {
     if (gif.x == 0x140 && gif.y == 0xC7) return -1;
     if (gif.x == 0x140) {

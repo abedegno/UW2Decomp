@@ -147,7 +147,7 @@ char far disk_to_vid(int blk, unsigned char far *buf);
 unsigned char far read_quikpal(int which, unsigned char far *pal);
 unsigned char far gronk_gr(char *name, int a, int b, unsigned char far *(far *adr)(int),
                            int (far *move)(unsigned char far *, int, int));
-int far ReadFileToAddress(int fd, void far *buf, unsigned n);
+int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
 void far grfx_quikfont(int which);
 void far fadein(unsigned char far *pal, int steps, int x);
 void far fadeout(unsigned char far *pal, int steps, int x);
@@ -783,13 +783,13 @@ char far strt_chargen(void)
     chrbuf = pic;
     if ((fd = open("DATA\\skills.dat", O_RDONLY | O_BINARY)) == -1)
         goto fail;
-    n = ReadFileToAddress(fd, stdat, 0x348);
+    n = intoFarBuffer_ovr167_5DA(fd, stdat, 0x348);
     close(fd);
     if (n < 0x28 || n == -1)
         goto fail;
     if ((fd = open("DATA\\chrgen.dat", O_RDONLY | O_BINARY)) == -1)
         goto fail;
-    ReadFileToAddress(fd, buf + n, 10000);
+    intoFarBuffer_ovr167_5DA(fd, buf + n, 10000);
     close(fd);
     opts = (struct ChrOpt far *)(buf + n);
     strs = (unsigned far *)(opts + 8);
@@ -839,8 +839,9 @@ char far create_player(void)
     return r;
 }
 
-/* Not referenced in DOS and has no FM Towns counterpart, so the IDA name is kept. */
-void far ovr101_18CB(struct Object far *obj, int slot)
+/* Not referenced in DOS and has no FM Towns counterpart. The name is provisional (IDA's
+   ovr101_18CB), chosen so that its tools/bssorder.py key puts it in the EXE's overlay stub order. */
+void far AddObjIfAny_ovr101_18CB(struct Object far *obj, int slot)
 {
     if (obj != 0)
         AddToInventory(obj, slot);

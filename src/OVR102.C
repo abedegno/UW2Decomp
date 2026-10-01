@@ -17,12 +17,12 @@ struct Combination {
    it. FM Towns has no name for it (its disassembly names the storage after _chroff, the
    last of ovr101's variables before it), so it was static. */
 static struct Combination ObjectCombinations[10];
-void far LoadDATFile(char *name, void far *dest, int size);
+void far bltfromdrive(char *name, void far *dest, int size);
 struct Object far * far CreateObj(unsigned id, int mobile);
 
 void far init_combinables(void)
 {
-    LoadDATFile("DATA\\cmb.dat", ObjectCombinations, 0x3C);
+    bltfromdrive("DATA\\cmb.dat", ObjectCombinations, 0x3C);
 }
 
 int far ObjsBeCombinable(struct Object far *a, struct Object far *b)

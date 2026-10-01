@@ -1,0 +1,9 @@
+# segment seg004_0849_54C0 base 0xE680 size 0xD76 org 0x54C0
+# cname: as in targets/seg004_0849.tsv; SEG004 split at +54C0..+6236
+seg004_0849_54C0	seg004_0849_54C0	0x0	0x252
+seg004_0849_5712	seg004_0849_5712	0x252	0x254
+compute_min_max_y	seg004_0849_5966	0x4A6	0xEE
+_asm_texture_map	seg004_0849_5A54	0x594	0x28B
+seg004_0849_5CDF	seg004_0849_5CDF	0x81F	0x4F
+seg004_0849_5D2E	seg004_0849_5D2E	0x86E	0x38
+seg004_0849_5D66	seg004_0849_5D66	0x8A6	0x4D0

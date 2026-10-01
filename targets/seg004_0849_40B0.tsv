@@ -1,0 +1,11 @@
+# segment seg004_0849_40B0 base 0xD270 size 0x63E org 0x40B0
+# cname: as in targets/seg004_0849.tsv; SEG004 split at +40B0..+46EE
+clip_vertex_x_neg_z	seg004_0849_40B0	0x0	0xB6
+clip_vertex_y_neg_z	seg004_0849_4166	0xB6	0xBA
+clip_vertex_x_z	seg004_0849_4220	0x170	0xB3
+clip_vertex_y_z	seg004_0849_42D3	0x223	0xB7
+_asm_clip_polygon_left	seg004_0849_438A	0x2DA	0xC2
+_asm_clip_polygon_bottom	seg004_0849_444C	0x39C	0xC5
+_asm_clip_polygon_right	seg004_0849_4511	0x461	0xB9
+_asm_clip_polygon_top	seg004_0849_45CA	0x51A	0xBC
+_asm_clip_polygon	seg004_0849_4686	0x5D6	0x68

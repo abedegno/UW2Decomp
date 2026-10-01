@@ -50,11 +50,11 @@ int far str_len(char far *s);
 int far our_open(char *name, int folder, int mode);
 int far read(int file, void *p, int count);
 void far * far farmalloc(unsigned long size);
-int far ReadFileToAddress(int file, void far *p, int count);
+int far intoFarBuffer_ovr167_5DA(int file, void far *p, int count);
 int far close(int file);
 int far fclose(int file);
 void far farfree(void far *p);
-int far LoadStringsPakToTable(char *name, char *mode);
+int far data_fopen(char *name, char *mode);
 int far fread(void *p, int size, int count, int file);
 int far fseek(int file, long offset, int whence);
 int far fgetc(int file);
@@ -199,9 +199,9 @@ int far LoadFileStringsPak_seg039_547(void)
         close(file);
         return 0x1001;
     }
-    ReadFileToAddress(file, StringsPak_Address_Indices, StringsPak_NoOfNodes << 2);
+    intoFarBuffer_ovr167_5DA(file, StringsPak_Address_Indices, StringsPak_NoOfNodes << 2);
     close(file);
-    if ((StringsPak_FileHandle = LoadStringsPakToTable(aStrings_pak, aRb_4)) == 0) return 0x3002;
+    if ((StringsPak_FileHandle = data_fopen(aStrings_pak, aRb_4)) == 0) return 0x3002;
     return 0;
 }
 

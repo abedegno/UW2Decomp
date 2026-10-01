@@ -316,7 +316,7 @@ extern struct Object far *ActiveObj;
 extern struct Object far *CursorObjPtr;
 extern signed char ValidLightSlots[];
 extern unsigned char Weapons[];
-struct Object far * far WhatsInSlot(int slot);
+struct Object far * far AskInventory(int slot);
 char far ObjWorn(int item, int slot);
 char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
 void far remove_spell(struct Object far *obj);
@@ -339,10 +339,10 @@ void far FixPlayerEquips(void)
     bonuses = 0;
     for (slot = 0; slot < 4; slot++) playerdat->armour[slot] = 0;
     for (slot = 0; slot <= 4; slot++) {
-        if (item = WhatsInSlot(slot))
+        if (item = AskInventory(slot))
             playerdat->armour[defence_slot_index[slot]] += armor_val(item);
     }
-    item = WhatsInSlot((((struct HandBits *)((char *)player + 0x65))->hand) + 7);
+    item = AskInventory((((struct HandBits *)((char *)player + 0x65))->hand) + 7);
     if (item && ((item->id & 0x1C0) >> 6) == 0 &&
         ((item->id & 0x30) >> 4) == 3 &&
         (item->id & 0xF) >= 11 && (item->id & 0xF) <= 15) {
@@ -351,7 +351,7 @@ void far FixPlayerEquips(void)
         playerdat->armour[1] += armour;
     }
     playerdat->defence = player->defence;
-    ActiveObj = WhatsInSlot(8 - (((struct HandBits *)((char *)player + 0x65))->hand));
+    ActiveObj = AskInventory(8 - (((struct HandBits *)((char *)player + 0x65))->hand));
     armour = 2;
     if (ActiveObj && ((ActiveObj->id & 0x1C0) >> 6) == 0 &&
         ((ActiveObj->id & 0x30) >> 4) < 2) {
@@ -371,7 +371,7 @@ void far FixPlayerEquips(void)
     brightness = 0;
     for (slot = 0; slot <= 4; slot++) {
         if (slot == 4) ActiveObj = CursorObjPtr;
-        else ActiveObj = WhatsInSlot(ValidLightSlots[slot]);
+        else ActiveObj = AskInventory(ValidLightSlots[slot]);
         if (ActiveObj && ((ActiveObj->id & 0x1F0) >> 4) == 9 &&
             (ActiveObj->id & 0xF) >= 4 && (ActiveObj->id & 0xF) < 8) {
             data = get_class_data();
@@ -386,7 +386,7 @@ void far FixPlayerEquips(void)
         player_affected_by(player->spells[slot] & 0xF,
                            (player->spells[slot] & 0xF0) >> 4, &bonuses, -1);
     for (slot = 0; slot <= 10; slot++) {
-        ActiveObj = WhatsInSlot(slot);
+        ActiveObj = AskInventory(slot);
         if (ActiveObj && ObjWorn(ActiveObj->id & 0x1FF, slot) &&
             decode_obj_spell(ActiveObj, &major, &effect, &flag) && !flag &&
             player_affected_by(major, effect, &bonuses, slot))

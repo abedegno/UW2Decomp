@@ -11,7 +11,7 @@ move_cam	RoamingSightInput_ovr143_B4B	0xB4B	0x102
 attach_eye	ChangeReferenceToCameraObject_ovr143_C4D	0xC4D	0xF9
 release_camera	MakeObjectTheCamera_ovr143_D46	0xD46	0x16
 crystal_ball	HackTrapCamera_ovr143_D5C	0xD5C	0xAD
-LaunchPlayerAtMoongate_ovr143_E09	LaunchPlayerAtMoongate_ovr143_E09	0xE09	0xF4
+Vortex_ovr143_E09	LaunchPlayerAtMoongate_ovr143_E09	0xE09	0xF4
 chg_plys	LookUpDown_ovr143_EFD	0xEFD	0x5B
-ChangeCameraRoll_ovr143_F58	ChangeCameraRoll_ovr143_F58	0xF58	0x25
+RollView_ovr143_F58	ChangeCameraRoll_ovr143_F58	0xF58	0x25
 chg_plyp	LookUpDown_ovr143_F7D	0xF7D	0x27

@@ -166,7 +166,7 @@ void far show_cutscene(int n);
 void far make_stew(void);
 int far checkLock(struct Object far *who, struct Object far *obj, int key);
 void far OpenTheBag(int slot);
-struct Object far * far WhatsInSlot(int slot);
+struct Object far * far AskInventory(int slot);
 void far AddToInventory(struct Object far *obj, int slot);
 void far DisplayInventory(void);
 void far play_instrument(int n);
@@ -756,7 +756,7 @@ void far UseLight(struct Object far *obj, unsigned char how)
         {
             for (i = 5; i <= 8; i++)
             {
-                inslot = WhatsInSlot(i);
+                inslot = AskInventory(i);
                 if (inslot == 0 && newslot == 0)
                     newslot = i;
                 else if (inslot == obj && qty == 1)

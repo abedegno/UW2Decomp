@@ -37,7 +37,7 @@ void far set_the_color(int);
 void far clear_window(void);
 void far mouse_show(void);
 int far our_open(char *, int, int);
-int far ReadFileToAddress(int, void far *, unsigned);
+int far intoFarBuffer_ovr167_5DA(int, void far *, unsigned);
 void far close(int);
 void far lseek(int, long, int);
 void far movedata(unsigned, unsigned, unsigned, unsigned, unsigned);
@@ -71,8 +71,8 @@ unsigned char far grfx_load_font(char *name)
     register int fd;
     if ((fd = our_open(name, 1, 0)) < 0) return 0;
     font_loaded = 1;
-    ReadFileToAddress(fd, cur_font, 12);
-    ReadFileToAddress(fd, bytefont, (cur_font->height + cur_font->width) << 7);
+    intoFarBuffer_ovr167_5DA(fd, cur_font, 12);
+    intoFarBuffer_ovr167_5DA(fd, bytefont, (cur_font->height + cur_font->width) << 7);
     close(fd);
     setup_font();
     return 1;
@@ -108,7 +108,7 @@ unsigned char far read_quikpal(int n, void far *dest)
     fd = our_open(pals_name, 1, 0);
     if (fd < 0) return 0;
     lseek(fd, (long)(n * 0x300), 0);
-    got = ReadFileToAddress(fd, dest, 0x300);
+    got = intoFarBuffer_ovr167_5DA(fd, dest, 0x300);
     close(fd);
     if (got != 0x300) return 0;
     return 1;
@@ -240,8 +240,11 @@ void far in3d(int count, void (far *callback)(int), int colour)
 
 void far fadeout3d(int n) { out3d(12, CallbackFunctionSleepRelated_seg021_22FD_CB7, 1); }
 void far fadein3d(int n) { in3d(12, CallbackFunctionSleepRelated_seg021_22FD_CB7, 1); }
-void far ovr118_534(int n) { out3d(n, Callback_seg021_22FD_CEA, 2); }
-void far ovr118_54B(int n) { in3d(n, Callback_seg021_22FD_CEA, 2); }
+/* DOS only: fadeout3d and fadein3d over n steps with another callback. The names are
+   provisional (IDA's ovr118_534 and ovr118_54B), chosen so that their tools/bssorder.py keys
+   put them in the EXE's overlay stub order. */
+void far steps_fadeout3d_ovr118_534(int n) { out3d(n, Callback_seg021_22FD_CEA, 2); }
+void far steps_fadein3d_ovr118_54B(int n) { in3d(n, Callback_seg021_22FD_CEA, 2); }
 
 void far fill_FB(int colour)
 {

@@ -39,8 +39,8 @@ unsigned long far *lentab = (unsigned long far *)(stdat + 0x3000);
 unsigned long far *alloctab = (unsigned long far *)(stdat + 0x3800);
 char far *arcstr = stdat + 0x4000;
 
-int far ReadFileToAddress(int fd, void far *buf, unsigned n);
-int far FileWriteWithParams(int fd, void far *buf, unsigned n);
+int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
+int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n);
 unsigned far ac_unshrink_disk(char far *dst, int fd, unsigned n);
 unsigned far ac_shrink_disk(char far *src, int fd, unsigned n);
 char far * far str_copy(char far *dst, char far *src);
@@ -56,12 +56,12 @@ void far arc_read_tables(register int fd)
     long hdr;
 
     lseek(fd, 0L, 0);
-    ok &= ReadFileToAddress(fd, &n, 2) == 2;
-    ok &= ReadFileToAddress(fd, &hdr, 4) == 4;
-    ok &= ReadFileToAddress(fd, offtab, n * 4) == n * 4;
-    ok &= ReadFileToAddress(fd, flagtab, n * 4) == n * 4;
-    ok &= ReadFileToAddress(fd, lentab, n * 4) == n * 4;
-    ok &= ReadFileToAddress(fd, alloctab, n * 4) == n * 4;
+    ok &= intoFarBuffer_ovr167_5DA(fd, &n, 2) == 2;
+    ok &= intoFarBuffer_ovr167_5DA(fd, &hdr, 4) == 4;
+    ok &= intoFarBuffer_ovr167_5DA(fd, offtab, n * 4) == n * 4;
+    ok &= intoFarBuffer_ovr167_5DA(fd, flagtab, n * 4) == n * 4;
+    ok &= intoFarBuffer_ovr167_5DA(fd, lentab, n * 4) == n * 4;
+    ok &= intoFarBuffer_ovr167_5DA(fd, alloctab, n * 4) == n * 4;
     lseek(fd, pos, 0);
 }
 
@@ -72,10 +72,10 @@ int far arc_write_tables(int fd, register unsigned n)
     register int ok = 1;
 
     lseek(fd, 6L, 0);
-    ok &= FileWriteWithParams(fd, offtab, n * 4) == n * 4;
-    ok &= FileWriteWithParams(fd, flagtab, n * 4) == n * 4;
-    ok &= FileWriteWithParams(fd, lentab, n * 4) == n * 4;
-    ok &= FileWriteWithParams(fd, alloctab, n * 4) == n * 4;
+    ok &= FarWrite_ovr167_627(fd, offtab, n * 4) == n * 4;
+    ok &= FarWrite_ovr167_627(fd, flagtab, n * 4) == n * 4;
+    ok &= FarWrite_ovr167_627(fd, lentab, n * 4) == n * 4;
+    ok &= FarWrite_ovr167_627(fd, alloctab, n * 4) == n * 4;
     lseek(fd, pos, 0);
     return ok;
 }
@@ -154,8 +154,8 @@ unsigned char far open_arc(int which, char *dir)
     str_copy(arcfile.name, name);
     ok = (fd = open(name, O_RDWR | O_BINARY)) != -1;
     if (ok) {
-        ok &= ReadFileToAddress(fd, &count, 2) == 2;
-        ok &= ReadFileToAddress(fd, &hdr, 4) == 4;
+        ok &= intoFarBuffer_ovr167_5DA(fd, &count, 2) == 2;
+        ok &= intoFarBuffer_ovr167_5DA(fd, &hdr, 4) == 4;
         if (ok) {
             arcfile.fd = fd;
             arcfile.count = count;
@@ -246,7 +246,7 @@ unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len)
                     pfatal_code(0x4002);
                 }
             } else {
-                t = FileWriteWithParams(fd, buf, (unsigned)size);
+                t = FarWrite_ovr167_627(fd, buf, (unsigned)size);
                 if (t != (unsigned)size) {
                     close(memfd);
                     unlink(memname);
@@ -260,11 +260,11 @@ unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len)
             if (compressed)
                 ac_suck_data(fd, memfd, (unsigned)size);
             else
-                FileWriteWithParams(fd, buf, (unsigned)size);
+                FarWrite_ovr167_627(fd, buf, (unsigned)size);
             if (extra) {
                 t = 15 * size / 100;
                 mem_set(stdat, 0, t);
-                FileWriteWithParams(fd, stdat, t);
+                FarWrite_ovr167_627(fd, stdat, t);
                 allocsize = size + t;
             } else
                 allocsize = size;
@@ -279,8 +279,8 @@ unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len)
             lseek(fd, 0L, 0);
             while (done < off) {
                 chunk = off - done > 0x2000 ? 0x2000 : off - done;
-                m = ReadFileToAddress(fd, stdat, chunk);
-                if ((w = FileWriteWithParams(t, stdat, m)) != m) {
+                m = intoFarBuffer_ovr167_5DA(fd, stdat, chunk);
+                if ((w = FarWrite_ovr167_627(t, stdat, m)) != m) {
                     close(t);
                     unlink(tmpname);
                     close(memfd);
@@ -290,8 +290,8 @@ unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len)
                 done += w;
             }
             lseek(fd, alloc, 1);
-            while ((n = ReadFileToAddress(fd, stdat, 0x2000)) > 0) {
-                if ((m = FileWriteWithParams(t, stdat, n)) != n) {
+            while ((n = intoFarBuffer_ovr167_5DA(fd, stdat, 0x2000)) > 0) {
+                if ((m = FarWrite_ovr167_627(t, stdat, n)) != n) {
                     close(t);
                     unlink(tmpname);
                     close(memfd);
@@ -303,7 +303,7 @@ unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len)
             writepos = tell(t);
             if (compressed)
                 n = ac_suck_data(t, memfd, (unsigned)size);
-            else if ((n = FileWriteWithParams(t, buf, (unsigned)size)) != (unsigned)size) {
+            else if ((n = FarWrite_ovr167_627(t, buf, (unsigned)size)) != (unsigned)size) {
                 close(t);
                 unlink(tmpname);
                 close(memfd);
@@ -313,7 +313,7 @@ unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len)
             if (extra) {
                 m = 15 * size / 100;
                 mem_set(stdat, 0, m);
-                if ((w = FileWriteWithParams(t, stdat, m)) != m) {
+                if ((w = FarWrite_ovr167_627(t, stdat, m)) != m) {
                     close(t);
                     unlink(tmpname);
                     close(memfd);
@@ -375,7 +375,7 @@ unsigned far get_arc(int arc, unsigned blk, char far *buf)
         else
             n = t;
     } else {
-        ReadFileToAddress(arcfile.fd, buf, size);
+        intoFarBuffer_ovr167_5DA(arcfile.fd, buf, size);
         n = size;
     }
     return n;

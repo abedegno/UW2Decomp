@@ -17,7 +17,7 @@ reset_times	ResetTimers_ovr112_45C	0x45C	0x29
 reset_game	ResetCharacter_ovr112_485	0x485	0xF7
 real_death	ReturnToMainMenu_ovr112_57C	0x57C	0xDB
 do_3d_view	ovr112_657	0x657	0xA
-DivideByZeroError_ovr112_661	DivideByZeroError_ovr112_661	0x661	0x4F
+div_zero_ovr112_661	DivideByZeroError_ovr112_661	0x661	0x4F
 new_player_pos	TeleportToPosition_ovr112_6B0	0x6B0	0x189
-SomethingWithDataFolders_ovr112_839	SomethingWithDataFolders_ovr112_839	0x839	0x12F
+ReadCfg_ovr112_839	SomethingWithDataFolders_ovr112_839	0x839	0x12F
 move_initial_files	CopyArkFilesToSaveFolder_ovr112_968	0x968	0x27

@@ -19,7 +19,7 @@ extern unsigned far smooth_base;
 extern unsigned far smooth_lowpass;
 
 int far our_open();
-int far ReadFileToAddress(int fd, void far *buf, unsigned n);
+int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
 void far close(int fd);
 long far lseek(int fd, long offset, int origin);
 int far read(int fd, void *buf, unsigned n);
@@ -36,7 +36,7 @@ int far lget(char *name, unsigned off, unsigned seg, unsigned n)
     int handle;
 
     if ((handle = our_open(name, 1, 0)) != -1) {
-        got = ReadFileToAddress(handle, MK_FP(seg, off), n);
+        got = intoFarBuffer_ovr167_5DA(handle, MK_FP(seg, off), n);
         close(handle);
     }
     if (got == n)

@@ -44,8 +44,8 @@ struct LzwWork {
 /* ovr153 declares this char far *; here it is the work area. */
 extern struct LzwWork far *globals;
 
-int far ReadFileToAddress(int fd, void far *buf, unsigned n);
-int far FileWriteWithParams(int fd, void far *buf, unsigned n);
+int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
+int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n);
 void far pfatal_code(int code);
 
 /* Inserts the string of length F at text_buf[r] into the tree, and sets match_position
@@ -140,7 +140,7 @@ void far DeleteNode(register int p)
    n counts what is still to be read from the file. GETC stores the byte in tmp before
    advancing buf: written tmp = *buf++ the increment comes first. */
 #define FILL() (len = min(n, worksize), buf = work, \
-                left = ReadFileToAddress(fd, work, len), n -= left)
+                left = intoFarBuffer_ovr167_5DA(fd, work, len), n -= left)
 #define GETC() (left ? (left--, tmp = *buf, buf++, tmp) : \
                 (FILL(), left ? (left--, tmp = *buf, buf++, tmp) : -1))
 
@@ -211,7 +211,7 @@ unsigned far DecompressLZW_disk(unsigned char far *dst, int fd, unsigned char fa
    it is written to fd. fd -1 means compress into memory, with work big enough for all of
    it. */
 #define GETC() (n ? (n--, tmp = *src, src++, tmp) : -1)
-#define FLUSH() (FileWriteWithParams(fd, work, out - work) != (int)(out - work) ? \
+#define FLUSH() (FarWrite_ovr167_627(fd, work, out - work) != (int)(out - work) ? \
                  pfatal_code(0x4002) : (void)0, out = work)
 #define PUTC(c) (out < end ? (*out = (c), ++out) : (FLUSH(), *out = (c), ++out))
 

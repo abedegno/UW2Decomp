@@ -14,9 +14,10 @@
    (set music_sound to 0 and 1), ovr136_487 game_group_fun (new_hilit_button(0)) and
    ovr136_51E quit_group_fun (new_hilit_button(3)).
 
-   Three DOS functions have no FM Towns counterpart and keep their IDA names: ovr136_482
-   and ovr136_5CB are empty like donothing_opt, and ovr136_315 only ends the options
-   loop. They are reached only through the button-group tables, so FM Towns either folded
+   Three DOS functions have no FM Towns counterpart: null_group_fun and
+   ButtonDoNothing_ovr136_5CB are empty like donothing_opt, and done_ovr136_315 only ends the
+   options loop. Their names are provisional (IDA's ovr136_482, ovr136_5CB, ovr136_315), chosen
+   so that their tools/bssorder.py keys put them in the EXE's overlay stub order. They are reached only through the button-group tables, so FM Towns either folded
    them into identical functions or left them out.
 
    The file's _DATA is DS:190A..1934: plyregen, save_or_rest, the three picture tables,
@@ -249,7 +250,7 @@ void far detail_set_opt(int level)
     mouse_show();
 }
 
-void far ovr136_315(int arg)
+void far done_ovr136_315(int arg)
 {
     gameopts_done = 1;
 }
@@ -344,7 +345,7 @@ void far do_musicsound_opt(int on)
     }
 }
 
-void far ovr136_482(void)
+void far null_group_fun(void)
 {
 }
 
@@ -396,7 +397,7 @@ void far musicsound_group_fun(void)
     }
 }
 
-void far ovr136_5CB(void)
+void far ButtonDoNothing_ovr136_5CB(void)
 {
 }
 

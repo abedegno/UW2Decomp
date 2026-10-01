@@ -4,8 +4,17 @@
    them out (whole stacks or part of one, from the paperdoll, the backpack or the open bag),
    searching it for an object by class, damage to worn equipment, and object weight: the
    whole of DOS overlay ovr124, in original order. Function and global names are the
-   originals from the FM Towns symbol table except ovr124_2C, which has no FM Towns
-   counterpart; the source file's own name is not known. */
+   originals from the FM Towns symbol table except FindEmptySlot, which has no FM Towns
+   counterpart and a provisional name chosen for its key (see below); the source file's own
+   name is not known.
+
+   Turbo C lists a file's publics in descending order of the tools/bssorder.py key of each
+   name, and TLINK numbers overlay stub entries from the last one listed, so the EXE's stub
+   order constrains the names. FM Towns gives AskInventory and WhatsInSlot one address (the
+   two functions are identical, and DOS has both), so its code cannot tell them apart; the
+   stub order can: the function at +15 must have a key between 321 and 481 and the one at
+   +5A4 between 630 and 702, which AskInventory (465) and WhatsInSlot (655) meet only this way
+   round. FindEmptySlot (1022) must sort above takeFromSlot (1004). */
 
 #include <string.h>
 
@@ -105,7 +114,7 @@ void far scroll_print(char far *s);
 
 int far ItemWeight(struct Object far *obj);
 struct Object far * far find_obj(int major, int minor, int cls, struct Object far **list);
-struct Object far * far AskInventory(int slot);
+struct Object far * far WhatsInSlot(int slot);
 struct Object far * far RemoveAllFromSlot(int major, int minor, int cls, int slot);
 char far invRemoveObject(struct Object far *obj, int qty);
 struct Object far * far removeFromSlot(int major, int minor, int cls, int slot, int qty);
@@ -116,13 +125,14 @@ void far RedisplayInvSlot(int slot)
     DisplayInvObject(SlotToDisplay[slot]);
 }
 
-struct Object far * far WhatsInSlot(int slot)
+struct Object far * far AskInventory(int slot)
 {
     return Obj_PtrTMem(&Inventory[slot].word);
 }
 
-/* The first empty slot from 5 to 18, or -1. Not in the FM Towns build and not called. */
-int far ovr124_2C(void)
+/* The first empty slot from 5 to 18, or -1. Not in the FM Towns build and not called; IDA's
+   ovr124_2C, renamed for its key. */
+int far FindEmptySlot(void)
 {
     register int slot;
 
@@ -267,12 +277,12 @@ struct Object far * far pick_inv(int how)
     if (hit < 0 || hit >= 20)
         return 0;
     if (how == 2)
-        return AskInventory(DisplayToSlot[hit]);
+        return WhatsInSlot(DisplayToSlot[hit]);
     return RemoveAllFromSlot(-1, -1, -1, DisplayToSlot[hit]);
 }
 
-/* The same as WhatsInSlot; the FM Towns map gives this name the same address. */
-struct Object far * far AskInventory(int slot)
+/* The same as AskInventory; the FM Towns map gives both names one address. */
+struct Object far * far WhatsInSlot(int slot)
 {
     return Obj_PtrTMem(&Inventory[slot].word);
 }
@@ -453,7 +463,7 @@ int far DamageInventory(int slot, unsigned char damage, unsigned char type, int 
     register char *msg;
     register int result;
 
-    if ((obj = WhatsInSlot(slot)) == 0)
+    if ((obj = AskInventory(slot)) == 0)
         return -2;
     if (how != 2) {
         if (how == 0) {

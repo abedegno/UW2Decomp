@@ -1,0 +1,22 @@
+# segment seg004_0849_3CF0 base 0xCEB0 size 0x3B2 org 0x3CF0
+# cname: as in targets/seg004_0849.tsv; SEG004 split at +3CF0..+40A2
+# far FD58 4FAF:C788
+do_set_tmctxt	seg004_0849_3CF0	0x0	0x15
+do_set_gmap_ctxt	seg004_0849_3D05	0x15	0x19
+do_ctxt_gtmap	seg004_0849_3D1E	0x2E	0xC
+do_ctxt_gmap	seg004_0849_3D2A	0x3A	0xE
+do_gtri	seg004_0849_3D38	0x48	0x6
+do_gtmap	seg004_0849_3D3E	0x4E	0x8
+do_gwtmap	seg004_0849_3D46	0x56	0x5C
+do_compact_map	seg004_0849_3DA2	0xB2	0xE
+do_compact_tmap	seg004_0849_3DB0	0xC0	0x8
+do_compact_wtmap	seg004_0849_3DB8	0xC8	0x74
+do_bcompact_map	seg004_0849_3E2C	0x13C	0x8
+do_bcompact_tmap	seg004_0849_3E34	0x144	0x8
+do_bcompact_wtmap	seg004_0849_3E3C	0x14C	0x73
+do_tmap_tri	seg004_0849_3EAF	0x1BF	0xB
+do_wtmap	seg004_0849_3EBA	0x1CA	0x8
+do_tmap	seg004_0849_3EC2	0x1D2	0x81
+draw_solid_tmap	seg004_0849_3F43	0x253	0x34
+seg004_0849_3F77	seg004_0849_3F77	0x287	0x28
+do_scalebm	seg004_0849_3F9F	0x2AF	0x103

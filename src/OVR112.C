@@ -16,8 +16,11 @@
                                  hold_scrgr, and it is the 3D screen's exit in editor_dispatch
      ResetTimers_ovr112_45C  reset_times  clears nextSpellTime, lstime, watertime, nextstep
      ovr112_657  do_3d_view      both call establish_view
-   FM Towns has nothing for ovr112_389, DivideByZeroError_ovr112_661 and
-   SomethingWithDataFolders_ovr112_839, which are DOS only; they keep their IDA names. */
+   FM Towns has nothing for ovr112_389, div_zero_ovr112_661 and ReadCfg_ovr112_839, which
+   are DOS only. ovr112_389 keeps its IDA name; the other two provisional names were
+   chosen for their keys: Turbo C lists a file's publics by the tools/bssorder.py key of
+   each name and TLINK numbers overlay stub entries from the last one listed, so these names
+   reproduce the EXE's stub order (the target table keeps IDA's names). */
 
 #include <dos.h>
 #include <dir.h>
@@ -124,7 +127,7 @@ void far init_debug(void);
 void far init_sounds(void);
 void far init_timers(void);
 void far init_cutscene(void);
-unsigned char far ovr167_463(void);    /* enough memory free; DOS only */
+unsigned char far OkEnoughMem_ovr167_463(void);    /* enough memory free; DOS only */
 void far punt_sound_stuff(int quiet);
 void far first_punt(int code);
 unsigned char far grfx_init(void);
@@ -222,7 +225,7 @@ void far reset_times(void);
 void far reset_game(void);
 void far do_3d_view(void);
 unsigned char far new_player_pos(void);
-void far SomethingWithDataFolders_ovr112_839(void);
+void far ReadCfg_ovr112_839(void);
 void far move_initial_files(void);
 
 /* This file's data, DS:11F4 to DS:12C5, then its strings. */
@@ -270,13 +273,13 @@ void far init_world(int argc, char *argv[])
     Map_Init();
     init_input();
     init_debug();
-    SomethingWithDataFolders_ovr112_839();
+    ReadCfg_ovr112_839();
     init_sounds();
     init_timers();
     init_cutscene();
-    if (!ovr167_463()) {
+    if (!OkEnoughMem_ovr167_463()) {
         punt_sound_stuff(1);
-        if (!ovr167_463())
+        if (!OkEnoughMem_ovr167_463())
             first_punt(0x1004);
     }
     if (!grfx_init())
@@ -510,7 +513,7 @@ void far do_3d_view(void)
     establish_view();
 }
 
-void far DivideByZeroError_ovr112_661(void)
+void far div_zero_ovr112_661(void)
 {
     char msg[0x50];
 
@@ -567,7 +570,7 @@ unsigned char far new_player_pos(void)
     return 1;
 }
 
-void far SomethingWithDataFolders_ovr112_839(void)
+void far ReadCfg_ovr112_839(void)
 {
     FILE *fp;
     char path[0x50];

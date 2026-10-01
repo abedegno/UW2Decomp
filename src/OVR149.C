@@ -89,8 +89,8 @@ int far wdialog(char *prompt, char *initial, char *result, char anychar, int max
 unsigned char far blttodrive(char far *src, char *path, int len);
 unsigned far get_workspace(void);
 void far release_workspace(void);
-int far ReadFileToAddress(int fd, void far *buf, unsigned n);
-int far FileWriteWithParams(int fd, void far *buf, unsigned n);
+int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
+int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n);
 void far clear_fight_state(void);
 void far unforce_mouse_cursor(int n);
 void far restore_mana(struct Object far *who, char amount);
@@ -397,8 +397,8 @@ unsigned char far copy_file(char *srcdir, char *dstdir, char *name)
             buf = MK_FP(ws, 0);
             ok = 1;
             do {
-                n = ReadFileToAddress(in, buf, 0xF000);
-                if (FileWriteWithParams(out, buf, n) != n) {
+                n = intoFarBuffer_ovr167_5DA(in, buf, 0xF000);
+                if (FarWrite_ovr167_627(out, buf, n) != n) {
                     ok = 0;
                     break;
                 }

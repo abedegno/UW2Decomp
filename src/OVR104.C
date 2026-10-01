@@ -30,7 +30,9 @@ void far creature_init(int fd)
     fread(Creature, 0x30, 0x40, fd);
 }
 
-void far ovr104_17(int fd)
+/* creature_init's counterpart, which FM Towns lacks; the name is provisional (IDA's ovr104_17), chosen so that its tools/bssorder.py key
+   puts it in the EXE's overlay stub order. */
+void far creature_save_ovr104_17(int fd)
 {
     fwrite(Creature, 0x30, 0x40, fd);
 }

@@ -1,0 +1,8 @@
+# segment seg021_22FD_6C0 base 0x243C0 size 0x4D org 0x6C0
+# cname: as in targets/seg021_22FD.tsv; SEG021 split at +6C0..+70D
+seg021_22FD_6C0	seg021_22FD_6C0	0x0	0x4
+seg021_22FD_6C4	seg021_22FD_6C4	0x4	0x4
+seg021_22FD_6C8	seg021_22FD_6C8	0x8	0x1F
+Read_Mouse_Motion_seg021_6E7	Read_Mouse_Motion_seg021_6E7	0x27	0x11
+seg021_22FD_6F8	Mouse_Sensitivity_Maybe_seg021_6F8	0x38	0xB
+seg021_22FD_703	Mouse_Position_And_Button_status_seg021_703	0x43	0xA

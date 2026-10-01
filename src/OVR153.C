@@ -13,8 +13,8 @@ char far *globals = 0;
 /* Far-buffer file reads and writes in ovr167. FM Towns, being flat, calls the library's
    read() and write() here; DOS cannot (_read is the near-buffer library call at 0E72:1FCD),
    and the DOS helpers' original names are not known, so these are the IDA names. */
-int far ReadFileToAddress(int fd, void far *buf, unsigned n);
-int far FileWriteWithParams(int fd, void far *buf, unsigned n);
+int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
+int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n);
 unsigned far DecompressLZW_disk(char far *dst, int fd, char far *work, unsigned worksize,
                                 unsigned n);
 unsigned far CompressLZW_disk(char far *src, int fd, char far *work, unsigned worksize,
@@ -33,7 +33,7 @@ unsigned far ac_unshrink_disk(char far *dst, int fd, unsigned n)
     char far *work;
     unsigned worksize;
 
-    ReadFileToAddress(fd, &len, 4);
+    intoFarBuffer_ovr167_5DA(fd, &len, 4);
     ac_setup_lzw(&work, &worksize);
     len = DecompressLZW_disk(dst, fd, work, worksize, n - 4);
     /* DOS compares the length with 0xFFFF and jumps to the same place either way: an
@@ -53,7 +53,7 @@ unsigned far ac_shrink_disk(char far *src, int fd, unsigned n)
 
     len = n;
     ac_setup_lzw(&work, &worksize);
-    FileWriteWithParams(fd, &len, 4);
+    FarWrite_ovr167_627(fd, &len, 4);
     done = CompressLZW_disk(src, fd, work, worksize, n);
     if (done == 0)
         return 0;

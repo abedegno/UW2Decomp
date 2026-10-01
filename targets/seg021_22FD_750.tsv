@@ -1,0 +1,9 @@
+# segment seg021_22FD_750 base 0x24450 size 0x2DC org 0x750
+# cname: as in targets/seg021_22FD.tsv; SEG021 split at +750..+A2C
+seg021_22FD_755	seg021_22FD_755	0x5	0x3C
+seg021_22FD_791	seg021_22FD_791	0x41	0x3C
+seg021_22FD_7CD	seg021_22FD_7CD	0x7D	0x3C
+seg021_22FD_809	seg021_22FD_809	0xB9	0x168
+key	seg021_22FD_971	0x221	0x3C
+mouse	seg021_22FD_9AD	0x25D	0x43
+mbuttons	Mouse_Button_Status_seg021_9F0	0x2A0	0x3C

@@ -1,0 +1,10 @@
+# segment seg004_0849_4E10 base 0xDFD0 size 0x392 org 0x4E10
+# cname: as in targets/seg004_0849.tsv; SEG004 split at +4E10..+51A2
+_asm_project_polygon	seg004_0849_4E10	0x0	0x7A
+_asm_texture_map_1	seg004_0849_4E8A	0x7A	0x75
+divide_overflow_handler	seg004_0849_4EFF	0xEF	0x5D
+seg004_0849_4F5C	seg004_0849_4F5C	0x14C	0x17
+seg004_0849_4F73	seg004_0849_4F73	0x163	0x12
+asm_texture_map_from_draw_poly	seg004_0849_4F85	0x175	0x15B
+compute_lighting_value	seg004_0849_50E0	0x2D0	0x7A
+compute_square_root_32	seg004_0849_515A	0x34A	0x48

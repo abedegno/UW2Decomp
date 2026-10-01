@@ -2,7 +2,7 @@
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
 AutoMap	ViewAutomap_ovr094_0	0x0	0x140
 automap_area	UpdateAutomapTiles_ovr094_140	0x140	0x161
-SetALTo1_ovr094_2A1	SetALTo1_ovr094_2A1	0x2A1	0x7
+ReturnOne_ovr094_2A1	SetALTo1_ovr094_2A1	0x2A1	0x7
 ovr094_2A8	ovr094_2A8	0x2A8	0x2B
 SaveAutoMapLevel	SaveAutomapToArk_ovr094_2D3	0x2D3	0x55
 GetAutoMapLevel	LoadAutoMap_ovr094_328	0x328	0x77
@@ -13,7 +13,7 @@ ShadeSide	ovr094_569	0x569	0xF8
 PixelDarken	ovr094_661	0x661	0x6C
 DoTile	PossiblyDrawAutomap_ovr094_6CD	0x6CD	0x20D
 DoDoorTile	ovr094_8DA	0x8DA	0xF8
-ovr094_9D2	ovr094_9D2	0x9D2	0x47
+CornerShade_ovr094_9D2	ovr094_9D2	0x9D2	0x47
 DetermineBetterHit	ovr094_A19	0xA19	0xF8
 true_gem_region	ovr094_B11	0xB11	0xCE
 ManageDungeonMap	AutomapRelated_ovr094_BDF	0xBDF	0x568

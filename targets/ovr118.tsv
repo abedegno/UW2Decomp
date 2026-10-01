@@ -15,7 +15,7 @@ out3d	ovr118_42F	0x42F	0x43
 in3d	CallSomeFunction_ovr118_472	0x472	0x96
 fadeout3d	ovr118_508	0x508	0x16
 fadein3d	ovr118_51E	0x51E	0x16
-ovr118_534	ovr118_534	0x534	0x17
-ovr118_54B	ovr118_54B	0x54B	0x17
+steps_fadeout3d_ovr118_534	ovr118_534	0x534	0x17
+steps_fadein3d_ovr118_54B	ovr118_54B	0x54B	0x17
 fill_FB	FlashColour_ovr118_562	0x562	0x31
 cameras_fade	SwitchCamera_ovr118_593	0x593	0x54

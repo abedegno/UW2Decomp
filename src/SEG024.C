@@ -200,7 +200,7 @@ void far play_effect_here(int fx, int vol, char c);
 void far play_effect_on_mobile(char fx, struct Object far *obj, int vol);
 int far rollem(int n, int sides);
 void far DamageInventory(int slot, int damage, int type, int a, int b);
-struct Object far * far WhatsInSlot(int slot);
+struct Object far * far AskInventory(int slot);
 int far skill_check(int value, int target);
 void far fill_FB(int colour);
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
@@ -478,7 +478,7 @@ int far frp_check(int attacker, int defender)
     result = skill_check(askill + hitangle, cr->defence);
     slot = 8 - player->hand;
     if (PoisonWeap) {
-        weap = WhatsInSlot(slot);
+        weap = AskInventory(slot);
         if (is_sharp(weap) && cr->blood)
             damage += damage * (player->skills[9] + 30) / 40;
     }
@@ -629,7 +629,7 @@ char far do_miss(int hit)
         else
             weapon = 1;
         if (hitobj == 1) {
-            armour = WhatsInSlot(slot = hitloc + 1 & 3);
+            armour = AskInventory(slot = hitloc + 1 & 3);
             item = OBJ_ITEM(armour);
             if (armour == 0)
                 victim = 0;
@@ -701,7 +701,7 @@ int far GetPlayerWeapon(unsigned char **wd, struct Object far **weap)
     register int item;
 
     *wd = 0;
-    *weap = WhatsInSlot(8 - player->hand);
+    *weap = AskInventory(8 - player->hand);
     if (*weap != 0) {
         if (((item = OBJ_ITEM(*weap)) >> 4) == 1) {
             if (Missile[item & 0xF].ammo >= 0 && Missile[item & 0xF].ammo < 0x10) {

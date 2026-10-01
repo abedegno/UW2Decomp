@@ -15,8 +15,8 @@ extern unsigned far EmsBuff;
 extern unsigned char far grs_3dinf[];
 void far seg042_35ED_12B(void);
 void far seg013_1D3C_E4(int a, int b, int c);
-int far ReadFileToAddress(int fd, void far *buf, unsigned n);
-void far LoadDATFile(char *name, void far *buf, unsigned n);
+int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
+void far bltfromdrive(char *name, void far *buf, unsigned n);
 void far map_crit_pages(void);
 
 unsigned char far preload_cr(unsigned char load_map)
@@ -30,16 +30,16 @@ unsigned char far preload_cr(unsigned char load_map)
         CmaptoPg[i] = 0xFF;
     }
     if ((fd = open("CRIT\\as.an", 0x8001)) < 0) return 0;
-    ReadFileToAddress(fd, grs_3dinf, 0x80);
+    intoFarBuffer_ovr167_5DA(fd, grs_3dinf, 0x80);
     close(fd);
     if ((fd = open("CRIT\\cr.an", 0x8001)) < 0) return 0;
     map_crit_pages();
-    ReadFileToAddress(fd, MK_FP(EmsBuff + 0xC00, 0), 0x4000);
+    intoFarBuffer_ovr167_5DA(fd, MK_FP(EmsBuff + 0xC00, 0), 0x4000);
     close(fd);
     seg042_35ED_12B();
     if (!load_map) return 1;
     if ((fd = open("CRIT\\pg.mp", 0x8001)) < 0) return 0;
-    ReadFileToAddress(fd, CmapFrm, 0x100);
+    intoFarBuffer_ovr167_5DA(fd, CmapFrm, 0x100);
     close(fd);
     return 1;
 }
@@ -83,7 +83,7 @@ void far PreLoadCritPages(void)
                 name[strlen(name) - 1] = j + '0';
                 name[strlen(name) - 5] = (cr >> 6) + '0';
                 name[strlen(name) - 4] = ((cr >> 3) & 7) + '0';
-                LoadDATFile(name, MK_FP(EmsBuff, 0), 0x7FFF);
+                bltfromdrive(name, MK_FP(EmsBuff, 0), 0x7FFF);
             }
         }
     }

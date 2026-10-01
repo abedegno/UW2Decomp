@@ -1,0 +1,9 @@
+# segment seg021_22FD_0 base 0x23D00 size 0x147 org 0x0
+# cname: as in targets/seg021_22FD.tsv; SEG021 split at +0..+147
+seg021_22FD_0	seg021_22FD_0	0x0	0x17
+seg021_22FD_17	seg021_22FD_17	0x17	0x4E
+seg021_22FD_65	seg021_22FD_65	0x65	0x3C
+seg021_22FD_A1	MaybePaletteCycling_seg021_22FD_A1	0xA1	0x48
+seg021_22FD_E9	seg021_22FD_E9	0xE9	0x29
+seg021_22FD_112	seg021_22FD_112	0x112	0x9
+seg021_22FD_11B	seg021_22FD_11B	0x11B	0x2C

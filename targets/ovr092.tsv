@@ -1,9 +1,9 @@
 # segment ovr092 base 0x717F0 size 0x2C org 0x0
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
-ovr092_0	ovr092_0	0x0	0x5
+ReturnFar_ovr092_0	ovr092_0	0x0	0x5
 ovr092_5	ovr092_5	0x5	0xE
 ovr092_13	ovr092_13	0x13	0x5
-ovr092_18	ovr092_18	0x18	0x5
+Nop_ovr092_18	ovr092_18	0x18	0x5
 ovr092_1D	ovr092_1D	0x1D	0x5
-ovr092_22	ovr092_22	0x22	0x5
+DoNothing_ovr092_22	ovr092_22	0x22	0x5
 ReturnFar_ovr092_27	ReturnFar_ovr092_27	0x27	0x5

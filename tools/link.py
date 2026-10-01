@@ -11,12 +11,13 @@ source without disturbing the matched build).
    object is missing or older, since extract.py compares its segments with the EXE.
 2. C0UW2.ASM is Turbo C++'s own TC/C0.ASM with the changes UW2's startup code shows (see
    c0_source), assembled as BUILD-C0.BAT does for the medium model.
-3. The objects are copied to build/LINK/obj; an overlay's copy changes only in the order it
-   lists its publics (see patch_object). Nothing else is adjusted: a source whose names,
-   statics, alignment or segment references disagree with the EXE (extract.py reports them)
-   stops the link until it is corrected.
+3. The objects are copied to build/LINK/obj as they are. Nothing is adjusted: a source whose
+   names, statics, alignment or segment references disagree with the EXE (extract.py reports
+   them), or an overlay whose publics are listed out of the EXE's stub order (see
+   stub_order_wrong), stops the link until it is corrected.
 4. In DOS: the date is set to 12 May 1993 (TLINK records it), TASM assembles the generated
-   modules, TLIB puts seg003, seg004, seg045 and the second library's data into UWLIB.LIB,
+   modules, TLIB puts the second library's modules (seg003's, seg004's, seg021's but its
+   first, and seg045) into UWLIB.LIB in the manifest's order,
    and TLINK links from LINK.RSP:
 
      TLINK /c /m /s XORDER C0UW2 <resident objects> /o <overlay objects> /o-,
@@ -57,7 +58,7 @@ def c0_source():
     sub("_FARDATA\tSEGMENT PARA PUBLIC 'FAR_DATA'", "_FARDATA\tSEGMENT WORD PUBLIC 'FAR_DATA'")
     return s.replace('\n', '\r\n')
 
-# ---- patching copies of objects ------------------------------------------------------
+# ---- checking objects --------------------------------------------------------------
 def _records(d):
     p = 0; out = []
     while p + 3 <= len(d):
@@ -69,42 +70,23 @@ def _records(d):
 def _idx(b, i):
     return ((b[i] & 0x7F) << 8 | b[i + 1], i + 2) if b[i] & 0x80 else (b[i], i + 1)
 
-def patch_object(d, order):
-    """A copy of object d with its code segment's publics listed in the order TLINK should
-    number their overlay stub entries (it numbers them from the last listed to the first).
+def stub_order_wrong(d, order):
+    """True unless object d lists the publics in order (the EXE's overlay stub order, entry 0
+    first) from last to first: TLINK numbers stub entries from the last public listed.
 
     Turbo C lists a file's publics in descending order of the key tools/bssorder.py computes
-    from each name, names with equal keys in the reverse of the order they were first seen;
-    so the EXE's stub order is a constraint on the names. Where it is not met the file has
-    provisional names whose keys sort differently from the original ones (ties can be put
-    right with a prototype; see OVR138.C), and only renaming those functions to names chosen
-    for their keys would make the copy unnecessary."""
-    recs = _records(d)
-    if order:
-        rank = {n: k for k, n in enumerate(order)}; first = None; ents = []; hdr = None; kept = []
-        for r in recs:
-            t, b = r
-            if t in (0x90, 0x91):
-                gi, i = _idx(b, 0); si, i = _idx(b, i)
-                names = []; j = i
-                while j < len(b):
-                    l = b[j]; nm = b[j + 1:j + 1 + l].decode('latin1'); k = j + 1 + l + 2; _, k = _idx(b, k)
-                    names.append((nm, b[j:k])); j = k
-                if names and all(nm in rank for nm, _ in names):
-                    ents += names; hdr = b[:i]
-                    if first is None: first = len(kept); kept.append(None)
-                    continue
-            kept.append(r)
-        if first is not None:
-            ents.sort(key=lambda e: -rank[e[0]])      # TLINK numbers them last to first
-            kept[first:first + 1] = [[0x90, bytearray(hdr) + b''.join(raw for _, raw in ents[k:k + 32])]
-                                     for k in range(0, len(ents), 32)]
-            recs = kept
-    out = bytearray()
-    for t, b in recs:
-        rec = bytes([t, (len(b) + 1) & 0xFF, (len(b) + 1) >> 8]) + bytes(b)
-        out += rec + bytes([(-sum(rec)) & 0xFF])
-    return bytes(out)
+    from each name, names with equal keys in the reverse of the order they were first seen
+    (a prototype counts; see OVR108.C); so the EXE's stub order is a constraint on the names.
+    A file that breaks it has a name whose key sorts differently from the original's."""
+    want = set(order); listed = []
+    for t, b in _records(d):
+        if t in (0x90, 0x91):
+            gi, i = _idx(b, 0); si, i = _idx(b, i)
+            if si == 0: i += 2
+            while i < len(b):
+                l = b[i]; nm = b[i + 1:i + 1 + l].decode('latin1'); i += 1 + l + 2; _, i = _idx(b, i)
+                if nm in want: listed.append(nm)
+    return listed != list(reversed(order))
 
 # what extract.py reports that the link used to patch into copies of the objects, and now
 # leaves to the sources: each is a defect in one
@@ -160,10 +142,18 @@ def main():
     for k, p in man['objects'].items():
         if k in man['resident'] or k in man['overlays'] or k in man['late']:
             d = open(override.get(k, os.path.join(root, p)), 'rb').read()
-            if man['stuborder'].get(k): d = patch_object(d, man['stuborder'][k])
+            if man['stuborder'].get(k) and stub_order_wrong(d, man['stuborder'][k]):
+                bad.append(f'{k}: publics listed out of the EXE\'s overlay stub order: a name whose '
+                           'tools/bssorder.py key sorts differently from the original\'s')
             open(os.path.join(objdir, k + '.OBJ'), 'wb').write(d)
             files.append(os.path.join(objdir, k + '.OBJ'))
-    batch.append('TLIB UWLIB ' + ' '.join('+' + k for k in man['late']))
+    if bad: sys.exit('sources to correct before linking:\n  ' + '\n  '.join(bad))
+    # through a response file: the module list is longer than a DOS command line
+    late = ['+' + k for k in man['late']]
+    open(os.path.join(LINKDIR, 'LIB.RSP'), 'w', newline='').write(
+        ''.join(' '.join(late[i:i + 8]) + (' &\r\n' if i + 8 < len(late) else '\r\n') for i in range(0, len(late), 8)))
+    files.append(os.path.join(LINKDIR, 'LIB.RSP'))
+    batch.append('TLIB UWLIB @LIB.RSP')
     objs = man['resident'] + ['/o'] + man['overlays'] + ['/o-']
     lines = []
     for i in range(0, len(objs), 8):

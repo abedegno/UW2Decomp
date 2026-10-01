@@ -1,0 +1,3 @@
+# segment seg003_0272_3686 base 0x6AD6 size 0xD5 org 0x3686
+# cname: as in targets/seg003_0272.tsv; SEG003 split at +3686..+375B
+seg003_0272_368E	seg003_0272_368E	0x8	0xCD

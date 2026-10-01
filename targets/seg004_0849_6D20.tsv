@@ -1,0 +1,16 @@
+# segment seg004_0849_6D20 base 0xFEE0 size 0x1434 org 0x6D20
+# cname: as in targets/seg004_0849.tsv; SEG004 split at +6D20..+8154
+do_fetchmap	seg004_0849_7D3E	0x101E	0x66
+do_settmobj	seg004_0849_7DA4	0x1084	0x6F
+do_uwobj	seg004_0849_7E13	0x10F3	0x7C
+do_uwcrit	seg004_0849_7E8F	0x116F	0x4F
+seg004_0849_7EDE	seg004_0849_7EDE	0x11BE	0x2E
+seg004_0849_7F0C	seg004_0849_7F0C	0x11EC	0x6
+update_cache	update_cache	0x11F2	0x1F
+unload_cpg	seg004_0849_7F31	0x1211	0x5C
+load_cpg	seg004_0849_7F8D	0x126D	0xCE
+lcpg_pghere	seg004_0849_805B	0x133B	0x44
+parse_cpg	seg004_0849_809F	0x137F	0x57
+do_setbmcol	seg004_0849_80F6	0x13D6	0x14
+do_mouseq	seg004_0849_810A	0x13EA	0xB
+do_uwcolv	seg004_0849_8115	0x13F5	0x3F

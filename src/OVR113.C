@@ -1,5 +1,10 @@
 /* target: ovr113 */
 /* opts: -mm -1 -G -O -Y -d */
+/* SCD event handling. FM Towns has 31 functions in this file and DOS 31; aligned in order
+   they agree in body where checked (ev_trapvar_ calls set_numbered_variable with the row's
+   words at +5, +7 and +8 as SCDOperationOnQuestOrVariables did), and every name's
+   tools/bssorder.py key puts it where the EXE's overlay stub order needs it, so all are
+   the FM Towns names. */
 #include <dos.h>
 #include <stdlib.h>
 
@@ -80,7 +85,7 @@ void far gronk_critid(int params, unsigned char all, int row,
     }
 }
 
-char far SetAL_ToZero_ovr113_18F(void) { return 0; }
+char far ev_donothing(void) { return 0; }
 
 char far gronkify_change_goal(struct Object far *npc, char *row)
 {
@@ -88,7 +93,7 @@ char far gronkify_change_goal(struct Object far *npc, char *row)
     return 0;
 }
 
-char far SCDSetGoalAndGTARG_ovr113_1BA(char far *row)
+char far ev_change_goal(char far *row)
 {
     char copy[16];
     movedata(FP_SEG(row), FP_OFF(row), FP_SEG(copy), FP_OFF(copy), 16);
@@ -149,7 +154,7 @@ char far gronkify_teleport(struct Object far *npc, unsigned char *row)
     return 0;
 }
 
-char far SCDRunCodeOnNPCSToMoveTile_ovr113_3AB(char far *row)
+char far ev_teleport(char far *row)
 {
     char copy[16];
     movedata(FP_SEG(row), FP_OFF(row), FP_SEG(copy), FP_OFF(copy), 16);
@@ -173,7 +178,7 @@ extern struct Object far *talking_to;
 extern unsigned char far *SCD_dseg_67d6_8634;
 void far instant_kill(struct Object far *npc);
 
-char far SCDKillCNPC_ovr113_433(struct Object far *npc, unsigned char *row)
+char far gronkify_slay(struct Object far *npc, unsigned char *row)
 {
     if (!row[7] && npc == talking_to) {
         if (row[8] > 0 && SCD_dseg_67d6_8634[6] == 15 && !row[3])
@@ -184,16 +189,16 @@ char far SCDKillCNPC_ovr113_433(struct Object far *npc, unsigned char *row)
     return 1;
 }
 
-char far SCDRunCodeOnNPCAndKill_ovr113_48E(char far *row)
+char far ev_kill(char far *row)
 {
     char copy[18];
     movedata(FP_SEG(row), FP_OFF(row), FP_SEG(copy), FP_OFF(copy), 18);
     gronk_critid(*(unsigned *)(copy + 5), 1, (int)copy,
-                 (char (far *)(struct Object far *, int))SCDKillCNPC_ovr113_433);
+                 (char (far *)(struct Object far *, int))gronkify_slay);
     return 0;
 }
 
-char far SCDRemoveObjectFromTile_ovr113_4C3(char far *row)
+char far ev_remove(char far *row)
 {
     char copy[16];
     movedata(FP_SEG(row), FP_OFF(row), FP_SEG(copy), FP_OFF(copy), 16);
@@ -202,7 +207,7 @@ char far SCDRemoveObjectFromTile_ovr113_4C3(char far *row)
     return 0;
 }
 
-char far SCDChangeQuest_ovr113_4F8(unsigned char far *row)
+char far ev_set_qbit(unsigned char far *row)
 {
     unsigned char far *params = row;
     *(unsigned long *)((char *)player + 0x66 + (((unsigned)params[5] >> 2) << 2)) =
@@ -237,7 +242,7 @@ char far ev_trigger(unsigned char far *row)
     return 0;
 }
 
-char far SCDChangeNPCHeading_ovr113_666(struct Object far *npc, unsigned char *row)
+char far gronkify_nystul(struct Object far *npc, unsigned char *row)
 {
     register unsigned char *p;
     register unsigned char *r = row;
@@ -250,18 +255,18 @@ char far SCDChangeNPCHeading_ovr113_666(struct Object far *npc, unsigned char *r
     return 0;
 }
 
-char far SCDChangeHeading_ovr113_6AC(char far *row)
+char far ev_nystul_hack(char far *row)
 {
     struct EventRow copy;
     unsigned char *p;
     copy = *(struct EventRow far *)row;
     p = copy.b + 6;
     gronk_critid(*(unsigned *)p, 1, (int)copy.b,
-                 (char (far *)(struct Object far *, int))SCDChangeNPCHeading_ovr113_666);
+                 (char (far *)(struct Object far *, int))gronkify_nystul);
     return 0;
 }
 
-char far SCDMoveNPCToTileRange_ovr113_6E5(struct Object far *npc, unsigned char *row)
+char far gronkify_gotha(struct Object far *npc, unsigned char *row)
 {
     unsigned char *eventRow = row;
     unsigned char *p = eventRow + 6;
@@ -278,20 +283,20 @@ char far SCDMoveNPCToTileRange_ovr113_6E5(struct Object far *npc, unsigned char 
     return 0;
 }
 
-char far SCDMoveNPCToTileRange_ovr113_775(char far *row)
+char far ev_gotha_hack(char far *row)
 {
     struct EventRow copy;
     unsigned char *p;
     copy = *(struct EventRow far *)row;
     p = copy.b + 6;
     gronk_critid(*(unsigned *)p, 1, (int)copy.b,
-                 (char (far *)(struct Object far *, int))SCDMoveNPCToTileRange_ovr113_6E5);
+                 (char (far *)(struct Object far *, int))gronkify_gotha);
     return 0;
 }
 
 void far set_numbered_variable(int left, int op, int right);
 
-char far SCDVariableOperation_ovr113_7AE(struct Object far *npc, unsigned char *row)
+char far gronkify_garg(struct Object far *npc, unsigned char *row)
 {
     register unsigned char *p;
     register unsigned char *r = row;
@@ -303,20 +308,20 @@ char far SCDVariableOperation_ovr113_7AE(struct Object far *npc, unsigned char *
     return 0;
 }
 
-char far SCDRunVariableOperationOnNPCs_ovr113_800(char far *row)
+char far ev_garg_hack(char far *row)
 {
     struct EventRow copy;
     unsigned char *p;
     copy = *(struct EventRow far *)row;
     p = copy.b + 6;
     gronk_critid(*(unsigned *)p, 1, (int)copy.b,
-                 (char (far *)(struct Object far *, int))SCDVariableOperation_ovr113_7AE);
+                 (char (far *)(struct Object far *, int))gronkify_garg);
     return 0;
 }
 
 extern int PlayerLevel;
 
-char far SCDMoveNPCToTileRandom_ovr113_839(struct Object far *npc, unsigned char *row)
+char far gronkify_soldier(struct Object far *npc, unsigned char *row)
 {
     unsigned char *eventRow = row;
     int x, y, max;
@@ -344,14 +349,14 @@ end:
     return 0;
 }
 
-char far SCDMoveNPCToRandom_ovr113_961(char far *row)
+char far ev_soldier_hack(char far *row)
 {
     struct EventRow copy;
     unsigned char *p;
     copy = *(struct EventRow far *)row;
     p = copy.b + 6;
     gronk_critid(*(unsigned *)(p + 2), 1, (int)copy.b,
-                 (char (far *)(struct Object far *, int))SCDMoveNPCToTileRandom_ovr113_839);
+                 (char (far *)(struct Object far *, int))gronkify_soldier);
     return 0;
 }
 
@@ -379,7 +384,7 @@ char far ev_freeze_hack(unsigned char far *row)
 }
 
 void far DoClosingDoors(unsigned char x);
-char far SCDFindAndCloseDoor_ovr113_A3A(unsigned char far *row)
+char far ev_door_hack(unsigned char far *row)
 {
     unsigned char far *params = row;
     unsigned char value[2];
@@ -389,13 +394,13 @@ char far SCDFindAndCloseDoor_ovr113_A3A(unsigned char far *row)
 }
 
 extern char (far *NestedSCDEventCodeJumps_dseg_67d6_1344[])(unsigned char far *);
-void far CallNestedSCDCodeJumps_ovr113_A62(unsigned char far *row)
+void far ev_hack(unsigned char far *row)
 {
     unsigned char far *params = row;
     NestedSCDEventCodeJumps_dseg_67d6_1344[params[5]](row);
 }
 
-char far SetAttitude_ovr113_A91(struct Object far *npc, int attitude)
+char far gronkify_attitude(struct Object far *npc, int attitude)
 {
     npc->attitude_word = npc->attitude_word & 0x3FFF | ((attitude & 3) << 14);
     if (attitude)
@@ -403,12 +408,12 @@ char far SetAttitude_ovr113_A91(struct Object far *npc, int attitude)
     return 0;
 }
 
-char far SCDSetAttitude_ovr113_ABD(char far *row)
+char far ev_attitude(char far *row)
 {
     char copy[16];
     movedata(FP_SEG(row), FP_OFF(row), FP_SEG(copy), FP_OFF(copy), 16);
     gronk_critid(*(unsigned *)(copy + 5), 1, (unsigned char)copy[7],
-                 (char (far *)(struct Object far *, int))SetAttitude_ovr113_A91);
+                 (char (far *)(struct Object far *, int))gronkify_attitude);
     return 0;
 }
 
@@ -445,7 +450,7 @@ char far ev_checkvar(unsigned char far *row)
     return 0;
 }
 
-char far SCDOperationOnQuestOrVariables_ovr113_BD8(unsigned char far *row)
+char far ev_trapvar(unsigned char far *row)
 {
     unsigned char far *params = row;
     set_numbered_variable(
@@ -479,14 +484,14 @@ char far Sched_DoEvent(unsigned char far *row)
    1394): the schedule event handlers, by the event row's sub-code and code. */
 typedef char (far *SCDEventFn)(unsigned char far *);
 SCDEventFn NestedSCDEventCodeJumps_dseg_67d6_1344[8] = {
-    (SCDEventFn)SetAL_ToZero_ovr113_18F, (SCDEventFn)SCDRunVariableOperationOnNPCs_ovr113_800,
-    (SCDEventFn)SCDMoveNPCToRandom_ovr113_961, ev_freeze_hack, SCDFindAndCloseDoor_ovr113_A3A,
-    (SCDEventFn)SetAL_ToZero_ovr113_18F, (SCDEventFn)SCDChangeHeading_ovr113_6AC,
-    (SCDEventFn)SCDMoveNPCToTileRange_ovr113_775 };
+    (SCDEventFn)ev_donothing, (SCDEventFn)ev_garg_hack,
+    (SCDEventFn)ev_soldier_hack, ev_freeze_hack, ev_door_hack,
+    (SCDEventFn)ev_donothing, (SCDEventFn)ev_nystul_hack,
+    (SCDEventFn)ev_gotha_hack };
 SCDEventFn SCDEventCodeJumps_dseg_67d6_1364[12] = {
-    (SCDEventFn)SetAL_ToZero_ovr113_18F, (SCDEventFn)SCDSetGoalAndGTARG_ovr113_1BA,
-    (SCDEventFn)SCDRunCodeOnNPCSToMoveTile_ovr113_3AB, (SCDEventFn)SCDRunCodeOnNPCAndKill_ovr113_48E,
-    SCDChangeQuest_ovr113_4F8, ev_trigger, (SCDEventFn)SetAL_ToZero_ovr113_18F,
-    (SCDEventFn)CallNestedSCDCodeJumps_ovr113_A62, (SCDEventFn)SCDSetAttitude_ovr113_ABD,
-    SCDOperationOnQuestOrVariables_ovr113_BD8, ev_checkvar,
-    (SCDEventFn)SCDRemoveObjectFromTile_ovr113_4C3 };
+    (SCDEventFn)ev_donothing, (SCDEventFn)ev_change_goal,
+    (SCDEventFn)ev_teleport, (SCDEventFn)ev_kill,
+    ev_set_qbit, ev_trigger, (SCDEventFn)ev_donothing,
+    (SCDEventFn)ev_hack, (SCDEventFn)ev_attitude,
+    ev_trapvar, ev_checkvar,
+    (SCDEventFn)ev_remove };

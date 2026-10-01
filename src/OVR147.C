@@ -8,7 +8,9 @@
    adr_opbtn and move_opbtn (IDA ovr147_0 and ovr147_22) are the FM Towns functions just
    before do_intro_scene, and gronk_gr's callbacks for "opbtn" in both builds.
    UnknownAutomapLoop_ovr147_A56 and its callback have no FM Towns counterpart and no
-   caller in DOS, so they keep their IDA names. */
+   caller in DOS. The loop keeps its IDA name; the callback (IDA's
+   UnknownCallBackFunctionForAutomap_ovr147_A73) has a provisional name chosen so that its
+   tools/bssorder.py key puts it in the EXE's overlay stub order. */
 
 #include <dos.h>
 #include <stdlib.h>
@@ -88,7 +90,7 @@ void far automap_area(int x0, int y0, int x1, int y1, int *arg, char (far *fn)()
 
 int far parse_start_input(int n, struct Button far *b, int text, int sel);
 int far do_journey(void);
-char far UnknownCallBackFunctionForAutomap_ovr147_A73(int x, int y);
+char far Region_ovr147_A73(int x, int y);
 
 /* gronk_gr's callbacks while loading the menu buttons: where to put the next picture, and
    recording it. Pictures alternate: a button's normal picture, then its selected one. */
@@ -433,10 +435,10 @@ int far do_journey(void)
 
 void far UnknownAutomapLoop_ovr147_A56(void)
 {
-    automap_area(0x12, 0x1E, 0x2C, 0x34, 0, UnknownCallBackFunctionForAutomap_ovr147_A73);
+    automap_area(0x12, 0x1E, 0x2C, 0x34, 0, Region_ovr147_A73);
 }
 
-char far UnknownCallBackFunctionForAutomap_ovr147_A73(register int x, register int y)
+char far Region_ovr147_A73(register int x, register int y)
 {
     if (x == 0x23)
         return y > 0x21;

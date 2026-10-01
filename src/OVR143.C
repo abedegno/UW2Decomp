@@ -496,9 +496,10 @@ void far crystal_ball(struct Object far *obj, int x, int y)
     FixPlayerEquips();
 }
 
-/* Spins the view into the moongate at tile (32, 32). Not in the FM Towns build, so the
-   name is IDA's. */
-void far LaunchPlayerAtMoongate_ovr143_E09(void)
+/* Spins the view into the moongate at tile (32, 32). Not in the FM Towns build; the name is
+   provisional (IDA's LaunchPlayerAtMoongate_ovr143_E09), chosen so that its tools/bssorder.py
+   key puts it in the EXE's overlay stub order. */
+void far Vortex_ovr143_E09(void)
 {
     long xd, yd;
     int x, y;
@@ -533,8 +534,9 @@ void far chg_plys(int *val, int dir, int limit)
     }
 }
 
-/* Rolls the view. Not in the FM Towns build, so the name is IDA's. */
-void far ChangeCameraRoll_ovr143_F58(int step)
+/* Rolls the view. Not in the FM Towns build; the name is provisional (IDA's
+   ChangeCameraRoll_ovr143_F58), chosen so that its key puts it in the EXE's stub order. */
+void far RollView_ovr143_F58(int step)
 {
     if (MoveCamera)
         chg_plys(&camang[2], step, 0);

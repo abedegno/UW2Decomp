@@ -52,7 +52,7 @@ prison_alarm_check	PrisonTowerQuest60_ovr110_395D	0x395D	0xCB
 genocide	LothIsDeadKillHisLiches_ovr110_3A28	0x3A28	0x97
 instant_kill	KillCritter_ovr110_3ABF	0x3ABF	0xFD
 is_my_race	CheckIfMatchingRace_ovr110_3BBC	0x3BBC	0x7E
-RemoveBishop_ovr110_3C3A	RemoveBishop_ovr110_3C3A	0x3C3A	0x19
+PuntBishop_ovr110_3C3A	RemoveBishop_ovr110_3C3A	0x3C3A	0x19
 fire_trigger_at	TriggerTrapInTile_ovr110_3C53	0x3C53	0x87
 transform_creature	TransformTalker_ovr110_3CDA	0x3CDA	0x131
 black_gem_trip	WorldGemTravel_ovr110_3E0B	0x3E0B	0x143

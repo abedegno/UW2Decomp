@@ -1,0 +1,18 @@
+# segment seg021_22FD_C20 base 0x24920 size 0x451 org 0xC20
+# cname: as in targets/seg021_22FD.tsv; SEG021 split at +C20..+1071
+cZoom	seg021_22FD_C34	0x14	0x4A
+cFBtoScreen	seg021_22FD_C7E	0x5E	0x6
+cFillFB	seg021_22FD_C84	0x64	0x33
+CallbackFunctionSleepRelated_seg	CallbackFunctionSleepRelated_seg021_22FD_CB7	0x97	0x33
+Callback_seg021_22FD_CEA	Callback_seg021_22FD_CEA	0xCA	0x33
+cPlaceFB	seg021_22FD_D1D	0xFD	0x5D
+cRender	seg021_22FD_D7A	0x15A	0xA0
+cInit3d	seg021_22FD_E1A	0x1FA	0x49
+cFstSinCos	GetVectorForDirection_seg021_22FD_E63	0x243	0x4B
+cSinCos	SomethingProjectileHeading_seg021_22FD_EAE	0x28E	0x4D
+cAtan2	MaybeGetTangent_seg021_22FD_EFB	0x2DB	0x44
+cSqRt	GetSquareRoot_seg021_22FD_F3F	0x31F	0x44
+cFrmtoRaw	cFrmtoRaw	0x363	0x5A
+seg021_22FD_FDD	seg021_22FD_FDD	0x3BD	0x27
+seg021_22FD_1004	seg021_22FD_1004	0x3E4	0x27
+seg021_22FD_102B	seg021_22FD_102B	0x40B	0x46

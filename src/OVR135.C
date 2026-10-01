@@ -100,7 +100,7 @@ void far Sched_SetBuf(int ofs, int seg);
 void far Sched_Load(int how);
 void far Sched_WrapTime(int time, int wrap, int how);
 void far Sched_Save(int how);
-struct Object far * far WhatsInSlot(int slot);
+struct Object far * far AskInventory(int slot);
 void far RedisplayInvSlot(int slot);
 int far rollem(int dice, int sides);
 void far fill_FB(int colour);
@@ -238,7 +238,7 @@ char far DegradeLights(int amount, unsigned char counter)
     {
         for (i = 0; i < 4; i++)
         {
-            if ((obj = WhatsInSlot(ValidLightSlots[i])) == 0)
+            if ((obj = AskInventory(ValidLightSlots[i])) == 0)
                 continue;
             light = obj->id & 0x0F;
             if ((obj->id & 0x1F0) >> 4 != 9 || light < 4 || light >= 8)

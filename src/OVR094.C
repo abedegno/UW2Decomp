@@ -252,8 +252,9 @@ void far automap_area(int x0, int y0, int x1, int y1, int *arg,
     }
 }
 
-/* DOS only: automap_area's callback for the whole level. */
-char far SetALTo1_ovr094_2A1(int x, int y, int *arg)
+/* DOS only: automap_area's callback for the whole level; the name is provisional (IDA's SetALTo1_ovr094_2A1), chosen so that its tools/bssorder.py key
+   puts it in the EXE's overlay stub order. */
+char far ReturnOne_ovr094_2A1(int x, int y, int *arg)
 {
     return 1;
 }
@@ -261,7 +262,7 @@ char far SetALTo1_ovr094_2A1(int x, int y, int *arg)
 /* DOS only: map the whole level and draw it. */
 void far ovr094_2A8(void)
 {
-    automap_area(1, 1, 0x3F, 0x3F, 0, SetALTo1_ovr094_2A1);
+    automap_area(1, 1, 0x3F, 0x3F, 0, ReturnOne_ovr094_2A1);
     mouse_hide();
     ShowDungeonMap();
     mouse_show();
@@ -490,8 +491,9 @@ void far DoDoorTile(int x, int y, register int px, register int py)
     }
 }
 
-/* DOS only, and nothing calls it: darken the pixel at one corner of a tile. */
-void far ovr094_9D2(int corner, int x, int y)
+/* DOS only, and nothing calls it: darken the pixel at one corner of a tile; the name is provisional (IDA's ovr094_9D2), chosen so that its tools/bssorder.py key
+   puts it in the EXE's overlay stub order. */
+void far CornerShade_ovr094_9D2(int corner, int x, int y)
 {
     register int px;
     register int py;

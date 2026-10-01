@@ -1,0 +1,10 @@
+# segment seg021_22FD_A30 base 0x24730 size 0x1C9 org 0xA30
+# cname: as in targets/seg021_22FD.tsv; SEG021 split at +A30..+BF9
+SquareRoot_seg021_22FD_A30	SquareRoot_seg021_22FD_A30	0x0	0x4
+sincos	sincos	0x4	0x4
+seg021_22FD_A38	HeadingLookupCalc_seg021_22FD_A38	0x8	0x31
+seg021_22FD_A69	LookupHeadingTable_seg021_22FD_A69	0x39	0xF
+SquareRoot_seg021_22FD_A78	SquareRoot_seg021_22FD_A78	0x48	0x100
+seg021_22FD_B78	seg021_22FD_B78	0x148	0x2A
+seg021_22FD_BA2	seg021_22FD_BA2	0x172	0x32
+MaybeTangent_seg021_22FD_BD4	MaybeTangent_seg021_22FD_BD4	0x1A4	0x25

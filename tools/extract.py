@@ -7,12 +7,14 @@ The modules hold game bytes, so they live under build/ and are never committed.
 
 What is extracted, and the evidence for each piece:
 
-- Code with no source: only the 15 zero bytes ending seg021's segment (XT021). Found by
+- Code with no source: none. Found by
   subtracting what the objects cover from the segment extents in the overlay manager's
   segment table (__SEGTABLE__: 0xAE entries of {paragraph, end, flags, start} that TLINK
   writes for every segment, in order). seg000 (SEG000.ASM), seg018 (SEG018.ASM), SetPnt at
   the start of seg019's segment (SETPNT.ASM) and the function ending seg043's segment
-  (SEG043B.C) used to be extracted here too; they now have sources.
+  (SEG043B.C) used to be extracted here too; they now have sources. Zero bytes between the
+  modules of seg003 (one, to a word), seg004 and seg021 (to a paragraph), and the 15 ending
+  seg021's segment, are TLINK's alignment padding, not extracted.
 - The 29 far data segments between C0's _FARDATA and the overlay manager's data (segment table
   entries 50 to 78), each with the alignment its start implies: para when it starts on a fresh
   paragraph after a gap, byte when it starts exactly where the previous one ended, word when
@@ -27,16 +29,17 @@ What is extracted, and the evidence for each piece:
   that C file (XFnnn), so that TLINK sees them first; XFAR, after the resident objects,
   holds the bytes of the ones taken from the EXE (so their relocations stay where they
   were in the relocation table) and declares the rest.
-  Still taken from the EXE: entries 51, 58 and 71, the graphics and 3D modules' data.
+  Entries 51, 58 and 71 (the graphics and 3D modules' data) are filled by those modules'
+  sources from their first relocation onwards (pieces placed by '# far' lines in their
+  target tables); XFAR holds the EXE's bytes before the first piece.
 - DGROUP gaps: _DATA bytes and _BSS space between the objects' own data, as verify.py places
   it (or, for a file whose own code never refers to its data, as its publics' addresses in
   symbols.tsv and the other objects place it). A gap shrinks or disappears by itself as
   sources define what is in it. What is left are bytes no source owns yet, mostly never
   referenced at all. Each gap becomes a byte-aligned module linked just before the next
   object whose data follows it, so TLINK lays it where the EXE has it. The second library's
-  _DATA (keyboard,
-  mouse, palette and font globals, after the C library's) is XLIBD, which link.py puts into
-  that library so that TLINK places it after the C library's data.
+  _DATA (keyboard, mouse, palette and font globals, after the C library's) comes from its
+  modules' sources; XLIBD, put last into that library, would hold any end of it they do not.
 - Empty overlays (ovr098, ovr100, ...): their stubs have no entries and codesize 0, so the
   original had modules with an empty code segment in the overlay list.
 - XORDER and XSEG020 declare empty code segments early, because TLINK places
@@ -266,17 +269,39 @@ for src in sorted(glob.glob(os.path.join(root, 'src', '*.ASM'))):
 # its bytes. It must be a whole entry of the segment table, and the files must be linked in
 # the order of their entries, since TLINK places each segment where it first sees it.
 FAROWN = {}      # segment table entry -> stem
+FARPIECES = {}   # segment table entry -> [(file lo, file hi, stem)]: pieces assembly modules contribute
 for stem, ob in OBJS.items():
     o = ob['o']
     for sn, para, off, ln in ob['far']:
         hits = [s[0] for s in SEGS[50:79] if s[1] == para and s[2] == file_of(para, off) and s[3] is not None and s[3] - s[2] == ln]
-        if len(hits) != 1: sys.exit(f'{stem}: its far segment {sn} ({ln} bytes at {para:04X}:{off:04X}) is not an entry of the segment table')
+        if len(hits) != 1:
+            # a piece of a segment that several modules contribute to (the graphics and 3D
+            # modules' data, seg_370D, seg052_519C and dseg062_62a6)
+            hits = [s[0] for s in SEGS[50:79] if s[1] == para and s[3] is not None and s[2] <= file_of(para, off) and file_of(para, off) + ln <= s[3]]
+            if len(hits) != 1: sys.exit(f'{stem}: its far segment {sn} ({ln} bytes at {para:04X}:{off:04X}) is not inside an entry of the segment table')
+            i = hits[0]
+            if i in FARSRC or i in FAROWN: sys.exit(f'{stem}: FD{i} is also defined by {FARSRC.get(i) or FAROWN[i]}')
+            FARPIECES.setdefault(i, []).append((file_of(para, off), file_of(para, off) + ln, stem))
+            si = next(k for k in range(1, len(o['segs'])) if o['segs'][k][0] == sn)
+            for name, (psi, poff) in o['pubs'].items():
+                if psi == si: define(('FAR', para, off + poff), name)
+            continue
         i = hits[0]
         if i in FARSRC or i in FAROWN: sys.exit(f'{stem}: FD{i} is also defined by {FARSRC.get(i) or FAROWN[i]}')
         FAROWN[i] = stem
         si = next(k for k in range(1, len(o['segs'])) if o['segs'][k][0] == sn)
         for name, (psi, poff) in o['pubs'].items():
             if psi == si: define(('FAR', para, off + poff), name)
+
+# The pieces of an entry must run without a gap to its end; the EXE's bytes before the first
+# one stay in XFAR (FARCUT: where they stop).
+FARCUT = {}
+for i, ps in FARPIECES.items():
+    ps.sort()
+    for (a, b, k), (c, d, k2) in zip(ps, ps[1:]):
+        if b != c: sys.exit(f'FD{i}: {k} ends at {b:X} but {k2} starts at {c:X}')
+    if ps[-1][1] != SEGS[i][3]: sys.exit(f'FD{i}: its last piece ({ps[-1][2]}) ends at {ps[-1][1]:X}, the segment at {SEGS[i][3]:X}')
+    FARCUT[i] = ps[0][0]
 
 # ---- references: name -> address ---------------------------------------------------------
 REFS = {}
@@ -335,7 +360,7 @@ for stem, ob in OBJS.items():
 # SEG018 (one relocation, its far call) and SETPNT (none, but it must declare seg019's segment
 # before XSEG020 declares seg020's) sit where XSEG018, the extracted module that held both, was;
 # SEG000 where its relocations put it; SEG043B, the end of seg043's segment, right after SEG043.
-RES = ['SEG%03d' % n for n in range(6, 17)] + ['XEMPTY18', 'SEG017', 'SEG018', 'SETPNT', 'XSEG020', 'SEG020', 'SEG000', 'SEG021',
+RES = ['SEG%03d' % n for n in range(6, 17)] + ['XEMPTY18', 'SEG017', 'SEG018', 'SETPNT', 'XSEG020', 'SEG020', 'SEG000', 'SEG021A',
        'SEG001', 'SEG002', 'SEG022'] + ['SEG%03d' % n for n in range(23, 33)] + ['SEG019'] + \
       ['SEG%03d' % n for n in range(33, 44)] + ['SEG043B', 'SEG044', 'XFAR']
 # SEG043B.C is the function ending seg043's segment, and its relocations show it was the last
@@ -343,7 +368,14 @@ RES = ['SEG%03d' % n for n in range(6, 17)] + ['XEMPTY18', 'SEG017', 'SEG018', '
 # once it is moved into SEG043.C and SEG043B.C removed, it simply drops out of the list.
 if 'SEG043B' not in OBJS: RES.remove('SEG043B')
 OVLNUMS = list(range(91, 168))
-LATE = ['SEG003', 'SEG004', 'SEG045']          # the second library, after the C library
+# The second library, after the C library, in the order of its modules' relocations (TLINK
+# takes a library's modules in library order): seg003, seg004 and seg021 are each several
+# modules (src/SEG003A.ASM .. SEG003N, SEG004A .. SEG004N, SEG021B .. SEG021Q; SEG021A, the
+# first module of seg021's segment, is in the resident list above). Modules with no
+# relocations sit next to their neighbours in the same segment.
+LATE = ['SEG021' + c for c in 'BCDEFGHIJKLM'] + ['SEG004' + c for c in 'ABCDE'] + ['SEG003A'] + \
+       ['SEG021' + c for c in 'NOPQ'] + ['SEG045'] + ['SEG004' + c for c in 'FGHIJKLM'] + \
+       ['SEG003' + c for c in 'BCD'] + ['SEG004N'] + ['SEG003' + c for c in 'EFGHIJKLMN']
 def ovl_module(n):
     for k, o in OBJS.items():
         if o['target'] == 'ovr%03d' % n: return k
@@ -369,6 +401,10 @@ for i, para, lo, hi, fl in SEGS[:48]:
     if i in (5, 6) or hi is None or hi <= lo: continue        # C0 and the C library: _TEXT
     for a, b in uncovered(lo, hi):
         if i in CODE_GAPS: GAPS.setdefault(i, []).append((a, b)); continue
+        # zero bytes before a paragraph (or one before a word) in seg003, seg004 and seg021: the
+        # linker's padding before the next module, or before a later empty contribution
+        if i in (3, 4, 23) and not any(exe[a:b]) and (b % 16 == 0 and b - a < 16 or b - a == 1 and b % 2 == 0):
+            continue
         # bytes after an object's code inside its own segment: a later contribution to it
         owner = [k for x, y, k in cover if y == a]
         if len(owner) != 1 or owner[0] in LATE: sys.exit(f'unexpected uncovered code {a:X}-{b:X} in segment {i}')
@@ -418,9 +454,25 @@ for i, pieces in GAPS.items():
     for a, b in pieces: RANGES.append((a, b, SEGS[i][1], CODE_GAPS[i][0]))
 for k, (i, a, b) in TAILS.items(): RANGES.append((a, b, SEGS[i][1], 'XT' + k[-3:]))
 for i, para, lo, hi, fl in FAR:
-    if hi is not None and hi > lo and i not in FARSRC and i not in FAROWN: RANGES.append((lo, hi, para, 'XFAR'))
+    if hi is not None and hi > lo and i not in FARSRC and i not in FAROWN and FARCUT.get(i, hi) > lo:
+        RANGES.append((lo, FARCUT.get(i, hi), para, 'XFAR'))
 for a, b, slot in DPIECES + BPIECES: RANGES.append((DS_FILE + a, DS_FILE + b, DS_PARA, dname(slot)))
-RANGES.append((DS_FILE + LIBDATA_START, DS_FILE + LIBDATA_END, DS_PARA, 'XLIBD'))
+# the second library's _DATA: what its modules' sources do not hold is XLIBD, linked last
+_lib = sorted((OBJS[k]['data'], OBJS[k]['data'] + OBJS[k]['datalen'], k) for k in LATE if k in OBJS and OBJS[k]['datalen'])
+for (a, b, k), (c, d, k2) in zip(_lib, _lib[1:]):
+    if c < b: sys.exit(f'second library: {k2}\'s _DATA at {c:X} overlaps {k}\'s ending at {b:X}')
+if [k for _, _, k in _lib] != [k for k in LATE if k in OBJS and OBJS[k]['datalen']]:
+    sys.exit('second library: its modules\' _DATA is not in their link order')
+LIBGAPS = []; _at = LIBDATA_START
+for a, b, k in _lib:
+    if a < LIBDATA_START or b > LIBDATA_END: sys.exit(f'{k}: its _DATA {a:X}..{b:X} is outside the second library\'s')
+    if a > _at: LIBGAPS.append((_at, a))
+    _at = b
+if _at < LIBDATA_END: LIBGAPS.append((_at, LIBDATA_END))
+if any(b != LIBDATA_END and _lib for a, b in LIBGAPS):
+    sys.exit('second library: _DATA no source holds lies between its modules\' (XLIBD only fills the end): ' +
+             ', '.join(f'DS:{a:X}..{b:X}' for a, b in LIBGAPS))
+for a, b in LIBGAPS: RANGES.append((DS_FILE + a, DS_FILE + b, DS_PARA, 'XLIBD'))
 
 def range_of(a):
     """The extracted range holding address a, if any."""
@@ -660,7 +712,8 @@ for i, para, lo, hi, fl in FAR:
     if i in FARSRC: m.lines.append(f'; {FARSRC[i]} fills this segment')
     else:
         if hi > lo: m.lines += seg_start_labels(m, para, i)
-        m.lines += body(m, lo, hi, para, False)
+        if i in FARPIECES: m.lines.append(f'; the rest of this segment comes from {", ".join(k for _, _, k in FARPIECES[i])}')
+        m.lines += body(m, lo, FARCUT.get(i, hi), para, False)
     m.lines.append(f'FD{i:02d} ends')
 # the far data sources follow XFAR, which declares their segments in the EXE's order
 RES[RES.index('XFAR') + 1:RES.index('XFAR') + 1] = sorted(FAROBJS)
@@ -689,7 +742,7 @@ after = {}; before = {}
 for slot, (dg, bg) in slots.items():
     dgroup_module(dname(slot), dg, bg)
     (after if slot[0] == 'after' else before)[slot[1]] = dname(slot)
-dgroup_module('XLIBD', [(LIBDATA_START, LIBDATA_END)], [])
+if LIBGAPS: dgroup_module('XLIBD', LIBGAPS, [])
 
 # empty overlays
 for n in OVLNUMS:
@@ -713,7 +766,7 @@ def expand(seq):
 manifest = dict(
     resident=['XORDER'] + expand(['C0UW2'] + RES),
     overlays=expand(OVL),
-    late=LATE + ['XLIBD'],
+    late=[k for k in LATE if k in OBJS] + (['XLIBD'] if LIBGAPS else []),
     bytealigned=ODD,
     statics=STATICS,
     stuborder=STUBORDER,

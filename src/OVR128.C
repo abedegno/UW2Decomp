@@ -40,8 +40,8 @@ extern void far mem_set(void far *dst, char value, int size);
 extern void far movedata(unsigned srcseg, unsigned srcoff,
                                                 unsigned dstseg, unsigned dstoff, unsigned size);
 
-char far LoadAnimationOverlays_ovr128_271(char far *source);
-char far StoreAnimationOverlaysToLevArk_ovr128_308(char far *destination);
+char far Anim_Load(char far *source);
+char far Anim_Save(char far *destination);
 
 char far Map_Init(void)
 {
@@ -89,7 +89,7 @@ unsigned char far Map_Load(int arc, int level, int folderType)
             (char far *)ActiveMob + *(unsigned far *)(end - 6);
         MapDirty = 0;
     }
-    LoadAnimationOverlays_ovr128_271((char far *)mapdata + 0x7C08);
+    Anim_Load((char far *)mapdata + 0x7C08);
     return 1;
 }
 
@@ -107,7 +107,7 @@ char far Map_Save(int arc, int level, int folderType)
         - (long)FP_OFF(objbot)) / 2L;
     *(unsigned far *)end = 0x7577;
     MapDirty = 0;
-    StoreAnimationOverlaysToLevArk_ovr128_308((char far *)mapdata + 0x7C08);
+    Anim_Save((char far *)mapdata + 0x7C08);
     if (!ObjCrunch(0)) {
         answer = 0;
         wyorn(0, 0x96, &answer);
@@ -124,7 +124,10 @@ char far Map_Save(int arc, int level, int folderType)
     return result;
 }
 
-char far LoadAnimationOverlays_ovr128_271(char far *source)
+/* FM Towns Anim_Load_ and Anim_Save_ follow Map_Save_ here and do the same copies (Map_Load_
+   and Map_Save_ call them as these are called); the names' keys also put them in the EXE's
+   overlay stub order. */
+char far Anim_Load(char far *source)
 {
     int count;
 
@@ -148,7 +151,7 @@ char far LoadAnimationOverlays_ovr128_271(char far *source)
     return 1;
 }
 
-char far StoreAnimationOverlaysToLevArk_ovr128_308(char far *destination)
+char far Anim_Save(char far *destination)
 {
     mem_set((char far *)animlist
                              + animcount * 6, 0,

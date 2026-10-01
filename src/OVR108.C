@@ -7,8 +7,11 @@
 
    Names are the FM Towns originals where it has the function, matched by position among the
    neighbours, by the opcode table (_cuts_dispatch gives each cutsop_ its number) and by the
-   same callees and globals. FM Towns has no counterpart of ovr108_671, OpenCutsFile_ovr108_2EAC,
-   ovr108_3200, ovr108_3333 or ovr108_3620, which keep the IDA names; it has get_token_,
+   same callees and globals. FM Towns has no counterpart of makeFourChars_ovr108_671,
+   writeCutsValue_ovr108_2EAC, record_task, MovePanView_ovr108_3333 or bufferPointer, whose
+   provisional names were chosen for their keys: Turbo C lists a file's publics by the tools/bssorder.py key of
+   each name and TLINK numbers overlay stub entries from the last one listed, so these names
+   reproduce the EXE's stub order (the target table keeps IDA's names); it has get_token_,
    draw_into_buffer_ and do_update_ where DOS has them inside draw_rsd and cuts_process_lp.
    virtual_screen and lback_vscreen sit elsewhere in FM Towns but here in DOS. */
 
@@ -125,8 +128,8 @@ extern char far dfx_buffer[];         /* the digital effects' buffer (SEG016.C) 
 void far MapMemory_seg013_1D3C_C7(int phys, int page);
 unsigned char far seg013_1D3C_E4(int bank, int page, int count);
 void far seg042_35ED_12B(void);
-int far ReadFileToAddress(int fd, void far *buf, unsigned n);
-unsigned char far LoadDATFile(char *name, void far *buf, unsigned n);
+int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
+unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
 
 /* Graphics. */
 extern unsigned long far *Time;
@@ -184,7 +187,6 @@ int far cutsop_txt(unsigned far *, struct CutsState *);
 int far cutsop_erase(unsigned far *, struct CutsState *);
 int far cutsop_func(unsigned far *, struct CutsState *);
 int far cutsop_pause(unsigned far *, struct CutsState *);
-int far cutsop_skip(unsigned far *, struct CutsState *);
 int far cutsop_next(unsigned far *, struct CutsState *);
 int far cutsop_end(unsigned far *, struct CutsState *);
 int far cutsop_loop(unsigned far *, struct CutsState *);
@@ -195,6 +197,9 @@ int far cutsop_jump(unsigned far *, struct CutsState *);
 int far cutsop_punt(unsigned far *, struct CutsState *);
 int far cutsop_say(unsigned far *, struct CutsState *);
 int far cutsop_wait(unsigned far *, struct CutsState *);
+/* cutsop_skip and cutsop_wait share a public-order key (875); Turbo C lists such publics in
+   reverse order of first sight, and the stub order puts cutsop_skip first, so it is declared later */
+int far cutsop_skip(unsigned far *, struct CutsState *);
 int far cutsop_clang(unsigned far *, struct CutsState *);
 int far cutsop_palrange(unsigned far *, struct CutsState *);
 int far cutsop_palfade(unsigned far *, struct CutsState *);
@@ -215,6 +220,9 @@ void far punt_single_task(int task);
 int far install_timebased_task(Task fn, int period, int total);
 void far task_palfade(int task, int done);
 void far remove_task(int task);
+/* not referenced before its definition, but declared here so that it is seen before
+   record_task: both names have the public-order key 970, and the stub order lists record_task first */
+char far * far bufferPointer(void);
 void far palette_fade(int step, int total, int first, int last, unsigned char far *pal);
 int far virtual_screen(int w, int h, int split);
 int far lback_vscreen(int x, int y, unsigned n);
@@ -297,7 +305,7 @@ unsigned char far big_speech_play(unsigned char file, unsigned char volume,
     sp_nread = 0;
     for (i = 0; i < pages; i++) {
         MapMemory_seg013_1D3C_C7(2, page + i);
-        sp_nread += ReadFileToAddress(audio_fd, SPEECH_BUF(0), 0x4000);
+        sp_nread += intoFarBuffer_ovr167_5DA(audio_fd, SPEECH_BUF(0), 0x4000);
         RESTORE_EMS();
         if (eof(audio_fd)) {
             close(audio_fd);
@@ -348,7 +356,7 @@ void far update_big_speech(void)
             if (page != audio_inpage) {
                 if (sp_nread < voc_length) {
                     MapMemory_seg013_1D3C_C7(2, speech_fpage + audio_inpage % sp_npages);
-                    sp_nread += ReadFileToAddress(audio_fd, SPEECH_BUF(0), 0x4000);
+                    sp_nread += intoFarBuffer_ovr167_5DA(audio_fd, SPEECH_BUF(0), 0x4000);
                     RESTORE_EMS();
                     if (sp_nread >= voc_length) {
                         close(audio_fd);
@@ -415,7 +423,7 @@ void far free_cuts_ems(void)
 }
 
 /* 0x671 */
-char * far ovr108_671(unsigned long value, char *out)
+char * far makeFourChars_ovr108_671(unsigned long value, char *out)
 {
     int i;
     for (i = 0; i < 4; i++) out[i] = (value >> (i * 8)) & 0xFF;
@@ -451,7 +459,7 @@ unsigned char far read_anmhdr(unsigned char far *dst)
     int i;
     unsigned value;
     wanted = 0xB00;
-    actual = ReadFileToAddress(stdat.anm_fd, dst, wanted);
+    actual = intoFarBuffer_ovr167_5DA(stdat.anm_fd, dst, wanted);
     for (i = 0; i < 16; i++) {
         value = *(unsigned far *)(dst + 0x82 + i * 8);
         *(unsigned far *)(dst + 0x82 + i * 8) = (value >> 8) & 0x3F;
@@ -466,7 +474,7 @@ int far readlp(unsigned page, unsigned far *desc, void far *dst)
     register int got;
     lseek(stdat.anm_fd, ((long)page << 16) + 0xB00L, 0);
     size = desc[2] + desc[1] * 2 + 8;
-    got = ReadFileToAddress(stdat.anm_fd, dst, size);
+    got = intoFarBuffer_ovr167_5DA(stdat.anm_fd, dst, size);
 }
 
 /* 0x819 */
@@ -483,7 +491,7 @@ int far readlpinc(unsigned page, unsigned far *desc, unsigned n, void far *dst)
     }
     if (lp_left == 0) return 0;
     if (n > lp_left) n = lp_left;
-    amount = ReadFileToAddress(stdat.anm_fd,
+    amount = intoFarBuffer_ovr167_5DA(stdat.anm_fd,
              target + out_size - lp_left, n);
     lp_left -= amount;
     return amount;
@@ -1055,7 +1063,7 @@ void far cuts_process_opcodes(int frame, register struct CutsState *st)
             else return;
         } else {
             lseek(stdat.n0x_fd, (stdat.code - (unsigned far *)stdat.n00 - 0x200) * 2, 1);
-            ReadFileToAddress(stdat.n0x_fd, stdat.n00, 0x400);
+            intoFarBuffer_ovr167_5DA(stdat.n0x_fd, stdat.n00, 0x400);
             stdat.code = (unsigned far *)stdat.n00;
         }
     }
@@ -1432,7 +1440,7 @@ void far show_anm(int cuts, int x, int y, int w, int h)
             return;
         }
         if (st.windowed == 0) grfx_clear();
-        ReadFileToAddress(stdat.n0x_fd, stdat.n00, 0x400);
+        intoFarBuffer_ovr167_5DA(stdat.n0x_fd, stdat.n00, 0x400);
         stdat.code = (unsigned far *)stdat.n00;
         cuts_init_info(&st);
         movedata(FP_SEG(palette), FP_OFF(palette), FP_SEG(st.palette), FP_OFF(st.palette), 0x300);
@@ -1511,7 +1519,7 @@ void far init_cutscene(void)
 }
 
 /* 0x2EAC: write a value into a cutscene's opcode file, then show it */
-void far OpenCutsFile_ovr108_2EAC(unsigned n, int value)
+void far writeCutsValue_ovr108_2EAC(unsigned n, int value)
 {
     unsigned char ok;
     char name[16];
@@ -1605,7 +1613,7 @@ int far install_timebased_task(Task fn, int period, int total)
 }
 
 /* 0x3200: a task that notes when it last ran */
-void far ovr108_3200(int task)
+void far record_task(int task)
 {
     tclock = *Time;
     prev_time = task_time[task];
@@ -1642,7 +1650,7 @@ void far palette_fade(int step, int total, int first, int last, unsigned char fa
 }
 
 /* 0x3333: a task that pans the view */
-void far ovr108_3333(int task, int done)
+void far MovePanView_ovr108_3333(int task, int done)
 {
     register int d, t;
     if (done) t = task_total[task];
@@ -1691,7 +1699,7 @@ int far lback_vscreen(int x, int y, unsigned n)
     name[10] = ((n >> 6) & 7) + '0';
     name[11] = ((n >> 3) & 7) + '0';
     name[12] = (n & 7) + '0';
-    ok = LoadDATFile(name, stdat.screen, 0xFA00);
+    ok = bltfromdrive(name, stdat.screen, 0xFA00);
     if (split == 0) {
         LBACK_WINDOW(y);
         show(0, 0xC7, stdat.screen, 200, 320, 0, 0);
@@ -1710,7 +1718,7 @@ int far lback_vscreen(int x, int y, unsigned n)
 }
 
 /* 0x3620 */
-char far * far ovr108_3620(void)
+char far * far bufferPointer(void)
 {
     return dfx_buffer;
 }

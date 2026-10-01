@@ -18,11 +18,11 @@
 ; DivideByZeroError(trap_sp, trap_ss), switch back and return from the interrupt.
 ;
 ; Names: int0_trap, int0_ss and int0_sp are symbols.tsv's (provisional; FM Towns has no
-; counterpart, being a different machine), DivideByZeroError_ovr112_661 likewise. The
+; counterpart, being a different machine), div_zero_ovr112_661 likewise. The
 ; other four variables are unnamed in every source and are named here for what they
 ; hold.
 
-        extrn   _DivideByZeroError_ovr112_661:far
+        extrn   _div_zero_ovr112_661:far
 
 DGROUP  group   _DATA
 _DATA   segment byte public 'DATA'
@@ -65,7 +65,7 @@ _int0_trap proc far
         mov     ds,ax
         push    cs:trap_ss
         push    cs:trap_sp
-        call    _DivideByZeroError_ovr112_661
+        call    _div_zero_ovr112_661
         pop     ax
         pop     ax
         cli

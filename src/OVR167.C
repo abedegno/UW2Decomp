@@ -11,12 +11,21 @@
    flip_bool toggles a byte; check_dirs checks the data directories; check_fds
    probes eight temporary files; blttodrive writes a buffer; build_xor_table
    makes the 80-byte key table; xor_xor_table transforms one block; xorread
-   and xorwrite process successive 80-byte blocks. DOS names remain for the
-   functions whose FM Towns counterpart is uncertain. */
+   and xorwrite process successive 80-byte blocks. The rest of the FM Towns file
+   lines up with DOS function by function, and each name's tools/bssorder.py key
+   puts it where the EXE's overlay stub order needs it: solve_compass and
+   unsolve_compass (the same arithmetic as IDA's ovr167_17 and ovr167_252),
+   get_theta (cSqRt then cAtan2, IDA's DartSatelliteVectoring_ovr167_313),
+   dir_exist (stat and S_IFDIR, IDA's ListFiles_ovr167_3F6), bltfromdrive (open,
+   read, close, after blttodrive) and data_fopen (the data directory, strcat,
+   fopen, just before our_open). FM Towns has nothing for the far read and write
+   helpers, which it does with read_ and write_, or for the memory check; their
+   names (intoFarBuffer_ovr167_5DA, FarWrite_ovr167_627, OkEnoughMem_ovr167_463)
+   are provisional, chosen for their keys. */
 
 void far flip_bool(char *p) { if (*p) *p = 0; else *p = 1; }
 
-int far ovr167_17(int a, int b, int x, int y)
+int far solve_compass(int a, int b, int x, int y)
 {
     register int q = ((x * 3) / a) % 3;
     register int r = ((y * 3) / b) % 3;
@@ -84,7 +93,7 @@ void far print_path_to(char far *s, int px, int py, int ignored,
 
 void far set_the_color(int a);
 void far box(int a, int b, int c, int d);
-void far ovr167_252(int x, int y, int t, int cx, int cy, int n)
+void far unsolve_compass(int x, int y, int t, int cx, int cy, int n)
 {
     register int xx = cx + x / 2;
     register int yy = cy + y / 2;
@@ -100,7 +109,7 @@ void far ovr167_252(int x, int y, int t, int cx, int cy, int n)
 
 long far cSqRt(long n);
 int far cAtan2(int x, int y);
-int far DartSatelliteVectoring_ovr167_313(int sx, int sy, int x, int y)
+int far get_theta(int sx, int sy, int x, int y)
 {
     int dx = x - sx;
     int result;
@@ -125,7 +134,7 @@ void far errmsg(char *a, char *b)
     scroll_print(b);
 }
 
-char far ListFiles_ovr167_3F6(char *name)
+char far dir_exist(char *name)
 {
     struct stat st;
     if (stat(name, &st) == -1) return 0;
@@ -137,15 +146,15 @@ void far first_punt(int code);
 void far check_dirs(void)
 {
     unsigned char ok = 1;
-    ok &= ListFiles_ovr167_3F6("data");
-    ok &= ListFiles_ovr167_3F6("crit");
-    ok &= ListFiles_ovr167_3F6("cuts");
+    ok &= dir_exist("data");
+    ok &= dir_exist("crit");
+    ok &= dir_exist("cuts");
     if (!ok) first_punt(0x3001);
 }
 
 unsigned far coreleft(void);
 unsigned long far farcoreleft(void);
-int far ovr167_463(void)
+int far OkEnoughMem_ovr167_463(void)
 {
     if (coreleft() >= 0x898 && farcoreleft() >= 0x5DCL) return 1;
     return 0;
@@ -172,31 +181,31 @@ void far check_fds(void)
     if (!ok) first_punt(6);
 }
 
-int far FileWriteWithParams(int fd, void far *buf, unsigned n);
+int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n);
 char far blttodrive(void far *buf, char *name, unsigned n)
 {
     unsigned char ok = 1;
     register int fd;
     fd = open(name, 0x8302, 0x80);
     if (fd < 0) return 0;
-    if (FileWriteWithParams(fd, buf, n) != n) ok = 0;
+    if (FarWrite_ovr167_627(fd, buf, n) != n) ok = 0;
     if (close(fd)) ok = 0;
     return ok;
 }
 
-int far ReadFileToAddress(int fd, void far *buf, unsigned n);
-char far LoadDATFile(char *name, void far *buf, unsigned n)
+int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
+char far bltfromdrive(char *name, void far *buf, unsigned n)
 {
     unsigned char ok = 1;
     register int fd;
     fd = open(name, 0x8001);
     if (fd < 0) return 0;
-    if (ReadFileToAddress(fd, buf, n) != n) ok = 0;
+    if (intoFarBuffer_ovr167_5DA(fd, buf, n) != n) ok = 0;
     if (close(fd)) ok = 0;
     return ok;
 }
 
-int far ReadFileToAddress(int fd, void far *buf, unsigned n)
+int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n)
 {
     struct SREGS sregs;
     union REGS in;
@@ -210,7 +219,7 @@ int far ReadFileToAddress(int fd, void far *buf, unsigned n)
     if (out.x.cflag) { errno = out.x.ax; return -1; }
     return out.x.ax;
 }
-int far FileWriteWithParams(int fd, void far *buf, unsigned n)
+int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n)
 {
     struct SREGS sregs;
     union REGS in;
@@ -259,7 +268,7 @@ int far xorread(int fd, unsigned char key, unsigned char far *buf, unsigned n)
     total = 0;
     build_xor_table(key, table);
     while (remaining + 0x50 > remaining) {
-        count = ReadFileToAddress(fd, encrypted, remaining < 0x50 ? remaining : 0x50);
+        count = intoFarBuffer_ovr167_5DA(fd, encrypted, remaining < 0x50 ? remaining : 0x50);
         xor_xor_table(buf, encrypted, table, count);
         total += count;
         remaining -= 0x50;
@@ -277,7 +286,7 @@ int far xorwrite(int fd, unsigned char key, unsigned char far *buf, unsigned n)
     build_xor_table(key, table);
     while (remaining + 0x50 > remaining) {
         xor_xor_table(encrypted, buf, table, remaining < 0x50 ? remaining : 0x50);
-        written = FileWriteWithParams(fd, encrypted, remaining < 0x50 ? remaining : 0x50);
+        written = FarWrite_ovr167_627(fd, encrypted, remaining < 0x50 ? remaining : 0x50);
         total += written;
         remaining -= 0x50;
         buf += 0x50;
@@ -286,7 +295,7 @@ int far xorwrite(int fd, unsigned char key, unsigned char far *buf, unsigned n)
 }
 
 void far fopen(char *path, int mode);
-void far LoadStringsPakToTable(char *name, int mode)
+void far data_fopen(char *name, int mode)
 {
     char path[0x42];
     strcpy(path, "DATA\\");

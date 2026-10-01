@@ -1,0 +1,3 @@
+# segment seg004_0849_51B0 base 0xE370 size 0x308 org 0x51B0
+# cname: as in targets/seg004_0849.tsv; SEG004 split at +51B0..+54B8
+seg004_0849_51B0	seg004_0849_51B0	0x0	0x308

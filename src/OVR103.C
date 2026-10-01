@@ -5,7 +5,10 @@
    the inventory built-ins a script uses to look at, give and take objects while bartering:
    the whole of DOS overlay ovr103, in original order. Function and global names are the
    originals from the FM Towns symbol table where it has them; the FM Towns build keeps
-   babl_menu, babl_fmenu, pause and babl_ask as statics, so those keep their IDA names.
+   babl_menu, babl_fmenu, pause and babl_ask as statics, so the C functions behind those
+   built-ins have provisional names, chosen for their keys: Turbo C lists a file's publics by the tools/bssorder.py key of
+   each name and TLINK numbers overlay stub entries from the last one listed, so these names
+   reproduce the EXE's stub order (the target table keeps IDA's names).
 
    Each built-in gets a far pointer just past its arguments on the conversation stack:
    stack[-1] is the first argument, stack[-2] the second and so on. Each argument is the
@@ -199,14 +202,17 @@ int far teleport_talker();
 char far * far adr_convpic(int);
 int far move_convpic(char far *, int, int);
 void far Converse(unsigned char, int);
-int far babl_menu_ovr103_A13(int far *);
-int far babl_fmenu_ovr103_BF2(int far *);
+int far conv_choice_ovr103_A13(int far *);
+int far conv_fmenu_ovr103_BF2(int far *);
+/* declared here, before conv_check_inv, because Turbo C lists publics of equal key
+   (595 for both) in reverse order of first sight, and the stub order needs this one last */
+void far conv_play_menu(int);
 void far npc_say(char far *);
 void far play_respond(char far *);
 void far play_say(char far *);
 void far conv_print(int far *);
-int far pause_ovr103_10DD(int far *);
-int far babl_ask_ovr103_1117(void);
+int far conv_pause_ovr103_10DD(int far *);
+int far getInputText_ovr103_1117(void);
 int far conv_check_inv(int far *);
 int far conv_give_inv(int far *);
 int far conv_find_inv(int far *);
@@ -379,14 +385,14 @@ void far Converse(unsigned char who, int subclass)
         scroll_print(get_string(0xe01));
         return;
     }
-    bab_fun("babl_menu", babl_menu_ovr103_A13);
-    bab_fun("babl_fmenu", babl_fmenu_ovr103_BF2);
+    bab_fun("babl_menu", conv_choice_ovr103_A13);
+    bab_fun("babl_fmenu", conv_fmenu_ovr103_BF2);
     bab_fun("say", npc_say);
     bab_fun("respond", play_respond);
     bab_fun("get_quest", get_quest);
     bab_fun("set_quest", set_quest);
     bab_fun("sex", sex);
-    bab_fun("babl_ask", babl_ask_ovr103_1117);
+    bab_fun("babl_ask", getInputText_ovr103_1117);
     bab_fun("print", conv_print);
     bab_fun("show_inv", conv_check_inv);
     bab_fun("give_to_npc", conv_give_inv);
@@ -400,7 +406,7 @@ void far Converse(unsigned char who, int subclass)
     bab_fun("do_judgement", do_judgement);
     bab_fun("end_barter", end_barter);
     bab_fun("setup_to_barter", setup_to_barter);
-    bab_fun("pause", pause_ovr103_10DD);
+    bab_fun("pause", conv_pause_ovr103_10DD);
     bab_fun("set_likes_dislikes", npc_likes_dislikes);
     bab_fun("do_inv_create", conv_inv_create);
     bab_fun("do_inv_delete", conv_inv_delete);
@@ -477,7 +483,7 @@ dispatch:
     }
 }
 
-int far babl_menu_ovr103_A13(int far *stack)
+int far conv_choice_ovr103_A13(int far *stack)
 {
     int i, base, string_no, used;
     char line[0xa0];
@@ -521,7 +527,7 @@ int far babl_menu_ovr103_A13(int far *stack)
     return babl_choice;
 }
 
-int far babl_fmenu_ovr103_BF2(int far *stack)
+int far conv_fmenu_ovr103_BF2(int far *stack)
 {
     int i, base, string_no, value, value_base, used;
     char line[0xa0];
@@ -653,7 +659,7 @@ void far conv_print(int far *stack)
     if (expanded != original) bab_free(expanded);
 }
 
-int far pause_ovr103_10DD(int far *stack)
+int far conv_pause_ovr103_10DD(int far *stack)
 {
     register int duration;
     duration = getmem(stack[-1]);
@@ -663,7 +669,7 @@ int far pause_ovr103_10DD(int far *stack)
     return 1;
 }
 
-int far babl_ask_ovr103_1117(void)
+int far getInputText_ovr103_1117(void)
 {
     char response[0xa0];
     wdialog(0, 0, response, 1, 0x32);

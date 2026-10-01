@@ -221,9 +221,9 @@ char far maybe_go_hang_out(struct Object far *npc);
 void far gronk_whoami(int whoami, unsigned char all, int arg, ObjectAction fn);
 void far gronk_race(int race, unsigned char loop, int param,
                     char (far *code)(struct Object far *, int));
-char far SetAttitude_ovr113_A91(struct Object far *npc, int attitude);
+char far gronkify_attitude(struct Object far *npc, int attitude);
 void far set_numbered_variable(int var, int how, int val);
-struct Object far * far WhatsInSlot(int slot);
+struct Object far * far AskInventory(int slot);
 char far InvRemoveOneObject(struct Object far *obj);
 void far player_get_exp(int exp);
 void far generate_inventory(struct Object far *obj);
@@ -842,7 +842,7 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
     unsigned char pit;
     pit = 0;
     if (mode && is_my_race(obj, 0xB))
-        gronk_race(0xB, 1, 0, SetAttitude_ovr113_A91);
+        gronk_race(0xB, 1, 0, gronkify_attitude);
     if (mode && (obj->id & 0x1FF) == 0x4E && PlayerLevel == 4
         && player->worms_killed < 0xC8)
         player->worms_killed++;
@@ -968,7 +968,7 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
                 obj->goal = obj->goal & 0xFFF0 | 5;
                 return 0;
             }
-            dagger = WhatsInSlot(8 - player->lefty);
+            dagger = AskInventory(8 - player->lefty);
             InvRemoveOneObject(dagger);
             dagger->id = dagger->id & 0xFE00 | 0xC7;
             near_mob_put_at(ThePlayer, dagger, 6, 0);
@@ -1809,9 +1809,11 @@ unsigned char far is_my_race(struct Object far *obj, int race)
         return Creature[(obj->id & 0x3F) >> 0].race == race;
 }
 
-/* 53: RemoveBishop_ovr110_3C3A, target size 0x19. FM Towns has no function between is_my_race_
-   and fire_trigger_at_, so the IDA name stays; it has an overlay stub entry, so it is public. */
-void far RemoveBishop_ovr110_3C3A(void)
+/* 53: PuntBishop_ovr110_3C3A, target size 0x19. FM Towns has no function between is_my_race_
+   and fire_trigger_at_; it has an overlay stub entry, so it is public. The name is provisional
+   (IDA's RemoveBishop_ovr110_3C3A), chosen so that its tools/bssorder.py key puts it in the
+   EXE's overlay stub order. */
+void far PuntBishop_ovr110_3C3A(void)
 {
     gronk_whoami(6, 0, 0, remove_whoami);
 }
@@ -2320,7 +2322,7 @@ void far put_player_in_jail(void)
     do_teleport(ThePlayer, 0x2A, 0x26, 1);
     row[7] = 1;
     row[8] = 0;
-    gronk_race(0x1C, 1, 2, SetAttitude_ovr113_A91);
+    gronk_race(0x1C, 1, 2, gronkify_attitude);
     gronk_race(0x1C, 1, (int)row, (char (far *)(struct Object far *, int))gronkify_change_goal);
     SET_QUEST(112, 1);
     update_all_critters_whilst_player_snoozes();

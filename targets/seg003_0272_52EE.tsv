@@ -1,0 +1,6 @@
+# segment seg003_0272_52EE base 0x873E size 0x81 org 0x52EE
+# cname: as in targets/seg003_0272.tsv; SEG003 split at +52EE..+536F
+# far FD51 370D:558A
+seg003_0272_5311	seg003_0272_5311	0x23	0x52
+seg003_0272_5363	seg003_0272_5363	0x75	0x8
+seg003_0272_536B	seg003_0272_536B	0x7D	0x4

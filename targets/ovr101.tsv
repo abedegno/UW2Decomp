@@ -15,4 +15,4 @@ adr_chrpic	MaybeAnImageDraw_ovr101_15C3	0x15C3	0x22
 move_chrpic	MaybeAnImageUnpack_ovr101_15E5	0x15E5	0x3F
 strt_chargen	StartNewGame_ovr101_1624	0x1624	0x289
 create_player	ovr101_18AD	0x18AD	0x1E
-ovr101_18CB	ovr101_18CB	0x18CB	0x1E
+AddObjIfAny_ovr101_18CB	ovr101_18CB	0x18CB	0x1E

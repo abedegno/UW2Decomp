@@ -1,0 +1,5 @@
+# segment seg021_22FD_590 base 0x24290 size 0xE5 org 0x590
+# cname: as in targets/seg021_22FD.tsv; SEG021 split at +590..+675
+seg021_22FD_598	seg021_22FD_598	0x8	0x30
+seg021_22FD_5C8	seg021_22FD_5C8	0x38	0x21
+seg021_22FD_5E9	seg021_22FD_5E9	0x59	0x8C

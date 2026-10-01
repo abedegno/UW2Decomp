@@ -1,0 +1,10 @@
+# segment seg004_0849_600 base 0x97C0 size 0x7A9 org 0x600
+# cname: as in targets/seg004_0849.tsv; SEG004 split at +600..+DA9
+smooth_closure	seg004_0849_600	0x0	0x198
+seg004_0849_798	seg004_0849_798	0x198	0x64
+seg004_0849_7FC	seg004_0849_7FC	0x1FC	0x132
+seg004_0849_92E	seg004_0849_92E	0x32E	0x136
+seg004_0849_A64	seg004_0849_A64	0x464	0x134
+seg004_0849_B98	seg004_0849_B98	0x598	0x138
+smooth_over	seg004_0849_CD0	0x6D0	0xB3
+seg004_0849_D83	seg004_0849_D83	0x783	0x26

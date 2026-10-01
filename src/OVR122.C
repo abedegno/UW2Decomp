@@ -72,8 +72,8 @@ unsigned far get_workspace(void);
 void far release_workspace(void);
 void far save_player_data(int fd);
 void far read_player_data(int fd);
-int far ReadFileToAddress(int fd, void far *buf, unsigned n);
-int far FileWriteWithParams(int fd, void far *buf, unsigned n);
+int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
+int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n);
 void far editchng(int bits);
 void far change_GrSq(int sq, int z);
 void far load_inventory_pix(void);
@@ -142,8 +142,8 @@ char far SavePlayerInv(char *name)
         fd = open(path, O_RDWR | O_CREAT | O_TRUNC | O_BINARY, S_IREAD | S_IWRITE);
         if (fd >= 0) {
             save_player_data(fd);
-            FileWriteWithParams(fd, &saveNum, 2);
-            FileWriteWithParams(fd, saveBuf, saveNum * 8 + 0x5B);
+            FarWrite_ovr167_627(fd, &saveNum, 2);
+            FarWrite_ovr167_627(fd, saveBuf, saveNum * 8 + 0x5B);
             close(fd);
         } else
             ok = 0;
@@ -292,8 +292,8 @@ char far RestorePlayerInv(char *name)
         fd = open(path, O_RDWR | O_BINARY);
         if (fd >= 0) {
             read_player_data(fd);
-            ReadFileToAddress(fd, &saveNum, 2);
-            ReadFileToAddress(fd, saveBuf, saveNum * 8 + 0x5B);
+            intoFarBuffer_ovr167_5DA(fd, &saveNum, 2);
+            intoFarBuffer_ovr167_5DA(fd, saveBuf, saveNum * 8 + 0x5B);
             close(fd);
             load_inventory_pix();
         } else {

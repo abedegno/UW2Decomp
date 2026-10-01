@@ -141,7 +141,7 @@ void far string_to_screen(char far *s, int x, int y);
 int far string_width(char far *s);
 struct Object far * far Obj_PtrTMem(unsigned far *link);
 int far Obj_MemTPtr(struct Object far *obj);
-struct Object far * far WhatsInSlot(int slot);
+struct Object far * far AskInventory(int slot);
 struct Object far * far takeFromSlot(int a, int b, int c, int slot, int d);
 void far FixPlayerEquips(void);
 struct Object far * far Obj_Alloc(char mobile);
@@ -536,7 +536,7 @@ void far SetCursorObj(int slot, char keep)
 
     had = CursorObjPtr != 0;
     if (keep)
-        link = Obj_MemTPtr(Obj_PtrTMem(&WhatsInSlot(slot)->qn.word));
+        link = Obj_MemTPtr(Obj_PtrTMem(&AskInventory(slot)->qn.word));
     CursorObjPtr = takeFromSlot(-1, -1, -1, slot, 0);
     if (CursorObjPtr != 0) {
         if (keep) {

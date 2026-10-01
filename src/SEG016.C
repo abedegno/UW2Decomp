@@ -171,12 +171,12 @@ void far game_sprint(int id);
 int far mouse_get_input(void);
 void far cFstSinCos(int angle, int *a, int *b);
 int far cSqRt(long v);
-int far ReadFileToAddress(int fd, void far *buf, unsigned n);
+int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
 char far * far str_cat(char far *dst, char far *src);
 /* FM Towns calls this bltfromdrive_ (read_file_to_mbuf_ and load_sound_driver_ call it
-   where DOS calls 65E0:007A); symbols.tsv has the provisional LoadDATFile. */
-unsigned char far LoadDATFile(char *name, void far *buf, unsigned n);
-unsigned char far ovr167_463(void);
+   where DOS calls 65E0:007A), and OVR167 defines it under that name. */
+unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
+unsigned char far OkEnoughMem_ovr167_463(void);
 
 #define OBJ_HEADING(o)  (((o)->pos & 0x380) >> 7)
 #define OBJ_FINEY(o)    (((o)->pos & 0x1C00) >> 10)
@@ -503,7 +503,7 @@ load:
     eof_hit = 0;
     for (i = 0, j = 0; i < count; i++) {
         MapMemory_seg013_1D3C_C7(2, sound_fpage + list[i]);
-        total += ReadFileToAddress(fd, MK_FP(EmsBuff + 0x800, 0), 0x4000);
+        total += intoFarBuffer_ovr167_5DA(fd, MK_FP(EmsBuff + 0x800, 0), 0x4000);
         RESTORE_EMS();
         ds_sounds_in_ems[slot].pages[j] = list[i];
         ds_page_status |= 1 << list[i];
@@ -817,7 +817,7 @@ unsigned char far init_sounds(void)
                 goto fail;
             if (!init_timbres())
                 goto fail;
-            if (!ovr167_463())
+            if (!OkEnoughMem_ovr167_463())
                 goto fail;
         }
         sound_b292 = 0;
@@ -837,17 +837,17 @@ void far * far load_global_timbre(int fd, unsigned char bank, unsigned char patc
         return 0;
     lseek(fd, 0L, 0);
     do {
-        if (ReadFileToAddress(fd, &timbre_entry, 6) != 6)
+        if (intoFarBuffer_ovr167_5DA(fd, &timbre_entry, 6) != 6)
             return 0;
         if (timbre_entry.bank == 0xFF)
             return 0;
     } while (timbre_entry.bank != bank || timbre_entry.patch != patch);
     lseek(fd, timbre_entry.offset, 0);
-    ReadFileToAddress(fd, &timbre_size, 2);
+    intoFarBuffer_ovr167_5DA(fd, &timbre_size, 2);
     if ((p = farmalloc(timbre_size)) == 0)
         return 0;
     *p = timbre_size;
-    if (ReadFileToAddress(fd, p + 1, timbre_size - 2) != timbre_size - 2)
+    if (intoFarBuffer_ovr167_5DA(fd, p + 1, timbre_size - 2) != timbre_size - 2)
         return 0;
     return p;
 }
@@ -954,7 +954,7 @@ void far * far load_sound_driver(char *name, int n)
     if ((drv_mem[n] = farmalloc(len + 0x10)) == 0)
         return 0;
     p = MK_FP(FP_SEG(drv_mem[n]) + 1, 0);
-    if (!LoadDATFile(name, p, (unsigned)len))
+    if (!bltfromdrive(name, p, (unsigned)len))
         return 0;
     return p;
 }
@@ -982,7 +982,7 @@ void far * far seg016_1E73_19DE(char *name)
     fclose(fp);
     if ((p = farmalloc(len)) == 0)
         goto fail;
-    if (!LoadDATFile(name, p, (unsigned)len))
+    if (!bltfromdrive(name, p, (unsigned)len))
         goto fail;
     return p;
 fail:
@@ -1000,7 +1000,7 @@ unsigned char far read_file_to_mbuf(char *name)
     fd = fileno(fp);
     len = filelength(fd);
     fclose(fp);
-    if (!LoadDATFile(name, midi_buf, (unsigned)len))
+    if (!bltfromdrive(name, midi_buf, (unsigned)len))
         goto fail;
     return 1;
 fail:

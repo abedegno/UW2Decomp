@@ -5,7 +5,9 @@
    do_judgement, give_all_stuff and the npc_inv_* family, and how a trader values
    an item. The whole of DOS overlay ovr097, in original order. Names are the
    originals from the FM Towns symbol table where it has them; the functions it
-   lacks were static there and keep their IDA names here.
+   lacks were static there, and their provisional names were chosen for their keys: Turbo C lists a file's publics by the tools/bssorder.py key of
+   each name and TLINK numbers overlay stub entries from the last one listed, so these names
+   reproduce the EXE's stub order (the target table keeps IDA's names).
 
    The two sides of a trade are indexed 0 for the NPC and 1 for the player. */
 #include <stdlib.h>
@@ -119,18 +121,18 @@ void far bab_var(char *name, int *values, int count);
 void far bab_var_out(char *name, int *values, int count);
 void far change_critter_goal(struct Object far *npc, char goal, int gtarg);
 
-void far RedrawTradeSlot_ovr097_A91(int side, int slot);
-void far SomethingWithTradeSlot_ovr097_E83(int side, int slot);
+void far drawTradeSlot_ovr097_A91(int side, int slot);
+void far showSelection_ovr097_E83(int side, int slot);
 static void far ReturnTradeObjectsToNPC_ovr097_F76(int only_unselected);
-void far LikelySlotInteractionRelated_ovr097_6E8(int side, int slot, int *content,
+void far UseTradeSlot_ovr097_6E8(int side, int slot, int *content,
                                                  unsigned char *active);
-void far SetObjectInHand_ovr097_C39(int slot, int *content, unsigned char split);
+void far PickUpFromSlot_ovr097_C39(int slot, int *content, unsigned char split);
 void far ovr097_CDB(int side, int slot, int *content);
-unsigned char far ObjectCombineToSlot_ovr097_D30(struct Object far *obj, int side, int slot, int *content);
+unsigned char far CombineToSlot_ovr097_D30(struct Object far *obj, int side, int slot, int *content);
 int far assess_value(int, int, int);
 int far does_npc_like(int);
 int far range(int, int, int);
-int far GetTotalValueOfOffering_ovr097_17CB(int, int *, unsigned char *, int *, int);
+int far total_offering_ovr097_17CB(int, int *, unsigned char *, int *, int);
 void far npc_inv_add(struct Object far *);
 
 /* This file's uninitialised data. FM Towns names greed and npc_assess, which are public;
@@ -187,7 +189,7 @@ void far setup_to_barter(void)
                 Obj_Add(&talking_to->ol, Obj_IntTMem(barter_items[0][slot]));
             }
             barter_items[0][slot] = Obj_MemTPtr(obj);
-            RedrawTradeSlot_ovr097_A91(0, slot);
+            drawTradeSlot_ovr097_A91(0, slot);
             slot++;
             if (slot >= 6) { slot = 0; all_filled = 1; }
             obj = next;
@@ -219,7 +221,7 @@ void far barter_init(void)
             barter_vals[side][0][slot] = -1;
             barter_vals[side][1][slot] = -1;
             barter_selected[side][slot] = 0;
-            SomethingWithTradeSlot_ovr097_E83(side, slot);
+            showSelection_ovr097_E83(side, slot);
         }
     barter_result = 0;
     srand(Obj_MemTPtr(talking_to));
@@ -252,7 +254,7 @@ void far end_barter(void)
                 restore_rect(barter_saves[side][slot]);
                 if (barter_selected[side][slot]) {
                     barter_selected[side][slot] = 0;
-                    SomethingWithTradeSlot_ovr097_E83(side, slot);
+                    showSelection_ovr097_E83(side, slot);
                 }
             }
             vfree(barter_saves[side][slot]);
@@ -271,7 +273,7 @@ void far play_barter(void)
     x = inplist[0] + 0x77;
     y = inplist[1] + 0x87;
     if ((slot = play_slot_hit_abs(x, y)) >= 0) {
-        LikelySlotInteractionRelated_ovr097_6E8(1, slot, barter_items[1], barter_selected[1]);
+        UseTradeSlot_ovr097_6E8(1, slot, barter_items[1], barter_selected[1]);
         set_workspace();
     }
 }
@@ -344,7 +346,7 @@ void far conv_inv_special(void)
     mouse_getxy(&x, &y);
     slot = play_slot_hit_abs(x, y);
     if (slot > -1)
-        LikelySlotInteractionRelated_ovr097_6E8(1, slot, barter_items[1], barter_selected[1]);
+        UseTradeSlot_ovr097_6E8(1, slot, barter_items[1], barter_selected[1]);
     set_workspace();
 }
 
@@ -356,14 +358,14 @@ void far npc_barter(void)
     x = inplist[0] + 0x46;
     y = inplist[1] + 0x87;
     if ((slot = npc_slot_hit_abs(x, y)) >= 0) {
-        LikelySlotInteractionRelated_ovr097_6E8(0, slot, barter_items[0], barter_selected[0]);
+        UseTradeSlot_ovr097_6E8(0, slot, barter_items[0], barter_selected[0]);
         set_workspace();
     }
 }
 
 /* A click on a trade slot: pick up what is there (asking how many of a stack), put
    down what is held, toggle the slot's selection, or look at the item. */
-void far LikelySlotInteractionRelated_ovr097_6E8(int side, int slot, int *content,
+void far UseTradeSlot_ovr097_6E8(int side, int slot, int *content,
                                                  unsigned char *active)
 {
     struct Object far *found;
@@ -393,12 +395,12 @@ void far LikelySlotInteractionRelated_ovr097_6E8(int side, int slot, int *conten
             return;
         }
         had_cursor = 1;
-        SetObjectInHand_ovr097_C39(slot, content, moved && moved != found);
-        RedrawTradeSlot_ovr097_A91(side, slot);
+        PickUpFromSlot_ovr097_C39(slot, content, moved && moved != found);
+        drawTradeSlot_ovr097_A91(side, slot);
         active[slot] = 0;
         barter_vals[1][0][slot] = -1;
         barter_vals[1][1][slot] = -1;
-        SomethingWithTradeSlot_ovr097_E83(side, slot);
+        showSelection_ovr097_E83(side, slot);
         if (CursorObjPtr == 0) return;
         if (moved) {
             GameInputMode = 1;
@@ -417,14 +419,14 @@ void far LikelySlotInteractionRelated_ovr097_6E8(int side, int slot, int *conten
         GameInputMode = 1;
         if (side == 0) return;
         ovr097_CDB(side, slot, content);
-        RedrawTradeSlot_ovr097_A91(side, slot);
+        drawTradeSlot_ovr097_A91(side, slot);
         active[slot] = 1;
-        SomethingWithTradeSlot_ovr097_E83(side, slot);
+        showSelection_ovr097_E83(side, slot);
         barter_vals[1][0][slot] = -1;
         barter_vals[1][1][slot] = -1;
     } else if (inplist[3] & 1) {
         active[slot] = !active[slot];
-        SomethingWithTradeSlot_ovr097_E83(side, slot);
+        showSelection_ovr097_E83(side, slot);
     } else {
         lore = 1;
         obj = Obj_IntTMem(content[slot]);
@@ -442,11 +444,11 @@ void far LikelySlotInteractionRelated_ovr097_6E8(int side, int slot, int *conten
 void far RedisplayBarterSlots(int side)
 {
     register int i;
-    for (i = 0; i < 6; i++) RedrawTradeSlot_ovr097_A91(side, i);
+    for (i = 0; i < 6; i++) drawTradeSlot_ovr097_A91(side, i);
 }
 
 /* Draw what is in one trade slot, with a count for a stack of more than one. */
-void far RedrawTradeSlot_ovr097_A91(int side, register int slot)
+void far drawTradeSlot_ovr097_A91(int side, register int slot)
 {
     int item;
     int qty;
@@ -484,7 +486,7 @@ void far RedrawTradeSlot_ovr097_A91(int side, register int slot)
 }
 
 /* Pick up what is in a slot; with split, the rest of a divided stack stays there. */
-void far SetObjectInHand_ovr097_C39(register int slot, register int *content, unsigned char split)
+void far PickUpFromSlot_ovr097_C39(register int slot, register int *content, unsigned char split)
 {
     unsigned char had_cursor;
 
@@ -507,13 +509,13 @@ void far ovr097_CDB(int side, register int slot, register int *content)
     if (content[slot] == 0) {
         content[slot] = Obj_MemTPtr(CursorObjPtr);
         CursorObjPtr = 0;
-    } else if (ObjectCombineToSlot_ovr097_D30(CursorObjPtr, side, slot, content))
+    } else if (CombineToSlot_ovr097_D30(CursorObjPtr, side, slot, content))
         CursorObjPtr = 0;
 }
 
 /* Add a held stack to the like stack in a slot, or else swap the two. Returns 1 when
    the held object was merged and freed. */
-unsigned char far ObjectCombineToSlot_ovr097_D30(struct Object far *obj, int side,
+unsigned char far CombineToSlot_ovr097_D30(struct Object far *obj, int side,
                                                  register int slot, int *content)
 {
     struct Object far *found;
@@ -533,16 +535,16 @@ unsigned char far ObjectCombineToSlot_ovr097_D30(struct Object far *obj, int sid
         merged = 1;
     } else {
         held = Obj_MemTPtr(CursorObjPtr);
-        SetObjectInHand_ovr097_C39(slot, content, 0);
+        PickUpFromSlot_ovr097_C39(slot, content, 0);
         content[slot] = held;
     }
-    RedrawTradeSlot_ovr097_A91(side, slot);
+    drawTradeSlot_ovr097_A91(side, slot);
     set_workspace();
     return merged;
 }
 
 /* Draw the small selection mark beside a slot: lit when it is selected. */
-void far SomethingWithTradeSlot_ovr097_E83(int side, int slot)
+void far showSelection_ovr097_E83(int side, int slot)
 {
     int color;
     register int x, y;
@@ -583,7 +585,7 @@ static void far ReturnTradeObjectsToNPC_ovr097_F76(int only_unselected)
                 restore_rect(barter_saves[0][slot]);
                 barter_selected[0][slot] = 0;
                 barter_items[0][slot] = 0;
-                SomethingWithTradeSlot_ovr097_E83(0, slot);
+                showSelection_ovr097_E83(0, slot);
             }
         }
     }
@@ -621,7 +623,7 @@ static void far probablyTradeObjects_ovr097_100A(void)
             restore_rect(barter_saves[1][slot]);
             barter_selected[1][slot] = 0;
             barter_items[1][slot] = 0;
-            SomethingWithTradeSlot_ovr097_E83(1, slot);
+            showSelection_ovr097_E83(1, slot);
         }
     }
     mouse_show();
@@ -663,9 +665,9 @@ int far do_offer(int far *args)
         barter_result = 0;
         return 0;
     }
-    player_value = GetTotalValueOfOffering_ovr097_17CB(1, barter_items[1], barter_selected[1],
+    player_value = total_offering_ovr097_17CB(1, barter_items[1], barter_selected[1],
                                                        barter_vals[1][1], npc_assess);
-    npc_value = GetTotalValueOfOffering_ovr097_17CB(0, barter_items[0], barter_selected[0],
+    npc_value = total_offering_ovr097_17CB(0, barter_items[0], barter_selected[0],
                                                     barter_vals[0][1], npc_assess);
     if (npc_value > 0) eval = (player_value - npc_value) * 100 / npc_value;
     else eval = 100;
@@ -728,7 +730,7 @@ int far do_demand(int far *args)
     else health = 1;
     armed = player->in_combat;
     player_score = player->level + armed + health + player->skills[15] / 6;
-    demanded = GetTotalValueOfOffering_ovr097_17CB(0, barter_items[0], barter_selected[0],
+    demanded = total_offering_ovr097_17CB(0, barter_items[0], barter_selected[0],
                                                    barter_vals[0][1], npc_assess);
     if (Creature[(talking_to->id & 0x3F) >> 0].max_vit > 0)
         health = 2 - (Creature[(talking_to->id & 0x3F) >> 0].max_vit - talking_to->hp) * 2 /
@@ -772,9 +774,9 @@ void far do_judgement(void)
 
     skill = player->skills[18];
     accuracy = 50 - skill * 45 / 30;
-    player_value = GetTotalValueOfOffering_ovr097_17CB(0, barter_items[1],
+    player_value = total_offering_ovr097_17CB(0, barter_items[1],
                     barter_selected[1], barter_vals[1][0], accuracy);
-    npc_value = GetTotalValueOfOffering_ovr097_17CB(0, barter_items[0],
+    npc_value = total_offering_ovr097_17CB(0, barter_items[0],
                     barter_selected[0], barter_vals[0][0], accuracy);
     npc_value += fudge;
     if (npc_value > 0) evaluation = (player_value - npc_value) * 100 / npc_value;
@@ -801,7 +803,7 @@ void far do_judgement(void)
 
 /* The total value of a side's selected items, valuing each once and caching it in
    values. With use_likes the NPC's likes and dislikes count. */
-int far GetTotalValueOfOffering_ovr097_17CB(int use_likes, int *items,
+int far total_offering_ovr097_17CB(int use_likes, int *items,
                                             unsigned char *selected,
                                             int *values, int accuracy)
 {
@@ -914,7 +916,7 @@ void far player_barter_give(int index)
             restore_rect(barter_saves[1][slot]);
             barter_items[1][slot] = 0;
             barter_selected[1][slot] = 0;
-            SomethingWithTradeSlot_ovr097_E83(1, slot);
+            showSelection_ovr097_E83(1, slot);
         }
     }
     mouse_show();
@@ -983,8 +985,8 @@ int far npc_barter_give(register int item)
                 barter_items[1][slot] = Obj_MemTPtr(obj);
                 barter_selected[1][slot] = 0;
                 barter_vals[1][0][slot] = barter_vals[0][1][slot] = -1;
-                SomethingWithTradeSlot_ovr097_E83(0, slot);
-                RedrawTradeSlot_ovr097_A91(1, slot);
+                showSelection_ovr097_E83(0, slot);
+                drawTradeSlot_ovr097_A91(1, slot);
                 return 1;
             }
         if (near_mob_put_at(talking_to, obj, 5, 0)) return 2;
@@ -1019,8 +1021,8 @@ int far npc_barter_give_id(register int index)
                 barter_items[1][slot] = Obj_MemTPtr(obj);
                 barter_selected[1][slot] = 0;
                 barter_vals[1][0][slot] = barter_vals[0][1][slot] = -1;
-                SomethingWithTradeSlot_ovr097_E83(0, slot);
-                RedrawTradeSlot_ovr097_A91(1, slot);
+                showSelection_ovr097_E83(0, slot);
+                drawTradeSlot_ovr097_A91(1, slot);
                 return 1;
             }
         if (near_mob_put_at(talking_to, obj, 5, 0)) return 2;
@@ -1101,7 +1103,7 @@ int far give_all_stuff(void)
     for (i = 0; i < 6; i++)
         if (barter_items[0][i]) {
             barter_selected[0][i] = 1;
-            SomethingWithTradeSlot_ovr097_E83(0, i);
+            showSelection_ovr097_E83(0, i);
         }
     if (nothing_there(barter_items[0], barter_selected[0])) return 0;
     ReturnTradeObjectsToNPC_ovr097_F76(1);

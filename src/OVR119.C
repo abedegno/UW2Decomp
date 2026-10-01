@@ -3,9 +3,12 @@
 /* Art loading: .GR picture files into EMS pages or video memory, and .TR textures.
    Function names are the FM Towns originals at the same positions, using the same
    globals in the same way (load_tr_ems is also the name OVR140 calls, stub +4D).
-   LoadArtFile_ovr119_804 and ovr119_949 have no FM Towns counterpart: the FM Towns file
+   LoadScaled_ovr119_804 and GrLoadAt_ovr119_949 have no FM Towns counterpart: the FM Towns file
    has load_tr_ems_ alone after reload_obj_ems_, and nothing between load_gr_video_ and
-   reload_gr_vpic_. Both keep their IDA names. */
+   reload_gr_vpic_. Both names are provisional, chosen for their keys: Turbo C lists a file's
+   publics by the tools/bssorder.py key of each name and TLINK numbers overlay stub entries
+   from the last one listed, so these reproduce the EXE's stub order (the target table keeps
+   IDA's LoadArtFile_ovr119_804 and ovr119_949). */
 #include <dos.h>
 #include <stdio.h>
 #include <string.h>
@@ -51,7 +54,7 @@ extern unsigned long far gr_offs[];
 extern unsigned char far cmpbuf1_start[];
 #define GR_OFFS_MAX 570
 
-int far ReadFileToAddress(int fd, void far *buf, unsigned n);
+int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
 void far MapMemory_seg013_1D3C_C7();
 int far valloc(int w, int h);
 void far DRAW_RELATED_seg017_2179_2A2();
@@ -60,6 +63,9 @@ void far seg042_35ED_12B(void);
 void far mem_set(void far *destination, int value, unsigned count);
 unsigned char far *far grs_scaledown();
 unsigned char far preload_cr();
+/* declared before load_gr_ems: the two names have the same public-order key (404), and
+   Turbo C lists such publics in reverse order of first sight, as the stub order needs */
+unsigned char far load_tr_ems(char *art);
 
 unsigned char far get_pals(void)
 {
@@ -100,7 +106,7 @@ unsigned char far _ld_open(char *art, char type)
         goto bad;
     tmpoffs = gr_offs;
     fseek(grfp, 0L, 1);
-    if (ReadFileToAddress(grfp->fd, tmpoffs, (tmpcnt + 1) << 2) !=
+    if (intoFarBuffer_ovr167_5DA(grfp->fd, tmpoffs, (tmpcnt + 1) << 2) !=
           ((tmpcnt + 1) << 2)) {
         goto bad;
     }
@@ -133,7 +139,7 @@ int far _ld_gr(int image, void far *dst)
         return -1;
     if (!size)
         return 0;
-    if (ReadFileToAddress(grfp->fd, dst, size) != size)
+    if (intoFarBuffer_ovr167_5DA(grfp->fd, dst, size) != size)
         return -1;
     return size;
 }
@@ -311,7 +317,7 @@ unsigned char far load_tr_ems(char *art)
         }
         if (tmpoffs[TxmID[i]] == tmpoffs[TxmID[i] + 1])
             mem_set(MK_FP(EmsBuff + ems_off + 0xC00, 0), 0, bytes);
-        else if (ReadFileToAddress(grfp->fd, MK_FP(EmsBuff + ems_off + 0xC00, 0),
+        else if (intoFarBuffer_ovr167_5DA(grfp->fd, MK_FP(EmsBuff + ems_off + 0xC00, 0),
                                    bytes) != bytes)
             break;
         TxmCol[i] = *(unsigned char far *)MK_FP(EmsBuff + 0xC00, ems_off << 4);
@@ -322,7 +328,7 @@ unsigned char far load_tr_ems(char *art)
 }
 
 /* DOS only: all 256 textures, each reduced by grs_scaledown to 256 bytes, into destination. */
-int far LoadArtFile_ovr119_804(char *art, void far *destination, int unused)
+int far LoadScaled_ovr119_804(char *art, void far *destination, int unused)
 {
     void far *dst;
     void far *source;
@@ -337,7 +343,7 @@ int far LoadArtFile_ovr119_804(char *art, void far *destination, int unused)
             break;
         if (tmpoffs[i] == tmpoffs[i+1])
             mem_set(cmpbuf1_start, 0, bytes);
-        else if (ReadFileToAddress(grfp->fd, cmpbuf1_start, bytes) != bytes)
+        else if (intoFarBuffer_ovr167_5DA(grfp->fd, cmpbuf1_start, bytes) != bytes)
             break;
         source = grs_scaledown(cmpbuf1_start, gsize, gsize, 4);
         movedata(FP_SEG(source), FP_OFF(source), FP_SEG(dst), FP_OFF(dst), 0x100);
@@ -356,7 +362,7 @@ unsigned char far load_gr_video(char *art)
     return ok;
 }
 
-unsigned char far ovr119_949(int offset, char *art, int start, int count)
+unsigned char far GrLoadAt_ovr119_949(int offset, char *art, int start, int count)
 {
     register int old = gr_index;
     unsigned char ok;

@@ -138,7 +138,7 @@ extern void far process_area(char count, unsigned char src,
     unsigned char (far *callback)(int, int, struct Object far *),
     unsigned char type, char x, char y, char w, char h);
 /* FM Towns get_theta_; OVR167.C defines it under the IDA name, which is what links. */
-extern int far DartSatelliteVectoring_ovr167_313(int x1, int y1, int x2, int y2);
+extern int far get_theta(int x1, int y1, int x2, int y2);
 /* Initialised data, DS:00AC..00C2: the step for each of the four path directions, the
    free path slots (a bit per entry of paths), the direction from one square to the next
    by [dx + 1][dy + 1], and the slope tile type climbed in each direction. FM Towns keeps
@@ -283,7 +283,7 @@ void far check_homing(void) {
             + ((target->pos & 0xE000) >> 13);
         yhome = (((target->home & 0x3F0) >> 4) << 3)
             + ((target->pos & 0x1C00) >> 10);
-        vector = DartSatelliteVectoring_ovr167_313(
+        vector = get_theta(
             projxpos, proj_ycoord, xhome, yhome);
         if (hdist < 12) step = 2;
         else if (hdist < 32) step = 4;
@@ -327,7 +327,7 @@ void far check_sat(void) {
     srcy = (((src->home & 0x3F0) >> 4) << 3) + ((src->pos & 0x1C00) >> 10);
     satx = (((meptr->home & 0xFC00) >> 10) << 3) + ((meptr->pos & 0xE000) >> 13);
     saty = (((meptr->home & 0x3F0) >> 4) << 3) + ((meptr->pos & 0x1C00) >> 10);
-    vector = DartSatelliteVectoring_ovr167_313(satx, saty, srcx, srcy);
+    vector = get_theta(satx, saty, srcx, srcy);
     theta = vector + 0x4000;
     diff = abs((theta >> 8) - meptr->heading);
     if (diff > 0x80) diff = 0xFF - diff;
