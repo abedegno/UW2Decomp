@@ -15,7 +15,7 @@ extern unsigned far smooth_div;
 extern unsigned far smooth_base;
 extern unsigned far smooth_lowpass;
 
-int far Stub_OpenDataFile_seg005_2891();
+int far our_open();
 int far ReadFileToAddress(int fd, void far *buf, unsigned n);
 void far close(int fd);
 long far lseek(int fd, long offset, int origin);
@@ -32,7 +32,7 @@ int far lget(char *name, unsigned off, unsigned seg, unsigned n)
     register int got = -1;
     int handle;
 
-    if ((handle = Stub_OpenDataFile_seg005_2891(name, 1, 0)) != -1) {
+    if ((handle = our_open(name, 1, 0)) != -1) {
         got = ReadFileToAddress(handle, MK_FP(seg, off), n);
         close(handle);
     }
@@ -56,7 +56,7 @@ void far set_light(signed char lightLevel)
         lget("mono.dat", FP_OFF(cLightTabs), FP_SEG(cLightTabs), 0x1000);
     }
     MonoOrLightShadeRelated_dseg_67d6_1AAC = lightLevel;
-    if ((handle = Stub_OpenDataFile_seg005_2891("shades.dat", 1, 0)) < 0)
+    if ((handle = our_open("shades.dat", 1, 0)) < 0)
         return;
     diValue = (int)lightLevel * 12;
     lseek(handle, diValue, 0);

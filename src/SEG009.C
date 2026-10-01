@@ -9,9 +9,9 @@ extern unsigned far *obj_tab;
 extern unsigned first_vram, first_button;
 extern unsigned char Palettes[];
 extern unsigned char far cmpbuf1_start[], far cmpbuf2_start[];
-extern unsigned char far TextureLogicalPage;
+extern unsigned char far tmap_fpage;
 extern unsigned char far tmap_inpage, far obj_inpage1;
-extern unsigned far ems_seg;
+extern unsigned far EmsBuff;
 extern unsigned char far Transparency;
 
 void far MapMemory_seg013_1D3C_C7(int physical, int page);
@@ -40,7 +40,7 @@ void far * far seg009_7(int icon)
         obj_inpage1 = page;
         MapMemory_seg013_1D3C_C7(2, page);
     }
-    return MK_FP(ems_seg + (grs_off[icon] & 0x3ff) + 0x800, 0);
+    return MK_FP(EmsBuff + (grs_off[icon] & 0x3ff) + 0x800, 0);
 }
 
 void far seg009_73(int icon, int x, int y, int height, int width)
@@ -139,12 +139,12 @@ void far mask_to_screen(int icon, int x, int y, int width, int height, int clip)
 
 unsigned far seg009_392(int index)
 {
-    unsigned char page = TextureLogicalPage + (index >> 2);
+    unsigned char page = tmap_fpage + (index >> 2);
     if (tmap_inpage != page) {
         MapMemory_seg013_1D3C_C7(3, page);
         tmap_inpage = page;
     }
-    return ems_seg + ((index & 3) << 8) + 0xc00;
+    return EmsBuff + ((index & 3) << 8) + 0xc00;
 }
 
 /* FM Towns grs_scaledown_ uses the same alternating scratch buffers and stride. */

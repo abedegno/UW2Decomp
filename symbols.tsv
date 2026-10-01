@@ -57,7 +57,6 @@ _AIL_timbre_status	2218:0C69	FM Towns
 _aligned	DS:2242	FM Towns
 _Alt	DS:2130	FM Towns
 _always_decode	DS:090E	FM Towns
-_ambient	DS:30EE	provisional
 _anim_overlays	DS:3578	provisional
 _animclassd	DS:34B6	FM Towns
 _animcount	DS:34B4	FM Towns
@@ -137,11 +136,11 @@ _change_music_maybe	1C86:2BB2	FM Towns
 _change_screen	64BF:0061	FM Towns
 _change_sprite	0000:00A6	FM Towns
 _change_state	DS:12B4	FM Towns
+_change_terrain	64A5:0124	FM Towns
 _change_weapon_playerbest	64A5:00CF	FM Towns
 _changed	DS:5DAC	FM Towns
 _changeDoor	654F:0089	FM Towns
 _ChangeLevel	6581:003E	FM Towns
-_ChangeTile_ovr110_F37	64A5:0124	provisional
 _CharacterThatTriggeredTrap_dseg_	DS:8644	provisional
 _chdir	0E72:1683	FM Towns
 _check_alert	65D5:007F	FM Towns
@@ -377,7 +376,7 @@ _effects	60A0:0000	FM Towns
 _eight_pos_switch	64A5:0048	FM Towns
 _empty_text	DS:098D	provisional
 _ems_frame	DS:22CE	provisional
-_ems_seg	4FAF:E4D2	provisional
+_EmsBuff	4FAF:E4D2	FM Towns
 _EncumCheck	650A:0075	FM Towns
 _end_barter	6448:0025	FM Towns
 _EndInventory	6513:0039	FM Towns
@@ -598,8 +597,8 @@ _invArmorQ	DS:6AD6	FM Towns
 _InvDisplay	DS:1626	FM Towns
 _InvDownArrow	DS:179E	FM Towns
 _Inventory	DS:6A98	FM Towns
-_InvRemoveObject	650A:0039	FM Towns
 _invRemoveObject	650A:003E	FM Towns
+_InvRemoveObject	650A:0039	FM Towns
 _InvRemoveOneObject	650A:0048	FM Towns
 _InvUpArrow	DS:179D	FM Towns
 _IsJoy	DS:8298	FM Towns
@@ -609,7 +608,6 @@ _ItemMinorClass	DS:554C	provisional
 _ItemSubClass	DS:492A	provisional
 _ItemWeight	650A:004D	FM Towns
 _itoa	0E72:1D1B	FM Towns
-_j_LikelyWaitForMore_ovr139_29	6559:002A	provisional
 _j_WriteTextWithMORE_ovr139_BD	6559:0039	provisional
 _joy_button_x	DS:027C	provisional
 _joy_button_y	DS:027E	provisional
@@ -652,7 +650,6 @@ _light_hi	DS:19B8	FM Towns
 _light_mod	DS:19B5	FM Towns
 _lighton	DS:053A	FM Towns
 _Lights	DS:6B40	FM Towns
-_LikelyDist	DS:2C6C	provisional
 _line_of_sight	1226:22F7	FM Towns
 _load_all_gr	64EA:0039	FM Towns
 _load_digi_fx	1C86:0260	FM Towns
@@ -669,11 +666,13 @@ _LoadDATFile	65E0:007A	provisional
 _LoadStringsPakToTable	65E0:0075	provisional
 _loc_lght	DS:19B7	FM Towns
 _local_do_palette	1F8C:0220	FM Towns
+_locsqmod	DS:2FC0	FM Towns
 _loct	DS:2C61	FM Towns
 _look_nothing	2529:073F	FM Towns
 _LookAt	651C:0048	FM Towns
 _loop_music_maybe	1C86:2B73	FM Towns
 _loopx	DS:2C6A	FM Towns
+_loopy	DS:2C6C	FM Towns
 _LootCreature	DS:863A	provisional
 _LowerCaseCharacterTable	DS:1BF7	provisional
 _lseek	0E72:1C75	FM Towns
@@ -776,6 +775,7 @@ _MoveCrits	DS:19DC	FM Towns
 _movedata	0E72:1DF9	provisional
 _MP	DS:03FA	FM Towns
 _mpos	65E0:0034	FM Towns
+_mptrmod	DS:30EE	FM Towns
 _mspell_mused	DS:1B0C	FM Towns
 _mts_doanim	34A2:0AB4	FM Towns
 _music_available	1C86:1AF0	FM Towns
@@ -867,10 +867,10 @@ _objhit_used	DS:25BC	provisional
 _objhit_x	DS:25BD	provisional
 _objhit_y	DS:25BE	provisional
 _ObjsBeCombinable	6465:002F	FM Towns
-_ObjWorldX	DS:3348	provisional
-_ObjWorldY	DS:334C	provisional
-_ObjWorldZ	DS:334A	provisional
 _ObjWorn	650A:0070	FM Towns
+_objxloc	DS:3348	FM Towns
+_objyloc	DS:334A	FM Towns
+_objzloc	DS:334C	FM Towns
 _oCollisions	DS:2520	FM Towns
 _octant	65E0:0025	FM Towns
 _open	0E72:1E46	FM Towns
@@ -879,6 +879,7 @@ _OpenBag	DS:1622	FM Towns
 _OpenBagList	DS:161E	FM Towns
 _OpenDoor	654F:007F	FM Towns
 _OpenTheBag	64F7:0025	FM Towns
+_our_open	65E0:0070	FM Towns
 _ovr167_463	65E0:0061	provisional
 _palette	DS:21AC	provisional
 _Palettes	DS:6742	FM Towns
@@ -1094,6 +1095,9 @@ _scroll_esc	DS:098C	FM Towns
 _scroll_mode	DS:097E	FM Towns
 _scroll_print	342C:01A0	FM Towns
 _scroll_up	342C:011F	FM Towns
+_scroll_wait	6559:002A	FM Towns
+_sd_xmod	DS:30F0	FM Towns
+_sd_ymod	DS:30F2	FM Towns
 _seg001_023B_C	004E:000C	provisional
 _seg003_0272_4431	0085:4431	provisional
 _seg003_0272_4629	0085:4629	provisional
@@ -1166,7 +1170,6 @@ _setup_icon_buttons	1B6B:000A	FM Towns
 _setup_to_barter	6448:003E	FM Towns
 _setvect	0E72:1B67	provisional
 _sex	643D:0057	FM Towns
-_Shade	DS:2FC0	provisional
 _ShadeCalcs_seg032_2E9B_4AF	2CAE:04AF	provisional
 _Shift	DS:2128	FM Towns
 _show	0085:4FC2	FM Towns
@@ -1234,7 +1237,6 @@ _strt_demscr	64BF:0052	FM Towns
 _strtime	DS:2B54	FM Towns
 _strupr	0E72:2940	FM Towns
 _stub108_B6	6488:00B6	provisional
-_Stub_OpenDataFile_seg005_2891	65E0:0070	provisional
 _stuff_class_data	65C1:0020	FM Towns
 _SwapItemsInBag	64F7:002A	FM Towns
 _switch_flip_hack	64A5:00ED	FM Towns
@@ -1257,7 +1259,6 @@ _tell	0E72:1072	FM Towns
 _term_icon_buttons	1B6B:004C	FM Towns
 _terrain	DS:26A9	provisional
 _TerrainCheck	2754:0385	FM Towns
-_TextureLogicalPage	4FAF:E4CF	provisional
 _ThePlayer	DS:828E	FM Towns
 _thump_your_magic_twanger_froggie	65B5:006B	FM Towns
 _tile_walls	DS:1BA6	FM Towns
@@ -1267,6 +1268,7 @@ _Time	DS:2158	FM Towns
 _timer_triggers	DS:34F6	provisional
 _timercount	DS:3576	FM Towns
 _TimeStop	DS:037F	FM Towns
+_tmap_fpage	4FAF:E4CF	FM Towns
 _tmap_inpage	4FAF:E4CE	FM Towns
 _tmapson	DS:0538	FM Towns
 _tmpcnt	DS:6740	FM Towns
@@ -1283,8 +1285,6 @@ _tp_act	DS:223C	FM Towns
 _trans	DS:2C5E	FM Towns
 _trans_grid	DS:0452	FM Towns
 _trans_pos_x	DS:06FE	FM Towns
-_trans_x	DS:30F0	provisional
-_trans_y	DS:30F2	provisional
 _transform_creature	64A5:00E3	FM Towns
 _transform_talker	643D:0066	FM Towns
 _Transparency	370D:0DC5	FM Towns
@@ -1298,7 +1298,7 @@ _tremEfflen	DS:0740	FM Towns
 _tries	DS:26B6	provisional
 _TriggerChainTileData_dseg_67d6_1	DS:1BB9	provisional
 _TriggeringButton_dseg_67d6_8648	DS:8648	provisional
-_TriggerObjectDatTable	DS:864C	provisional
+_Triggers	DS:864C	FM Towns
 _try_cast	6504:0020	FM Towns
 _try_clear	6504:0052	FM Towns
 _turn_fx	1C86:1B95	FM Towns

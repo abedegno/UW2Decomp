@@ -77,7 +77,7 @@ char far * far FindInString_seg005_105F_103F(char *s, char c);
 char far * far MaybeAComparison_seg005_105F_282C(char *s, char c);
 int far string_width(char far *s);
 void far string_to_screen(char far *s, int x, int y);
-void far j_LikelyWaitForMore_ovr139_29(int ticks, int also);
+void far scroll_wait(int ticks, int also);
 void far j_WriteTextWithMORE_ovr139_BD(void);
 /* A 6-int call in a different file; FM Towns vcopy_ matches the first four parameters
    exactly (by position and value) but takes only four, so this probably is not it.
@@ -266,7 +266,7 @@ void far scroll_print3(char *text, int flag)
             code_val = 0x190;
         case 'P':
             code_val += 0xC8;
-            j_LikelyWaitForMore_ovr139_29(code_val, 1);
+            scroll_wait(code_val, 1);
             break;
         case 'm':
             j_WriteTextWithMORE_ovr139_BD();

@@ -29,7 +29,7 @@ void far seg021_22FD_791(void);
 void far set_the_color(int);
 void far seg003_0272_4D86(void);
 void far mouse_show(void);
-int far Stub_OpenDataFile_seg005_2891(char *, int, int);
+int far our_open(char *, int, int);
 int far ReadFileToAddress(int, void far *, unsigned);
 void far close(int);
 void far lseek(int, long, int);
@@ -62,7 +62,7 @@ void far ovr118_0(void)
 unsigned char far grfx_load_font(char *name)
 {
     register int fd;
-    if ((fd = Stub_OpenDataFile_seg005_2891(name, 1, 0)) < 0) return 0;
+    if ((fd = our_open(name, 1, 0)) < 0) return 0;
     grfx_driver[12] = 1;
     ReadFileToAddress(fd, cur_font, 12);
     ReadFileToAddress(fd, bytefont, (cur_font->height + cur_font->width) << 7);
@@ -98,7 +98,7 @@ unsigned char far read_quikpal(int n, void far *dest)
 {
     register int fd;
     register int got;
-    fd = Stub_OpenDataFile_seg005_2891(pals_name, 1, 0);
+    fd = our_open(pals_name, 1, 0);
     if (fd < 0) return 0;
     lseek(fd, (long)(n * 0x300), 0);
     got = ReadFileToAddress(fd, dest, 0x300);

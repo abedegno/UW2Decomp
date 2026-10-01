@@ -79,7 +79,7 @@ extern struct GLoc far *dseg_67d6_2C74;   /* no FM Towns name (it is _gr_wcall+4
 extern unsigned char *qdec;
 extern int mxY;
 extern signed char quad;
-extern int loopx, LikelyDist;          /* LikelyDist is _loopy in FM Towns */
+extern int loopx, loopy;          /* loopy is _loopy in FM Towns */
 extern int PlayerLevel;
 extern unsigned char PickUp;
 extern unsigned char AnimObjInPipe;
@@ -93,7 +93,7 @@ extern int cTmBm, cTmDm, cTmSz, cTmHg;
 extern unsigned far bmhgtoff;
 extern FlrFn gr_fcall, gr_ccall;
 extern WalFn gr_wcall;
-extern int trans_x, trans_y;           /* _sd_xmod and _sd_ymod in FM Towns */
+extern int sd_xmod, sd_ymod;           /* _sd_xmod and _sd_ymod in FM Towns */
 
 int far SetPnt(char x, char y, char z);
 void far Ref(int n, int a);
@@ -270,8 +270,8 @@ void far do_3d_pickup(void)
     gr_ccall = gctab[0];
     gr_wcall = gwtab[0];
     set_pix_xfer(2);
-    trans_x = quad_mod[quad][0];
-    trans_y = quad_mod[quad][1];
+    sd_xmod = quad_mod[quad][0];
+    sd_ymod = quad_mod[quad][1];
     subprocess();
 }
 
@@ -300,7 +300,7 @@ void far subprocess(void)
     if (idx > 0x2000)
         idx = idx - 0x4000;
     sort_setup(-10);
-    for (LikelyDist = mxY; LikelyDist >= 0; LikelyDist--) {
+    for (loopy = mxY; loopy >= 0; loopy--) {
         sort_setup(2);
         for (loopx = 0, dseg_67d6_2C74 = gloc + loopx, tmptr = row + loopx * dx,
              i = idx + loopx * dx; loopx < 0x10;
@@ -507,23 +507,23 @@ void far grdb_elem(unsigned char *automap)
         vis = cPlayer->z > hgt_val[ht];
     else
         vis = (((loopx - 0x10) << 8) - cPlayer->x) * norm[hq][0]
-            + ((LikelyDist << 8) - cPlayer->y) * norm[hq][2]
+            + ((loopy << 8) - cPlayer->y) * norm[hq][2]
             + (hgt_val[ht + *hm] - cPlayer->z) * norm[hq][1] < 0;
     tCacheOK = 0xE0;
     if (vis) {
         p -= 4;
-        *p++ = SetPnt(loopx, LikelyDist + 1, ht + hm[2]);
-        *p++ = SetPnt(loopx + 1, LikelyDist + 1, ht + hm[3]);
-        *p++ = SetPnt(loopx + 1, LikelyDist, ht + hm[1]);
-        *p++ = SetPnt(loopx, LikelyDist, ht + hm[0]);
+        *p++ = SetPnt(loopx, loopy + 1, ht + hm[2]);
+        *p++ = SetPnt(loopx + 1, loopy + 1, ht + hm[3]);
+        *p++ = SetPnt(loopx + 1, loopy, ht + hm[1]);
+        *p++ = SetPnt(loopx, loopy, ht + hm[0]);
         (*gr_fcall)(pts, sqmod, tmptr->floor);
     }
     if (cPlayer->z <= 0x3F4 && ciels) {
         p -= 4;
-        *p++ = SetPnt(loopx, LikelyDist, 0x10);
-        *p++ = SetPnt(loopx + 1, LikelyDist, 0x10);
-        *p++ = SetPnt(loopx + 1, LikelyDist + 1, 0x10);
-        *p++ = SetPnt(loopx, LikelyDist + 1, 0x10);
+        *p++ = SetPnt(loopx, loopy, 0x10);
+        *p++ = SetPnt(loopx + 1, loopy, 0x10);
+        *p++ = SetPnt(loopx + 1, loopy + 1, 0x10);
+        *p++ = SetPnt(loopx, loopy + 1, 0x10);
         (*gr_ccall)(pts, sqmod, 0xF);
     }
     bit = 0x40;
@@ -549,22 +549,22 @@ void far grdb_elem(unsigned char *automap)
                 sh = 0x10 - ht - thgt[w][hq];
             }
             p -= 4;
-            *p++ = SetPnt(loopx + wm[0], LikelyDist + wm[1], nh);
-            *p++ = SetPnt(loopx + wm[3], LikelyDist + wm[4], h2);
-            *p++ = SetPnt(loopx + wm[3], LikelyDist + wm[4], ht + hm[wm[5]]);
-            *p++ = SetPnt(loopx + wm[0], LikelyDist + wm[1], ht + hm[wm[2]]);
+            *p++ = SetPnt(loopx + wm[0], loopy + wm[1], nh);
+            *p++ = SetPnt(loopx + wm[3], loopy + wm[4], h2);
+            *p++ = SetPnt(loopx + wm[3], loopy + wm[4], ht + hm[wm[5]]);
+            *p++ = SetPnt(loopx + wm[0], loopy + wm[1], ht + hm[wm[2]]);
             (*gr_wcall)(pts, sqmod, sh, tmptr->wall);
         }
     } while (++w < 3);
     if ((flags & 0x44) == 0x44) {
         dxp = dxtab[flags & 3];
         if ((((loopx + dxp[0] - 0x10) << 8) - cPlayer->x) * dxp[4]
-            + (((LikelyDist + dxp[1]) << 8) - cPlayer->y) * dxp[5] < 0) {
+            + (((loopy + dxp[1]) << 8) - cPlayer->y) * dxp[5] < 0) {
             p -= 4;
-            *p++ = SetPnt(loopx + dxp[0], LikelyDist + dxp[1], 0x10);
-            *p++ = SetPnt(loopx + dxp[2], LikelyDist + dxp[3], 0x10);
-            *p++ = SetPnt(loopx + dxp[2], LikelyDist + dxp[3], ht);
-            *p++ = SetPnt(loopx + dxp[0], LikelyDist + dxp[1], ht);
+            *p++ = SetPnt(loopx + dxp[0], loopy + dxp[1], 0x10);
+            *p++ = SetPnt(loopx + dxp[2], loopy + dxp[3], 0x10);
+            *p++ = SetPnt(loopx + dxp[2], loopy + dxp[3], ht);
+            *p++ = SetPnt(loopx + dxp[0], loopy + dxp[1], ht);
             (*gr_wcall)(pts, sqmod, 0x10 - ht, tmptr->wall);
         }
     }

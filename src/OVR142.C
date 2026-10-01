@@ -72,7 +72,7 @@ int far rand(void);
 void far set_cyb(int n);
 void far grfx_quikpal(int n);
 void far random_light(int n);
-int far Stub_OpenDataFile_seg005_2891(char *name, int mode, int flags);
+int far our_open(char *name, int mode, int flags);
 long far lseek(int fd, long pos, int whence);
 void far close(int fd);
 
@@ -397,7 +397,7 @@ void far load_dl(void)
 {
     unsigned char value;
     register int fd;
-    fd = Stub_OpenDataFile_seg005_2891("dl.dat", 1, 0);
+    fd = our_open("dl.dat", 1, 0);
     if (fd >= 0) {
         lseek(fd, (long)(PlayerLevel - 1), 0);
         read(fd, &value, 1);

@@ -231,7 +231,7 @@ struct Seq {
 };
 extern struct Seq far *seqptr;
 /* The segment of the EMS page frame, provisional name. */
-extern unsigned far ems_seg;
+extern unsigned far EmsBuff;
 extern unsigned char pmouseHandled;
 /* Per critter type: the page of its animations. */
 struct Grs3d {
@@ -868,7 +868,7 @@ void far crit_talk(void)
                 mouse_freereign();
                 TalkTo(meptr);
                 map_crit_pages();
-                seqptr = MK_FP(ems_seg + 0xC00, 0);
+                seqptr = MK_FP(EmsBuff + 0xC00, 0);
             }
         }
     }
@@ -1614,7 +1614,7 @@ void far move_mobile(char delta)
     curBin = lastbin + delta & 0xF;
     meptr = 0;
     map_crit_pages();
-    seqptr = MK_FP(ems_seg + 0xC00, 0);
+    seqptr = MK_FP(EmsBuff + 0xC00, 0);
     for (p = ActiveMob; p < LastActiveMob; p++) {
         meptr = &critdata[*p];
         while (timetodo(BIN(meptr), RATE(meptr))) {
