@@ -64,7 +64,7 @@ ovr110	C	68	20625	59	8	0	1	find_good_x_and_y_	Killorn_just_crashed_
 ovr112	C	21	2446	18	0	0	3	main_	move_initial_files_	yes
 ovr113	C	31	3241	10	21	0	0	gronk_race_	Sched_DoEvent_	yes
 ovr114	C	4	412	2	0	1	1	first_punt_	pfatal_code_	yes
-ovr116	C	6	1190	0	1	0	5			
+ovr116	C	6	1190	0	1	0	5			yes
 ovr117	C	5	949	2	1	2	0	preload_cr_	PreLoadCritPages_	yes
 ovr118	C	19	1511	9	7	0	3	grfx_quikfont_	cameras_fade_	yes
 ovr119	C	25	3009	10	10	3	2	_ld_open_	load_doors_	
