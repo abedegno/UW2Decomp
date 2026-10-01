@@ -105,7 +105,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **An int also stored as a char stays on the stack** (SI and DI have no byte halves), even when DI is free.
 - **The first assignment and the loop step share a call tail**: `obj = f(&a->x); while (obj && c) obj = f(&obj->y);` jumps from the first call into the body's pushes. That is the compiler, not a `goto`.
 - **`sizeof` widened to long**: `farmalloc(sizeof(struct Bag))` pushes `6A 00, 6A 0C`. The runtime's `farmalloc`/`farfree` are in seg005.
-- **Odd-sized local arrays go after the scalars**: a `char x[11]` is placed after scalar locals declared after it, whatever the order; even-sized arrays keep declaration order. An 11-byte gap can be `char x[10]` plus a padding byte.
+- **Odd-sized local arrays go after the scalars** (uninitialised ones; an initialised `unsigned char inst[3] = {...}` kept its place): a `char x[11]` is placed after scalar locals declared after it, whatever the order; even-sized arrays keep declaration order. An 11-byte gap can be `char x[10]` plus a padding byte.
 - **Shared `return 0`**: several exits jumping to one `mov al,0` before the epilogue need the function's last statement to be a reachable `return 0;`; then early `return 0`s merge into it too (ovr125). Without a reachable final one, each early return gets its own `mov al,0; jmp`.
 - **`FP_SEG` of a computed near pointer re-evaluates it**: `movedata(..., FP_SEG(d), FP_OFF(d), ...)` with `d = s + strlen(s)` calls `strlen` twice and pushes `ds`; a stack array gives `push ss`.
 - **Two explicit `register` locals**: sometimes the first declared gets SI (ovr126), sometimes the second (ovr124, a pointer and an int). Try both orders.
@@ -182,5 +182,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **`&=` with a large constant**: on an int global, `x &= 0xFF7F` gives load, AND, store (the constant is unsigned); `x &= ~0x80` gives `and word [x],0FF7Fh`.
 - **`return 0` against `break` in a switch case**: a `jcc` to a lone `jmp` in front of the final `return 0` means the case said `return 0;`; with `break` the jumps are threaded straight to the shared return and the function grows.
 - **`return !x;`** on an unsigned register variable gives `mov ax,di; neg ax; sbb ax,ax; inc ax`; `return x == 0;` gives a branch and `mov ax,1` / `xor ax,ax`.
+- **Testing an `unsigned char` return**: only `!f()` widens it (`mov ah,0; or ax,ax`); `f()`, `f() != 0`, `(int)f()` and `f() ? 1 : 0` all give `or al,al`.
+- **A repeated store or tail becomes a jump**: in `if (a) x = 0; else if (b) x = e; else x = 0;` the first `x = 0` turns into a jump to the shared final store; a whole else block repeating the function's tail becomes one `jmp` to it.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.
