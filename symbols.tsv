@@ -114,6 +114,7 @@ _cPerror	DS:215C	FM Towns
 _cPlaceFB	2110:0D1D	FM Towns
 _cPlayer	DS:2168	FM Towns
 _creat_spell	65B5:002A	FM Towns
+_create_player	645E:002A	FM Towns
 _CreateObj	30BC:0044	FM Towns
 _Creature	DS:494C	FM Towns
 _creature_obj_init	6475:002F	FM Towns
@@ -185,6 +186,7 @@ _do_crit_phys	1226:0D6A	FM Towns
 _do_escape_key	6469:0061	FM Towns
 _do_fbuf_bms	30D3:1567	FM Towns
 _do_keyboard_input	1B8F:04AE	FM Towns
+_do_level_hacks	6581:0043	FM Towns
 _do_main_scroll	342C:0022	FM Towns
 _do_mstone	6599:0039	FM Towns
 _do_objhit	29CA:01CE	FM Towns
@@ -223,6 +225,7 @@ _EncumCheck	650A:0075	FM Towns
 _environ	DS:204C	FM Towns
 _errmsg	65E0:0089	FM Towns
 _establish_view	2CAE:0355	FM Towns
+_exit	0E72:032C	FM Towns
 _ExitAutoMap	641E:0061	FM Towns
 _fadein	64E2:0061	FM Towns
 _fadein3d	64E2:0043	FM Towns
@@ -249,6 +252,7 @@ _fire_trigger_at	64A5:0034	FM Towns
 _fireball_effect	34A2:08EA	FM Towns
 _first_punt	64D4:002F	FM Towns
 _fix_name_string	3265:03ED	FM Towns
+_FixBagArea	64F7:004D	FM Towns
 _FixOpenBag	64F7:0048	FM Towns
 _FixPlayerEquips	6564:002F	FM Towns
 _fiz_update	DS:00D3	FM Towns
@@ -269,6 +273,7 @@ _free_scrgr	30D3:02BE	FM Towns
 _free_sounds	1C86:2AEC	FM Towns
 _free_strings	3265:0084	FM Towns
 _free_timers	1C86:29C5	FM Towns
+_free_world	64BF:0025	FM Towns
 _freepaths	DS:00B4	FM Towns
 _FreePlayerInv	64FE:0039	FM Towns
 _frictionless	DS:229E	FM Towns
@@ -289,6 +294,7 @@ _get_hp_back	65A7:00C0	FM Towns
 _get_iconreg_button	1B6B:005C	FM Towns
 _get_name	3265:0327	FM Towns
 _get_phys_data	29CA:043D	FM Towns
+_get_save_descs	6581:0061	FM Towns
 _get_string	3265:008E	FM Towns
 _get_terrain	1226:09F5	FM Towns
 _get_wfr	30D3:151E	FM Towns
@@ -296,6 +302,7 @@ _get_workspace	3400:0176	FM Towns
 _GetAutoMapLevel	641E:0025	FM Towns
 _getcurdir	0E72:1A91	provisional
 _getdfree	0E72:1B38	provisional
+_GetLevel	6581:0048	FM Towns
 _GetObjDesc	651C:004D	FM Towns
 _GetSlopeHgt	2754:01AF	FM Towns
 _getvect	0E72:1B58	provisional
@@ -488,6 +495,7 @@ _mouse_show	1B8F:00C0	FM Towns
 _MousQUp	1B8F:0B30	FM Towns
 _move_along	33EA:004E	FM Towns
 _move_cam	656A:002A	FM Towns
+_move_initial_files	64BF:0066	FM Towns
 _move_me_joe	1226:0173	FM Towns
 _move_mobile	15B5:359F	FM Towns
 _MoveCamera	DS:077B	FM Towns
@@ -648,6 +656,8 @@ _PN	DS:25DC	FM Towns
 _pn_act	DS:2270	FM Towns
 _PoisonWeap	DS:037E	FM Towns
 _Ppd	DS:25C4	FM Towns
+_preload_cr	64DE:0020	FM Towns
+_PreLoadCritPages	64DE:002F	FM Towns
 _pretty_panelagain	30D3:12F0	FM Towns
 _print_path_to	65E0:003E	FM Towns
 _prison_alarm_check	64A5:00D4	FM Towns
@@ -673,6 +683,7 @@ _quick_time	DS:0388	FM Towns
 _quit_buttongroup	DS:01AB	FM Towns
 _rand	0E72:0DE7	FM Towns
 _read	0E72:1FCD	FM Towns
+_read_player_data	6564:003E	FM Towns
 _read_quikpal	64E2:006B	FM Towns
 _ReadFileToAddress	65E0:0066	provisional
 _real_death	64BF:007A	FM Towns
@@ -704,6 +715,7 @@ _restore_hp	65A7:00B1	FM Towns
 _restore_mana	65A7:00CF	FM Towns
 _restore_opt	653E:00BB	FM Towns
 _restore_rect	004E:025B	FM Towns
+_RestoreGame	6581:005C	FM Towns
 _RestorePlayerInv	64FE:002A	FM Towns
 _ReturnObject	2669:0439	FM Towns
 _rgn_dl	DS:8628	provisional
@@ -718,6 +730,7 @@ _RightButtonThing	DS:24F0	FM Towns
 _RightPanel	DS:079E	FM Towns
 _rollem	33EA:011F	FM Towns
 _save_opt	653E:00A7	FM Towns
+_save_player_data	6564:0043	FM Towns
 _save_rect	004E:01D5	FM Towns
 _save_screenshot	64DA:0020	provisional
 _SaveAutoMapLevel	641E:0039	FM Towns
@@ -772,6 +785,7 @@ _SetOffTrap	65D5:0084	FM Towns
 _setvect	0E72:1B67	provisional
 _Shift	DS:2128	FM Towns
 _show	0085:4FC2	FM Towns
+_show_credits	652F:0020	FM Towns
 _show_cutscene	6488:00F2	FM Towns
 _simple_fizix	191C:0225	FM Towns
 _skill_check	323F:0009	FM Towns

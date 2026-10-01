@@ -1,7 +1,7 @@
 # segment ovr147 base 0x98A10 size 0xAC2 org 0x0
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
-ovr147_0	ovr147_0	0x0	0x22
-ovr147_22	ovr147_22	0x22	0x72
+adr_opbtn	ovr147_0	0x0	0x22
+move_opbtn	ovr147_22	0x22	0x72
 do_intro_scene	PlayIntroIfNoSaveGames_ovr147_94	0x94	0x38
 draw_start_buttons	DrawMainMenuLoadScreen_ovr147_CC	0xCC	0x14C
 real_start	MainMenu_ovr147_218	0x218	0x327
