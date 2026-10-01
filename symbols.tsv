@@ -457,6 +457,7 @@ _frictionless	DS:229E	FM Towns
 _fseek	0E72:0A07	FM Towns
 _fstat	0E72:18C4	FM Towns
 _ftell	0E72:0A6D	FM Towns
+_fudge	DS:0BFE	FM Towns
 _fx_available	1C86:1AE8	FM Towns
 _fx_is_on	1C86:1AD3	FM Towns
 _game_sprint	3265:04A4	FM Towns
@@ -823,6 +824,7 @@ _npc_inv_add	6448:0089	FM Towns
 _npc_inv_create	6448:00B1	FM Towns
 _npc_inv_delete	6448:00B6	FM Towns
 _npc_likes_dislikes	6448:002A	FM Towns
+_npc_say	6469:003E	FM Towns
 _npc_scroll	DS:094D	FM Towns
 _npp_func	DS:12C2	FM Towns
 _nvokHgt	DS:2582	FM Towns
@@ -920,6 +922,7 @@ _play_effect_on_mobile	1C86:1E7E	FM Towns
 _play_effect_on_mobile_src	1C86:1EE7	FM Towns
 _play_instrument	1C86:26BC	FM Towns
 _play_music	1C86:1987	FM Towns
+_play_say	6469:0057	FM Towns
 _play_with_switches	64A5:002A	FM Towns
 _player	DS:828A	FM Towns
 _player_attack	22FC:134B	FM Towns
@@ -959,6 +962,7 @@ _PlayerPitch	DS:33D6	FM Towns
 _PlayersMap	DS:36FC	FM Towns
 _PlayerTurn	DS:0775	FM Towns
 _PLeft	DS:829E	FM Towns
+_plot_pixel	0085:47E2	FM Towns
 _plyNotice	DS:19B2	FM Towns
 _plyregen	DS:190A	FM Towns
 _pmouseHandled	DS:073E	FM Towns
@@ -1317,6 +1321,7 @@ _typehit	DS:00C6	FM Towns
 _typos	DS:224F	FM Towns
 _typost	DS:2260	FM Towns
 _tzpos	DS:2274	FM Towns
+_uhline	0085:4C1F	FM Towns
 _undefineMouseRegion	1B8F:061F	FM Towns
 _unforce_mouse_cursor	1B8F:06AF	FM Towns
 _unlink	0E72:2BC0	FM Towns
@@ -1350,10 +1355,12 @@ _using_bow	DS:03B4	FM Towns
 _using_punt	32FA:0383	FM Towns
 _UsingPole	DS:19B4	FM Towns
 _UsPtr	DS:2C6E	FM Towns
+_uvline	0085:4CAB	FM Towns
 _ValidLightSlots	DS:161A	FM Towns
 _valloc	004E:004A	FM Towns
 _Valor	DS:0383	FM Towns
 _vcopyfb	0085:517B	FM Towns
+_vfree	004E:0105	FM Towns
 _victim	DS:228C	FM Towns
 _vort_rad	DS:33C8	FM Towns
 _vort_theta	DS:33CC	FM Towns

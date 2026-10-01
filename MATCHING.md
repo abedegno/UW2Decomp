@@ -197,5 +197,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **`tmp = *p++` on a far pointer in a used expression** increments the offset before the load; `(tmp = *p, p++, tmp)` loads first.
 - **`x ? f() : (void)0`** leaves a `jmp short` to the next instruction after the call; an `if` doesn't.
 - **Recognise library code**: ovr127 is Haruhiko Okumura's 1989 LZSS.C almost line for line, with its globals moved into one far work area. Well-known public code is worth looking for before reconstructing from scratch.
+- **`jne L; mov; jmp X; L: jmp X`** (a conditional jump onto an unshortened `jmp`) comes from the same last statement written in both arms of an if/else, which `-O` merges into one copy; goto, continue and `else ;` don't reproduce it.
+- **Arrays indexed `[side][slot]`**: when two sides of a trade or similar are handled by one loop, the original used 2-D arrays; separate arrays can't reproduce the indexing.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

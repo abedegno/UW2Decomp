@@ -50,7 +50,7 @@ ovr093	C	13	3629	7	4	0	2	get_ulong_	check_arc_	yes
 ovr094	C	28	6350	25	0	0	3	AutoMap_	make_terrain_unseen_	yes
 ovr095	C	58	8859	3	7	7	41	babl_setmem_	bab_var_out_	
 ovr096	C	27	5202	12	15	0	0	babl_hack_	x_obj_pos_	yes
-ovr097	C	37	8598	19	6	2	10	setup_to_barter_	does_npc_like_	
+ovr097	C	37	8598	19	6	2	10	setup_to_barter_	does_npc_like_	yes
 ovr099	C	7	38	0	7	0	0			
 ovr101	C	16	6377	15	0	1	0	init_char_	create_player_	yes
 ovr102	C	5	357	4	0	0	1	ObjsBeCombinable_	make_stew_	yes
