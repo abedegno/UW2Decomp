@@ -83,7 +83,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **A block-local initialised array** (`char num[3] = "00";`) puts its initialiser in `_DATA` where the function is.
 - **Pointer tables in data** (an initialised array of far function pointers) carry fixups inside `_DATA`; `verify.py` checks each pointer against the EXE and leaves those bytes out of the comparison.
 - **An empty string can be someone else's padding byte**: seg043 passes `push 98Dh` for `""`, an address inside another file's data, so the literal was merged by the linker and is declared there as an extern array.
-- **`_BSS` is laid out by name, not declaration order** (file-scope data only; function-level statics are placed where they are defined): Turbo C emits uninitialised variables in its symbol table's order, so renaming one moves it and reordering declarations doesn't (ties keep declaration order; ints are word-aligned). A static's name never reaches the linker, so when a static has no original name, choose one that lands where the EXE has it, and say in a comment that the name was chosen for layout. Public names are fixed by other files.
+- **`_BSS` is laid out by name, not declaration order** (file-scope data only; function-level statics are placed where they are defined): Turbo C emits uninitialised variables in its symbol table's order, so renaming one moves it and reordering declarations doesn't (ties keep declaration order; ints are word-aligned). A static's name never reaches the linker, so when a static has no original name, choose one that lands where the EXE has it, and say in a comment that the name was chosen for layout. Public names are fixed by other files. To find a name that lands where you need it, compile a probe file of candidate public `char` names through `tools/tcc.mjs` and read their offsets from the object's PUBDEF records; similar names tend to share a bucket.
 - **Static uninitialised data** goes in `_BSS`, which `verify.py` checks for a consistent base (no bytes to compare).
 - **`!c` against `c == 0` on a `char` parameter**: `!c` gives `mov al; cbw; or ax,ax`; `c == 0` gives `cmp byte [bp+N],0`.
 - **Far pointers compare by offset only** for `<`/`>=` (`mov ax,[bp+N]; cmp ax,[g]`), while `== 0` tests both halves (`or ax,dx`).
@@ -167,5 +167,8 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **A stray `xor ax,ax` before a bitfield store** comes from a chained assignment such as `o->next = o->quality = 0;`.
 - **`lx *= K` against `lx = lx * K` on a long** puts the constant in CX:BX or DX:AX for `N_LXMUL@`.
 - **Unreachable code is dropped**: if both arms of an if/else return, a following `return` disappears (with a warning) and the function comes out short; a dead `jmp` to the epilogue after an else arm's return means the source had a reachable statement there.
+- **Decrementing a char by one**: on `unsigned char`, `x = x - 1` and `x -= 1` give `add al,0FFh`; on plain `char`, `dec al`.
+- **A 2D table index with offsets** folds them into the displacement: `dirs[a + 1][b + 1]` on `char[3][3]` gives `[bx+base+4]`, so a DS address inside a table can be the table indexed with +1.
+- **Addition operand order**: `a + (b << n)` pushes the shifted term and adds `a` after; `(b << n) + a` adds the other way round.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

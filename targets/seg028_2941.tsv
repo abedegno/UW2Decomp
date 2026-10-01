@@ -1,15 +1,15 @@
 # segment seg028_2941 base 0x2A14E size 0x14C8 org 0xE
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
 GetHgt	GetHeightAdjustedByTileType_seg028_2941_E	0x0	0x1A1
-GetTileZOffset_seg028_2941_1AF	GetTileZOffset_seg028_2941_1AF	0x1A1	0x68
+GetSlopeHgt	GetTileZOffset_seg028_2941_1AF	0x1A1	0x68
 SolvePnt	GetNeighbourTileDetails_seg028_2941_217	0x209	0xB8
 SolveCenter	seg028_2941_2CF_terrainrelated	0x2C1	0xB6
 TerrainCheck	ProcessMotionTileHeights_seg028_2941_385	0x377	0x47E
-seg028_2941_803	seg028_2941_803	0x7F5	0x26A
-GetTileAttribute8_seg028_2941_A6D	GetTileAttribute8_seg028_2941_A6D	0xA5F	0xB
-CreateCollisionRecord_seg028_2941_A78	CreateCollisionRecord_seg028_2941_A78	0xA6A	0x196
+ComputeHeading	seg028_2941_803	0x7F5	0x26A
+get_home_tile	GetTileAttribute8_seg028_2941_A6D	0xA5F	0xB
+obj_coll_check	CreateCollisionRecord_seg028_2941_A78	0xA6A	0x196
 ObjectCheck	ScanForCollisions_seg028_2941_C0E	0xC00	0x265
-SwapCollisionRecords_seg028_2941_E73	SwapCollisionRecords_seg028_2941_E73	0xE65	0x65
+oCswap	SwapCollisionRecords_seg028_2941_E73	0xE65	0x65
 process_objlist	SortCollisions_seg028_2941_ED8	0xECA	0x149
 can_place	TestIfObjectFitsInTile_seg028_2941_1021	0x1013	0x224
 put_at	MoveObjectToCoordinates_seg028_2941_1245	0x1237	0xBB
