@@ -187,5 +187,8 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **A repeated store or tail becomes a jump**: in `if (a) x = 0; else if (b) x = e; else x = 0;` the first `x = 0` turns into a jump to the shared final store; a whole else block repeating the function's tail becomes one `jmp` to it.
 - **Build far pointers with `MK_FP` from `<dos.h>`**: Turbo C defines it as `(void _seg *)(seg) + (void near *)(ofs)`, which evaluates the offset before the segment. No hand-written `((unsigned long)seg << 16) | off` form does that in either operand order.
 - **`= i++` folded into a char store** lets a `register int` take SI; as a separate `i++` it stayed on the stack.
+- **Constants move to the end of an addition chain**: `a + b + 0x10 + c` adds `c` before `0x10`; `(int)(a + b + 0x10) + c` keeps the source order.
+- **A register variable used in two separate blocks** may need to be a block-scoped `register int` in each block to land in the same register as the original.
+- **A jump into the middle of another arm's stores** means the statements after that point came after the if/else in the source, so both paths run them.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

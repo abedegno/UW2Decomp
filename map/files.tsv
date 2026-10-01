@@ -30,7 +30,7 @@ seg029_2A8E	C	31	4754	30	0	0	1	Map_ObjFix_	ObjCrunch_	yes
 seg030_2BB7	C	11	5172	11	0	0	0	bounce_obj_	obj_deal_	yes
 seg031_2CFA	C	21	6675	20	0	0	1	do_physics_	CollObject_	yes
 seg032_2E9B	C	21	4650	19	0	0	2	place_3d_view_	do_2dclip_	yes
-seg033_2FBE	C	3	5349	3	0	0	0	do_obj_	do_door_	
+seg033_2FBE	C	3	5349	3	0	0	0	do_obj_	do_door_	yes
 seg034_310D	C	10	2530	4	6	0	0	do_partition_	do_objsort_	yes
 seg035_31AB	C	13	4071	13	0	0	0	player_mous_move_	get_eye_	yes
 seg036_32A9	C	2	356	2	0	0	0	Map_GetAddr_	CreateObj_	yes

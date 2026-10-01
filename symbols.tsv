@@ -88,6 +88,7 @@ _BitOperation_ovr166_298	65D5:0048	provisional
 _BlastFunction	32FA:0C38	FM Towns
 _Blessed	DS:0382	FM Towns
 _blttodrive	65E0:006B	FM Towns
+_bmhgtoff	4FAF:C782	FM Towns
 _bmsegoff	4FAF:C784	FM Towns
 _bounced	DS:25DB	provisional
 _build_corpse	1226:0005	FM Towns
@@ -149,6 +150,7 @@ _ClearInventory	6513:0070	FM Towns
 _clearobj	64BF:003E	FM Towns
 _click_time	DS:0984	provisional
 _cLightTabs	DS:2178	FM Towns
+_Clk	35AF:00B7	FM Towns
 _close	0E72:02FE	FM Towns
 _close_arc	6417:0039	FM Towns
 _CloseDoor	654F:0084	FM Towns
@@ -208,8 +210,11 @@ _cst	DS:492C	FM Towns
 _CT1	DS:26BA	FM Towns
 _CT2	DS:26C6	FM Towns
 _CT4	DS:26DE	FM Towns
+_cTmBm	DS:2F82	FM Towns
+_cTmDm	DS:2F84	FM Towns
 _Ctrl	DS:2134	FM Towns
 _cur_font	DS:21CC	provisional
+_curautocode	DS:053E	FM Towns
 _curBin	DS:228B	FM Towns
 _curelem	DS:0C0C	FM Towns
 _curP	DS:2562	FM Towns
@@ -355,6 +360,7 @@ _fire_trigger_at	64A5:0034	FM Towns
 _fireball_effect	34A2:08EA	FM Towns
 _first_anim	4FAF:D030	FM Towns
 _first_punt	64D4:002F	FM Towns
+_first_tmobj	DS:1502	FM Towns
 _fix_name_string	3265:03ED	FM Towns
 _FixBagArea	64F7:004D	FM Towns
 _FixOpenBag	64F7:0048	FM Towns
@@ -462,6 +468,7 @@ _hack_class_data	64F4:0020	FM Towns
 _hack_init	64F4:0025	FM Towns
 _HasOrIsObj	28A1:0C6B	FM Towns
 _Hasted	DS:0380	FM Towns
+_headmod	DS:044A	FM Towns
 _hgt_change	191C:14B1	FM Towns
 _hgt_val	DS:1874	FM Towns
 _hit_critter_goal	65A7:0039	FM Towns
@@ -551,6 +558,7 @@ _level_table	DS:08E1	provisional
 _light_act	DS:19B6	FM Towns
 _light_hi	DS:19B8	FM Towns
 _light_mod	DS:19B5	FM Towns
+_lighton	DS:053A	FM Towns
 _Lights	DS:6B40	FM Towns
 _LikelyDist	DS:2C6C	provisional
 _line_of_sight	1226:22F7	FM Towns
@@ -891,6 +899,7 @@ _RedispInv	2529:012F	FM Towns
 _RedisplayInvSlot	650A:002A	FM Towns
 _RedispRune	6504:0048	FM Towns
 _RedispStat	65BC:0043	FM Towns
+_Ref	35AF:00E5	FM Towns
 _refugees	DS:30F6	FM Towns
 _release_camera	656A:002F	FM Towns
 _release_missile	65A7:003E	FM Towns
@@ -1050,6 +1059,7 @@ _speech_available	1C86:2F99	FM Towns
 _spell_fire	2669:0342	FM Towns
 _spells	6389:0000	FM Towns
 _spsave	DS:1B9F	FM Towns
+_sqmod	DS:2F7A	FM Towns
 _srand	0E72:0DD6	FM Towns
 _sscanf	0E72:0F7F	provisional
 _start_line	DS:0980	FM Towns
@@ -1087,6 +1097,7 @@ _takeFromSlot	650A:007A	FM Towns
 _talking_to	DS:490E	FM Towns
 _TalkTo	6469:0052	FM Towns
 _targ_ceil	DS:26A8	provisional
+_tCacheOK	DS:2F94	FM Towns
 _tdistsqr	DS:224C	FM Towns
 _tdisttsqr	DS:2250	FM Towns
 _tdx	DS:2230	FM Towns
@@ -1107,8 +1118,10 @@ _timer_triggers	DS:34F6	provisional
 _timercount	DS:3576	FM Towns
 _TimeStop	DS:037F	FM Towns
 _tmap_inpage	4FAF:E4CE	FM Towns
+_tmapson	DS:0538	FM Towns
 _tmpcnt	DS:6740	FM Towns
 _tmpoffs	DS:673C	FM Towns
+_tmptr	DS:2F7C	FM Towns
 _toast_animobj	34A2:00EA	FM Towns
 _toggle_fightmode	2529:13E5	FM Towns
 _ToggleDoor	654F:0075	FM Towns
@@ -1140,6 +1153,8 @@ _TxmID	DS:8208	FM Towns
 _TxmTerr	DS:8188	FM Towns
 _txpos	DS:223E	FM Towns
 _txpost	DS:2248	FM Towns
+_txtflr	1FCD:0A94	FM Towns
+_txtwal	1FCD:0C07	FM Towns
 _typehit	DS:00C6	FM Towns
 _typos	DS:224F	FM Towns
 _typost	DS:2260	FM Towns
