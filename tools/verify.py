@@ -9,7 +9,8 @@ usage: verify.py src/FILE.C [--update]      (run match.py first; this reads its 
   which the linker assigns; those must be one per function.
 - References into this file's _DATA must agree on one base, and the _DATA bytes must equal
   the EXE's data segment at that base. References into _BSS must agree on one base.
---update merges the resolved externs into symbols.tsv, refusing any conflict."""
+Names are always checked against symbols.tsv (one name per address, one address per
+name); --update also merges them in."""
 import sys, os, re, struct
 here = os.path.dirname(os.path.abspath(__file__)); root = os.path.dirname(here)
 sys.path.insert(0, here)
@@ -182,7 +183,8 @@ def main():
             else:
                 print(f'{name}: segment {para:04X} referenced on its own' + (f', agreeing with {v}' if v else ''))
     print(f'{len(o["fixups"])} fixups: {len(syms)} externs resolved, {internal} internal references')
-    if '--update' in a: update(syms, problems)
+    # without --update, still check the names against symbols.tsv, read-only
+    update(syms, problems, write='--update' in a)
     for p in problems: print('PROBLEM', p)
     print('-- fixups and data verified' if not problems else f'-- {len(problems)} problems')
     return 1 if problems else 0
@@ -190,7 +192,7 @@ def main():
 def fmt(v):
     return f'DS:{v[1]:04X}' if v[0] == 'DS' else f'{v[1]:04X}:{v[2]:04X}'
 
-def update(syms, problems):
+def update(syms, problems, write=True):
     path = os.path.join(root, 'symbols.tsv'); known = {}
     if os.path.exists(path):
         for l in open(path):
@@ -211,6 +213,7 @@ def update(syms, problems):
     if os.path.exists(fm):
         for l in open(fm):
             n = l.split('\t')[0]; orig.add(n); orig.add('_' + n.rstrip('_'))
+    if not write: return
     if problems:
         print('symbols.tsv not updated: fix the problems first'); return
     with open(path, 'w') as f:

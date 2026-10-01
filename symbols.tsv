@@ -896,8 +896,8 @@ _sp_enchant	65B5:004D	FM Towns
 _sp_hold	65A7:005C	FM Towns
 _sp_hp	65BC:0020	FM Towns
 _sp_mp	65BC:002A	FM Towns
-_sp_study_monster	0000:0066	FM Towns
-_sp_true_sight	0000:0061	FM Towns
+_sp_study_monster	65B5:0066	FM Towns
+_sp_true_sight	65B5:0061	FM Towns
 _sp_ward_undead	65A7:00A2	FM Towns
 _sp_xp	65BC:002F	FM Towns
 _spec_class_data	65A4:0020	FM Towns
@@ -943,8 +943,8 @@ _ThePlayer	DS:828E	FM Towns
 _thump_your_magic_twanger_froggie	65B5:006B	FM Towns
 _tile_walls	DS:1BA6	FM Towns
 _TileIndices	DS:2CBA	provisional
-_Time	DS:2158	FM Towns
 _time	0E72:0FF2	FM Towns
+_Time	DS:2158	FM Towns
 _timercount	DS:3576	FM Towns
 _TimeStop	DS:037F	FM Towns
 _toast_animobj	34A2:00EA	FM Towns
