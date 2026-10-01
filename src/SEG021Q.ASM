@@ -57,6 +57,7 @@ _cDbbase label dword
 _cPixXferStuff label dword
         dd      seg_370D+0B08h
         db      0Ch dup (0)
+        extrn   _joy_position:dword             ; SEG021M's, DS:211C: the top of its private stack
 _DATA   ends
 DGROUP  group   _DATA
 
@@ -638,7 +639,7 @@ _seg021_22FD_102B proc far
         mov     ax,ss
         mov     word ptr cs:L0C30,ax
         mov     word ptr cs:L0C32,sp
-        mov     ax,211Ch
+        mov     ax,offset DGROUP:_joy_position  ; the 0CEh bytes of SEG021M's _DATA below it are the stack
         cli
         mov     sp,ax
         mov     ax,DGROUP

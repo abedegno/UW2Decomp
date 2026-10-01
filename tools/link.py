@@ -1,9 +1,17 @@
 """Link UW2.EXE from the matched objects with Turbo Link 3.01, headless in DOS, and compare.
 
     python3 tools/link.py [--no-extract] [--out DIR] [--obj STEM=PATH ...]
+    python3 tools/link.py --mod [--out DIR] [--obj STEM=PATH ...]
 
 --obj links another build of one object in place of build/STEM/STEM.OBJ (to try a changed
 source without disturbing the matched build).
+
+--mod is the modding build (README, "Modding build"): sources may change by any size. The
+layout comes from the last exact run (build/LINK/base, written by extract.py when every object
+verified), the sources whose text differs from that run's are compiled into build/MODLINK/src
+(the matched objects in build/ are left alone), and the EXE goes to build/MODLINK/out. Nothing
+is compared with your EXE, and an overlay's publics may come in any order (TLINK then numbers
+its stub entries differently, which nothing depends on).
 
 1. tools/extract.py writes the data-only modules, manifest.json and renames.json under
    build/LINK (skip with --no-extract when they are current). Before it, a far data source
@@ -33,7 +41,9 @@ source without disturbing the matched build).
 """
 import sys, os, json, subprocess, shutil, re
 here = os.path.dirname(os.path.abspath(__file__)); root = os.path.dirname(here)
+EXE = os.environ.get('UW2_EXE', os.path.expanduser('~/UWGOG/UW2/UW2.EXE'))
 LINKDIR = os.path.join(root, 'build', 'LINK')
+LINKDIR_EXACT = LINKDIR
 
 def c0_source():
     """TC/C0.ASM with UW2's differences. UW2's C0 (seg005 up to offset 0x249) is the same code
@@ -110,11 +120,52 @@ def build_fardata():
         if not re.search(r'Error messages:\s+None', log) or not os.path.exists(obj):
             sys.exit(f'{stem}: assembly failed\n{log}')
 
+def changed_sources():
+    """--mod: {stem: object} for each source whose text is not what the last exact run built,
+    compiled (unless the object there was built from this same text) into build/MODLINK/src/STEM
+    with the source's own /* opts: */ (match.py's defaults otherwise)."""
+    import hashlib, glob
+    lay = os.path.join(LINKDIR_EXACT, 'base', 'layout.json')
+    if not os.path.exists(lay):
+        sys.exit('no build/LINK/base: run the exact link (python3 tools/link.py) once while every source matches')
+    known = json.load(open(lay))['sources']
+    out = {}
+    for src in sorted(glob.glob(os.path.join(root, 'src', '*.C')) + glob.glob(os.path.join(root, 'src', '*.ASM'))):
+        text = open(src, 'rb').read()
+        head = text[:3000].decode('latin1')
+        if not re.search(r'/\*\s*(target:\s*\w+|fardata)\s*\*/', head): continue
+        stem = os.path.splitext(os.path.basename(src))[0].upper()
+        if stem == 'SEG046': continue
+        if stem not in known: sys.exit(f'{stem}: a source the exact run did not have; --mod links the existing files only')
+        if hashlib.sha1(text).hexdigest() == known[stem][1]: continue
+        d = os.path.join(LINKDIR, 'src', stem); obj = os.path.join(d, stem + '.OBJ')
+        sha = hashlib.sha1(text).hexdigest(); shafile = os.path.join(d, 'SOURCE.SHA1')
+        if not os.path.exists(obj) or not os.path.exists(shafile) or open(shafile).read() != sha:
+            opts = re.search(r'/\*\s*opts:\s*([^*]+?)\s*\*/', head)
+            opts = opts.group(1) if opts else ('/ml' if src.upper().endswith('.ASM') else '-mm -1 -G -O -Z')
+            print(f'compiling {os.path.relpath(src, root)} ({opts})')
+            if os.path.exists(obj): os.remove(obj)
+            subprocess.run(['node', os.path.join(here, 'tcc.mjs'), d, opts, src], check=True)
+            log = open(os.path.join(d, 'BUILD.LOG'), encoding='latin1').read()
+            bad = [l for l in log.splitlines() if re.search(r'Error|Fatal', l) and not re.search(r'messages:\s+None', l)]
+            if bad or not os.path.exists(obj): sys.exit(f'{stem}: build failed\n' + log)
+            open(shafile, 'w').write(sha)
+        out[stem] = obj
+    return out
+
 def main():
+    global LINKDIR
     a = sys.argv[1:]
+    mod = '--mod' in a
+    if mod: LINKDIR = os.path.join(root, 'build', 'MODLINK')
     out = os.path.join(LINKDIR, 'out')
     if '--out' in a: out = a[a.index('--out') + 1]
-    if '--no-extract' not in a:
+    changed = {}
+    if mod:
+        changed = changed_sources()
+        print('changed sources:', ' '.join(sorted(changed)) or 'none')
+        subprocess.run([sys.executable, os.path.join(here, 'extract.py'), '--mod'], check=True)
+    elif '--no-extract' not in a:
         build_fardata()
         subprocess.run([sys.executable, os.path.join(here, 'extract.py')], check=True)
     man = json.load(open(os.path.join(LINKDIR, 'manifest.json')))
@@ -138,11 +189,12 @@ def main():
         bad += [f'{k}: {why}' for k in man.get(x) or ()]      # a list or a dict by object
     if bad: sys.exit('sources to correct before linking:\n  ' + '\n  '.join(bad))
     override = dict(x.split('=', 1) for k, x in enumerate(a) if k and a[k - 1] == '--obj')
+    override = {**changed, **override}
     objdir = os.path.join(LINKDIR, 'obj'); os.makedirs(objdir, exist_ok=True)
     for k, p in man['objects'].items():
         if k in man['resident'] or k in man['overlays'] or k in man['late']:
             d = open(override.get(k, os.path.join(root, p)), 'rb').read()
-            if man['stuborder'].get(k) and stub_order_wrong(d, man['stuborder'][k]):
+            if not mod and man['stuborder'].get(k) and stub_order_wrong(d, man['stuborder'][k]):
                 bad.append(f'{k}: publics listed out of the EXE\'s overlay stub order: a name whose '
                            'tools/bssorder.py key sorts differently from the original\'s')
             open(os.path.join(objdir, k + '.OBJ'), 'wb').write(d)
@@ -176,6 +228,11 @@ def main():
     print('\n'.join(errs[:60]))
     if len(errs) > 60: print(f'... {len(errs) - 60} more')
     if r.returncode: sys.exit(r.returncode)
+    if mod:
+        if not os.path.exists(os.path.join(out, 'UW2.EXE')) or errs: sys.exit('the modding link failed')
+        print(f'modding build: {os.path.relpath(os.path.join(out, "UW2.EXE"), root)}, '
+              f'{os.path.getsize(os.path.join(out, "UW2.EXE"))} bytes (yours: {os.path.getsize(EXE)})')
+        return
     sys.exit(subprocess.run([sys.executable, os.path.join(here, 'exediff.py'), os.path.join(out, 'UW2.EXE')]).returncode)
 
 if __name__ == '__main__':

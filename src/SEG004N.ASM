@@ -38,6 +38,7 @@ _obj_tab label dword
         dd      seg052_519C+0D849h
         dd      seg_370D+0B10h
         db      00h,00h,00h,00h
+        extrn   _Palettes:byte                  ; OVR119's object palettes, DS:6742
 _DATA   ends
 DGROUP  group   _DATA
 
@@ -501,7 +502,7 @@ L7E4E:
         mov     cl,4
         xor     ah,ah
         shl     ax,cl
-        mov     si,6742h
+        mov     si,offset DGROUP:_Palettes
         add     si,ax
         mov     ax,DGROUP
         mov     ds,ax

@@ -1,9 +1,19 @@
 """Generate data-only TASM modules from your own UW2.EXE for everything the link needs that
 no source in src/ produces yet, plus the manifest tools/link.py links by.
 
-    python3 tools/extract.py      writes build/LINK/*.ASM, manifest.json and renames.json
+    python3 tools/extract.py        writes build/LINK/*.ASM, manifest.json and renames.json
+    python3 tools/extract.py --mod  the same for the modding build, in build/MODLINK
 
 The modules hold game bytes, so they live under build/ and are never committed.
+
+When every object verifies, the exact run also keeps what the modding build needs in
+build/LINK/base: a copy of each matched object, the SHA-1 of the source it came from, and the
+places verify.py found for its data (layout.json). --mod works out the same layout from those
+instead of from build/, where an object may now come from a changed source (verify.py places
+data by the EXE's bytes at the object's own offsets, which a changed object no longer has), so
+its modules are the exact run's except that the near code offsets the IDA listing types in
+the extracted data become `dw offset NAME` (see NEAR below). The extracted bytes hold no
+relocated word and no near DGROUP pointer (docs/LAYOUT.md), so nothing else in them moves.
 
 What is extracted, and the evidence for each piece:
 
@@ -63,7 +73,12 @@ sys.path.insert(0, here)
 from fixups import fixups
 
 EXE = os.environ.get('UW2_EXE', os.path.expanduser('~/UWGOG/UW2/UW2.EXE'))
-OUT = os.path.join(root, 'build', 'LINK')
+# --mod: the modding build (see the README's "Modding build"). The layout is worked out from
+# the matched objects and their places as the last exact run recorded them (BASE), not from
+# the objects in build/, which may hold changed sources; the modules go to build/MODLINK.
+MOD = '--mod' in sys.argv[1:]
+BASE = os.path.join(root, 'build', 'LINK', 'base')
+OUT = os.path.join(root, 'build', 'MODLINK' if MOD else 'LINK')
 TC = os.environ.get('UW2DECOMP_TC', os.path.join(root, 'TC'))
 exe = open(EXE, 'rb').read()
 w16 = lambda b, i: struct.unpack_from('<H', b, i)[0]
@@ -101,6 +116,11 @@ for src in sorted(glob.glob(os.path.join(root, 'src', '*.C')) + glob.glob(os.pat
     stem = os.path.splitext(os.path.basename(src))[0].upper()
     if stem == 'SEG046': continue      # the overlay manager: linked from OVERLAY.LIB itself
     obj = os.path.join(root, 'build', stem, stem + '.OBJ')
+    if MOD:
+        obj = os.path.join(BASE, stem + '.OBJ')
+        if not os.path.exists(obj):
+            sys.exit(f'{stem}: no matched object in {os.path.relpath(BASE, root)}: run the exact link '
+                     '(python3 tools/link.py) once while every source matches')
     o = fixups(open(obj, 'rb').read())
     hdr = open(os.path.join(root, 'targets', m.group(1) + '.tsv')).readline()
     base = int(re.search(r'base 0x([0-9A-F]+)', hdr).group(1), 16)
@@ -113,14 +133,12 @@ for src in sorted(glob.glob(os.path.join(root, 'src', '*.C')) + glob.glob(os.pat
 import verify
 _captured = {}
 verify.update = lambda syms, problems, write=True: _captured.update({n: v for n, (v, _) in syms.items()})
-_argv = sys.argv
+ALL_VERIFIED = True
 for stem, ob in OBJS.items():
+    if MOD: break
     _captured.clear(); buf = io.StringIO()
-    sys.argv = ['verify.py', ob['src']]
-    try:
-        with contextlib.redirect_stdout(buf): verify.main()
-    finally:
-        sys.argv = _argv
+    with contextlib.redirect_stdout(buf): rc = verify.main([ob['src']])
+    ALL_VERIFIED = ALL_VERIFIED and not rc
     v = buf.getvalue()
     for kind, n, at in re.findall(r'^_(DATA|BSS): (\d+) bytes.*?DS:([0-9A-F]+)', v, re.M):
         ob[kind.lower()] = int(at, 16)
@@ -130,6 +148,17 @@ for stem, ob in OBJS.items():
     # the file's own far segments, where verify.py placed them
     ob['far'] = [(n, int(p, 16), int(q, 16), int(ln)) for n, ln, p, q in
                  re.findall(r'^(\S+): (\d+) bytes match at ([0-9A-F]{4}):([0-9A-F]{4})', v, re.M)]
+
+if MOD:
+    # each object's places as the exact run found them (verify.py needs the EXE's bytes at the
+    # object's own offsets, which a changed object no longer has)
+    _lay = json.load(open(os.path.join(BASE, 'layout.json')))
+    for stem, ob in OBJS.items():
+        if stem not in _lay['objects']: sys.exit(f'{stem}: not in {os.path.relpath(BASE, root)}/layout.json')
+        L = _lay['objects'][stem]
+        ob['data'], ob['bss'] = L['data'], L['bss']
+        ob['refs'] = {n: tuple(a) for n, a in L['refs'].items()}
+        ob['far'] = [tuple(x) for x in L['far']]
 
 # A file whose own code never refers to its _DATA or _BSS (data defined for other files, such
 # as seg033's ActDoors) is placed by its publics instead: where other files' references and
@@ -243,7 +272,8 @@ for src in sorted(glob.glob(os.path.join(root, 'src', '*.ASM'))):
     if not re.search(r'/\*\s*fardata\s*\*/', open(src, encoding='latin1').read(3000)): continue
     stem = os.path.splitext(os.path.basename(src))[0].upper()
     obj = os.path.join(root, 'build', stem, stem + '.OBJ')
-    if not os.path.exists(obj) or os.path.getmtime(obj) < os.path.getmtime(src):
+    if MOD: obj = os.path.join(BASE, stem + '.OBJ')
+    elif not os.path.exists(obj) or os.path.getmtime(obj) < os.path.getmtime(src):
         sys.exit(f'{stem}: build/{stem}/{stem}.OBJ is missing or older than its source (link.py builds it)')
     o = fixups(open(obj, 'rb').read()); FAROBJS[stem] = obj
     if o['fixups']: sys.exit(f'{stem}: far data with fixups is not handled yet')
@@ -606,6 +636,59 @@ def labels_at(m, f, para):
             out.append(f'{n} label byte'); m.publics.append(n)
     return out
 
+# --mod: near addresses held as plain words in the extracted bytes. There are no relocations
+# in them and no near pointers into DGROUP (docs/LAYOUT.md); what they do hold is near code
+# offsets, tables of handlers in seg003 and seg004 that the assembly jumps through
+# (`jmp word ptr [bx+24F4h]` with DS on seg052_519C). The IDA listing types some of those as
+# `dw offset LABEL`; each one whose word in the EXE is the offset of a name there becomes `dw
+# offset NAME`, so that it follows that code if the module holding it changes size. The
+# exact link keeps the bytes (same result either way while nothing moves).
+def ida_code_offsets():
+    asm = os.path.expanduser(os.environ.get('UW2_ASM', '~/UWReverseEngineering/uw2_asm.asm'))
+    if not os.path.exists(asm): print('no IDA listing: near code offsets in the extracted data stay numbers'); return {}
+    found = {}; seg = None; at = None
+    for raw in open(asm, 'rb'):
+        l = raw.decode('latin1').split(';')[0].rstrip()
+        mm = re.match(r'^(\S+)\s+segment\b', l)
+        if mm:
+            q = re.search(r'_([0-9A-Fa-f]{4})$', mm.group(1)); seg = None; at = None
+            if q: seg = (mm.group(1), int(q.group(1), 16) - 0x1ED)
+            continue
+        if seg is None: continue
+        mm = re.match(r'^(%s_([0-9A-Fa-f]+))?\s*dw offset (\w+?)(?:_([0-9A-Fa-f]{4}))?_([0-9A-Fa-f]+)\s*$' % re.escape(seg[0]), l)
+        if mm and (mm.group(1) or at is not None):
+            at = int(mm.group(2), 16) if mm.group(1) else at + 2
+            tpara = int(mm.group(4), 16) - 0x1ED if mm.group(4) else None
+            found[HDR + seg[1] * 16 + at] = (tpara, int(mm.group(5), 16))
+        else: at = None
+    return found
+NEAR = {}
+if MOD:
+    _ida = ida_code_offsets(); _tables = {}
+    # an entry IDA names without a segment (nullsub_3) is in the segment of the next one
+    for f in sorted(_ida, reverse=True):
+        if _ida[f][0] is None and f + 2 in _ida and _ida[f + 2][0] is not None: _ida[f] = (_ida[f + 2][0], w16(exe, f))
+    for f, (tpara, toff) in sorted(_ida.items()):
+        if tpara is None or not any(r[0] <= f < r[1] - 1 for r in RANGES) or w16(exe, f) != toff: continue
+        n = NAME_AT.get(('FAR', tpara, toff))
+        if n: NEAR[f] = n; _tables.setdefault(tpara, set()).add(f)
+    # IDA types only the start of a table: it goes on while the next word is the offset of a
+    # name in the same code segment (seg052_519C's model opcode table at 24F4 runs to 25D2, 111
+    # handlers, the same as FM Towns' do_eof .. do_bcompact_map; its entry for 0xDA points at a
+    # data word in seg004, L0D7F, which has no name and stays a number)
+    for tpara, fs in _tables.items():
+        for f in sorted(fs):
+            g = f + 2
+            while any(r[0] <= g < r[1] - 1 for r in RANGES):
+                if not w16(exe, g): break          # zero words end it (a name at offset 0 is no evidence)
+                n = NAME_AT.get(('FAR', tpara, w16(exe, g)))
+                if g in NEAR: g += 2; continue
+                if not n:
+                    if NAME_AT.get(('FAR', tpara, w16(exe, g + 2))): g += 2; continue    # one unnamed entry
+                    break
+                NEAR[g] = n; g += 2
+    print(f'--mod: {len(NEAR)} near code offsets in the extracted data written as names')
+
 def body(m, lo, hi, para, code):
     """Bytes lo..hi of the EXE as db lines, with labels for the names defined there and a fixup
     at every relocation. para: the frame of the segment the range sits in."""
@@ -616,6 +699,8 @@ def body(m, lo, hi, para, code):
     while i < hi:
         if i in OWN:
             flush(); out += labels_at(m, i, para)
+        if i in NEAR and i + 1 not in OWN:
+            flush(); m.externs.add(NEAR[i]); out.append(f'        dw offset {NEAR[i]}'); i += 2; continue
         if i + 2 in RELOCS and i + 2 < hi and i not in RELOCS and i + 1 not in OWN and i + 2 not in OWN and i + 3 not in OWN:
             off = w16(exe, i); seg = RELOCS[i + 2]
             ok_ptr = (not code) or (i >= lo + 1 and exe[i - 1] in (0x9A, 0xEA))
@@ -778,6 +863,22 @@ manifest = dict(
 for fx in ADDFIX.values():
     for e in fx: e[1] = frame_name(e[2])
 json.dump(manifest, open(os.path.join(OUT, 'manifest.json'), 'w'), indent=1)
+if not MOD and ALL_VERIFIED:
+    # the matched objects and where they sit, for --mod: copies of the objects, the hash of each
+    # source they were built from (so the modding build knows which sources changed) and the
+    # places verify.py found
+    import hashlib, shutil
+    os.makedirs(BASE, exist_ok=True)
+    lay = {'objects': {}, 'sources': {}}
+    for stem, ob in OBJS.items():
+        shutil.copyfile(ob['obj'], os.path.join(BASE, stem + '.OBJ'))
+        lay['objects'][stem] = dict(data=ob['data'], bss=ob['bss'], refs=ob['refs'], far=ob['far'])
+        lay['sources'][stem] = [os.path.relpath(ob['src'], root), hashlib.sha1(open(ob['src'], 'rb').read()).hexdigest()]
+    for stem, p in FAROBJS.items():
+        shutil.copyfile(p, os.path.join(BASE, stem + '.OBJ'))
+        src = os.path.join(root, 'src', stem + '.ASM')
+        lay['sources'][stem] = [os.path.relpath(src, root), hashlib.sha1(open(src, 'rb').read()).hexdigest()]
+    json.dump(lay, open(os.path.join(BASE, 'layout.json'), 'w'), indent=1, sort_keys=True)
 json.dump(RENAMES, open(os.path.join(OUT, 'renames.json'), 'w'), indent=1, sort_keys=True)
 print(f'{len(modules)} modules in {os.path.relpath(OUT, root)}: {len(DPIECES)} _DATA gaps, {len(BPIECES)} _BSS gaps, '
       f'{len(OWNED)} names defined, {sum(map(len, RENAMES.values()))} renames')

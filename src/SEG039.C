@@ -289,12 +289,14 @@ char far * far seg039_3452_857(char far *s)
     return start;
 }
 
+/* isspace and isdigit by hand: <ctype.h>'s _ctype indexed with the character as a signed
+   char, plus one (the C library's table at DS:1BF6 starts with the entry for EOF). */
 int far seg039_3452_89A(char far *s)
 {
     int i = 0, n = 0;
-    while (((signed char near *)0x1bf7)[(signed char)s[i]] & 1) i++;
+    while ((_ctype + 1)[(signed char)s[i]] & _IS_SP) i++;
     i += (*s == '-');
-    while (((signed char near *)0x1bf7)[(signed char)s[i]] & 2) {
+    while ((_ctype + 1)[(signed char)s[i]] & _IS_DIG) {
         n *= 10;
         n += (signed char)s[i] - '0';
         i++;

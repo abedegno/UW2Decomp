@@ -18,6 +18,7 @@
         .186
 
 _DATA   segment word public 'DATA'
+        extrn   __psp:word                      ; C0's, at DS:92
 _DATA   ends
 DGROUP  group   _DATA
 
@@ -38,7 +39,7 @@ _seg021_22FD_0 proc near
         push    es
         mov     ax,DGROUP
         mov     es,ax
-        mov     bx,92h
+        mov     bx,offset DGROUP:__psp
         mov     ax,word ptr es:[bx]
         mov     word ptr ds:[2],ax
         pop     es

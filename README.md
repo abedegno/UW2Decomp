@@ -27,6 +27,16 @@ Every byte of code now has source, including seg000 (the sprite module), seg018 
 
 `matched.txt` lists the matched segments; `map/files.tsv` has per-file status.
 
+## Modding build
+
+`python3 tools/link.py --mod` links an EXE from sources that may change by any size, in code or data, resident or overlay. It reaches the main menu, character creation and the 3D view with a longer overlay string and more overlay code, more resident code and initialised data, and a larger `_BSS`, each on its own and all together (docs/LAYOUT.md has the tests).
+
+- **Run the exact link once first.** `python3 tools/link.py`, with every source matching, keeps in `build/LINK/base` a copy of each matched object, the SHA-1 of its source and where verify.py found its data (extract.py writes it only when every object verifies). The modding build works out the layout from those, so the extracted modules keep their places next to their neighbours whatever the changed objects do.
+- **Then edit and link.** Each source whose text differs from that run's is compiled with its own `/* opts: */` into `build/MODLINK/src`; the matched objects in `build/` are left alone, so the exact link still works once you revert. The EXE goes to `build/MODLINK/out/UW2.EXE` and is not compared with yours. With no source changed it is the exact link's EXE.
+- **What moves safely:** everything the linker places. Calls, globals, strings and pointer initialisers in the C are fixups; the extracted modules hold no relocated word and no DGROUP pointer; and the four DGROUP addresses the sources wrote as numbers are names now. In this build the model interpreter's opcode table in the extracted data is written as names too. `tools/addrscan.py` lists numbers that could be addresses, and docs/LAYOUT.md is the audit.
+- **What is still fixed:** the internal layout of the far data segments seg_370D, seg052_519C and dseg062_62a6 (partly taken from your EXE, partly from the assembly) and of the code in seg003, seg004 and seg021, which the assembly addresses by number. Change those modules and `src/FARDATA.ASM` only at the same length. DGROUP has about 22 KB to spare. A new source file needs a place in extract.py's link order first.
+- `--obj STEM=PATH` works here too, in place of the compiled object.
+
 ## The map
 
 `map/` lays out the whole program. Turbo C puts each source file in its own code segment, so each DOS segment is one original source file. The Japanese FM Towns release kept 3237 of Looking Glass's original names, and it was linked from the same object list in the same order, so the two builds can be aligned function by function.

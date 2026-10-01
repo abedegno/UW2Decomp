@@ -31,8 +31,8 @@ from match import load_targets, EXE
 DS_FILE = 0x68A90
 DS_PARA = 0x65E9
 
-def main():
-    a = sys.argv[1:]; src = a[0]
+def main(argv=None):
+    a = sys.argv[1:] if argv is None else list(argv); src = a[0]
     stem = os.path.splitext(os.path.basename(src))[0].upper()
     seg = re.search(r'/\*\s*target:\s*(\w+)\s*\*/', open(src, encoding='latin1').read()).group(1)
     o = fixups(open(os.path.join(root, 'build', stem, stem + '.OBJ'), 'rb').read())
