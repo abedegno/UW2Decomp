@@ -1,6 +1,6 @@
 # segment ovr152 base 0x9AA30 size 0x1F6 org 0x0
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
-set_light	OpenDataFile_ovr152_0	0x0	0x4A
-OpenAndApplyShadesDat_ovr152_4A	OpenAndApplyShadesDat_ovr152_4A	0x4A	0xF7
-LoadLightAndXFerDat_ovr152_141	LoadLightAndXFerDat_ovr152_141	0x141	0x2D
-ChangeShroomPaletteData_ovr152_16E	ChangeShroomPaletteData_ovr152_16E	0x16E	0x88
+lget	OpenDataFile_ovr152_0	0x0	0x4A
+set_light	OpenAndApplyShadesDat_ovr152_4A	0x4A	0xF7
+init_lighting	LoadLightAndXFerDat_ovr152_141	0x141	0x2D
+random_light	ChangeShroomPaletteData_ovr152_16E	0x16E	0x88

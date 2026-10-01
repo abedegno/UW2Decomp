@@ -136,6 +136,7 @@ _ClearAutoMap	641E:0066	FM Towns
 _ClearInventory	6513:0070	FM Towns
 _clearobj	64BF:003E	FM Towns
 _click_time	DS:0984	provisional
+_cLightTabs	DS:2178	FM Towns
 _close	0E72:02FE	FM Towns
 _close_arc	6417:0039	FM Towns
 _CloseDoor	654F:0084	FM Towns
@@ -569,6 +570,8 @@ _mlowptr	DS:2F6E	FM Towns
 _mob_init	29CA:0C27	FM Towns
 _mob_to_static	29CA:0DDF	FM Towns
 _mode_to_button	DS:0129	FM Towns
+_ModelData_seg052_519C_2600	4FAF:2600	provisional
+_MonoOrLightShadeRelated_dseg_67d	DS:1AAC	provisional
 _motionbits	DS:00D2	FM Towns
 _mous_3d_hide	1B8F:0139	FM Towns
 _mous_3d_set	1B8F:00F7	FM Towns
@@ -922,6 +925,7 @@ _SetCursorObj	6513:007A	FM Towns
 _SetOffTrap	65D5:0084	FM Towns
 _setup_icon_buttons	1B6B:000A	FM Towns
 _setvect	0E72:1B67	provisional
+_ShadeCalcs_seg032_2E9B_4AF	2CAE:04AF	provisional
 _Shift	DS:2128	FM Towns
 _show	0085:4FC2	FM Towns
 _show_credits	652F:0020	FM Towns
@@ -971,6 +975,7 @@ _strt_converse	6469:00AC	FM Towns
 _strt_demscr	64BF:0052	FM Towns
 _strtime	DS:2B54	FM Towns
 _strupr	0E72:2940	FM Towns
+_Stub_OpenDataFile_seg005_2891	65E0:0070	provisional
 _stuff_class_data	65C1:0020	FM Towns
 _SwapItemsInBag	64F7:002A	FM Towns
 _takeFromSlot	650A:007A	FM Towns
@@ -1026,6 +1031,8 @@ _typost	DS:2260	FM Towns
 _tzpos	DS:2274	FM Towns
 _undefineMouseRegion	1B8F:061F	FM Towns
 _unforce_mouse_cursor	1B8F:06AF	FM Towns
+_UnkShades_dseg_67d6_534	DS:0534	provisional
+_UnkShades_dseg_67d6_536	DS:0536	provisional
 _unlink	0E72:2BC0	FM Towns
 _update_all_critters_whilst_playe	647E:002A	FM Towns
 _update_animobj	34A2:0719	FM Towns
@@ -1084,6 +1091,7 @@ _write	0E72:1458	FM Towns
 _ws_active	DS:0922	provisional
 _wtop	DS:21DC	FM Towns
 _wyorn	6559:0043	FM Towns
+_XFERDATA_seg003_0272_E73	0085:0E73	provisional
 _xhgt	DS:26EC	FM Towns
 _XP	DS:2276	FM Towns
 _xt_spells	65B5:003E	FM Towns

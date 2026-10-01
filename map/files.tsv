@@ -95,7 +95,7 @@ ovr148	C	1	7	0	0	0	1
 ovr149	C	14	2849	14	0	0	0	init_save_	do_level_hacks_	yes
 ovr150	C	2	295	2	0	0	0	display_screen_	disk_to_vid_	yes
 ovr151	C	17	1737	9	6	0	2	do_migrations_	Sched_Insert_	
-ovr152	C	4	502	1	0	2	1	set_light_	set_light_	
+ovr152	C	4	502	1	0	2	1	set_light_	set_light_	yes
 ovr153	C	3	238	3	0	0	0	ac_setup_lzw_	ac_shrink_disk_	yes
 ovr154	C	26	6964	26	0	0	0	use_skill_	RemoveTrap_	yes
 ovr155	C	1	7	0	1	0	0			
