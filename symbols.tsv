@@ -91,6 +91,9 @@ _build_corpse	1226:0005	FM Towns
 _build_new_obj	65A7:00CA	FM Towns
 _busywaiting_new_options	653E:0093	FM Towns
 _button_to_mode	DS:0123	FM Towns
+_bytefont	DS:21D0	FM Towns
+_Callback_seg021_22FD_CEA	2110:0CEA	provisional
+_CallbackFunctionSleepRelated_seg	2110:0CB7	provisional
 _calloc	0E72:02AD	FM Towns
 _camang	DS:33DA	FM Towns
 _cameras_fade	64E2:0070	FM Towns
@@ -310,6 +313,7 @@ _errmsg	65E0:0089	FM Towns
 _establish_view	2CAE:0355	FM Towns
 _exit	0E72:032C	FM Towns
 _ExitAutoMap	641E:0061	FM Towns
+_fade_buffer	DS:5E34	provisional
 _fadein	64E2:0061	FM Towns
 _fadein3d	64E2:0043	FM Towns
 _fadeout	64E2:0066	FM Towns
@@ -346,6 +350,8 @@ _fiz_update	DS:00D3	FM Towns
 _flip_bool	65E0:0052	FM Towns
 _flip_switch	32FA:0720	FM Towns
 _flood_path	1226:1994	FM Towns
+_font_name	DS:14C5	provisional
+_font_suffixes	DS:14D2	provisional
 _Food	DS:6B60	FM Towns
 _fopen	0E72:07FC	FM Towns
 _force_mouse_cursor	1B8F:067D	FM Towns
@@ -418,6 +424,7 @@ _grdb_blank	35AF:0006	FM Towns
 _greed	DS:4754	FM Towns
 _grfx_clear	64E2:007A	FM Towns
 _grfx_close	64E2:0034	FM Towns
+_grfx_driver	DS:14B8	FM Towns
 _grfx_init	64E2:0075	FM Towns
 _grfx_quikfont	64E2:004D	FM Towns
 _grfx_quikpal	64E2:002F	FM Towns
@@ -726,6 +733,7 @@ _OpenTheBag	64F7:0025	FM Towns
 _ovr167_463	65E0:0061	provisional
 _palette	DS:21AC	provisional
 _Palettes	DS:6742	FM Towns
+_pals_name	DS:14F5	provisional
 _panel_check	65BC:0048	FM Towns
 _panel_check_hpmp	323F:0201	FM Towns
 _panel_mouse_region	DS:6B0A	provisional
@@ -893,7 +901,9 @@ _saved_tmap_inpage	DS:0925	provisional
 _SaveHandles	DS:6ADC	FM Towns
 _SavePlayerInv	64FE:0020	FM Towns
 _SCD_dseg_67d6_8634	DS:8634	provisional
+_scdBlockHasBeenModified_dseg_67d	DS:1A7E	provisional
 _SCDEventCodeJumps_dseg_67d6_1364	DS:1364	provisional
+_Sched_DoEvent	64C8:008E	FM Towns
 _Sched_Load	658B:0020	FM Towns
 _Sched_Migrate	658B:004D	FM Towns
 _Sched_Save	658B:0025	FM Towns
@@ -910,6 +920,10 @@ _scroll_mode	DS:097E	FM Towns
 _scroll_print	342C:01A0	FM Towns
 _scroll_up	342C:011F	FM Towns
 _seg001_023B_C	004E:000C	provisional
+_seg003_0272_4431	0085:4431	provisional
+_seg003_0272_4629	0085:4629	provisional
+_seg003_0272_4933	0085:4933	provisional
+_seg003_0272_4D86	0085:4D86	provisional
 _seg003_0272_5025	0085:5025	provisional
 _seg003_0272_51C8	0085:51C8	provisional
 _seg009_392	1A6D:0392	provisional
@@ -921,6 +935,8 @@ _seg013_1D3C_A	1B4F:000A	provisional
 _seg013_1D3C_B2	1B4F:00B2	provisional
 _seg013_1D3C_E4	1B4F:00E4	provisional
 _seg016_1E73_2FCB	1C86:2FCB	provisional
+_seg021_22FD_755	2110:0755	provisional
+_seg021_22FD_791	2110:0791	provisional
 _seg039_3452_814	3265:0814	provisional
 _seg042_35ED_12B	3400:012B	provisional
 _seg046_37CD_8D7	35E0:08D7	provisional
@@ -965,6 +981,7 @@ _show_credits	652F:0020	FM Towns
 _show_cutscene	6488:00F2	FM Towns
 _ShowClip	370D:0DC4	FM Towns
 _ShowSaveRest	6581:0057	FM Towns
+_ShowStupidFirstPersonWeapon	DS:08B6	FM Towns
 _simple_fizix	191C:0225	FM Towns
 _skill_check	323F:0009	FM Towns
 _sknow	DS:47B8	FM Towns
@@ -1010,9 +1027,11 @@ _strt_converse	6469:00AC	FM Towns
 _strt_demscr	64BF:0052	FM Towns
 _strtime	DS:2B54	FM Towns
 _strupr	0E72:2940	FM Towns
+_stub108_B6	6488:00B6	provisional
 _Stub_OpenDataFile_seg005_2891	65E0:0070	provisional
 _stuff_class_data	65C1:0020	FM Towns
 _SwapItemsInBag	64F7:002A	FM Towns
+_sys_suffix	DS:14F0	provisional
 _takeFromSlot	650A:007A	FM Towns
 _talking_to	DS:490E	FM Towns
 _TalkTo	6469:0052	FM Towns

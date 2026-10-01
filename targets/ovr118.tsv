@@ -1,20 +1,20 @@
 # segment ovr118 base 0x8A830 size 0x5E7 org 0x0
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
 ovr118_0	ovr118_0	0x0	0x34
-OpenDataFileByParam_ovr118_772B_34	OpenDataFileByParam_ovr118_772B_34	0x34	0x67
+grfx_load_font	OpenDataFileByParam_ovr118_772B_34	0x34	0x67
 grfx_quikfont	OpenFont_ovr118_772BW_9B	0x9B	0x38
 ovr118_D3	ovr118_D3	0xD3	0xF
 grfx_clear	ProbablyResetScreen_ovr118_E2	0xE2	0x2F
-OpenPalsDat_ovr118_772B_111	OpenPalsDat_ovr118_772B_111	0x111	0x60
+read_quikpal	OpenPalsDat_ovr118_772B_111	0x111	0x60
 grfx_quikpal	SetPalette_ovr118_171	0x171	0x2E
 grfx_setpal	ApplyCutscenePalette_ovr118_19F	0x19F	0x2B
 grfx_palrange	CopyAPalette_ovr118_1CA	0x1CA	0x49
-ovr118_213	ovr118_213	0x213	0x11D
-ovr118_330	ovr118_330	0x330	0xFF
+fadeout	ovr118_213	0x213	0x11D
+fadein	ovr118_330	0x330	0xFF
 out3d	ovr118_42F	0x42F	0x43
 in3d	CallSomeFunction_ovr118_472	0x472	0x96
-ovr118_508	ovr118_508	0x508	0x16
-ovr118_51E	ovr118_51E	0x51E	0x16
+fadeout3d	ovr118_508	0x508	0x16
+fadein3d	ovr118_51E	0x51E	0x16
 ovr118_534	ovr118_534	0x534	0x17
 ovr118_54B	ovr118_54B	0x54B	0x17
 fill_FB	FlashColour_ovr118_562	0x562	0x31
