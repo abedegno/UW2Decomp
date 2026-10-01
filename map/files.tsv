@@ -75,7 +75,7 @@ ovr123	C	11	1703	11	0	0	0	add_rune_	player_cast_	yes
 ovr124	C	20	3754	18	0	0	2	RedisplayInvSlot_	EncumCheck_	yes
 ovr125	C	20	6738	20	0	0	0	load_inventory_pix_	FindInventoryHit_	yes
 ovr126	C	10	4065	10	0	0	0	LookAt_	GetObjDesc_	yes
-ovr127	C	4	3086	2	2	0	0	DecompressLZW_disk_	CompressLZW_disk_	
+ovr127	C	4	3086	2	2	0	0	DecompressLZW_disk_	CompressLZW_disk_	yes
 ovr128	C	6	906	3	1	1	1	Map_Init_	Map_Save_	yes
 ovr130	C	2	138	0	2	0	0			yes
 ovr131	C	1	24	1	0	0	0	show_credits_	show_credits_	

@@ -1,6 +1,6 @@
 # segment ovr127 base 0x917E0 size 0xC11 org 0x0
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
-DataCompressionSubFunction_ovr127_0	DataCompressionSubFunction_ovr127_0	0x0	0x23C
-DataCompressionRelatedFunction_ovr127_23C	DataCompressionRelatedFunction_ovr127_23C	0x23C	0x204
+InsertNode	DataCompressionSubFunction_ovr127_0	0x0	0x23C
+DeleteNode	DataCompressionRelatedFunction_ovr127_23C	0x23C	0x204
 DecompressLZW_disk	DecompressArkData_ovr127_440	0x440	0x355
 CompressLZW_disk	DataCompression_ovr127_795	0x795	0x47C
