@@ -10,6 +10,7 @@ _AddToInventory	650A:006B	FM Towns
 _advance	6599:0043	FM Towns
 _Alt	DS:2130	FM Towns
 _always_decode	DS:090E	FM Towns
+_animcount	DS:34B4	FM Towns
 _answer_x	DS:8186	provisional
 _area_spell_state	DS:1B0A	FM Towns
 _AskHowMany	6513:003E	FM Towns
@@ -26,6 +27,7 @@ _bmsegoff	4FAF:C784	FM Towns
 _build_new_obj	65A7:00CA	FM Towns
 _busywaiting_new_options	653E:0093	FM Towns
 _button_to_mode	DS:0123	FM Towns
+_calloc	0E72:02AD	FM Towns
 _camang	DS:33DA	FM Towns
 _campos	DS:33E0	FM Towns
 _can_place	2754:1021	FM Towns
@@ -48,6 +50,7 @@ _chg_plyp	656A:004D	FM Towns
 _cInit3d	2110:0E1A	FM Towns
 _clear_all_loretries	64A5:0039	FM Towns
 _clear_fight_state	22FC:130F	FM Towns
+_ClearInventory	6513:0070	FM Towns
 _click_time	DS:0984	provisional
 _close	0E72:02FE	FM Towns
 _close_arc	6417:0039	FM Towns
@@ -137,6 +140,7 @@ _editchng	1B44:00AE	FM Towns
 _editor_dispatch	DS:11F4	FM Towns
 _empty_text	DS:098D	provisional
 _EncumCheck	650A:0075	FM Towns
+_errmsg	65E0:0089	FM Towns
 _fadein3d	64E2:0043	FM Towns
 _fadeout3d	64E2:0052	FM Towns
 _farfree	0E72:325E	provisional
@@ -158,6 +162,7 @@ _flip_switch	32FA:0720	FM Towns
 _Food	DS:6B60	FM Towns
 _force_mouse_cursor	1B8F:067D	FM Towns
 _foreground_color	DS:21C4	FM Towns
+_free	0E72:36E0	FM Towns
 _frictionless	DS:229E	FM Towns
 _game_sprint	3265:04A4	FM Towns
 _GameInputMode	DS:2506	FM Towns
@@ -185,6 +190,7 @@ _grfx_clear	64E2:007A	FM Towns
 _grfx_quikpal	64E2:002F	FM Towns
 _grPageFlip	0085:46AA	FM Towns
 _grSoftPageFlip	0085:46E6	FM Towns
+_GrSq	DS:22A4	FM Towns
 _gvechead	DS:2C60	FM Towns
 _gvecs	DS:2B5E	FM Towns
 _HasOrIsObj	28A1:0C6B	FM Towns
@@ -242,6 +248,7 @@ _MapObj_Y	DS:24FA	FM Towns
 _mapptr	DS:2B58	FM Towns
 _MaybeAComparison_seg005_105F_282	0E72:282C	provisional
 _mdetect	65B5:0039	FM Towns
+_mem_set	1F8C:00EE	provisional
 _memset	0E72:1DCA	FM Towns
 _mendable	65B5:005C	FM Towns
 _menu_scroll	DS:0962	FM Towns
@@ -409,9 +416,11 @@ _real_death	64BF:007A	FM Towns
 _rectangle	0085:4CF2	FM Towns
 _RectLook	651C:0043	FM Towns
 _RedisplayInvSlot	650A:002A	FM Towns
+_release_camera	656A:002F	FM Towns
 _release_missile	65A7:003E	FM Towns
 _release_workspace	3400:0233	FM Towns
 _releasePtr	DS:2502	FM Towns
+_rem_anim_from_list	34A2:007F	FM Towns
 _remove_lock	24B4:0003	FM Towns
 _remove_opponent	64A5:0061	FM Towns
 _RemoveOneFromSlot	650A:0034	FM Towns
@@ -498,10 +507,12 @@ _thump_your_magic_twanger_froggie	65B5:006B	FM Towns
 _tile_walls	DS:1BA6	FM Towns
 _TileIndices	DS:2CBA	provisional
 _Time	DS:2158	FM Towns
+_timercount	DS:3576	FM Towns
 _TimeStop	DS:037F	FM Towns
 _toggle_fightmode	2529:13E5	FM Towns
 _trans	DS:2C5E	FM Towns
 _Transparency	370D:0DC5	FM Towns
+_trap_obj_del	65D5:0034	FM Towns
 _trap_teleport_data	DS:1BB6	FM Towns
 _TxmID	DS:8208	FM Towns
 _TxmTerr	DS:8188	FM Towns

@@ -2,7 +2,7 @@
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
 Map_ObjFix	ClearTilemap_seg029_2A8E_6	0x0	0x111
 Obj_Check	CallFunctionOnObjectsInChain_seg029_2A8E_117	0x111	0xBA
-ObjectCullingRngTest_2A8E_1D1	ObjectCullingRngTest_2A8E_1D1	0x1CB	0x80
+chkTenacious	ObjectCullingRngTest_2A8E_1D1	0x1CB	0x80
 Obj_Elem_Fate	ObjectCullingTest_seg029_2A8E_251	0x24B	0xC3
 Obj_Fate	CullingCheckOnObjectChain_seg029_2A8E_314	0x30E	0x40
 Obj_GarbageCollect	CullObjects_seg029_2A8E_354	0x34E	0x11D
@@ -19,8 +19,8 @@ Obj_MemTPtr	ReverseObjectLookup_seg029_2A8E_927	0x921	0x4A
 Obj_IntTMem	LookupObjectByIndex_seg029_2A8E_971	0x96B	0x41
 Obj_Find	FindObjectListHeadObject_seg029_2A8E_9B2	0x9AC	0xD5
 IsMobElem	TestIfStaticOrMobile_seg029_2A8E_A87	0xA81	0x1E
-AddtoEndOfTileMapMobiles_seg029_2A8E_AA5	AddtoEndOfTileMapMobiles_seg029_2A8E_AA5	0xA9F	0x13
-RemoveFromMobilesList_seg029_2A8E_AB8	RemoveFromMobilesList_seg029_2A8E_AB8	0xAB2	0x4C
+active_critter	AddtoEndOfTileMapMobiles_seg029_2A8E_AA5	0xA9F	0x13
+free_critter	RemoveFromMobilesList_seg029_2A8E_AB8	0xAB2	0x4C
 UNREFERENCED_seg029_2A8E_B04	UNREFERENCED_seg029_2A8E_B04	0xAFE	0x67
 Obj_InList	GetLinkedOrNextObjectWithFilter_seg029_2A8E_B6B	0xB65	0x100
 HasOrIsObj	CheckIfItemID_Or_ContainsItemID_seg029_2A8E_C6B	0xC65	0x69

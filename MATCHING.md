@@ -5,6 +5,7 @@ UW2.EXE was built with Borland Turbo C++ 1.01, medium model with 186 instruction
 - ovr154 (`PLAYER.C`): `-mm -1 -G -O -Y -d`. `-d` (merge duplicate strings) is proven by the data segment: each repeated literal is stored once. `-Y` is overlay code: taking the address of a far function in the same file is a fixup rather than `mov ..,cs`. No `-Z`, so the compiler reloads `mov bx,[player]` and `les bx,[...]` after every store through them.
 - seg012 (`SEG012.C`, resident): matches with `-mm -1 -G -O -d`; `-G` is proven, `-O`, `-Z` and `-Y` make no difference in that file.
 - seg038 (`SEG038.C`, resident): `-mm -1 -G -O -d`, and no `-Z` is proven (with it `player_get_exp` comes out 8 bytes short).
+- **Probably every file was compiled with `-Y`**: seg029 is resident but needs it (it passes a same-file function's address, which without `-Y` is `push cs` and with it a relocated segment push), and no file has yet needed it absent. Use `-mm -1 -G -O -Y -d` for resident files too.
 - seg023 and seg036 (resident): `-mm -1 -G -O -d`; seg023 proves `-G` and `-O` (without either, functions change size).
 - The file holding CycleColours (file offset 0x802C4) needed `-Z` to match its register reuse.
 
@@ -82,7 +83,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **A block-local initialised array** (`char num[3] = "00";`) puts its initialiser in `_DATA` where the function is.
 - **Pointer tables in data** (an initialised array of far function pointers) carry fixups inside `_DATA`; `verify.py` checks each pointer against the EXE and leaves those bytes out of the comparison.
 - **An empty string can be someone else's padding byte**: seg043 passes `push 98Dh` for `""`, an address inside another file's data, so the literal was merged by the linker and is declared there as an extern array.
-- **`_BSS` is laid out by name, not declaration order**: Turbo C emits uninitialised variables in its symbol table's order, so renaming one moves it and reordering declarations doesn't (ties keep declaration order; ints are word-aligned). A static's name never reaches the linker, so when a static has no original name, choose one that lands where the EXE has it, and say in a comment that the name was chosen for layout. Public names are fixed by other files.
+- **`_BSS` is laid out by name, not declaration order** (file-scope data only; function-level statics are placed where they are defined): Turbo C emits uninitialised variables in its symbol table's order, so renaming one moves it and reordering declarations doesn't (ties keep declaration order; ints are word-aligned). A static's name never reaches the linker, so when a static has no original name, choose one that lands where the EXE has it, and say in a comment that the name was chosen for layout. Public names are fixed by other files.
 - **Static uninitialised data** goes in `_BSS`, which `verify.py` checks for a consistent base (no bytes to compare).
 - **`!c` against `c == 0` on a `char` parameter**: `!c` gives `mov al; cbw; or ax,ax`; `c == 0` gives `cmp byte [bp+N],0`.
 - **Far pointers compare by offset only** for `<`/`>=` (`mov ax,[bp+N]; cmp ax,[g]`), while `== 0` tests both halves (`or ax,dx`).
@@ -151,5 +152,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 - **`return f(0);`** of a char returns the callee's AL with no move.
 - **`jcc +2; jmp short` to a shared `return 0`** is a separate early-return statement whose body was replaced by a jump, not part of an `&&` chain.
 - **Byte-identical functions with two FM Towns names at one address**: FM Towns' linker folded them, so which DOS copy carries which name can't be proven; say so in a comment.
+- **`a = b = expr` with far pointers** stores both from DX:AX; `a = expr; b = a;` reloads.
+- **`x++; if (x >= n)`** compares the register directly; `if (++x >= n)` copies to AX first.
 - Struct field offsets must be exact; use `char padN[...]` to place fields.
 - Library helpers (long multiply, divide and shifts) are `N_LXMUL@`, `H_LDIV@` and so on, called as far calls; long arithmetic in C produces them automatically.

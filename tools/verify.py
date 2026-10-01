@@ -77,6 +77,10 @@ def main():
                     if word(exe, base + at) != add + org or word(exe, base + at + 2) != para:
                         problems.append(f'+{at:X}: far self-call goes to {word(exe, base + at + 2):04X}:{word(exe, base + at):04X}, '
                                         f'expected {para:04X}:{add + org:04X}')
+            elif loc == 5 and base < mzend:
+                # a function's address taken in resident code: its real offset
+                if word(exe, base + at) != add + org:
+                    problems.append(f'+{at:X}: function address {word(exe, base + at):X}, object says {add + org:X}')
             elif loc == 5:
                 # a far function's address taken in an overlay (-Y): the linker points it
                 # at the function's entry in the overlay's stub table, which it assigns
