@@ -7,7 +7,7 @@ UW2.EXE was built with Borland Turbo C++ 1.01, medium model with 186 instruction
 - seg038 (`SEG038.C`, resident): `-mm -1 -G -O -d`, and no `-Z` is proven (with it `player_get_exp` comes out 8 bytes short).
 - **Probably every file was compiled with `-Y`**: seg029 is resident but needs it (it passes a same-file function's address, which without `-Y` is `push cs` and with it a relocated segment push), and no file has yet needed it absent. Use `-mm -1 -G -O -Y -d` for resident files too.
 - seg023 and seg036 (resident): `-mm -1 -G -O -d`; seg023 proves `-G` and `-O` (without either, functions change size).
-- The file holding CycleColours (file offset 0x802C4) needed `-Z` to match its register reuse.
+- CycleColours (file offset 0x802C4) needed `-Z` to match its register reuse when compiled alone in the first spike; in its real file, `src/OVR108.C`, it matches with the standard switches. Match a function in its own file before concluding it needs a switch.
 
 So if reloads differ in a way restructuring can't fix, try the file with and without `-Z`.
 

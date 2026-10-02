@@ -14,7 +14,7 @@ This is a fan research project, not affiliated with or endorsed by the rights ho
 
 ## Linking
 
-`python3 tools/link.py` links `build/LINK/out/UW2.EXE` with TLINK in headless DOS and compares it with your `UW2.EXE` (`tools/exediff.py`). The result is the same size as the original, its header, overlay area and resident image are identical except for two bytes, and it runs: it reaches the title and main menu, and a changed string in a C source shows up in the game.
+`make exact` (`python3 tools/link.py`) links `build/LINK/out/UW2.EXE` with TLINK in headless DOS and compares it with your `UW2.EXE` (`tools/exediff.py`). The result is the same size as the original, its header, overlay area and resident image are identical except for two bytes, and it runs: it reaches the title and main menu, and a changed string in a C source shows up in the game.
 
 - **What the repo does not contain is taken from your own EXE at build time.** `tools/extract.py` writes data-only TASM modules under `build/LINK` (never committed) for the far data segments, the DGROUP gaps between files, and the code that has no source yet. Their publics are the names in `symbols.tsv`, and each relocation in them becomes a `dd`/`dw seg` fixup.
 - **The link order comes from the EXE.** TLINK writes relocations module by module and lists every segment in the overlay manager's segment table, so both record the original order. seg000 to seg004 precede C0's `_TEXT`, and seg003, seg004 and seg045 come from a second library linked after `CM.LIB`.
@@ -31,7 +31,7 @@ Every byte of code now has source, including seg000 (the sprite module), seg018 
 
 ## Modding build
 
-`python3 tools/link.py --mod` links an EXE from sources that may change by any size, in code or data, resident or overlay. It reaches the main menu, character creation and the 3D view with a longer overlay string and more overlay code, more resident code and initialised data, and a larger `_BSS`, each on its own and all together (docs/LAYOUT.md has the tests).
+`make game` (`python3 tools/link.py --mod`) links an EXE from sources that may change by any size, in code or data, resident or overlay. It reaches the main menu, character creation and the 3D view with a longer overlay string and more overlay code, more resident code and initialised data, and a larger `_BSS`, each on its own and all together (docs/LAYOUT.md has the tests).
 
 - **Run the exact link once first.** `python3 tools/link.py`, with every source matching, keeps in `build/LINK/base` a copy of each matched object, the SHA-1 of its source and where verify.py found its data (extract.py writes it only when every object verifies). The modding build works out the layout from those, so the extracted modules keep their places next to their neighbours whatever the changed objects do.
 - **Then edit and link.** Each source whose text differs from that run's is compiled with its own `/* opts: */` into `build/MODLINK/src`; the matched objects in `build/` are left alone, so the exact link still works once you revert. The EXE goes to `build/MODLINK/out/UW2.EXE` and is not compared with yours. With no source changed it is the exact link's EXE.
@@ -54,16 +54,24 @@ Rebuild it with `tools/doslist.py`, `tools/callpairs.py`, `tools/anchors.py`, `t
 
 `match.py` compares code bytes with fixups masked. `verify.py` then checks what that masks: every extern resolves to one address everywhere it is used and no two externs share one, every reference into the file's own code lands where it should, and the file's initialised data matches the EXE's data segment byte for byte. `symbols.tsv` is the resulting map of names to addresses in `UW2.EXE`, each marked as an original FM Towns name, a library routine or provisional.
 
-`src/THEME.C` and `src/CYCLE.C` are the first spike functions from other segments; they have no target tables yet.
 
-## Setup
+## Building
 
-- Node 20+ and `npm install`, which fetches [dos-mcp](https://www.npmjs.com/package/dos-mcp) to run the compiler headless in js-dos.
-- `tools/setup-tc.sh DIR` extracts Turbo C++ 1.01 from `Disk01.img`..`Disk04.img` into `TC/` and checks it is the expected build. Needs mtools and 7z.
-- Python 3 with `iced-x86` for the disassembly diffs: `python3 -m venv .venv && .venv/bin/pip install iced-x86`.
-- UW2's `UW2.EXE` at `~/UWGOG/UW2/UW2.EXE`, or set `UW2_EXE`. `tools/targets.py` also reads the IDA listing `uw2_asm.asm` from [UWReverseEngineering](https://github.com/hankmorgan/UWReverseEngineering) (set `UW2_ASM` if it isn't at `~/UWReverseEngineering/uw2_asm.asm`).
-- Optional: the Japanese FM Towns release of UW2, for `tools/fmt.py`, which disassembles a function by its original name. Extract `UW2.EXP` from the disc and use `uw2fmt.py` from UWReverseEngineering's `UW2 FM Towns` folder to write `fmtowns/uw2fmt.img` (`unpack`) and `fmtowns/syms.tsv` (`syms`).
+You need Node 20 or later, Python 3, mtools and 7z (`brew install mtools p7zip`), the Turbo C++ 1.01 and Turbo Assembler 2.0 disk images, and UW2's `UW2.EXE` at `~/UWGOG/UW2/UW2.EXE` (or set `UW2_EXE`; the GOG release works).
 
-## Use
+- `make setup TC_DISKS=DIR TASM_DISKS=DIR` extracts Turbo C++ into `TC/` and TASM into `TASM/` from the directories holding their disk images and checks both are the expected builds, makes the `.venv` with `iced-x86` (for instruction diffs), and runs `npm install` (which fetches [dos-mcp](https://www.npmjs.com/package/dos-mcp) to run the tools headless in js-dos). It skips whatever is already in place, so it is safe to run again.
+- `make` (or `make game`) is the modding build, `tools/link.py --mod`, and prints the path of the EXE.
+- `make exact` links the matched objects exactly and compares the result with your `UW2.EXE`; it passes when only the two known bytes differ.
+- `make check` is the gate. It compiles every source with a `/* target: */` line (several to a DOS session, three sessions at once), and requires `match.py` to report WHOLE SEGMENT MATCHES and `verify.py` "fixups and data verified" for each. It then rebuilds `symbols.tsv` from scratch in a scratch directory and requires the same names at the same addresses as the committed file, requires the exact link to equal `UW2.EXE` except the bytes at 0x6676C and 0x66774, and requires the modding build with no changes to be byte-identical to the exact link. It recompiles only the sources whose text or object has changed since they last passed (`build/check/state.json`); `make check-all` recompiles everything. On this machine `make check-all` takes about a minute and `make check` with nothing changed about ten seconds.
+- `make boot` boots the modding build in headless DOS and saves screenshots of the title, the intro and the main menu under `build/boot/`. Look at them.
+- `make hooks` installs a git pre-push hook that runs `make check` and stops the push when it fails. Hosted CI cannot run the gate, because the toolchain and the game cannot be on GitHub, so this hook is the gate. Bypass it for one push with `git push --no-verify` (or `SKIP_CHECK=1 git push`). It checks the working tree, not the commits being pushed, so commit or stash first. The GitHub workflow runs only `tools/repocheck.py`: script syntax, Markdown links, and that no game data or Borland binary is committed.
+
+Optional: the Japanese FM Towns release of UW2, for `tools/fmt.py`, which disassembles a function by its original name. Extract `UW2.EXP` from the disc and use `uw2fmt.py` from UWReverseEngineering's `UW2 FM Towns` folder to write `fmtowns/uw2fmt.img` (`unpack`) and `fmtowns/syms.tsv` (`syms`). `tools/targets.py` reads the IDA listing `uw2_asm.asm` from [UWReverseEngineering](https://github.com/hankmorgan/UWReverseEngineering) (set `UW2_ASM` if it is not at `~/UWReverseEngineering/uw2_asm.asm`).
+
+### Working on one file
 
 `.venv/bin/python tools/match.py src/PLAYER.C` compiles the file and reports every function as MATCH or where it differs. `--dis NAME` shows an instruction diff. `.venv/bin/python tools/verify.py src/PLAYER.C --update` then checks fixups and data, and merges the file's externs into `symbols.tsv`, refusing any conflict. See [MATCHING.md](MATCHING.md) for the compiler switches and what the compiler's output reveals about the original source.
+
+## Contributing
+
+Every change must pass `make check` before it is pushed; `make hooks` makes that automatic. A readability change (names, shared headers, `#define`s and enums, struct fields, comments, file renames) must keep the bytes identical, and the gate passing is the proof. Renaming a function or global also renames it in `symbols.tsv`: change it in every file that uses it, replace its line in `symbols.tsv`, and the gate's from-scratch rebuild of `symbols.tsv` shows anything missed. A change meant to alter the program is for the modding build (see above), not the matched sources.

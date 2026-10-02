@@ -1,0 +1,22 @@
+# Hosted CI runs only what needs neither the Borland toolchain nor UW2.EXE, which cannot be
+# on GitHub: tools/repocheck.py (Python and script syntax, Markdown links, no game data or
+# Borland binaries committed). The real gate is `make check`, run locally by the pre-push
+# hook (`make hooks`).
+name: repocheck
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  repocheck:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: python3 tools/repocheck.py
