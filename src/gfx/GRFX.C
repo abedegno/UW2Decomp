@@ -45,7 +45,8 @@ char font_suffixes[6][5] = { "4x5p", "5x6p", "char", "big", "5x6i", "butn" };
 char sys_suffix[] = ".sys";
 char pals_name[] = "pals.dat";
 
-/* match: no return statement; UWEDIT.C tests what grfx_quikfont leaves in AL. */
+/* match: no return statement; UWEDIT.C tests what grfx_quikfont leaves in AL, which is
+   grfx_load_font's result: 1 when the font file opened, which at start-up is font_loaded. */
 unsigned char far grfx_init(void)
 {
     seg021_22FD_755();
@@ -54,6 +55,7 @@ unsigned char far grfx_init(void)
     grSoftPageFlip();
     init_colors();
     grfx_quikfont(FONT_5X6P);
+    AX_RESULT(font_loaded);
 }
 
 /* Loads a font file: its header into cur_font, then (charsize + widthsize) * 128 bytes of

@@ -1,6 +1,6 @@
 # Porting UW2 to modern systems
 
-This page is the design for a native port of UW2 built from the matched sources. Milestones 1 and 2 are done: the C compiles on a modern host with no errors, and `make port` links it with stubs into a native macOS binary that starts and stops at the first stub. Their numbers are below, followed by the plan for Milestone 3. Nothing else described here exists yet.
+This page is the design for a native port of UW2 built from the matched sources. Milestones 1 to 3 are done: the C compiles on a modern host with no errors, `make port` links it into a native macOS binary, and the binary boots the real game data in an SDL3 window, runs `init_world` to the end and shows the two opening screens exactly as DOS does. Their results are below, followed by the plan for Milestone 4. What the later milestones describe does not exist yet.
 
 ## Goals and non-goals
 
@@ -38,14 +38,17 @@ Every change to a shared source has to pass the gate. So a change made for the p
 | `src/include/portable.h` | the types and macros both builds share (explicit widths, `NEARPTR`, `OLDSTYLE`, `FAR_COPY`, `NULLTRAP`, `HOST_LAYOUT_BEGIN`); each is the original tokens under Turbo C | yes |
 | `src/port/compat.h` | the portability layer, force-included into every port compile | no |
 | `src/port/include/` | stand-ins for Borland's headers (`dos.h`, `alloc.h`, `mem.h`, `io.h`, `stat.h`, `dir.h`, `conio.h`, `bios.h`) | no |
-| `src/port/3d/`, `src/port/gfx/`, `src/port/sys/`, `src/port/sound/` | C written for the port to replace the assembly modules and the DOS-only C files, named after the module each replaces | no |
-| `src/port/mem/` | the paragraph map, EMS and the far heap | no |
+| `src/port/port.h` | what the port's own C shares: the paragraph map, the far data blocks, the emulated hardware | no |
+| `src/port/3d/`, `src/port/gfx/`, `src/port/sys/`, `src/port/sound/` | C written for the port to replace the assembly modules and the DOS-only C files, named after the module each replaces, and the emulated hardware (`gfx/vga.c`, `sys/pit.c`) | no |
+| `src/port/mem/` | the paragraph map, the far heap, EMS, and the far data loaded from the user's EXE | no |
 | `src/port/stubs/` | the link stubs, one file per source of the names (written by `tools/portstubs.py`); a replacement deletes its stubs | no |
-| `platform/include/plat.h` | the platform API | no |
-| `platform/sdl3/` | the SDL3 implementation of the platform API | no |
+| `src/port/platform/plat.h` | the platform API, with no SDL in it | no |
+| `src/port/platform/files.c`, `png.c` | the parts of the platform layer any POSIX host shares: the data root and DOS paths, and the PNG writer | no |
+| `src/port/platform/sdl3/` | the SDL3 backend of the platform API, the only code that includes SDL | no |
 | `tools/portcheck.py` | the compile measurement (`make port-check`) | no |
 | `tools/portbuild.py` | the port build and link (`make port`) | no |
-| `tools/portstubs.py` | writes `src/port/stubs/` from the names a link still needs | no |
+| `tools/portstubs.py` | writes `src/port/stubs/` from the names a link still needs and the port's C does not define | no |
+| `tools/portshot.py` | the screen comparison with DOS (Milestone 3's exit test) | no |
 | `tools/widths.py` | rewrites integer declarations to the explicit widths | no |
 | `tools/layoutcheck.py` | compares every struct's layout under Turbo C (in DOS) and the port | no |
 | `tools/intaudit.py` | the promotion and overflow audit, on clang's AST | no |
@@ -72,11 +75,12 @@ The layer does these things:
 - It gives Borland's values to the `open` flags and permission bits. The sources also write them as numbers, e.g. `open(name, 0x8001)` in MISCUTIL.C and the mode `0x80` in ARC.C, and Borland's `O_RDONLY` is 1 where the host's is 0.
 - It renames the Borland library calls whose host versions behave differently to `bc_` names, so that the port supplies Borland's behaviour. These are `open`, `read`, `write`, `close`, `lseek`, `creat`, `access`, `unlink`, `mkdir`, `chdir`, `stat`, `fstat`, `fopen`, `rand`, `srand`, `time` and `clock`. The reasons are DOS paths and case, Borland's text mode and flags, one-argument `mkdir`, Borland's `rand` (its own generator with `RAND_MAX` 7FFFh, called 272 times in the game), `clock` at 18.2 Hz, and the need for the replay harness to control `time` and `rand`.
 - It declares Borland's extra library names (`itoa`, `ltoa`, `strupr`, `strnicmp`, `max`, `min`, `environ`) and Borland's `_ctype` table, which GAMESTRN.C reads directly.
+- It renames the game's `main` to `uw2_main`, because the port's own `main` (`src/port/sys/main.c`) sets up the platform and runs the game's on a thread of its own, and `exit` to `bc_exit`, which runs the termination chain seg021 hooked and ends the program through the platform layer.
 - It packs every struct the game declares (`#pragma pack(1)`), as Turbo C does with no `-a`, after it has included every host header the game uses, so the host's own structs keep their alignment. Port C that includes a game header must include `compat.h` first.
 
 The game's translation units see only ISO C and POSIX 2008 names from the host (`-D_POSIX_C_SOURCE=200809L`). Without that, macOS's headers declare `valloc`, which collides with VALLOC.ASM's routine of the same name.
 
-The shared sources also include `src/include/portable.h`, through `uw2.h`. It holds what both builds need: under Turbo C (`__TURBOC__`) every name in it is the original type or the original tokens, so the DOS bytes cannot change, and on the host it takes the host's meaning. It has the explicit-width types (`int16`, `uint16`, `int32`, `uint32`), `NEARPTR` and `UNEARPTR`, `OLDSTYLE`, `FAR_COPY`, `NULLTRAP` and `FARNULLTRAP`, and `HOST_LAYOUT_BEGIN` and `HOST_LAYOUT_END`. Each is described below where it is used.
+The shared sources also include `src/include/portable.h`, through `uw2.h`. It holds what both builds need: under Turbo C (`__TURBOC__`) every name in it is the original type or the original tokens, so the DOS bytes cannot change, and on the host it takes the host's meaning. It has the explicit-width types (`int16`, `uint16`, `int32`, `uint32`), `NEARPTR` and `UNEARPTR`, `OLDSTYLE`, `FAR_COPY`, `NULLTRAP` and `FARNULLTRAP`, `HOST_LAYOUT_BEGIN` and `HOST_LAYOUT_END`, and `AX_RESULT`, for a function the original wrote with no return statement whose callers use what it left in AX (an empty statement under Turbo C, `return` of that value on the host). Each is described below where it is used.
 
 ## Memory model and data layout
 
@@ -224,15 +228,19 @@ The DOS graphics library draws into VGA mode X with two pages, latched copies, a
 
 ## The platform layer
 
-The platform API is `platform/include/plat.h`, and it is the only code that knows about SDL3. Everything above it is portable C. The API covers these areas:
+The platform API is `src/port/platform/plat.h`. It names no SDL type, and `src/port/platform/sdl3/plat_sdl3.c` is the only file that includes SDL. Everything above it is portable C. SDL3 itself runs on macOS, Windows, Linux, iOS and iPadOS, Android and Emscripten; because the layer stays SDL-free, a web build without SDL or a libretro core is one more backend file, not a change to the port.
 
-- **Video.** `plat_present(const uint8_t *indexed, int w, int h)` and `plat_set_palette(const uint8_t *rgb6, int first, int count)`. Window scaling, integer scaling and the 4:3 aspect correction from 200 to 240 lines are window options, so they never touch game code.
-- **Keyboard.** The platform turns SDL key events into PC set-1 scan codes, with the E0 prefixes, and pushes them into a 64-byte ring buffer with the same semantics as KBDINT.ASM. The game's KEYQUEUE logic, ported to C, then reads the ring buffer unchanged. Held keys repeat as typematic make codes at the BIOS default rate, so the game's own filtering of repeats sees what it saw in DOS. The enhanced-keyboard flag the game reads from 0040:0096 is set as for a 101-key keyboard.
-- **Mouse.** `int 33h` semantics: position in the driver's ranges, buttons, and relative motion in mickeys, which MOUSEDRV.ASM halves. Phase 2's mouselook reads the same motion.
-- **Joystick.** Optional, through SDL gamepads, mapped onto JOYPORT's -127 to 127 axes with its dead zone.
-- **Time.** A timer thread runs the AIL timers at their own rates: the game clock at 256 Hz increments `*Time`, the effects timer runs at 16 Hz, and the BIOS tick at 18.2 Hz. As in DOS, the clock advances while the game runs. Under replay the game reads the recorded values instead (below).
-- **Files.** Every DOS path the game uses (`DATA\SKILLS.DAT`, `SAVE0\LEV.ARK`, `CRIT\CR01.00`) is mapped onto the user's data directory, with `\` as the separator and case-insensitive lookup. The data directory is read-only. Saves go to a separate directory, which plays the part of `UWHOME`.
-- **Audio.** An output stream with a callback. The mixer runs on its own thread, so the game thread's hitches cause no underruns.
+The model is the PC's. The game runs on a thread of its own, as the CPU did. The backend owns the window and the event loop on the host's main thread (which macOS and iOS require), and calls into the port the way the PC's hardware interrupted the CPU. Its hooks run on the backend's thread and do only what an interrupt handler could. The port's own timer thread plays the PIT.
+
+- **Video.** The game never presents anything. Each pass of the event loop the backend calls the `scanout` hook, which reads the emulated VGA as its CRT controller would (the visible page, the offset, the panning and the line compare) and returns an indexed picture with the DAC's 256 6-bit entries. The backend converts it to RGB, `(v << 2) | (v >> 4)` as DOSBox does, and draws it scaled. The scaling is the backend's: integer multiples by default, and the 4:3 aspect correction from 200 to 240 lines, so it never touches game code.
+- **Pointer events, not "mouse".** A pointer is a mouse, a pen or a finger. Each event carries its position in the game's 320 by 200 screen pixels, already undone from the window's scaling and letterbox, its motion, and its buttons. The port's mouse driver (`src/port/sys/mousedrv.c`) builds int 33h's state from them: the position in the driver's 640 by 200 range, the buttons, and the motion in mickeys at the driver's default rate. The game reads only the motion and the buttons and keeps its own cursor, so a touch screen drives it the same way.
+- **Keyboard.** The backend turns each SDL key event into PC set-1 scan code bytes, make or break, with the E0 and E1 prefixes, through one table, and hands them over one byte at a time, as port 60h did. The port's int 9 handler (`src/port/sys/keyqueue.c`) stores them in KBDINT.ASM's 64-byte ring buffer at the same offsets of seg021's data, and `key`, KEYQUEUE.ASM in C, reads them out unchanged. The backend drops the host's own key repeat; the port's keyboard repeats a held key itself at the BIOS default (500 ms, then 10.9 a second), so the game's filter of repeats sees what it saw in DOS. The enhanced keyboard flag is set, as for a 101-key keyboard.
+- **Time.** `plat_counter` and `plat_counter_hz` are the host's high-resolution counter, and `plat_sleep_ns` a precise sleep. The PIT (`src/port/sys/pit.c`) runs on a thread of its own from them: the AIL timers at their own rates (the game clock, SOUND.C's `cllbck_tst`, at 256 Hz), the BIOS tick at 18.2 Hz for `clock`, and the keyboard's repeat. A timer is due whenever its period has passed, so its rate is exact on average, and a late wake-up runs the missed calls at once, as queued interrupts did. Under replay (Milestone 4) the game reads the recorded values instead.
+- **Files: the data root.** The user's own copy of UW2 is the data root, and it is never written. The port's home directory (`--home`, default `~/.uw2port`) plays the part of `UWHOME`: it is laid over the data root, so the game sees one tree. Every DOS path the game names (`DATA\uw.cfg`, `data`, `SAVE0\LEV.ARK`, `CRIT\CR01.00`, the scratch files `a.tmp` to `h.tmp`) is looked up one component at a time, without case, first in the home directory and then in the data root (`src/port/platform/files.c`). A file the game creates goes to the home directory. A file it opens to change stays in the data root until its first write, and is copied into the home directory then. Borland's text mode (CR LF, Ctrl-Z) is kept for handles opened without `O_BINARY`. The far data no source defines yet, and seg021's and seg003's data segments, are read from the user's `UW2.EXE` in the data root, which the port checks by its size and CRC-32 first.
+- **Lifecycle events.** The backend reports suspend (a phone going to the background, a window minimised), resume, and a request to quit (the window's close box). A phone build has to stop the timers and save on suspend; the desktop build only logs them.
+- **Audio.** An output stream of 16-bit stereo samples with a callback on the audio thread (`plat_audio_open`). Milestone 3 opens it and feeds silence. Sound is Milestone 7.
+- **No JIT and no self-modifying code** anywhere in the port. iOS refuses writable executable memory. The DOS code that patched itself (seg004's texture mappers, seg003's polygon clipper, SCALEBM.ASM's generated sprite code) becomes C that chooses with data what the patch chose.
+- **Debugging.** `--screenshot-after MS` writes the scan-out to a PNG, `--window-shot FILE` the window's own scaled contents, `--shot-at-flip K:FILE` the screen right after the game's K-th page flip, `--hidden` runs with no window, `--exit-after MS` quits, `--exit-on-halt` quits where the port stops instead of leaving the window up, and `-v` traces file opens, the paragraph map's windows and the call stack at a stub.
 
 ## Sound
 
@@ -286,9 +294,9 @@ The faithful port reproduces each likely bug, and the replay test proves it does
 | --- | --- | --- |
 | 1. Measure (done) | `src/port/compat.h`, the stand-in headers, `make port-check` | every C source compiles or fails with a categorised reason; the unresolved names are listed; the gate passes |
 | 2. Compile and link (done) | gated source changes for the errors and the pointer, prototype and Borland issues; explicit widths; the layout check; the promotion audit; the null-pointer static pass; the far pointer macros; link stubs; `make port` | `make port-check` shows 0 errors and no pointer truncation in the shared C; `make port` links a native binary with stubs that abort; `tools/layoutcheck.py` shows every file record identical; the gate passes |
-| 3. Boot to the title | the platform layer on SDL3 (video, keyboard, time, files); the paragraph map and EMS; Borland's library; seg021 in C; the parts of seg003, MODEX and the VGA emulation that the first title screen needs; AIL as "no driver found"; `port_null_near` and `port_null_far` | the port runs `init_world` up to `display_screen(5, 6)` and shows the first title screen, and its VGA scan-out matches a DOS screenshot of that frame byte for byte |
-| 4. Replay hooks | `GAME_TIME()` and the input hooks in the shared sources; the replay DOS build; `state_dump()`; the null-pointer write check | a DOS session recorded and replayed in DOS gives identical dumps twice in a row; quitting after it prints no "Null pointer assignment", and DS:0 to DS:3 and the vector table are as before |
-| 5. System and screen | the rest of seg003, the sprite, VALLOC and MODEX modules, the mouse; a `-fsanitize=null` debug build | the port plays the title cutscene and shows the main menu; screens match DOS byte for byte at the menu |
+| 3. Boot to the title (done) | the platform layer on SDL3 (video, pointer events, keyboard, time, files, lifecycle, silent audio); the paragraph map, the far heap and EMS; Borland's library; seg021 in C; the parts of seg003, MODEX, VALLOC and the VGA emulation the opening screens need; AIL with no driver; `port_null_near` and `port_null_far` | the port runs `init_world` past `display_screen(5, 6)` and shows the first title screen, and its VGA scan-out matches a DOS screenshot of that frame byte for byte |
+| 4. Replay, and the way into the game | `GAME_TIME()` and the input hooks in the shared sources; the replay DOS build; `state_dump()`; the null-pointer write check; the cutscene player's screen access, the rest of seg003, the sprites and the mouse cursor, text; a `-fsanitize=null` debug build | a DOS session recorded and replayed in DOS gives identical dumps twice in a row; the same session from boot through the title cutscene, the main menu and character creation to the first game screen replays in the port with identical dumps at each checkpoint, and the title, menu and character creation screens match DOS byte for byte |
+| 5. The game screen | the panels, the inventory, the message scroll, the automap screen; everything but the 3D view | a recorded session in the first level replays in the port with identical dumps, and every screen outside the 3D view matches DOS byte for byte |
 | 6. 3D view | seg004 in C | the 3D frame buffer matches DOS byte for byte for a set of recorded positions, including pick frames |
 | 7. Sound | the AIL API, the XMIDI sequencer, the OPL and MT-32 backends, the digital channel | every theme plays; effects, speech and the cutscene audio play; music timing matches a DOS recording |
 | 8. Faithful release (phase 1) | the replay suite over whole sessions; save compatibility; every null-pointer site decided | a set of recorded sessions, from character creation into several worlds, replays in the port with identical dumps and saves, with no null dereference reported by `-fsanitize=null`; saves load both ways |
@@ -453,18 +461,85 @@ The other four are false: GAMESORT.C's `do_objsort(0L)` reaches `link` only thro
 - Handlers called through a pointer of another type: `sp_true_sight` in the area spell table takes `(caster, target)` but is called with `(x, y, target, tile, type)`, and the critter collision handlers take a `struct Phys *` but are given the address of an `unsigned` collision state. Both work in DOS by layout; the port must keep them working the same way.
 - The assembly replacements should take explicitly sized parameters: the C passes them `int` values computed without the 16-bit wrap, e.g. `cSinCos(cPlayer->heading + 0x2040, ...)`.
 
-## The Milestone 3 plan
+## Milestone 3 results
 
-Milestone 3 boots the port to the first title screen. `init_world` (UWEDIT.C) brings the game up in a fixed order, and the first screen it shows is `display_screen(5, 6)` after `grfx_init`. So the work is everything that order calls up to that point, replaced in the order it is called, each stub file shrinking as its names get real code:
+Milestone 3 boots the port to the title. Run on 2 October 2026 on an Apple Silicon Mac, with Apple clang 21 and SDL 3.4.16, `make port` links `build/port/uw2port` (about 1 MB, arm64), and `build/port/uw2port --data ~/UWGOG/UW2` boots the GOG release's data in an SDL3 window in about a second, as far as this:
 
-1. **Process start.** `getvect` and `setvect` keep a table of handlers, and `int0_trap` becomes the port's divide handler (a signal handler for `SIGFPE` that calls `DivideByZeroError`); `_SS` and `_SP` read the register file; `bc_time`, `bc_srand` and `bc_rand` with Borland's generator. The port's `main` sets the data and save directories and calls the game's `main`.
-2. **Memory.** The paragraph map (`port_mk_fp`, `port_fp_seg`, `port_fp_off`), `farmalloc`, `farfree`, `coreleft` and `farcoreleft` (reporting what DOS reported on the reference set-up, since `OkEnoughMem` tests it), and EMS: the five EMS.C functions and the page frame as a region, with the TMAPOPS and PGCACHE page state (`EmsBuff`, `tmap_fpage`, `crit_fpage` and the rest) as plain variables. `stdat`, `cmpbuf1_start`, `cmpbuf2_start`, `gr_offs` and the rest of FARDATA.ASM become arrays in the paragraph map, with `ATM_Strings` inside `stdat`.
-3. **Files.** The `bc_` file functions and `tell`, `eof`, `filelength`, `getcurdir`, `findfirst`, `findnext` and `getdfree` on the platform layer's path mapping, so `check_dirs`, `check_fds`, `init_strings` (STRINGS.PAK), `Map_Init` and `ReadCfg` run on the user's data. `intdosx` and `bc_geninterrupt` cover the DOS calls the C makes itself.
-4. **Sound off.** The AIL entry points report no driver, the path a DOS machine without a sound card takes, so `init_sounds` and `init_timers` succeed silently; the 256 Hz clock is a platform timer that increments `*Time` from the start.
-5. **Graphics.** `grfx_init` and `display_screen` need GRCORE's set-up (`init_graphics`, `init_colors`, `setup_font`, `set_the_window`), `palette` and MODEX's `local_do_palette`, the screen copy (`show`, `vcopy`, `grPageFlip`), and the archive and decompression C, which already compiles. The VGA emulation needs the planes, the map mask and the DAC; the platform layer presents the scan-out in a window. The FM Towns routines of the same names are the template, and the DOS assembly is the authority.
-6. **Null pointers.** `port_null_near` and `port_null_far` with the DGROUP and vector table images described above.
+1. `init_world` runs to its end. Every step of it works on the user's data: the divide trap; EMS (the emulated driver has 512 pages, and `init_mem` asks for 89 to 103 of them by `rand`); the data directories and the eight scratch files; STRINGS.PAK; the map; input; UW.CFG; sound with no card (UW.CFG says `0 -1 -1 -1 sound`) and the 256 Hz clock; the graphics library; the Origin screen, `display_screen(5, 6)`; the music (none, with no card); the video memory pool; all the art (ALLPALS.DAT and 20 .GR files, ten into EMS and ten into video memory); the Looking Glass screen, `display_screen(6, 7)`; the mouse, the objects, the 3D view's set-up, the player, the AI, lighting, the save directory, the working copies of LEV.ARK and SCD.ARK (written to the home directory's SAVE0), the conversation globals (BGLOBALS.DAT, also in SAVE0), and the game palette.
+2. `titlescr` starts cutscene 9. `show_cutscene`, `show_anm` and `cuts_process_anm` run, and `cuts_process_lp` calls `copy_visible_to_hidden`, GRCORE.ASM's first entry with no C yet. The port stops there and leaves the window up (`--exit-on-halt` quits instead).
 
-The exit test is a screenshot: the port's VGA scan-out at the first title screen against the same frame captured in DOS through dos-mcp, byte for byte. Milestone 3 also starts the replay hooks' DOS side (Milestone 4), which needs no port code.
+**The screens match DOS byte for byte.** `tools/portshot.py` builds, for each opening screen, a DOS EXE that stops on it (UWEDIT.C with `for (;;) ;` after the `display_screen` call, compiled with Turbo C and linked as the modding build), boots it in headless DOS and screenshots it, and compares that with the port's scan-out right after the same page flip (`--shot-at-flip`). js-dos doubles mode X to 640 by 400, so every second pixel is compared. Both convert the DAC's 6-bit colour the same way, so equal pixels mean equal palette indices under equal palettes:
+
+| Screen | Call | Flip | Pixels that differ | Colours |
+| --- | --- | --- | --- | --- |
+| Origin, "presents" | `display_screen(5, 6)` | 1 | 0 of 64,000 | 223 |
+| Looking Glass Technologies | `display_screen(6, 7)` | 2 | 0 of 64,000 | 199 |
+
+Neither screen stays up long in either build: the first is replaced when the art has loaded, the second when the title cutscene starts. An unheld DOS boot under js-dos shows neither in screenshots taken 150 ms apart, which is why the comparison holds both builds on the screen instead of timing them.
+
+### What replaces what
+
+Each replacement is written from the DOS assembly, with its comments, and keeps the module's data at the assembly's offsets in the same segment, so a state dump can compare it with DOS. Where seg003's data holds near code offsets (the span writer in 4112, the pens' writers, the pen set-up table, the transfer in 0DC2), they keep their DOS values and the C dispatches on them, and an offset with no C yet stops the port with its address. The FM Towns routines with the same names were read beside them (`show`, `set_the_window`, `init_graphics_`, `lsqrt`, `sincos`, `atan2`, `mouse`, with `tools/fmt.py`). They do the same jobs for the FM Towns' own video hardware, and DOS was followed throughout. One difference touches arithmetic: FM Towns' `mouse` halves the motion with `sar`, which rounds down, where DOS's `_6F8` divides by 200 with `idiv`, which rounds towards zero; the port does what DOS does.
+
+| Replaced | By | What |
+| --- | --- | --- |
+| SYSENTRY.ASM, STARTUP.ASM, SYSINIT.ASM, CPUTYPE.ASM, VIDSAVE.ASM, SYSLIBL.ASM, TICKS.ASM, TICKREAD.ASM, JOYPORT.ASM's `_30A` | `sys/sysentry.c` | seg021's start-up and shut-down, the exit chain and its message, the far pointers into dseg062_62a6, `mouse`, `mbuttons`, the game clock (a 386, a 101-key keyboard, no joystick) |
+| KEYQUEUE.ASM, KBDINT.ASM | `sys/keyqueue.c` | the int 9 ring buffer and `key`, as described under the platform layer |
+| MOUSEDRV.ASM | `sys/mousedrv.c` | int 33h from pointer events |
+| IMATH.ASM, C3DENTRY.ASM's `cSinCos`, `cFstSinCos`, `cAtan2`, `cSqRt` | `sys/imath.c` | table sines with imul's middle word, arcsines, `atan2`, Newton square roots with div's carry |
+| C3DENTRY.ASM's data and `cInit3d` (with GRDISP.ASM's `_5363`) | `sys/c3dentry.c` | the far pointers into the renderer's data; the 3D view's window |
+| INT0TRAP.ASM | `sys/int0trap.c` | the divide trap, on SIGFPE |
+| OVERLAY.ASM | `sys/overlay.c` | `_OvrInitEms`, which has nothing to do |
+| Borland's C library | `sys/borland.c` | the `bc_` functions, handle I/O and text mode, `findfirst`, `intdosx` (3Fh, 40h), `getvect`, `getdfree`, port I/O, the string extras, `_ctype` (from the EXE's DGROUP), Borland's `rand` |
+| EMS.C (DOS-only) | `mem/ems.c` | the emulated EMS 4.0 driver: a page store and the frame at E000h, by copying |
+| FARDATA.ASM, the far data taken from the EXE, TMPALLOC's page variables | `mem/fardata.c` | the far segments 3705:0000 to 5F5D:104C as one block in the EXE's layout, with the names inside it as labels; dseg062_62a6; PGCACHE.ASM's `lightabs`; all read from the user's EXE |
+| segment arithmetic, Borland's far heap | `mem/parmap.c` | the paragraph map, `farmalloc` and the rest, `movedata`, the null-pointer copies |
+| GRCORE.ASM (in part) | `gfx/grcore.c` | the graphics globals, `init_graphics`, `init_colors`, `set_the_window`, `set_the_color`, `clear_window`, `rectangle`, `urectangle`, `show`, `setup_font`, `grPageFlip`, `grSoftPageFlip`, the video memory bump allocator `_49AE` |
+| VIDMODE.ASM (in part) | `gfx/vidmode.c` | mode X, the mode's pages, Ytab, the edge masks, page flips, the window and its guards, pens, the solid span writer, show's clipping and row records |
+| GRLIBF.ASM, GRLIBL.ASM, GRLIBI.ASM (in part) | `gfx/grlibf.c`, `grlibl.c`, `grlibi.c` | clear_window and urectangle; the opaque and transparent bitmap transfers; the text masks and `setup_font` |
+| MODEX.ASM (all but `grab`) | `gfx/modex.c` | `local_do_palette`, the console print, the far string helpers, `gr_pixel`, the video memory pictures (2A2, 320, 361) |
+| VALLOC.ASM (all but `save_rect` and `restore_rect`) | `gfx/valloc.c` | the video memory pool, `valloc`, `vfree` |
+| PGCACHE.ASM's data | `3d/pgcache.c` | `grs_off`, `obj_tab` |
+| AIL.ASM | `sound/ail.c` | the timer services on the PIT thread; every driver call returns 0, as AIL does for a handle with no driver |
+| the VGA, the PIT | `gfx/vga.c`, `sys/pit.c` | the emulated hardware |
+
+The stubs went from 160 functions and 80 variables in 19 files to 38 functions and 9 variables in 10 files. `tools/portstubs.py` now leaves out every name the port's own C defines. The functions left are the rest of GRCORE.ASM (text, lines, copies between pages, the virtual screen, the frame buffer), SPRITE.ASM, SCALEBM.ASM's `cXfer`, SETPNT.ASM, C3DENTRY.ASM's renderer entries and callbacks, the joystick reads, `save_rect`, `restore_rect` and `grab`. The variables left are DGROUP gaps and `sound_fpage`, which work as zeroed variables.
+
+### Shared-source changes
+
+One, proved by the gate: `AX_RESULT` (`portable.h`), used once, at the end of GRFX.C's `grfx_init`. The original has no return statement there, and `init_world` tests what `grfx_quikfont` left in AL, which is `grfx_load_font`'s result; on the host the function returned nothing defined and the port stopped with error D003. `make check` passes, and `make port-check` shows 0 errors and 60 warnings (61 before).
+
+### Found on the way, for later milestones
+
+- **Four more functions fall off their end** and have callers that use the result: CONVERSE.C (line 805), SCHEDULE.C (113, on some paths), TRIGGER.C's `SetOffTrap` (145) and CUTS.C (414). Each needs `AX_RESULT` with the value DOS leaves in AX, read from the code.
+- **A stream and its handle together.** LOADGR.C reads `fileno(grfp)` after `fseek(grfp, 0L, 1)`, which Borland's library made agree with the handle by emptying its buffer. The host's stdio keeps its buffer, so the offsets table came back wrong and every art file failed (error D004). The port's streams are unbuffered.
+- **String literals are read-only on the host.** `init_sounds` writes the driver's name into the literal `"dm00.adv"`, which crashes the host. It runs only with a sound card configured, so the GOG configuration never reaches it; Milestone 7 meets it first.
+- **Division by zero does not trap on arm64.** x86-64 raises SIGFPE and the port runs the game's int 0 handler; Apple Silicon gives 0 and goes on. The promotion audit's divide sites are where to look if a replay disagrees.
+- **CUTS.C writes the screen through a far pointer** (`MK_FP(0xA000, 0)`, with the map mask set by `outportb`). A host pointer cannot apply the map mask, so the planar writes need a macro whose Turbo C expansion is the original store and whose host expansion calls `vga_write`.
+- **EMS mapping by copying** cannot show one logical page mapped into two frame slots at once, as real EMS can. No such mapping has been seen yet.
+- **The clock is read without a barrier.** The game reads `*Time` directly while the PIT thread increments it. The port is built without optimisation, so every read happens; `GAME_TIME()` (Milestone 4) makes it explicit.
+- **Paragraph map windows.** `intoFarBuffer_ovr167_5DA` and `FarWrite_ovr167_627` take `FP_SEG` of near buffers on the stack, which makes a window each time (`-v` logs them). The idiom deserves a named macro.
+
+## The Milestone 4 plan
+
+Milestone 4 has two halves, done side by side: the record and replay harness, which makes every later comparison exact, and the rest of the way from the title to the first game screen.
+
+**Record and replay.** As designed above ("The differential test"):
+
+1. `GAME_TIME()` for every read of `*Time`, and hooks in `key`, `mouse`, `mbuttons`, the joystick reads, `time()` and `srand`, in the shared sources, each the original tokens under Turbo C. The gate proves them.
+2. The replay DOS build: the modding build compiled with `-DREPLAY`, recording to and replaying from a file in the game directory. `tools/rungame.mjs` drives a recording session in headless DOS.
+3. `state_dump()` in both builds: the player record, the level block, the SCD state, the quest variables, the frame buffer, the palette, and the VGA's planes and registers, at chosen points (every N clock reads, each screen change).
+4. The port's replay: the same hooks read the recording, and the PIT thread stops driving `*Time`. The first check is that a DOS recording replayed twice in DOS gives identical dumps, then that the port gives the same dumps.
+5. The null-pointer write check after each DOS session (C0's message, DS:0 to DS:3 and the vector table through dos-mcp's `read_memory`), and a `-fsanitize=null` debug build of the port over the same sessions.
+
+**From the title to the game.** In the order the boot reaches them, each stub replaced from its assembly as in Milestone 3, and each screen checked with `tools/portshot.py` (new hold points) and then by replay:
+
+1. The title cutscene, cutscene 9: GRCORE's page copies (`copy_visible_to_hidden`, `copy_hidden_to_visible`, `vcopy`), the virtual screen and its focus (`seg003_0272_4A3A`, `vscreen_focus`, VIDMODE's `_2977` and `_2A0D`, with the line compare and panning the VGA emulation already scans out), and CUTS.C's planar writes through a portable macro (above). The LPF decoding and the palette fades are C already.
+2. The main menu (MAINMENU.C): text (GRLIBI's string drawing and `string_width`), lines and boxes, the sprites (SPRITE.ASM), VALLOC's `save_rect` and `restore_rect` with their pens, and the mouse cursor. Input then comes from pointer events and keys for the first time, so the replay harness has to be in place.
+3. Character creation (CHARGEN.C), and the other cutscenes the menu can start.
+4. Into the game: `strt_demscr` draws the panels (screen image 4, `init_gamedisp`), and the first `render_FB` reaches `cRender`, the 3D renderer (Milestone 6). The milestone ends there, with the panels matching DOS.
+
+The exit test: one DOS session, recorded from boot through the title cutscene, the main menu and a new character to the first game screen, replays in the port with identical dumps at every checkpoint, and the title, menu and character creation screens match DOS byte for byte.
 
 ## Risks
 

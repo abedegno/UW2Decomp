@@ -82,8 +82,10 @@ The sources also build the native port (PORT.md). Every change still has to pass
 - A struct with pointer fields goes between `HOST_LAYOUT_BEGIN` and `HOST_LAYOUT_END`.
 - A dereference that can see a null pointer in DOS is written through `NULLTRAP(p)` (near) or `FARNULLTRAP(p)` (far), with a comment.
 - A file whose code is DOS-only says `port: dos-only` in its header comment, and the port replaces it.
+- A function the original wrote with no return statement, whose callers use what it left in AX, ends with `AX_RESULT(v)`, where `v` is that value, with a comment saying where it comes from.
+- Port-only C (the replacements for the assembly modules, the emulated hardware, the platform layer) lives under `src/port` and never in a game source; a file there says in its first line which module it replaces, or "replaces nothing".
 
-Each of these is the original tokens under Turbo C. After a change, `make port-check` should show no new error or warning, and `make port` should still link.
+Each of these is the original tokens under Turbo C (port-only C is never seen by it). After a change, `make port-check` should show no new error or warning, and `make port` should still link.
 
 ## Named constants
 

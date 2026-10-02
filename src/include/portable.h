@@ -102,6 +102,15 @@ void port_far_copy(void *dst, const void *src, unsigned n);
 #define FAR_COPY(dst, src, n) port_far_copy((void *)(dst), (const void *)(src), (unsigned)(n))
 #endif
 
+/* AX_RESULT(v), at the end of a function the original wrote with no return statement, whose
+   callers use what it left in AX: v is that value. Nothing under Turbo C (an empty statement,
+   no code); `return v;` on the host, where falling off the end returns nothing defined. */
+#ifdef __TURBOC__
+#define AX_RESULT(v)
+#else
+#define AX_RESULT(v) return (v)
+#endif
+
 /* HOST_LAYOUT_BEGIN and HOST_LAYOUT_END, around a struct that holds pointers. The port packs
    every struct as Turbo C does (src/port/compat.h), so that file records and the structs laid
    over buffers keep their DOS layout; a struct with pointer fields cannot keep it, since a

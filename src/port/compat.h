@@ -4,11 +4,13 @@
    headers (tools/tcc.mjs stages src/include only, and tools/sources.py skips src/port).
    docs/PORT.md has the design.
 
-   Milestone 1 uses it for a compile-only measurement (tools/portcheck.py): the Turbo C
-   keywords are defined away, the far pointer macros and pseudo-registers become calls and
-   variables the port will provide, and Borland's library names that the host libc also has,
-   with other behaviour, are renamed to bc_ so that the link lists them as port work. Nothing
-   here gives a behaviour yet; every bc_ and port_ name is unresolved on purpose. */
+   The Turbo C keywords are defined away, the far pointer macros and pseudo-registers become
+   calls into the paragraph map and variables of the port's register file (src/port/mem,
+   src/port/sys/borland.c), and Borland's library names that the host libc also has, with
+   other behaviour, are renamed to bc_, which the port defines (src/port/sys/borland.c). The
+   game's main and exit are renamed too: the port's own main runs the game on a thread of its
+   own, and exit ends it through the platform layer. Port C that includes a game header
+   includes this file first. */
 #ifndef UW2_PORT_COMPAT_H
 #define UW2_PORT_COMPAT_H
 
@@ -137,6 +139,10 @@ long bc_clock(void);
 #define stat(p, b) bc_stat(p, b)
 #define fstat(f, b) bc_fstat(f, b)
 #define fopen(p, m) bc_fopen(p, m)
+/* exit runs the termination chain seg021's init hooked (sys/borland.c), then ends the
+   program through the platform layer, which owns the main thread. */
+void bc_exit(int status);
+#define exit(s) bc_exit(s)
 #define rand() bc_rand()
 #define srand(s) bc_srand(s)
 #define time(t) bc_time((long *)(t))
@@ -171,6 +177,11 @@ extern unsigned char _ctype[];
 #ifndef min
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
+
+/* The game's main (UWEDIT.C) is not the program's: the port's own main (src/port/sys/main.c)
+   sets up the platform and the emulated machine, then runs this one on the game's thread. */
+#define main uw2_main
+int uw2_main(int argc, char *argv[]);
 
 /* Struct layout. Turbo C lays structs out with byte alignment (no game source is compiled
    with -a), so a 16-bit field can sit at an odd offset and a record takes only the bytes it
