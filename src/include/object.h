@@ -158,18 +158,19 @@ struct AnimClass {
 #define HOME_X          0xFC00          /* bits 10-15 */
 
 /* Accessors for an object's fields. The getters are written mask then shift, as the
-   original's macros were (MATCHING.md, "Bitfields versus macros"): a shift by 0 is kept,
-   because Turbo C emits it (shr ax,0). A setter rewrites the whole word or byte. Two
+   original's macros were (MATCHING.md, "Bitfields versus macros"). A setter rewrites the
+   whole word or byte.
+   Names of the mobile fields come from the code that uses them; UnderworldGodot's
+   uwobject.cs (Hank Morgan's reading of the same bytes) agrees where noted, and names
+   with only a byte and bit (OBJ_B19_4) are fields whose meaning is not known. */
+/* match: a shift by 0 is kept, because Turbo C emits it (shr ax,0). Two
    fields need a second spelling, because files compile them differently:
    OBJ_INMAJOR_NOSHIFT leaves out the shift by 0 (one instruction fewer; ovr157, seg007),
    and SET_FINEX_UNSIGNED casts the new value to unsigned, which stops Turbo C merging the
    macro's "& 7" with the same mask in the argument (SET_FINEX(o, x & 7) is one "and", the
    _UNSIGNED form two; seg008, seg024, seg027, seg028, seg030). Other differences between
    the files' old copies (an unmasked value, a missing "<< 0") changed no bytes, because
-   those files pass constants or values already masked.
-   Names of the mobile fields come from the code that uses them; UnderworldGodot's
-   uwobject.cs (Hank Morgan's reading of the same bytes) agrees where noted, and names
-   with only a byte and bit (OBJ_B19_4) are fields whose meaning is not known. */
+   those files pass constants or values already masked. */
 /* The id word */
 #define OBJ_ITEM(o)         ((o)->id & ID_ITEM)
 #define OBJ_MAJOR(o)        (((o)->id & ID_MAJOR) >> 6)
@@ -397,9 +398,9 @@ void far DumpTheBag(struct Object far *bag, char to_player);
 void far UseRockHammerOn(struct Object far *obj, unsigned char how, char other);
 void far UseWatch(void);
 void far UseCrystal(int quality);
-/* Declared before the rest of its file because TLINK numbers the overlay's stub entries in
-   the order Turbo C lists the publics, which for names with the same hash key is the order
-   they were first seen: the EXE's stub has UseBook before UseFood. */
+/* match: declared before the rest of its file because TLINK numbers the overlay's stub
+   entries in the order Turbo C lists the publics, which for names with the same hash key
+   is the order they were first seen: the EXE's stub has UseBook before UseFood. */
 void far UseBook(struct Object far *obj, unsigned char how);
 int far UseFood(struct Object far *who, struct Object far *food, unsigned char how);
 void far UseLockpickOn(struct Object far *obj, unsigned char how);

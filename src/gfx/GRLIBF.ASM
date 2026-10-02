@@ -1,7 +1,37 @@
 ; /* target: seg003_0272_3206 */
 ; /* opts: /ml */
 ;
-; _3206 .. _34C7.
+; Graphics library module 6: the clipped and unclipped point, line, box and rectangle
+; primitives, the window clipper for polygons, and the video-memory bump allocator. Found by
+; aligning with FM Towns, whose 2D library has, in the same order, copy_visible_to_hidden_,
+; copy_hidden_to_visible_, pixel, upixel, vline, uvline, box_si, box, ubox, ubox_si, clip_rect,
+; rectangle, clear_window, urectangle, hline, uhline, concave_shclip and shclip; GRCORE's C
+; wrappers (rectangle, urectangle, box, uhline, uvline, clear_window ...) call the DOS routines
+; that line up with those names.
+;
+; How the primitives draw. None of them writes video memory itself. Each turns its shape into a
+; list of spans and jumps through DS:4112, the current span writer (a "ylr" routine in
+; VIDMODE.ASM, reached through GRCORE's jump table at 52C9 .. 52DB: solid fill, copy, save and
+; restore). A span record is 6 bytes, y, left x, right x; a list ends with 0FFFFh. The u- prefix
+; (FM Towns) means unclipped: the caller guarantees the shape is inside the window.
+;
+; Registers: AX = x, BX = y for a point; a second point or extent in CX, DX. DS = ES = seg_370D.
+; Data (seg_370D):
+;   3DF4 left, 3DF6 top, 3DF8 right, 3DFA bottom: the clip window. y counts up from the bottom
+;        of the screen (VIDMODE.ASM builds the row table so that row 0 is the bottom line), so
+;        bottom < top
+;   3DEC, 3DEE  the screen's last x and last y
+;   4106, 4108, 410A  video memory: the first byte after the visible and hidden pages, the end,
+;        and the bump pointer (VIDMODE.ASM sets them at mode set; VALLOC.ASM takes the rest)
+;   4112  the span writer; 414A a one-span list; 4152..4158 a box's corners; 415A, 415C a
+;        rectangle's x range; 44CE the per-row span table urectangle fills (row y at
+;        44CE + (0C7h - y) * 6); 49AC the end mark in it
+;   5046  nonzero: a per-row x limit table (5046 + 2 * y) for a concave window
+;   415E, 42EE  the two vertex buffers shclip alternates between; 447E..448A its state
+;
+; name: descriptive (module 6 of seg003); its job, found here, is the basic 2D primitives.
+; Routine names in these comments are FM Towns' where the alignment above gives one; the DOS
+; labels have none.
 ;
 ; SEG003 split into its original modules: this is module 6 of 14, +3206..+3686 of the segment
 ; (file 6656h), a module of the second library (UWLIB.LIB).
@@ -57,6 +87,9 @@ SEG003_TEXT segment word public 'CODE'
         public  _seg003_0272_34C7
 
 ; seg003_0272_3206  (+3206)
+; Allocate BX bytes of video memory from the bump pointer (410A). Out: carry clear and AX = the
+; block's offset, or carry set when it would pass 4108 or wrap. GRCORE's far wrapper _49AE
+; returns AX or 0 to C. VALLOC.ASM's pool is what is left after these.
 _seg003_0272_3206 proc near
         mov     ax,word ptr ds:[410Ah]
         add     bx,ax
@@ -72,6 +105,13 @@ L3219:
 _seg003_0272_3206 endp
 
 ; seg003_0272_321B  (+321B)
+; Give video memory back: set the bump pointer to AX, unless AX is below the floor 4106 (carry
+; set). GRCORE's _49F4 is the C wrapper.
+;
+; The unlabelled code after the ret (and so after this proc's first return) is four small
+; routines that nothing in the sources jumps to by name: a clipped line drawn with span writer
+; 52CC, the same with 52D2, an unclipped line with 52CF, and a page-flipped clear (flip, _326A,
+; flip back).
 _seg003_0272_321B proc near
         cmp     ax,word ptr ds:[4106h]
         jae     L3223
@@ -105,11 +145,14 @@ L3223:
 _seg003_0272_321B endp
 
 ; seg003_0272_326A  (+326A)
+; _326A: set the colour (AX, through set_the_color's vector 52B7) and fall into _326D.
 _seg003_0272_326A proc near
         call    _seg003_0272_52B7
 _seg003_0272_326A endp
 
 ; seg003_0272_326D  (+326D)
+; _326D: fill the whole screen, (0, 0) to (3DEC, 3DEE), with the current span writer, through
+; urectangle.
 _seg003_0272_326D proc near
         sub     ax,ax
         mov     bx,word ptr ds:[3DEEh]
@@ -120,6 +163,8 @@ _seg003_0272_326D proc near
 _seg003_0272_326D endp
 
 ; seg003_0272_327D  (+327D)
+; copy_visible_to_hidden: run _326D with span writer 52CC, a whole-screen copy from the visible
+; page to the hidden one (GRCORE's copy_visible_to_hidden wrapper).
 _seg003_0272_327D proc near
         push    word ptr ds:[4112h]
         mov     word ptr ds:[4112h],offset _seg003_0272_52CC
@@ -129,6 +174,13 @@ _seg003_0272_327D proc near
 _seg003_0272_327D endp
 
 ; seg003_0272_328F  (+328F)
+; copy_hidden_to_visible: flip the pages (5299, grSoftPageFlip's vector), copy, flip back, so
+; the copy runs the other way.
+;
+; _32B4, inside this proc, is pixel (FM Towns): plot the point (AX, BX) if it is inside the
+; window, as a one-span list through the span writer; with the solid writer (52C9) it goes
+; straight to the pixel writer 52A8 (upixel), first checking the concave-window table at 5046
+; when there is one. GRMISC's far thunk _0 enters here for the 3D view's points.
 _seg003_0272_328F proc near
         call    _seg003_0272_5299
         call    _seg003_0272_327D
@@ -170,6 +222,10 @@ _seg003_0272_32B4:
 _seg003_0272_328F endp
 
 ; seg003_0272_32E2  (+32E2)
+; _32E2: clip a vertical line (x AX, y from BX to DX) to the window. Returns with BX >= DX
+; inside the window, or discards its caller's return address (pop ax; ret) so the caller returns
+; at once when the line is wholly outside. The code after it is a clipped vertical line through
+; vector 52B1.
 _seg003_0272_32E2 proc near
         cmp     ax,word ptr ds:[3DF8h]
         jg      L3311
@@ -203,6 +259,7 @@ L3311:
 _seg003_0272_32E2 endp
 
 ; seg003_0272_331A  (+331A)
+; _331A: a clipped vertical line through the vector at 52B4.
 _seg003_0272_331A proc near
         call    _seg003_0272_32E2
         call    _seg003_0272_52B4
@@ -210,11 +267,16 @@ _seg003_0272_331A proc near
 _seg003_0272_331A endp
 
 ; seg003_0272_3321  (+3321)
+; vline: clip (_32E2) and fall into uvline.
 _seg003_0272_3321 proc near
         call    _seg003_0272_32E2
 _seg003_0272_3321 endp
 
 ; seg003_0272_3324  (+3324)
+; uvline: a vertical line at x AX from y BX to DX. The solid and copy writers have direct
+; vertical-line routines (52B1, 52B4); otherwise it builds one span per row at 2D42 and runs the
+; span writer. The code after it loads AX, BX, CX, DX from four words at SI (ubox_si, probably)
+; and falls into box.
 _seg003_0272_3324 proc near
         cmp     word ptr ds:[5046h],0
         jne     L3341
@@ -258,11 +320,14 @@ L3351:
 _seg003_0272_3324 endp
 
 ; seg003_0272_336E  (+336E)
+; box: clip the rectangle (clip_rect) and fall into ubox.
 _seg003_0272_336E proc near
         call    _seg003_0272_33BE
 _seg003_0272_336E endp
 
 ; seg003_0272_3371  (+3371)
+; ubox: an outline rectangle with corners (AX, BX) and (CX, DX): two horizontal lines (uhline)
+; and two vertical ones (uvline). The code after it is the same with the corners read from SI.
 _seg003_0272_3371 proc near
         mov     di,4152h
         stosw
@@ -297,6 +362,10 @@ L337B:
 _seg003_0272_3371 endp
 
 ; seg003_0272_33BE  (+33BE)
+; clip_rect: order and clip the rectangle (AX, BX)-(CX, DX) to the window. Out: AX <= CX, DX <=
+; BX (BX the upper row), inside the window; BP = the edges that were cut (8 left, 2 right, 1
+; bottom, 4 top); carry set when nothing was cut. A rectangle wholly outside discards the
+; caller's return address. _3416 loads the four words at SI and falls into it.
 _seg003_0272_33BE proc near
         sub     bp,bp
         cmp     bx,dx
@@ -357,12 +426,14 @@ _seg003_0272_3416:
 _seg003_0272_33BE endp
 
 ; seg003_0272_341E  (+341E)
+; rectangle: clip_rect, then urectangle.
 _seg003_0272_341E proc near
         call    _seg003_0272_33BE
         jmp     short _seg003_0272_342E
 _seg003_0272_341E endp
 
 ; seg003_0272_3423  (+3423)
+; clear_window: urectangle over the whole clip window.
 _seg003_0272_3423 proc near
         mov     si,3DF4h
         lodsw
@@ -376,6 +447,9 @@ _seg003_0272_3423 proc near
 _seg003_0272_3423 endp
 
 ; seg003_0272_342E  (+342E)
+; urectangle: a filled rectangle (AX, BX)-(CX, DX), corners in either order. Writes one span per
+; row into the row table at 44CE (the x range copied into each), moves the end mark, and runs
+; the span writer on it.
 _seg003_0272_342E proc near
         cmp     bx,dx
         jg      L3434
@@ -419,6 +493,8 @@ L347E:
 _seg003_0272_342E endp
 
 ; seg003_0272_347F  (+347F)
+; hline: clip a horizontal line (y BX, x from AX to CX) to the window and draw it as one span;
+; returns at once when it is outside.
 _seg003_0272_347F proc near
         cmp     bx,word ptr ds:[3DF6h]
         jg      L347E
@@ -446,6 +522,7 @@ L34AC:
 _seg003_0272_347F endp
 
 ; seg003_0272_34AE  (+34AE)
+; uhline: one span (y BX, x AX to CX, either order) through the span writer.
 _seg003_0272_34AE proc near
         cmp     ax,cx
         jl      L34B3
@@ -463,12 +540,23 @@ L34B3:
 _seg003_0272_34AE endp
 
 ; seg003_0272_34C2  (+34C2)
+; concave_shclip (FM Towns, 7 bytes before shclip there as here): shclip with the handler set at
+; 449A in place of 4492.
 _seg003_0272_34C2 proc near
         mov     si,449Ah
         jmp     short L34CA
 _seg003_0272_34C2 endp
 
 ; seg003_0272_34C7  (+34C7)
+; shclip: clip a polygon to the window, Sutherland-Hodgman, one edge at a time. In: CX = the
+; vertex count, the vertices (x, y words) at 415E. A pass is skipped when every vertex is
+; already inside on that axis. Each pass (L358F) walks the edges, classifies both ends by
+; patching the comparison at L35B0 and L35BE (7Ch jl or 7Fh jg, followed by a far jump to flush
+; the prefetch queue), and calls one of four handlers through 448A by the in/out case: keep, add
+; the intersection, or drop. The intersection (L3611, L364C) is computed with imul/idiv, halving
+; both terms on overflow, and nudged one pixel inward unless it lies on the window edge. Out: CX
+; = the new count, the vertices back at 415E; when nothing is left it discards the caller's
+; return address.
 _seg003_0272_34C7 proc near
         mov     si,4492h
 L34CA:
@@ -563,7 +651,7 @@ L358F:
         mov     byte ptr cs:L35BE,al
         mov     word ptr ds:[4480h],cx
         mov     word ptr ds:[447Eh],cx
-        db      0EAh                     ; far jmp to the next instruction, flushing the prefetch queue after the cs: stores above; TASM would shorten it
+        db      0EAh                     ; far jmp to the next instruction, flushing the prefetch queue after the cs: stores above (match: as bytes, since TASM would shorten it)
         dw      offset L35A7
         dw      seg L35A7
 L35A7:

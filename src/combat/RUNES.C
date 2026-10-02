@@ -1,13 +1,25 @@
 /* target: ovr123 */
 /* opts: -mm -1 -G -O -Y -d */
 /* The rune bag and casting from runes: adding a runestone to the bag, drawing the bag,
-   clicking runes onto the shelf, clicking an active spell, and casting the spell the
-   shelf spells out. The whole of DOS overlay ovr123, in original order. Function and
-   global names are the originals from the FM Towns symbol table; the source file's own
-   name is not known.
+   clicking runes onto the shelf, clicking an active spell, and casting the spell the shelf
+   spells out. The whole of DOS overlay ovr123, in original order.
 
-   clear_runes (IDA ClearRuneBag_ovr123_64) is the FM Towns function between add_rune_
-   and ShowRune_, and empties the bag the same way. */
+   What it does in the game: the player's side of magic. Runestones picked up go into
+   player->runebag (a bit per rune, add_rune); the rune panel shows them (RedispRune).
+   Clicking a rune puts it on the three-place shelf (player->shelf, mous_in_rune); clicking
+   the cast area looks the shelf up in the spells[] table (try_cast) and player_cast checks
+   circle, mana and skill before handing the spell to do_spell in SPELLS.C. try_clear handles
+   the three active spell icons: right click tells how stable a spell is, left click
+   dispels it. Callers are the panel and mouse code (PANELS.C, INTERACT.C) and the
+   inventory (picking up a runestone).
+
+   Data owned: spell_delay and lstime (the time between casts), and a flag that clears the
+   shelf on the next rune click after a cast.
+
+   Function and global names are the originals from the FM Towns symbol table.
+   clear_runes (IDA ClearRuneBag_ovr123_64) is the FM Towns function between add_rune_ and
+   ShowRune_, and empties the bag the same way.
+   Name: descriptive (the rune bag and casting from runes). */
 
 #include <string.h>
 #include "combat.h"
@@ -19,8 +31,9 @@
 extern struct Inplist near *inplist;
 extern char far Transparency;
 extern struct Spell far spells[];
-/* This file's _BSS, DS:6A96 (ovr122's ends at 6A95): only this file uses it, and FM Towns
-   keeps it unnamed, so it was static. */
+/* This file's _BSS, DS:6A96 (ovr122's ends at 6A95). Set by try_cast, it makes the next
+   rune click start a new shelf. */
+/* name: only this file uses it, and FM Towns keeps it unnamed, so it was static. */
 static char dseg_67d6_6A96;     /* provisional */
 
 void far mouse_release(int n);
@@ -30,6 +43,8 @@ unsigned char far play_effect_here(unsigned char fx, unsigned char pan, char vol
 unsigned char spell_delay = 0;
 unsigned long lstime = 0;
 
+/* Puts a runestone into the rune bag: the object is freed and the rune's bit set (bit
+   7 - (rune & 7) of runebag[rune / 8]). Returns 0 for an object that is not a runestone. */
 char far add_rune(struct Object far *obj)
 {
     int rune;
@@ -77,6 +92,10 @@ void far clear_shelf(void)
     set_runes(player->shelf);
 }
 
+/* A click in the rune bag panel. A click in the strip with y < 0x12 clears the
+   shelf. Otherwise the rune under the pointer (four to a row) is
+   looked at on a right click, or added to the shelf on a left click: a fourth rune pushes
+   the oldest off, and the first click after a cast starts a new shelf. */
 void far mous_in_rune(void)
 {
     int rune;
@@ -116,6 +135,9 @@ void far not_a_spell(void)
     scroll_print("Not a spell\n");
 }
 
+/* A click on one of the three active spell icons (index from the right). Right click
+   prints the spell's name and how long it has left: the high byte of player->spells[idx]
+   <= 2 is 'is nearly done', <= 10 'is unstable', more 'is stable'. Left click dispels it. */
 void far try_clear(void)
 {
     int idx;
@@ -136,13 +158,17 @@ void far try_clear(void)
                 stab = 1;
             else
                 stab = 2;
-            game_sprint(stab + 0x97);
+            game_sprint(stab + 0x97);  /* 0x97 'is nearly done', 0x98 'is unstable', 0x99 'is stable' */
         } else if (dispel_spell(&idx))
             FixPlayerEquips();
         mouse_release(1);
     }
 }
 
+/* Casts the spell on the shelf, if the player is not paralysed and not in another input
+   mode. Too soon after the last cast (game_clock < lstime + spell_delay) it refuses with a
+   sound and string 0xB. The three shelf runes, packed five bits each, are looked up in the
+   64-entry spells[] table; no match prints 'Not a spell'. */
 void far try_cast(int how)
 {
     char i;
@@ -159,7 +185,7 @@ void far try_cast(int how)
     dseg_67d6_6A96 = 1;
     if (player->game_clock < lstime + spell_delay) {
         play_effect_here(0x15, 0x40, 0);
-        game_sprint(0xB);
+        game_sprint(0xB);  /* 'You are not yet ready to cast another spell.' */
         mouse_release(1);
         return;
     }
@@ -175,6 +201,9 @@ void far try_cast(int how)
     player_cast(i);
 }
 
+/* Plays the fizzle sound and prints why a cast failed, string 0xE1 + why: 0 'You are not
+   experienced enough to cast spells of that circle.', 1 'You do not have enough mana ...',
+   2 'The incantation failed.', 3 'Casting was not successful.'. Returns 0. */
 char far fail_spell(int why)
 {
     play_effect_here(0x16, 0x40, 0);
@@ -182,6 +211,16 @@ char far fail_spell(int why)
     return 0;
 }
 
+/* The player casts spell idx (0..63; the circle is idx / 8 + 1). The checks, in order:
+   on levels 1..8 (PlayerLevel's first world, Britannia, inferred) spells above circle 3
+   fail outright; the player's experience level must be at least 2 * circle - 1; mana must
+   be at least 3 * circle; and skill_check(Casting, 3 * circle) must not give 0 (failed) or
+   -1 (backfire: the spell becomes SPELLC_BACKFIRE at strength circle / 2). The delay before
+   the next cast is (2 * circle - level) * 4 + 128 ticks. Mana is paid now, except for missile
+   and single-target area spells (SPELLC_MISSILE, SPELLC_1AREA), which keep the cost in
+   mspell_mused until they are aimed and released (SPELLS.C). On success the casting sound
+   depends on the spell class and minor; when do_spell refuses, the cost is waived and
+   'Casting was not successful' printed. */
 char far player_cast(unsigned char idx)
 {
     unsigned char level;
@@ -204,7 +243,7 @@ char far player_cast(unsigned char idx)
     if ((sub = skill_check(player->skills[SKILL_CASTING], level * 3)) == 0)
         return fail_spell(2);
     if (sub == -1) {
-        game_sprint(0xE5);
+        game_sprint(0xE5);  /* 'The spell backfires.' */
         cls = SPELLC_BACKFIRE;
         sub = level / 2;
     } else

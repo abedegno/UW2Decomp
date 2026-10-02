@@ -1,9 +1,37 @@
 ; /* target: seg004_0849_3000 */
 ; /* opts: /ml */
 ;
-; render_3d and the transforms: scale_matrix, check_flat, set_accept, self_modify, the
-; xlate_rotate_pnt routines, mxmul, the instance_ routines, code_pnt, mm9x9, mm3x9_bpsi,
-; mm3x9t and the overflow handlers.
+; The renderer's frame entry and its transforms. render_3d (called by seg021's cRender) sets up
+; the projection from the clip window, builds the view matrix, and runs the render database
+; through the model interpreter (INTERP.ASM). The rest is the geometry the interpreter's opcodes
+; call: turning model points into view space (mini_xlate_rotate_pnt, load_xlate_rotate_pnt,
+; mxmul), the frustum clip codes of a view-space point (code_pnt), the sub-object rotations by
+; heading, pitch and bank (the instance_ routines), 3 x 3 matrix products (mm9x9, mm3x9_bpsi,
+; mm3x9t), and the divide-overflow handlers the renderer installs on int 0.
+;
+; Fixed point: matrix entries are 1.15 (7FFFh is 1.0); a product of two is shifted left once and
+; its high word kept. Points are 16-bit view or model coordinates.
+; Data (FD58, DS; FM Towns names where they read the same variables):
+;   14B2..14C2  the view matrix, nine words (three rows of three)
+;   14A0, 14A2  the caller's SP and SS, saved by render_3d; 14AA a frame counter
+;   14CC        DbEntry, the start of the render database (VIEW3D.C)
+;   2470, 2472  scrh and scrw: half the view's height and width; 2474, 2476 biasx and biasy,
+;               the view's centre on the screen (all four from the clip window at SS:0C30..0C36)
+;   248C, 248E, 2490, 2492  the screen-aligned axes do_scalebm stands sprites on
+;   24C8        a temporary for mxmul; 24CA, 24CC, 24CE  cos, sin and -sin of an instance angle
+;   24E6        the zoom (cZoom); 24E8, 24EA, 24EC, 24EE, 24F0  scale factors scale_matrix keeps
+;   24F4        the opcode table (vector_table)
+;   257A..2590  the opcode table's entries for the relative-move opcodes, which check_flat swaps
+;   25D4        nonzero while the flat (no pitch or bank) handlers are installed
+;   25E0        the point shift (patched into the xlate routines by self_modify)
+;   25E6, 25E8, 25EA  the eye in the current object's frame (FM vvars): x, y, z
+; Self-modifying code: render_3d writes biasx and biasy into immediates in other modules
+; (INTERP.ASM's _seg004_0849_644 .. 6C2, modify_biasx, modify_bx2 ...), self_modify writes the eye
+; and shift into the xlate routines here, check_flat copies one of two mxmul bodies over mxmul, and
+; seg004_0849_35FF patches modify_axis2 in SPHERE.ASM.
+;
+; name: inferred. The routines have their FM Towns names; System Shock's 3D library has
+; instance.asm with instance_x, instance_y and instance_z, the same job for its axes.
 ;
 ; SEG004 split into its original modules: this is module 5 of 14, +3000..+3CF0 of the segment
 ; (file C1C0h), a module of the second library (UWLIB.LIB).
@@ -177,6 +205,8 @@ SEG004_TEXT segment para public use16 'CODE'
         public  overflow_count
 
 ; seg004_0849_3000  (+3000)
+; seg004_0849_3000: an opcode handler that breaks into the debugger (int 3) and goes on to the
+; next opcode; probably the table's entry for unused opcodes.
 _seg004_0849_3000 proc near
         int     3
         lodsw
@@ -185,6 +215,19 @@ _seg004_0849_3000 proc near
 _seg004_0849_3000 endp
 
 ; render_3d  (+3007): FM render_3d
+; render_3d: draw the frame whose render database starts at DbEntry. Called by cRender
+; (src/sys/C3DENTRY.ASM) with SS on cRender's private stack in FD71 (dseg062_62a6, seg021's data
+; segment), where it reads the view window: the copy of the clip window that set_the_window
+; (VIDMODE.ASM) keeps at FD71:0C30, 0C30 left, 0C32 top, 0C34 right, 0C36 bottom, y counting up
+; from the bottom of the screen. Works out scrw, scrh, biasx and biasy from it and patches biasx
+; and biasy into the projection code; counts the frame; builds the view matrix (create_matrix in
+; INTERP.ASM, then seg004_0849_35FF, scale_matrix, check_flat).
+;
+; It then switches to a stack in seg_370D (SP 5548h) with seg_370D:2CEE set to 9C9h, and calls
+; seg021_22FD_C10, which only returns (SYSLIBP.ASM): a hook that does nothing in this build.
+; Finally it restores the stack and runs the database: the first opcode at DbEntry is called
+; through the opcode table, and the chain of handlers returns here at the end of the frame
+; (do_eof). Out: DS = ES = SS; seg_370D:2CEE restored.
 _render_3d proc far
         mov     ax,seg seg052_519C
         mov     ds,ax
@@ -261,6 +304,15 @@ L30DA   dw      0                       ; the seg_370D word at 2CEEh, saved over
 _render_3d endp
 
 ; seg004_0849_30DC  (+30DC)
+; scale_matrix: fold the screen's shape and the zoom into the view matrix. Scales matrix entries
+; by the ratio of the view's half width to half height (with 14A4, whose sign picks which axis
+; is scaled; probably so x and y project to the square frustum CLIP.ASM's 45-degree planes
+; assume) and by the zoom word 24E6 (the depth column when it is positive, the other entries
+; when negative), and works out 248C/248E, a unit horizontal direction on the screen, and from
+; it 2490/2492, the axes do_scalebm (TMAPOPS.ASM) uses to place sprites facing the viewer.
+; Installs _overflow_handler_reg for the divides: cRender points int 0 at FD71:05A0, which holds
+; `jmp far cs:[5A5]`, and the far pointer at 5A5 (FM overflow_ptr) is into seg004, so writing
+; its offset word selects the handler. Uses SquareRoot_seg021_22FD_A30 (IMATH.ASM).
 _scale_matrix proc near
         mov     word ptr ds:[24E8h],7FFFh
         mov     word ptr ds:[24EAh],7FFFh
@@ -596,6 +648,12 @@ L33C3:
 _scale_matrix endp
 
 ; seg004_0849_340E  (+340E)
+; check_flat: when the view is level (the matrix's middle row and column are 0 except the middle
+; entry, at least 7FFBh), install the flat variants of the relative-move opcode handlers
+; (flat_x_rel ... flat_rod, INTERP.ASM) in the opcode table and copy the short mxmul body
+; (L35DA) over mxmul; otherwise install the general handlers and the full body (L3587). 25D4
+; records which set is in, so the copy is done only on a change. A level view is probably the
+; common case: the view pitches only while the player looks up or down.
 _check_flat proc near
         test    word ptr ds:[14B8h],0FFFFh
         jne     short L3436
@@ -651,11 +709,16 @@ is_flat:
 _check_flat endp
 
 ; seg004_0849_34C4  (+34C4)
+; set_accept: empty here and in FM Towns (accept_flag, which it would set, is never written; see
+; CLIP.ASM).
 _set_accept proc near
         ret
 _set_accept endp
 
 ; seg004_0849_34C5  (+34C5)
+; self_modify: patch the eye position in the current object's frame (25E6, 25E8, 25EA) and the
+; point shift (25E0) into the immediates of mini_xlate_rotate_pnt and load_xlate_rotate_pnt, so
+; that turning a model point into view space needs no memory reads for them.
 _self_modify proc near
         mov     ax,word ptr ds:[25E6h]
         mov     word ptr cs:[modify_mex+1],ax
@@ -673,6 +736,10 @@ _self_modify proc near
 _self_modify endp
 
 ; seg004_0849_34F2  (+34F2)
+; mini_xlate_rotate_pnt: in: SI = three signed bytes, a model point in the order x, z, y, each
+; times 32. Subtracts the patched eye, shifts by the patched shift and falls into mxmul. Out:
+; BX, CX, BP = the view-space point (see mxmul); SI advanced by 3. load_xlate_rotate_pnt below
+; is the same for three words.
 _mini_xlate_rotate_pnt proc near
         mov     cl,5                    ; the shift and the three origins are patched by self_modify
         lodsb
@@ -721,6 +788,11 @@ modify_mey:
 _load_xlate_rotate_pnt endp
 
 ; seg004_0849_3534  (+3534)
+; mxmul: rotate a point by the view matrix. In: BX, CX, BP = the point's x, y (vertical) and z.
+; Out: BX, CX, BP = view x, y and depth z, each the high word of its 1.15 products (so at half
+; scale); DI, DX changed. The general body (copied from L3587) does all nine products; the flat
+; body (L35DA, for a level view) skips the products with the zero entries and takes y as it is,
+; halved.
 _mxmul proc near
         mov     ax,bx
         imul    word ptr ds:[14B2h]
@@ -805,6 +877,10 @@ L35DA:
 _mxmul endp
 
 ; seg004_0849_35FF  (+35FF)
+; seg004_0849_35FF: choose the axis for SPHERE.ASM's first cull (modify_axis2): y when the view
+; is pitched by more than 45 degrees (|14BC| > 5A82h, sin 45 in 1.15), else whichever of x and z
+; the view looks along more. Patches the instruction to add or subtract (by the sign) the eye's
+; coordinate on that axis (25E6 + offset).
 _seg004_0849_35FF proc near
         mov     ax,word ptr ds:[14BCh]
         cwd
@@ -847,6 +923,8 @@ L363D:
 _seg004_0849_35FF endp
 
 ; seg004_0849_3650  (+3650)
+; instance_vvars_head: rotate the eye position in the object's frame (25E6 x, 25EA z) by the
+; instance heading in 24CA..24CE, so later points can be taken relative to the rotated object.
 _instance_vvars_head proc near
         mov     ax,word ptr ds:[25E6h]
         imul    word ptr ds:[24CAh]
@@ -874,6 +952,11 @@ _instance_vvars_head proc near
 _instance_vvars_head endp
 
 ; seg004_0849_368D  (+368D)
+; instance_head: enter a sub-object turned by a heading. In: AX = the angle. Gets sin and cos
+; (sincos, IMATH.ASM, called with DS = SS), rotates the eye (instance_vvars_head) and multiplies
+; the view matrix by the rotation about the vertical axis, saturating each entry to 1.15. The
+; interpreter saves and restores the matrix around the sub-object (INTERP.ASM, opcode 50h and
+; the do_ihcall family).
 _instance_head proc near
         mov     ax,ss
         mov     ds,ax
@@ -1003,6 +1086,8 @@ L37A1:
 _instance_head endp
 
 ; seg004_0849_37B8  (+37B8)
+; instance_vvars_pitch and instance_pitch, instance_vvars_bank and instance_bank: as
+; instance_vvars_head and instance_head for rotations about the other two axes (pitch and bank).
 _instance_vvars_pitch proc near
         mov     ax,word ptr ds:[25E8h]
         imul    word ptr ds:[24D6h]
@@ -1315,6 +1400,10 @@ L3A71:
 _instance_bank endp
 
 ; seg004_0849_3A88  (+3A88)
+; code_pnt: the clip codes of a view-space point. In: BX = x, CX = y, BP = z. Out: AL = 0 inside
+; the frustum, else bits 1 (x < -z), 2 (x > z), 4 (y > z), 8 (y < -z), and 80h when z <= 0
+; (behind the eye, with the side bits set from the signs). The four planes are CLIP.ASM's.
+; Changes AX only.
 _code_pnt proc near
         mov     ax,bp
         neg     ax
@@ -1407,6 +1496,8 @@ L3B01:
 _code_pnt endp
 
 ; seg004_0849_3B04  (+3B04)
+; mm9x9: the view matrix (written through ES) = the 3 x 3 matrix at BP times the one at SI, row
+; by row through mm3x9_bpsi. BP is advanced by 18 bytes.
 _mm9x9 proc near
         call    _mm3x9_bpsi
         mov     word ptr es:[14B2h],bx
@@ -1426,6 +1517,11 @@ _mm9x9 proc near
 _mm9x9 endp
 
 ; seg004_0849_3B41  (+3B41)
+; mm3x9_bpsi: a row times a matrix: BP = a row of three 1.15 words, SI = a 3 x 3 matrix by rows.
+; Out: BX, CX, DI = the row's three products, saturated to +-8001h on overflow (8000h becomes
+; 8001h, so negation is safe). The overflow fix-up of the third product reads and writes CX, not
+; DI, so an overflow there overwrites the second result and leaves the third wrapped; FM Towns'
+; mm3x9_bpsi saturates DI. Probably a slip in the DOS source.
 _mm3x9_bpsi proc near
         mov     ax,word ptr [bp]
         imul    word ptr [si]
@@ -1508,6 +1604,8 @@ L3BE6:
 _mm3x9_bpsi endp
 
 ; seg004_0849_3BE8  (+3BE8)
+; mm3x9t: as mm3x9_bpsi with the matrix at BP taken transposed (a row at SI times the columns of
+; BP's matrix), with the same slip in the third product's overflow fix-up.
 _mm3x9t proc near
         mov     ax,word ptr [si]
         imul    word ptr [bp]
@@ -1595,6 +1693,9 @@ L3C8D           dw      0               ; bp, saved while a handler runs
 overflow_count  dw      0               ; FM overflow_count, cleared by in_scalebm
 
 ; seg004_0849_3C91  (+3C91)
+; overflow_handler_reg: the int 0 handler for a 2-byte `idiv reg`: skips the instruction and
+; returns AX = +-7FFFh by the sign of DX (DX the sign extension), and counts the overflow
+; (do_scalebm abandons a sprite that overflowed).
 _overflow_handler_reg proc far
         mov     word ptr cs:L3C8D,bp
         mov     bp,sp
@@ -1612,6 +1713,7 @@ L3CA9:
 _overflow_handler_reg endp
 
 ; seg004_0849_3CB5  (+3CB5)
+; overflow_handler_mem: for a 4-byte divide by a memory operand: skips it, AX = 7FFFh, DX = 0.
 _overflow_handler_mem proc far
         mov     word ptr cs:L3C8D,bp
         mov     bp,sp
@@ -1623,6 +1725,8 @@ _overflow_handler_mem proc far
 _overflow_handler_mem endp
 
 ; seg004_0849_3CCB  (+3CCB)
+; overflow_handler_special_bp: for a 2-byte divide by BP: skips it and returns +-7FFFh by the
+; sign of DX xor BP (the quotient's sign), DX = 0.
 _overflow_handler_special_bp proc far
         mov     word ptr cs:L3C8D,bp
         mov     bp,sp

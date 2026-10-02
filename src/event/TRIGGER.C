@@ -2,7 +2,31 @@
 /* opts: -mm -1 -G -O -Y -d */
 /* Triggers and traps: running a trigger's trap chain, the per-type trap actions (UseTrap)
    and the special-purpose "hack" traps, quest and variable traps, removing triggers and
-   traps, wandering monsters, closing doors, pressure plates and bridges. */
+   traps, wandering monsters, closing doors, pressure plates and bridges. The whole of DOS
+   overlay ovr166, in original order.
+
+   What it does in the game: triggers and traps are MAJOR_TRAP objects (items 0x180..0x1BF;
+   minor classes 0 and 1 traps, 2 and 3 triggers). A trigger sits on a tile or inside an
+   object; its quality and owner fields name a target square, and its link points at a
+   trap there. The game reports an action with UseTrigger(who, object, trigger, kind), where
+   kind is a trigger mode from Triggers[] (OBJECTS.DAT's trigger type table; the Guide's
+   "Trigger Type Table": 0 move, 2 pick up, 4 use, 5 look, 6 enter, 7 pressure, 8 open, 9
+   close, 0xA timer, 0xB unlock, 0xC scheduled, 0xE exit, 0xF pressure release). A trigger of
+   the matching mode runs its trap (SetOffTrap, UseTrap), and each trap passes on to the
+   object its link names, so traps form chains; condition traps branch. A trigger without
+   ID_FLAG10 is used up: its trap chain is deleted after it runs.
+
+   Callers: using, looking at and picking up objects (OBJUSE.C, USEITEMS.C, INTERACT.C), doors
+   (EFFECT.C, USEITEMS.C), movement and pressure plates (the motion code, check_pplate),
+   the timer list (EFFECT.C), schedules (SCDEVENT.C) and spells (SPELLS2.C).
+
+   Data owned: Triggers[16] (the trigger modes, read by trap_init), the trigger that is
+   running (CharacterThatTriggeredTrap, TriggeringButton), the removal state, tile_walls,
+   trap_teleport_data (the facing a teleport trap gives) and the pressure plate's tile.
+   Function and global names are the originals from the FM Towns symbol table where it has
+   them.
+   Name: inferred (triggers and traps: UseTrigger, SetOffTrap, UseTrap; the job of System
+   Shock's TRIGGER.C). */
 #include <stdlib.h>
 #include "combat.h"
 #include "critter.h"
@@ -17,11 +41,13 @@
 #include "ui.h"
 #include "uw2.h"
 
-/* This file's _BSS, DS:863C..865B (ovr163's LootCreature ends at 863B; seg045's starts at
-   865C), laid out by name (tools/bssorder.py): RemoveTrapIndex 58, RemoveTrapFlags 74,
-   ObjRunCodeAround 447, CharacterThatTriggeredTrap 459, TriggeringButton 460, Triggers 996.
-   Only Triggers has an FM Towns name (ovr162 uses it too); the others only this file uses,
-   so they are static, their provisional names chosen for their keys. */
+/* This file's _BSS, DS:863C..865B: the trigger modes, the trap being removed, and the
+   trigger that is running. */
+/* match: ovr163's LootCreature ends at 863B; seg045's starts at 865C. Laid out by name
+   (tools/bssorder.py): RemoveTrapIndex 58, RemoveTrapFlags 74, ObjRunCodeAround 447,
+   CharacterThatTriggeredTrap 459, TriggeringButton 460, Triggers 996. */
+/* name: only Triggers has an FM Towns name (ovr162 uses it too); the others only this
+   file uses, so they are static, their provisional names chosen for their keys. */
 unsigned char Triggers[16];
 static int RemoveTrapIndex;                             /* DS:863C */
 static int RemoveTrapFlags;                             /* DS:863E */
@@ -30,15 +56,17 @@ static struct Object far *CharacterThatTriggeredTrap;   /* DS:8644 */
 static struct Object far *TriggeringButton;             /* DS:8648 */
 void far fread(void near *dest, int count, int size, int handle);
 
-/* IDA: LoadTriggerObjDat. FM Towns' trap_init, first in this run of functions: the same
-   fread of 16 bytes into the trigger type table. */
+/* Reads the 16-byte trigger type table from OBJECTS.DAT (handle positioned by the caller). */
+/* name: IDA: LoadTriggerObjDat. FM Towns' trap_init, first in this run of functions: the
+   same fread of 16 bytes into the trigger type table. */
 void far trap_init(int handle)
 {
     fread(Triggers, 1, 16, handle);
 }
 
-/* IDA: MajorClass6TriggerType. FM Towns' trap_class_data: the same minor-class test on
-   ActiveObj and the same index into the trigger table. */
+/* The class data of ActiveObj: a trigger's entry in Triggers[], none for a trap. */
+/* name: IDA: MajorClass6TriggerType. FM Towns' trap_class_data: the same minor-class test
+   on ActiveObj and the same index into the trigger table. */
 unsigned char near * far trap_class_data(void)
 {
     if (OBJ_MINOR(ActiveObj) & 2)
@@ -46,6 +74,15 @@ unsigned char near * far trap_class_data(void)
     return 0;
 }
 
+/* Fires trigger trig for an action of kind type by who on object start (type -1: reached
+   along a trap chain, no checks). The trigger must be a trigger (minor class 2 or 3) of the
+   mode type. A switch that is already on (class SWITCH, minor index above 7) passes the action
+   to the next trigger in its list. Who may set it off: the player only if ID_FLAG11 is set
+   (and a look trigger above floor level needs a Search skill check against its height),
+   critters only with ID_ENCHANT set and not on a MAJOR_RECT trigger, other objects only with
+   ID_FLAG9. The trap chain runs at the trigger's target square; a trigger without ID_FLAG10
+   then deletes the chain (result | 0x20). A pressure trigger updates the plate afterwards.
+   Returns 2 when nothing ran. */
 int far UseTrigger(struct Object far *who, struct Object far *start,
                    struct Object far *trig, register int type)
 {
@@ -93,6 +130,9 @@ int far UseTrigger(struct Object far *who, struct Object far *start,
     return result;
 }
 int far UseTrap(struct Object far *trap, int x, int y);
+/* Runs trap at square x, y, remembering who set the chain off and with which object.
+   The function has no return statement, as in DOS, so its callers get whatever is
+   left in AX. */
 int far SetOffTrap(struct Object far *who, struct Object far *context,
                     struct Object far *trap, int x, int y)
 {
@@ -104,7 +144,9 @@ int far SetOffTrap(struct Object far *who, struct Object far *context,
     result = UseTrap(trap, x, y);
     CharacterThatTriggeredTrap = 0;
 }
-/* IDA: PerformVariableOperation. FM Towns' do_math_op, between SetOffTrap and
+/* The variable traps' operations: 0 add, 1 subtract, 2 set, 3 and, 4 or, 5 xor, 6 shift
+   left, 7 count up while equal (value + 1 if value == right, else 0). */
+/* name: IDA: PerformVariableOperation. FM Towns' do_math_op, between SetOffTrap and
    set_numbered_variable: the same eight operations. */
 int far do_math_op(int value, int op, int right)
 {
@@ -120,6 +162,10 @@ int far do_math_op(int value, int op, int right)
     }
     return value;
 }
+/* The variables traps, schedules and conversations share, by number: 0..0xFF the player's
+   vars[] (bytes), 0x100..0x17F a bit each, bit (n & 3) of quests[n / 4] (op 5 toggles it,
+   op 1 leaves it, others set it to right > 0), 0x180..0x18F the quest bytes (quest 128 on),
+   0x190..0x19F the X clocks. */
 void far set_numbered_variable(int left, unsigned char op, register int right)
 {
     if (left < 0x100) {
@@ -160,6 +206,7 @@ void far set_numbered_variable(int left, unsigned char op, register int right)
         }
     }
 }
+/* Reads a numbered variable (see set_numbered_variable); 0 beyond 0x19F. */
 int far get_numbered_variable(int index)
 {
     if (index < 0x100) return player->vars[index];
@@ -173,10 +220,11 @@ int far get_numbered_variable(int index)
     return 0;
 }
 extern unsigned char stay_centered;
-/* This file's _DATA, DS:1BA6..1BBC, in definition order. ovr158's strings end at 1BA5
-   (odd), ovr167's data starts at 1BBE. This file uses three of the four; FM Towns keeps
-   tile_walls and map_sq (TriggerChainTileData here) together, the same 16 bytes then the
-   pointer, and moves the small scalars between them elsewhere, as it does all of them. */
+/* This file's _DATA, DS:1BA6..1BBC, in definition order. */
+/* match: ovr158's strings end at 1BA5 (odd), ovr167's data starts at 1BBE. This file uses
+   three of the four; FM Towns keeps tile_walls and map_sq (TriggerChainTileData here)
+   together, the same 16 bytes then the pointer, and moves the small scalars between them
+   elsewhere, as it does all of them. */
 unsigned char tile_walls[16] = { 30, 0, 19, 21, 11, 13, 32, 32, 32, 32, 0, 0, 0, 0, 0, 30 };
 int trap_teleport_data = -1;                                    /* DS:1BB6 */
 unsigned char CreatedObjectFound_dseg_67d6_1BB8 = 0;            /* DS:1BB8 */
@@ -203,6 +251,39 @@ void far scroll_print(char far *s);
                          Obj_PtrTMem(&obj->qn.link), x, y);                         \
     return 2
 
+/* Performs one trap at square x, y, then, unless the trap ends the chain, passes on to the
+   trap or trigger its link names. Returns 2, or the result of the chain. By trap type
+   (items.h's TRAP_*; parameters in the trap's quality, owner, z, heading and fine position):
+   - ARROW fires the trap's missile (MISSILE.C); SPECIAL_EFFECT plays an effect.
+   - TELEPORT moves who to square (quality, owner) of level z (0: this level, inferred); fine x bits
+     choose the facing and whether the player loses the level's map.
+   - CHANGE_TERRAIN, OSCILLATOR (steps a tile's height, floor or wall by one between quality
+     and owner, reversing at the ends), PIT (opens or fills a pit) and BRIDGE (lays or removes
+     a row of bridges) change the map.
+   - SET_VARIABLE and CHECK_VARIABLE use the numbered variables; SET_VARIABLE with fine y
+     set also counts XC_CHANGED.
+   - Condition traps branch (RUN_ELSE_CHAIN): CHECK_VARIABLE when the variables do not
+     match, SKILL when the check passes (quality 0..2 an attribute, 3 the value 15, 4 and up
+     a skill; owner * 3 the difficulty; heading 1 a skill_check, else a plain comparison),
+     PROXIMITY when who is outside the rectangle (quality, owner) from x, y or on the wrong
+     side of the trap's height, INVENTORY when the player lacks the item (quality * 32 +
+     owner; fine x: it must be worn; z: at least that many).
+   - EXPERIENCE gives (quality * 8 + (owner & 7) - 256) << (owner >> 3) experience, which
+     can be negative; DAMAGE hits who for quality (heals when owner is set).
+   - CREATE_OBJECT copies its linked object onto the square with chance (63 - quality) in 63,
+     not when another created object is within four squares, and never in the Tombs (world
+     6) once bit 3 of quest 1 is set. A linked "adventurer" (0x7F) is a template for a random
+     monster scaled by the level within the world, the castle plot (XC_CASTLE) and the
+     player's level; it is made hostile, temporary and homed there.
+   - DOOR opens (1), closes (2) or toggles (3) the door on the square, and with owner set
+     replaces its lock by a copy of the trap's linked lock.
+   - DELETE_OBJECT removes its linked object from square (quality, owner).
+   - WARD (a rune of warding) hits the critter that steps on it, of class quality (0x3F any),
+     for 3 + rand * Casting, and tells the player.
+   - TEXT_STRING prints string quality * 32 + owner of block 9 (if owner's high bit is set,
+     only while player->b62_5 is set).
+   - JUMP, CHANGE_FROM, SPELL (inanimate_spell) and HACK (do_trap_hack) hand on to other
+     files. */
 int far UseTrap(struct Object far *trap, int x, int y)
 {
     struct Tile far *tile;
@@ -611,6 +692,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
             int damage;
             damage = (int)(((long)rand() * player->skills[SKILL_CASTING]) / 0x8000L) + 3;
             print_path_to(get_string(0x304), OBJ_HOMEX(ThePlayer), OBJ_HOMEY(ThePlayer), 0,
+            /* 'Your Rune of Warding has been set off ' */
                           OBJ_HOMEX(CharacterThatTriggeredTrap),
                           OBJ_HOMEY(CharacterThatTriggeredTrap), 0, 0);
             result = whack_thing(Obj_MemTPtr(CharacterThatTriggeredTrap),
@@ -638,6 +720,8 @@ int far UseTrap(struct Object far *trap, int x, int y)
     }
     return result;
 }
+/* Removes from the list head, and recursively from containers, every trigger whose link
+   is RemoveTrapIndex (and its timer), counting RemoveTrapFlags down. */
 void far kill_triggers(union Link far *head)
 {
     struct Object far *obj;
@@ -663,6 +747,8 @@ void far kill_triggers(union Link far *head)
     }
 }
 extern struct Tile far *mapdata;
+/* Deletes trap and its chain. Its flags count the triggers pointing at it, so the whole
+   map is searched to remove them too. */
 void far delete_trap(union Link far *head, struct Object far *trap)
 {
     struct Tile far *tile;
@@ -684,6 +770,18 @@ void far delete_trap(union Link far *head, struct Object far *trap)
 void far Sched_SetAllClocks(int how);
 void far gronkify_change_goal();
 void far gronk_whoami(int who, int how, unsigned char near *info, void (far *fn)());
+/* The hack traps (TRAP_HACK), each a special case of the game, chosen by the trap's
+   quality: 2 the crystal ball, 3 and 4 the eight-position switch, 5 a crime against owner,
+   10 the best weapon for the arena, 11 fraznium, 12 a standing wave, 14 a cycling floor, 17
+   breaking ice, 18 flipping switches, 19 resetting arrow pillars, 20 toggling pillars, 21
+   and 22 raising or lowering an object, 23 and 28 set the linked object's owner, 24
+   graffiti, 25 skup_ductosnore, 26 a force field, 27 set the linked object's quality, 29
+   the switch puzzle, 30 and 31 running and cheating in the Pits of Carnage arena, 32 qbert,
+   33 redeeming bottles, 34 the courtyard, 35 recharging light bulbs, 36 the castle NPCs'
+   moves, 37 bringing the schedules up to date, 38 spoiling cure potions, 39 showing or
+   hiding the linked object, 40..42 vending machines, 43 changing a critter's goal, 44
+   sleep, 45 hiding terrain, 54 and 55 the blackrock gem, 62 setting the goal of the critter
+   that set it off. Most handlers are in WORLDEV.C. Returns 2 (55 returns its own result). */
 int far do_trap_hack(struct Object far *trap, register int x, register int y)
 {
     int owner = 0;
@@ -825,6 +923,8 @@ int far do_trap_hack(struct Object far *trap, register int x, register int y)
     }
     return 2;
 }
+/* Builds a move trigger (minor 2, mode 0) and a trap of type sub at square x, y, the
+   trigger aimed at its own square: a trap laid by a spell. Returns the trigger's index. */
 int far cast_trap_spell(int x, int y, int sub)
 {
     struct Object far *trigger;
@@ -873,6 +973,8 @@ int far cast_trap_spell(int x, int y, int sub)
     Obj_Add(&tile->objects, trap);
     return Obj_MemTPtr(trigger);
 }
+/* Deletes trigger obj: the last trigger of a trap deletes the trap too, otherwise the
+   trap's trigger count drops. */
 void far trigger_obj_del(union Link far *head, struct Object far *obj)
 {
     struct Object far *linked;
@@ -892,6 +994,7 @@ void far trigger_obj_del(union Link far *head, struct Object far *obj)
     if (Triggers[obj->id & ID_INCLASS] == 10)
         rem_timer_obj(Obj_MemTPtr(obj));
 }
+/* Deletes a trap or trigger object. */
 void far trap_obj_del(union Link far *head, struct Object far *obj)
 {
     if (OBJ_MINOR(obj) > 1)
@@ -899,7 +1002,9 @@ void far trap_obj_del(union Link far *head, struct Object far *obj)
     else
         delete_trap(head, obj);
 }
-/* FM Towns calls this callback is_this_wandering; its bit and exclusions match. */
+/* gronk_area callback: notes a temporary (wandering, created) object near
+   ObjRunCodeAround, other than the player. */
+/* name: FM Towns calls this callback is_this_wandering; its bit and exclusions match. */
 char far is_this_wandering(int x, int y, struct Object far *obj)
 {
     struct Object far *p = obj;
@@ -912,6 +1017,8 @@ char far is_this_wandering(int x, int y, struct Object far *obj)
 typedef char (far *AreaFn)(int, int, struct Object far *);
 void far gronk_area(struct Object far *who, char count, AreaFn fn,
                     unsigned char type, unsigned char dist, unsigned char radius);
+/* True if a created (temporary) object is already within four squares of obj, so a
+   create-object trap should not add another. */
 char far dont_create_wandering_monster_here(struct Object far *obj)
 {
     CreatedObjectFound_dseg_67d6_1BB8 = 0;
@@ -919,6 +1026,8 @@ char far dont_create_wandering_monster_here(struct Object far *obj)
     gronk_area(obj, 1, is_this_wandering, 0, 0, 4);
     return CreatedObjectFound_dseg_67d6_1BB8;
 }
+/* For the wandering monster and door updates: 0 when the player is within 8 squares of
+   x, y, so the change would be seen; 1 otherwise, or when is_player is clear. */
 char far check_alert(unsigned char is_player, int x, int y)
 {
     int px, py;
@@ -929,6 +1038,9 @@ char far check_alert(unsigned char is_player, int x, int y)
         return 0;
     return 1;
 }
+/* Runs every create-object trap on the level (MAJOR_TRAP minor 0 class 7, flags 0) whose
+   template is a mobile, out of the player's sight, marking the template temporary. Called
+   when time passes for the level (inferred). */
 void far DoWanderingMonsters(unsigned char is_player)
 {
     int x = 0;
@@ -947,6 +1059,9 @@ void far DoWanderingMonsters(unsigned char is_player)
         x++;
     }
 }
+/* Each open door on the level (not on a tile with door bit 1) closes with chance 3 in 10
+   where the player cannot see it, as if someone shut it; with is_player clear the moving
+   doors are also run to the end. */
 void far DoClosingDoors(unsigned char is_player)
 {
     int x = 0;
@@ -971,6 +1086,7 @@ void far DoClosingDoors(unsigned char is_player)
     }
     quick_time = 0;
 }
+/* The weight the player carries, the cursor object included. */
 int far Ply_Weight(void)
 {
     int weight = player->weight;
@@ -978,6 +1094,11 @@ int far Ply_Weight(void)
         weight += ItemWeight(CursorObjPtr);
     return weight;
 }
+/* Fires the enter (6) or pressure plate triggers on tile for who at height z (how is the
+   mode: 6 or 14 enter and exit; 7 or 15 pressure and release). A pressure trigger fires
+   when the weight on the plate (check_weight with the player's load) crosses its threshold:
+   fine y bit 0 says whether it is now pressed, bit 2 picks the heavier threshold (84 rather
+   than 4). Returns 1 when the tile has a plate. */
 char far check_pplate(struct Object far *who, struct Tile far *tile, int z, int how)
 {
     register int type = how;
@@ -1032,6 +1153,8 @@ advance_pressure:
     TriggerChainTileData_dseg_67d6_1BB9 = 0;
     return result;
 }
+/* A pressure plate changed state: every plate trigger on the tile flips its pressed bit,
+   and with fine y bit 1 the floor texture steps to show the plate up or down. */
 void far update_pplate(struct Object far *trig)
 {
     struct Object far *next;
@@ -1051,6 +1174,9 @@ void far update_pplate(struct Object far *trig)
         TriggerChainTileData_dseg_67d6_1BB9->floor = yset;
     }
 }
+/* Hack 17, thin ice: if the player stands on floor texture owner and fails an Acrobat
+   check (difficulty his weight / 12 when that is over 20, else 0), the tile drops by one
+   and takes the trap's texture (broken ice, inferred). */
 void far do_ice_hack(struct Object far *trap)
 {
     struct Tile far *tile;
@@ -1074,6 +1200,7 @@ void far do_ice_hack(struct Object far *trap)
 }
 struct Object far * far CreateObj(int id, int extra);
 unsigned char far put_at(int x, int y, int z, struct Object far *obj, int a, int b);
+/* Puts a bridge object on x, y at height z facing heading, unless one is there. */
 struct Object far * far place_bridge(int x, int y, int zarg, int headingarg)
 {
     struct Object far *obj;
@@ -1100,6 +1227,7 @@ struct Object far * far place_bridge(int x, int y, int zarg, int headingarg)
     }
     return obj;
 }
+/* Removes the bridge at x, y with that height and heading. */
 void far destroy_bridge(int x, int y, int zarg, int headingarg)
 {
     struct Object far *obj;
@@ -1119,13 +1247,17 @@ void far destroy_bridge(int x, int y, int zarg, int headingarg)
         if (Obj_Rem(&Map_GetAddr(x, y)->objects, obj))
             Obj_Free(obj);
 }
-/* IDA: Critter_RNG_STR_CHECK. FM Towns' eligible_castle_monster, between destroy_bridge and
-   check_for_sunken_moongate: a zero strength byte fails, otherwise one chance in strength. */
+/* Whether a random wandering monster may be this creature: never for strength 0, else one
+   chance in its strength, so strong creatures turn up less often. */
+/* name: IDA: Critter_RNG_STR_CHECK. FM Towns' eligible_castle_monster, between
+   destroy_bridge and check_for_sunken_moongate. */
 unsigned char far eligible_castle_monster(int npc)
 {
     if (Creature[npc & ID_INMAJOR].attr[0] == 0) return 0;
     return rand() % Creature[npc & ID_INMAJOR].attr[0] == 0;
 }
+/* Level 0x44: once the tile at (0x18, 2) has been raised, lowers it and raises (2, 0x15),
+   the sunken moongate (from the name). */
 void far check_for_sunken_moongate(void)
 {
     struct Tile far *tile = Map_GetAddr(0x18, 2);

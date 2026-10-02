@@ -2,8 +2,30 @@
 /* opts: -mm -1 -G -O -Y -d */
 /* World events: teleports, terrain changes, traps, the castle guards, the pits, item repair,
    quest hacks and Killorn's fall: the whole of DOS overlay ovr110, in original order.
+
+   What it does in the game: the actions behind the traps (TRIGGER.C's UseTrap and its hack
+   traps), the schedules (SCDEVENT.C) and a number of plot events. The general part:
+   do_teleport (and find_good_x_and_y, which finds room near the destination), changing
+   tiles with everything standing on them (change_terrain, raise_up, put_down, filter),
+   damage and spell traps, passing time (pass_time), deaths that matter to the plot
+   (death_check, instant_kill, genocide), repairing items (repair_item, from the Repair
+   skill and from conversations), fishing (go_fish), and the castle guards. The rest are
+   single-purpose hacks for places in the game: the Britannia courtyard drying up and the
+   castle schedule, the Pits of Carnage arena, the blackrock gem's facets, the vending
+   machines, the Scintillus Academy's pillars, wand and potions, Bliy Skup Ductosnore's
+   chamber, the q*bert floor puzzle, jail, and Killorn Keep's crash.
+
+   Quest flags are read and written with GET_QUEST and SET_QUEST: bit (q & 3) of
+   player->quests[q / 4], the same packing as TRIGGER.C's numbered variables 0x100 on. NPCs
+   are named here by whoami, with the name the conversation strings give them (block 7,
+   whoami + 16).
+
+   Data owned: TK_wand, and the statics of courtyard_hacking, black_gem_trip, do_qbert and
+   go_vend.
    Function and global names are the originals from the FM Towns symbol table where it has
-   them; the source file's own name is not known. */
+   them. Each function's first comment gives its explanation; the second, tagged name:,
+   its number in the file and IDA's name.
+   Name: descriptive (world events and quest hacks: do_teleport, change_terrain, death_check). */
 #include <stdlib.h>
 #include <string.h>
 #include "combat.h"
@@ -72,7 +94,7 @@ void far punt_fightmode(void);
 /* Defined later in this file. */
 unsigned char far instant_kill(struct Object far *obj);
 
-/* 1: TeleportCharToTile_ovr110_0. A breadth-first search outward from (x, y), at most
+/* name: 1: TeleportCharToTile_ovr110_0. A breadth-first search outward from (x, y), at most
    20 tiles a ring, for a tile within the 9x9 box around it where the object fits. */
 #define VISITED(tx, ty) (visited[(tx) - xmin] & (1 << ((ty) - ymin)))
 #define VISIT(tx, ty) \
@@ -177,7 +199,10 @@ unsigned char far find_good_x_and_y(struct Object far *obj, int x, int y,
     return 0;
 }
 
-/* 2: AddTimeToClock_ovr110_949, target size 0x79. */
+/* Lets seconds of game time pass: the game clock (1/256 s units, inferred from the shift)
+   moves on, the day clock XC_TIME becomes clock / 0x4B000 modulo 72 (so a step is 20
+   minutes and the cycle a day), and the schedules catch up. */
+/* name: 2: AddTimeToClock_ovr110_949, target size 0x79. */
 void far pass_time(long seconds)
 {
     long elapsed = seconds << 8;
@@ -187,7 +212,14 @@ void far pass_time(long seconds)
     lastDurCheck = player->game_clock >> 8;
 }
 
-/* 3: Teleport_ovr110_9C2, target size 0x211. */
+/* Teleports who to square x, y of level (0 or this level: a nearby free square is found).
+   Only the player can change level, and not while asleep in the void unless the destination
+   is the Ethereal Void. A player leaving jail (quest 112, the cell at 0x2A..0x2B, 0x26 of
+   levels 0 and 1) has escaped: quest 112 is cleared and quest 124 set. A fighter in the
+   Pits who teleports out of his part of the arena has run away (arena_player_runs). The
+   player's move is only recorded (NewPlayerLevel, NewPlayerX, NewPlayerY) for the main
+   loop to carry out. Returns 0x10 on success, 2 otherwise. */
+/* name: 3: Teleport_ovr110_9C2, target size 0x211. */
 int far do_teleport(struct Object far *who, int x, int y, int level)
 {
     int new_x, new_y;
@@ -240,7 +272,11 @@ int far do_teleport(struct Object far *who, int x, int y, int level)
     return 2;
 }
 
-/* 4: RaiseZposOfObjectInChangingTile_ovr110_BD3, target size 0x135. */
+/* change_terrain helper for a rising tile: lifts an object standing below the new floor
+   height (mobiles keep their fine height in step, the player's physics too) and, on a tile
+   that has become solid, removes static objects; objects pushed above the ceiling are
+   destroyed. Returns the link to continue the list walk from. */
+/* name: 4: RaiseZposOfObjectInChangingTile_ovr110_BD3, target size 0x135. */
 union Link far * far raise_up(struct Tile far *tile, union Link far *head,
                             int old_height, int new_height, int tile_x,
                             int tile_y, char solid, int adjust)
@@ -266,7 +302,10 @@ union Link far * far raise_up(struct Tile far *tile, union Link far *head,
     return &obj->qn.link;
 }
 
-/* 5: LowerZposOfObjectInChangingTile_ovr110_D08, target size 0x10B. */
+/* change_terrain helper for a sinking tile: objects resting on the old floor drop with
+   it (a critter is marked to fall; the player is re-settled on his terrain). Returns the
+   link to continue from. */
+/* name: 5: LowerZposOfObjectInChangingTile_ovr110_D08, target size 0x10B. */
 union Link far * far put_down(struct Tile far *tile, union Link far *head,
                            int old_height, int new_height, int tile_x,
                            int tile_y, char remove_obj, int adjust)
@@ -296,7 +335,10 @@ union Link far * far put_down(struct Tile far *tile, union Link far *head,
     return &obj->qn.link;
 }
 
-/* 6: WillObjectMoveWithTileHeightChange_ovr110_E13, target size 0x124. */
+/* Whether an object on a tile next to a changing one moves with it: anything on the
+   changing tile, or an object at the right height whose footprint reaches over the edge.
+   Traps and MAJOR_RECT objects never move. */
+/* name: 6: WillObjectMoveWithTileHeightChange_ovr110_E13, target size 0x124. */
 unsigned char far filter(int tile_x, int tile_y, int cur_x, int cur_y,
                          int old_height, int new_height, union Link far *link)
 {
@@ -330,7 +372,12 @@ unsigned char far filter(int tile_x, int tile_y, int cur_x, int cur_y,
     return 0;
 }
 
-/* 7: ChangeTile_ovr110_F37, target size 0x2F6. */
+/* Changes the tiles from x, y to x + dx, y + dy: wall and floor textures (0x3F and 0xF
+   mean unchanged), type (10 or more unchanged) and height (adjust 1 and 3 raise or lower
+   by one instead; 4 allows height 15). Objects on the tiles and overlapping from their
+   neighbours rise or fall with the floor. A new water floor, or (at random) lava, makes the
+   change remove static objects. Returns 2. */
+/* name: 7: ChangeTile_ovr110_F37, target size 0x2F6. */
 int far change_terrain(int x, int y, int wall, int floor, int height,
                        int type, int dx, int dy, int adjust)
 {
@@ -410,7 +457,11 @@ int far change_terrain(int x, int y, int wall, int floor, int height,
     return 2;
 }
 
-/* 8: ChangeFromTrap_ovr110_122D, target size 0x1EE. */
+/* The change-from trap (TRAP_CHANGE_FROM) and its linked change-to trap: over the area
+   given by the trap's fine position (all of the map when 0), every tile whose wall, floor,
+   type and height match the change-from values (a field at its limit matches anything)
+   gets the change-to values (fields at their limit are left). */
+/* name: 8: ChangeFromTrap_ovr110_122D, target size 0x1EE. */
 void far do_change_grokking(struct Object far *trap, struct Object far *link,
                             int x, int y)
 {
@@ -463,7 +514,10 @@ void far do_change_grokking(struct Object far *trap, struct Object far *link,
     }
 }
 
-/* 9: DamageTrap_ovr110_141B, target size 0xC0. */
+/* The damage trap: damage to object index with damage type 4 (physical). Negative damage
+   poisons the player at that strength instead (unless he resists poison) or, for others,
+   is plain damage. Returns 0x10 when the object was destroyed, else 2. */
+/* name: 9: DamageTrap_ovr110_141B, target size 0xC0. */
 int far whack_thing(int index, int damage, int how, int extra)
 {
     struct Object far *target;
@@ -489,7 +543,8 @@ int far whack_thing(int index, int damage, int how, int extra)
     return 2;
 }
 
-/* 10: SpellTrap_ovr110_14DB, target size 0x50. */
+/* A spell cast by a trap at x, y: by class and minor (major >= 0) or by spell number. */
+/* name: 10: SpellTrap_ovr110_14DB, target size 0x50. */
 int far inanimate_spell(int x, int y, struct Object far *trap,
                         struct Object far *who, int major, int effect)
 {
@@ -502,7 +557,11 @@ int far inanimate_spell(int x, int y, struct Object far *trap,
     return 2;
 }
 
-/* 11: UseFishingPole_ovr110_152B, target size 0xF7. */
+/* Fishing: the player must face water (a non-solid tile of the water terrain class
+   whose floor is below him) about a square ahead. Then a fish bites when a roll of 0..4 is at
+   most (Track + 7) / 8, and is caught if he can carry it.
+   Returns 1 for a catch, which the caller adds (USEITEMS.C, inferred). */
+/* name: 11: UseFishingPole_ovr110_152B, target size 0xF7. */
 unsigned char far go_fish(void)
 {
     int x;
@@ -524,20 +583,22 @@ unsigned char far go_fish(void)
     if (player->weight + ComObjData[ITEM_FISH].mass
         >= player->max_weight)
         goto no_room;
-    game_sprint(0x70);
+    game_sprint(0x70);  /* 'You catch a lovely fish.' */
     return 1;
 no_room:
-    game_sprint(0x73);
+    game_sprint(0x73);  /* 'You feel a nibble, but the fish gets away.' */
     return 0;
 no_luck:
-    game_sprint(0x71);
+    game_sprint(0x71);  /* 'No luck this time.' */
     return 0;
 bad_place:
-    game_sprint(0x72);
+    game_sprint(0x72);  /* 'You cannot fish there. Perhaps somewhere else.' */
     return 0;
 }
 
-/* 12: SpawnATalkingRotworm_ovr110_1622, target size 0xB2. */
+/* A conversation with no body: a rotworm is made at the player's square with the given
+   whoami, talked to and removed again. */
+/* name: 12: SpawnATalkingRotworm_ovr110_1622, target size 0xB2. */
 void far talk_to_disembodied(char whoami)
 {
     struct Object far *worm;
@@ -554,7 +615,9 @@ void far talk_to_disembodied(char whoami)
     Obj_Free(worm);
 }
 
-/* 13: HackTrapTrespass_ovr110_16D4, target size 0x51. */
+/* The player has done something the owner (a race number) would object to: the owners
+   nearby are told, as if he had taken their property (player_grabbed, CRITTIME.C). */
+/* name: 13: HackTrapTrespass_ovr110_16D4, target size 0x51. */
 void far player_did_bad(int owner)
 {
     register int oldx, oldy;
@@ -569,7 +632,10 @@ void far player_did_bad(int owner)
     }
 }
 
-/* 14: HackTrapChangeHeight_ovr110_1725, target size 0x84. */
+/* Hack 3 and 4, the eight-position switch: with the switch's position (flags) times 8
+   added to the trap's height, hack 3 sets the height of the tile, hack 4 the height of the
+   trap's linked object. */
+/* name: 14: HackTrapChangeHeight_ovr110_1725, target size 0x84. */
 void far eight_pos_switch(int flags, struct Object far *trap, int x, int y)
 {
     struct Object far *obj;
@@ -584,7 +650,10 @@ void far eight_pos_switch(int flags, struct Object far *trap, int x, int y)
     }
 }
 
-/* 15: HackTrapChangeObjectZPos_ovr110_17A9, target size 0xAA. */
+/* Hacks 21 and 22: sets the linked object (and with multiple the next one in its group
+   of five) to the trap's height, or that plus owner if it is not above it already: a
+   platform that moves up and down. */
+/* name: 15: HackTrapChangeObjectZPos_ovr110_17A9, target size 0xAA. */
 void far toggle_object_height(struct Object far *trap, char multiple)
 {
     struct Object far *obj;
@@ -603,7 +672,9 @@ void far toggle_object_height(struct Object far *trap, char multiple)
     editchng(2);
 }
 
-/* 16: SpecialEffects_ovr110_1853, target size 0x66. */
+/* A special-effect trap: types 5..8 flash the screen in colour arg + 0x40 * (8 - type),
+   type 2 plays sound arg + 0x64, type 4 shakes the screen by 2 * arg. */
+/* name: 16: SpecialEffects_ovr110_1853, target size 0x66. */
 void far do_sfx(int type, int arg)
 {
     switch (type) {
@@ -618,7 +689,8 @@ void far do_sfx(int type, int arg)
     }
 }
 
-/* 17: RemoveNPC_ovr110_18B9, target size 0x47. */
+/* Removes an NPC and its contents from the map (a gronk callback). */
+/* name: 17: RemoveNPC_ovr110_18B9, target size 0x47. */
 unsigned char far remove_whoami(struct Object far *obj)
 {
     union Link far *head;
@@ -627,7 +699,9 @@ unsigned char far remove_whoami(struct Object far *obj)
     return 1;
 }
 
-/* 18: PitWarriorLosesFight_ovr110_1900, target size 0x5C. */
+/* A pit fighter has lost: removes it from player->pit_fighters; when at most one was
+   left, the fight is over (in_pits cleared). Returns 1 if it was one of them. */
+/* name: 18: PitWarriorLosesFight_ovr110_1900, target size 0x5C. */
 unsigned char far remove_opponent(struct Object far *npc)
 {
     unsigned char removed;
@@ -648,7 +722,27 @@ unsigned char far remove_opponent(struct Object far *npc)
     return removed;
 }
 
-/* 19: SpecialDeathCases_ovr110_195C, target size 0x8B6. */
+/* The plot's special deaths. mode 0 is asked before a critter with a conversation starts
+   to die (go_into_dying_sequence, AI.C): returning 0 keeps it alive. mode 1 is the death
+   itself. Killing one of race 0xB (a trilkhun by the owner race strings of block 1, inferred)
+   makes the rest of that race hostile (gronkify_attitude with 0); bloodworms killed on
+   level 4 count in quest byte 7; a pit fighter's death counts towards the player's pit
+   record (QB_PIT_RECORD), and XC_PIT_KILLS keeps the best. The castle's people (whoami
+   0x81..0x8F, Syria 0xA8 and guard 0x95) cannot be killed: they drop to a third of their
+   hit points and the guards are called, except Lady Tory (0x8D) once the castle plot has
+   reached 8. By whoami: Altara 0x2D (quest 69), Mokpo 0x48 (quest 53), Mystell 0x2C (66),
+   Bliy Skup Ductosnore 0x98 (fires two triggers, quest 122), a guard 0x4B (turns into a
+   hordling the first time), Freemis 0x0B (10), Zaria 0x62 (25), Dorstag 0x63 (121), Blog
+   0x65 (65), Bishop 6 (4), Relk 0x31 (123), Lord Umbria 0x1F (variable 0xF3 and a crime
+   against race 0x15, golems by the race strings), Praecor Loth 0x20 (his liches die with
+   him, quest 7), Mors Gotha 0x2F (in Killorn Keep she talks instead of dying, or vanishes
+   after the crash, quest 54; elsewhere she talks and then dies, quest 64), the Listener
+   0x91 (dies only to Altara's dagger, which breaks: castle plot + 1, quest 11), Krilner
+   0x64 and Fissif 0x80 (yield and talk), Patterson 0x8C (talks as he dies; the castle plot
+   moves to 0xD, or 0xE after the djinn), Nelson 0x8B (calls the guards in the castle after
+   plot stage 0xB), and whoami 0x3A (quest byte 6 counts to 2, then quest 50). Many set
+   XC_CHANGED so the schedules notice. Returns 1 to let the death go on. */
+/* name: 19: SpecialDeathCases_ovr110_195C, target size 0x8B6. */
 unsigned char far death_check(struct Object far *obj, unsigned char mode)
 {
     unsigned char pit;
@@ -856,7 +950,9 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
     return 1;
 }
 
-/* 20: TalkToDyingNPC_ovr110_2212, target size 0x6C. */
+/* Makes a critter stop fighting and talk: friendly, goal 8, the player's fight state
+   cleared, time running, then the conversation. */
+/* name: 20: TalkToDyingNPC_ovr110_2212, target size 0x6C. */
 void far stop_and_talk(struct Object far *obj)
 {
     obj->last_hit = 0;
@@ -871,7 +967,10 @@ void far stop_and_talk(struct Object far *obj)
     obj->attitude_word = obj->attitude_word & 0xFDFF;
 }
 
-/* 21: RunScheduleTriggersInTile_15_29_ovr110_227E, target size 0x12D. */
+/* The castle guards: every scheduled trigger (mode 0xC) in the guard post square
+   (0xF, 0x1D) sends its linked guard to home_x, home_y, hostile and powerful, by firing
+   the trigger. */
+/* name: 21: RunScheduleTriggersInTile_15_29_ovr110_227E, target size 0x12D. */
 void far call_out_the_guards(int home_x, int home_y)
 {
     struct Object far *scheduled;
@@ -901,7 +1000,9 @@ void far call_out_the_guards(int home_x, int home_y)
     }
 }
 
-/* 22: PitArenaRelated_ovr110_23AB, target size 0x79. */
+/* True when x, y is inside the Pits of Carnage arena, a ring around (0x1F, 0x1F) whose
+   outer edge depends on the quarter. */
+/* name: 22: PitArenaRelated_ovr110_23AB, target size 0x79. */
 unsigned char far in_arena(int x, int y)
 {
     register int oct = 0;
@@ -918,7 +1019,9 @@ unsigned char far in_arena(int x, int y)
     return 1;
 }
 
-/* 23: GetItemDurability_ovr110_2424, target size 0x6D. */
+/* An item's durability for repair: from the Weapons or Armour tables; -1 for anything
+   else (missiles included), which cannot be repaired. */
+/* name: 23: GetItemDurability_ovr110_2424, target size 0x6D. */
 int far get_rep_diff(struct Object far *obj)
 {
     register int item;
@@ -935,7 +1038,12 @@ int far get_rep_diff(struct Object far *obj)
     return -1;
 }
 
-/* 24: RepairItem_ovr110_2491, target size 0x118. */
+/* One repair attempt with skill: it takes durability * 3 - skill - quality / 2 minutes
+   (at least 15). skill_check(skill, durability): a critical restores the item fully, a
+   success adds 3 + skill / 5 quality, a plain result does nothing, a failure takes off 4..11
+   quality, or destroys the item when a random 0..63 beats quality + skill. Returns 3 fully
+   repaired, 2 partly, 1 no effect, -1 damaged, -2 destroyed, 0 not repairable. */
+/* name: 24: RepairItem_ovr110_2491, target size 0x118. */
 int far do_repair(struct Object far *obj, int skill, int *time)
 {
     int repair_time, result, durability;
@@ -973,7 +1081,12 @@ int far do_repair(struct Object far *obj, int skill, int *time)
     return -2;
 }
 
-/* 25: ItemRepairLogic_ovr110_25A9, target size 0x1F0. */
+/* Repairs obj with skill, by the player (who set) or by an NPC in a conversation. The
+   player is told the difficulty first, by durability - skill + 15: trivial, simple,
+   possible, hard, very difficult, and asked to confirm. The attempt is noisy and takes its
+   time; a destroyed item may survive by its fate. The result is printed from string 0x9C +
+   result. */
+/* name: 25: ItemRepairLogic_ovr110_25A9, target size 0x1F0. */
 void far repair_item(struct Object far *obj, int skill, char who)
 {
     int time;
@@ -994,11 +1107,11 @@ void far repair_item(struct Object far *obj, int skill, char who)
                 estimate = 4;
             else
                 estimate = estimate / 10 + 1;
-            game_sprint(0xE7);
-            game_sprint(estimate + 0xEA);
-            game_sprint(0xE8);
+            game_sprint(0xE7);  /* 'You think it will be ' */
+            game_sprint(estimate + 0xEA);  /* 'trivial', 'simple', 'possible', 'hard', 'very difficult' */
+            game_sprint(0xE8);  /* ' to repair the ' */
             scroll_print(name);
-            reply = wyorn(0, 0xE9, &answer);
+            reply = wyorn(0, 0xE9, &answer);  /* 'Make an attempt? ' */
             if (reply != 0 && reply < 4)
                 wd_bool(answer = reply == 2);
             scroll_print("\n");
@@ -1020,7 +1133,7 @@ void far repair_item(struct Object far *obj, int skill, char who)
             } else
                 result = 0;
         }
-        game_sprint(result + 0x9C);
+        game_sprint(result + 0x9C);  /* -2 'You destroy the ' .. 0 'You cannot repair that.' .. 3 'You fully repair the ' */
         if (result) {
             scroll_print(name);
             game_sprint(0x60);
@@ -1031,8 +1144,11 @@ void far repair_item(struct Object far *obj, int skill, char who)
         Obj_Punt(&Map_GetAddr(MapObj_X, MapObj_Y)->objects, obj, 0);
 }
 
-/* 26: ClearHeadingBit2ovr110_2799, target size 0x76. Named clear_loretry_ in FM Towns, at the same position
-   among its neighbours, and the code corresponds. */
+/* Clears an object's "already examined" bit (heading bit 2), so a better Lore skill can
+   identify it again. Not for mobiles, MAJOR_RECT, traps or objects drawn as 3D models
+   (the Guide, on the lore skill). */
+/* name: 26: ClearHeadingBit2ovr110_2799, target size 0x76. Named clear_loretry_ in FM
+   Towns, at the same position among its neighbours, and the code corresponds. */
 unsigned char far clear_loretry(struct Object far *obj)
 {
     if (IsMobElem(obj)) return 0;
@@ -1042,7 +1158,8 @@ unsigned char far clear_loretry(struct Object far *obj)
     return 0;
 }
 
-/* 27: ClearHeadingBit2FromAllObjects_ovr110_280F, target size 0x6D. */
+/* Clears the examined bit on every object on the map (after the Lore skill rises). */
+/* name: 27: ClearHeadingBit2FromAllObjects_ovr110_280F, target size 0x6D. */
 void far clear_all_loretries(void)
 {
     struct Tile far *tile;
@@ -1058,7 +1175,9 @@ void far clear_all_loretries(void)
     }
 }
 
-/* 28: ScintillusPlatformsTrap_ovr110_287C, target size 0xA8. */
+/* Hack 20, the Scintillus pillars: toggles the height of the pillars marked in mask, a
+   5 by 3 grid of tiles three apart from x, y, between lower and upper. */
+/* name: 28: ScintillusPlatformsTrap_ovr110_287C, target size 0xA8. */
 void far toggle_pillars_hack(int x, int y, int lower, int upper, int mask)
 {
     int tile_x, tile_y, j;
@@ -1077,7 +1196,11 @@ void far toggle_pillars_hack(int x, int y, int lower, int upper, int mask)
     }
 }
 
-/* 29: HackTrapCastleSchedule_ovr110_2924, target size 0x99. */
+/* Hack 36, the castle NPCs' day: while quest 109 is set and the castle plot is below
+   16, each castle person (whoami 0x81..0x8F and Syria) may go to their next place
+   (maybe_go_hang_out, CRITTIME.C), except Lord British once jailed (quest 112), Lady Tory
+   from plot stage 8 and Nelson and Patterson from stage 11. */
+/* name: 29: HackTrapCastleSchedule_ovr110_2924, target size 0x99. */
 void far move_folks_around(void)
 {
     register int who, hour;
@@ -1093,9 +1216,10 @@ void far move_folks_around(void)
     }
 }
 
-/* 30: GrowMushroomsInBritannia_ovr110_29BD, target size 0x1B1. Named kill_plants_ in FM Towns, at the same position
-   among its neighbours, and the code corresponds. */
-/* FM Towns: kill_plants_. Callback for courtyard_hacking. */
+/* Courtyard callback: with chance one in three, a plant wilts (0xD9 to 0xDA), a wilted
+   plant becomes debris, grass or a mushroom, and it shifts a little. */
+/* name: 30: GrowMushroomsInBritannia_ovr110_29BD, target size 0x1B1. Named kill_plants_ in
+   FM Towns, at the same position among its neighbours, and the code corresponds. */
 unsigned char far kill_plants(struct Object far *obj)
 {
     int x;
@@ -1115,7 +1239,7 @@ unsigned char far kill_plants(struct Object far *obj)
             break;
         case ITEM_GRASS:
             switch ((int)(((long)rand() * 0xF) / 0x8000L)) {
-            case 0: item = ITEM_MUSHROOM; return 0;     /* the new item is never used */
+            case 0: item = ITEM_MUSHROOM; return 0;     /* the new item is never used (as in DOS) */
             case 1: item = ITEM_PILE_OF_DEBRIS_D6; return 0;
             }
         default:
@@ -1137,10 +1261,14 @@ unsigned char far kill_plants(struct Object far *obj)
     return 0;
 }
 
-/* 31: BritanniaGoesDry_ovr110_2B6E, target size 0x277. */
+/* Hack 34, Britannia goes dry: once per stage of the castle plot, the plants in the area
+   wilt (kill_plants); from stage 3 the fountains' water animations go and their floor
+   changes, and from stage 13 mushrooms spring up in 43% of the squares. */
+/* name: 31: BritanniaGoesDry_ovr110_2B6E, target size 0x277. */
 void far courtyard_hacking(int x, int y, struct Object far *trap)
 {
-    /* the hours already handled; no FM Towns name (static) */
+    /* the castle plot stages already handled */
+    /* name: no FM Towns name (static) */
     static int dried = 0;
     struct Tile far *tile;
     int hour;
@@ -1188,7 +1316,11 @@ void far courtyard_hacking(int x, int y, struct Object far *trap)
     }
 }
 
-/* 32: HackTrapBlySkupChamber_ovr110_2DE5, target size 0x1BB. */
+/* Hack 25, Bliy Skup Ductosnore's chamber: after his death (quest 122), with the right
+   objects in place on squares (0x3A, 4), (0x39, 4) and (0x3B, 4) of quality 2 or 6, the two
+   crystals are moved to the middle and the trigger at (0x3A, 5) fires; the quest flag is
+   cleared. */
+/* name: 32: HackTrapBlySkupChamber_ovr110_2DE5, target size 0x1BB. */
 void far skup_ductosnore(void)
 {
     struct Object far *obj;
@@ -1220,7 +1352,9 @@ void far skup_ductosnore(void)
     SET_QUEST(122, 0);
 }
 
-/* 33: HackTrapOscillateTiles_ovr110_2FA0, target size 0xC2. */
+/* Hack 12, a standing wave: the seven tiles north of x, y take heights that follow a
+   wave whose phase is the trap's owner (counted up each time by the caller). */
+/* name: 33: HackTrapOscillateTiles_ovr110_2FA0, target size 0xC2. */
 void far standing_wave(int x, int y, int owner)
 {
     struct Tile far *tile;
@@ -1238,7 +1372,9 @@ void far standing_wave(int x, int y, int owner)
     }
 }
 
-/* 34: TileTextureCycle_ovr110_3062, target size 0xC9. */
+/* Hack 14: cycles the floor (and with wall, the wall) textures first..last one step in
+   the rectangle. */
+/* name: 34: TileTextureCycle_ovr110_3062, target size 0xC9. */
 void far cycle_floor(int x, int y, int width, int height,
                      int first, int last, char wall)
 {
@@ -1267,7 +1403,9 @@ void far cycle_floor(int x, int y, int width, int height,
     editchng(6);
 }
 
-/* 35: HackTrapGraffiti_ovr110_312B, target size 0x14E. */
+/* Hack 24, graffiti: in the 9 by 9 area, writings (MAJOR_RECT minor 2 class 0xE) showing
+   one text change to another with a chance; five pairs by owner. */
+/* name: 35: HackTrapGraffiti_ovr110_312B, target size 0x14E. */
 void far do_graffiti(int x, register int y, int owner)
 {
     struct Object far *obj;
@@ -1306,7 +1444,10 @@ void far do_graffiti(int x, register int y, int owner)
     }
 }
 
-/* 36: HackTrapPlatformReset_ovr110_3279, target size 0x135. */
+/* Hack 19: sets each arrow pillar's tile (marked by a trigger of class 4) back to its
+   trigger's height, along the rows from x, y to the first wall, choosing a floor texture
+   by direction when owner is set. */
+/* name: 36: HackTrapPlatformReset_ovr110_3279, target size 0x135. */
 void far reset_arrow_pillars(int x, int y, char owner)
 {
     struct Object far *trig;
@@ -1345,7 +1486,11 @@ void far reset_arrow_pillars(int x, int y, char owner)
     }
 }
 
-/* 37: HackTrap_ClassItem_ovr110_33AE, target size 0x15F. */
+/* Hack 10, the arena's prize (inferred): turns the weapon of class owner on x, y into
+   something for the player's best skill: a mani stone (or a wooden shield with no magic)
+   for a caster, leather gloves for a brawler, 30..41 sling stones for a missile user,
+   otherwise a short sword, hand axe or cudgel. */
+/* name: 37: HackTrap_ClassItem_ovr110_33AE, target size 0x15F. */
 void far change_weapon_playerbest(int x, int y, int owner)
 {
     struct Object far *obj;
@@ -1408,7 +1553,10 @@ void far change_weapon_playerbest(int x, int y, int owner)
     }
 }
 
-/* 38: HackTrap_ForceField_ovr110_350D, target size 0xDC. */
+/* Hack 11, fraznium: the force field on x, y is lifted out of the way (height 0x7F) when
+   the player wears the fraznium gauntlets or circlet, else lowered; owner set lowers it
+   regardless. */
+/* name: 38: HackTrap_ForceField_ovr110_350D, target size 0xDC. */
 void far check_fraznium(int x, int y, unsigned char owner)
 {
     union Link far *head;
@@ -1429,7 +1577,8 @@ void far check_fraznium(int x, int y, unsigned char owner)
         field->pos = field->pos & 0xFF80 | (gloves ? 0x7F : 0) & 0x7F;
 }
 
-/* 39: FindAndUseSwitch_ovr110_35E9, target size 0x59. */
+/* Hack 18: flips the switch on x, y to position owner and fires its use triggers. */
+/* name: 39: FindAndUseSwitch_ovr110_35E9, target size 0x59. */
 void far switch_flip_hack(int x, int y, int owner)
 {
     struct Object far *obj;
@@ -1438,8 +1587,9 @@ void far switch_flip_hack(int x, int y, int owner)
         checkTrap(0L, obj, 4, x, y);
 }
 
-/* 40: RandomSwitchFlicker_ovr110_3642, target size 0x44. Named maybe_flip_a_switch_ in FM Towns, at the same position
-   among its neighbours, and the code corresponds. */
+/* play_with_switches callback: flips a switch at random. */
+/* name: 40: RandomSwitchFlicker_ovr110_3642, target size 0x44. Named maybe_flip_a_switch_
+   in FM Towns, at the same position among its neighbours, and the code corresponds. */
 unsigned char far maybe_flip_a_switch(struct Object far *obj)
 {
     switch OBJ_CLASS(obj) {
@@ -1450,7 +1600,8 @@ unsigned char far maybe_flip_a_switch(struct Object far *obj)
     return 0;
 }
 
-/* 41: FlickSwitchesInTileRandomly_ovr110_3686, target size 0x73. */
+/* Hack 29: flips switches at random in the 5 by 2 area from x, y. */
+/* name: 41: FlickSwitchesInTileRandomly_ovr110_3686, target size 0x73. */
 void far play_with_switches(int x, int y)
 {
     union Link far *head;
@@ -1465,8 +1616,9 @@ void far play_with_switches(int x, int y)
     editchng(2);
 }
 
-/* 42: RechargeLightSphere_ovr110_36F9, target size 0x24. Named recharge_a_lightbulb_ in FM Towns, at the same position
-   among its neighbours, and the code corresponds. */
+/* recharge_lightbulbs callback: a light sphere gets full quality. */
+/* name: 42: RechargeLightSphere_ovr110_36F9, target size 0x24. Named recharge_a_lightbulb_
+   in FM Towns, at the same position among its neighbours, and the code corresponds. */
 unsigned char far recharge_a_lightbulb(struct Object far *obj)
 {
     switch OBJ_ITEM(obj) {
@@ -1476,7 +1628,8 @@ unsigned char far recharge_a_lightbulb(struct Object far *obj)
     return 0;
 }
 
-/* 43: RechargeLightSpheresInTile_ovr110_371D, target size 0xAB. */
+/* Hack 35: recharges the light spheres on x, y, with a sparkle on each. */
+/* name: 43: RechargeLightSpheresInTile_ovr110_371D, target size 0xAB. */
 void far recharge_lightbulbs(int x, int y)
 {
     union Link far *head;
@@ -1495,8 +1648,9 @@ void far recharge_lightbulbs(int x, int y)
     }
 }
 
-/* 44: BottleRecycler_ovr110_37C8, target size 0x26. Named redeem_a_bottle_ in FM Towns, at the same position
-   among its neighbours, and the code corresponds. */
+/* redeem_all_bottles callback: an empty bottle (0x13D) becomes a coin. */
+/* name: 44: BottleRecycler_ovr110_37C8, target size 0x26. Named redeem_a_bottle_ in FM
+   Towns, at the same position among its neighbours, and the code corresponds. */
 unsigned char far redeem_a_bottle(struct Object far *obj)
 {
     switch OBJ_ITEM(obj) {
@@ -1506,7 +1660,8 @@ unsigned char far redeem_a_bottle(struct Object far *obj)
     return 0;
 }
 
-/* 45: HackTrapBottleRecycler_ovr110_37EE, target size 0x4C. */
+/* Hack 33: turns the empty bottles on x, y into coins (a bottle return). */
+/* name: 45: HackTrapBottleRecycler_ovr110_37EE, target size 0x4C. */
 void far redeem_all_bottles(int x, int y)
 {
     union Link far *head;
@@ -1515,8 +1670,9 @@ void far redeem_all_bottles(int x, int y)
         Obj_Check(Obj_PtrTMem(head), redeem_a_bottle);
 }
 
-/* 46: ToggleForcefield_ovr110_383A, target size 0x44. Named toggle_force_field_ in FM Towns, at the same position
-   among its neighbours, and the code corresponds. */
+/* find_and_gronk_force_field callback: raises or lowers a force field. */
+/* name: 46: ToggleForcefield_ovr110_383A, target size 0x44. Named toggle_force_field_ in FM
+   Towns, at the same position among its neighbours, and the code corresponds. */
 unsigned char far toggle_force_field(struct Object far *obj)
 {
     if (OBJ_ITEM(obj) != ITEM_FORCE_FIELD_16D)
@@ -1525,13 +1681,16 @@ unsigned char far toggle_force_field(struct Object far *obj)
     return 1;
 }
 
-/* 47: HackTrapForceField_ovr110_387E, target size 0x2F. */
+/* Hack 26: toggles the force fields on x, y. */
+/* name: 47: HackTrapForceField_ovr110_387E, target size 0x2F. */
 void far find_and_gronk_force_field(int x, int y)
 {
     Obj_Check(Obj_PtrTMem(&Map_GetAddr(x, y)->objects), toggle_force_field);
 }
 
-/* 48: SmiteUndead_ovr110_38AD, target size 0xB0. */
+/* Destroys a floating skull: it becomes a plain skull, falls or vanishes, and drops what
+   it carried. */
+/* name: 48: SmiteUndead_ovr110_38AD, target size 0xB0. */
 unsigned char far destroy_floatskull(struct Object far *obj)
 {
     obj->id = obj->id & 0xFE00 | ITEM_SKULL_C3;
@@ -1545,7 +1704,10 @@ unsigned char far destroy_floatskull(struct Object far *obj)
     return 1;
 }
 
-/* 49: PrisonTowerQuest60_ovr110_395D, target size 0xCB. */
+/* The prison tower alarm: if any non-loner of race 6 (goblins by the race strings) is
+   hostile, quest 60 is set and the
+   schedules notified. */
+/* name: 49: PrisonTowerQuest60_ovr110_395D, target size 0xCB. */
 void far prison_alarm_check(void)
 {
     unsigned char far *p;
@@ -1564,7 +1726,8 @@ void far prison_alarm_check(void)
     }
 }
 
-/* 50: LothIsDeadKillHisLiches_ovr110_3A28, target size 0x97. */
+/* Kills every active critter of race (0xFF: every undead, and floating skulls). */
+/* name: 50: LothIsDeadKillHisLiches_ovr110_3A28, target size 0x97. */
 void far genocide(int race)
 {
     unsigned char far *p;
@@ -1579,7 +1742,9 @@ void far genocide(int race)
     }
 }
 
-/* 51: KillCritter_ovr110_3ABF, target size 0xFD. */
+/* Kills a critter outright: death_check both ways, its loot and corpse, and it drops what
+   it carries. Returns 1 if it was removed. */
+/* name: 51: KillCritter_ovr110_3ABF, target size 0xFD. */
 unsigned char far instant_kill(struct Object far *obj)
 {
     int oldx;
@@ -1608,7 +1773,9 @@ unsigned char far instant_kill(struct Object far *obj)
     return 0;
 }
 
-/* 52: CheckIfMatchingRace_ovr110_3BBC, target size 0x7E. */
+/* True when obj is of race; race 0xFF matches undead (resist bit 0x80) and floating
+   skulls. */
+/* name: 52: CheckIfMatchingRace_ovr110_3BBC, target size 0x7E. */
 unsigned char far is_my_race(struct Object far *obj, int race)
 {
     if (OBJ_MAJOR(obj) != MAJOR_CREATURE) {
@@ -1621,7 +1788,8 @@ unsigned char far is_my_race(struct Object far *obj, int race)
         return Creature[OBJ_INMAJOR(obj)].race == race;
 }
 
-/* 53: PuntBishop_ovr110_3C3A, target size 0x19. FM Towns has no function between is_my_race_
+/* Removes the Bishop (whoami 6). */
+/* name: 53: PuntBishop_ovr110_3C3A, target size 0x19. FM Towns has no function between is_my_race_
    and fire_trigger_at_; it has an overlay stub entry, so it is public. The name is provisional
    (IDA's RemoveBishop_ovr110_3C3A), chosen so that its tools/bssorder.py key puts it in the
    EXE's overlay stub order. */
@@ -1630,7 +1798,8 @@ void far PuntBishop_ovr110_3C3A(void)
     gronk_whoami(6, 0, 0, remove_whoami);
 }
 
-/* 54: TriggerTrapInTile_ovr110_3C53, target size 0x87. */
+/* Fires the first trigger or trap on square x, y. */
+/* name: 54: TriggerTrapInTile_ovr110_3C53, target size 0x87. */
 void far fire_trigger_at(int x, int y)
 {
     struct Object far *trap;
@@ -1645,7 +1814,9 @@ void far fire_trigger_at(int x, int y)
     }
 }
 
-/* 55: TransformTalker_ovr110_3CDA, target size 0x131. */
+/* Changes a critter into another creature (item -1 keeps it) with a new whoami,
+   powerful bit and attitude (-1 keeps each), settling it on the floor. */
+/* name: 55: TransformTalker_ovr110_3CDA, target size 0x131. */
 unsigned char far transform_creature(struct Object far *obj, int item, int whoami,
                                      int powerful, int attitude)
 {
@@ -1673,7 +1844,13 @@ unsigned char far transform_creature(struct Object far *obj, int item, int whoam
     return 1;
 }
 
-/* 56: WorldGemTravel_ovr110_3E0B, target size 0x143. */
+/* The blackrock gem: the facet the player stands at (eight around the gem at fine
+   position 0xE3, 0x143) takes him to its world if that facet's gem has been used
+   (QB_GEMS_USED) or it is the facet the gem currently shows (vars[6]); worlds[] gives each
+   facet's level, square and facing. The world is marked visited (QB_WORLDS_VISITED, with
+   facets 5 and 6 swapped for the bit). Otherwise 'That face of the gem remains opaque, and
+   you are bounced back.'. */
+/* name: 56: WorldGemTravel_ovr110_3E0B, target size 0x143. */
 int far black_gem_trip(void)
 {
     static struct { unsigned char map, x, y, flags; } worlds[8] = {
@@ -1709,12 +1886,14 @@ int far black_gem_trip(void)
         trap_teleport_data = worlds[world].flags;
         return do_teleport(ThePlayer, worlds[world].x, worlds[world].y, worlds[world].map);
     }
-    game_sprint(0x15C);
+    game_sprint(0x15C);  /* 'That face of the gem remains opaque, and you are bounced back.' */
     return 4;
 }
 
-/* 57: RotateWorldGem_ovr110_3F4E, target size 0x9B. Named black_gem_rotate_ in FM Towns, at the same position
-   among its neighbours, and the code corresponds. */
+/* Hack 54: the gem shows a new random facet (vars[6]), from the first 1, 3, 6 or all 8
+   by the castle plot's stage, not the last one shown or a used one (8 when none is left). */
+/* name: 57: RotateWorldGem_ovr110_3F4E, target size 0x9B. Named black_gem_rotate_ in FM
+   Towns, at the same position among its neighbours, and the code corresponds. */
 void far black_gem_rotate(void)
 {
     int old_gem, gem;
@@ -1738,7 +1917,11 @@ void far black_gem_rotate(void)
     editchng(2);
 }
 
-/* 58: QbertTraps_ovr110_3FE9, target size 0x6C6. */
+/* Hack 32, the q*bert floor puzzle (inferred from the name): stepping on a tile (owner
+   0x3F) moves its floor colour along the sequence kept in vars[100..]; when the 5 by 5
+   pyramid is all one colour the walls take it and the reward objects (fixed object indexes
+   0x3CC, 0x3CD, 0x29A, 0x279) are set. */
+/* name: 58: QbertTraps_ovr110_3FE9, target size 0x6C6. */
 void far do_qbert(int owner)
 {
     static unsigned char gate_links[7] = { 0x21, 0x7F, 0x4F, 0x5B, 0x10, 0x29, 0xC2 };
@@ -1885,7 +2068,9 @@ void far do_qbert(int owner)
     }
 }
 
-/* 59: AvatarIsACowardInThePits_ovr110_46AF, target size 0xCC. */
+/* The player has left the arena mid-fight: the pit fighters stop, the first talks to him,
+   and his pit record and fight are cleared. */
+/* name: 59: AvatarIsACowardInThePits_ovr110_46AF, target size 0xCC. */
 void far arena_player_runs(void)
 {
     struct Object far *warrior;
@@ -1915,7 +2100,10 @@ void far arena_player_runs(void)
     }
 }
 
-/* 60: TransformRedPotionToPoison_ovr110_477B, target size 0x142. */
+/* Hack 38 callback: a red potion with ID_FLAG11 set becomes a green potion holding a
+   poison trap (1..8), or water if no trap can be made; called on the cursor object and the
+   player's contents too. */
+/* name: 60: TransformRedPotionToPoison_ovr110_477B, target size 0x142. */
 unsigned char far morpheus_ruin_potion(struct Object far *potion)
 {
     struct Object far *trap;
@@ -1926,7 +2114,7 @@ unsigned char far morpheus_ruin_potion(struct Object far *potion)
             unforce_mouse_cursor(3);
             force_mouse_cursor(OBJ_ITEM(CursorObjPtr));
         } else
-            ;   /* an empty else: probably a debug message compiled out. Without it -O
+            ;   /* match: an empty else: probably a debug message compiled out. Without it -O
                    cross-jumps the force_mouse_cursor cleanup into RedisplayInvSlot's */
         return 0;
     } else {
@@ -1951,17 +2139,21 @@ unsigned char far morpheus_ruin_potion(struct Object far *potion)
     return 0;
 }
 
-/* 61: HackTrapTransformPotionToPoison_ovr110_48BD, target size 0x2F. */
+/* Hack 38: spoils the cure potions on x, y. */
+/* name: 61: HackTrapTransformPotionToPoison_ovr110_48BD, target size 0x2F. */
 void far ruin_cure_potions(int x, int y)
 {
     Obj_Check(Obj_PtrTMem(&Map_GetAddr(x, y)->objects), morpheus_ruin_potion);
 }
 
-/* The telekinesis wand's object index, found by find_TK_wand_check. FM Towns keeps it as an
-   unnamed static (it shows as _update_vscreen+1); the name is ours. */
+/* The telekinesis wand's object index, found by find_TK_wand_check. */
+/* name: FM Towns keeps it as an unnamed static (it shows as _update_vscreen+1); the name
+   is ours. */
 static int TK_wand;
 
-/* 62: FindAcademyWand_ovr110_48EC, target size 0x6E. */
+/* Obj_Check callback: finds the telekinesis wand (a wand with id bit 13, spell major -1
+   effect 0x27) and remembers its index. */
+/* name: 62: FindAcademyWand_ovr110_48EC, target size 0x6E. */
 unsigned char far find_TK_wand_check(struct Object far *obj)
 {
     int major, effect;
@@ -1976,7 +2168,9 @@ unsigned char far find_TK_wand_check(struct Object far *obj)
     return 1;
 }
 
-/* 63: MoveAcademyWand_ovr110_495A, target size 0x1E2. */
+/* Takes the telekinesis wand away from the player wherever it is (cursor, inventory or
+   map) and puts it back at fine position (0xFB, 0xEB), height 0x50. */
+/* name: 63: MoveAcademyWand_ovr110_495A, target size 0x1E2. */
 void far remove_TK_wand(void)
 {
     struct Object far *wand;
@@ -2020,7 +2214,10 @@ void far remove_TK_wand(void)
         }
 }
 
-/* 64: HackTrapVendingMachine_ovr110_4B3C, target size 0x1ED. */
+/* Hacks 40..42, the vending machine: 0x28 selects an item (vars[machine]), 0x29 sells it
+   for half its value + 1 in coins put on x, y, 0x2A prints '<Item> is the current
+   selection (N gp).'. */
+/* name: 64: HackTrapVendingMachine_ovr110_4B3C, target size 0x1ED. */
 void far go_vend(int which, int machine, int x, int y, int choice)
 {
     static int vend_items[8] = {
@@ -2059,7 +2256,7 @@ void far go_vend(int which, int machine, int x, int y, int choice)
         if (text[0] >= 'a' && text[0] <= 'z')
             text[0] = text[0] + 'A' - 'a';
         scroll_print(text);
-        game_sprint(0x15D);
+        game_sprint(0x15D);  /* ' is the current selection ' */
         i = 0;
         text[i++] = '(';
         if (price > 9)
@@ -2076,8 +2273,9 @@ void far go_vend(int which, int machine, int x, int y, int choice)
     }
 }
 
-/* 65: CollectMoneyInTile_ovr110_4D29, target size 0x151. With check set, only counts
-   whether the coins in the tile cover money; otherwise takes them. */
+/* With check set, only counts whether the coins in the tile cover money; otherwise
+   takes them. Returns 1 when they do. */
+/* name: 65: CollectMoneyInTile_ovr110_4D29, target size 0x151. */
 unsigned char far vend_check_gold(char x, char y, unsigned char money, unsigned char check)
 {
     struct Object far *coins;
@@ -2112,15 +2310,21 @@ unsigned char far vend_check_gold(char x, char y, unsigned char money, unsigned 
     return money == 0;
 }
 
-/* 66: StoreReverseObjectLookupResultInVar_ovr110_4E7A, target size 0x1C. Named gronkify_find_ in FM Towns, at the same position
-   among its neighbours, and the code corresponds. */
+/* gronk callback: stores the object's index in *result. */
+/* name: 66: StoreReverseObjectLookupResultInVar_ovr110_4E7A, target size 0x1C. Named
+   gronkify_find_ in FM Towns, at the same position among its neighbours, and the code
+   corresponds. */
 char far gronkify_find(struct Object far *obj, register int *result)
 {
     *result = Obj_MemTPtr(obj);
     return 0;
 }
 
-/* 67: SendAvatarToJail_ovr110_4E96, target size 0x1A8. */
+/* Jail: the player wakes in the cell (0x2A, 0x26 of level 1) a little later (up to 40
+   minutes pass), having lost a ninth of his experience and with his hit points set to his
+   strength. The guards (race 0x1C, humans by the race strings) calm down, quest 112 is set,
+   Lord British is moved outside the cell, and the cell's trigger fires. */
+/* name: 67: SendAvatarToJail_ovr110_4E96, target size 0x1A8. */
 void far put_player_in_jail(void)
 {
     int lb_index;
@@ -2155,7 +2359,9 @@ void far put_player_in_jail(void)
     new_player_pos();
 }
 
-/* 68: KilhornIsCrashing_ovr110_503E, target size 0x54. */
+/* Killorn Keep crashes: the screen shakes and fades, quest 54 is set and the schedules
+   catch up (unless the player is entering the level). */
+/* name: 68: KilhornIsCrashing_ovr110_503E, target size 0x54. */
 void far Killorn_just_crashed(unsigned char entering)
 {
     do_sfx(4, 0);

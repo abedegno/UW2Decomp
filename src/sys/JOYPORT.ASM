@@ -1,8 +1,18 @@
 ; /* target: seg021_22FD_2E0 */
 ; /* opts: /ml */
 ;
-; The joystick (port 201h): reading and calibrating the axes and buttons, with far thunks for
-; C.
+; The analogue joystick on the game port (201h): finding which of the four axes are connected,
+; timing them, turning the counts into positions from -127 to 127 around the centre found at
+; start-up, and reading the four buttons. FM Towns has initjoy, joystick and jbuttons here (as
+; stubs). The far entries (_2E0, _2E4, _2E8, _369, _36D, _371) are for C (SYSENTRY.ASM's
+; joy_position and the debug key Ctrl+J in DEBUG.C).
+;
+; Data (FD71): 01A0 the four positions (-127..127); 01A8 each axis's centre count (0: not
+; connected); 01B0 the four buttons (0 or -1); 01B8 the raw counts from the last timing;
+; 01C0 a trim subtracted from each position; 01C8 a saved set of positions; 01D0 the number of
+; axes connected; 01D2 their mask (bit per axis, as on port 201h).
+;
+; name: descriptive (module 6 of seg021, "the joystick port").
 ;
 ; SEG021 split into its original modules: this is module 6 of 17, +2E0..+450 of the segment
 ; (file 23FE0h), a module of the second library (UWLIB.LIB).
@@ -37,24 +47,29 @@ SEG021_TEXT segment para public 'CODE'
         public  _seg021_22FD_3FD
 
 ; seg021_22FD_2E0  (+2E0)
+; _2E0: far entry to _30A (find and centre the axes).
 _seg021_22FD_2E0 proc far
         call    _seg021_22FD_30A
         retf
 _seg021_22FD_2E0 endp
 
 ; seg021_22FD_2E4  (+2E4)
+; _2E4: far entry to _3A3 (read the positions).
 _seg021_22FD_2E4 proc far
         call    _seg021_22FD_3A3
         retf
 _seg021_22FD_2E4 endp
 
 ; seg021_22FD_2E8  (+2E8)
+; _2E8: far entry to _2EC (read the buttons).
 _seg021_22FD_2E8 proc far
         call    _seg021_22FD_2EC
         retf
 _seg021_22FD_2E8 endp
 
 ; seg021_22FD_2EC  (+2EC)
+; _2EC (jbuttons, probably): read port 201h and store each button (bits 4-7, pressed when 0) as
+; -1 or 0 at 01B0.., for the axes that are connected.
 _seg021_22FD_2EC proc near
         mov     dx,201h
         in      al,dx
@@ -76,6 +91,10 @@ L0303:
 _seg021_22FD_2EC endp
 
 ; seg021_22FD_30A  (+30A)
+; _30A (initjoy, probably): clear the data, time all four axes once (_3FD), and keep each count
+; between 10h and 3E8h as that axis's centre; an axis outside that range is not connected (and
+; when FD71:0120 is set, the first such axis drops all the rest too; 0120 is also read by
+; KEYQUEUE.ASM's _46B, meaning not known). Sets 01D0 and 01D2.
 _seg021_22FD_30A proc near
         sub     ax,ax
         mov     di,1A0h
@@ -123,6 +142,7 @@ L0360:
 _seg021_22FD_30A endp
 
 ; seg021_22FD_369  (+369)
+; _369, _36D, _371: far entries to _375, _380 and _38F.
 _seg021_22FD_369 proc far
         call    _seg021_22FD_375
         retf
@@ -141,6 +161,7 @@ _seg021_22FD_371 proc far
 _seg021_22FD_371 endp
 
 ; seg021_22FD_375  (+375)
+; _375: clear the trims at 01C0.
 _seg021_22FD_375 proc near
         mov     di,1C0h
         sub     ax,ax
@@ -150,6 +171,7 @@ _seg021_22FD_375 proc near
 _seg021_22FD_375 endp
 
 ; seg021_22FD_380  (+380)
+; _380: read the positions and save them at 01C8.
 _seg021_22FD_380 proc near
         call    _seg021_22FD_3A3
         mov     si,1A0h
@@ -160,6 +182,8 @@ _seg021_22FD_380 proc near
 _seg021_22FD_380 endp
 
 ; seg021_22FD_38F  (+38F)
+; _38F: read the positions and store at 01C0 each one less its saved value (01C8). Probably
+; calibration steps of a joystick set-up screen; no caller in the C sources was traced.
 _seg021_22FD_38F proc near
         call    _seg021_22FD_3A3
         mov     si,1A0h
@@ -174,6 +198,9 @@ L039B:
 _seg021_22FD_38F endp
 
 ; seg021_22FD_3A3  (+3A3)
+; _3A3 (joystick, probably): time the axes (_3FD) and, for each connected one, position = (count
+; - centre) * 128 / centre - trim, with a dead zone of 4 around 0 and clamped to -127..127,
+; stored at 01A0.
 _seg021_22FD_3A3 proc near
         cmp     word ptr ds:[1D0h],0
         je      short L03EB
@@ -226,6 +253,9 @@ L03F8:
 _seg021_22FD_3A3 endp
 
 ; seg021_22FD_3FD  (+3FD)
+; _3FD: time the connected axes: write to port 201h to start the one-shots, then with interrupts
+; off count down until each axis bit falls, recording the count each time a bit changes; the
+; counts go to 01B8.. for the axes that fell. CX running out (no change) ends the loop.
 _seg021_22FD_3FD proc near
         mov     ah,byte ptr ds:[1D2h]
         sub     cx,cx

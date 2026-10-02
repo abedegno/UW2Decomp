@@ -284,8 +284,9 @@ int far seg039_3452_781(int file);
 int far seg039_3452_7B2(int file, int index);
 void far game_sprint(int id);
 void far game_strings_3(int first, int second, int third);
-/* 3265:0814, upper-cases a far string in place and returns it. FM Towns has no
-   counterpart (its build is Japanese), so the name is the segment and offset. */
+/* 3265:0814, upper-cases a far string in place and returns it. */
+/* name: FM Towns has no counterpart (its build is Japanese), so the name is the segment
+   and offset. */
 char far * far seg039_3452_814(char far *s);
 char far * far seg039_3452_857(char far *s);
 int far seg039_3452_89A(char far *s);

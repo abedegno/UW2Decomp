@@ -1,5 +1,9 @@
-/* sys.h: The program's start-up, main loop and shutdown, memory and EMS, errors, small
-   helpers, debugging hooks, and the C-like helpers in seg017. */
+/* sys.h: the program's start-up, main loop and shutdown, memory and EMS, errors, small
+   helpers, debugging hooks, the C-like helpers in seg017 (MODEX.ASM), and the C side of
+   seg021, the assembly system layer: the input and timer drivers (SYSENTRY.ASM) and the
+   entry points into the 3D renderer (C3DENTRY.ASM). The far pointers declared for seg021
+   (Alt, Asc, MouseDx, cPlayer ...) point into seg021's own data segment, dseg062_62a6;
+   SYSENTRY.ASM's header has a map of it. docs/subsystems/sys.md describes the subsystem. */
 #ifndef SYS_H
 #define SYS_H
 
@@ -11,8 +15,9 @@ struct Camera;
 
 /* UWEDIT.C: the program's main and its startup and shutdown */
 extern char HomeDir[0x42];
-/* DS:5D60, FM Towns _scrmode (IDA's label "InGameMode" here is wrong: a different global,
-   DS:2506, exists under that name already). */
+/* DS:5D60, FM Towns _scrmode.
+   name: IDA's label "InGameMode" here is wrong: a different global, DS:2506, exists
+   under that name already. */
 extern int scrmode;
 extern int scrnum;
 extern int notdone;
@@ -46,21 +51,22 @@ void far mainloop(void);
 void far editchng(int bits);
 
 /* EMS.C: EMS (LIM expanded memory) driver calls */
-/* No FM Towns counterpart (FM Towns has no EMS): the segment of the EMS page frame, set
-   by seg013 from INT 67h function 41h. Provisional name. */
+/* The segment of the EMS page frame, set by seg013 from INT 67h function 41h.
+   name: provisional; no FM Towns counterpart (FM Towns has no EMS). */
 extern unsigned ems_frame;
 void far seg013_1D3C_138(unsigned handle, char far *name);
 int far seg013_1D3C_A(unsigned min_pages, unsigned max_pages);
 void far seg013_1D3C_B2(void);
 
 /* TMPALLOC.C: memory and the workspace */
-/* DOS A5 is FM Towns mem_setup: both initialise the page counts and invalidate mappings.
-   The IDA name is kept as the public symbol until its target-table entry is renamed. */
+/* name: DOS A5 is FM Towns mem_setup: both initialise the page counts and invalidate
+   mappings. The IDA name is kept as the public symbol until its target-table entry is
+   renamed. */
 void far mem_setup(int page);
 void far seg042_35ED_12B(void);
 void far init_mem(void);
 void far free_mem(void);
-/* DOS only: maps the critter animation pages into the EMS frame. Provisional name. */
+/* DOS only: maps the critter animation pages into the EMS frame. name: provisional. */
 void far map_crit_pages(void);
 int far set_workspace(void);
 void far release_workspace(void);
@@ -107,14 +113,14 @@ char far * far str_str(char far *s, char far *find);
 extern unsigned far int0_sp;
 extern unsigned far int0_ss;
 /* The divide-by-zero trap in seg018 (assembly), and the two words in its code segment
-   where it finds the stack to return to. DOS only; the names are ours. */
+   where it finds the stack to return to. name: DOS only; the names are ours. */
 void interrupt far int0_trap();
 
 /* SYSENTRY.ASM */
 extern unsigned char far *Alt;  /* DS:2130 */
 extern unsigned char far *Asc;  /* DS:2148, FM Towns _Asc */
 /* DS:212C, a far pointer to the keyboard handler's caps lock state (it sets the LEDs from
-   it). FM Towns has no counterpart, so the name is ours. */
+   it). name: ours; FM Towns has no counterpart. */
 extern unsigned char far *CapsLock;  /* DS:212C */
 extern unsigned char far *Ctrl;  /* DS:2134 */
 extern int far *MouseDx;  /* DS:214C, FM Towns _MouseDx */
@@ -127,18 +133,23 @@ extern int far *cJoyInit;
 extern int far *cPerror;
 extern int far *joy_buttons;
 extern int far *joy_position;
-/* The asm input module (2110): FM Towns key_, mouse_ and mbuttons. */
+/* The asm input module (2110): FM Towns key_, mouse_ and mbuttons. key returns the next key
+   event (0 for none, else the character in the low byte and the scan code in the high);
+   mouse leaves the motion in *MouseDx and *MouseDy. */
 int far key(void);
 extern unsigned char far *key_on;  /* DS:2138 */
 int far mbuttons(void);
 void far mouse(void);
-void far seg021_22FD_755(void);
-void far seg021_22FD_791(void);
-void far seg021_22FD_7CD(void);
-void far seg021_22FD_809(void);
+void far seg021_22FD_755(void);    /* seg021's start-up (grfx_init) */
+void far seg021_22FD_791(void);    /* and shut-down (grfx_close) */
+void far seg021_22FD_7CD(void);    /* read the joystick into *joy_position */
+void far seg021_22FD_809(void);    /* read its buttons into *joy_buttons */
 
-/* C3DENTRY.ASM */
-void far Callback_seg021_22FD_CEA(int);
+/* C3DENTRY.ASM: the C entry points into the 3D renderer (seg004) and the frame buffer
+   (seg003's GRENTRY.ASM). cRender draws a frame from the render database and in fact
+   returns the clock ticks it took in DX:AX; cPlaceFB puts the view's frame buffer on the
+   screen at (x, y), y counting up from the bottom; cFrmtoRaw decodes a picture. */
+void far Callback_seg021_22FD_CEA(int);    /* FM Towns cLiteFB */
 int far cAtan2(int x, int y);
 extern int far *cDbase;  /* DS:216C, start of the bytecode buffer */
 extern int far *cDbbase;  /* DS:2180, where gr_entry records dbptr */
@@ -158,9 +169,9 @@ int far cSqRt(long v);
 void far cZoom(unsigned zoom);
 
 /* STUBS2.C: screen changes */
-/* Declared before the rest of its file because TLINK numbers the overlay's stub entries in
-   the order Turbo C lists the publics, which for names with the same hash key is the order
-   they were first seen: the EXE's stub has ovr165_E before ovr165_0. */
+/* match: declared before the rest of its file because TLINK numbers the overlay's stub
+   entries in the order Turbo C lists the publics, which for names with the same hash key
+   is the order they were first seen: the EXE's stub has ovr165_E before ovr165_0. */
 void far ovr165_E(void);
 
 /* SETPNT.ASM */

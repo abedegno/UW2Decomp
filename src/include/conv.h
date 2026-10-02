@@ -101,7 +101,7 @@ int far move_convpic(char far *image, int ok, int which);
 void far Converse(unsigned char who, int subclass);
 int far conv_choice_ovr103_A13(int far *stack);
 int far conv_fmenu_ovr103_BF2(int far *stack);
-/* declared before conv_check_inv, because Turbo C lists publics of equal key
+/* match: declared before conv_check_inv, because Turbo C lists publics of equal key
    (595 for both) in reverse order of first sight, and the stub order needs this one last */
 void far conv_play_menu(int option);
 void far npc_say(char far *s);

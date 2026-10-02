@@ -1,9 +1,13 @@
 ; /* target: seg021_22FD_590 */
 ; /* opts: /ml */
 ;
-; Installing and removing the int 9 keyboard handler (_598, _5C8) and setting the keyboard
-; LEDs (_5E9). It opens with its data: the far pointer to the key buffer (_590) and the saved
-; int 9 vector.
+; The keyboard interrupt (int 9): installing and removing the game's own handler, which puts raw
+; scan codes into a 64-byte ring buffer at FD71:0300..033F for KEYQUEUE.ASM to read, and setting
+; the keyboard LEDs. FM Towns has installkey and restorekey here. The module opens with its data
+; in the code segment: _590, the handler's write pointer into the buffer (a far pointer,
+; FD71:0300 at first), and L0594, the saved int 9 vector.
+;
+; name: descriptive (module 8 of seg021, "the int 9 keyboard handler").
 ;
 ; SEG021 split into its original modules: this is module 8 of 17, +590..+680 of the segment
 ; (file 24290h), a module of the second library (UWLIB.LIB).
@@ -38,6 +42,9 @@ L0596:
         db      0h,0h
 
 ; seg021_22FD_598  (+598)
+; _598 (installkey, probably): settle the keyboard layout (KEYQUEUE's _46B), save the int 9
+; vector and point int 9 at the handler at +62E (after _5E9), and set the LEDs from the game's
+; lock state (FD71:01E8, caps lock in bit 0).
 _seg021_22FD_598 proc near
         call    _seg021_22FD_46B
         push    es
@@ -62,6 +69,8 @@ _seg021_22FD_598 proc near
 _seg021_22FD_598 endp
 
 ; seg021_22FD_5C8  (+5C8)
+; _5C8 (restorekey, probably): put the saved int 9 vector back and set the LEDs from the BIOS
+; keyboard flags (0040:0017 bits 4-6).
 _seg021_22FD_5C8 proc near
         push    ds
         push    es
@@ -80,6 +89,14 @@ _seg021_22FD_5C8 proc near
 _seg021_22FD_5C8 endp
 
 ; seg021_22FD_5E9  (+5E9)
+; _5E9: set the keyboard LEDs to AH: send command EDh and then AH to the keyboard (port 60h,
+; waiting on the controller's status port 64h), each up to three tries waiting for the FAh
+; acknowledge. Out: carry set if the keyboard did not acknowledge. Interrupts are off meanwhile.
+;
+; The int 9 handler follows (+62E, no label): read the scan code from port 60h and store it at
+; the write pointer, wrapping at 0340h; on Caps Lock (3Ah) toggle the lock state and the LED;
+; acknowledge the keyboard by pulsing bit 7 of port 61h, and send EOI to the PIC. The BIOS
+; handler is not called, so the BIOS sees no keys while the game runs.
 _seg021_22FD_5E9 proc near
         cli
         push    dx

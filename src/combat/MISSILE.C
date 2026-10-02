@@ -1,9 +1,24 @@
 /* target: seg027_2856 */
 /* opts: -mm -1 -G -O -d */
 /* Missiles: aiming from the mouse, firing by the player, critters, spells and traps,
-   throwing and dropping objects, and launching a missile into the world. The whole of
-   DOS segment seg027_2856, in original order. Function and global names are the
-   originals from the FM Towns symbol table; the source file's own name is not known. */
+   throwing and dropping objects, and launching a missile into the world. The whole of DOS
+   segment seg027_2856, in original order.
+
+   What it does in the game: every missile starts here. Each front end fills in the launch
+   globals (what item, from where, which source object, the aim) and calls missile_fire,
+   which creates the projectile as a mobile object, gives it the source's heading plus the
+   aim, lifts it to the source's eye height, steps it clear of the source (push_missile)
+   and adds it to the map; the motion code (PHYSICS.C and friends) flies it from there and
+   COMBAT.C's missile_thwack applies its damage when it hits. The front ends are
+   player_fire (bows, crossbows and slings, from COMBAT.C's player_attack), critter_fire
+   (AI.C), spell_fire (SPELLS.C), trap_fire (TRIGGER.C) and ReturnObject, which throws or
+   drops the object on the cursor (BAGS.C).
+
+   Data owned: using_bow and magical_missile (which launch sound to play) and the launch
+   parameters below. Missile[] (combat.h) gives each launcher its ammunition and each
+   missile its damage and type.
+   Function and global names are the originals from the FM Towns symbol table.
+   Name: descriptive (missiles: player_fire, missile_fire). */
 
 #include "combat.h"
 #include "inv.h"
@@ -24,11 +39,11 @@ extern int PlayerPitch;
 unsigned char using_bow = 0;
 unsigned char magical_missile = 0;
 
-/* This file's _BSS, DS:2508..2519, laid out by name (tools/bssorder.py). The missile being
-   launched: static in FM Towns (unnamed there, just after Valor), so static here, with
-   provisional names whose keys put them where UW2 has them: missile_class 69, missile_x
-   and missile_y 677, missile_item 917, then missile_src, missile_arc, missile_trx and
-   missile_try all 957, in definition order. */
+/* This file's _BSS, DS:2508..2519: the missile being launched. */
+/* match: laid out by name (tools/bssorder.py). Static in FM Towns (unnamed there, just
+   after Valor), so static here, with provisional names whose keys put them where UW2 has
+   them: missile_class 69, missile_x and missile_y 677, missile_item 917, then missile_src,
+   missile_arc, missile_trx and missile_try all 957, in definition order. */
 static int missile_class;               /* DS:2508 */
 static int missile_x, missile_y;        /* DS:250A, 250C */
 static int missile_item;                /* DS:250E */
@@ -46,6 +61,11 @@ struct Object far * far CreateObj(int id, int b);
 void far ObjectCheck(int a, int b);
 void far TerrainCheck(int a);
 
+/* The player's aim from the mouse position in the 3D view: missile_trx turns the shot
+   up to about 40 heading units (of 256 a turn) either side of straight ahead, and
+   missile_try raises or lowers it, from the pointer's height and the player's pitch. Returns
+   true when the pointer is low enough in the view (y >= 0x2A from its top, inferred) that a
+   drop should be a throw. */
 char far player_settr(void)
 {
     int x, y;
@@ -65,6 +85,12 @@ char far player_settr(void)
     return y >= 0x2A;
 }
 
+/* Fires the player's missile weapon of missile class weapon (8 sling, 9 bow, 10
+   crossbow: items 0x18..0x1A, indexed within class 1): takes one of its
+   ammunition from the inventory and gives the projectile that object's quantity, link,
+   flags, quality (as hit points), owner and enchantment bits, so a fired arrow keeps its
+   identity. A bow or crossbow twangs (effect 9). With no room in front it plays effect 0x2D
+   and prints string 0x10E. */
 void far player_fire(int weapon)
 {
     int slot;
@@ -105,7 +131,7 @@ void far player_fire(int weapon)
             Obj_Free(ammo_obj);
         } else {
             play_effect_here(0x2D, 0x40, 0);
-            game_sprint(0x10E);
+            game_sprint(0x10E);  /* 'You need more space to fire that weapon.' */
         }
         if ((using_bow || weapon == 8) && fired)
             play_effect_on_mobile_src(0xA, proj, 0x14);
@@ -113,6 +139,8 @@ void far player_fire(int weapon)
     }
 }
 
+/* A critter shoots: item is the missile (offset from FIRST_MISSILE), type its missile
+   class, aimed straight along the critter's heading. */
 void far critter_fire(struct Object far *who, int item, int type)
 {
     struct Object far *proj;
@@ -131,6 +159,10 @@ void far critter_fire(struct Object far *who, int item, int type)
         play_effect_on_mobile_src(0xA, proj, 0x14);
 }
 
+/* A spell that makes a missile (spell is the missile's item offset from FIRST_MISSILE).
+   The player aims with the mouse; a critter fires straight ahead; an object caster (a wand
+   on the floor, a trap, inferred: anything at or above objdata) fires flat from the map
+   square inanmMapX, inanmMapY. Returns 1 when the missile was launched. */
 char far spell_fire(struct Object far *who, int spell)
 {
     struct Object far *proj;
@@ -168,6 +200,12 @@ char far spell_fire(struct Object far *who, int spell)
     return proj != 0;
 }
 
+/* Puts the object the player holds on the cursor into the world. In throw mode with the
+   pointer low in the view it is thrown as a missile of class 0xF, keeping its properties as
+   player_fire's ammunition does. Otherwise it is dropped a little in front of the player
+   if can_place finds room (a lit light, minor class 4..6, goes out: its minor class drops
+   by 4), and pressure plates under it are checked; with no room and message set it prints
+   string 0x10D. Returns 1 when the object left the cursor. */
 char far ReturnObject(struct Object far *obj, char message)
 {
     struct Object far *thrown;
@@ -226,13 +264,15 @@ char far ReturnObject(struct Object far *obj, char message)
             obj = 0;
         } else {
             if (message)
-                game_sprint(0x10D);
+                game_sprint(0x10D);  /* 'There is no space to drop that.' */
             play_effect_here(0x2D, 0x40, 0);
         }
     }
     return obj == 0;
 }
 
+/* A missile trap fires: the missile item is the trap's quality * 32 + owner, class 0x14,
+   from map square x, y, flat and slightly turned (missile_trx and missile_try 2). */
 void far trap_fire(struct Object far *trap, int x, int y)
 {
     struct Object far *proj;
@@ -252,6 +292,13 @@ void far trap_fire(struct Object far *trap, int x, int y)
         play_effect_on_mobile_src(0xA, proj, 0x14);
 }
 
+/* Creates and launches the missile described by the launch globals. The heading is the
+   source's fine heading (or 0 when missile_arc was cleared, for objects) plus missile_trx;
+   the height is the source's z plus 5/6 of its height plus twice missile_try (lower for a
+   swimming player). Missiles that are not critters keep their fixed-point position, the
+   launcher's mobile index (last_hit, so the kill is credited, inferred) and missile_try as
+   their vertical speed. A thrown or fired object that can be owned loses its owner. Returns
+   the projectile, or 0 when it could not be created or placed. */
 struct Object far * far missile_fire(void)
 {
     struct Object far *proj;
@@ -312,6 +359,9 @@ failed:
     return 0;
 }
 
+/* Tests whether proj fits where it is or, with launch set, just clear of src (the two
+   radii plus 4 fine units ahead); on success with launch it moves proj there. Returns 0 when
+   a wall or object is in the way. */
 unsigned char far push_missile(struct Object far *proj, struct Object far *src, char launch)
 {
     struct MotionCalc calc;

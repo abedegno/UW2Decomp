@@ -3,9 +3,29 @@
 /* The screen furniture around the 3D view: the vitality and mana flasks, the compass, the
    power gem, the eyes, the first-person weapon and its frames from DATA\weap.dat, the rune
    shelf and active spell icons, the sliding stat/inventory/rune panel, and the frame buffer
-   send. The whole of DOS resident segment seg037_32C0, in original order. Function and
-   global names are the originals from the FM Towns symbol table, except where a comment
-   says otherwise; the source file's own name is not known. */
+   send. The whole of DOS resident segment seg037_32C0, in original order.
+
+   What it does in the game: the rest of the game asks for a display element to change
+   with set_screen_frame(which, value), which sets that element's goal; update_screen, run
+   each frame, moves each element a step towards its goal through its adjust_ function,
+   some at once, some every 32 ticks of the clock and some every 64 (the flasks bubble and
+   the compass needle swings at the slow rate). The elements, by index (adjust, goal,
+   setting): 0 the vitality flask, 1 the mana flask (both shown in 12 steps of their
+   maximum; the vitality flask turns green while poisoned), 2 the compass (16 headings), 3
+   the power gem (the attack's charge, 9 the pulsing ready state), 6 the right-hand panel
+   (it slides across when changed), 7 the gargoyle eyes and 8 the weapon (0..2 a swing of
+   that kind, 3 drawing, 4 ready, 5 sheathing, 6 sheathed). The first-person weapon's
+   pictures come from WEAP.GR by the weapon kind and hand, with per-frame positions from
+   DATA\weap.dat, and are drawn into the frame buffer before it is sent to the screen
+   (do_fbuf_bms, send_FB).
+
+   Data owned: the goal, setting and adjust tables, the flask, compass and weapon frame
+   tables, RightPanel (0 inventory, 1 runes, 2 statistics, 4 while sliding) and
+   panel_dispatch, the weapon frame state (weapid, weap_frame, wframe ...).
+   Function and global names are the originals from the FM Towns symbol table, except where
+   a comment says otherwise.
+   Name: descriptive (the screen furniture around the 3D view: flasks, compass, weapon,
+   panels). */
 
 #include <stdio.h>
 #include <string.h>
@@ -27,9 +47,11 @@ extern unsigned char far Transparency;
 extern unsigned char far stdat[];
 extern unsigned char Palettes[][16];
 
-/* This file's _BSS, DS:33E8-349A. Turbo C lays it out by name: the static that FM Towns
-   keeps just after `setting` (the low byte of *Time at the last redraw) has no original
-   name, and old_time was chosen because it lands first, at DS:33E8, as in the EXE. */
+/* This file's _BSS, DS:33E8-349A: the low byte of *Time at the last redraw, the weapon
+   frame tables and the display elements' settings and goals. */
+/* match: Turbo C lays it out by name: the static that FM Towns keeps just after `setting`
+   has no original name, and old_time was chosen because it lands first, at DS:33E8, as
+   in the EXE. */
 static unsigned char old_time;
 unsigned char weap_x[0x1F];
 unsigned char weap_y[0x1F];
@@ -45,12 +67,13 @@ char far gronk_gr(char *name, int start, int count, unsigned char far *(far *adr
                   char (far *mv)(unsigned char far *p, int size, int n));
 void far MapMemory_seg013_1D3C_C7(int phys, int log);
 
-/* The panel showing on the right, an index into panel_dispatch (FM Towns _RightPanel).
-   DS:79E, the first byte of this file's _DATA: seg035's data ends at 79E and this file's
-   word-aligned _DATA holds DS:79F, so the byte is ours. */
+/* The panel showing on the right, an index into panel_dispatch (FM Towns _RightPanel). */
+/* match: DS:79E, the first byte of this file's _DATA: seg035's data ends at 79E and this
+   file's word-aligned _DATA holds DS:79F, so the byte is ours. */
 unsigned char RightPanel = 0;
 /* Which screen elements to redraw: now, on every 32nd tick, and on every 64th tick. One
-   bit per element, by its index in `adjust`. Static (no FM Towns names); ours. */
+   bit per element, by its index in `adjust`. */
+/* name: static (no FM Towns names); ours. */
 static int slow_adjust = 0;             /* DS:79F */
 static int fast_adjust = 0;             /* DS:7A1 */
 static int now_adjust = 0;              /* DS:7A3 */
@@ -67,7 +90,8 @@ unsigned char bubbling[2] = { 0, 0 };
 unsigned char swishing[2] = { 0, 0 };
 int nedl_x[16] = { -0x5, -0xC, -0x12, -0x18, -0x1A, -0x1B, -0x14, -0xD, -0x6, 0x2, 0xC, 0x10, 0x13, 0x10, 0xB, 0x3 };
 int nedl_y[16] = { 0x8, 0x8, 0x7, 0x5, 0x3, 0x2, -0x1, -0x2, -0x3, -0x2, -0x1, 0x2, 0x3, 0x5, 0x7, 0x8 };
-/* FM Towns keeps the panel buffer's pointer in pbuf too; here it is in EMS. */
+/* The sliding panel's progress. FM Towns keeps the panel buffer's pointer in pbuf too;
+   here the buffer is in EMS. */
 struct {
     unsigned char frame;
     unsigned char flag;
@@ -87,6 +111,7 @@ int level[4] = { 0, 0, 0, 0 };
 void (far *adjust[9])() = { adjust_flasks, adjust_flasks, adjust_compass, adjust_power, 0, 0,
                             adjust_panel, adjust_eyes, adjust_weapon };
 
+/* Draws flask which (0 vitality, 1 mana) at its goal level at once. */
 void far set_flask(int which)
 {
     int frame;
@@ -107,6 +132,7 @@ void far set_flask(int which)
     setting[which] = goal[which];
 }
 
+/* Draws the compass at its goal heading at once. */
 void far set_compass(void)
 {
     int dir;
@@ -118,6 +144,7 @@ void far set_compass(void)
     update_sprites();
 }
 
+/* Resets every display element (the weapon sheathed, the inventory panel). */
 void far reset_scrgr(void)
 {
     int i;
@@ -134,6 +161,8 @@ void far reset_scrgr(void)
     update_sprites();
 }
 
+/* Creates the sprites of the flasks, compass, needle and eyes once, then draws the whole
+   frame: flasks, compass, eyes, rune shelf and the right-hand panel from PANELS.GR. */
 void far init_scrgr(void)
 {
     static unsigned char inited = 0;
@@ -169,6 +198,7 @@ void far init_scrgr(void)
     grSoftPageFlip();
 }
 
+/* Stops a panel slide where it is, taking the target panel at once. */
 void far hold_scrgr(void)
 {
     RightPanel = goal[6] = setting[6];
@@ -181,6 +211,9 @@ void far free_scrgr(void)
     free_panelflip();
 }
 
+/* Sets display element which's goal to val (see the file comment). Flask values are hit
+   points and mana, scaled to 12 steps; the weapon's goal is held back while another weapon's
+   pictures are to be loaded. */
 void far set_screen_frame(char which, int val)
 {
     register int max;
@@ -234,6 +267,9 @@ void far set_screen_frame(char which, int val)
     }
 }
 
+/* Called every frame: steps the display elements whose redraw bits are set, the 'now'
+   ones at once, the fast ones every 32 ticks, the slow ones every 64 (when the flasks may
+   also start bubbling at random). */
 void far update_screen(void)
 {
     unsigned char now;
@@ -280,15 +316,17 @@ void far update_screen(void)
     }
 }
 
+/* Moves flask which one step towards its goal (filling or draining) and animates its
+   bubbles; the vitality flask switches to the green set while the player is poisoned. */
 void far adjust_flasks(int which)
 {
     static int bub_frame[2] = { 0x2019, 0x2032 };
     static int bub_spr[2] = { 0, 0 };
     static int drain_spr[2] = { 0, 0 };
     static int mask_spr[2] = { 0, 0 };
-    /* The flask is used through a register copy, but the bit for `slow_adjust` is shifted
-       by the parameter itself (FM Towns does the same); without the copy the compiler
-       puts `base` in DI and leaves the parameter on the stack. */
+    /* match: the flask is used through a register copy, but the bit for `slow_adjust` is
+       shifted by the parameter itself (FM Towns does the same); without the copy the
+       compiler puts `base` in DI and leaves the parameter on the stack. */
     register int f = which;
     register int n;
     int diff;
@@ -368,6 +406,7 @@ void far adjust_flasks(int which)
     }
 }
 
+/* Turns the compass one step (of 16) the short way towards its goal. */
 void far adjust_compass(void)
 {
     int cur;
@@ -392,6 +431,8 @@ void far adjust_compass(void)
     setting[2] = cur;
 }
 
+/* Shows the power gem: frame p (COMBAT.C sets 0 at rest and 1 + charge / 12 while a blow
+   charges); 9 pulses between two frames. */
 void far adjust_power(void)
 {
     static int spr = 0;
@@ -422,6 +463,8 @@ void far adjust_power(void)
     }
 }
 
+/* Slides the right-hand panel towards the goal panel, a frame at a time (do_panel_frame),
+   with RightPanel 4 while it moves. */
 void far adjust_panel(void)
 {
     if (setting[6] != goal[6]) {
@@ -438,6 +481,8 @@ void far adjust_panel(void)
     }
 }
 
+/* Animates the gargoyle's eyes above the view: a blink sequence of five frames, the set
+   chosen by the goal (inferred: set_screen_frame(7, n) picks the expression). */
 void far adjust_eyes(void)
 {
     static unsigned char wait = 0;
@@ -465,6 +510,7 @@ void far adjust_eyes(void)
     }
 }
 
+/* gronk_gr callback: the next place in the EMS weapon buffer for a picture. */
 unsigned char far * far adr_weapon(int size)
 {
     unsigned char far *p;
@@ -479,6 +525,7 @@ unsigned char far * far adr_weapon(int size)
     return p;
 }
 
+/* gronk_gr callback: records where each weapon picture starts. */
 char far move_weapon(unsigned char far *p, int size, int n)
 {
     if (n == 0)
@@ -487,6 +534,7 @@ char far move_weapon(unsigned char far *p, int size, int n)
     return 1;
 }
 
+/* Asks for weapon kind id's pictures (0..3; -1 none) to be loaded at the next weapon redraw. */
 void far load_weapon(char id)
 {
     weapid = id;
@@ -494,6 +542,10 @@ void far load_weapon(char id)
         fast_adjust |= 0x100;
 }
 
+/* Loads the pictures and frame tables of the weapon kind weapid for the player's hand
+   (lefty): 0x61 bytes of DATA\weap.dat (a picture count, frame totals per swing, the frame
+   of each step and the x, y of each picture) and the pictures from WEAP.GR. With no
+   weapon, the idle frames are used. */
 char far do_weapload(void)
 {
     static unsigned char idle[9] = { 0x20, 0x21, 0x42, 0x63, 0x64, 0x65, 0x86, 0xA7, 0xE8 };
@@ -532,6 +584,7 @@ char far do_weapload(void)
     return ok;
 }
 
+/* Sways the weapon sideways as the player moves: how 0 still, 1 a little, 2 more. */
 void far jiggle_weapon(int how)
 {
     switch (how) {
@@ -550,6 +603,9 @@ void far jiggle_weapon(int how)
     }
 }
 
+/* Steps the first-person weapon: drawing and sheathing play their three frames, a swing
+   plays its frames until its total, then it is ready again; a new weapon's pictures are
+   loaded while sheathed. */
 void far adjust_weapon(void)
 {
     static unsigned char swung = 0;
@@ -632,6 +688,8 @@ void far adjust_weapon(void)
     }
 }
 
+/* Reads the weapon's colour map for the player's skin (DATA\weap.cm, 16 bytes, the second
+   set for body type 1) into palette 30. */
 char far load_weapcm(void)
 {
     char ok;
@@ -648,6 +706,7 @@ char far load_weapcm(void)
     return ok;
 }
 
+/* Shows the three runes on the shelf (RUNE_NONE leaves a place empty). */
 void far set_runes(unsigned char *runes)
 {
     static int spr[3] = { 0, 0, 0 };
@@ -670,6 +729,7 @@ void far set_runes(unsigned char *runes)
     update_sprites();
 }
 
+/* Shows the icons of up to three active spells (0..0x1D) in the 3D view mode. */
 void far active_spells(unsigned char *spells)
 {
     static int spr[3] = { 0, 0, 0 };
@@ -694,6 +754,7 @@ void far active_spells(unsigned char *spells)
     }
 }
 
+/* Prepares a panel slide: draws panel into the EMS buffer to slide in. */
 void far init_panelflip(int panel)
 {
     unsigned char far *buf;
@@ -724,6 +785,7 @@ void far free_panelflip(void)
 {
 }
 
+/* Redraws the right-hand panel in full. */
 void far pretty_panelagain(void)
 {
     if (read_gr_far("panels", RightPanel, stdat)) {
@@ -738,6 +800,8 @@ void far pretty_panelagain(void)
     }
 }
 
+/* One frame of the panel slide: the old panel moves out, then the new one moves in, over
+   20 frames with a two-frame picture on top. Returns 1 when done. */
 char far do_panel_frame(void)
 {
     int frame;
@@ -783,6 +847,7 @@ char far do_panel_frame(void)
     return pbuf.frame == 0;
 }
 
+/* Ends a slide at once, optionally redrawing the panel. */
 void far restore_sliding_panel(int redraw)
 {
     pbuf.flag = 0;
@@ -792,6 +857,8 @@ void far restore_sliding_panel(int redraw)
         pretty_panelagain();
 }
 
+/* The index into wframe for step f of the weapon's current state: 9 frames a swing kind,
+   then the draw/sheathe and ready frames from 0x1B. */
 int far get_wfr(int f)
 {
     int n;
@@ -809,6 +876,9 @@ int far get_wfr(int f)
 
 char ShowStupidFirstPersonWeapon = 1;
 
+/* Draws the first-person weapon into the frame buffer (unless sheathed, turned off, or
+   the camera is detached by Roaming Sight), swaying with the player's speed, and the
+   picture at (0x5E, 0x80) on top. */
 void far do_fbuf_bms(void)
 {
     unsigned char far *p;
@@ -835,6 +905,7 @@ void far do_fbuf_bms(void)
     Transparency = 0;
 }
 
+/* Copies the 3D frame buffer to the screen, after drawing the weapon in demo mode. */
 void far send_FB(void)
 {
     if (demo_mode)
@@ -842,8 +913,10 @@ void far send_FB(void)
     cFBtoScreen();
 }
 
-/* Two empty functions; FM Towns folded player_look_shaft and player_look_grave into one
-   address, so which DOS copy carries which name can't be proven. */
+/* Two empty functions, called when the player looks at a shaft or a gravestone
+   (LOOK.C). */
+/* name: FM Towns folded player_look_shaft and player_look_grave into one address, so
+   which DOS copy carries which name can't be proven. */
 void far player_look_shaft(void)
 {
 }

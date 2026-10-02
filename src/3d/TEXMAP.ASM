@@ -1,7 +1,40 @@
 ; /* target: seg004_0849_54C0 */
 ; /* opts: /ml */
 ;
-; compute_min_max_y and _asm_texture_map.
+; The horizontal polygon texture mapper: _asm_texture_map fills a clipped, projected polygon row
+; by row, walking its left and right edges from its lowest row to its highest (seg003's rows
+; count up from the bottom of the screen) and handing each row to one of the four span drawers
+; in PERTLP.ASM and PERTP.ASM. The vertical mapper for walls, _asm_texture_map_v, is the same
+; design turned on its side (TEXMAPV.ASM). The only caller is _asm_texture_map_1 (PROJPOLY.ASM).
+;
+; Arguments (near call, on the stack; the helpers read them through the caller's BP):
+;   [bp+4]  the texture descriptor (DS:CCF2): +0 width, +2 height, +4 pixel offset, +6 segment,
+;           +8 a byte copied to CF46
+;   [bp+6]  the vertex records (32 bytes each, layout in CLIP.ASM), [bp+8] their count
+;   [bp+0A] the mapping: 0 or 1 linear, 2 perspective
+;   [bp+0C] nonzero to shade the texels (the "tl" span drawers), zero for the "tp" ones
+;
+; Edge state (FD58, 16.16 unless said; FM Towns names, which use the same variables):
+;   CF52 _cur_left_ind, CF54 _cur_right_ind   the vertex each edge has reached
+;   CF56, CF58  the first and last row, clamped to the screen; CF5A _y the row being drawn
+;   CF5C _xleft, CF60 _uleft, CF64 _vleft, CF74 _wleft, CF7C _lleft, and the right edge's
+;   CF68 .. CF80 (the span drawers' inputs, see PERTLP.ASM)
+;   CF84, CF88, CF8C, CF9C, CFA4  the left edge's steps per row in x, u, v, w and l
+;   CF90, CF94, CF98, CFA0, CFA8  the right edge's
+;   CFAC, CFB4, CFB0, CFB8  u * w and v * w at the left and right ends, for floors
+;   CF42  the span drawer chosen for the polygon
+;   CF44  set when a vertex is at z <= 1/256 (where w = 128 / z would overflow): the polygon
+;         is abandoned (FM abort_due_to_kfix_div_ovf)
+;   CCF0  global_floor_or_ceiling_flag (PROJPOLY.ASM's classifier)
+;
+; In the perspective case the edges carry u * w, v * w and w = 128 / z, which are linear on the
+; screen, and the span drawers divide them back. For a floor or ceiling every row is at one depth,
+; so the mapper divides at the two ends of each row and draws the row with a linear span drawer
+; (seg004_0849_5D2E chooses it): one divide per row end in place of one per few pixels. Rows are
+; rounded as the span drawers round x: (y + 41h) >> 16.
+;
+; name: descriptive (module 12 of seg004). compute_min_max_y and _asm_texture_map have their FM
+; Towns names; the helpers are unnamed there too.
 ;
 ; SEG004 split into its original modules: this is module 12 of 14, +54C0..+6240 of the segment
 ; (file E680h), a module of the second library (UWLIB.LIB).
@@ -35,6 +68,12 @@ SEG004_TEXT segment para public use16 'CODE'
         public  _seg004_0849_5D66
 
 ; seg004_0849_54C0  (+54C0)
+; seg004_0849_54C0: step the left edge to its next vertex. The left edge walks the vertices
+; backwards (index - 1, wrapping): CF4C becomes the vertex at _cur_left_ind - 1 and CF4E the one
+; before it. Loads the edge's start (x, l, u * w, v * w and w, or u, v with w = 1.0 when linear)
+; and works out its steps per row by dividing each difference by the edge's height in rows
+; (CF48). A zero-height edge gets zero steps. In: BP = _asm_texture_map's frame. Changes EAX,
+; EBX, ECX, EDX, SI.
 _seg004_0849_54C0 proc near
         mov     ax,word ptr ds:[0CF52h]
         dec     ax
@@ -216,6 +255,8 @@ L5711:
 _seg004_0849_54C0 endp
 
 ; seg004_0849_5712  (+5712)
+; seg004_0849_5712: as seg004_0849_54C0 for the right edge, which walks the vertices forwards
+; (index + 1, wrapping), into CF68 .. CF80 and CF90 .. CFA8.
 _seg004_0849_5712 proc near
         mov     ax,word ptr ds:[0CF54h]
         inc     ax
@@ -402,6 +443,12 @@ L5965:
 _seg004_0849_5712 endp
 
 ; seg004_0849_5966  (+5966)
+; compute_min_max_y: find the polygon's first and last rows. Sets CFCC and CFD0 to the least and
+; greatest sy (16.16) and both edge indices to the vertex with the least sy; if that vertex
+; shares its rounded row with the next or previous vertex, that one becomes the start of the
+; right or left edge instead, so a flat first edge starts both edges at its two ends. The top
+; and bottom rows are clamped to 0 .. 2 * scrh - 1 into CF56 and CF58 (scrh, DS:2470, is half
+; the view height). In: BP = _asm_texture_map's frame.
 _compute_min_max_y proc near
         mov     dword ptr ds:[0CFCCh],7FFFFFFFh
         mov     dword ptr ds:[0CFD0h],80000001h
@@ -496,6 +543,12 @@ L5A50:
 _compute_min_max_y endp
 
 ; seg004_0849_5A54  (+5A54)
+; _asm_texture_map(descriptor, vertices, count, mapping, shaded): draw the polygon into the
+; frame buffer (ES = seg_370D:0958, GS = the texture's segment). Chooses the span drawer, finds
+; the first row, sets up both edges (seg004_0849_5D66), then for each row: advance an edge to
+; its next vertex when the row passes it, for floors divide u * w and v * w by w at both ends,
+; clamp the span to the screen (seg004_0849_5CDF), call the span drawer and step both edges. The
+; last row is drawn after the loop. Keeps SI, DI, ES, GS, BP; clears CF44 on the way out.
 __asm_texture_map proc near
         push    bp
         mov     bp,sp
@@ -695,6 +748,9 @@ L5CD2:
 __asm_texture_map endp
 
 ; seg004_0849_5CDF  (+5CDF)
+; seg004_0849_5CDF: clamp the row's span: x ends below 0 become 0, x ends at or past 2 * scrw
+; (DS:2472 * 2, the view width) become 2 * scrw - 1, and a row at or past 2 * scrh becomes the
+; last row. Changes AX.
 _seg004_0849_5CDF proc near
         test    word ptr ds:[0CF5Eh],0FFFFh
         jns     short L5CF0
@@ -728,6 +784,9 @@ L5D29:
 _seg004_0849_5CDF endp
 
 ; seg004_0849_5D2E  (+5D2E)
+; seg004_0849_5D2E: choose the span drawer into CF42: linear (_lin_) for a floor or ceiling
+; (CCF0) or for a polygon with mapping 0 or 1, else perspective (_per_); shaded (tlp) or not
+; (tp) by the shaded argument. Changes AX.
 _seg004_0849_5D2E proc near
         test    word ptr ds:[0CCF0h],0FFFFh
         jne     L5D3E
@@ -757,6 +816,10 @@ L5D62:
 _seg004_0849_5D2E endp
 
 ; seg004_0849_5D66  (+5D66)
+; seg004_0849_5D66: set up both edges from the first vertex at once: the left edge from
+; _cur_left_ind to the vertex before it, the right edge from _cur_right_ind to the one after,
+; with the starting values and per-row steps of seg004_0849_54C0 and 5712 (an edge of zero rows
+; is taken as one row here). In: BP = _asm_texture_map's frame.
 _seg004_0849_5D66 proc near
         mov     ax,20h
         imul    word ptr ds:[0CF52h]

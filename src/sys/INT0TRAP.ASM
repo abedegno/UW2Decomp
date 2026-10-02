@@ -9,15 +9,18 @@
 ; Hand-written assembly, not C: its variables live in the code segment and are reached
 ; with cs: overrides, it ends in iret after popping the registers it pushed (a Turbo C
 ; interrupt function pushes ax bx cx dx es ds si di bp and loads DS from DGROUP@ instead),
-; and it switches stacks by hand. Only 8086 instructions, so no .186. The segment starts
-; at an odd address right after seg017, so it is byte-aligned, written out in full
-; (`.model medium` would make it word-aligned).
+; and it switches stacks by hand.
+;
+; match: only 8086 instructions, so no .186. The segment starts at an odd address right
+; after seg017, so it is byte-aligned and its segments are written out in full (`.model
+; medium` would make it word-aligned).
 ;
 ; What it does: note the faulting stack (trap_sp, trap_ss), save the registers, switch to
 ; the stack the game was started on (int0_ss:int0_sp, with DS = SS, DGROUP), call
 ; DivideByZeroError(trap_sp, trap_ss), switch back and return from the interrupt.
 ;
-; Names: int0_trap, int0_ss and int0_sp are symbols.tsv's (provisional; FM Towns has no
+; name: descriptive (map/filenames.tsv: "the divide-by-zero trap int0_trap").
+; name: int0_trap, int0_ss and int0_sp are symbols.tsv's (provisional; FM Towns has no
 ; counterpart, being a different machine), div_zero_ovr112_661 likewise. The
 ; other four variables are unnamed in every source and are named here for what they
 ; hold.

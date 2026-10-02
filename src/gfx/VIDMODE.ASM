@@ -1,8 +1,49 @@
 ; /* target: seg003_0272_21D4 */
 ; /* opts: /ml */
 ;
-; _21D4 .. _31E7: video mode setting (SetVideoMode_2B9B), palette and screen routines,
-; nullsub_1.
+; Graphics library module 5: the VGA itself. It sets up the game's screen mode (mode X: the
+; BIOS's 320 x 200 mode 13h unchained to four planes, so there is room for two pages and spare
+; video memory), keeps the row address table (Ytab) through which every routine in the library
+; addresses the screen, flips and scrolls pages, loads the palette, and holds the span writers
+; the primitives call through DS:4112 (solid, copy, save, restore, xor, on one page or both),
+; the pixel and vertical-line writers, set_the_color, init_colors and set_the_window. Its first
+; proc also holds the bitmap routines (show, fbshow, vcopyfb, vcopy and two more), which clip a
+; bitmap's rectangle, write one transfer record per row and call the transfer chosen in 0DC2
+; (GRLIBL.ASM, GRENTRY.ASM), and a concave polygon fill.
+;
+; The y axis points up. _2AED builds Ytab from the highest row down: the highest row gets the
+; page's start address and each lower row the next 80 bytes, and the display start is set to
+; that address (_295F), so row 0 is the bottom line of the screen. Every routine in seg003, and
+; the 3D renderer's frame buffer, uses this orientation.
+;
+; Data (seg_370D): 36A2 the CPU type CPUTYPE.ASM found (FD71:0110: 86h, 30h, 186h, 286h or
+; 386h; from 186h up _2945 writes the palette with rep outsb, which the 8086 lacks); 36A8 the bytes per row (width / 4); 36AC Ytab,
+; the drawing page's row addresses; 3840 the other page's; 2CD4, 2CD6 the second page's start
+; and a spare area after it; 2CD8 the current mode; 2CDE the mode table (6 bytes a mode,
+; copied to 3DEC: last x, last y, and a third word; mode 0 is 320 x 200, mode 1 320 x 400); 2D35 the CRTC's original maximum scan line;
+; 3B64, 3CA8 the left-edge and right-edge plane masks by x; 3DE8..3DFA the screen size and the
+; clip window; 3DFC the screen segment; 3E00 the palette being loaded; 410C the offset from
+; the drawing page to the other one; 4110, 4111 the colour; 4112 the span writer; 4116 the
+; pen's second word (a video memory offset for save and restore).
+; _ShowClip (0DC4) nonzero clips bitmaps to the window; _Transparency (0DC5) nonzero skips
+; colour 0 in them.
+;
+; GRCORE.ASM's jump table maps C entry points to these (52C9 .. 52E7 are the span writers):
+;   52BD _283D init_graphics   52C0 _286C, 52C3 _2869 set mode   52C6 _292D palette to the DAC
+;   5293 _2914 load a palette  5296 _2ABE grPageFlip  5299 _2AC1 grSoftPageFlip
+;   529C _295F show the drawing page  529F _30FB, 52A2 _30E3 read a pixel  52A5 _3094 plot
+;   52A8 _30AC unclipped plot, then _30D7 and _30CF read and compare
+;   52B1 _3164, 52B4 _3121 vertical lines  52B7 _3195 set_the_color  52BA _31BE init_colors
+;   52C9 _2D83 solid  52CC _2F18 copy from the other page  52CF _2D0D solid on both pages
+;   52D2 _2E79 copy onto both pages  52D5 _2E3A copy whole groups from the other page
+;   52D8 _303B, 52DB _2FD6 plane-by-plane copies with the buffer at 4116  52DE _2F96 restore
+;   52E1 _2DF3 save  52E4 _31E7 set_the_window  52E7 _2C9A xor  52EA _283C nothing
+;
+; name: descriptive (module 5 of seg003, "video mode, palette and screen routines"). FM Towns'
+; library has the same jobs under names such as init_graphics_, vga_config, vga_focus,
+; solid_ylr, save_vylr, copy_ylr, restore_vylr, solid_pixel, read_pixel_, solid_uvline,
+; copy_uvline, set_the_color_, set_the_window, concave, show, fbshow, vcopyfb and vcopy, but for
+; its own hardware, so the alignment here is by job, not by code.
 ;
 ; SEG003 split into its original modules: this is module 5 of 14, +21D4..+3206 of the segment
 ; (file 5624h), a module of the second library (UWLIB.LIB).
@@ -97,6 +138,24 @@ SEG003_TEXT segment word public 'CODE'
         public  _SetVideoMode_seg003_0272_2B9B
 
 ; seg003_0272_21D4  (+21D4)
+; show: put a bitmap on the screen. In (from GRCORE's show): AX, BX the screen position, DI, SI
+; the source offset and segment, CX, BP the size, 0DC6, 0DC8 the source's x and y offset.
+; Chooses the transfer by _Transparency (_5372 opaque, _5467 transparent, GRLIBL.ASM) and joins
+; the common path at L2296. The labelled entries after it are the same for other sources and
+; targets: _21ED a bitmap already in video memory (_5578 or _568B by plane alignment, _56E3
+; transparent), _2214 fbshow (into the frame buffer, GRENTRY's _6F8 or _729), _222B into the
+; linear buffer set by _2B62 (_58C7 or _58F8), _2242 vcopyfb (frame buffer to screen, GRENTRY's
+; _A7F) and _2250 vcopy (screen to screen, _581B or, for an overlapping copy to the right,
+; _586D).
+;
+; L2296: clip the rectangle to the window when _ShowClip is set (moving the source offsets to
+; match), then write one 8-byte record per row (y, left, right, source offset) into the table at
+; 0DCB, end it, and jump to the transfer in 0DC2. L2373 and L243F build the records forwards or,
+; for vcopy, in the order an overlapping copy needs.
+;
+; After L249A's ret is the concave polygon fill (FM Towns concave and uconcave, probably): clip
+; with concave_shclip (GRLIBF.ASM), then build the spans of a polygon that may be concave from
+; an edge list (1B84 .. 1B8A) into 2D42 and run the span writer.
 _seg003_0272_21D4 proc near
         cmp     byte ptr ds:[_Transparency],0
         jne     L21E4
@@ -820,6 +879,13 @@ _seg003_0272_283C:
 _seg003_0272_21D4 endp
 
 ; seg003_0272_283D  (+283D)
+; init_graphics: needs a VGA (_2B7A, else returns with carry set). Records the CPU type from
+; FD71:0110, sets mode X (SetVideoMode), saves the CRTC maximum scan line, builds the edge mask
+; tables, and falls into the mode set. _2869 sets the mode number AX first; _286C applies 3DEA:
+; copies the mode's size to 3DEC and to FD71:0C38, sets the scan doubling (the saved value for
+; mode 0, 1 line per row otherwise), sets the window to the whole screen, works out the row
+; length and the two pages and the video memory left after them (4106, 410A), builds Ytab,
+; initialises the pens, flips to page 0, and builds the text masks (GRLIBI's _3BE2).
 _seg003_0272_283D proc near
         push    ds
         mov     ax,seg dseg062_62a6
@@ -923,6 +989,8 @@ L28B9:
 _seg003_0272_283D endp
 
 ; seg003_0272_2914  (+2914)
+; _2914: when 3DFE is set, clear it, copy a palette (183h words) from SI to 3E00 and load it.
+; _292D: wait for vertical retrace and write 256 colours from SI to the DAC (_2945).
 _seg003_0272_2914 proc near
         cmp     word ptr ds:[3DFEh],0
         jne     L291C
@@ -951,6 +1019,8 @@ L2931:
 _seg003_0272_2914 endp
 
 ; seg003_0272_2945  (+2945)
+; _2945: write CX colours from SI to the DAC data port (DX = 3C9h), with rep outsb on a 186 or
+; later (36A2 at least 0BAh), else with single out instructions, since the 8086 has no outsb.
 _seg003_0272_2945 proc near
         cmp     word ptr ds:[36A2h],0BAh
         jl      L2956
@@ -971,6 +1041,8 @@ L2956:
 _seg003_0272_2945 endp
 
 ; seg003_0272_295F  (+295F)
+; _295F: set the CRTC display start (registers 0Ch, 0Dh) to the drawing page, Ytab of the
+; highest row.
 _seg003_0272_295F proc near
         mov     bx,word ptr ds:[3DEEh]
         shl     bx,1
@@ -986,6 +1058,12 @@ _seg003_0272_295F proc near
 _seg003_0272_295F endp
 
 ; seg003_0272_2977  (+2977)
+; _2977: set up a virtual screen with a split (GRCORE's _4A3A). AX = the virtual width in pixels
+; (CRTC offset 13h), BX = the line where the split starts (negative: no split), CX = the height
+; of the scrolling part. Turns on the attribute controller's pixel panning compatibility (so the
+; part below the split does not pan), sets the line compare (_2A8F) and the display start, and
+; rebuilds Ytab for both parts (_2B2C). Used with vscreen_focus for a scrolling picture;
+; probably the cutscenes or the map (not traced).
 _seg003_0272_2977 proc near
         shr     ax,1
         shr     ax,1
@@ -1070,6 +1148,9 @@ L2A09:
 _seg003_0272_2977 endp
 
 ; seg003_0272_2A0D  (+2A0D)
+; vscreen_focus: scroll the virtual screen of _2977 to (AX, BX): rebuild Ytab for the visible
+; part, wait for the vertical retrace, set the display start (whole bytes) and the horizontal
+; pixel panning (attribute register 33h, the low two bits of x, times 2).
 _seg003_0272_2A0D proc near
         xchg    bx,ax
         inc     ax
@@ -1146,6 +1227,8 @@ L2A7C:
 _seg003_0272_2A0D endp
 
 ; seg003_0272_2A8F  (+2A8F)
+; _2A8F: set the CRTC line compare (the split-screen line) to AX, ten bits: register 18h and the
+; overflow bits in registers 7 (bit 4) and 9 (bit 6).
 _seg003_0272_2A8F proc near
         push    ax
         mov     dx,3D4h
@@ -1184,6 +1267,10 @@ L2ABC:
 _seg003_0272_2A8F endp
 
 ; seg003_0272_2ABE  (+2ABE)
+; grPageFlip: display the drawing page (_295F), then fall into grSoftPageFlip (_2AC1): keep the
+; current row table as the displayed page's (3840), work out the other page's start and the
+; offset between them (410C), and rebuild Ytab for it, so drawing goes to the page not on
+; screen.
 _seg003_0272_2ABE proc near
         call    _seg003_0272_295F
 _seg003_0272_2AC1:
@@ -1206,6 +1293,8 @@ _seg003_0272_2AC1:
 _seg003_0272_2ABE endp
 
 ; seg003_0272_2AED  (+2AED)
+; _2AED: build Ytab from AX: the highest row (3DEE) gets AX and each lower row 36A8 more (ten
+; rows a pass). Marks 2D1C as -1.
 _seg003_0272_2AED proc near
         mov     di,word ptr ds:[3DEEh]
         shl     di,1
@@ -1243,6 +1332,8 @@ L2B01:
 _seg003_0272_2AED endp
 
 ; seg003_0272_2B2C  (+2B2C)
+; _2B2C: set Ytab rows CX up to BX, the highest getting AX, each lower one 36A8 more (for the
+; split screen).
 _seg003_0272_2B2C proc near
         neg     cx
         add     cx,bx
@@ -1259,6 +1350,9 @@ L2B37:
 _seg003_0272_2B2C endp
 
 ; seg003_0272_2B44  (+2B44)
+; _2B44: build the edge plane mask tables: 3B64 from the four bytes at 2D2C and 3CA8 from those
+; at 2D31, each repeated 80 times (_2B53), so 3B64[x] and 3CA8[x] are the planes at and right
+; of, and at and left of, pixel x within its group of four.
 _seg003_0272_2B44 proc near
         mov     si,2D2Ch
         mov     di,3B64h
@@ -1282,6 +1376,8 @@ L2B56:
 _seg003_0272_2B53 endp
 
 ; seg003_0272_2B62  (+2B62)
+; _2B62: set the linear buffer _222B draws into (GRCORE's _50E7): DX its segment (39D0), and a
+; row table at 39D2 for CX rows of stride BX starting at AX, highest row first.
 _seg003_0272_2B62 proc near
         mov     word ptr ds:[39D0h],dx
         mov     di,39D2h
@@ -1300,6 +1396,8 @@ L2B73:
 _seg003_0272_2B62 endp
 
 ; seg003_0272_2B7A  (+2B7A)
+; _2B7A: is there a VGA? int 10h, AX = 1A00h (read display combination): carry clear for an
+; active VGA (codes 7 or 8), set otherwise.
 _seg003_0272_2B7A proc near
         mov     ax,1A00h
         int     10h
@@ -1322,6 +1420,10 @@ L2B99:
 _seg003_0272_2B7A endp
 
 ; SetVideoMode_seg003_0272_2B9B  (+2B9B)
+; SetVideoMode: mode 13h through the BIOS, then unchained (mode X): chain-4 off in the
+; sequencer's memory mode, odd/even off in the graphics controller, bit mask and map mask all
+; on, the whole 256 KB cleared, and the CRTC switched from doubleword to byte addressing. Leaves
+; the sequencer index at the map mask.
 _SetVideoMode_seg003_0272_2B9B proc near
         mov     ax,13h
         int     10h
@@ -1381,6 +1483,17 @@ _SetVideoMode_seg003_0272_2B9B proc near
 _SetVideoMode_seg003_0272_2B9B endp
 
 ; seg003_0272_2BF9  (+2BF9)
+; _2BF9: guard the new window's edges for the unclipped writers: the Ytab entries just above and
+; below the window point at the spare area 2CD6, and the edge mask entries just left and right
+; of it get partial masks (2D2D, 2D30). _2C44 undoes this for the old window. Both are called by
+; set_the_window.
+;
+; The span writers follow (in 2C44's proc). Each takes SI = a list of 6-byte spans (y, left x,
+; right x) ended by a y with its top bit set, and writes the left and right partial groups with
+; the edge masks and the whole groups between with all four planes:
+;   _2C9A  XOR colour 0Fh into the spans (graphics controller function XOR, latches loaded
+;          first), probably for a highlight or cursor
+;   _2D0D  solid fill on the drawing page (_2D83), then the same on the other page (3840)
 _seg003_0272_2BF9 proc near
         mov     ax,word ptr ds:[3DF6h]
         shl     ax,1
@@ -1581,6 +1694,10 @@ L2D7E:
 _seg003_0272_2C44 endp
 
 ; seg003_0272_2D83  (+2D83)
+; _2D83: fill the spans with the colour in 4111 (FM solid_ylr). The labels after it:
+;   _2DF3  save: copy the spans' whole groups to video memory at 4116 through the latches
+;   _2E3A  copy the spans' whole groups from the other page (410C) through the latches
+;   _2E79  copy from the other page (_2F18), then the same onto the displayed page (410E)
 _seg003_0272_2D83 proc near
         mov     dx,3C5h
         mov     bl,byte ptr ds:[4111h]
@@ -1787,6 +1904,12 @@ L2F0C:
 _seg003_0272_2D83 endp
 
 ; seg003_0272_2F18  (+2F18)
+; _2F18: copy the spans from the other page (410C away) into the drawing page through the
+; latches, edge masks included (FM copy_ylr). The labels after it:
+;   _2F96  restore: copy the spans' whole groups back from video memory at 4116
+;   _2FD6, _303B  plane-by-plane copies between the spans and the area at 4116, one plane at a
+;          time (map mask or read map select); probably the save and restore of a pen whose
+;          area is not in video memory, not traced
 _seg003_0272_2F18 proc near
         mov     ax,0
         mov     dx,3CFh
@@ -1982,6 +2105,9 @@ L3053:
 _seg003_0272_2F18 endp
 
 ; seg003_0272_3094  (+3094)
+; _3094 (plot): plot (AX, BX) in the colour 4111 if it is inside the window. _30AC is the
+; unclipped entry: map mask from the edge tables, address from Ytab. _30CF and _30D7 read a
+; pixel (clipped or not) and compare it with CL, leaving the flags.
 _seg003_0272_3094 proc near
         cmp     bx,word ptr ds:[3DF6h]
         jg      L30CE
@@ -2024,6 +2150,7 @@ L30DF:
 _seg003_0272_3094 endp
 
 ; seg003_0272_30E3  (+30E3)
+; _30E3: read the pixel at (AX, BX), or AX = -1 outside the window; falls into _30FB.
 _seg003_0272_30E3 proc near
         cmp     bx,word ptr ds:[3DF6h]
         jg      L30DF
@@ -2036,6 +2163,8 @@ _seg003_0272_30E3 proc near
 _seg003_0272_30E3 endp
 
 ; seg003_0272_30FB  (+30FB)
+; _30FB: read the pixel at (AX, BX): select its plane for reading (graphics controller register
+; 4) and read the byte. Out: AL = the colour. Leaves the graphics controller index at 8.
 _seg003_0272_30FB proc near
         mov     di,ax
         mov     ah,al
@@ -2058,6 +2187,8 @@ _seg003_0272_30FB proc near
 _seg003_0272_30FB endp
 
 ; seg003_0272_3121  (+3121)
+; _3121: copy a vertical line (x AX, rows BX down to DX) from the other page (410C) through the
+; latches (FM copy_uvline).
 _seg003_0272_3121 proc near
         mov     di,ax
         mov     cx,bx
@@ -2092,6 +2223,7 @@ L3153:
 _seg003_0272_3121 endp
 
 ; seg003_0272_3164  (+3164)
+; _3164: a solid vertical line (x AX, rows BX down to DX) in the colour 4111 (FM solid_uvline).
 _seg003_0272_3164 proc near
         mov     di,ax
         mov     cx,bx
@@ -2119,6 +2251,9 @@ L318E:
 _seg003_0272_3164 endp
 
 ; seg003_0272_3195  (+3195)
+; set_the_color: AX = a pen number (negative: no change). As GRENTRY's fbuf_setcolor, for the
+; screen: colour bytes 4110 and 4116 from the tables at 21E and 434, and the span writer from
+; the table at 2CEE by the pen's mode, less 5046 (the concave-window variants).
 _seg003_0272_3195 proc near
         shl     ax,1
         jb      L31BD
@@ -2127,7 +2262,7 @@ _seg003_0272_3195 proc near
         mov     word ptr ds:[4110h],ax
         mov     ax,word ptr [bx+434h]
         mov     word ptr ds:[4116h],ax
-        db      8Bh,9Fh,8h,0h                   ; mov bx,word ptr [bx+8]: disp16, the table at seg_370D:0008 (TASM gives disp8 for a number, and a label there would need that segment)
+        db      8Bh,9Fh,8h,0h                   ; match: mov bx,word ptr [bx+8]: disp16, the table at seg_370D:0008 (TASM gives disp8 for a number, and a label there would need that segment)
         cmp     bx,14h
         jae     L31BD
         mov     ax,word ptr [bx+2CEEh]
@@ -2138,15 +2273,17 @@ L31BD:
 _seg003_0272_3195 endp
 
 ; seg003_0272_31BE  (+31BE)
+; init_colors: run each pen's set-up routine (the table at 2D04, by the pen's mode) for every
+; pen, then store DI (lowered by any pen that took video memory) as the video memory limit 4108.
 _seg003_0272_31BE proc near
         mov     di,0FFFFh
         call    _nullsub_1
         mov     cx,21Eh
-        db      81h,0E9h,8h,0h                  ; sub cx,8 with an imm16: the offset of the same table, which TASM gives as 83 for a number
+        db      81h,0E9h,8h,0h                  ; match: sub cx,8 with an imm16: the offset of the same table, which TASM gives as 83 for a number
         shr     cx,1
         sub     bp,bp
 L31CF:
-        db      8Bh,9Eh,8h,0h                   ; mov bx,word ptr [bp+8]: disp16, the table at seg_370D:0008 (TASM gives disp8 for a number, and a label there would need that segment)
+        db      8Bh,9Eh,8h,0h                   ; match: mov bx,word ptr [bp+8]: disp16, the table at seg_370D:0008 (TASM gives disp8 for a number, and a label there would need that segment)
         cmp     bx,14h
         jae     L31DC
         call    word ptr [bx+2D04h]
@@ -2165,6 +2302,10 @@ _nullsub_1 proc near
 _nullsub_1 endp
 
 ; seg003_0272_31E7  (+31E7)
+; set_the_window (far through 52E4): SI = four words, left, top, right, bottom (y counting up).
+; Removes the old window's edge guards (_2C44), copies the window to 3DF4, guards the new one
+; (_2BF9), and copies it to FD71:0C30, where the 3D renderer's render_3d reads it
+; (INSTANCE.ASM).
 _seg003_0272_31E7 proc near
         call    _seg003_0272_2C44
         push    si

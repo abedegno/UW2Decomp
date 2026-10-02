@@ -2,9 +2,24 @@
 /* opts: -mm -1 -G -O -Y -d */
 /* Open bags in the inventory panel: opening and closing containers, scrolling their
    contents, putting objects into them and swapping objects within them, and the weight of
-   a container's contents: the whole of DOS overlay ovr121, in original order. Function and
-   global names are the originals from the FM Towns symbol table; the source file's own name
-   is not known. */
+   a container's contents: the whole of DOS overlay ovr121, in original order.
+
+   What it does in the game: opening a container in the inventory replaces the backpack
+   rows of the panel with the container's contents. Open bags form a chain (struct Bag,
+   inv.h: OpenBagList the outermost, OpenBag the innermost), each remembering its contents'
+   weight so capacity checks are cheap. Inventory[19] is the open container and
+   Inventory[20..27] the eight of its objects on show (invisible objects are skipped); the
+   arrows scroll by rows of four. The backpack's slot pictures are swapped out to
+   BagSaveHandles while a bag is open. Opening a container also switches its item to the open
+   form (even minor class to odd, below class 12) and closing it switches it back.
+   DoSpecialActions is the panel's dispatcher for everything that is not picking up or
+   putting down: scroll arrows, closing the bag, dropping into the 3D view, the barter area,
+   toggling fight mode from the weapon hand, and using an object in a slot.
+
+   Data owned: BagSaveHandles and display_inventory_no_show (set while the panel must not
+   redraw).
+   Function and global names are the originals from the FM Towns symbol table.
+   Name: descriptive (open bags in the inventory panel). */
 
 #include <alloc.h>
 #include "combat.h"
@@ -19,10 +34,12 @@
 
 extern struct Player PlayerDat;
 extern union Link Inventory[];
-/* This file's _BSS, DS:6A76..6A85 (ovr122's starts at 6A86): only this file uses it. */
+/* This file's _BSS, DS:6A76..6A85: the backpack slots' screen saves while a bag is open. */
+/* match: ovr122's _BSS starts at 6A86; only this file uses it. */
 int BagSaveHandles[8];
-/* This file's _DATA, DS:15D0 (ovr119's strings end there; ovr122's data starts at 15D2):
-   of ovr120 and ovr121, the two files between, only this one uses it. */
+/* This file's _DATA, DS:15D0. */
+/* match: ovr119's strings end there and ovr122's data starts at 15D2; of ovr120 and
+   ovr121, the two files between, only this one uses it. */
 unsigned char display_inventory_no_show = 0;
 extern char RightPanel;
 extern struct Inplist near *inplist;
@@ -30,6 +47,12 @@ extern struct Inplist near *inplist;
 void far UseObj(struct Object far *who, struct Object far *obj, int how);
 void far set_screen_frame(int frame, int how);
 
+/* A click on display position slot that is not a pick-up or put-down: 0x15 and 0x16
+   scroll the open bag, 0x14 (the open bag's own picture) closes it, 0x17 drops or throws the
+   cursor object into the 3D view (ReturnObject, MISSILE.C; a moonstone dropped, or a
+   container holding one, records this level in a free player->moonstones entry for Gate
+   Travel), 0x18 is the barter area (conv_inv_special), the weapon hand with a weapon or bow
+   in it toggles fight mode, and anything else uses the object in the slot (UseObj). */
 void far DoSpecialActions(int slot)
 {
     int cls;
@@ -87,6 +110,8 @@ void far DoSpecialActions(int slot)
     }
 }
 
+/* Turns an open container back into its closed item (odd minor class below 12 to the even
+   one before it). */
 void far MakeBagClose(struct Bag far *bag)
 {
     struct Object far *obj;
@@ -118,6 +143,7 @@ void far CloseAllBags(void)
         Inventory[i].f.index = 0;
 }
 
+/* Closes every bag and gives the panel its backpack rows back. */
 void far FixBagArea(void)
 {
     int i;
@@ -147,6 +173,8 @@ void far FixBagArea(void)
     }
 }
 
+/* Closes the innermost open bag, showing the one it was opened from, or the backpack if it
+   was the outermost. */
 void far CloseTheBag(void)
 {
     struct Bag far *bag;
@@ -168,6 +196,7 @@ void far CloseTheBag(void)
     }
 }
 
+/* Draws the open bag's eight slots and its scroll arrows, working out which arrows apply. */
 void far DisplayOpenBag(void)
 {
     struct Object far *obj;
@@ -190,6 +219,8 @@ void far DisplayOpenBag(void)
     mouse_show();
 }
 
+/* Refills Inventory[20..27] from the open bag's contents list, keeping the first object
+   shown if it is still there (else starting from the top), skipping invisible objects. */
 void far FixOpenBag(void)
 {
     struct Object far *obj;
@@ -237,6 +268,10 @@ void far FixOpenBag(void)
     }
 }
 
+/* Opens the container in slot in the panel. A container of minor class 0xF (the rune bag)
+   shows the rune panel instead. Opening a bag already open goes back to the backpack; a bag
+   in the paperdoll or hands (slot < 11) closes the others first, one in the backpack or an
+   open bag opens inside the current one. */
 void far OpenTheBag(int slot)
 {
     struct Bag far *bag;
@@ -327,6 +362,8 @@ void far ScrollItemsUp(void)
     DisplayOpenBag();
 }
 
+/* Shows the previous row of four of the open bag (the arrow names are the other way
+   round from the direction the list moves, inferred). */
 void far ScrollItemsDown(void)
 {
     struct Object far *obj;
@@ -353,6 +390,10 @@ void far ScrollItemsDown(void)
     DisplayOpenBag();
 }
 
+/* Puts obj into the container at slot (19: the container the open bag sits in, or the
+   backpack when it is the outermost). Runestones go into the rune bag as runes (add_rune).
+   The object merges with a matching stack inside or is added at the end; weights are kept
+   right; a lit light put into a bag goes out. Returns 1 when it went in. */
 char far PutObjectInBag(struct Object far *obj, int slot)
 {
     struct Object far *next;
@@ -391,7 +432,7 @@ char far PutObjectInBag(struct Object far *obj, int slot)
     if (OBJ_ITEM(cont) == ITEM_RUNE_BAG) {
         if (add_rune(obj))
             return 1;
-        game_sprint(0x106);
+        game_sprint(0x106);  /* 'You can only put runes in the rune bag.' */
         return 0;
     }
     weight = ItemWeight(obj);
@@ -433,6 +474,8 @@ char far PutObjectInBag(struct Object far *obj, int slot)
     return 1;
 }
 
+/* Puts obj in the open bag's slot in place of the object there, which goes onto the
+   cursor; if obj does not fit, the old object goes back and obj stays on the cursor. */
 char far SwapItemsInBag(struct Object far *obj, int slot)
 {
     struct Object far *target;
@@ -470,6 +513,7 @@ char far SwapItemsInBag(struct Object far *obj, int slot)
     return result;
 }
 
+/* Adds the weight of every object in the list head, and of their contents, to *total. */
 void far BagWeight(union Link far *head, int far *total)
 {
     struct Object far *obj;

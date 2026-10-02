@@ -4,8 +4,28 @@
    picking objects out of the view, reach and line-of-sight checks, getting, looking at,
    using, talking to and attacking, the inventory clicks, the interaction-mode icons and
    drawing or sheathing the weapon. The whole of DOS segment seg026_2716, in original
-   order. Function and global names are the originals from the FM Towns symbol table
-   except where noted; the source file's own name is not known. */
+   order.
+
+   What it does in the game: the left-hand icons choose what a click in the 3D view does
+   (RightButtonThing: 0 the default, look and drag to get; 1 use, 2 fight, 3 look, 4 get, 5
+   talk; deal_with_icons). mous_in_3d is the 3D view's mouse handler (registered by
+   PLAYER.C's mous_player): it finds the object under the pointer from the renderer's pick
+   buffer (pick_3d: stdat holds a colour per pixel naming the object drawn there) and
+   dispatches through player_disp. GameInputMode says whether something else owns the
+   pointer: 1 an object on the cursor (it is dropped or thrown), 2 a targeted spell or an
+   object being used on another (ObjectActor is called on the pick), 3 a missile spell being
+   aimed. mous_in_panel does the same for the right-hand panel (inventory, runes or
+   statistics). display_scr runs every frame: the flasks and compass, colour cycling, death,
+   and every 20 seconds of game time the timed effects (duration_check, PLAYTIME.C).
+
+   Data owned: the spell effect flags (PoisonWeap, TimeStop, Hasted, WizEye, Blessed, Valor),
+   the interaction state (RightButtonThing, GameInputMode, ObjectActor, ObjectActing,
+   ObjectActorArg, newPlObj, PickMap, MapObj_X, MapObj_Y, releasePtr), PickDist (the reach,
+   0x90: 12 fine units squared, inferred) and the duration check timer.
+   Function and global names are the originals from the FM Towns symbol table except where
+   noted.
+   Name: descriptive (the player's interaction with the 3D view and panels: pick_3d,
+   player_3duse). */
 
 #include <stdlib.h>
 #include "combat.h"
@@ -25,9 +45,10 @@
 
 #define TERRAIN(t)      ((TxmTerr[(t)->floor] & 0xC0) >> 6)
 
-/* This file's data, in DS order from 0x37E. The six spell-effect flags lead it: they lie
-   between seg024's data and this file's in link order, and FM Towns keeps them with this
-   file's other variables (ObjectActor .. MapObj_X, quick_time, Valor). */
+/* This file's data, in DS order from 0x37E. */
+/* match: the six spell-effect flags lead it: they lie between seg024's data and this
+   file's in link order, and FM Towns keeps them with this file's other variables
+   (ObjectActor .. MapObj_X, quick_time, Valor). */
 unsigned char PoisonWeap = 0;           /* DS:037E */
 unsigned char TimeStop = 0;
 unsigned char Hasted = 0;
@@ -52,7 +73,8 @@ extern int PickUp;
 extern unsigned char far stdat[];
 extern char gameopts_buttongroup[];
 
-/* This file's _BSS, DS:24E4..2507, laid out by name (tools/bssorder.py): the keys run
+/* This file's _BSS, DS:24E4..2507. */
+/* match: laid out by name (tools/bssorder.py): the keys run
    pTxtId 56, current_button 91, ObjectActor 135, ObjectActing 191, RightButtonThing 194,
    ObjectActorArg 351, PickMap 536, MapObj_X and MapObj_Y 581, newPlObj 638, CrownTmap 907,
    releasePtr 914, GameInputMode 935. CrownTmap is the FM Towns name in the same group with
@@ -84,6 +106,10 @@ void far RemoveTrap(struct Object far *obj, int skill);
 void far busywaiting_new_options(char *group);
 void far set_new_music(int n);
 
+/* Called every frame: drives the player's attack, redraws the health and mana flasks and
+   the compass (no compass in the Ethereal Void), cycles the palette, starts death when the
+   player's hit points are 0, and once per second of game time counts down paralysis and
+   maybe changes the music; every 20 seconds it runs duration_check. */
 void far display_scr(void)
 {
     int v;
@@ -125,6 +151,9 @@ void far RedispInv(void)
     }
 }
 
+/* Whether obj on tile is within reach: the squared fine distance at most dist, and the
+   height difference within 12 below or 24 above (doubled with a pole; a swimming player
+   reaches lower). dist 0 means any distance. Sets MapObj_X, MapObj_Y to the tile. */
 unsigned char far InPickRange(int dist, struct Object far *obj, struct Tile far *tile)
 {
     int px, py, dz;
@@ -152,6 +181,7 @@ unsigned char far InPickRange(int dist, struct Object far *obj, struct Tile far 
     return 1;
 }
 
+/* The height of the highest bridge on tile, or -1. */
 int far BridgeHeight(struct Tile far *tile)
 {
     struct Object far *obj;
@@ -163,6 +193,10 @@ int far BridgeHeight(struct Tile far *tile)
     return h;
 }
 
+/* Whether the terrain stops the player reaching obj: it is too high or low for him, or a
+   tile on the straight line to it rises above him (for the normal reach), or the line
+   crosses another terrain class (water, lava, ice) than the one he stands on, unless a
+   bridge carries it. dist 0 means never blocked. */
 unsigned char far BlockingTerrain(int dist, struct Object far *obj)
 {
     int px, py, xdir, ydir, pz, oz, terr, bridge;
@@ -223,6 +257,9 @@ unsigned char far BlockingTerrain(int dist, struct Object far *obj)
     return 0;
 }
 
+/* Searches outward from x, y in the pick buffer, a growing square spiral up to radius 9,
+   for a pixel that names an object; returns its colour or 0. Lets a click near a small
+   object pick it. */
 unsigned char far check_around(unsigned char far *map, int x, int y)
 {
     unsigned char c;
@@ -252,6 +289,11 @@ unsigned char far check_around(unsigned char far *map, int x, int y)
     return 0;
 }
 
+/* The object drawn at the pointer in the 3D view, or 0: the renderer's pick buffer gives
+   each object a colour (1..PickUp-1, mapped to the object by color_to_obj and its tile by
+   color_to_map); a click on a wall or floor (colours 0xAC..0xFC) looks around for a nearby
+   object, else leaves the texture in pTxtId for look_nothing. Sets PickMap, releasePtr and
+   whether the object could be picked up (releaseable). */
 struct Object far * far pick_3d(int how)
 {
     unsigned char far *p;
@@ -284,6 +326,9 @@ struct Object far * far pick_3d(int how)
     return obj;
 }
 
+/* No object under the pointer: describes the texture clicked when looking ('You see' and
+   the texture's description from block 10: a wall or floor texture, a terrain, or
+   nothing), else prints string 0xA6 + how ('You cannot use that.', ...). */
 void far look_nothing(unsigned char how, int txt)
 {
     int t;
@@ -300,9 +345,10 @@ void far look_nothing(unsigned char how, int txt)
         scroll_print(get_string(t | STR_TEXTURES));
         game_sprint(0x60);
     } else
-        game_sprint(how + 0xA6);
+        game_sprint(how + 0xA6);  /* 'You cannot use that.', 'Why is this being printed?', 'You see nothing.' */
 }
 
+/* Takes a picked-up object off its tile, firing its pick-up triggers (mode 2). */
 void far release_3d(struct Object far *obj)
 {
     if (releaseable) {
@@ -313,6 +359,12 @@ void far release_3d(struct Object far *obj)
     }
 }
 
+/* Picks up newPlObj into the cursor if it can be taken, is in reach and not blocked
+   (a stack asks how many; too heavy: 'That is too heavy for you to pick up.'). Taking book
+   0x138 with id bit 13 set (a book that belongs to someone, inferred) sets quest 26 bit 2
+   and is a crime against the humans (race 0x1C); taking a moonstone frees its
+   player->moonstones entry; owners nearby notice (player_grabbed), and pressure plates are
+   updated. Otherwise it explains why, or in the default mode uses or talks instead. */
 void far player_3dget(void)
 {
     unsigned char inrange, clear;
@@ -335,7 +387,7 @@ void far player_3dget(void)
                 if (Obj_Rem(&newPlObj->qn.link, split))
                     Obj_Free(split);
             }
-            game_sprint(0x6C);
+            game_sprint(0x6C);  /* 'That is too heavy for you to pick up.' */
         } else {
             if (OBJ_ITEM(newPlObj) == ITEM_BOOK_138 && OBJ_DOORDIR(newPlObj)) {
                 player->quests[26] = (player->quests[26] & 0xFFFFFFFBL) + 4;
@@ -354,7 +406,7 @@ void far player_3dget(void)
             DoInventoryDrag(newPlObj);
         }
     } else if (releaseable) {
-        game_sprint(inrange + 0x6A);
+        game_sprint(inrange + 0x6A);  /* 0x6A 'That is too far away to take.', 0x6B 'You cannot reach that.' */
         mouse_release(1);
     } else if (def_mode) {
         if (IsMobElem(newPlObj) && OBJ_MAJOR(newPlObj) == MAJOR_CREATURE || OBJ_ITEM(newPlObj) == ITEM_WISP)
@@ -366,7 +418,7 @@ void far player_3dget(void)
             if (inrange && clear)
                 UseObj(ThePlayer, newPlObj, 0);
         } else
-            game_sprint(0x6D);
+            game_sprint(0x6D);  /* 'You cannot pick that up.' */
         mouse_release(1);
     }
 }
@@ -377,6 +429,9 @@ void far player_3dtalk(void)
     TalkTo(newPlObj);
 }
 
+/* Looks at newPlObj, with detail only in close reach. In look mode a found trap may be
+   disarmed (asks first, then RemoveTrap with the Traps skill); otherwise dragging after
+   the look picks the object up. Fires the object's look triggers (mode 5). */
 void far player_3dlook(void)
 {
     char yes;
@@ -389,7 +444,7 @@ void far player_3dlook(void)
     if (RightButtonThing == 3) {
         if (DetectedTrap(newPlObj, player->skills[SKILL_SEARCH]) > 0) {
             yes = 1;
-            r = wyorn(0, 0x103, &yes);
+            r = wyorn(0, 0x103, &yes);  /* 'You found a trap! Do you wish to try to disarm it? ' */
             if (r != 0 && r < 4)
                 wd_bool(yes = r == 2);
             scroll_print("\n");
@@ -407,16 +462,20 @@ void far player_3dlook(void)
     def_mode = 0;
 }
 
+/* Uses newPlObj if it is in reach, else 'You are unable to use that from here.' (not for
+   the texture map objects). */
 void far player_3duse(void)
 {
     mouse_release(1);
     if (InPickRange(PickDist, newPlObj, PickMap) && !BlockingTerrain(PickDist, newPlObj))
         UseObj(ThePlayer, newPlObj, 0);
     else if ((newPlObj->id & 0x1FE) != ITEM_TMAP_C)
-        game_sprint(0xC8);
+        game_sprint(0xC8);  /* 'You are unable to use that from here.' */
 }
 
-/* FM Towns calls it player_3dattack; the DOS name is not known otherwise. */
+/* Fight mode click: the swing is the ninth of the view clicked (1..9, left to right
+   and top to bottom). */
+/* name: FM Towns calls it player_3dattack; the DOS name is not known otherwise. */
 void far player_3dattack(void)
 {
     int n;
@@ -429,6 +488,8 @@ void (far *player_disp[])(void) = {
     player_3duse, player_3dattack, player_3dlook, player_3dget, player_3dtalk
 };
 
+/* The 3D view's mouse handler (see the file comment). A paralysed player can do nothing;
+   the left button moves him (player_mous_move). */
 void far mous_in_3d(void)
 {
     unsigned char how;
@@ -466,7 +527,7 @@ void far mous_in_3d(void)
                 if (InPickRange(PickDist, newPlObj, PickMap) && !BlockingTerrain(PickDist, newPlObj))
                     (*ObjectActor)(newPlObj, 1, 0);
                 else
-                    game_sprint(0x6B);
+                    game_sprint(0x6B);  /* 'You cannot reach that.' */
             }
             if (CursorObjPtr) {
                 unforce_mouse_cursor(3);
@@ -482,6 +543,10 @@ void far mous_in_3d(void)
     }
 }
 
+/* Looks at an object in the inventory, identifying it with the Lore skill: the first
+   look rolls skill_check(Lore, 8) + 1 (at least 1) and keeps the best result in the
+   object's heading (bit 2 marks it examined, bits 0..1 the lore level), so it is not
+   rerolled until a better Lore clears the marks (WORLDEV.C's clear_all_loretries). */
 void far inv_look(void)
 {
     unsigned char ident;
@@ -511,13 +576,14 @@ void far inv_look(void)
     DoInventoryMouse(-1);
 }
 
-/* Not in the FM Towns build and never called in DOS. */
+/* name: not in the FM Towns build and never called in DOS. */
 static void far seg026_2716_F8A(void)
 {
     DoInventoryMouse(1);
 }
 
-/* Not in the FM Towns build and never called in DOS: use the object under the cursor. */
+/* Use the object under the cursor. */
+/* name: not in the FM Towns build and never called in DOS. */
 void far seg026_2716_F98(void)
 {
     if (newPlObj == 0)
@@ -526,6 +592,9 @@ void far seg026_2716_F98(void)
     UseObj(ThePlayer, newPlObj, 1);
 }
 
+/* Inventory panel clicks by GameInputMode: 0 pick up or put down (looking in look mode or
+   on the right button), 1 put down the cursor object, 2 use the cursor object or spell on
+   the object clicked (ObjectActor). */
 void far mous_in_inv(void)
 {
     int x, y;
@@ -566,6 +635,8 @@ void far mous_in_inv(void)
     }
 }
 
+/* The right panel's mouse handler: inventory, rune bag or statistics by RightPanel. Not
+   while asleep in the void or paralysed. */
 void far mous_in_panel(void)
 {
     if (player->sleepbits && player->in_void || player->paralyzed > 0)
@@ -583,6 +654,11 @@ void far mous_in_panel(void)
     }
 }
 
+/* A click on one of the interaction icons (mode -1: find which from the pointer). Mode 5
+   is the options screen. Otherwise it sheathes the weapon, then selects the mode or, if it
+   was already selected, returns to the default. Selecting fight draws the weapon (not
+   while asleep in the void, paralysed or with motion_state bit 0 set) and
+   starts the combat music; use, look and get change the pointer. */
 void far deal_with_icons(int mode)
 {
     unsigned char released = 0;
@@ -637,6 +713,7 @@ void far deal_with_icons(int mode)
     }
 }
 
+/* Draws the weapon: fight mode, the combat music, the weapon picture. */
 void far pick_fightmode(void)
 {
     if (player->drawn == 1)
@@ -655,6 +732,7 @@ void far pick_fightmode(void)
         set_new_music(5);
 }
 
+/* Sheathes the weapon and leaves fight mode, back to walking music. */
 void far punt_fightmode(void)
 {
     if (player->drawn) {
@@ -668,6 +746,7 @@ void far punt_fightmode(void)
     }
 }
 
+/* Draws or sheathes the weapon (from a click on the weapon hand), only in the 3D view mode. */
 void far toggle_fightmode(void)
 {
     if (inplist->mode == 1) {

@@ -1,7 +1,25 @@
 ; /* target: seg003_0272_5934 */
 ; /* opts: /ml */
 ;
-; Code from 5934 (no routine start in the target table).
+; Graphics library module 13: the Gouraud-shaded (smooth) polygon, FM Towns' spolygon and
+; supolygon. The vertices are 6 bytes each (x, y, intensity) at 415E. The polygon is clipped by
+; GRLIBN.ASM's s_shclip, which interpolates the intensity along with the position, then every
+; edge is stepped down its rows (16.16 for both x and intensity) into the span table at 5692 (10
+; bytes a row: y, left x, right x, left intensity, right intensity; GRDISP.ASM defines it with
+; the y words filled in), keeping per row the leftmost and rightmost x with their intensities.
+; The table is handed to GRENTRY.ASM's _C13 (FM Towns vga_smooth_ylrii), which draws the shaded
+; spans. The 3D renderer's Gouraud faces reach it through SMOOTH.ASM.
+;
+; Entries (labels; GRCORE's jump table and seg004 use them):
+;   _5946  spolygon: CX = the vertex count (more than 99 is refused; one or two vertices
+;          become a point or a line, L5934), clip with s_shclip, then fill
+;   _5956  attach the intensities from 55EE to plain (x, y) vertices first (_5D47), then fill
+;   _5959  supolygon: fill a polygon already inside the window
+; Data (seg_370D): 566E, 5670 the lowest and highest rows; 5672..5686 the current edge's stepping
+; state; 5680 the edges left. Negative y is clamped to 0 before filling.
+;
+; name: descriptive (module 13 of seg003); its job, found here, is the smooth polygon. No
+; routine of it has a proc in the target table; its entries are labels.
 ;
 ; SEG003 split into its original modules: this is module 13 of 14, +5934..+5B50 of the segment
 ; (file 8D84h), a module of the second library (UWLIB.LIB).
@@ -47,8 +65,12 @@ L5955:
 _seg003_0272_5956:
         call    _seg003_0272_5D47
 _seg003_0272_5959:
-        db      0E9h                    ; jmp to the next instruction in the near form, which TASM never makes
+        db      0E9h                    ; match: a near jmp to the next instruction, which TASM never makes
         dw      L595C-$-2
+; Fill: close the vertex list by copying the first vertex after the last, find the top and
+; bottom, initialise every row record to an empty span (left 3E8h, right 0FC18h), then step each
+; edge (horizontal edges are handled at L5B0A), and finally mark the end of the table (top bit
+; of the row after the last) and call _C13.
 L595C:
         mov     di,cx
         shl     di,1

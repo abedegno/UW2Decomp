@@ -1,7 +1,20 @@
 ; /* target: seg003_0272_5B50 */
 ; /* opts: /ml */
 ;
-; _5B50 and _5D47, the last routines of the segment.
+; Graphics library module 14: the clipper for smooth (Gouraud) polygons, FM Towns' s_shclip, and
+; its helper. It is GRLIBF.ASM's shclip for 6-byte vertices (x, y, intensity): the same
+; Sutherland-Hodgman passes against the window's top and bottom and then left and right, with
+; the comparison opcodes patched in place (7Ch jl or 7Fh jg) and a far jump to flush the
+; prefetch queue, and the intersections interpolate the intensity as well as the position. The
+; four case handlers are reached through the near offsets GRDISP.ASM stores at 5E76.
+;
+; In: CX = the vertex count, the vertices at 415E; DS = seg_370D. Out: CX = the count after
+; clipping, the vertices back at 415E; nothing left discards the caller's return address.
+; Data: 42EE the second vertex buffer; 447E..4488 the pass state; seg_370D:07D0 the pass's
+; vertex counter.
+;
+; name: descriptive (module 14 of seg003); its job, found here, is clipping smooth polygons. The
+; routine names are FM Towns'.
 ;
 ; SEG003 split into its original modules: this is module 14 of 14, +5B50..+5D6D of the segment
 ; (file 8FA0h), a module of the second library (UWLIB.LIB).
@@ -24,6 +37,10 @@ SEG003_TEXT segment word public 'CODE'
         public  _seg003_0272_5D47
 
 ; seg003_0272_5B50  (+5B50)
+; s_shclip: attach intensities (_5D47), close the list, then clip top and bottom (skipped when
+; every vertex is inside them) and left and right. L5C16 is one pass; L5C9C and L5CF0 work out
+; an intersection with a horizontal or vertical edge (imul/idiv, both terms halved on overflow)
+; and nudge it one pixel inward unless it lies on the edge.
 _seg003_0272_5B50 proc near
         call    _seg003_0272_5D47
         mov     si,415Eh
@@ -112,7 +129,7 @@ L5C16:
         mov     byte ptr cs:L5C46,al
         mov     word ptr ds:_seg_370D_7D0,cx
         mov     word ptr ds:[447Eh],cx
-        db      0EAh                     ; far jmp to the next instruction, flushing the prefetch queue after the cs: stores above; TASM would shorten it
+        db      0EAh                     ; far jmp to the next instruction, flushing the prefetch queue after the cs: stores above (match: as bytes, since TASM would shorten it)
         dw      offset L5C2E
         dw      seg L5C2E
 L5C2E:
@@ -264,6 +281,9 @@ L5D41:
 _seg003_0272_5B50 endp
 
 ; seg003_0272_5D47  (+5D47)
+; _5D47 (probably FM Towns' pack_vertices, which comes next to s_shclip there): turn CX (x, y)
+; vertices at 415E into (x, y, intensity) ones, taking the intensities in order from the word
+; table at 55EE (assembled in 42EE and copied back).
 _seg003_0272_5D47 proc near
         mov     si,415Eh
         mov     bx,55EEh

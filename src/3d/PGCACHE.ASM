@@ -1,10 +1,41 @@
 ; /* target: seg004_0849_6D20 */
 ; /* opts: /ml */
 ;
-; The image and page cache: uncmp_tab, lightabs, do_fetchmap, do_settmobj, do_uwobj,
-; do_uwcrit, update_cache, unload_cpg, load_cpg, lcpg_pghere, parse_cpg, do_setbmcol,
-; do_mouseq and do_uwcolv (FM Towns names; FM Towns has them in this order in one place too).
-; Its _DATA is the far pointers grs_off and obj_tab and their neighbours.
+; The art side of the renderer: the opcode handlers that fetch textures and pictures from EMS
+; and draw them (do_fetchmap, do_settmobj, do_uwobj, do_uwcrit, do_uwcolv, do_setbmcol,
+; do_mouseq), and the critter page cache that pages critter animation files (CRIT\CRnn.0p) into
+; EMS on demand (load_cpg, unload_cpg, lcpg_pghere, parse_cpg, update_cache). It also holds
+; uncmp_tab, the image decoders by format (EXPAND.ASM), and lightabs, the 16 distance-shading
+; rows the renderer's shading reads. Its _DATA is the far pointers grs_off and obj_tab that the
+; C (gfx/GRSPIC.C, gfx/LOADGR.C) uses to reach the same tables. FM Towns has all these routines
+; with these names in this order.
+;
+; Data in FD58 (DS; FM Towns names):
+;   D030 first_anim (view3d.h): the first grs_off slot of the animated-object pictures
+;   D032 the EMS map array lcpg_swap passes to int 67h function 50h (two logical/physical
+;        pairs); D03A cpgFname, "crit\cr??.??", whose ?s load_cpg fills; D047 cpgFname+0Dh,
+;        the cache index being loaded
+;   D049 grs_off's table: a word per picture slot; an EMS address (logical page in bits
+;        12-15, paragraph in bits 0-9; seg004_0849_7EDE) or, from 2000h, a video address
+;   D849 obj_tab's table: two words per object type, the first its grs_off slot (bits 0-9)
+;   E049 grs_3dinf: two bytes per 3D critter type, its critter map (0FFh none) and palette
+;   E0C9 CmaptoPg: per cache index (critter map * 8 + page), its EMS cache slot or 0FFh
+;   E1C9 PgtoCmap: per cache slot, the cache index in it, or 0FEh free
+;   E2C9 CmapFrm: per critter map, 8 bytes, the last frame number in each of its pages
+;   E3C9 CmapCache: per cache index, its age: 10h on load, +2 on each use up to 0F0h, -1 each
+;        frame (update_cache) down to 1; 0FFh not loaded
+;   E4C9 crit_fpage, E4CB crit_nlpages: the first EMS page and the number of slots of the
+;        critter cache (a slot is two 16 KB pages); E4CD crit_inpage, the slot now mapped
+;   E4CE tmap_inpage, E4CF tmap_fpage: the texture page now mapped, and the first texture page
+;   E4D1 obj_inpage1: the art page now mapped in physical page 2
+;   E4D2 EmsBuff: the EMS page frame's segment; E4D4 the EMS handle
+;   2692 pickup (a pick frame), 2694 cdist (the object's distance shade), 2696 tmcolor
+;   seg_370D:0DC1 bmcolor, the pick colour
+; EMS physical pages: 0 and 1 the critter cache slot, 2 the art page (pictures, through
+; grs_off), 3 the texture page (do_fetchmap).
+;
+; name: descriptive (module 14 of seg004, after its page cache). The routines' names are FM
+; Towns'.
 ;
 ; SEG004 split into its original modules: this is module 14 of 14, +6D20..+8154 of the segment
 ; (file FEE0h), a module of the second library (UWLIB.LIB).
@@ -355,6 +386,15 @@ lightabs        db      00h,01h,02h,03h,04h,05h,06h,07h,08h,09h,0Ah,0Bh,0Ch,0Dh,
                 db      00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h,00h
 
 ; seg004_0849_7D3E  (+7D3E)
+; do_fetchmap (opcode 0x3E): load a wall or floor texture into a bitmap slot. Operands: the
+; slot, the texture number, the next opcode. Textures are 4 KB (64 x 64) and four share a 16 KB
+; EMS page: page tmap_fpage + n / 4 is mapped into physical page 3 (int 67h, 44h, unless it is
+; already there; an EMS error breaks with int 3) and the slot's word +4 gets the texture's
+; segment, EmsBuff + 0C00h + (n & 3) * 100h.
+;
+; It then sets tmcolor (2696) from the first byte of the texture, but DOS loads DS from SI (the
+; slot's address) where FM Towns reads the texture itself, so the byte it reads is not the
+; texture's. Probably a DOS slip; what reads tmcolor has not been traced.
 _do_fetchmap proc near
         lodsw
         mov     di,ax
@@ -406,6 +446,14 @@ L7D77:
 _do_fetchmap endp
 
 ; seg004_0849_7DA4  (+7DA4)
+; do_settmobj (opcode 0xC0): use an object's picture as the texture of bitmap slot 6 (C832, FM
+; bm_number_6), for a 3D model drawn with an object's own art. Operands: the grs_off slot, an
+; unused word, the next opcode. The picture is reached through seg004_0849_7EDE; the slot gets
+; the picture's width (byte 1), its byte count (word 3) - 1, the segment of the 4 KB buffer
+; _seg_5DFD, and (height - 1) shifted by 8 - log2(width) as the row mask; then the picture's
+; pixels (from byte 5, word 3 of them) are copied into _seg_5DFD, where the mapper reads them.
+; (The `lodsw` after the dispatch jump is never reached. L7E0A is do_uwobj's branch for
+; animations.)
 _do_settmobj proc near
         lodsw
         mov     cx,ax
@@ -469,6 +517,13 @@ L7E0A:
 _do_settmobj endp
 
 ; seg004_0849_7E13  (+7E13)
+; do_uwobj (opcode 0x3A): draw an object's sprite. Operands: the object type, the shade (dh for
+; the decoder), the point. Types below 1C0h take their picture slot from obj_tab (bits 0-9);
+; 1C0h and up are animations, slot first_anim + type - 1C0h. The picture (byte 0 the format, 1
+; and 2 width and height, 3 its auxiliary palette, pixels from 4) is decoded through uncmp_tab
+; with the 16-byte palette from LOADGR's _Palettes (palette numbers from 20h are folded down: (n
+; - 8) * 2), the decoded bitmap's address and size go to the sprite record at C856 (FM
+; sbm_inventory), and it is drawn by in_scalebm (TMAPOPS.ASM) with record offset 1Ch.
 _do_uwobj proc near
         lodsw
         cmp     ax,1C0h
@@ -526,12 +581,18 @@ L7E4E:
         mov     di,ax
         add     di,14D0h
         mov     ax,1Ch
-        db      0EAh                     ; jmp far ptr in_scalebm: TASM would shorten it
+        db      0EAh                     ; match: jmp far ptr in_scalebm as bytes: TASM would shorten it
         dw      offset in_scalebm
         dw      seg in_scalebm
 _do_uwobj endp
 
 ; seg004_0849_7E8F  (+7E8F)
+; do_uwcrit (opcode 0x5A): draw a critter's animation frame. Operands: the critter type (index
+; into grs_3dinf), a flag (nonzero: palette 3 in place of the critter's own; probably the
+; shading used for a critter being hit or a special state, not checked), the shade, the frame
+; number, the point. A type with no critter map (0FFh) is skipped. The frame picks the page: the
+; first of the critter map's eight CmapFrm bytes not below it. load_cpg makes sure the page is
+; in the cache and mapped; parse_cpg decodes and draws the frame.
 _do_uwcrit proc near
         lodsw
         mov     cx,ax
@@ -578,6 +639,11 @@ L7ED5:
 _do_uwcrit endp
 
 ; seg004_0849_7EDE  (+7EDE)
+; seg004_0849_7EDE (DOS only; FM Towns has flat memory): turn a grs_off word into a segment. AX
+; = the word: bits 12-15 the EMS logical page, mapped into physical page 2 unless it is the one
+; there (obj_inpage1; an EMS error breaks with int 3), bits 0-9 the paragraph within the 16 KB
+; page. Out: AX = EmsBuff + 800h + paragraph. Changes BX, CL, DX, DI. GRSPIC.C's C code does the
+; same for the 2D side.
 _seg004_0849_7EDE proc near
         mov     di,ax
         mov     cl,0Ch
@@ -604,6 +670,8 @@ L7F0A:
 _seg004_0849_7EDE endp
 
 ; seg004_0849_7F0C  (+7F0C)
+; seg004_0849_7F0C: far entry to the decoders for C (cFrmtoRaw), BX = format * 2, other
+; registers as the decoder wants (EXPAND.ASM).
 _seg004_0849_7F0C proc far
         call    word ptr cs:uncmp_tab[bx]
         retf
@@ -611,6 +679,9 @@ _seg004_0849_7F0C endp
 
 ; update_cache  (+7F12): FM update_cache. It saves DS in BX and then reuses BX, so it
 ; returns with DS = 0E3C9h; cRender reloads DS afterwards.
+; update_cache: called by cRender after each frame. Ages every loaded critter page (CmapCache
+; entries 1 to 0FCh not 0FFh) by one, stopping at 1, so the least recently used page has the
+; lowest count.
 _update_cache proc far
         mov     bx,ds
         mov     ax,seg _CmapCache
@@ -632,6 +703,11 @@ L7F2B:
 _update_cache endp
 
 ; seg004_0849_7F31  (+7F31)
+; unload_cpg: entered from load_cpg when no cache slot is free, BX = the cache index wanted.
+; Finds the loaded page with the lowest age, takes its slot (marks it unloaded), gives the slot
+; to BX and joins load_cpg to read the file. If nothing is loaded either, it drops the critter:
+; discards load_cpg's return address and the pushed shade, skips the remaining operand and
+; dispatches the next opcode.
 _unload_cpg proc near
         mov     di,0FFh
         mov     dl,0FFh
@@ -675,6 +751,13 @@ L7F81:
 _unload_cpg endp
 
 ; seg004_0849_7F8D  (+7F8D)
+; load_cpg: make critter page (DX = critter map, BX = page 0-7) present and mapped. If CmaptoPg
+; has a slot for it, lcpg_pghere maps it. Otherwise it takes a free slot (PgtoCmap 0FEh, or
+; unload_cpg's), builds the file name crit\crMM.0P from the map number in two octal digits and
+; the page, opens it, maps the slot and reads up to 7FFFh bytes into the page frame, and sets
+; its age to 10h. Out: the slot mapped into physical pages 0 and 1. If the file does not open or
+; read, it breaks with int 2, frees the slot and skips the critter (dispatching the next
+; opcode).
 _load_cpg proc near
         shl     dx,3
         add     bx,dx
@@ -771,6 +854,10 @@ L8032:
 _load_cpg endp
 
 ; seg004_0849_805B  (+805B)
+; lcpg_pghere: AL = cache slot, BX = cache index. Adds 2 to the page's age (up to 0F0h) and,
+; unless the slot is already mapped (crit_inpage), maps its two EMS pages (crit_fpage + slot * 2
+; and the next) into physical pages 0 and 1 with int 67h function 50h. An EMS error breaks with
+; int 2.
 _lcpg_pghere proc near
         mov     dl,byte ptr [bx-1C37h]
         cmp     dl,0F0h
@@ -806,6 +893,12 @@ L809C:
 _lcpg_pghere endp
 
 ; seg004_0849_809F  (+809F)
+; parse_cpg: decode and draw a frame from the mapped critter page. In: BP = frame number, DL =
+; the palette, DH = the shade. The page holds 32-byte palettes from offset 0
+; (palette n at n * 32) and a word per frame at 80h giving the frame's offset; a frame is width,
+; height, hot spot x and y (bytes 0-3), the format (byte 4) and the pixels. The decoded bitmap
+; goes to the sprite record at C848 (FM sbm_critter) and in_scalebm draws it at the operand
+; point with record offset 0Eh.
 _parse_cpg proc near
         mov     bx,bp
         mov     ax,word ptr ds:[0E4D2h]
@@ -848,12 +941,14 @@ _parse_cpg proc near
         mov     di,ax
         add     di,14D0h
         mov     ax,0Eh
-        db      0EAh                     ; jmp far ptr in_scalebm: TASM would shorten it
+        db      0EAh                     ; match: jmp far ptr in_scalebm as bytes: TASM would shorten it
         dw      offset in_scalebm
         dw      seg in_scalebm
 _parse_cpg endp
 
 ; seg004_0849_80F6  (+80F6)
+; do_setbmcol (opcode 0xAE): set bmcolor (seg_370D:0DC1), the colour sprites are drawn in during
+; a pick frame. Operand: the colour.
 _do_setbmcol proc near
         mov     bx,es
         mov     ax,seg seg_370D
@@ -867,6 +962,9 @@ _do_setbmcol proc near
 _do_setbmcol endp
 
 ; seg004_0849_810A  (+810A)
+; do_mouseq (opcode 0xB0): service the mouse during a frame. Calls seg021_22FD_102B
+; (C3DENTRY.ASM), which calls MousQUp; FM Towns calls MousQUp(1) directly. GRIDDB.C emits it at
+; the end of each grid row, so the cursor keeps moving while a frame renders.
 _do_mouseq proc near
         call    far ptr _seg021_22FD_102B
         lodsw
@@ -875,6 +973,10 @@ _do_mouseq proc near
 _do_mouseq endp
 
 ; seg004_0849_8115  (+8115)
+; do_uwcolv: set the colour for the next flat polygon from a colour word and the distance shade.
+; Operands: the address (in DS) of the colour, a shade word whose low byte is added to cdist
+; (2694), capped at 15, to pick the lightabs row. In a pick frame (pickup set) the colour is
+; bmcolor instead. Ends in INTERP.ASM's setcol_common.
 _do_uwcolv proc near
         test    word ptr ds:[2692h],0FFh
         jne     short L8141

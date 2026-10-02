@@ -30,7 +30,8 @@ SEG021_TEXT segment para public 'CODE'
 ; CL = 21h leaves a bit (186 and later mask the count to 5 bits), 30h if `mul al` of 40h
 ; leaves ZF set (presumably the NEC V20/V30 test, the flags after MUL being undefined on
 ; Intel parts, so "30" for V30), and 86h for an 8086/8088. Called by init; nothing in the
-; C sources reads the result.
+; C sources reads the result, but VIDMODE.ASM's init_graphics copies it and writes the
+; palette with rep outsb from 186h up.
 _seg021_22FD_1D0 proc near
         pushf
         xor     ax,ax

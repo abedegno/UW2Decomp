@@ -1,10 +1,24 @@
 ; /* target: seg021_22FD_C20 */
 ; /* opts: /ml */
 ;
-; The far C entry points into the 3D code (cZoom, cFBtoScreen, cFillFB, cPlaceFB, cRender,
-; cInit3d, cFstSinCos, cSinCos, cAtan2, cSqRt, cFrmtoRaw), which switch to the private stack
-; whose words open the module. Its _DATA is the far pointers cPlayer, cDbase, cEntryStrt,
-; cLightTabs, cDbbase, cPixXferStuff and their neighbours.
+; The far C entry points into the 3D code and the integer maths: cZoom, cFBtoScreen, cFillFB,
+; cDimFB and cLiteFB (the two Callback_ procs), cPlaceFB, cRender, cInit3d, cFstSinCos, cSinCos,
+; cAtan2, cSqRt and cFrmtoRaw (FM Towns names, which FM Towns has together). VIEW3D.C and the
+; rest of the C call them. Each switches to the private stack in dseg062_62a6 (FD71, SP 510h;
+; the caller's SS:SP saved in the words that open the module), loads the arguments into
+; registers and calls seg003, seg004 or this segment's own maths (IMATH.ASM). Its _DATA is the
+; far pointers C uses to reach the 3D data: cPlayer (FD71:0A40, the camera), cDbase (the render
+; database, seg052:26A4), cEntryStrt, cLightTabs (lightabs, PGCACHE.ASM), cDbbase (DbEntry,
+; seg052:14CC), cPixXferStuff and their neighbours.
+;
+; cRender is the frame: see its comment. _102B lets the renderer call the C routine MousQUp in
+; the middle of a frame (seg004's do_mouseq opcode): because MousQUp may itself come back into
+; seg021 through an entry point, which would reset SP to 510h and overwrite the frame's stack,
+; _102B first copies the used part of the private stack away (_FDD) and runs MousQUp on a small
+; DGROUP stack, then copies it back (_1004).
+;
+; name: descriptive (module 17 of seg021, "far C entry points into the 3D code (cRender, cInit3d
+; ...)"). The c- names are FM Towns'.
 ;
 ; SEG021 split into its original modules: this is module 17 of 17, +C20..+1071 of the segment
 ; (file 24920h), a module of the second library (UWLIB.LIB).
@@ -114,6 +128,8 @@ L0C32:
         db      0h,0h
 
 ; seg021_22FD_C34  (+C34)
+; cZoom(zoom): store the zoom word in the render database's header (the word after the address
+; at seg052:0158).
 _cZoom proc far
         push    bp
         mov     bp,sp
@@ -153,12 +169,15 @@ _cZoom proc far
 _cZoom endp
 
 ; seg021_22FD_C7E  (+C7E)
+; cFBtoScreen: copy the 3D frame buffer to the screen (GRENTRY.ASM's _7F9, which switches stacks
+; itself).
 _cFBtoScreen proc far
         call    far ptr _DRAW_RELATED_seg003_0272_7F9
         retf
 _cFBtoScreen endp
 
 ; seg021_22FD_C84  (+C84)
+; cFillFB(colour): fill the frame buffer (GRENTRY.ASM's fill_fbuf).
 _cFillFB proc far
         push    bp
         mov     bp,sp
@@ -187,6 +206,9 @@ _cFillFB proc far
 _cFillFB endp
 
 ; CallbackFunctionSleepRelated_seg021_22FD_CB7  (+CB7)
+; cDimFB(shade) (FM Towns; the label is an old guess): darken the frame buffer through a
+; lightabs row (GRENTRY.ASM's _764). name: cDimFB is FM Towns' name for the routine at this
+; place; the proc keeps the label it was matched under.
 _CallbackFunctionSleepRelated_seg proc far
         push    bp
         mov     bp,sp
@@ -215,6 +237,9 @@ _CallbackFunctionSleepRelated_seg proc far
 _CallbackFunctionSleepRelated_seg endp
 
 ; Callback_seg021_22FD_CEA  (+CEA)
+; cLiteFB(count) (FM Towns): remap the frame buffer through cXfer table 3, count times
+; (GRENTRY.ASM's _788). name: cLiteFB is FM Towns' name; the proc keeps the label it was matched
+; under.
 _Callback_seg021_22FD_CEA proc far
         push    bp
         mov     bp,sp
@@ -243,6 +268,9 @@ _Callback_seg021_22FD_CEA proc far
 _Callback_seg021_22FD_CEA endp
 
 ; seg021_22FD_D1D  (+D1D)
+; cPlaceFB(x, y, width, height): put the 3D view's frame at (x, y) on the screen, y counting up:
+; the screen offset (0C7h - y) * 80 + x / 4 goes to seg_370D:094E, then GRENTRY.ASM's
+; setup_frame_buf(width, height).
 _cPlaceFB proc far
         push    bp
         mov     bp,sp
@@ -289,6 +317,10 @@ _cPlaceFB proc far
 _cPlaceFB endp
 
 ; seg021_22FD_D7A  (+D7A)
+; cRender: draw one 3D frame. Switches to the private stack, notes the game clock, points int 0
+; at FD71:05A0 (the renderer's overflow handler, INSTANCE.ASM), then calls GRENTRY's clear_fbuf,
+; INSTANCE's render_3d, GRMISC's _18 and PGCACHE's update_cache; restores the stack and the int
+; 0 vector. Returns DX:AX = the clock ticks the frame took.
 _cRender proc far
         push    bp
         mov     bp,sp
@@ -349,6 +381,8 @@ _cRender proc far
 _cRender endp
 
 ; seg021_22FD_E1A  (+E1A)
+; cInit3d: zero the game clock's low word and set the clip window from the record FD71:0A98
+; points at (GRDISP.ASM's _5363).
 _cInit3d proc far
         push    bp
         mov     bp,sp
@@ -385,6 +419,8 @@ _cInit3d proc far
 _cInit3d endp
 
 ; GetVectorForDirection_seg021_22FD_E63  (+E63)
+; cFstSinCos(angle, &sin, &cos) (FM Towns; the label is an old guess): the table sine and cosine
+; (IMATH.ASM's _A69).
 _cFstSinCos proc far
         push    bp
         mov     bp,sp
@@ -426,6 +462,7 @@ _cFstSinCos proc far
 _cFstSinCos endp
 
 ; SomethingProjectileHeading_seg021_22FD_EAE  (+EAE)
+; cSinCos(angle, &sin, &cos): the interpolated sine and cosine (IMATH.ASM's _A38).
 _cSinCos proc far
         push    bp
         mov     bp,sp
@@ -469,6 +506,7 @@ _cSinCos proc far
 _cSinCos endp
 
 ; MaybeGetTangent_seg021_22FD_EFB  (+EFB)
+; cAtan2(sin, cos): the angle of a unit vector (IMATH.ASM's _BD4).
 _cAtan2 proc far
         push    bp
         mov     bp,sp
@@ -506,6 +544,7 @@ _cAtan2 proc far
 _cAtan2 endp
 
 ; GetSquareRoot_seg021_22FD_F3F  (+F3F)
+; cSqRt(long): the square root of a 32-bit value (IMATH.ASM's _A78).
 _cSqRt proc far
         push    bp
         mov     bp,sp
@@ -543,6 +582,10 @@ _cSqRt proc far
 _cSqRt endp
 
 ; cFrmtoRaw  (+F83)
+; cFrmtoRaw(a, b, source offset, source segment, format): decode a picture in one of the .GR/.CR
+; formats to one byte per pixel through PGCACHE.ASM's far stub to the decoders (EXPAND.ASM). The
+; first two arguments go to BP and AX, where the decoders take their destination and palette
+; arguments (EXPAND.ASM has the details); DH is set to 0FFh.
 _cFrmtoRaw proc far
         push    bp
         mov     bp,sp
@@ -588,6 +631,8 @@ _cFrmtoRaw proc far
 _cFrmtoRaw endp
 
 ; seg021_22FD_FDD  (+FDD)
+; _FDD: copy the used part of the private stack (SP up to 510h) to just below FD71:0C2A, and
+; keep the caller's saved SS:SP (L0C24) in L0C20, so a nested entry cannot overwrite either.
 _seg021_22FD_FDD proc near
         mov     ax,ss
         mov     ds,ax
@@ -608,6 +653,7 @@ _seg021_22FD_FDD proc near
 _seg021_22FD_FDD endp
 
 ; seg021_22FD_1004  (+1004)
+; _1004: copy the private stack back from the save area and restore L0C24 from L0C20.
 _seg021_22FD_1004 proc near
         mov     ax,ss
         mov     ds,ax
@@ -628,6 +674,9 @@ _seg021_22FD_1004 proc near
 _seg021_22FD_1004 endp
 
 ; seg021_22FD_102B  (+102B)
+; _102B: called by seg004's do_mouseq (PGCACHE.ASM) during a frame. Saves the private stack
+; (_FDD), switches to DS = ES = DGROUP and the small stack below joy_position in DGROUP, calls
+; MousQUp(1), switches back and restores the private stack (_1004).
 _seg021_22FD_102B proc far
         push    si
         push    ds

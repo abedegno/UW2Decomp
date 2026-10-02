@@ -2,11 +2,22 @@
 /* opts: -mm -1 -G -O -Y -d */
 /* The main menu: loading its button pictures, drawing the buttons or the list of saved
    games, following the mouse and the keys, and acting on the choice. The whole of DOS
-   overlay ovr147, in original order. Function names are the originals from the FM Towns
-   symbol table; the source file's own name is not known.
+   overlay ovr147, in original order.
 
-   adr_opbtn and move_opbtn (IDA ovr147_0 and ovr147_22) are the FM Towns functions just
-   before do_intro_scene, and gronk_gr's callbacks for "opbtn" in both builds.
+   What it does in the game: real_start (called from UWEDIT.C's main) shows the menu on
+   screen 5 of the art with four buttons from OPBTN.GR: introduction, create character,
+   acknowledgements and journey onward; journey onward is offered only when a saved game
+   exists, and with none the introduction plays first. Creating a character (CHARGEN.C's
+   create_player) clears the SAVE0 directory, copies in the starting files, starts the
+   conversation system and loads level 1 with the player at (0x13, 0x30). Journeying onward
+   lists the saved games' descriptions and restores the one chosen (GAMEWRAP.C). Escape on
+   the buttons (key 0x278) quits to DOS.
+
+   Data owned: the button pictures (opbuf, buttons).
+   Function names are the originals from the FM Towns symbol table.
+   Name: descriptive (the main menu: draw_start_buttons, real_start). */
+/* name: adr_opbtn and move_opbtn (IDA ovr147_0 and ovr147_22) are the FM Towns functions
+   just before do_intro_scene, and gronk_gr's callbacks for "opbtn" in both builds.
    UnknownAutomapLoop_ovr147_A56 and its callback have no FM Towns counterpart and no
    caller in DOS. The loop keeps its IDA name; the callback (IDA's
    UnknownCallBackFunctionForAutomap_ovr147_A73) has a provisional name chosen so that its
@@ -27,7 +38,7 @@
 extern unsigned char far *foreground_color;
 extern struct FontInfo far *cur_font;
 
-/* FM Towns keeps these as statics, so their names are not known. */
+/* name: FM Towns keeps these as statics, so their names are not known. */
 static unsigned char far *opbuf = 0;    /* where gronk_gr puts the next button picture */
 static struct Button *buttons;          /* the menu's buttons, on real_start's stack */
 
@@ -44,7 +55,7 @@ void far fadeout(unsigned char far *pal, int steps, int x);
 void far punt_fightmode(void);
 void far preload_cr(int n);
 void far free_world(int n);
-char far RestoreGame();                 /* no prototype: the slot is pushed as an int */
+char far RestoreGame();                 /* match: no prototype: the slot is pushed as an int */
 void far load_weapcm(void);
 void far automap_area(int x0, int y0, int x1, int y1, int *arg, char (far *fn)());
 
@@ -120,6 +131,9 @@ void far draw_start_buttons(int n, struct Button far *b, unsigned char text, int
     mouse_show();
 }
 
+/* The main menu loop (intro set: play the introduction when there are no saves). Returns
+   once a game has been started or restored, with the game screen set up; a restore that
+   fails shows 'Error: Bad save file' and returns to the menu. */
 void far real_start(int intro)
 {
     int found;
@@ -177,7 +191,7 @@ void far real_start(int intro)
             if (r == -1) {
                 char far *msg;
 
-                msg = get_string(0x2B8);
+                msg = get_string(0x2B8);  /* 'Error: Bad save file' */
                 disk_to_vid(5, 0);
                 grfx_quikfont(FONT_BIG);
                 *foreground_color = 7;
@@ -374,7 +388,7 @@ int far do_journey(void)
         i = count;
         mouse_hide();
         display_screen(-1, 5);
-        msg = get_string(0x311);
+        msg = get_string(0x311);  /* 'You reenter the Underworld . . .' */
         grfx_quikfont(FONT_BIG);
         *foreground_color = 7;
         *background_color = 7;
@@ -389,6 +403,8 @@ int far do_journey(void)
     return 0;
 }
 
+/* Marks an irregular area of the automap (x 0x12..0x2C, y 0x1E..0x34, cut by
+   Region_ovr147_A73) as seen. Never called. */
 void far UnknownAutomapLoop_ovr147_A56(void)
 {
     automap_area(0x12, 0x1E, 0x2C, 0x34, 0, Region_ovr147_A73);

@@ -3,18 +3,31 @@
 /* Saving and restoring the player's inventory in player.dat: the player object, the object
    in the cursor and every object reachable from them are copied into the workspace, with
    their links renumbered to the copy's own indexes, and back again. The whole of DOS
-   overlay ovr122, in original order. Function names are the originals from the FM Towns
-   symbol table (the four helpers IDA left as ovr122_336, _38A, _3A4 and _3C6 are
-   replaceInInv, allocSaveObj, getSaveObj and putInInv, the FM Towns functions at the same
-   positions doing the same work); the source file's own name is not known.
+   overlay ovr122, in original order.
+
+   What it does in the game: the inventory lives in the level's object lists, which are
+   saved per level, so the player's own objects travel separately. SavePlayerInv writes
+   PLAYER.DAT: the player data (save_player_data, PLAYDATA.C), a word, and the workspace
+   copy. With no name it only fills the workspace, and RestorePlayerInv with no name puts it
+   back: GAMEWRAP.C's GetLevel and SaveLevel use the pair to keep the inventory out of
+   the level's object lists while a level is loaded or written, and SaveGame and the restore
+   use the named form. Restoring frees the old
+   inventory first (Punt_player_inv).
 
    The workspace holds the player object at 0, the cursor object at 0x1B, a copy of the
-   inventory slots at 0x23, and from 0x5B the saved objects, numbered from 1. */
+   inventory slots at 0x23, and from 0x5B the saved objects (8-byte static object records),
+   numbered from 1 so that 0 can stay the empty link. The word written before it is one more
+   than the number of objects, which makes saveNum * 8 + 0x5B the length of the copy.
+
+   Function names are the originals from the FM Towns symbol table (the four helpers IDA
+   left as ovr122_336, _38A, _3A4 and _3C6 are replaceInInv, allocSaveObj, getSaveObj and
+   putInInv, the FM Towns functions at the same positions doing the same work).
+   Name: descriptive (saving and restoring the player's inventory). */
 
 #include <dos.h>
 #include <io.h>
 #include <fcntl.h>
-#include <stat.h>                       /* sys\stat.h; the build keeps it flat */
+#include <stat.h>                       /* match: sys\stat.h; the build keeps it flat */
 #include <string.h>
 #include "file.h"
 #include "inv.h"
@@ -26,8 +39,9 @@
 
 extern union Link Inventory[];
 
-/* FM Towns keeps these as statics after BagSaveHandles, so their names are not known; these
-   were chosen to land in _BSS in the EXE's order (DS:6A86, 6A8A, 6A8E, 6A90, 6A94). */
+/* name: FM Towns keeps these as statics after BagSaveHandles, so their names are not known. */
+/* match: these names were chosen to land in _BSS in the EXE's order (DS:6A86, 6A8A, 6A8E,
+   6A90, 6A94). */
 static union Link far *invSlots;        /* the inventory slots in the workspace */
 static struct StaticObj far *saveObjs;     /* the saved objects, numbered from 1 */
 static int saveNum;                     /* the number of saved objects */
@@ -36,6 +50,7 @@ static char cursorSaved;                /* the copy holds a cursor object */
 
 unsigned far get_workspace(void);
 
+/* Closes any open bag and frees every object the player carries. */
 void far Punt_player_inv(void)
 {
     FixBagArea();
@@ -43,6 +58,8 @@ void far Punt_player_inv(void)
     ClearInventory();
 }
 
+/* Fills the workspace ws with the player object, the inventory and, if one is held, the
+   cursor object (which is freed from memory: it is in the copy now). */
 void far makePlayerInvCopy(void far *ws)
 {
     struct Object far *p;
@@ -73,6 +90,9 @@ void far makePlayerInvCopy(void far *ws)
         cursorSaved = 0;
 }
 
+/* Copies the inventory to the workspace and, given a save directory name, writes
+   name + "player.dat" and releases the workspace. Returns 0 if the workspace or the file
+   could not be had. */
 char far SavePlayerInv(char *name)
 {
     char ok = 1;
@@ -179,6 +199,7 @@ void far InvRestoreNexts(unsigned far *dst, union Link far *src)
     }
 }
 
+/* Frees every object in the list head and in their contents. */
 void far FreePlayerInv(union Link far *head)
 {
     struct Object far *obj;
@@ -197,6 +218,7 @@ void far FreePlayerInv(union Link far *head)
         Obj_Free(obj);
 }
 
+/* Rebuilds the player object, the inventory and the cursor object from the workspace. */
 void far getPlayerInvCopy(void far *ws)
 {
     struct Object far *p;
@@ -216,6 +238,10 @@ void far getPlayerInvCopy(void far *ws)
     }
 }
 
+/* Frees the inventory and rebuilds it, from name + "player.dat" when a save directory is
+   given (also reading the player data and reloading the paperdoll pictures, and moving the
+   player's square record while doing so), or from the workspace a nameless
+   SavePlayerInv filled. */
 char far RestorePlayerInv(char *name)
 {
     char ok = 1;

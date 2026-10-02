@@ -1,7 +1,11 @@
 ; /* target: seg021_22FD_C10 */
 ; /* opts: /ml */
 ;
-; _C10: a far routine that only returns.
+; _C10: a far routine that only returns. INSTANCE.ASM's render_3d calls it on a stack in
+; seg_370D in the middle of each frame, so it is probably a hook left empty in this build (a
+; debugging or timing call in the development version; nothing in UW2 shows which).
+;
+; name: descriptive (module 16 of seg021); its job is not known beyond being empty.
 ;
 ; SEG021 split into its original modules: this is module 16 of 17, +C10..+C20 of the segment
 ; (file 24910h), a module of the second library (UWLIB.LIB).

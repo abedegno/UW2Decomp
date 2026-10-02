@@ -1,8 +1,18 @@
 /* target: ovr163 */
 /* opts: -mm -1 -G -O -Y -d */
 /* Spilling a container's contents onto the map, and the loot a critter is generated with:
-   the whole of DOS overlay ovr163, in original order. Function and global names are the
-   originals from the FM Towns symbol table; the source file's own name is not known. */
+   the whole of DOS overlay ovr163, in original order.
+
+   What it does in the game: generate_inventory gives a critter, the first time it needs
+   one (OBJ_HAS_INV clear), the loot its Creature record describes (the Guide's "Loot sub
+   table"): treasure scaled by the world, food, its two weapons and two other items, each
+   by chance. drop_link_chain empties a container or a dead critter onto the floor where it
+   stands; the items a critter drops belong to its race (drop_some_objects), so taking them
+   can count as theft.
+
+   Data owned: LootCreature, the Creature record being looted.
+   Function and global names are the originals from the FM Towns symbol table.
+   Name: descriptive (spilling containers and generating loot: generate_treasure). */
 
 #include <stdlib.h>
 #include "combat.h"
@@ -13,13 +23,19 @@
 #include "ui.h"
 
 extern struct MissileInfo Missile[];
-/* This file's _BSS, DS:863A: only this file uses it; no FM Towns name, so static. */
+/* This file's _BSS, DS:863A. */
+/* name: only this file uses it; no FM Towns name, so static. */
 static struct Creature near *LootCreature;
 
 char far put_at(int x, int y, int z, struct Object far *obj, int a, int b);
 void far UseTrigger(struct Object far *who, int a, int b, struct Object far *trig, int how);
 struct Object far * far CreateObj(int id, int b);
 
+/* Empties container cont onto the floor at its position (MapObj_X, MapObj_Y for a static
+   container), after removing its locks. Each object can be given owner (when nonzero and
+   the item can be owned); lit lights go out; a trap trigger among the contents (MAJOR_TRAP
+   minor 2 and up) is set off as it falls out (UseTrigger with how 4). Returns 1 if there was
+   anything inside. */
 char far drop_link_chain(struct Object far *cont, int owner)
 {
     struct Object far *obj;
@@ -61,11 +77,17 @@ char far drop_link_chain(struct Object far *cont, int owner)
     return 0;
 }
 
+/* A critter drops what it carries; the objects belong to its race. */
 void far drop_some_objects(struct Object far *critter)
 {
     drop_link_chain(critter, Creature[OBJ_INMAJOR(critter)].race);
 }
 
+/* Maybe adds treasure (items 0xA0 on) to npc. With chance treasure_rate in 16, a
+   treasure type is rolled from -(30 - 3w) to 6, w the world number; anything below 2
+   becomes type 0, so deeper worlds give better treasure more often. The type's value
+   (ComObjData, stretched above 4) against four times treasure_prob decides the quantity:
+   one at a chance when the value is higher, else 4d(2 * (4 * prob / value)) / 4. */
 void far generate_treasure(struct Object far *npc)
 {
     char type;
@@ -108,6 +130,7 @@ void far generate_treasure(struct Object far *npc)
     Obj_Add(&npc->ol.link, obj);
 }
 
+/* With chance food_prob in 16, adds the critter's food item. */
 void far generate_food(struct Object far *npc)
 {
     unsigned char prob;
@@ -122,6 +145,10 @@ void far generate_food(struct Object far *npc)
     }
 }
 
+/* Adds the critter's two weapons if present, at a random quality (half the time 4..8
+   times the dungeon level, which the 6-bit quality field wraps on deep levels, otherwise
+   0..63); ammunition (missile items whose Missile ammo
+   byte is 0xC0) comes in a stack of 4..11. */
 void far generate_weapons(struct Object far *npc)
 {
     unsigned char item;
@@ -146,6 +173,8 @@ void far generate_weapons(struct Object far *npc)
     }
 }
 
+/* Adds each of the two other items with its chance in 16, at a random quality as for
+   weapons (quality type 0xF items always 40). */
 void far generate_equipment(struct Object far *npc)
 {
     unsigned char i;
@@ -168,6 +197,7 @@ void far generate_equipment(struct Object far *npc)
     }
 }
 
+/* Gives npc its loot once and sets OBJ_HAS_INV so it is not given again. */
 void far generate_inventory(struct Object far *npc)
 {
     int minor, index;

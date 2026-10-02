@@ -1,6 +1,17 @@
 ; /* target: seg046_37CD */
 ; /* opts: /ml */
 ;
+; What it does in UW2. Most of UW2's C code is in overlays (the ovrNNN segments): only one
+; overlay's code at a time is in a buffer in conventional memory, and a call to a function in
+; an overlay goes through a small stub in the resident image. If the overlay is not loaded,
+; the stub's int 3Fh enters this manager, which reads the overlay from the EXE (or copies it
+; from EMS, when TMPALLOC.C has called _OvrInitEms) into the buffer, possibly throwing out
+; others, and patches the stubs. UWEDIT.C sizes the buffer through _ovrbuffer. The game's own
+; code never calls the manager except for _OvrInitEms.
+;
+; name: inferred (map/filenames.tsv): named after the library, OVERLAY.LIB, whose five
+; modules it holds.
+;
 ; Borland's VROOMM overlay manager, from OVERLAY.LIB of Turbo C++ 1.01 (XLIB.ZIP on disk 3).
 ; The segment is the _OVRTEXT_ code of five library modules, linked in library order, and
 ; each one equals the library object byte for byte outside its fixups:
@@ -20,7 +31,7 @@
 ; own far call to seg046_37CD_135, which the library object also holds as a far call.
 ; The original was several separately assembled modules; here it is one file.
 ;
-; NOSMART: with it TASM 2.0 keeps `call far ptr` into the same segment as 9A (backward
+; match: NOSMART: with it TASM 2.0 keeps `call far ptr` into the same segment as 9A (backward
 ; and forward, no push cs) and keeps `lea reg,[direct]` as lea instead of making it
 ; `mov reg,offset`; both occur here (tested; a backward `jmp near ptr` is still made
 ; short). .186: __OvrInitExt has `shr ax,4` (C1 E8 04) at +0B4C.
@@ -35,12 +46,12 @@
 ; _VDISKSEG_ are the library's own group and segment names, declared here as externs only
 ; to give their segment values.
 ;
-; _OvrInitEms is __OvrInitEms (seg042 calls it as _OvrInitEms(0, 0, 0) after printing
+; name: _OvrInitEms is __OvrInitEms (seg042 calls it as _OvrInitEms(0, 0, 0) after printing
 ; "EMS allocated"); it keeps the symbols.tsv name until that file is changed.
 
         .186
 
-; Two encodings TASM's default SMART mode would change: a far call into this segment
+; match: two encodings TASM's default SMART mode would change: a far call into this segment
 ; (SMART makes it push cs; call near) and lea of a direct address (SMART makes it mov).
 ; The library has both, while elsewhere it uses the sign-extended 83 forms that NOSMART
 ; gives up, so NOSMART is switched on for just these instructions. MASM 5.1 produces all
@@ -185,6 +196,13 @@ L000E:
         dw      0
 
 ; seg046_37CD_10  (+10)
+; __OVRINIT(exe name far, heap start, heap end) (far, pascal-style: retf 8): open the program's
+; own EXE (the name passed, else __EXENAME__, else searched for on the PATH), find the overlay
+; data that TLINK appended after the load image (the chain of blocks headed "FB" "OV"), record
+; its file position and size (__OvrFileBase, __OvrSize), install the int 3Fh trap (_135), set up
+; the overlay heap between the two paragraphs given, build the module tables (__InitModules) and
+; check the heap holds the largest overlay. Out: AX = 0, or a negative error (-2 file not found,
+; -3 read error, -4 not an overlay EXE, -5 heap too small, -1 other).
 __OVRINIT proc far
         push    bp
         mov     bp,sp
@@ -308,6 +326,9 @@ L012C:
 __OVRINIT endp
 
 ; seg046_37CD_135  (+135)
+; _135: swap the int 3Fh vector (the overlay trap, whose number is __OVRTRAP__+1) with the one
+; saved in OVRMAN's data, and open or close the EXE (__OvrDosHandle) to match; called once to
+; install and once to remove.
 _seg046_37CD_135 proc far
         push    bp
         mov     bp,sp
@@ -346,6 +367,8 @@ L0183:
 _seg046_37CD_135 endp
 
 ; seg046_37CD_186  (+186)
+; __OVREXIT: remove the trap, and call the EMS and extended-memory exit hooks (__CALLEMSEXIT,
+; __CALLEXTEXIT) so their memory is freed.
 __OVREXIT proc far
         push    bp
         mov     bp,sp
@@ -798,6 +821,11 @@ L04DF:
 __ReadOvrDisk endp
 
 ; Interrupt_3F_seg046_37CD_4E0  (+4E0)
+; The int 3Fh handler: every call to a function in an overlay that is not loaded lands here
+; through the overlay's stub (the int 3Fh in the stub's entry). It finds the stub from the
+; return address, loads the overlay (_590), and returns into the now-patched stub, which jumps
+; to the code; __OVRHOOK__ is called afterwards. An odd BP means the stack is not a normal frame
+; and the program is halted (__OverlayHalt).
 _Interrupt_3F_seg046_37CD_4E0 proc far
         push    bp
         mov     bp,sp
@@ -1180,6 +1208,8 @@ _seg046_37CD_799 proc near
 _seg046_37CD_799 endp
 
 ; seg046_37CD_7B1  (+7B1)
+; __ISOVERLAYMOD: AX = a segment. If it is a block in the overlay heap holding an overlay's
+; code, AX = that overlay's stub segment; otherwise AX = 0 and carry set.
 __ISOVERLAYMOD proc far
         push    ds
         push    es
@@ -1208,6 +1238,9 @@ L07E4:
 __ISOVERLAYMOD endp
 
 ; seg046_37CD_7E7  (+7E7)
+; __CHECKSTACK: walk the chain of BP frames (up to CX) and mark the stubs of the overlays that
+; frames on the stack will return into, so the loader can deal with them before it throws code
+; out of the buffer (how it deals with them is in the code after L0836; read only this far).
 __CHECKSTACK proc far
         push    bp
         mov     bp,sp
@@ -1279,6 +1312,7 @@ L0878:
 __CHECKSTACK endp
 
 ; seg046_37CD_87F  (+87F)
+; __CHECKOVERLAY: the loader's check of one overlay against the stack walk above.
 __CHECKOVERLAY proc far
         push    bp
         mov     bp,sp
@@ -1320,6 +1354,9 @@ __CHECKOVERLAY endp
 ; ---- OVRSWAP (+08D7)
 
 ; _OvrInitEms  (+8D7)
+; _OvrInitEms(handle, first page, pages) (Borland's _OvrInitEms): keep overlays in EMS as well
+; as in the buffer, so reloading one is a copy from EMS rather than a read from disk. TMPALLOC.C
+; calls it as _OvrInitEms(0, 0, 0) (all defaults) after it has set up its own EMS use.
 __OvrInitEms proc far
         push    bp
         mov     bp,sp
@@ -1539,6 +1576,7 @@ L0AA0:
 __OvrInitEms endp
 
 ; seg046_37CD_AA1  (+AA1)
+; __OvrInitExt (Borland's _OvrInitExt): the same with extended memory; UW2 does not call it.
 __OvrInitExt proc far
         push    bp
         mov     bp,sp
@@ -1825,6 +1863,8 @@ L0CF2:
 _seg046_37CD_CF0 endp
 
 ; seg046_37CD_CFD  (+CFD)
+; __SwapOverlay: copy an overlay to or from the cache: EMS (_BBB) when bit 0 of OVRSWAP's flag
+; byte is set, extended memory (L09B7) when bit 1 is.
 __SwapOverlay proc near
         test    byte ptr ds:[ovrswap_data],1
         je      short L0D08
@@ -1848,6 +1888,10 @@ L0D14:
 ; ---- OVRUSER (+0D15)
 
 ; seg046_37CD_D15  (+D15)
+; __OvrPrepare: run at start-up from the C start-up's _INIT_ table, before main. Builds the
+; module tables, allocates the overlay buffer with farmalloc, the larger of _ovrbuffer (UWEDIT.C
+; sets 300h paragraphs, 12 KB) and twice the largest overlay, and calls __OVRINIT on it; any
+; failure aborts the program.
 __OvrPrepare proc far
         push    ds
         push    si

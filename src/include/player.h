@@ -216,11 +216,11 @@ extern int GrSq;
 void far change_GrSq(int sq, int z);
 void far hgt_change(struct Object far *obj, struct Tile far *tile, int z);
 void far player_newsq(int sq);
-/* IDA's StopPlayerMotion. Named from FM Towns: player_sqhandler_ follows player_newsq_
+/* name: IDA's StopPlayerMotion. Named from FM Towns: player_sqhandler_ follows player_newsq_
    there and is the same test (bit 0x1000, no pitch, slow, lastTerr & 0xA) clearing PN+6
    and PN+8; player_setup stores it as PT's handler, as FM Towns does. */
 char far player_sqhandler(unsigned *w);
-/* IDA's CalculateMotionFromCommand. Named from FM Towns: do_player_input_ is next there,
+/* name: IDA's CalculateMotionFromCommand. Named from FM Towns: do_player_input_ is next there,
    is called by set_player_phys_params_ with PlayerInput as here, and has the same
    14-entry switch on the input. */
 void far do_player_input(int input, int rate, int *speed);

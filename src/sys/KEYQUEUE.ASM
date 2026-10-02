@@ -1,8 +1,21 @@
 ; /* target: seg021_22FD_450 */
 ; /* opts: /ml */
 ;
-; The keyboard input queue the int 9 handler fills: key translation, the shift states and the
-; buffer at 300h..340h of the module data segment.
+; Reading the keyboard: turning the raw scan codes KBDINT.ASM's int 9 handler queues into key
+; events. It reads the ring buffer at FD71:0300..033F (the read pointer at 026C, the write
+; pointer the handler keeps in _590), assembles the E0 and E1 prefixed sequences of the extended
+; keys, keeps a down count for every key (01EB + scan code), ignores the hardware autorepeat
+; unless 01E0 is set, works out the shift states, and translates scan codes to characters
+; through the table at FD71:0010 (256 entries: the scan code, plus 80h when shifted). _450 is
+; the far entry; FM Towns has key and key_ here.
+;
+; Data (FD71): 01E0 allow repeats; 01E2..01E7 the six modifier states (_51A); 01E8 the lock
+; state; 01E9 the keyboard layout (0, 2 or 4; see _46B); 026B the byte after an E0 prefix;
+; 026E the 13 scan codes _454 remaps for layout 4, and their replacements 12 bytes on;
+; 0288 the 16 E0-prefixed scan codes the game uses; 0299, 02A1 the two keys of each modifier,
+; by layout.
+;
+; name: descriptive (module 7 of seg021, "the keyboard input queue").
 ;
 ; SEG021 split into its original modules: this is module 7 of 17, +450..+590 of the segment
 ; (file 24150h), a module of the second library (UWLIB.LIB).
@@ -32,12 +45,14 @@ SEG021_TEXT segment para public 'CODE'
         public  _seg021_22FD_577
 
 ; seg021_22FD_450  (+450)
+; _450 (key, probably): far entry to _4A8.
 _seg021_22FD_450 proc far
         call    _seg021_22FD_4A8
         retf
 _seg021_22FD_450 endp
 
 ; seg021_22FD_454  (+454)
+; _454: remap AL (top bit kept) through the 13-entry table at 026E, for layout 4.
 _seg021_22FD_454 proc near
         mov     ah,al
         and     ah,80h
@@ -53,6 +68,10 @@ L0468:
 _seg021_22FD_454 endp
 
 ; seg021_22FD_46B  (+46B)
+; _46B: choose the keyboard layout once (when 01E9 is 0): 2 when the BIOS reports an enhanced
+; 101/102-key keyboard (0040:0096 bit 4), else 4 when FD71:0120 is set, else 0. FD71:0120 is
+; probably a setting from the command line or configuration (not traced). The code after the ret
+; (L049B, L049E) belongs to _4A8: no key, and the Pause sequence (E1), returned as E0h.
 _seg021_22FD_46B proc near
         cmp     word ptr ds:[1E9h],0
         jne     short L048C
@@ -84,6 +103,12 @@ L049E:
 _seg021_22FD_46B endp
 
 ; seg021_22FD_4A8  (+4A8)
+; _4A8: the next key event. Takes a complete scan-code sequence from the buffer (_562; none: AX
+; = 0); an E0-prefixed key becomes an index into the table at 0288 (the fake shifts E0 2A and E0
+; 36 are skipped). For a key going down, counts it (a key already down is ignored unless 01E0 is
+; set), translates it with the shift state, and updates the modifiers; for a key going up (top
+; bit), clears its count and the modifiers and reads on. Out: AL = the translated character, AH
+; = the scan code, BX = 1.
 _seg021_22FD_4A8 proc near
         call    _seg021_22FD_562
         jb      L049B
@@ -126,7 +151,7 @@ L04FD:
         je      short L050B
         or      bl,80h
 L050B:
-        ; mov ah,[bx+10h] with a 16-bit displacement: the source named a relocatable
+        ; match: mov ah,[bx+10h] with a 16-bit displacement: the source named a relocatable
         ; label (offset 10h in the module's data segment), which always takes 16 bits.
         ; A plain number gives 8A 67 10, and a forward equate 8A 67 10 90.
         db      8Ah,0A7h,10h,0h
@@ -140,6 +165,8 @@ L050B:
 _seg021_22FD_4A8 endp
 
 ; seg021_22FD_51A  (+51A)
+; _51A: recompute the six modifier states at 01E2: each is down if either of its two keys (from
+; the tables at 0299 and 02A1 for the current layout) is down. L053B is _4A8's key-up path.
 _seg021_22FD_51A proc near
         mov     cx,6
         mov     bx,word ptr ds:[1E9h]
@@ -167,6 +194,8 @@ L054B:
 _seg021_22FD_51A endp
 
 ; seg021_22FD_552  (+552)
+; _552: step the buffer index SI (wrapping at 0340h) and compare it with the handler's write
+; pointer (ZF: no more bytes yet).
 _seg021_22FD_552 proc near
         inc     si
         cmp     si,340h
@@ -178,6 +207,8 @@ L055C:
 _seg021_22FD_552 endp
 
 ; seg021_22FD_562  (+562)
+; _562: is a complete sequence waiting? Carry set when the buffer is empty or an E0 or E1
+; sequence has not all arrived (checked with _552), else falls into _577 for its first byte.
 _seg021_22FD_562 proc near
         mov     si,word ptr ds:[26Ch]
         cmp     si,word ptr cs:_seg021_22FD_590
@@ -190,6 +221,8 @@ _seg021_22FD_562 proc near
 _seg021_22FD_562 endp
 
 ; seg021_22FD_577  (+577)
+; _577: AL = the next byte of the buffer, advancing the read pointer 026C (wrapping at 0340h);
+; carry clear.
 _seg021_22FD_577 proc near
         mov     si,word ptr ds:[26Ch]
         lodsb

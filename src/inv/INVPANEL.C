@@ -2,9 +2,27 @@
 /* opts: -mm -1 -G -O -Y -d */
 /* The inventory panel: the paperdoll and backpack slots, their screen rectangles, picking
    objects up and putting them down in the slots, stacking and combining them, the weight
-   display and the hit test: the whole of DOS overlay ovr125, in original order. Function
-   and global names are the originals from the FM Towns symbol table; the source file's own
-   name is not known. */
+   display and the hit test: the whole of DOS overlay ovr125, in original order.
+
+   What it does in the game: the right-hand panel in its inventory mode. BeginInventory
+   saves the screen under every slot and registers the panel's mouse region; a click there
+   comes to DoInventoryMouse (through mous_in_panel), which picks the object up onto the
+   cursor (SetCursorObj, asking 'Move how many?' for a stack) or puts the cursor object down
+   (RearrangeInventory): into an empty slot, onto a bag (PutObjectInBag, BAGS.C), merged with
+   a matching stack (AddTogether), combined with another object (COMBINE.C), or swapped.
+   ItemFitsSlot holds the rules for what goes where. DisplayInvSpecial draws the paperdoll
+   with the armour worn, each piece's picture chosen by its type and condition;
+   displayInventoryArray draws slots with stack counts, and displayEnc the weight the player
+   can still carry.
+
+   Data owned: the slot tables (InvDisplay, a rectangle per display position;
+   SlotToDisplay and DisplayToSlot between Inventory[] slots and display positions, see
+   inv.h), OpenBag and OpenBagList (BAGS.C's open bags), CursorObjPtr (the object on the
+   cursor), the screen saves (SaveHandles) and the paperdoll picture cache (invArmorObj,
+   invArmorQ). Containers[] (what each container holds and how much) is OBJCLASS.C's data,
+   used here.
+   Function and global names are the originals from the FM Towns symbol table.
+   Name: descriptive (the inventory panel: DoInventoryMouse, DisplayInventory). */
 
 #include <stdlib.h>
 #include "gfx.h"
@@ -14,7 +32,7 @@
 #include "ui.h"
 #include "uw2.h"
 
-/* One container type, 3 bytes. */
+/* One container type, 3 bytes: OBJECTS.DAT's container table (Guide, "Containers table"). */
 struct Container {
     unsigned char capacity;             /* 0x00, 0 for no limit */
     int mask;                           /* 0x01, what it accepts: an item id, 0x200.. a kind, or -1 */
@@ -23,7 +41,8 @@ struct Container {
 extern struct Player PlayerDat;
 extern union Link Inventory[];
 extern struct Container Containers[];
-/* This file's _BSS, DS:6AD0..6B0F, laid out by name (tools/bssorder.py): invArmorObj and
+/* This file's _BSS, DS:6AD0..6B0F. */
+/* match: laid out by name (tools/bssorder.py): invArmorObj and
    invArmorQ 57, SaveHandles 827, panel_mouse 968, CursorObjPtr 995; ovr130's Containers
    (339) starts the next run. panel_mouse (DS:6B0A) has no FM Towns name and only this file
    uses it, so it is static, its provisional name chosen for its key. Inventory (DS:6A98,
@@ -83,7 +102,7 @@ char SlotToDisplay[28] = {
 char DisplayToSlot[21] = {
     1, 3, 0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
 };
-/* FM Towns keeps the next four as unnamed statics; the names are mine. */
+/* name: FM Towns keeps the next four as unnamed statics; the names are mine. */
 static int panel_input = 0;             /* DS:1799, the panel's mouse handler */
 static int shown_capacity = -1;         /* DS:179B, the weight figure on screen */
 unsigned char InvUpArrow = 0;
@@ -92,6 +111,8 @@ static unsigned char inv_begun = 0;     /* DS:179F */
 unsigned char inv_refresh = 1;
 static unsigned char ArmorSlots[5] = { 1, 3, 5, 4, 2 };    /* DS:17A1, the paperdoll slots */
 
+/* Loads the paperdoll body picture (BODIES, by sex and body type) and forgets the cached
+   armour pictures. */
 void far load_inventory_pix(void)
 {
     register int i;
@@ -102,6 +123,8 @@ void far load_inventory_pix(void)
         invArmorObj[i] = 0;
 }
 
+/* Once per game: saves the background under each slot's rectangle for redrawing, and
+   registers the panel's mouse region and its handler mous_in_panel. */
 void far BeginInventory(void)
 {
     int x;
@@ -136,7 +159,7 @@ void far BeginInventory(void)
     }
 }
 
-/* IDA DoesNothing_ovr125_1E6; FM Towns has EndInventory_, also empty, in this place. */
+/* name: IDA DoesNothing_ovr125_1E6; FM Towns has EndInventory_, also empty, in this place. */
 void far EndInventory(void)
 {
 }
@@ -155,6 +178,15 @@ void far ClearInventory(void)
     shown_capacity = -1;
 }
 
+/* A click in the inventory panel (how: the kind of click, -2 a look). With an empty
+   cursor, a press on an object picks it up (dragging a stack asks how many; a bag already
+   open cannot be taken, and in barter mode only a container of class 0xF can, else string
+   0xC9); clicking the empty weapon hand toggles fight mode. With an object on the cursor it
+   is put down in the slot (RearrangeInventory) or handed to DoSpecialActions (BAGS.C), which also
+   handles a use click on a slot with nothing on the cursor, for the special positions: 21
+   and 22 the bag's scroll arrows, 0x17 the 3D view (dropping into the world), 0x18 the
+   player's barter area. While another panel is shown on the right only the 3D view (0x17)
+   takes objects. */
 void far DoInventoryMouse(int how)
 {
     int x0;
@@ -198,7 +230,7 @@ void far DoInventoryMouse(int how)
                 }
             } else if (OBJ_MAJOR(obj) == MAJOR_MISC && OBJ_MINOR(obj) == 0) {
                 if (inplist->mode == 4 && OBJ_INCLASS(obj) != 0xF) {
-                    game_sprint(0xC9);
+                    game_sprint(0xC9);  /* 'You cannot barter a container. Instead, remove the contents ...' */
                     return;
                 }
                 for (bag2 = OpenBagList; bag2 != 0; bag2 = bag2->next)
@@ -255,6 +287,8 @@ void far DoInventoryMouse(int how)
     }
 }
 
+/* An object dragged into the panel from the 3D view becomes the cursor object and is put
+   down where the button is released. */
 void far DoInventoryDrag(struct Object far *obj)
 {
     int x;
@@ -289,8 +323,10 @@ void far DoInventoryDrag(struct Object far *obj)
     }
 }
 
-/* IDA LoadMaleOrFemaleArmourArt_ovr125_68B; FM Towns load_inv_pic_ sits in the same place
-   and patches the same string the same way. */
+/* Loads paperdoll picture img for display slot n from ARMOR_F or ARMOR_M by the player's
+   sex, by patching the name's last letter in place. */
+/* name: IDA LoadMaleOrFemaleArmourArt_ovr125_68B; FM Towns load_inv_pic_ sits in the same
+   place and patches the same string the same way. */
 char far load_inv_pic(int n, int img)
 {
     register char *name = "armor_f";
@@ -303,6 +339,10 @@ char far load_inv_pic(int n, int img)
     return 1;
 }
 
+/* Draws the paperdoll: the body, then the armour in the five armour slots, each picture
+   chosen by the armour's type (minor index & 0x1F) and condition (quality / 16; types
+   above 14 always use condition 3), loaded only when it changed; then the hands and
+   rings, and the weight left. */
 void far DisplayInvSpecial(void)
 {
     struct Object far *obj;
@@ -385,6 +425,8 @@ void far DisplayInvObject(int slot)
     }
 }
 
+/* Takes the object in slot onto the mouse cursor. keep: the slot holds a split stack, and
+   the remainder (the next object in the list) stays in the slot. */
 void far SetCursorObj(int slot, char keep)
 {
     char had;
@@ -408,6 +450,9 @@ void far SetCursorObj(int slot, char keep)
     }
 }
 
+/* Asks 'Move how many? ' for a stack obj of n objects; Escape gives 0. Returns the object
+   to move: obj itself, or obj cut down to the number asked with the rest split off into a
+   new object, or 0. */
 struct Object far * far AskHowMany(struct Object far *obj)
 {
     int orig;
@@ -455,6 +500,19 @@ struct Object far * far AskHowMany(struct Object far *obj)
     return split;
 }
 
+/* Whether obj may go into slot: 1 yes, 0 no, -1 it was eaten (food dropped on slot 0, the
+   head, inferred: UseFood took it). The armour slots take armour of the matching wearable
+   type (cls[3]: 8 head, 1 torso, 4 gloves, 3 legs, 5 boots; Guide, "Armour and Wearables
+   Table"), the ring slots type 9. The weapon hand refuses a stack of weapons. A light
+   source (MAJOR_MISC minor 1 class 4..7) is tested as its unlit form and stays lit only in
+   a shoulder or hand slot (ValidLightSlots); elsewhere it is put out. Into a container (a
+   bag slot or the open bag) the weight must fit the capacity of the container and every
+   open bag around it ('The <bag> is too full.'), and a container with a mask takes only
+   that item or kind: 0x200 runes (rune bag), 0x201 sling stones, bolts, arrows and wands
+   (items 0x98..0x9F), 0x202 scrolls and maps (0x134..0x137, 0x139, 0x13A), 0x203 food and
+   reagents but not drinks, 0x204 keys (or a key container); by what they accept, probably
+   the rune bag, quiver, map case, bowl and key ring (items 0x8F, 0x8D, 0x88, 0x8E, 0x8C;
+   inferred). Otherwise the item's ComObjData pickup flag decides. */
 int far ItemFitsSlot(struct Object far *obj, int slot)
 {
     struct ComObj *com;
@@ -485,7 +543,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
                 if (Inventory[j].f.index == 0)
                     break;
             if (j > 18)
-                game_sprint(0x112);
+                game_sprint(0x112);  /* 'There is no place to put that.' */
             return j <= 18;
         }
         cont = Obj_PtrTMem(&OpenBag->prev->obj);
@@ -565,7 +623,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
                 get_name(name, cont, 0, 0);
                 scroll_print("The ");
                 scroll_print(name);
-                game_sprint(0xD0);
+                game_sprint(0xD0);  /* ' is too full.' */
                 return 0;
             }
         }
@@ -581,7 +639,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
             switch (cap) {
             case 0x200:
                 if (!(res = major == MAJOR_STUFF && (minor == 3 || minor == 2 && sub > 7))) {
-                    game_sprint(0x106);
+                    game_sprint(0x106);  /* 'You can only put runes in the rune bag.' */
                     return 0;
                 }
                 break;
@@ -612,6 +670,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
     return com->pickup;
 }
 
+/* Puts the cursor object down in slot: into it if empty, else onto what is there. */
 void far RearrangeInventory(int slot)
 {
     if (Inventory[slot].f.index == 0) {
@@ -639,13 +698,18 @@ unsigned char far AddToEmptySlot(struct Object far *obj, int slot)
     return ok;
 }
 
+/* Whether obj can be merged into the stack onto: the same item, both plain stacks (not
+   containers, not special links), a stackable item (ComObjData stack not 1 or 3), keys
+   with the same owner (the lock they open), under 999 together, and, except for sling
+   stones, bolts and arrows, the same quality band (quality / 16) with neither ruined
+   unless both are. Storage crystals never merge. */
 char far AddTogether(struct Object far *obj, struct Object far *onto)
 {
     register int q1;
     register int q2;
 
-    /* Every return 0 here is one jump to the final return 0: the compiler shares them
-       only when that last statement is itself reachable. */
+    /* match: every return 0 here is one jump to the final return 0: the compiler shares
+       them only when that last statement is itself reachable. */
     if (OBJ_ITEM(obj) != OBJ_ITEM(onto))
         return 0;
     if (!OBJ_ISQUANT(obj) && obj->ol.f.link > 0
@@ -667,6 +731,10 @@ char far AddTogether(struct Object far *obj, struct Object far *onto)
     return 0;
 }
 
+/* Puts obj down on the occupied slot: into a bag that is there, merged with a matching
+   stack (the merged quality is the average of the two), combined if the two combine
+   (COMBINE.C: the result goes to the slot or the cursor), else swapped with what is there
+   (the old object comes onto the cursor). Returns 1 when obj was used up. */
 char far AddToOccupiedSlot(struct Object far *obj, register int slot)
 {
     struct Object far *target;
@@ -752,11 +820,13 @@ void far DisplayInventory(void)
         if (OpenBag != 0)
             pic_to_screen(0x2073, 0xEE, 0x7A, 0x2B, 0x4C);
         else
-            restore_rect(1);            /* FM Towns restores SaveHandles[1]; DOS pushes 1 */
+            restore_rect(1);            /* match: FM Towns restores SaveHandles[1]; DOS pushes 1 */
         displayInventoryArray(6, 0x16);
     }
 }
 
+/* Redraws display positions from..to: each object's picture, the stack counts over them
+   in the small font, and the weight left. */
 void far displayInventoryArray(int from, int to)
 {
     int id;
@@ -808,6 +878,8 @@ void far displayInventoryArray(int from, int to)
     mouse_show();
 }
 
+/* Draws the weight the player can still carry (max_weight - weight, shown / 10) if it
+   changed; returns 1 when it drew and show was set. */
 char far displayEnc(char show)
 {
     char drawn;
@@ -828,6 +900,9 @@ char far displayEnc(char show)
     return drawn;
 }
 
+/* The display position under screen point x, y: 0..22 from InvDisplay, 0x17 for the
+   3D view (PLeft, PBot, PWid, PHgt), 0x18 for the player's barter area in barter mode, or
+   -1. */
 int far FindInventoryHit(int x, int y)
 {
     register struct InvRect *r;

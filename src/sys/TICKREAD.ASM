@@ -1,7 +1,10 @@
 ; /* target: seg021_22FD_C00 */
 ; /* opts: /ml */
 ;
-; _C00: reads the tick counter (far).
+; _C00: AX = the low word of the game clock (TICKS.ASM), far. Called by GRMISC.ASM's
+; frame-timing pair (_28, _46).
+;
+; name: descriptive (module 15 of seg021, "reads the tick counter").
 ;
 ; SEG021 split into its original modules: this is module 15 of 17, +C00..+C10 of the segment
 ; (file 24900h), a module of the second library (UWLIB.LIB).

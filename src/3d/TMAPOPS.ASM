@@ -1,8 +1,42 @@
 ; /* target: seg004_0849_3CF0 */
 ; /* opts: /ml */
 ;
-; The texture-mapping opcode handlers: do_set_tmctxt .. do_tmap, draw_solid_tmap and
-; do_scalebm (FM Towns names).
+; The texture-mapping opcode handlers of the model interpreter (INTERP.ASM): each collects one
+; polygon's vertices with their texture coordinates and hands it to the texture mapper
+; (asm_texture_map_from_draw_poly, PROJPOLY.ASM), or draws it flat when texture mapping is off.
+; do_scalebm draws a bitmap scaled to the view (a sprite face), through seg003's SCALEBM.ASM.
+; The module also holds the start of the renderer's far data that follows it in FD58.
+;
+; Interpreter conventions (all opcode handlers, see INTERP.ASM): SI points at the bytecode
+; operands; a handler ends with `lodsw; xchg bx,ax; jmp word ptr [bx+24F4h]`, the next opcode
+; through the opcode table at DS:24F4 (FM Towns vector_table). DS = ES = FD58 (seg052_519C).
+;
+; Data (DS = FD58; FM Towns names, which read the same variables in the same order):
+;   DS:01B6 vert_ptr, 01B8 buf_ptr: end and start of the polygon being built in vbuf
+;   DS:01BA vbuf: the polygon, 12 bytes a vertex: the point's x, y, z words, its clip codes
+;           as a word, then u and v (8.8 texel coordinates)
+;   DS:14CA codes_or, 14CB codes_and: the OR and AND of the vertices' clip codes; codes_and
+;           nonzero means every vertex is off the same edge and nothing is drawn
+;   DS:14D0 resbuf: the transformed points, 8 bytes each (x, y, z, codes byte at +6)
+;   DS:2690 polym: nonzero draws the polygon flat (draw_solid_tmap)
+;   DS:C788 mapper_rtn: 60h for a floor-style map (do_tmap ...) or 20Fh for a wall map (the
+;           "w" opcodes); PROJPOLY.ASM compares it with C800 to pick vertical columns. In DOS
+;           the value is only a flag: seg003:60 is the 'map bitmap error' break, and FM Towns
+;           stores its routines map_bitmap and wmap_bitmap there.
+;   DS:C78C the map routine of the current g-map context (do_set_gmap_ctxt), 60h or 20Fh
+;   DS:C78E the vertex count of do_tmap (4) or do_tmap_tri (3)
+;   DS:C7FE bmap_blk_ptr: the current texture's 8-byte block in the table at C802
+;           (bm_number_0): word 0 the width, word 1 the v limit, then the texture's far pointer
+;
+; Data defined here (FD58 from C788 to the end of the segment; the parts before C788 come from
+; the EXE, see below): the bitmap table at C802 with its initial texture blocks (_seg_5DFD,
+; _checkerboard1), _first_anim (it holds the pattern "crit\cr??.??"), _grs_3dinf (the art page
+; of each 3D object type's pictures, view3d.h struct Grs3d), the page-cache maps _CmaptoPg,
+; _PgtoCmap, _CmapFrm and _CmapCache (PGCACHE.ASM), and the page variables _crit_fpage ..
+; _EmsBuff.
+;
+; name: descriptive (module 6 of seg004). Every handler has its FM Towns name; the module's own
+; name is not known.
 ;
 ; SEG004 split into its original modules: this is module 6 of 14, +3CF0..+40B0 of the segment
 ; (file CEB0h), a module of the second library (UWLIB.LIB).
@@ -206,6 +240,10 @@ SEG004_TEXT segment para public use16 'CODE'
         public  in_scalebm
 
 ; seg004_0849_3CF0  (+3CF0)
+; do_set_tmctxt (opcode 0xB2): operands: a bitmap slot (low byte), then the next opcode. Points
+; bmap_blk_ptr (C7FE) at slot n of the table at C802 (8 bytes a slot) for the texture-mapping
+; opcodes that take their texture from the context (do_ctxt_gtmap, do_ctxt_gmap,
+; do_compact_map).
 _do_set_tmctxt proc near
         lodsw
         xor     ah,ah
@@ -220,6 +258,8 @@ _do_set_tmctxt proc near
 _do_set_tmctxt endp
 
 ; seg004_0849_3D05  (+3D05)
+; do_set_gmap_ctxt (opcode 0xD0): operand: a flag. Sets the g-map context's map routine (C78C):
+; 60h (floor-style) when the flag's low byte is 0, else 20Fh (wall).
 _do_set_gmap_ctxt proc near
         lodsw
         test    al,0FFh
@@ -235,6 +275,8 @@ L3D18:
 _do_set_gmap_ctxt endp
 
 ; seg004_0849_3D1E  (+3D1E)
+; do_ctxt_gtmap: a g-polygon textured from the context slot (do_set_tmctxt), floor-style
+; mapping. Falls into do_gwtmap's vertex loop with BP = the context's bitmap block.
 _do_ctxt_gtmap proc near
         mov     word ptr ds:[0C788h],60h
         mov     bp,word ptr ds:[0C7FEh]
@@ -242,6 +284,7 @@ _do_ctxt_gtmap proc near
 _do_ctxt_gtmap endp
 
 ; seg004_0849_3D2A  (+3D2A)
+; do_ctxt_gmap: as do_ctxt_gtmap, with the mapping style of the g-map context (C78C).
 _do_ctxt_gmap proc near
         mov     bp,word ptr ds:[0C78Ch]
         mov     word ptr ds:[0C788h],bp
@@ -250,6 +293,7 @@ _do_ctxt_gmap proc near
 _do_ctxt_gmap endp
 
 ; seg004_0849_3D38  (+3D38)
+; do_gtri: does nothing but skip to the next opcode (no operands).
 _do_gtri proc near
         lodsw
         xchg    bx,ax
@@ -257,6 +301,13 @@ _do_gtri proc near
 _do_gtri endp
 
 ; seg004_0849_3D3E  (+3D3E)
+; do_gtmap and do_gwtmap: a textured polygon whose vertices carry fractional texture
+; coordinates. Operands: the bitmap slot, the vertex count n, then n triples (point offset into
+; resbuf, u, v); u and v are fractions (0..FFFFh) of the texture's width and height, scaled here
+; by the block's words 0 and 1 (the `mul` keeps the 8.8 result). do_gtmap maps floor-style
+; (60h), do_gwtmap wall-style (20Fh). The tail at L3F2E, shared by every handler in the module,
+; records vert_ptr and either draws the polygon flat (polym set) or calls _seg004_0849_3F77 to
+; texture map it.
 _do_gtmap proc near
         mov     word ptr ds:[0C788h],60h
         jmp     short L3D4C
@@ -305,6 +356,12 @@ L3D6C:
 _do_gwtmap endp
 
 ; seg004_0849_3DA2  (+3DA2)
+; do_compact_map, do_compact_tmap, do_compact_wtmap: a textured quadrilateral in a compact form.
+; Operands: the bitmap slot (not for do_compact_map, which uses the context), then four point
+; numbers as bytes (each times 8 is the point's offset in resbuf). The texture coordinates are
+; implied: the corners get u = width-1 or 0 and v = the v limit or 0 in a fixed order, so the
+; whole texture covers the quad. GRIDDB.C's txtflr and txtwal emit these for floors and walls
+; (opcodes 0xA0 and 0xA2).
 _do_compact_map proc near
         mov     bp,word ptr ds:[0C78Ch]
         mov     word ptr ds:[0C788h],bp
@@ -372,6 +429,12 @@ L3E26:
 _do_compact_wtmap endp
 
 ; seg004_0849_3E2C  (+3E2C)
+; do_bcompact_map, do_bcompact_tmap, do_bcompact_wtmap: as the do_compact_ handlers with the u
+; corners swapped (the `je` where do_compact has `jne`), so the texture is mirrored left to
+; right; probably for faces seen from behind (b for back). do_bcompact_map sets floor-style
+; mapping and jumps to L3E4C with AX unset: AX there is the BX the previous handler left (the
+; dispatch's xchg), where FM Towns' do_bcompact_map loads bmap_blk_ptr first. So in DOS it
+; would map with a stray block pointer; probably the C never emits it.
 _do_bcompact_map proc near
         mov     word ptr ds:[0C788h],60h
         jmp     short L3E4C
@@ -437,6 +500,10 @@ L3EAA:
 _do_bcompact_wtmap endp
 
 ; seg004_0849_3EAF  (+3EAF)
+; do_tmap_tri, do_wtmap, do_tmap: a textured triangle (do_tmap_tri) or quadrilateral,
+; floor-style (do_tmap, opcode 0x36) or wall-style (do_wtmap). Operands: the bitmap slot, then
+; per vertex a point offset into resbuf and a corner word: bit 0 set gives u = width-1, a value
+; of 2 or more gives v = the v limit, so each vertex sits at one corner of the texture.
 _do_tmap_tri proc near
         mov     word ptr ds:[0C788h],60h
         mov     cx,3
@@ -509,6 +576,10 @@ L3F2E:
 _do_tmap endp
 
 ; seg004_0849_3F43  (+3F43)
+; draw_solid_tmap: draw the polygon just collected as a flat polygon instead (polym nonzero,
+; texture mapping turned off). Compacts vbuf's 12-byte vertices to the 8-byte form the flat
+; polygon code reads, dropping u and v, recomputes codes_or and codes_and, and jumps to
+; INTERP.ASM's draw_poly_buf_ptr, which ends the opcode.
 _draw_solid_tmap proc near
         push    si
         mov     si,word ptr ds:[1B8h]
@@ -533,6 +604,10 @@ L3F59:
 _draw_solid_tmap endp
 
 ; seg004_0849_3F77  (+3F77)
+; seg004_0849_3F77 (FM Towns has it unnamed, at draw_solid_tmap+53h): texture map the polygon in
+; vbuf unless codes_and says it is wholly off one edge. CX = the vertex count ((vert_ptr -
+; buf_ptr) / 12; a remainder breaks with int 2), BX = bmap_blk_ptr, then
+; asm_texture_map_from_draw_poly (PROJPOLY.ASM). Keeps every register (pusha/popa).
 _seg004_0849_3F77 proc near
         test    byte ptr ds:[14CBh],0FFh
         jne     short L3F9E
@@ -556,6 +631,18 @@ L3F9E:
 _seg004_0849_3F77 endp
 
 ; seg004_0849_3F9F  (+3F9F)
+; do_scalebm: draw a bitmap scaled to its distance, standing upright at a point (a sprite).
+; Operands: the point's offset in resbuf, the bitmap record (an offset from C83A: do_uwobj
+; passes 1Ch, the record at C856, and do_uwcrit 0Eh, the record at C848, which they fill), and the next opcode. in_scalebm is a second entry with DI =
+; the point and AX = the slot, used by PGCACHE.ASM's do_uwobj and do_uwcrit.
+;
+; It offsets the point by the bitmap's hot spot (the record's words at +0Ah and +0Ch times bytes
+; +6 and +8, shifted by 3 - the zoom at DS:25E0, times the view scales at 2490 and 14BA),
+; projects that corner and the opposite one (_code_pnt, INSTANCE.ASM, gives the clip codes; a
+; point behind the eye or off the wrong edge abandons the sprite), stores the screen corner and
+; size in seg_370D:0B1A..0B27 and calls seg003's _seg003_0272_D1E (SCALEBM.ASM) to draw it. A
+; divide overflow while projecting is caught by _overflow_handler_reg (INTERP.ASM), installed
+; through SS:5A5, and also abandons the sprite.
 _do_scalebm proc near
         lodsw
         mov     di,ax

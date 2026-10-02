@@ -3,8 +3,28 @@
 /* Animated objects and timers: the list of running animation overlays (moving doors,
    explosions, splashes and other class 7 effects), stepping them each frame, ending
    them, creating the effect objects that carry them, and the list of timer triggers.
-   The whole of DOS resident segment seg044_368F, in original order. Function and global
-   names are the originals from the FM Towns symbol table where it has them. */
+   The whole of DOS resident segment seg044_368F, in original order.
+
+   What it does in the game: an animated object (MAJOR_ANIMOBJ, items 0x1C0..0x1CF) is an
+   ordinary object in a tile's list plus an entry in animlist, which says how many frames it
+   has left and on which tile it is. Its animation class (the low four bits of its item,
+   animclassd, loaded with the class data in ANIMOBJ.C) says what happens each frame: the
+   frame number, kept in the owner field, cycles or is picked at random, and a moving door
+   swings or rises. update_animobj, called from the main loop, steps every entry, ends the
+   expired ones (toast_animobj: a moving door becomes a door again, open or closed; an
+   effect is removed from the map) and fires the timer triggers. put_effect makes the blood,
+   dust, sparks and spell effects of combat and magic (COMBAT.C, SPELLS.C); fireball_effect
+   adds the scattered flames of an explosion; mts_doanim turns a fireball or lightning
+   missile that has struck into its explosion.
+
+   Data owned: animlist and animcount (at most 64 running animations), animclassd (16
+   classes), timerlist and timercount (at most 64 timer triggers), and timer_tick. The
+   level block keeps copies of the animation and timer lists, which MAP.C's Anim_Load and
+   Anim_Save move in and out.
+   Function and global names are the originals from the FM Towns symbol table where it has
+   them.
+   Name: inferred (add_animobj, update_animobj, put_effect; the job of System Shock's
+   EFFECT.C, which has add_obj_to_animlist and do_special_effect). */
 
 #include <stdlib.h>
 #include "combat.h"
@@ -18,7 +38,7 @@
 
 unsigned char lengset = 0;              /* DS:98E, check_door set the length itself */
 unsigned char DoAnimO = 1;              /* DS:98F */
-static int timer_tick = 0;              /* DS:990, FM Towns keeps it in _spec_col */
+static int timer_tick = 0;              /* DS:990; name: FM Towns keeps it in _spec_col */
 
 char animcount;                         /* DS:34B4 */
 struct AnimClass animclassd[16];        /* DS:34B6 */
@@ -34,6 +54,7 @@ void far play_effect(char type, int x, int y, int a);
 void far UseTrigger(struct Object far *who, void far *a, struct Object far *trig, int how);
 int far rand(void);
 
+/* Removes animation n's object from its tile and frees it. */
 void far rem_anim_from_map(int n)
 {
     struct Tile far *t;
@@ -45,6 +66,7 @@ void far rem_anim_from_map(int n)
         Obj_Free(obj);
 }
 
+/* Drops the animation of object index from animlist (the last entry fills its place). */
 void far rem_anim_from_list(int index)
 {
     int i;
@@ -56,6 +78,12 @@ void far rem_anim_from_list(int index)
         animlist[i] = animlist[animcount];
 }
 
+/* Ends animation n. A class with flag 0x80 first plays its remaining frames. A moving
+   door (class 0xF; its owner field holds the door's minor class and state) becomes a door
+   again: closing (flag 8) it becomes the closed door, unless something now stands in the
+   doorway, when it turns round (changeDoor) and keeps moving; opening it becomes the open
+   door (state | 8). It plays the door sound (0x26 for a portcullis, door_type 6, else 0xC).
+   A class with flag 0x20 is then removed from the map. */
 void far toast_animobj(int n, int frames)
 {
     struct Object far *obj;
@@ -116,6 +144,7 @@ void far toast_animobj(int n, int frames)
         animlist[n] = animlist[animcount];
 }
 
+/* Ends the animation of object index at once, if it has one. No FM Towns counterpart. */
 void far seg044_368F_392(int index)
 {
     int i;
@@ -127,6 +156,7 @@ void far seg044_368F_392(int index)
         }
 }
 
+/* The animation of object from now belongs to object to (an object was replaced). */
 void far Change_AnimPtr(struct Object far *to, struct Object far *from)
 {
     int toidx;
@@ -142,6 +172,9 @@ void far Change_AnimPtr(struct Object far *to, struct Object far *from)
         }
 }
 
+/* Starts an animation of len frames (-1 for ever) for object index on tile x, y, with
+   frame a (modulo the class's frame count) as its first. Returns the new count, or -1 when
+   the list is full. */
 int far add_animobj(int index, int len, unsigned char a, unsigned char x, unsigned char y)
 {
     struct Object far *obj;
@@ -163,6 +196,10 @@ int far add_animobj(int index, int len, unsigned char a, unsigned char x, unsign
     return ++animcount;
 }
 
+/* Steps animation n by frames, for each flag of its class: 1 the next frame (wrapping),
+   2 a random frame, 4 door motion (the open angle in the low three flag bits, opening or
+   closing by flag 8; a portcullis, state 6, rises or falls 6 units a frame; a closing door
+   is checked for obstruction by check_door). */
 void far do_animobj(int n, register int frames)
 {
     struct Object far *obj;
@@ -201,6 +238,11 @@ void far do_animobj(int n, register int frames)
     }
 }
 
+/* Called each game frame with the frames elapsed. Steps every animation and ends those
+   that run out; while time is frozen (TimeStop) only moving doors move. Then the timer
+   triggers: each fires (UseTrigger with how 10, the timer mode) once every z + 1 ticks of
+   timer_tick, but only while the player or the roaming eye is within 8 squares of the
+   trigger's target (its quality and owner fields hold the target square). */
 void far update_animobj(int frames)
 {
     struct Object far *obj;
@@ -245,6 +287,8 @@ void far update_animobj(int frames)
     timer_tick = (timer_tick + frames) & 0x7F;
 }
 
+/* Scatters three to five flame copies of the explosion src around it on tile x, y, each a
+   random explosion frame item (the item + 1 or + 2), offset a little and short-lived. */
 void far fireball_effect(struct Object far *src, int x, int y)
 {
     struct Object far *copy;
@@ -278,6 +322,10 @@ void far fireball_effect(struct Object far *src, int x, int y)
     }
 }
 
+/* A missile has struck at x, y: a fireball becomes an explosion with flames and
+   damage_square kind 1 (magic and fire), a lightning bolt a lightning flash with kind 2
+   (magic). Returns 0 for any other missile (inferred: the caller then handles it as a plain
+   missile). */
 unsigned char far mts_doanim(struct Object far *obj, int x, int y, char who)
 {
     int from[3] = { ITEM_FIREBALL_14, ITEM_LIGHTNING_BOLT, ITEM_FIREBALL_1D };
@@ -298,6 +346,9 @@ unsigned char far mts_doanim(struct Object far *obj, int x, int y, char who)
     return 1;
 }
 
+/* Creates effect cls (an animation class, item FIRST_ANIMOBJ + cls) on tile x, y for len
+   frames starting at frame: at who's fine position, and at height -z when z is negative,
+   else who's z plus z eighths of who's height. Returns 0 when it could not be made. */
 unsigned char far put_effect(struct Object far *who, int cls, int len, unsigned char frame,
                              int z, int x, int y)
 {
@@ -327,8 +378,9 @@ unsigned char far put_effect(struct Object far *who, int cls, int len, unsigned 
     return 1;
 }
 
-/* No FM Towns counterpart: put_effect with the fine position given rather than copied,
-   and the effect added at the head of the tile's list. */
+/* put_effect with the fine position given rather than copied, and the effect added at
+   the head of the tile's list. */
+/* name: no FM Towns counterpart; IDA's name. */
 unsigned char far CreateAnimoForSrcObject_seg044_368F_CE3(struct Object far *src, int cls,
         int len, unsigned char frame, int z, int x, int y, int finex, int finey)
 {
@@ -356,6 +408,7 @@ unsigned char far CreateAnimoForSrcObject_seg044_368F_CE3(struct Object far *src
     return 1;
 }
 
+/* The animlist entry of obj, or -1. */
 int far find_anim(struct Object far *obj)
 {
     int index;
@@ -389,6 +442,9 @@ void far set_animlen(struct Object far *obj, int len)
         animlist[i].len = len;
 }
 
+/* A closing door (animation n) checks its doorway. If something is in the way it fires
+   the door's open triggers (checkTrap with mode 8, the Guide's open trigger), turns the
+   door round and shortens the run. Returns 1 when the way is clear. */
 unsigned char far check_door(int n, int frames)
 {
     struct Object far *obj;
@@ -425,7 +481,8 @@ unsigned char far check_door(int n, int frames)
     return 1;
 }
 
-/* No FM Towns counterpart and no caller: add an object to the timer list. */
+/* Adds an object to the timer list. */
+/* name: no FM Towns counterpart and no caller. */
 static unsigned char far add_timer_obj(int index)
 {
     if (timercount < 0x40) {

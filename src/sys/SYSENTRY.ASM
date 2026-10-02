@@ -1,10 +1,39 @@
 ; /* target: seg021_22FD_750 */
 ; /* opts: /ml */
 ;
-; The far C entry points that switch to the module's private stack (_755, _791, _7CD, _809),
-; key, mouse and mbuttons. Its _DATA is the table of far pointers C reaches the module's data
-; through (joy_position, cJoyInit, Shift, Alt, Ctrl, key_on, Asc, MouseDx, MouseDy, MouseOn,
-; Time, cPerror, cExitMessage), at the start of the second library's data.
+; The far C entry points into seg021's input and start-up code: key, mouse and mbuttons, the
+; joystick reads JOYSTICK.C calls (_7CD, _809), and _755 and _791, which GRFX.C's grfx_init and
+; grfx_close use to run STARTUP.ASM's start-up and shut-down glue. Each saves the caller's SS:SP
+; in L0750/L0752, loads DS, ES and SS with dseg062_62a6 (FD71) and SP with 510h, calls the near
+; routine and switches back (STARTUP.ASM's header describes the arrangement). Its _DATA is the
+; table of far pointers through which C reaches seg021's data (joy_position, joy_buttons,
+; cJoyInit, Shift, CapsLock, Alt, Ctrl, key_on, Asc, MouseDx, MouseDy, MouseOn, Time, cPerror,
+; cExitMessage), at the start of the second library's data.
+;
+; The data segment FD71 (dseg062_62a6, 60B9:0000, C40h bytes), as the seg021 and seg004 code
+; uses it:
+;   0010  Asc: the scan code to character table (256 bytes, +80h for shifted)
+;   0110  the CPU type (CPUTYPE.ASM)     0120  a flag read by the keyboard and joystick set-up
+;   0190  cPerror                         0192  the exit hook SYSINIT.ASM calls
+;   01A0..01D2  the joystick (JOYPORT.ASM)
+;   01E0..01E9  the keyboard state: repeat flag, modifiers (Shift 01E2, Alt 01E3, Ctrl 01E4,
+;         01E5..01E7), CapsLock 01E8, layout 01E9; 01EB key_on, a down count per scan code
+;   026B..02A9  KEYQUEUE.ASM's read pointer and tables
+;   0300..033F  the scan code ring buffer (KBDINT.ASM)
+;   0350..0355  the saved video mode (VIDSAVE.ASM)   0360, 0362 the mouse (MOUSEDRV.ASM)
+;   0510  the top of the private stack all the entries use; 0510, 0512 MouseDx and MouseDy
+;         (mouse stores the motion there); 0514 cExitMessage
+;   05A0  the 3D renderer's int 0 handler, jmp far cs:[05A5] (INSTANCE.ASM)
+;   05B0..  the sine table; 0832 the arcsine and 0934 the arccosine tables (IMATH.ASM)
+;   0A40  cPlayer, the camera (view3d.h struct Camera); 0A98 a pointer to the 3D view's window, which cInit3d makes the clip window
+;   0C2A  the save area for the private stack (C3DENTRY.ASM's _FDD, below 0C2A)
+;   0C30..0C36  the clip window set_the_window copies here; 0C38.. the screen mode and size
+;
+; The 0CEh zero bytes at the start of _DATA (DS:204E..211B) are a stack: C3DENTRY.ASM's _102B
+; runs MousQUp on it during a frame.
+;
+; name: descriptive (module 13 of seg021, "far C entry points (key, mouse, mbuttons)"); key,
+; mouse and mbuttons are FM Towns names.
 ;
 ; SEG021 split into its original modules: this is module 13 of 17, +750..+A30 of the segment
 ; (file 24450h), a module of the second library (UWLIB.LIB).
@@ -17,7 +46,8 @@
 ; Its _DATA is DS:204E..2164 (relocation entries 2280-2297), defined before the code because
 ; those entries come before the code's.
 ;
-; DS:204E..211B (zeros, nothing refers to them) is placed here: it is the second library's
+; DS:204E..211B (zeros; nothing names them, but C3DENTRY.ASM's _102B runs on them as a
+; stack, its SP at joy_position) is placed here: it is the second library's
 ; data before this module's first pointer, and no module linked earlier from the library has
 ; data in DGROUP; which module it belonged to is not known.
 
@@ -108,6 +138,7 @@ L0752:
         ret
 
 ; seg021_22FD_755  (+755)
+; _755: run STARTUP.ASM's _0 (start-up) on the private stack; GRFX.C's grfx_init calls it.
 _seg021_22FD_755 proc far
         push    bp
         mov     bp,sp
@@ -142,6 +173,7 @@ _seg021_22FD_755 proc far
 _seg021_22FD_755 endp
 
 ; seg021_22FD_791  (+791)
+; _791: run STARTUP.ASM's _17 (shut-down); grfx_close calls it.
 _seg021_22FD_791 proc far
         push    bp
         mov     bp,sp
@@ -176,6 +208,7 @@ _seg021_22FD_791 proc far
 _seg021_22FD_791 endp
 
 ; seg021_22FD_7CD  (+7CD)
+; _7CD: read the joystick position into joy_position (JOYPORT.ASM's _3A3); JOYSTICK.C calls it.
 _seg021_22FD_7CD proc far
         push    bp
         mov     bp,sp
@@ -210,6 +243,10 @@ _seg021_22FD_7CD proc far
 _seg021_22FD_7CD endp
 
 ; seg021_22FD_809  (+809)
+; _809: read the joystick buttons into joy_buttons (JOYPORT.ASM's _2EC). After its retf come
+; five more entries of the same form with no labels, so nothing outside can call them:
+; KBDINT.ASM's install (+845) and remove (+881), BIOSKEY.ASM's _236 (+8BD), the CPU test (+8F9)
+; and CRITERR.ASM's diskerr (+935). SYSINIT.ASM calls the near routines directly.
 _seg021_22FD_809 proc far
         push    bp
         mov     bp,sp
@@ -394,6 +431,8 @@ _seg021_22FD_809 proc far
 _seg021_22FD_809 endp
 
 ; seg021_22FD_971  (+971)
+; key (FM Towns): the next key event (KEYQUEUE.ASM's _4A8): AX = 0 when there is none, else AL =
+; the character and AH = the scan code.
 _key proc far
         push    bp
         mov     bp,sp
@@ -428,6 +467,8 @@ _key proc far
 _key endp
 
 ; seg021_22FD_9AD  (+9AD)
+; mouse (FM Towns): read the mouse motion (MOUSEDRV.ASM's _6E7) into MouseDx and MouseDy
+; (FD71:0510, 0512).
 _mouse proc far
         push    bp
         mov     bp,sp
@@ -464,6 +505,7 @@ _mouse proc far
 _mouse endp
 
 ; Mouse_Button_Status_seg021_9F0  (+9F0)
+; mbuttons (FM Towns): the mouse buttons and position (MOUSEDRV.ASM's _703).
 _mbuttons proc far
         push    bp
         mov     bp,sp

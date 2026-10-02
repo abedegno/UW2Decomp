@@ -3,8 +3,23 @@
 /* Looking at things: the description printed when the player looks at an object, its
    quality, enchantment, owner and charges, books, scrolls, gravestones, bones, keys and
    critters, and the short description used elsewhere: the whole of DOS overlay ovr126, in
-   original order. Function and global names are the originals from the FM Towns symbol
-   table; the source file's own name is not known. */
+   original order.
+
+   What it does in the game: LookAt builds 'You see a <quality> <name> of <spell> with N full
+   charges belonging to <race>.' from the object's tables: the quality word from string
+   block 5 by the item's quality type and quality band, the name from block 4 (get_name), the
+   enchantment from block 6, the owner's race from block 1. Then SpecialLook adds what some
+   kinds of object say for themselves: a book or scroll's text, a key's description, whose
+   bones these are. Critters are described by CritterLook (attitude, kind and name);
+   gravestones and plaques by RectLook. GetObjDesc is the short form used by other messages
+   (enchanting, mending, bartering). Callers: the look command (INTERACT.C), the inventory
+   (INVPANEL.C), the rune panel (RUNES.C), Name Enchantment (SPELLS.C, lore 3).
+
+   The lore argument says how much the player knows: 2 shows that an object is magical, 3
+   (identified, from Name Enchantment or a lore check) names the enchantment and charges and
+   shows curses and poisoned potions.
+   Function and global names are the originals from the FM Towns symbol table.
+   Name: descriptive (looking at things: LookAt, GetObjDesc). */
 
 #include <string.h>
 #include <stdlib.h>
@@ -32,6 +47,11 @@ char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsig
 void far player_look_grave(int n);
 void far show_cutscene(int n);
 
+/* Prints the look description of obj (see the file comment). The quality word is skipped
+   for quality 0 and for a light at quality 1; indestructible items (qualclass 3) use the
+   fifth word of their quality type; quality type 13 takes no article. An ownable object
+   with an owner 1..30 is 'belonging to' that race (strings 0x172 + owner: ' a worm', ' a
+   slug', ... ' a human'). Non-lookable decals go to RectLook. */
 void far LookAt(struct Object far *obj, int lore)
 {
     char far *pos;
@@ -106,6 +126,9 @@ void far LookAt(struct Object far *obj, int lore)
     SpecialLook(obj, lore);
 }
 
+/* The words before the name: 'cursed ' (lore 3, a curse, major 9), 'magical ' (lore 2,
+   or a magic book of class 8 or below), or for a blackrock gem 'warm ' or 'cool ' by whether
+   its owner field is set. Returns 1 when it added a word. */
 char far do_mods(struct Object far *obj, int lore, char *s)
 {
     int major;
@@ -132,6 +155,10 @@ char far do_mods(struct Object far *obj, int lore, char *s)
     return 0;
 }
 
+/* The words after the name, for an identified object (lore 3): ' of Poison' for a
+   potion holding a poison trap object, else ' of <enchantment>' (block 6: weapon and armour
+   enchantments from 0x1C0, spells from 0x100, others by major class * 16) and, for an object
+   whose spell has charges, ' with N full charges' (a potion always shows 1). */
 char far do_of(struct Object far *obj, int lore, char *s)
 {
     int major;
@@ -201,6 +228,10 @@ char far do_of(struct Object far *obj, int lore, char *s)
     return 0;
 }
 
+/* Reads a book or scroll: a map says 'Enscribed upon the scroll is your map.'; an
+   enchanted (spell) scroll says nothing here; a scroll flagged with ID_FLAG10 plays a
+   cutscene (0x100 + its text number); otherwise 'You read the <name>...' and its text from
+   block 3. Reading text 6 sets bit 2 of quest variable 26. */
 void far BookLook(struct Object far *obj, int print)
 {
     char far *str;
@@ -209,7 +240,7 @@ void far BookLook(struct Object far *obj, int print)
     if (print < 1)
         return;
     if (OBJ_ITEM(obj) == ITEM_MAP) {
-        game_sprint(0xA5);
+        game_sprint(0xA5);  /* 'Enscribed upon the scroll is your map.' */
         return;
     }
     if (OBJ_ITEM(obj) == ITEM_BIT_OF_A_MAP)
@@ -235,6 +266,12 @@ void far BookLook(struct Object far *obj, int print)
     }
 }
 
+/* Looks at a decal: classes 14 and 15 describe the texture behind them (and a shaft
+   texture, terrain 5, prompts player_look_shaft), class 4 is a bridge, class 5 a gravestone
+   and class 6 a plaque. A gravestone's picture number comes from DATA\GRAVE.DAT, indexed by
+   its text number; with one, the scroll is cleared and the gravestone shown
+   (player_look_grave), otherwise 'The gravestone reads: ' (or for a plaque 'The plaque
+   reads: ') and the inscription from block 8. */
 void far RectLook(struct Object far *obj, int look)
 {
     int fd;
@@ -262,7 +299,7 @@ void far RectLook(struct Object far *obj, int look)
         if (OBJ_FLAGS(obj) >= 2)
             look_nothing(2, OBJ_FLAGS(obj) + 0x3F);
         else
-            game_sprint(0xBA);
+            game_sprint(0xBA);  /* 'You see a bridge.' */
         break;
     case 6:
         base += 0x10;
@@ -297,6 +334,10 @@ void far RectLook(struct Object far *obj, int look)
     }
 }
 
+/* Whose bones: 'It looks to be that of ' (or 'They look to be those of ' for a pile) and
+   the creature kind from the owner field (+ FIRST_CREATURE), 'Relk.' for owner 0x3D or 'an
+   adventurer.' for 0x3F. Owners 0, 0x28 and 0x3C..0x3E say nothing, so the 'Relk.' case for
+   0x3D is never reached. */
 void far BonesLook(struct Object far *obj, int print)
 {
     struct Object tmp;
@@ -323,6 +364,8 @@ void far BonesLook(struct Object far *obj, int print)
     }
 }
 
+/* A key's description, string 0x64 + owner of block 5 (by lock, e.g. 'The key feels
+   unnaturally heavy.'), if there is one. */
 void far KeyLook(struct Object far *obj, int print)
 {
     char far *str;
@@ -334,6 +377,12 @@ void far KeyLook(struct Object far *obj, int print)
     }
 }
 
+/* Describes a critter into s: 'a <attitude> <kind> named <Name>'. The attitude word is
+   block 5 0x60 + attitude (hostile, upset, peaceful, friendly), shown only for whoami below
+   0xF0 or 0xFF; the kind is its item name, or for a nameless kind with goal 11 a string
+   from 0x115 by its animation sequence; the name is the NPC's conversation name (block 7,
+   whoami + 0x10). A name that starts in lower case replaces the kind instead of following
+   it. */
 void far CritterLook(struct Object far *obj, char *s)
 {
     char far *desc;
@@ -381,6 +430,9 @@ void far CritterLook(struct Object far *obj, char *s)
     }
 }
 
+/* The second line of a look for books and scrolls (BookLook), keys (KeyLook), bones
+   (BonesLook) and doors: a closed door whose owner bit 0 is set prints string 0x91, which is
+   empty in the game's STRINGS.PAK. */
 void far SpecialLook(struct Object far *obj, int print)
 {
     int minor;
@@ -399,11 +451,13 @@ void far SpecialLook(struct Object far *obj, int print)
         break;
     case MAJOR_RECT:
         if (minor == 0 && OBJ_INCLASS(obj) < 8 && (obj->ol.f.owner & 1))
-            game_sprint(0x91);
+            game_sprint(0x91);  /* an empty string */
         break;
     }
 }
 
+/* The short description of obj into s: quality word and name (plural for a stack), or a
+   critter's CritterLook. Returns the quantity. */
 int far GetObjDesc(struct Object far *obj, int lore, char *s)
 {
     char far *qstr;

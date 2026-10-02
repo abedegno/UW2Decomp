@@ -1,7 +1,17 @@
 ; /* target: seg021_22FD_A30 */
 ; /* opts: /ml */
 ;
-; Integer maths: square roots, sines and cosines, headings and arctangents from tables.
+; Integer trigonometry and square roots for the 3D code and the game, from tables in FD71 (DS =
+; dseg062_62a6). FM Towns has sincos, fast_sincos, lsqrt, lsqrt32, fast_asin and atan2 together,
+; the same set; C3DENTRY.ASM's cSinCos, cFstSinCos, cAtan2 and cSqRt are their C entries, and
+; INSTANCE.ASM calls sincos and the square root directly.
+;
+; Units: an angle is a word, 10000h to the full turn (4000h = 90 degrees); a sine or cosine is
+; 1.15 (7FFFh = 1.0).
+; Tables (FD71): 05B0 the sine at each 1/256 turn (257 words, so 0630, 64 entries on, is the
+; cosine); 0832 the arcsine and 0934 the arccosine of 0 .. 1.0 in 128 steps, as angles.
+;
+; name: descriptive (module 14 of seg021, "integer square roots, sines, arctangents").
 ;
 ; SEG021 split into its original modules: this is module 14 of 17, +A30..+C00 of the segment
 ; (file 24730h), a module of the second library (UWLIB.LIB).
@@ -30,18 +40,22 @@ SEG021_TEXT segment para public 'CODE'
         public  _SquareRoot_seg021_22FD_A78
 
 ; SquareRoot_seg021_22FD_A30  (+A30)
+; _A30: far entry to _A78 (square root).
 _SquareRoot_seg021_22FD_A30 proc far
         call    _SquareRoot_seg021_22FD_A78
         retf
 _SquareRoot_seg021_22FD_A30 endp
 
 ; sincos  (+A34)
+; sincos (FM Towns name): far entry to _A38.
 _sincos proc far
         call    _seg021_22FD_A38
         retf
 _sincos endp
 
 ; HeadingLookupCalc_seg021_22FD_A38  (+A38)
+; _A38 (sincos): BX = an angle. Out: AX = its sine, BX = its cosine, each interpolated linearly
+; between the table's two entries by the angle's low byte. Changes CX, DX, BP.
 _seg021_22FD_A38 proc near
         mov     cx,bx
         xor     ch,ch
@@ -68,6 +82,8 @@ _seg021_22FD_A38 proc near
 _seg021_22FD_A38 endp
 
 ; LookupHeadingTable_seg021_22FD_A69  (+A69)
+; _A69 (fast_sincos, FM Towns): as _A38 without interpolation, the entry for the angle's high
+; byte.
 _seg021_22FD_A69 proc near
         mov     bl,bh
         xor     bh,bh
@@ -78,6 +94,12 @@ _seg021_22FD_A69 proc near
 _seg021_22FD_A69 endp
 
 ; SquareRoot_seg021_22FD_A78  (+A78)
+; _A78 (lsqrt, FM Towns): DI = the square root of the 32-bit value CX:BX, by five rounds of
+; Newton's method from a starting guess chosen by the value's size (CH, CL, BH or BL the highest
+; non-zero byte). Changes AX, CX, DX.
+;
+; The unlabelled code after its last ret is fast_asin (FM Towns), probably: CX = the arcsine of
+; AX (1.15) from the table's entry for |AX|'s high byte, without interpolation, with AX's sign.
 _SquareRoot_seg021_22FD_A78 proc near
         or      ch,ch
         je      short L0AB9
@@ -215,6 +237,7 @@ L0B61:
 _SquareRoot_seg021_22FD_A78 endp
 
 ; seg021_22FD_B78  (+B78)
+; _B78: CX = the arcsine of AX (1.15), interpolated, with AX's sign.
 _seg021_22FD_B78 proc near
         cwd
         xor     ax,dx
@@ -240,6 +263,8 @@ _seg021_22FD_B78 proc near
 _seg021_22FD_B78 endp
 
 ; seg021_22FD_BA2  (+BA2)
+; _BA2: CX = the arccosine of BX (1.15), interpolated; for a negative BX the result is moved
+; into the other half of the circle (by adding 8000h to the negated value).
 _seg021_22FD_BA2 proc near
         mov     ax,bx
         cwd
@@ -268,6 +293,10 @@ _seg021_22FD_BA2 proc near
 _seg021_22FD_BA2 endp
 
 ; MaybeTangent_seg021_22FD_BD4  (+BD4)
+; _BD4 (atan2, FM Towns, through cAtan2): CX = the angle of the unit vector (sine AX, cosine
+; BX). Where the sine is small (|AX| up to sin 45 degrees, 5A82h) it uses the arcsine of AX,
+; reflected when BX is negative; otherwise the arccosine of BX with AX's sign. Both are well
+; conditioned in their range.
 _MaybeTangent_seg021_22FD_BD4 proc near
         cmp     ax,5A82h
         jg      short L0BEE

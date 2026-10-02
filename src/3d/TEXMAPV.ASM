@@ -1,7 +1,29 @@
 ; /* target: seg004_0849_6240 */
 ; /* opts: /ml */
 ;
-; _asm_texture_map_v.
+; The vertical polygon texture mapper, for walls: _asm_texture_map_v fills a clipped, projected
+; polygon column by column, left to right, and hands each column to the vertical span drawer in
+; SCANLINE.ASM (_seg004_0849_51B0, probably FM Towns' _asm_texture_map_scanline_lin_tlpv). It is
+; TEXMAP.ASM's _asm_texture_map turned on its side: the same edge walk with x and y exchanged
+; (the edges run along sx, +0Ch of the vertex record, and carry sy), and the same variables
+; where the two agree. The only caller is _asm_texture_map_1 (PROJPOLY.ASM), when the classifier
+; there has set the vertical flag (CCEE), which it does for the wall opcodes.
+;
+; Down a column of an upright wall the depth does not change while the view is level, so each
+; column is perspective-correct at its two ends (u * w and v * w divided by w there,
+; seg004_0849_68B5) and drawn linearly between them; the edges always carry u * w, v * w and w =
+; 128 / z. Every wall column is shaded: there is no unshaded variant.
+;
+; Arguments: as _asm_texture_map (TEXMAP.ASM); the descriptor's pixel offset must be 0 (else int 2).
+; Variables beyond TEXMAP.ASM's (FD58, 16.16):
+;   CCC4 _x, the column being drawn (shared with the horizontal span drawers)
+;   D008, D00C  the least and greatest sx; D022, D024 the first and last column, clamped
+;   D010, D014  the two edges' y at the current column; D01C, D01E the left-walking edge's
+;               current and next vertex
+;   CFE0 .. CFFC, D000, D004  the column's ends as the span drawer reads them (SCANLINE.ASM)
+;
+; name: descriptive (module 13 of seg004). _asm_texture_map_v has its FM Towns name; the helpers
+; are unnamed there too.
 ;
 ; SEG004 split into its original modules: this is module 13 of 14, +6240..+6D20 of the segment
 ; (file F400h), a module of the second library (UWLIB.LIB).
@@ -32,6 +54,10 @@ SEG004_TEXT segment para public use16 'CODE'
         public  _seg004_0849_6952
 
 ; seg004_0849_6240  (+6240)
+; seg004_0849_6240: step the edge that walks the vertices backwards (index - 1, wrapping) to its
+; next vertex: its starting y (D010), w, l, u * w and v * w, and its steps per column (CF84 ..
+; CFA4), each difference divided by the edge's width in columns. A vertex at z <= 1/256 sets
+; CF44 and the polygon is abandoned. In: BP = _asm_texture_map_v's frame.
 _seg004_0849_6240 proc near
         mov     ax,word ptr ds:[0CF52h]
         dec     ax
@@ -186,6 +212,8 @@ L6436:
 _seg004_0849_6240 endp
 
 ; seg004_0849_6437  (+6437)
+; seg004_0849_6437: as seg004_0849_6240 for the edge that walks forwards (index + 1, wrapping),
+; into D014 and CF68 .. CF80, CF90 .. CFA8.
 _seg004_0849_6437 proc near
         mov     ax,word ptr ds:[0CF54h]
         inc     ax
@@ -344,6 +372,9 @@ L6631:
 _seg004_0849_6437 endp
 
 ; seg004_0849_6632  (+6632)
+; seg004_0849_6632: compute_min_max_y's counterpart for columns: finds the least and greatest
+; sx, starts both edges at the leftmost vertex (or at the two ends of a vertical left side), and
+; clamps the first and last column to 0 .. 2 * scrw - 1 into D022 and D024.
 _seg004_0849_6632 proc near
         mov     dword ptr ds:[0D008h],7FFFFFFFh
         mov     dword ptr ds:[0D00Ch],80000001h
@@ -438,6 +469,11 @@ L671C:
 _seg004_0849_6632 endp
 
 ; seg004_0849_6720  (+6720)
+; _asm_texture_map_v(descriptor, vertices, count, mapping, shaded): draw the polygon into the
+; frame buffer (ES = seg_370D:0958, GS = the texture's segment) one column at a time from D022
+; to D024, advancing either edge to its next vertex when the column passes it, drawing the
+; column (seg004_0849_68B5) and stepping both edges. The last column is drawn after the loop.
+; Keeps SI, DI, ES, GS, BP; clears CF44 on the way out.
 __asm_texture_map_v proc near
         push    bp
         mov     bp,sp
@@ -549,6 +585,8 @@ L6859:
 __asm_texture_map_v endp
 
 ; seg004_0849_6866  (+6866)
+; seg004_0849_6866: clamp the column: y ends below 0 become 0, y ends at or past 2 * scrh become
+; 2 * scrh - 1, and a column at or past 2 * scrw becomes the last one. Changes AX.
 _seg004_0849_6866 proc near
         test    word ptr ds:[0CFE6h],0FFFFh
         jns     short L6877
@@ -582,6 +620,10 @@ L68B0:
 _seg004_0849_6866 endp
 
 ; seg004_0849_68B5  (+68B5)
+; seg004_0849_68B5: draw the current column. Its ends are the two edges' y, widened by a pixel
+; each way (one end's integer part less one, the other's plus one) and clamped
+; (seg004_0849_6866); u, v at both ends are u * w / w and v * w / w; l and w are copied; then
+; the span drawer _seg004_0849_51B0 (SCANLINE.ASM) is called. Keeps BP.
 _seg004_0849_68B5 proc near
         mov     eax,dword ptr ds:[0D010h]
         mov     dword ptr ds:[0CFE4h],eax
@@ -629,6 +671,8 @@ _seg004_0849_68B5 proc near
 _seg004_0849_68B5 endp
 
 ; seg004_0849_6952  (+6952)
+; seg004_0849_6952: set up both edges from the leftmost vertex at once (TEXMAP.ASM's
+; seg004_0849_5D66 turned on its side; an edge of zero columns is taken as one column).
 _seg004_0849_6952 proc near
         mov     ax,20h
         imul    word ptr ds:[0CF52h]

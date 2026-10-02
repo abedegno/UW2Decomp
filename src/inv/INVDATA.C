@@ -3,12 +3,23 @@
 /* The player's inventory as data: what is in each slot, adding objects to it and taking
    them out (whole stacks or part of one, from the paperdoll, the backpack or the open bag),
    searching it for an object by class, damage to worn equipment, and object weight: the
-   whole of DOS overlay ovr124, in original order. Function and global names are the
-   originals from the FM Towns symbol table except FindEmptySlot, which has no FM Towns
-   counterpart and a provisional name chosen for its key (see below); the source file's own
-   name is not known.
+   whole of DOS overlay ovr124, in original order.
 
-   Turbo C lists a file's publics in descending order of the tools/bssorder.py key of each
+   What it does in the game: the inventory is the player object's contents list (the
+   player's ol.link), with Inventory[] (28 link words, slot layout in inv.h) naming the
+   object shown in each slot. This file keeps the two and the carried weight
+   (PlayerDat.weight, and each open bag's weight) in step. The panel (INVPANEL.C) and bags
+   (BAGS.C) call it for every move; the rest of the game asks it what the player carries
+   (FindObj for ammunition, keys and the like; AskInventory for the weapon hand and armour)
+   and wears out armour and weapons through DamageInventory (COMBAT.C, traps).
+
+   Data owned: none for certain. OpenBag and the slot tables are INVPANEL.C's; Inventory
+   is this file's or INVPANEL.C's (undecided, see INVPANEL.C).
+   Function and global names are the originals from the FM Towns symbol table except
+   FindEmptySlot, which has no FM Towns counterpart and a provisional name chosen for its key
+   (see below).
+   Name: descriptive (the inventory as data: AddToInventory, FindSlot). */
+/* name: Turbo C lists a file's publics in descending order of the tools/bssorder.py key of each
    name, and TLINK numbers overlay stub entries from the last one listed, so the EXE's stub
    order constrains the names. FM Towns gives AskInventory and WhatsInSlot one address (the
    two functions are identical, and DOS has both), so its code cannot tell them apart; the
@@ -46,8 +57,8 @@ struct Object far * far AskInventory(int slot)
     return Obj_PtrTMem(&Inventory[slot]);
 }
 
-/* The first empty slot from 5 to 18, or -1. Not in the FM Towns build and not called; IDA's
-   ovr124_2C, renamed for its key. */
+/* The first empty slot from 5 to 18, or -1. Not called. */
+/* name: not in the FM Towns build; IDA's ovr124_2C, renamed for its key. */
 int far FindEmptySlot(void)
 {
     register int slot;
@@ -58,6 +69,10 @@ int far FindEmptySlot(void)
     return -1;
 }
 
+/* Adds obj to the inventory, in slot (checked by ItemFitsSlot; -1 adds it to the
+   player's contents without a slot). Slots above 18 are the open bag: the object goes into
+   that bag and every enclosing open bag's weight grows. Returns 1 when added; with
+   ItemFitsSlot's -1 (the object was eaten from the head slot, inferred) it returns 0. */
 unsigned char far AddToInventory(struct Object far *obj, int slot)
 {
     char done;
@@ -114,6 +129,9 @@ int far FindSlot(struct Object far *obj)
     return -1;
 }
 
+/* Finds an object by major, minor and class (-1 for any) in the inventory and sets *where
+   to its slot. how limits the search: 1 the paperdoll and hands (slots 0..10) only, 2 and
+   3 the backpack too (to 18), anything else also inside the containers carried. */
 struct Object far * far FindObj(int major, int minor, int cls, int how, register int *where)
 {
     struct Object far *contents;
@@ -157,6 +175,9 @@ struct Object far * far FindObj(int major, int minor, int cls, int how, register
     return 0;
 }
 
+/* Depth-first search of an object list and its containers for the first object matching
+   major, minor and class (-1 for any). On a match *list is set to 0, or after a match
+   inside a container to the rest of that container's list. */
 struct Object far * far find_obj(int major, int minor, register int cls, register struct Object far **list)
 {
     struct Object far *next;
@@ -181,6 +202,8 @@ struct Object far * far find_obj(int major, int minor, register int cls, registe
     return 0;
 }
 
+/* The object under the pointer in the inventory panel: with how 2 just looked at, else
+   taken out of its slot. */
 struct Object far * far pick_inv(int how)
 {
     int x;
@@ -197,7 +220,8 @@ struct Object far * far pick_inv(int how)
     return RemoveAllFromSlot(-1, -1, -1, DisplayToSlot[hit]);
 }
 
-/* The same as AskInventory; the FM Towns map gives both names one address. */
+/* The same as AskInventory. */
+/* name: the FM Towns map gives both names one address. */
 struct Object far * far WhatsInSlot(int slot)
 {
     return Obj_PtrTMem(&Inventory[slot]);
@@ -213,6 +237,9 @@ char far InvRemoveOneObject(struct Object far *obj)
     return invRemoveObject(obj, 1);
 }
 
+/* Removes obj, or qty of a stack (-1 for all), from the inventory: through its slot if it
+   has one (redrawing the slot or the open bag), else out of the contents lists, splitting
+   a stack when only part is taken. Returns 0 when it is not carried. */
 char far invRemoveObject(struct Object far *obj, int qty)
 {
     int index;
@@ -296,6 +323,10 @@ struct Object far * far removeFromSlot(int major, int minor, int cls, int slot, 
     return obj;
 }
 
+/* Takes the object in slot, or with major, minor or class given the first matching object
+   inside it, out of the inventory. qty splits a stack (0 takes it all); the rest of a split
+   stack stays in the slot. Keeps the carried weight and the open bags' weights right.
+   Returns the object taken or 0. */
 struct Object far * far takeFromSlot(int major, int minor, int cls, int slot, int qty)
 {
     struct Object far *obj;
@@ -354,7 +385,9 @@ struct Object far * far takeFromSlot(int major, int minor, int cls, int slot, in
     return obj;
 }
 
-/* Whether an object of type id is being worn or wielded in slot. */
+/* Whether an object of type id is being worn or wielded in slot: anything in the armour
+   slots 0..4 and the ring slots 9 and 10, and in the shield hand (lefty + 7) a shield
+   (MAJOR_HACK, minor 2 or 3, class 0xB..0xF). */
 unsigned char far ObjWorn(register int id, register int slot)
 {
     if (slot >= 0 && slot <= 4)
@@ -369,7 +402,10 @@ unsigned char far ObjWorn(register int id, register int slot)
 }
 
 /* Damage the object in slot: -2 if there is none or it does not take this damage, -1 if
-   it was unharmed, otherwise 1 if it was destroyed and 0 if only damaged. */
+   it was unharmed, otherwise 1 if it was destroyed and 0 if only damaged. how 0 damages
+   only a weapon, 1 only something worn there, 2 anything. With debris set a destroyed
+   object leaves its debris by the player. Prints 'Your <item> was/were damaged.' or
+   '... destroyed.' (were when the name ends in s). */
 int far DamageInventory(int slot, unsigned char damage, unsigned char type, int how, char debris)
 {
     struct Object far *obj;
@@ -418,6 +454,8 @@ int far DamageInventory(int slot, unsigned char damage, unsigned char type, int 
     return result;
 }
 
+/* An object's weight in tenths of a stone (inferred from the panel's weight / 10): mass
+   times quantity for a stack, or its own mass plus its contents for a container. */
 int far ItemWeight(struct Object far *obj)
 {
     int mass;
@@ -434,6 +472,7 @@ int far ItemWeight(struct Object far *obj)
     return mass;
 }
 
+/* True if the player can carry obj as well without going over max_weight. */
 unsigned char far EncumCheck(struct Object far *obj)
 {
     if (ItemWeight(obj) + PlayerDat.weight > PlayerDat.max_weight)

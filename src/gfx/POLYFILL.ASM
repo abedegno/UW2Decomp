@@ -1,7 +1,35 @@
 ; /* target: seg003_0272_EC */
 ; /* opts: /ml */
 ;
-; Polygon span filling (_EC, _183) with its edge tables.
+; Graphics library module 2: an older texture mapper for walls, FM Towns' wmap_bitmap with its
+; edge steppers get_wright (_EC) and get_wleft (_183). Its far entry is the unlabelled code at
+; +20F, after _183's ret: the offset 20Fh that seg004 stores as mapper_rtn for the wall opcodes
+; (TMAPOPS.ASM) and keeps as wmap_bitmap_offset (C800). In FM Towns the 3D code calls
+; mapper_rtn; in the DOS build nothing calls it (the only use of the value is PROJPOLY.ASM's
+; comparison, which sends wall polygons to _asm_texture_map_v instead), so this module is
+; probably dead code kept from an earlier renderer. The earlier description of it as polygon
+; span filling was a guess from its shape.
+;
+; How it works, as far as read: the polygon's vertices are 14-byte records at 370D:0658 (copied
+; there by the caller; x at +0, y at +2, a texture coordinate at +6, the depth at +0Ah); the
+; mapper first works out, for each screen column, which texture column it shows (a table of
+; bytes at 7F0, filled by stepping across the polygon's top edge with a perspective divide by
+; the depth), then walks the left and right edges down the screen (_183 and _EC) and draws each
+; row through that table with xlat, the texture row stepped linearly. The steps are patched into
+; the instructions (the 1234h immediates at L04F8 .. L054D). The code-segment words _7A .. _98
+; in GRMISC.ASM receive a copy of its inputs.
+;
+; The routine after L0582 (no label, no caller found) works out the coefficients of a quadratic
+; through three values at 932 .. 944 and returns its start and two steps in BP:SI and BX:DX;
+; probably an alternative stepping for the texture coordinate.
+;
+; Data (seg_370D): 7A8, 7AA the vertex list's last and end; 7B0 .. 7CC the two edges' current
+; vertex, x and texture coordinate (16.16); 7CE the row; 7D0 the vertices left; 7D2 the
+; caller's segment; 7D8 .. 7EE the column-table stepping; 930 the polygon's right x; 958 the
+; screen segment; 95C the row offsets.
+;
+; name: descriptive (module 2 of seg003), but the old name describes it poorly; its routines are
+; FM Towns' wmap_bitmap, get_wright and get_wleft.
 ;
 ; SEG003 split into its original modules: this is module 2 of 14, +EC..+6E2 of the segment
 ; (file 353Ch), a module of the second library (UWLIB.LIB).
@@ -77,6 +105,10 @@ SEG003_TEXT segment word public 'CODE'
         public  _seg003_0272_EC
 
 ; seg003_0272_EC  (+EC)
+; _EC (get_wright, FM Towns): advance the right-hand edge to the next vertex (forwards through
+; the list, wrapping at 7AA): load its x and texture coordinate, and patch the per-row steps of
+; both (16.16, from two divides by the edge's height) into the drawing loop. Out: ZF set when no
+; vertices are left. L0104 is the re-entry used while drawing.
 _seg003_0272_EC proc near
         mov     bx,word ptr ds:[7B4h]
         mov     ax,word ptr [bx+6]
@@ -137,6 +169,10 @@ L0182:
 _seg003_0272_EC endp
 
 ; seg003_0272_183  (+183)
+; _183 (get_wleft, FM Towns): the same for the left-hand edge, backwards through the list. After
+; its ret is wmap_bitmap (+20F, far): save the caller's stack and switch to the library's, copy
+; the vertex list to GRMISC's _98, find the extremes, build the column table, then draw row by
+; row until both edges run out, and return far on the caller's stack.
 _seg003_0272_183 proc near
         mov     bx,word ptr ds:[7B2h]
         mov     ax,word ptr [bx+6]

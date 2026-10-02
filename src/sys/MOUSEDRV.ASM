@@ -1,8 +1,13 @@
 ; /* target: seg021_22FD_6C0 */
 ; /* opts: /ml */
 ;
-; The mouse driver interface (int 33h): reset, motion (scaled by the sensitivity), position
-; and buttons, with far thunks for C.
+; The mouse through the DOS mouse driver (int 33h): reset, relative motion scaled for the game,
+; position and buttons. FM Towns has initmouse, mouse, mbuttons and resetmouse in this place;
+; SYSENTRY.ASM's far C entries (mouse, mbuttons) and the start-up code call these. Data in FD71:
+; 0360 the motion divisor (200 with a mouse, 0 without), 0362 MouseOn (the C side's _MouseOn
+; points here).
+;
+; name: descriptive (module 10 of seg021, "the int 33h mouse driver interface").
 ;
 ; SEG021 split into its original modules: this is module 10 of 17, +6C0..+710 of the segment
 ; (file 243C0h), a module of the second library (UWLIB.LIB).
@@ -29,18 +34,23 @@ SEG021_TEXT segment para public 'CODE'
         public  _seg021_22FD_703
 
 ; seg021_22FD_6C0  (+6C0)
+; _6C0: far entry to _6E7 (the motion).
 _seg021_22FD_6C0 proc far
         call    _Read_Mouse_Motion_seg021_6E7
         retf
 _seg021_22FD_6C0 endp
 
 ; seg021_22FD_6C4  (+6C4)
+; _6C4: far entry to _703 (position and buttons).
 _seg021_22FD_6C4 proc far
         call    _seg021_22FD_703
         retf
 _seg021_22FD_6C4 endp
 
 ; seg021_22FD_6C8  (+6C8)
+; _6C8 (initmouse, probably): if the int 33h vector (0000:00CC) is not null, reset the driver
+; (function 0). A driver that answers sets both 0360 and 0362 to 200; otherwise both are 0 (and
+; the game runs without a mouse).
 _seg021_22FD_6C8 proc near
         push    es
         sub     ax,ax
@@ -63,6 +73,8 @@ L06DF:
 _seg021_22FD_6C8 endp
 
 ; Read_Mouse_Motion_seg021_6E7  (+6E7)
+; _6E7: the motion since the last call (function 0Bh, mickeys), each scaled by 100 / 200 (_6F8),
+; so half a mickey per unit. Out: AX = x, BX = y.
 _Read_Mouse_Motion_seg021_6E7 proc near
         mov     ax,0Bh
         int     33h
@@ -77,6 +89,8 @@ _Read_Mouse_Motion_seg021_6E7 proc near
 _Read_Mouse_Motion_seg021_6E7 endp
 
 ; Mouse_Sensitivity_Maybe_seg021_6F8  (+6F8)
+; _6F8: BX = AX * 100 / [0360]. The divisor is the 200 _6C8 stored; nothing else found writes
+; it, so the old name's "sensitivity" is a guess.
 _seg021_22FD_6F8 proc near
         mov     bx,64h
         imul    bx
@@ -86,6 +100,8 @@ _seg021_22FD_6F8 proc near
 _seg021_22FD_6F8 endp
 
 ; Mouse_Position_And_Button_status_seg021_703  (+703)
+; _703: the position and buttons (function 3). Out: AX = the left and right buttons (bits 0, 1),
+; CX, DX = x, y as the driver gives them.
 _seg021_22FD_703 proc near
         mov     ax,3
         int     33h

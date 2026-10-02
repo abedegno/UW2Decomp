@@ -130,7 +130,7 @@ int far do_math_op(int value, int op, int right);
 int far get_numbered_variable(int index);
 extern unsigned char tile_walls[16];
 extern int trap_teleport_data;
-extern struct Tile far *TriggerChainTileData_dseg_67d6_1BB9;  /* FM Towns: map_sq */
+extern struct Tile far *TriggerChainTileData_dseg_67d6_1BB9;  /* name: FM Towns: map_sq */
 struct Object far * far place_bridge(int x, int y, int zarg, int headingarg);
 void far destroy_bridge(int x, int y, int zarg, int headingarg);
 void far check_for_sunken_moongate(void);
@@ -147,9 +147,10 @@ unsigned char far Sched_Insert(struct SCDRow far *row, unsigned char run);
 unsigned char far Sched_Load(unsigned char block);
 unsigned char far Sched_Save(unsigned char block);
 void far Sched_SetBuf(int ofs, int seg);
-/* Declared before the rest of its file because TLINK numbers the overlay's stub entries in
-   the order Turbo C lists the publics, which for names with the same hash key is the order
-   they were first seen: the EXE's stub has Sched_IncrTime before Sched_WrapTime. */
+/* match: declared before the rest of its file because TLINK numbers the overlay's stub
+   entries in the order Turbo C lists the publics, which for names with the same hash key
+   is the order they were first seen: the EXE's stub has Sched_IncrTime before
+   Sched_WrapTime. */
 unsigned char far Sched_IncrTime(unsigned n, unsigned char mode);
 unsigned char far Sched_WrapTime(unsigned time, unsigned span, unsigned char mode);
 

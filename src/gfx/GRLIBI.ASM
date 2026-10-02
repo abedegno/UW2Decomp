@@ -1,7 +1,37 @@
 ; /* target: seg003_0272_38B4 */
 ; /* opts: /ml */
 ;
-; _38B4 .. _43C5.
+; Graphics library module 9: filled polygons and text. Found by reading the code and aligning
+; with FM Towns, whose 2D library has the same pieces (upolygon, polygon; string_to_screen,
+; ustring_to_screen, shadowed_string_to_screen, setup_font, vga_bitmap_to_screen, shift_left_1,
+; string_width), in a different order.
+;
+; Polygons. polygon (_3B0D) clips with GRLIBF's shclip and fills with upolygon (_38B4), which
+; walks the left and right chains of edges from the top vertex down, writes one span per row
+; into the row table at 44CE and runs the current span writer (DS:4112), as GRLIBH's uline does
+; for lines.
+;
+; Text. A string is drawn in two steps. The rasteriser at 4D14 (statically the unlabelled
+; routine after _4186, 4225h) renders the whole string into a one-bit-per-pixel buffer at 2D43,
+; glyph by glyph from the font, already shifted for x mod 4. Then a blitter (4D16) puts the
+; buffer on the screen: _3C61 writes it straight to the planar (mode X) screen, setting the
+; sequencer map mask (port 3C5h) from a table that turns each buffer byte into two four-pixel
+; plane masks (4A26, built by _3BE2) and storing the colour, so only the set pixels are written;
+; L4126 instead passes the buffer to VIDMODE's bitmap routine _222B.
+;
+; Data (seg_370D):
+;   4A0E, 4A10  the text's x and y (y is its top row; y counts up); 4A0C the colour for _3C61
+;   4D00..4D06  the bit buffer's size and pointers; 4D04 its width in bytes
+;   4D08..4D13  the font's header (gfx.h struct FontInfo, which GRFX.C's grfx_load_font
+;        reads here through cur_font): 4D08 widthsize, the bytes each glyph has after its
+;        rows; 4D0E height; 4D10 rowwidth; 4D12 maxwidth, copied to 2D40; 4D18 the glyph
+;        pointer of each character 0..127 (setup_font), into the glyphs at 1C54h (bytefont)
+;   2D36, 2D3A  the shadow and text colours; 2D3C..2D40 the font fields string_width reads
+;   4C8E, 4C24  entry tables into the unrolled blit and shift loops, by width
+;   3DFC  the screen segment; 36AC the row address table (Ytab); 36A8 the row stride
+;
+; name: descriptive (module 9 of seg003). Its job, found here, is polygon filling and text; the
+; routine names given here are FM Towns'.
 ;
 ; SEG003 split into its original modules: this is module 9 of 14, +38B4..+43F0 of the segment
 ; (file 6D04h), a module of the second library (UWLIB.LIB).
@@ -53,6 +83,10 @@ SEG003_TEXT segment word public 'CODE'
         public  _seg003_0272_43C5
 
 ; seg003_0272_38B4  (+38B4)
+; upolygon: fill a polygon already inside the window. In: CX = the vertex count, the vertices
+; (x, y words) from 415E. Finds the top vertex, steps the two chains (_395C going one way round,
+; _3989 the other) to fill the row table, and jumps to the span writer. A polygon of zero height
+; becomes one span from its least to its greatest x.
 _seg003_0272_38B4 proc near
         mov     si,word ptr ds:[49ACh]
         and     word ptr [si],7FFFh
@@ -133,6 +167,8 @@ L394D:
 _seg003_0272_38B4 endp
 
 ; seg003_0272_395C  (+395C)
+; _395C: walk the chain from the top vertex backwards through the vertex list, filling one side
+; of the row records (through _39BB) until an edge turns upwards.
 _seg003_0272_395C proc near
         inc     di
         inc     di
@@ -165,6 +201,7 @@ L3988:
 _seg003_0272_395C endp
 
 ; seg003_0272_3989  (+3989)
+; _3989: the same walk forwards, for the other side.
 _seg003_0272_3989 proc near
         add     di,4
 L398C:
@@ -199,6 +236,9 @@ L39BA:
 _seg003_0272_3989 endp
 
 ; seg003_0272_39BB  (+39BB)
+; _39BB: one edge, from (AX, BX) to (CX, DX): its rows from BX down to DX get the stepped x
+; (16.16 slope from two divides), 31 rows a call of the unrolled _3A02 and the remainder through
+; the entry table at 49C4.
 _seg003_0272_39BB proc near
         sub     bx,dx
         mov     word ptr ds:[4A06h],bx
@@ -238,6 +278,9 @@ L39F0:
 _seg003_0272_39BB endp
 
 ; seg003_0272_3A02  (+3A02)
+; _3A02: 31 rows of an edge, unrolled: add the slope to the 16.16 x and store it in the next
+; record. L3AFB, after it, is polygon's case for one or two vertices: a line through cline_si or
+; a point through pixel.
 _seg003_0272_3A02 proc near
         add     dx,cx
         adc     ax,bx
@@ -375,6 +418,8 @@ L3B03:
 _seg003_0272_3A02 endp
 
 ; seg003_0272_3B0D  (+3B0D)
+; polygon: CX = the vertex count (more than 99 is refused), vertices at 415E. Two or fewer go to
+; L3AFB; otherwise shclip (GRLIBF.ASM), then upolygon. GRCORE's _4EFA is the C wrapper.
 _seg003_0272_3B0D proc near
         cmp     cx,63h
         ja      L3B1D
@@ -387,6 +432,9 @@ L3B1D:
 _seg003_0272_3B0D endp
 
 ; seg003_0272_3B1E  (+3B1E)
+; _3B1E, _3B26, _3B2E: string entries (see _3B36). _3B1E and _3B26 use the bitmap blitter L4126
+; (_3B1E clipped, _3B26 unclipped); _3B2E is the clipped single-colour entry with the colour in
+; DX. GRCORE reaches them through the jump table at 527E .. 528D.
 _seg003_0272_3B1E proc near
         mov     word ptr ds:[4D16h],offset L4126
         jmp     short L3B4A
@@ -399,6 +447,10 @@ _seg003_0272_3B2E:
 _seg003_0272_3B1E endp
 
 ; seg003_0272_3B36  (+3B36)
+; _3B36 (string_to_screen, FM Towns): draw the string at SI with its top-left corner at (AX, BX)
+; in the colour at 2D3A, through the single-colour blitter. The clipped entries give up unless
+; the whole text box (font height up from y, and x) is inside the window: text is clipped whole,
+; not cut. _3B3E is the unclipped entry (ustring_to_screen).
 _seg003_0272_3B36 proc near
         mov     word ptr ds:[4D16h],offset _seg003_0272_3C61
         jmp     short L3B4A
@@ -436,6 +488,10 @@ L3B8E:
 _seg003_0272_3B36 endp
 
 ; seg003_0272_3B8F  (+3B8F)
+; _3B8F (shadowed_string_to_screen, FM Towns): the same box check, then the string drawn one
+; pixel right and one down in the shadow colour (2D36), the bit buffer shifted one pixel back
+; (_4150), and the string drawn again at (x, y) in the text colour (2D3A). _3BC8 is the
+; unclipped entry.
 _seg003_0272_3B8F proc near
         mov     word ptr ds:[4A0Eh],ax
         mov     word ptr ds:[4A10h],bx
@@ -468,6 +524,9 @@ _seg003_0272_3BC8:
 _seg003_0272_3B8F endp
 
 ; seg003_0272_3BE2  (+3BE2)
+; _3BE2: build the 256-entry table at 4A26 from the 16 plane masks at 4A16: for each byte of a
+; one-bit row, the map masks of its high and low four pixels. GRCORE's _43F5 runs it through the
+; jump table at 5278.
 _seg003_0272_3BE2 proc near
         mov     cx,10h
         mov     si,4A16h
@@ -489,6 +548,13 @@ L3BF4:
 _seg003_0272_3BE2 endp
 
 ; seg003_0272_3BFD  (+3BFD)
+; setup_font: after a font has been loaded into 4D08..4D12, build the glyph pointer table at
+; 4D18 for characters 0 to 127, from 1C54h in steps of (height << (bytes per row - 1)) + 4D08
+; and copy the font's height and row width for string_width.
+;
+; After its ret are small entries that set a colour (4116) and a span writer (4112: 52CC, 52DB,
+; 52D8 or 52E7) and draw a rectangle from four words at SI (GRLIBF's _3416); nothing in the
+; sources jumps to them by name.
 _seg003_0272_3BFD proc near
         mov     bx,word ptr ds:[4D0Eh]
         mov     cx,word ptr ds:[4D10h]
@@ -532,6 +598,11 @@ L3C4C:
 _seg003_0272_3BFD endp
 
 ; seg003_0272_3C61  (+3C61)
+; _3C61: the single-colour blitter. In: AX = the colour. Works out the screen address of (4A0E,
+; 4A10) from Ytab, and writes the bit buffer row by row: for each byte, the two plane masks from
+; 4A26 to port 3C5h, each followed by a store of the colour. The code at the second entry (after
+; the jmp) sets the colour from AH and draws a filled box behind the text first. L4126, near the
+; end, is the other blitter.
 _seg003_0272_3C61 proc near
         mov     word ptr ds:[4A0Ch],ax
         jmp     short L3C84
@@ -1232,6 +1303,9 @@ L4141:
 _seg003_0272_3C61 endp
 
 ; seg003_0272_4150  (+4150)
+; _4150 (shift_left_1, FM Towns): shift the whole bit buffer left by one pixel (through _4186
+; and the entry table at 4C24) and move the text's x back by one, stepping the screen address
+; back a byte when x crosses a multiple of 4.
 _seg003_0272_4150 proc near
         clc
         pushf
@@ -1257,6 +1331,13 @@ L417B:
 _seg003_0272_4150 endp
 
 ; seg003_0272_4186  (+4186)
+; _4186: one bit left through 53 bytes of a buffer row, unrolled (rcl from SI down to SI-34h);
+; entered part way through for shorter rows.
+;
+; After its ret is the rasteriser (4225h, the routine 4D14 points at): measure the string
+; (string_width), size the bit buffer (4D04 bytes wide, font height rows) and clear it, then OR
+; each glyph's rows into it at the running bit position, through the unrolled loop L42CA..L438D
+; entered by the font height (L43A5). Characters outside 20h..7Ah are drawn as '?'.
 _seg003_0272_4186 proc near
         rcl     byte ptr [si],1
         rcl     byte ptr [si-1],1
@@ -1520,6 +1601,9 @@ L43A5   dw      offset L438D, offset L4380, offset L4373, offset L4366
 _seg003_0272_4186 endp
 
 ; seg003_0272_43C5  (+43C5)
+; string_width: in: SI = the string. Out: AX = DX = the sum of its characters' widths (the byte
+; just past each glyph's rows), stopping at the terminating 0 or after 54 characters. GRCORE's
+; string_width is the C wrapper.
 _seg003_0272_43C5 proc near
         mov     bx,word ptr ds:[2D3Ch]
         mov     cx,word ptr ds:[2D3Eh]

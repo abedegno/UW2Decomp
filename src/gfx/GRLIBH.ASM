@@ -1,7 +1,19 @@
 ; /* target: seg003_0272_375C */
 ; /* opts: /ml */
 ;
-; _375C, _37BE and _381C.
+; Graphics library module 8: uline, an unclipped line (FM Towns uline). A line is drawn as a
+; list of horizontal spans, one per row: the x at each row is stepped in 16.16 fixed point and
+; each row's span runs from that x to the next row's, so steep and shallow lines both come out
+; solid. The spans go into the row table at 44CE (as urectangle's do, GRLIBF.ASM) and the
+; current span writer (DS:4112) draws them. GRMISC's far thunk _8 enters it for the 3D view's
+; lines that need no clipping, and GRLIBG's cline jumps to it after clipping.
+;
+; In: (AX, BX) and (CX, DX), the ends. DS = ES = seg_370D.
+; Data: 49AC the end mark in the row table; 49B0 which end of each record is the left (0 or 2,
+; for lines leaning either way); 49B2 the row count; 49B4 the end x; 49B6 the first record;
+; 498A the entry table into the unrolled stepper _381C, by the remaining count.
+;
+; name: descriptive (module 8 of seg003); its routine is FM Towns' uline.
 ;
 ; SEG003 split into its original modules: this is module 8 of 14, +375C..+38B4 of the segment
 ; (file 6BACh), a module of the second library (UWLIB.LIB).
@@ -23,6 +35,9 @@ SEG003_TEXT segment word public 'CODE'
         public  _seg003_0272_381C
 
 ; seg003_0272_375C  (+375C)
+; uline: order the ends so BX is the upper (y counts up), pick which side of each record the
+; stepped x goes to by the line's direction, fill the records (_37BE), close the list and jump
+; to the span writer.
 _seg003_0272_375C proc near
         mov     si,word ptr ds:[49ACh]
         and     word ptr [si],7FFFh
@@ -66,6 +81,10 @@ L37BD:
 _seg003_0272_375C endp
 
 ; seg003_0272_37BE  (+37BE)
+; _37BE: fill the span records for rows BX down to DX (DI = the first record, BP = the offset
+; from one record's stepped x to the other x). The slope (CX - AX) / rows is formed as a 16.16
+; value in BX:CX by two divides; a vertical line takes slope 0. Rows are filled fifteen at a
+; time by _381C, then the remainder by jumping into it through 498A.
 _seg003_0272_37BE proc near
         mov     word ptr ds:[49B4h],cx
         mov     si,bx
@@ -113,6 +132,8 @@ L380B:
 _seg003_0272_37BE endp
 
 ; seg003_0272_381C  (+381C)
+; _381C: fifteen rows of the line, unrolled: add the slope to the 16.16 x (AX:DX), store it as
+; this record's x and the previous record's other x.
 _seg003_0272_381C proc near
         add     dx,cx
         adc     ax,bx

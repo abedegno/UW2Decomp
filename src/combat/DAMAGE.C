@@ -1,8 +1,21 @@
 /* target: seg025_26A1 */
 /* opts: -mm -1 -G -O -d */
-/* Damage to objects: resistances, damage to doors and containers, and what an object
-   leaves behind when it breaks. The whole of DOS resident segment seg025_26A1, in original
-   order. Function and global names are the originals from the FM Towns symbol table. */
+/* Damage to objects that are not critters: resistances, wear on doors, containers and
+   weapons, and what an object leaves behind when it breaks. The whole of DOS resident
+   segment seg025_26A1, in original order.
+
+   What it does in the game: every source of damage (melee in COMBAT.C, spells in SPELLS.C
+   and SPELLS2.C, falls and collisions in the motion code, traps and world events in
+   WORLDEV.C, eating and the void in SKILLS.C) calls damage_item. It applies the item's
+   resistances from ComObjData (check_res), hands critters to damage_critter (AI.C), and
+   for anything else takes the damage off the object's hit points or quality
+   (damage_object). An object worn to nothing is turned into debris or removed
+   (remove_object): a door opens and loses its locks, a chest or barrel spills, a weapon
+   becomes the broken weapon of its skill, a bag drops its contents.
+
+   Data owned: none; the per-item tables are ComObjData (object.h) and Weapons (combat.h).
+   Function and global names are the originals from the FM Towns symbol table.
+   Name: original (damage_object is in System Shock's DAMAGE.C, the damage to objects in both). */
 
 #include <stdlib.h>
 #include "combat.h"
@@ -24,6 +37,9 @@ void far put_effect(struct Object far *obj, int type, int size, int a, int b, in
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
                      unsigned char damage, unsigned char type);
 
+/* Removes the lock object (a MAJOR_SPEC object of minor class 0) from obj's contents:
+   the first one, or every one if all is set. Returns 1 only when all was set and a lock
+   was found; with all clear it returns 0 even after removing one. */
 char far remove_lock(struct Object far *obj, char all)
 {
     union Link far *head;
@@ -46,6 +62,9 @@ char far remove_lock(struct Object far *obj, char all)
     return found;
 }
 
+/* Takes a dying object off the map list head. Objects below objdata (the player and
+   other fixed records, inferred) cannot be freed: their hit points are zeroed instead and
+   0 is returned. Otherwise returns 1 when Obj_Punt removed it. */
 char far try_remove(union Link far *head, struct Object far *obj)
 {
     if (obj >= objdata)
@@ -54,6 +73,21 @@ char far try_remove(union Link far *head, struct Object far *obj)
     return 0;
 }
 
+/* What happens when an object is destroyed by damage of the given type at map square
+   x, y (x < 0: not on the map, nothing is done and 1 is returned). debris is the item the
+   object turns into: -2 means work it out with debris_type, -1 means leave the object as
+   it is. Doors of minor class 0..7 swing open and every door loses its locks; a chest or
+   barrel spills its contents unless its id bit 13 is set; a weapon becomes its broken
+   form unless the damage type is exactly 8 (pure fire); a bag drops its contents if its
+   fate says so. Returns 1 when the object has left the map (removed by try_remove, or
+   obj_deal failed to replace it), else 0; the final debris < -1 test is always false,
+   because debris_type never returns a negative value.
+
+   Breaking bottle 0x116 is the djinn quest: the bottle holds the air daemon. Before the
+   djinn has been captured (xclock[XC_DJINN] < 5) breaking it kills the player; broken at
+   squares (0x15..0x16, 0x34..0x35) of level 0x45 once it is captured, it sets
+   xclock[XC_DJINN] to 6, advances the castle plot from 0xD to 0xE and sets bit 1 of
+   quest variable 26 (the player has absorbed the djinn; inferred from the string). */
 char far remove_object(struct Object far *obj, struct Object far *who, char type, int x, int y)
 {
     int debris = -2;
@@ -103,7 +137,7 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
     {
         if (player->xclock[XC_DJINN] < 5)
         {
-            game_sprint(0x171);
+            game_sprint(0x171);  /* 'The air daemon is released, and then rends you.' */
             damage_item(ThePlayer, 0L, OBJ_HOMEX(ThePlayer),
                         OBJ_HOMEY(ThePlayer), 0xFF, 0);
         }
@@ -111,7 +145,7 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
         {
             fill_FB(2);
             player->xclock[XC_DJINN] = 6;
-            game_sprint(0x150);
+            game_sprint(0x150);  /* 'The air-daemon is absorbed into your body, ...' */
             if (player->xclock[XC_CASTLE] == 0xD)
                 player->xclock[XC_CASTLE] = 0xE;
             player->quests[26] = (player->quests[26] & 0xFFFFFFFDL) + 2;
@@ -158,6 +192,9 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
     return debris < -1;
 }
 
+/* The item a broken object becomes: a weapon its skill's broken weapon (Weapons[].skill
+   + 0xC5, so SKILL_SWORD gives 0xC8 'a broken sword'; a dagger gives the broken dagger),
+   furniture wood chips, anything else a pile of debris (0xD6). */
 int far debris_type(int item, char type)
 {
     if (ITEM_CLASS(item) == CLASS_WEAPON && type != 8)
@@ -171,6 +208,13 @@ int far debris_type(int item, char type)
     return ITEM_PILE_OF_DEBRIS_D6;
 }
 
+/* Applies the item's resist byte (ComObjData[].resist) to damage of the given type bits
+   and returns the damage left. The bits, named by Study Monster's list (SPELLS2.C's dtypes
+   and strings 0x146..0x14B): 3 magic, 4 physical attacks, 8 fire, 0x10 poison, 0x20 cold,
+   0x40 missiles; 0x80 marks the undead (SPELLS.C tests it). Magic resistance is a chance:
+   the item ignores the blow when rand() % 3 < (resist & 3). Any other type bit the item
+   resists cancels the damage. Fire against a cold-resistant item, or cold against a
+   fire-resistant one that does not also resist cold, does double damage (capped at 0xFF). */
 unsigned char far check_res(struct Object far *obj, unsigned char damage, unsigned char type)
 {
     unsigned char res = ComObjData[OBJ_ITEM(obj)].resist;
@@ -196,6 +240,9 @@ unsigned char far check_res(struct Object far *obj, unsigned char damage, unsign
     return damage;
 }
 
+/* The entry point for damaging any object: resistances first, then critters go to
+   damage_critter (AI.C) and other objects to damage_object, which removes them through
+   remove_object once they are destroyed. Returns nonzero when the object is gone. */
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
                      unsigned char damage, unsigned char type)
 {
@@ -207,6 +254,14 @@ char far damage_item(struct Object far *obj, struct Object far *who, int x, int 
     return 0;
 }
 
+/* Takes damage off an object that is not a critter and returns 1 when it is destroyed.
+   ComObjData's qualclass is the object's toughness: damage is shifted right by it, and
+   class 3 objects are indestructible, as are objects other than doors with id bit 13 set.
+   Mobile objects lose hit points. Doors (0x140..0x147) whose owner field has bit 0 set keep
+   their strength in the rest of the owner field and are worn down but never destroyed
+   here. Everything else loses quality; damaging an ownable object counts against the
+   player with its owner (player_did_bad). A destroyed static object on the map sets off
+   any trap attached to it (checkTrap with event 4, the use triggers' mode). */
 char far damage_object(struct Object far *obj, struct Object far *who, int damage, int x, int y)
 {
     char destroyed = 0;

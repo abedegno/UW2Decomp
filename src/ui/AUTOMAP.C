@@ -2,9 +2,28 @@
 /* opts: -mm -1 -G -O -Y -d */
 /* The automap: drawing the player's map of each level, the map notes the player writes on
    it, the gem that picks a level, and map scraps that reveal parts of other levels. The
-   whole of DOS overlay ovr094, in original order. Function and global names are the
-   originals from the FM Towns symbol table where it has them; the source file's own name
-   is not known. */
+   whole of DOS overlay ovr094, in original order.
+
+   What it does in the game: PlayersMap is the map the player has made of the current
+   level, a byte per tile: bits 0..3 the tile type (0 never seen; 1..9 the tile types; 0xA
+   and up marks a tile known but not seen, inferred from make_terrain_unseen and
+   update_map_scraps), bits 4..5 a kind (0x10 a door, 0x20 and 0x30 drawn as water or dark,
+   inferred from DoTile) and bits 6..7 the floor's terrain class, which picks the shading.
+   The motion and view code fills it in as the player sees tiles; spells and scraps fill in
+   areas through automap_area. Each level's map is block 0x9F + level of the save
+   directory's LEV.ARK and its notes block 0xEF + level (UW-Formats 4.1: the automap and the
+   map notes), up to 100 notes of 0x36 bytes (struct ATM). AutoMap opens the map screen
+   (screen 2 of UWEDIT.C's screen table, entered with newscr(2); ExitAutoMap leaves it);
+   ManageDungeonMap handles clicks: writing a note anywhere on the map, erasing one with the
+   eraser, the up and down arrows for the levels of a world, the gem's facets for the other
+   worlds, and the exit.
+
+   Data owned: PlayersMap, the note list ATM_Strings (FARDATA), the level shown and the
+   drawing tables.
+   Function and global names are the originals from the FM Towns symbol table where it has
+   them.
+   Name: inferred (AutoMap is its first function, and System Shock's map display is
+   AUTOMAP.C). */
 
 #include <dos.h>
 #include <stdlib.h>
@@ -48,7 +67,8 @@ void far rectangle(int x0, int y0, int x1, int y1);
 unsigned far get_workspace(void);
 char far disk_to_vid(int blk, char far *buf);
 
-/* Initialised data, DS:09EE. None of it has an FM Towns name, so it was static. */
+/* Initialised data, DS:09EE. */
+/* name: none of it has an FM Towns name, so it was static. */
 
 /* How each solid tile type is shaded, a 3x3 pattern per type: 1 shades the pixel with the
    tile's terrain, 2 darkens it. */
@@ -64,10 +84,11 @@ static signed char diag_side[4] = { 1, 2, 0, 3 };
 static signed char door_dy[4] = { -1, 0, -1, 1 };
 static signed char door_dx[4] = { 0, -1, -1, -1 };
 
-/* Uninitialised data, DS:36F8. Turbo C lays _BSS out in an order set by the names, so the
-   static names (none has an FM Towns name) were chosen by compiling probes to land where
-   the EXE has them: door_dir, notes_dirty, level, old_strings, num_words and map_mouse
-   are ours. */
+/* Uninitialised data, DS:36F8: the drawing state, the level shown, the note counts and
+   the player's map. */
+/* match: Turbo C lays _BSS out in an order set by the names, so the static names (none
+   has an FM Towns name) were chosen by compiling probes to land where the EXE has them:
+   door_dir, notes_dirty, level, old_strings, num_words and map_mouse are ours. */
 static signed char door_dir;
 static unsigned char notes_dirty;
 static int level;
@@ -79,6 +100,10 @@ static int map_mouse;
 unsigned char far SaveAutoMapLevel(int flags, int lev);
 unsigned char far GetAutoMapLevel(int flags, int lev);
 
+/* Opens the map screen: registers its key and mouse handlers once, saves the current
+   level's map, and shows this level, or without a map of it (player->automap clear) the
+   level of the last map scrap read (player->map_scrap; its high bit marks a scrap to
+   switch to). Walking music plays if none of the map themes is. */
 void far AutoMap(void)
 {
     char noauto;
@@ -115,6 +140,10 @@ void far AutoMap(void)
     notes_dirty = 0;
 }
 
+/* Fills PlayersMap from the level for each tile x0..x1, y0..y1 that fn(x, y, arg) accepts:
+   the tile type and its floor's terrain class. The loop over the tile's objects checks
+   bridges, doors and wall decals but records nothing for them (assignments of terr to
+   itself, as in DOS). Used by Map Area (SPELLS.C) and the whole-level map below. */
 void far automap_area(int x0, int y0, int x1, int y1, int *arg,
                       char (far *fn)(int x, int y, int *arg))
 {
@@ -159,8 +188,9 @@ void far automap_area(int x0, int y0, int x1, int y1, int *arg,
     }
 }
 
-/* DOS only: automap_area's callback for the whole level; the name is provisional (IDA's SetALTo1_ovr094_2A1), chosen so that its tools/bssorder.py key
-   puts it in the EXE's overlay stub order. */
+/* automap_area's callback for the whole level. */
+/* name: DOS only; the name is provisional (IDA's SetALTo1_ovr094_2A1), chosen so that its
+   tools/bssorder.py key puts it in the EXE's overlay stub order. */
 char far ReturnOne_ovr094_2A1(int x, int y, int *arg)
 {
     return 1;
@@ -175,6 +205,8 @@ void far ovr094_2A8(void)
     mouse_show();
 }
 
+/* Writes PlayersMap as level lev's automap block (0x9F + lev of LEV.ARK in the save
+   directory). flags bit 2: the archive is already open. */
 unsigned char far SaveAutoMapLevel(int flags, int lev)
 {
     unsigned char ok = 0;
@@ -187,6 +219,7 @@ unsigned char far SaveAutoMapLevel(int flags, int lev)
     return ok;
 }
 
+/* Reads level lev's automap into PlayersMap (all unseen if the archive cannot be opened). */
 unsigned char far GetAutoMapLevel(int flags, int lev)
 {
     unsigned char ok = 0;
@@ -203,6 +236,8 @@ unsigned char far GetAutoMapLevel(int flags, int lev)
     return ok;
 }
 
+/* Leaves the map screen: saves the notes, remembers the level shown in map_scrap, reloads
+   the current level's map and restores the game palette and pointer. */
 void far ExitAutoMap(void)
 {
     mouse_hide();
@@ -226,6 +261,8 @@ void far ClearAutoMap(void)
     memset(PlayersMap, 0, 0x1000);
 }
 
+/* Draws every seen tile, three pixels a tile, and shades its sides that face unseen or
+   solid neighbours. */
 void far ShowDungeonMap(void)
 {
     int x;
@@ -263,6 +300,9 @@ void far ShowDungeonMap(void)
     }
 }
 
+/* Shades one side of the tile at x, y (0 south, 1 east, 2 north, 3 west, inferred) if the
+   neighbour there is not an open tile; a neighbour of type 11 gets a lighter edge. Returns
+   1 if it drew. */
 char far ShadeSide(int side, int x, int y)
 {
     int t;
@@ -309,6 +349,7 @@ char far ShadeSide(int side, int x, int y)
     return 1;
 }
 
+/* Adds base plus a random 0..n-1 to the colour at x, y: a rough, hand-drawn darkening. */
 void far PixelDarken(int x, register int y, int base, unsigned n)
 {
     register int d;
@@ -319,6 +360,9 @@ void far PixelDarken(int x, register int y, int base, unsigned n)
     gr_pixel(x, y, base + rand() / d + gr_read_pixel(x, y));
 }
 
+/* Draws one tile from its PlayersMap byte: the pattern of its type (diagonals half
+   filled), coloured by the terrain class (bits 6..7), then the kind (bits 4..5): dark, the
+   0xE9.. colours, or a door. */
 void far DoTile(int type, int x, int y)
 {
     int px;
@@ -382,6 +426,8 @@ void far DoTile(int type, int x, int y)
     }
 }
 
+/* Draws a door: a dark centre and two dark pixels across the passage, turned to face the
+   open neighbours. */
 void far DoDoorTile(int x, int y, register int px, register int py)
 {
     PixelDarken(++px, ++py, 6, 3);
@@ -395,8 +441,9 @@ void far DoDoorTile(int x, int y, register int px, register int py)
     }
 }
 
-/* DOS only, and nothing calls it: darken the pixel at one corner of a tile; the name is provisional (IDA's ovr094_9D2), chosen so that its tools/bssorder.py key
-   puts it in the EXE's overlay stub order. */
+/* Darkens the pixel at one corner of a tile. Nothing calls it. */
+/* name: DOS only; the name is provisional (IDA's ovr094_9D2), chosen so that its
+   tools/bssorder.py key puts it in the EXE's overlay stub order. */
 void far CornerShade_ovr094_9D2(int corner, int x, int y)
 {
     register int px;
@@ -459,6 +506,10 @@ int far true_gem_region(int x, int y)
     return region;
 }
 
+/* The map screen's mouse handler (see the file comment). Notes are typed in capitals in
+   the small font, up to 46 characters and the screen edge, ended by Enter, Escape or a
+   click. The level arrows move within the current world (level & 7), the gem's facets
+   pick a world at the same depth. */
 void far ManageDungeonMap(void)
 {
     int mx;
@@ -619,6 +670,7 @@ void far ManageDungeonMap(void)
     mouse_release(1);
 }
 
+/* Draws the notes that have not been erased. */
 void far RedisplayStrings(void)
 {
     char buf[50];
@@ -637,6 +689,7 @@ void far RedisplayStrings(void)
     grfx_quikfont(FONT_5X6P);
 }
 
+/* Writes the level's notes (block 0xEF + lev) if they changed, dropping the erased ones. */
 void far SaveTheWords(int lev)
 {
     register int i;
@@ -660,6 +713,7 @@ void far SaveTheWords(int lev)
     }
 }
 
+/* Reads the level's notes into ATM_Strings; returns 0 if the archive cannot be opened. */
 unsigned char far GetTheWords(int lev)
 {
     old_strings = num_words = 0;
@@ -671,6 +725,8 @@ unsigned char far GetTheWords(int lev)
     return 0;
 }
 
+/* Draws one facet of the gem (part 0..7 a world, 8 the middle): how 1 lit, 2 the current
+   world's picture. */
 void far show_a_part(register int part, int how)
 {
     struct { unsigned char x, y; } pos[9] = {
@@ -686,6 +742,8 @@ void far show_a_part(register int part, int how)
     }
 }
 
+/* Lights the gem facets of the worlds the player has visited (QB_WORLDS_VISITED) and marks
+   the world of the level shown (world 0, Britannia, is the middle). */
 void far show_gem_parts(int lev)
 {
     int i;
@@ -706,6 +764,9 @@ void far show_gem_parts(int lev)
     Transparency = old;
 }
 
+/* Draws the map screen for level lev: the background, the map, the gem, the player's
+   position (only on his own level and with player->automap set), the notes and the level
+   number within its world. */
 void far ShowAutoMapLevel(int lev)
 {
     int px;
@@ -757,6 +818,8 @@ void far ShowAutoMapLevel(int lev)
     mouse_show();
 }
 
+/* Shows another level's map, saving this one's notes first. Level 0x47 (the first of the
+   map scraps' slots) is never loaded and shows blank. */
 void far ChangeAutoMapLevel(register int lev)
 {
     SaveTheWords(level);
@@ -766,15 +829,18 @@ void far ChangeAutoMapLevel(register int lev)
     ShowAutoMapLevel(lev);
 }
 
-/* IDA ChangeThemeToBrittania_ovr094_158E: FM Towns automap_scr_ sits at this position and
+/* The automap screen's idle work: keeps the music going. */
+/* name: IDA ChangeThemeToBrittania_ovr094_158E: FM Towns automap_scr_ sits at this position and
    is the same one call, to loop_music_maybe_. */
 void far automap_scr(void)
 {
     loop_music_maybe();
 }
 
-/* IDA GetMapPieceSegmentNo_ovr094_1598: FM Towns map_section_ at this position is the same
-   code. Which of the map's eight sections (1 to 7, round the middle) a point lies in. */
+/* Which of the map's sections a point (relative to the map's middle) lies in: 0 the
+   middle (within 9 tiles), 1 to 7 round it. */
+/* name: IDA GetMapPieceSegmentNo_ovr094_1598: FM Towns map_section_ at this position is
+   the same code. */
 int far map_section(register int x, register int y)
 {
     int t;
@@ -803,6 +869,12 @@ int far map_section(register int x, register int y)
     return s;
 }
 
+/* Copying a map scrap to the player's map (USEITEMS.C): the scrap's map is stored as the
+   automap of level number scrap (0x47 + the scrap object's quality) and covers level lev
+   (its owner field); the sections it shows are a bit mask (its link). The scrap's map is
+   loaded and every tile outside those sections is marked unseen; then each tile it adds to
+   lev's map gives experience (lev / 8 + 1 per tile, a twentieth of the total in the end),
+   and the scrap's notes in those sections are copied too. */
 void far update_map_scraps(int scrap, int lev, unsigned char sections)
 {
     unsigned char far *buf;
@@ -877,8 +949,9 @@ void far update_map_scraps(int scrap, int lev, unsigned char sections)
     release_workspace();
 }
 
-/* IDA AutoMapTrap_ovr094_1878: FM Towns make_terrain_unseen_ at this position is the same
-   code. Marks a block of the map as not seen. */
+/* Marks a block of the map as not seen (tile types 0..5 become 0xA..0xF); hack trap 45. */
+/* name: IDA AutoMapTrap_ovr094_1878: FM Towns make_terrain_unseen_ at this position is
+   the same code. */
 void far make_terrain_unseen(int x, int y, unsigned w, unsigned h)
 {
     unsigned char hi;

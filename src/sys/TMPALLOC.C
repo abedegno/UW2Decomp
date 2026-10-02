@@ -20,7 +20,8 @@
    whole frame with get_workspace and gives it back with release_workspace, which maps
    the saved pages back in. The page variables live in the 3D renderer's far data
    (view3d.h) because PGCACHE.ASM maps pages too.
-   Pages 4-9 are not assigned here; what uses them is not known.
+   Pages 4-9 are not assigned here: LOADGR.C packs the art it keeps in EMS into logical
+   pages from 4 upward (its ems_page starts at 4), so they are probably that art's.
    name: inferred, the job of System Shock's TMPALLOC.C (temp_malloc, temp_free). */
 
 #include <dos.h>

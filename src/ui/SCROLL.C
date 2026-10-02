@@ -27,8 +27,8 @@
    and each scroll_print copies it to start_line, the number of older lines that may
    scroll out of sight; each scroll_up uses one. When a new line is needed in a full box
    and none is left, scroll_more shows [MORE] and waits. So (inferred) the player is only
-   stopped when the current message's own lines would scroll away unread. The scroll's field names in ui.h
-   do not say what they hold; see struct Scroll there.
+   stopped when the current message's own lines would scroll away unread. The scroll's field
+   names in ui.h do not say what they hold; see struct Scroll there.
 
    Neighbours: game_sprint and the other GAMESTRN.C printers end here; SCROLLIO.C has the
    interactive side (the [MORE] prompt, typed answers, clearing).
@@ -56,9 +56,12 @@ unsigned char mouse_in_scroll;                   /* DS:34B2, FM Towns _mouse_in_
    together in this order and then unnamed space: click_time, edge_phase and
    conv_edge_phase have no names there, so they were static. The pool holds one string,
    the "" at DS:098D that scroll_wrap passes to scroll_print3. */
-struct Scroll main_scroll = { 0x1E, 1, 0x10, 0xDF, 0x10, 0x1E, 0x10, 0x1E, 0, 0, 0x76 };   /* DS:0938 */
-struct Scroll npc_scroll = { 0x78, 0x28, 0x15, 0xDA, 0x18, 0x76, 0x18, 0x76, 0, 0, 0x76 };  /* DS:094D */
-struct Scroll menu_scroll = { 0x1E, 1, 8, 0x137, 8, 0x1E, 8, 0x1E, 0, 0, 0x76 };            /* DS:0962 */
+struct Scroll main_scroll = { 0x1E, 1, 0x10, 0xDF, 0x10, 0x1E, 0x10, 0x1E, 0, 0, 0x76 };
+/* DS:0938 */
+struct Scroll npc_scroll = { 0x78, 0x28, 0x15, 0xDA, 0x18, 0x76, 0x18, 0x76, 0, 0, 0x76 };
+/* DS:094D */
+struct Scroll menu_scroll = { 0x1E, 1, 8, 0x137, 8, 0x1E, 8, 0x1E, 0, 0, 0x76 };
+/* DS:0962 */
 unsigned char spec_col[7] = { 0x75, 0x68, 0x01, 0x02, 0x21, 0x50, 0x48 };    /* DS:0977, colours for \0..\6 */
 int scroll_mode = 0;                    /* DS:097E */
 int start_line = 0;                     /* DS:0980 */

@@ -1,12 +1,39 @@
 ; /* target: seg003_0272_43F0 */
 ; /* opts: /ml */
 ;
-; The graphics library's C entry points: setup_font, string_to_screen, string_width,
-; init_graphics, grPageFlip, plot_pixel, set_the_color, set_the_window, rectangle, box, show,
-; fbshow, vcopyfb, fbuf_setcolor and the rest, and the table of near jumps at _5278. Its _DATA
-; is the graphics globals C uses: palette, Color_data_ptr, foreground_color, background_color,
-; cur_font, bytefont, wtop, wbot, wright, wleft, pixel_color and Ytab, mostly far pointers
-; into seg_370D.
+; Graphics library module 10: the C entry points. Each far routine here is called by the game's
+; C code with C arguments, saves the caller's SS:SP in L43F0/L43F2, switches DS, ES and SS to
+; seg_370D with the stack at 4FA8h, loads the arguments into the registers the library routine
+; wants, calls it (directly or through the table of near jumps at _5278 .. _52EA) and switches
+; back. String entries first copy the far string (up to 84h bytes) to 370D:4FA8, below the
+; private stack. Its _DATA is the graphics globals C uses: palette, Color_data_ptr,
+; foreground_color, background_color, cur_font, bytefont, wtop, wbot, wright, wleft, pixel_color
+; and Ytab, mostly far pointers into seg_370D. The symbol seg_370D is 370D:0008, so `seg_370D+X`
+; addresses offset X + 8: wleft, wright, wbot and wtop (written +3DEC .. +3DF2) are the clip
+; window at 3DF4 .. 3DFA, cur_font (+4D00) the font header at 4D08, bytefont (+1C4C) the glyphs
+; at 1C54, Ytab (+36A4) the row table at 36AC, foreground_color and background_color the text
+; colours at 2D3A and 2D3B.
+;
+; Entry point -> library routine (module; FM Towns name where the alignment gives one):
+;   43F5 -> _3BE2 build the text masks (GRLIBI)      setup_font -> _3BFD (GRLIBI)
+;   string_to_screen -> _3B36 .. (GRLIBI)            44DC -> _3B8F shadowed string (GRLIBI)
+;   string_width -> _43C5 (GRLIBI)                   45BA -> _3B1E string via bitmap (GRLIBI)
+;   init_graphics -> _283D (VIDMODE)                 4665 -> _2914 load a palette (VIDMODE)
+;   grPageFlip, grSoftPageFlip -> _2ABE, _2AC1        4722 -> _295F show the drawing page
+;   gr_read_pixel -> _30FB, 47A0 -> _30E3 (read)      plot_pixel -> _3094, 4824 -> _30AC
+;   4866 -> _3164, 48AD -> _3121 vertical lines       set_the_color -> _3195, init_colors -> _31BE
+;   496F -> _286C set the screen mode                49AE, 49F4 -> _3206, _321B video memory
+;   4A3A -> _2977 virtual screen, vscreen_focus -> _2A0D (VIDMODE)
+;   set_the_window -> _31E7 (VIDMODE)                copy_hidden_to_visible, copy_visible_to_hidden
+;   4B93 -> _331A, 4C64 -> _3321 vline, uvline -> _3324; 4BDA -> _347F hline, uhline -> _34AE
+;   rectangle, urectangle, clear_window, box -> _341E, _342E, _3423, _336E; 4E0C -> _3371 ubox
+;   4E56 -> _342E with the window; 4EB0 -> _368E cline (GRLIBG); 4F78 -> _375C uline (GRLIBH)
+;   4EFA -> _3B0D polygon, 4F39 -> _38B4 upolygon (GRLIBI)
+;   show, 5025, fbshow, 511C, vcopyfb, vcopy -> _21D4, _21ED, _2214, _222B, _2242, _2250
+;   50E7 -> _2B62 set the linear target; fbuf_setcolor -> _B9B (GRENTRY)
+;
+; name: descriptive (module 10 of seg003, "the C entry points"). The C names are the ones the C
+; sources use, FM Towns' where the alignment gave one; the rest keep their addresses.
 ;
 ; SEG003 split into its original modules: this is module 10 of 14, +43F0..+52EE of the segment
 ; (file 7840h), a module of the second library (UWLIB.LIB).
@@ -378,6 +405,8 @@ _string_to_screen proc far
 _string_to_screen endp
 
 ; seg003_0272_44DC  (+44DC)
+; A shadowed string (GRLIBI's _3B8F): (far string, x, y, ...), the same arguments as
+; string_to_screen.
 _seg003_0272_44DC proc far
         push    bp
         mov     bp,sp
@@ -488,6 +517,7 @@ _string_width proc far
 _string_width endp
 
 ; seg003_0272_45BA  (+45BA)
+; A string drawn through the bitmap blitter (GRLIBI's _3B1E), with string_to_screen's arguments.
 _seg003_0272_45BA proc far
         push    bp
         mov     bp,sp
@@ -577,6 +607,8 @@ _init_graphics proc far
 _init_graphics endp
 
 ; seg003_0272_4665  (+4665)
+; Load a palette (VIDMODE's _2914): SI = the palette's offset in seg_370D, AX and BX the other
+; two arguments (passed through; _2914 does not read them).
 _seg003_0272_4665 proc far
         push    bp
         mov     bp,sp
@@ -682,6 +714,7 @@ _grSoftPageFlip proc far
 _grSoftPageFlip endp
 
 ; seg003_0272_4722  (+4722)
+; Show the drawing page (VIDMODE's _295F), without switching pages.
 _seg003_0272_4722 proc far
         push    bp
         mov     bp,sp
@@ -752,6 +785,7 @@ _gr_read_pixel proc far
 _gr_read_pixel endp
 
 ; seg003_0272_47A0  (+47A0)
+; Read the pixel at (x, y), or -1 outside the window (VIDMODE's _30E3).
 _seg003_0272_47A0 proc far
         push    bp
         mov     bp,sp
@@ -824,6 +858,7 @@ _plot_pixel proc far
 _plot_pixel endp
 
 ; seg003_0272_4824  (+4824)
+; Plot (x, y) without clipping (VIDMODE's _30AC through the jump table).
 _seg003_0272_4824 proc far
         push    bp
         mov     bp,sp
@@ -860,6 +895,7 @@ _seg003_0272_4824 proc far
 _seg003_0272_4824 endp
 
 ; seg003_0272_4866  (+4866)
+; A solid vertical line (x, y1, y2) without clipping (VIDMODE's _3164).
 _seg003_0272_4866 proc far
         push    bp
         mov     bp,sp
@@ -898,6 +934,7 @@ _seg003_0272_4866 proc far
 _seg003_0272_4866 endp
 
 ; seg003_0272_48AD  (+48AD)
+; A vertical line (x, y1, y2) copied from the other page (VIDMODE's _3121).
 _seg003_0272_48AD proc far
         push    bp
         mov     bp,sp
@@ -1005,6 +1042,7 @@ _init_colors proc far
 _init_colors endp
 
 ; seg003_0272_496F  (+496F)
+; Set the screen mode (AX = the mode number, VIDMODE's _286C).
 _seg003_0272_496F proc far
         push    bp
         mov     bp,sp
@@ -1040,6 +1078,8 @@ _seg003_0272_496F proc far
 _seg003_0272_496F endp
 
 ; seg003_0272_49AE  (+49AE)
+; Allocate n bytes of video memory (GRLIBF's _3206). Returns the offset, or 0 when there is no
+; room.
 _seg003_0272_49AE proc far
         push    bp
         mov     bp,sp
@@ -1079,6 +1119,8 @@ L49DE:
 _seg003_0272_49AE endp
 
 ; seg003_0272_49F4  (+49F4)
+; Give video memory back down to an offset (GRLIBF's _321B). Returns the offset, or 0 if it was
+; below the floor.
 _seg003_0272_49F4 proc far
         push    bp
         mov     bp,sp
@@ -1118,6 +1160,7 @@ L4A24:
 _seg003_0272_49F4 endp
 
 ; seg003_0272_4A3A  (+4A3A)
+; Set up a virtual screen with a split (width, split line, height; VIDMODE's _2977).
 _seg003_0272_4A3A proc far
         push    bp
         mov     bp,sp
@@ -1302,6 +1345,7 @@ _copy_visible_to_hidden proc far
 _copy_visible_to_hidden endp
 
 ; seg003_0272_4B93  (+4B93)
+; A clipped vertical line through the vector at 52B4 (GRLIBF's _331A).
 _seg003_0272_4B93 proc far
         push    bp
         mov     bp,sp
@@ -1340,6 +1384,7 @@ _seg003_0272_4B93 proc far
 _seg003_0272_4B93 endp
 
 ; seg003_0272_4BDA  (+4BDA)
+; hline: a clipped horizontal line (x1, y, x2; GRLIBF's _347F).
 _seg003_0272_4BDA proc far
         push    bp
         mov     bp,sp
@@ -1414,6 +1459,7 @@ _uhline proc far
 _uhline endp
 
 ; seg003_0272_4C64  (+4C64)
+; vline: a clipped vertical line (x, y1, y2; GRLIBF's _3321).
 _seg003_0272_4C64 proc far
         push    bp
         mov     bp,sp
@@ -1641,6 +1687,7 @@ _box proc far
 _box endp
 
 ; seg003_0272_4E0C  (+4E0C)
+; ubox: an unclipped outline rectangle (GRLIBF's _3371).
 _seg003_0272_4E0C proc far
         push    bp
         mov     bp,sp
@@ -1680,6 +1727,7 @@ _seg003_0272_4E0C proc far
 _seg003_0272_4E0C endp
 
 ; seg003_0272_4E56  (+4E56)
+; Fill the whole window (GRLIBF's urectangle on the window's corners).
 _seg003_0272_4E56 proc far
         push    bp
         mov     bp,sp
@@ -1723,6 +1771,7 @@ _seg003_0272_4E56 proc far
 _seg003_0272_4E56 endp
 
 ; seg003_0272_4EB0  (+4EB0)
+; cline: a clipped line (x1, y1, x2, y2; GRLIBG's _368E).
 _seg003_0272_4EB0 proc far
         push    bp
         mov     bp,sp
@@ -1762,6 +1811,7 @@ _seg003_0272_4EB0 proc far
 _seg003_0272_4EB0 endp
 
 ; seg003_0272_4EFA  (+4EFA)
+; polygon: CX = the vertex count, the vertices already at 415E (GRLIBI's _3B0D).
 _seg003_0272_4EFA proc far
         push    bp
         mov     bp,sp
@@ -1797,6 +1847,7 @@ _seg003_0272_4EFA proc far
 _seg003_0272_4EFA endp
 
 ; seg003_0272_4F39  (+4F39)
+; upolygon: as polygon, without clipping (GRLIBI's _38B4).
 _seg003_0272_4F39 proc far
         push    bp
         mov     bp,sp
@@ -1832,6 +1883,7 @@ _seg003_0272_4F39 proc far
 _seg003_0272_4F39 endp
 
 ; seg003_0272_4F78  (+4F78)
+; uline: an unclipped line (GRLIBH's _375C).
 _seg003_0272_4F78 proc far
         push    bp
         mov     bp,sp
@@ -2011,6 +2063,7 @@ _fbshow proc far
 _fbshow endp
 
 ; seg003_0272_50E7  (+50E7)
+; Set the linear buffer bitmaps are drawn into by _511C (VIDMODE's _2B62).
 _seg003_0272_50E7 proc far
         push    bp
         mov     bp,sp
@@ -2039,6 +2092,7 @@ _seg003_0272_50E7 proc far
 _seg003_0272_50E7 endp
 
 ; seg003_0272_511C  (+511C)
+; Draw a bitmap into that linear buffer (VIDMODE's _222B), with fbshow's arguments.
 _seg003_0272_511C proc far
         push    bp
         mov     bp,sp
@@ -2173,6 +2227,9 @@ L5218:
 _vcopy endp
 
 ; seg003_0272_5220  (+5220)
+; _5220: CX = the length of the string at SI (a strlen). The far code after its ret compares two
+; strings with it (repe cmpsb); L5218, in vcopy's proc, is a far strcpy. No callers of these
+; were found.
 _seg003_0272_5220 proc near
         mov     di,si
         xor     al,al
@@ -2227,6 +2284,9 @@ _fbuf_setcolor proc far
 _fbuf_setcolor endp
 
 ; seg003_0272_5278  (+5278)
+; The near jump table _5278 .. _52EA: one jmp per library entry, so the wrappers above and other
+; modules (GRDISP's _536B) reach the routines by fixed offsets. The span writers are entries
+; 52C9 .. 52E7 (see VIDMODE.ASM's header for the full list).
 _seg003_0272_5278 proc near
         jmp     _seg003_0272_3BE2
 _seg003_0272_5278 endp

@@ -1,8 +1,30 @@
 ; /* target: seg003_0272_D1E */
 ; /* opts: /ml */
 ;
-; _D1E, the XFER colour tables (_cXfer), and the scaled-bitmap span routines with the code
-; they generate at run time (_1373 and its buffer).
+; Graphics library module 4: scaled bitmaps, FM Towns' scale_nibble_bitmap with its span writers
+; (really_slow_xfer, transparent_pixel_xfer, color_pixel_xfer) and its code generators
+; (byte_compiler, scale_up_by_2, scale_down and their inner and outer loops). It draws the 3D
+; view's sprites: seg004's do_scalebm (TMAPOPS.ASM) fills in the sprite record at seg_370D:0B1A
+; and far-calls _D1E, which draws the bitmap stretched or shrunk to its screen size into the
+; frame buffer (GRENTRY.ASM). Rather than step through the source pixel by pixel, _D1E has a
+; generator write a straight-line scaler for the sprite's width (lodsb/stosb/movsb sequences,
+; with xlat to unpack four-bit pixels) into the buffer L1554 in this code segment, and calls it
+; once per source row. It also holds the five XFER.DAT colour tables (_cXfer), which LIGHTING
+; loads at start-up.
+;
+; The sprite record (seg_370D, from TMAPOPS.ASM's do_scalebm and PGCACHE.ASM's decoders):
+;   0B0E the generator to use, 0B10 the span writer; 0B18, 0B1A the source's offset and
+;   segment; 0B1C its width; 0B1E, 0B1F its height; 0B20, 0B22 the screen x and the top
+;   y (y counts up); 0B24, 0B26 the height and width on the screen
+; Working data: 0B38 the source step per screen pixel (8.8), 0B3A per screen row; 0B3C rows
+; left; 0B3E the pixels clipped off the left; 0B40 the unpacked row; 0DC0 the source's bytes
+; per row; 0DC1 bmcolor (pick frames).
+; Pixel colours from 0F9h up are not drawn as themselves by the translucent writer: each picks
+; a cXfer table that remaps the pixel already on the screen, so a sprite can tint or darken
+; what is behind it (probably ghosts and similar effects; not checked in the game).
+;
+; name: descriptive (module 4 of seg003, "XFER tables and scaled-bitmap spans"); the routine
+; names given here are FM Towns'.
 ;
 ; SEG003 split into its original modules: this is module 4 of 14, +D1E..+21D4 of the segment
 ; (file 416Eh), a module of the second library (UWLIB.LIB).
@@ -288,6 +310,12 @@ SEG003_TEXT segment word public 'CODE'
         public  _seg003_0272_D1E
 
 ; seg003_0272_D1E  (+D1E)
+; scale_nibble_bitmap (FM Towns; far): draw the sprite described at 0B0A .. 0B3F. Gives up for a
+; sprite 2 pixels or less in either direction, one wider than 200h, or one wholly outside the
+; window. Works out the steps, clips left, right, top and bottom, generates the row scaler into
+; L1554 (through 0B0E), then for each screen row from the top down: when the source row changes,
+; unpack and scale it into 0B40 by calling L1554; write the scaled row into the frame buffer at
+; row 095C[y] + x through the span writer (0B10). Runs on the library's stack.
 _seg003_0272_D1E proc far
         push    es
         push    ds
@@ -518,7 +546,19 @@ _cXfer label byte
         db      1h,1h,0F2h,0F3h,0F2h,1h,93h,0F6h,0F8h,0DEh,0ADh,0Ch,0A1h,0DEh,0AEh,0DDh
 
 ; seg003_0272_1373  (+1373): span routines and the scaler generators, reached through
-; the pointers at DS:B0E and DS:B10
+; The span writers (CX pixels from SI at 0B40 to ES:DI in the frame buffer): _1373 remaps the
+; screen pixel under each non-zero source pixel through cXfer table 4 (a translucent sprite),
+; L1388 the same with table 3; the unlabelled writer after L139D writes non-zero pixels, those
+; from 0F9h through the cXfer table they name; then a plain copy (rep movsb), a transparent copy
+; (skip 0), and a writer that puts bmcolor (0DC1) wherever the source is non-zero, for pick
+; frames.
+;
+; The generators (write code to ES:DI = L1554, ending it with a ret): the first (after L1420)
+; unpacks four-bit pixels, choosing the nibble by the parity of the source position and
+; translating through a 16-entry palette with xlat ss:; the one after L14A6 scales a byte row,
+; emitting movsb for pixels kept once, lodsb then several stosb for pixels repeated when
+; enlarging (step below 1.0), or skipping source bytes with inc si / add si,n when shrinking
+; (step above 1.0).
 _seg003_0272_1373 proc near
         mov     bx,offset _cXfer+400h
 L1376:

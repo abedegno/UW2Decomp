@@ -1,7 +1,19 @@
 ; /* target: seg003_0272_3686 */
 ; /* opts: /ml */
 ;
-; _368E with the eight bytes of data before it.
+; Graphics library module 7: cline, a line clipped to the window (FM Towns cline; _3686 is
+; cline_si, which loads the two ends from four words at SI first). It handles vertical and
+; horizontal lines through GRLIBF's vline and hline, clips the rest Cohen-Sutherland style
+; against the window (3DF4 left, 3DF8 right, 3DFA bottom, 3DF6 top; y counts up), and draws what
+; is left with uline (GRLIBH.ASM). GRMISC's far thunk _10 enters it for the 3D view's lines, and
+; GRCORE's _4EB0 for C.
+;
+; In: (AX, BX) and (CX, DX), x and y of the two ends. DS = ES = seg_370D.
+; Data: 44A2 dx, 44A4 dy; 44A6 the table of the four edge handlers (the code after the jmp
+; word ptr [bx+44A6h]: left, right, bottom, top); 44C6 the other end's out code.
+;
+; name: descriptive (module 7 of seg003); the routine is FM Towns' cline, which with its _si
+; entry is the whole module.
 ;
 ; SEG003 split into its original modules: this is module 7 of 14, +3686..+375C of the segment
 ; (file 6AD6h), a module of the second library (UWLIB.LIB).
@@ -36,6 +48,9 @@ _seg003_0272_3686:
         xchg    dx,ax
 
 ; seg003_0272_368E  (+368E)
+; cline. The out codes are 2 left, 4 right, 8 below, 10h above. Both ends inside: jump to uline.
+; Both outside on the same side: return. Otherwise move the outside end onto the edge its lowest
+; set bit names (the slope from dx and dy by imul/idiv) and test again.
 _seg003_0272_368E proc near
         mov     si,cx
         sub     si,ax

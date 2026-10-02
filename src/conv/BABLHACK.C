@@ -58,8 +58,8 @@ void far do_teleport(struct Object far *who, int x, int y, int level);
 char far teleport_critter(struct Object far *critter, int x, int y, int how);
 void far set_numbered_variable(int var, int how, int val);
 
-/* Read and cleared by babl_hack mode 1. Meant for when the player runs from a pit fight
-   (inferred from the name); nothing in the tree sets it. */
+/* Read and cleared by babl_hack mode 1. Set by WORLDEV.C's arena_player_runs when the
+   player runs from a pit fight, which then starts a conversation with a pit fighter. */
 char running_away = 0;
 /* Where teleport_player and teleport_talker asked to go, done by do_babl_teleport once
    the conversation is over; -1 for nothing pending. */

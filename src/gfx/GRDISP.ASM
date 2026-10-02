@@ -1,7 +1,29 @@
 ; /* target: seg003_0272_52EE */
 ; /* opts: /ml */
 ;
-; The dispatcher _5311 that the thunks of GRMISC jump to, and _5363, _536B.
+; Graphics library module 11: the dispatcher that GRMISC's far thunks jump to, and the start of
+; the graphics data segment's last piece (the dispatcher's stack words and the Gouraud span
+; table).
+;
+; The dispatcher. A caller outside the library (seg004's 3D code) puts a near routine of seg003
+; in BP and its arguments in AX..DX, SI, DI, and far-jumps or calls here. The dispatcher sets DS
+; = ES = seg_370D, saves SP at 370D:558A, switches to the private stack SS:SP = [558C]:[5588]
+; (seg_370D itself), calls BP, then puts SS back to dseg062_62a6 (FD71, seg021's data segment,
+; which holds cRender's private stack, the one seg004 runs on) and the saved SP, and
+; far-returns. The C wrappers in GRCORE do the same job with their own stack (370D:4FA8) and
+; save area (cs:43F0).
+;
+; The FD51 piece (370D:558A..5E7E): 558A the saved SP; 558C the private stack's segment (the far
+; pointer seg_370D-8, so 370D); 558E an 8-byte rectangle buffer _5363 fills; then, from 5692,
+; two hundred 10-byte span records with their y words already filled in (C7h down to 1):
+; GRLIBM's Gouraud polygon writes its spans (y, left, right, left intensity, right intensity)
+; into these and hands them to GRENTRY's _C13; then terminator words; and at 5E76 four near
+; offsets into GRLIBN (5C5A, 5C72, 5C86, 5C90), the per-case routines GRLIBN's clipper calls
+; through [bx+5E76h].
+;
+; name: descriptive (map/filenames.tsv: "graphics library module 11: the dispatcher the thunks
+; jump to"). No FM Towns counterpart: the 32-bit build has one flat segment and calls the
+; routines directly.
 ;
 ; SEG003 split into its original modules: this is module 11 of 14, +52EE..+5370 of the segment
 ; (file 873Eh), a module of the second library (UWLIB.LIB).
@@ -441,6 +463,14 @@ SEG003_TEXT segment word public 'CODE'
         public  _seg003_0272_5363
         public  _seg003_0272_536B
 
+; L52EE: copy CX words from DS:SI to 370D:558E, then enter _52FF with SI = 558E. Reached only
+; from _5363.
+;
+; _52FF (near, entered by jmp with a far return address on the stack, BP = routine): the
+; dispatcher for callers on another stack. If SS already is seg_370D the library has been
+; re-entered; it then executes int 2 (a break into a debugger) and calls BP on the current
+; stack. Otherwise it takes the path at L533A below, which ends with DS = ES = dseg062_62a6
+; rather than the caller's values. Used by GRMISC's _18.
 L52EE:
         mov     di,558Eh
         push    ax
@@ -465,6 +495,11 @@ _seg003_0272_52FF:
         retf
 
 ; seg003_0272_5311  (+5311)
+; _5311 (far, entered by GRMISC's thunks with jmp far): save DS and ES, set DS = ES = seg_370D,
+; save SP at DS:558A, switch to the private stack [558C]:[5588] with interrupts off, call BP,
+; switch back to SS = dseg062_62a6 (FD71, seg021's data segment, where cRender's private stack
+; is) and the saved SP, restore DS and ES, retf. AX..DX, SI and DI reach the routine unchanged
+; and come back as it leaves them.
 _seg003_0272_5311 proc far
         push    ds
         push    es
@@ -510,6 +545,9 @@ L533A:
 _seg003_0272_5311 endp
 
 ; seg003_0272_5363  (+5363)
+; _5363: set the clip window from the 4 words (left, top, right, bottom) at the caller's DS:SI,
+; through the dispatcher: CX = 4 words are copied to 370D:558E and the window routine (_52E4,
+; VIDMODE's _31E7) is called with SI pointing at the copy. No caller was found in the sources.
 _seg003_0272_5363 proc near
         mov     cx,4
         mov     bp,offset _seg003_0272_52E4
@@ -517,6 +555,9 @@ _seg003_0272_5363 proc near
 _seg003_0272_5363 endp
 
 ; seg003_0272_536B  (+536B)
+; _536B (far): call _52B7 (set_the_color's vector, VIDMODE's _3195) with the caller's DS and
+; stack, without switching; it is only correct when DS already is seg_370D. No caller was found
+; in the sources.
 _seg003_0272_536B proc far
         call    _seg003_0272_52B7
         retf

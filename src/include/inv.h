@@ -62,6 +62,21 @@ int far DamageInventory(int slot, unsigned char damage, unsigned char type, int 
 unsigned char far EncumCheck(struct Object far *obj);
 
 /* INVPANEL.C: the inventory panel */
+/* The inventory's slots, Inventory[28] (each a union Link naming the object shown there;
+   the objects themselves are the player's contents list). From the code of INVDATA.C,
+   INVPANEL.C and BAGS.C, with the wearable types of ItemFitsSlot (Guide, "Armour and
+   Wearables Table"):
+     0 head, 1 torso, 2 gloves, 3 legs, 4 boots (the armour slots, ObjWorn);
+     5, 6 the shoulders, 7, 8 the hands: the weapon hand is 8 - lefty, the shield hand
+       7 + lefty; lights burn only in 5..8 (ValidLightSlots);
+     9, 10 the rings;
+     11..18 the backpack;
+     19 the open bag (the innermost container open in the panel), 20..27 the eight of its
+       objects on show.
+   Display positions (InvDisplay, FindInventoryHit) number the panel's rectangles instead:
+   0 the body, 1..5 the armour (SlotToDisplay maps slots 3, 0, 1, 2, 4 to 1..5), 6..19
+   slots 5..18 (an open bag's 20..27 take 12..19), 20 the open bag, 21 and 22 its scroll
+   arrows; FindInventoryHit adds 0x17 for the 3D view and 0x18 for the barter area. */
 extern int SaveHandles[23];
 extern struct Object far *CursorObjPtr;
 extern struct Bag far *OpenBagList;

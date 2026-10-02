@@ -30,7 +30,8 @@
 ; are. Their owner is unknown, so they stay here. tools/extract.py declares them, empty,
 ; before PATHFIND so that TLINK places them first.
 ;
-; Names: FM Towns names where it has them (checkerboard1, stdat, ATM_Strings,
+; name: descriptive (map/filenames.tsv: "the far data no C file defines (the name it had)").
+; name: FM Towns names where it has them (checkerboard1, stdat, ATM_Strings,
 ; cmpbuf1_start, cmpbuf2_start, gr_offs, sp_inf_tab); the others are the provisional names
 ; in symbols.tsv.
 
@@ -63,7 +64,9 @@ FD50    ends
 ; as different things (the level's tile data in CRITTIME, the cutscene player's state in
 ; CUTS, archive tables in ARC); the automap notes (ATM_Strings) follow it. FM Towns
 ; has the two adjacent too, ATM_Strings 468Eh after stdat. seg003 names the segment
-; seg049_3EE2 (IDA's name).
+; seg049_3EE2 (IDA's name) and uses it as the 3D view's frame buffer (GRENTRY.ASM: rows
+; from offset 2, up to 69D4h); its other uses are probably ones that never overlap a 3D
+; frame (not checked).
 FD52    segment para public 'FAR_DATA'
         public  seg049_3EE2, _stdat, _ATM_Strings
 seg049_3EE2 label byte
@@ -86,7 +89,8 @@ FD54    segment para public 'FAR_DATA'
 _dfx_buffer db  1000h dup (0)
 FD54    ends
 
-; entry 60, 5DFD:0000, 1000h bytes, zero: a buffer VIEW3D.C and seg004 use by segment
+; entry 60, 5DFD:0000, 1000h bytes, zero: a buffer VIEW3D.C and seg004 use by segment (PGCACHE.ASM's
+; do_settmobj copies an object's picture into it to use as a texture)
 FD60    segment para public 'FAR_DATA'
         public  _seg_5DFD
 _seg_5DFD db    1000h dup (0)
