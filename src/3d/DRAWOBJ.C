@@ -90,7 +90,7 @@ unsigned char rect_cols[32][5] = {
 /* The model drawn for each 3D object type, indexed by item & 0x3F less 0x10 for
    render type 2 objects (probably items 0x150 to 0x16F; item & 0x3F below 0x10 is a
    door), -1 for none. */
-int rect_sub[32] = {
+int16 rect_sub[32] = {
     0x03, 0x08, 0x08, 0x07, 0x07, 0x06, 0x05, 0x0B,
     0x18, 0x09, 0x17, 0x1B, 0x1C, 0x19, 0x1A, 0x04,
     0x0A, 0x10, 0x11, 0x0D, 0x02, 0x13, 0x12, 0x1D,
@@ -104,7 +104,7 @@ unsigned char dirtab[32] = {
 /* Colours for model 2 when its flags are below its texture count, indexed by the
    object's flags. Static: FM Towns has no name for it and keeps it after dirtab too
    (as dirtab+0x20), so the name is ours. */
-static int rect_flagcol[2] = { 0x8C, 0xC8 };
+static int16 rect_flagcol[2] = { 0x8C, 0xC8 };
 
 /* Draw one object. The player's own object and invisible objects are skipped. A
    mobile object that is not a critter takes its fine position within the tile from
@@ -197,8 +197,8 @@ void far do_obj(struct Object far *o)
         *dbptr++ = objyloc;
         *dbptr++ = 0x7F8;
         frame = o->b15 & 0x3F;
-        dir = dirtab[((OBJ_HEADING(o) << 2) + 0x20
-                      - ((cPlayer->heading + headmod[quad]) >> 11)) % 0x20];
+        dir = dirtab[(uint16)((OBJ_HEADING(o) << 2) + 0x20
+                      - ((uint16)(cPlayer->heading + headmod[quad]) >> 11)) % 0x20];
         crit = grs_3dinf[item & 0x3F].page;
         frame = ((((crit << 3) + OBJ_SEQ(o) << 3) + dir) << 3) + OBJ_FRAME(o);
         pix = *(unsigned char far *)MK_FP(EmsBuff + 0xC00, frame);

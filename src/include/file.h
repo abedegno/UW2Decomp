@@ -62,29 +62,29 @@ unsigned far ac_shrink_disk(char far *src, int fd, unsigned n);
    measured only as the distance to lson. */
 struct LzwWork {
     unsigned char flag0;                /* 0x0000, tested (to no effect) at the end of compression */
-    unsigned long textsize;             /* 0x0001 */
-    unsigned long codesize;             /* 0x0005 */
-    unsigned long printcount;           /* 0x0009 */
+    uint32 textsize;                    /* 0x0001 */
+    uint32 codesize;                    /* 0x0005 */
+    uint32 printcount;                  /* 0x0009 */
     unsigned char flagD;                /* 0x000D, set to 1 when compressing */
-    int match_position;                 /* 0x000E */
-    int match_length;                   /* 0x0010 */
+    int16 match_position;               /* 0x000E */
+    int16 match_length;                 /* 0x0010 */
     unsigned char text_buf[4096 + 18 + 1]; /* 0x0012, N + F + 1 (LZSS.C) */
-    int lson[4096 + 1];                 /* 0x1025 */
-    int rson[4096 + 257];               /* 0x3027 */
-    int dad[4096 + 1];                  /* 0x5229 */
-    int w722B;                          /* 0x722B, set to -1 when compressing */
-    int w722D;                          /* 0x722D, set to 0 when compressing */
+    int16 lson[4096 + 1];               /* 0x1025 */
+    int16 rson[4096 + 257];             /* 0x3027 */
+    int16 dad[4096 + 1];                /* 0x5229 */
+    int16 w722B;                        /* 0x722B, set to -1 when compressing */
+    int16 w722D;                        /* 0x722D, set to 0 when compressing */
 };
 extern struct LzwWork far *globals;
 
 /* INVSAVE.C: saving and restoring the player's inventory in player.dat */
 void far FreePlayerInv(union Link far *head);
-void far InvSaveNexts(union Link far *src, unsigned far *dst);
+void far InvSaveNexts(union Link far *src, uint16 far *dst);
 void far replaceInInv(union Link far *old, union Link far *new);
 struct Object far * far allocSaveObj(void);
 struct Object far * far getSaveObj(int n);
 void far putInInv(union Link far *mem, union Link far *saved);
-void far InvRestoreNexts(unsigned far *dst, union Link far *src);
+void far InvRestoreNexts(uint16 far *dst, union Link far *src);
 void far getPlayerInvCopy(void far *ws);
 void far Punt_player_inv(void);
 char far SavePlayerInv(char *name);
@@ -95,19 +95,20 @@ unsigned char far clear_dir(char *dir);
 unsigned char far copy_dir(char *src, char *dst);
 void far do_level_hacks(int level, int mode);
 int far GetLevel(int level);
-void far get_save_descs(char descs[][40], int *found);
+void far get_save_descs(char descs[][40], int16 *found);
 void far ShowSaveRest(void);
 void far DoSaveRest(int restore, int slot);
 unsigned char far copy_file(char *srcdir, char *dstdir, char *name);
 void far gruesome_door_hack(int x, int y);
 unsigned char far init_save(void);
 /* RestoreGame(char slot) and SaveGame(char slot, char *desc). */
-/* match: no prototypes: their callers push the slot as an int. SaveGame is declared before
+/* match: no prototypes under Turbo C (OLDSTYLE, portable.h): their callers push the slot as
+   an int. SaveGame is declared before
    SaveLevel because TLINK numbers the overlay's stub entries in the order Turbo C lists
    the publics, which for names with the same hash key is the order they were first seen:
    the EXE's stub has SaveGame before SaveLevel. */
-char far RestoreGame();
-int far SaveGame();
+char far RestoreGame OLDSTYLE((char slot));
+int far SaveGame OLDSTYLE((char slot, char *desc));
 char far ChangeLevel(int from, int to);
 
 /* SCRSHOT.C: screenshots */

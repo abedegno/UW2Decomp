@@ -31,11 +31,11 @@
 /* name: cr_class and cr_type are the FM Towns names (its creature_class_data_ sets them
    as this one does), and their keys put them exactly where UW2 has them, either side of
    Creature. */
-unsigned cr_type;                       /* DS:492A, the creature's type within its class */
+uint16 cr_type;                         /* DS:492A, the creature's type within its class */
 struct Creature *cst;                   /* DS:492C */
 static char cr_unused[0x1E];            /* DS:492E, never used */
 struct Creature Creature[NUM_CREATURES];         /* DS:494C */
-unsigned cr_class;                      /* DS:554C, the creature's class */
+uint16 cr_class;                        /* DS:554C, the creature's class */
 
 /* Read the 64 critter records, 48 bytes each, from the open OBJECTS.DAT. */
 void far creature_init(FILE *fd)

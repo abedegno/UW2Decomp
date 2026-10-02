@@ -18,7 +18,7 @@
 #include "object.h"
 
 struct Combination {
-    unsigned first, second, output;
+    uint16 first, second, output;
 };
 
 /* match: this file's _BSS, DS:47C0..47FB: between ovr101's and ovr103's, and only this file
@@ -37,7 +37,7 @@ void far init_combinables(void)
    1, or a container link other than 0). */
 int far ObjsBeCombinable(struct Object far *a, struct Object far *b)
 {
-    int ids[2];
+    int16 ids[2];
     register struct Combination *entry;
     register int i;
     unsigned first, second;
@@ -64,7 +64,7 @@ int far ObjsBeCombinable(struct Object far *a, struct Object far *b)
 /* Creates a new static object of rule combo's output item; returns 0 if none is free. */
 struct Object far * far CombineObjs(int combo)
 {
-    return CreateObj(((unsigned *)ObjectCombinations)[combo * 3 + 2], 0);
+    return CreateObj(((uint16 *)ObjectCombinations)[combo * 3 + 2], 0);
 }
 
 /* Returns 1 when rule combo uses obj up: bit 15 of whichever source word names obj's item
@@ -72,10 +72,10 @@ struct Object far * far CombineObjs(int combo)
 char far RemoveAfterCombine(struct Object far *obj, int combo)
 {
     register int id;
-    register unsigned *entry;
+    register uint16 *entry;
 
     id = obj->id & ID_ITEM;
-    entry = (unsigned *)&ObjectCombinations[combo];
+    entry = (uint16 *)&ObjectCombinations[combo];
     if ((*entry & ID_ITEM) == id)
         ;
     else

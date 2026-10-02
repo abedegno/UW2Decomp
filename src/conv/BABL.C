@@ -53,18 +53,20 @@
 /* A block of the script heap: its size in bytes (header and tag included) and, while
    free, the next free block. An allocated block points at itself and ends with a tag,
    a far pointer to its own data, which bab_free checks before releasing it. */
+HOST_LAYOUT_BEGIN
 struct BabBlock {
-    long size;
+    int32 size;
     struct BabBlock far *next;
 };
+HOST_LAYOUT_END
 
 /* One entry of the script's import table, 32 bytes. */
 struct BablImport {
     char name[24];
-    int count;                          /* 0x18, array length; 0 ends the table */
-    int index;                          /* 0x1A, memory address or function number */
-    int type;                           /* 0x1C, the value's type */
-    int kind;                           /* 0x1E, 0x111 for a function */
+    int16 count;                        /* 0x18, array length; 0 ends the table */
+    int16 index;                        /* 0x1A, memory address or function number */
+    int16 type;                         /* 0x1C, the value's type */
+    int16 kind;                         /* 0x1E, 0x111 for a function */
 };
 
 /* This file's _BSS: the interpreter's state (see the header). */
@@ -74,23 +76,23 @@ struct BablImport {
    where the EXE has them (DS:4702..4737). */
 char far *arc_buffer;
 static struct BabBlock far *free_list;
-static int sp;
-static int far *stack;
+static int16 sp;
+static int16 far *stack;
 static struct BablImport far *babl_import_table;
-static int far *mem;
-static int reg;
-static long code_size;
+static int16 far *mem;
+static int16 reg;
+static int32 code_size;
 static void (far * far *funcs)();
-static int hdr_word;
-static int stack_base;
+static int16 hdr_word;
+static int16 stack_base;
 static char *file_name;
-static int func_count;
-static int pc;
-static int babl_nvars;
-static int far *code;
-static int current_func;
-static int empty_string;
-static int bp;
+static int16 func_count;
+static int16 pc;
+static int16 babl_nvars;
+static int16 far *code;
+static int16 current_func;
+static int16 empty_string;
+static int16 bp;
 
 /* The names of the opcodes, indexed by opcode, unused by the code. */
 /* name: FM Towns calls the table opcode_text. */
@@ -127,7 +129,7 @@ unsigned char far tag_check(char far *p, int unused)
     base = p - 8;
     p = base;
     q = p;
-    if (((char far * far *)q)[(*(unsigned far *)base >> 2) - 1] == p + 8)
+    if (((char far * far *)q)[(*(uint16 far *)base >> 2) - 1] == p + 8)
         return 1;
     return 0;
 }
@@ -135,7 +137,7 @@ unsigned char far tag_check(char far *p, int unused)
 /* First-fit allocation from the script heap: n is rounded up to 4 and 12 added for the
    header and tag; a free block more than 16 bytes larger is split. Returns 0 when nothing
    fits (callers mostly call pfatal_code(4) then). */
-char far * far bab_malloc(long n)
+char far * far bab_malloc(int32 n)
 {
     char far *result;
     struct BabBlock far *current;
@@ -184,7 +186,7 @@ void far bab_free(char far *data)
     current = free_list;
     previous = 0;
     while (current != 0) {
-        if ((unsigned)current > (unsigned)block || current->next == 0) {
+        if ((UNEARPTR)current > (UNEARPTR)block || current->next == 0) {
             if (previous != 0) {
                 if ((char far *)previous + previous->size == (char far *)block) {
                     previous->size += block->size;
@@ -211,14 +213,14 @@ void far bab_free(char far *data)
 
 /* Shrink a block in place (splitting off the tail when more than 16 bytes are left
    over), or grow it by allocating, copying and freeing. */
-char far * far bab_realloc(char far *p, long n)
+char far * far bab_realloc(char far *p, int32 n)
 {
     struct BabBlock far *block;
     struct BabBlock far *split;
     struct BabBlock far *current;
     char far *olddata;
     char far *result;
-    long original;
+    int32 original;
     struct BabBlock far *tail;
 
     original = n;
@@ -229,7 +231,7 @@ char far * far bab_realloc(char far *p, long n)
     if (block->size > n) {
         current = free_list;
         result = 0;
-        if (current == 0 || (unsigned)current > (unsigned)block) {
+        if (current == 0 || (UNEARPTR)current > (UNEARPTR)block) {
             result = p + 8;
             if (block->size - n > 16) {
                 split = (struct BabBlock far *)(p + n);
@@ -245,7 +247,7 @@ char far * far bab_realloc(char far *p, long n)
             return result;
         } else {
             while (current != 0) {
-                if ((unsigned)current->next > (unsigned)block || current->next == 0) {
+                if ((UNEARPTR)current->next > (UNEARPTR)block || current->next == 0) {
                     result = p + 8;
                     if (block->size - n > 16) {
                         split = (struct BabBlock far *)(p + n);
@@ -268,8 +270,7 @@ char far * far bab_realloc(char far *p, long n)
         if (result == 0) pfatal_code(4);
         if (block->size - 16 <= original)
             original = block->size - 16;
-        movedata(FP_SEG(olddata), FP_OFF(olddata),
-            FP_SEG(result), FP_OFF(result), (unsigned)original);
+        FAR_COPY(result, olddata, (unsigned)original);
         bab_free(olddata);
     }
     return result;
@@ -307,7 +308,7 @@ int far init_babl(void)
 /* Read conversation cnv_id's private globals from bglobals.dat into the start of script
    memory (at most count words). Records are in slot order, so the search stops at a
    higher slot. */
-void far bab_get_globals(int far *memory, int count)
+void far bab_get_globals(int16 far *memory, int count)
 {
     int size;
     unsigned block;
@@ -325,14 +326,14 @@ void far bab_get_globals(int far *memory, int count)
                 if (intoFarBuffer_ovr167_5DA(handle, memory, size << 1) <
                     (unsigned)(size << 1)) done = 1;
             } else
-                lseek(handle, (unsigned long)(unsigned)(size << 1), 1);
+                lseek(handle, (uint32)(unsigned)(size << 1), 1);
         }
         close(handle);
     }
 }
 
 /* Write them back over the same record when the script ends. */
-void far bab_put_globals(int far *memory, int count)
+void far bab_put_globals(int16 far *memory, int count)
 {
     int size;
     unsigned block;
@@ -350,7 +351,7 @@ void far bab_put_globals(int far *memory, int count)
                 FarWrite_ovr167_627(handle, memory, size << 1);
                 done = 1;
             } else
-                lseek(handle, (unsigned long)(unsigned)(size << 1), 1);
+                lseek(handle, (uint32)(unsigned)(size << 1), 1);
         }
         close(handle);
     }
@@ -385,7 +386,7 @@ int far load_script(char *name, char far *work)
     if (DoReadHeader_ovr095_12C3() < 0) return -1;
     DoCopyCode_ovr095_14B1();
     bab_free(buffer);
-    mem = (int far *)bab_malloc((long)((babl_nvars + 0x800) * sizeof(int)));
+    mem = (int16 far *)bab_malloc((int32)((babl_nvars + 0x800) * sizeof(int16)));
     bab_get_globals(mem, babl_nvars);
     stack_base = babl_nvars;
     stack = mem + stack_base;
@@ -410,15 +411,15 @@ int far unbound(void) { return 0; }
 
 /* The script's "random": 1 .. arg1, from rand(). The string built-ins below read their
    arguments as the built-ins in CONVERSE.C do: args[-1] holds the address of arg1. */
-int far BabRand_ovr095_A5B(int far *args)
+int far BabRand_ovr095_A5B(int16 far *args)
 {
-    return (int)(((long)rand() *
+    return (int)(((int32)rand() *
         getmem(args[-1])) / 0x8000L) + 1;
 }
 
 /* The script's "compare": 1 when two strings are equal after @-substitution, ignoring
    case. */
-int far bab_compare_ovr095_A8B(int far *args)
+int far bab_compare_ovr095_A8B(int16 far *args)
 {
     char far *str1;
     char far *str2;
@@ -443,7 +444,7 @@ int far bab_compare_ovr095_A8B(int far *args)
 
 /* The script's "plural": args[-2]'s string id when the count at args[-3] is 1 or less,
    args[-1]'s when it is more. */
-int far babPluralize_ovr095_B95(int far *args)
+int far babPluralize_ovr095_B95(int16 far *args)
 {
     int count;
     register int plural;
@@ -460,7 +461,7 @@ int far babPluralize_ovr095_B95(int far *args)
    place, but searches the @-substituted copies, so case is only ignored when no
    substitution happened; the copies are never freed (they live until the heap is reset
    by the next load_script). */
-int far StringContains_ovr095_BDB(int far *args)
+int far StringContains_ovr095_BDB(int16 far *args)
 {
     char far *str1;
     char far *str2;
@@ -484,7 +485,7 @@ int far StringContains_ovr095_BDB(int far *args)
 }
 
 /* The script's "append": a new dynamic string, arg2's string followed by arg1's. */
-int far babl_str_append_ovr095_D0A(int far *args)
+int far babl_str_append_ovr095_D0A(int16 far *args)
 {
     int len1, length;
     char far *s1, far *s2, far *out;
@@ -495,7 +496,7 @@ int far babl_str_append_ovr095_D0A(int far *args)
     len2 = str_len(s2);
     len1 = str_len(s1);
     length = len2 + len1 + 1;
-    out = bab_malloc((unsigned long)(unsigned)length);
+    out = bab_malloc((uint32)(unsigned)length);
     str_copy(out, s2);
     str_copy(out + len2, s1);
     id = make_string(out, STRBLK_DYNAMIC);
@@ -503,14 +504,14 @@ int far babl_str_append_ovr095_D0A(int far *args)
 }
 
 /* The script's "copy": a new dynamic string holding a copy of arg1's. */
-int far STRING_COPY_ovr095_DC7(int far *args)
+int far STRING_COPY_ovr095_DC7(int16 far *args)
 {
     char far *source, far *out;
     register int length;
     register int id;
     source = get_string(getmem(args[-1]));
     length = str_len(source) + 1;
-    out = bab_malloc((unsigned long)(unsigned)length);
+    out = bab_malloc((uint32)(unsigned)length);
     str_copy(out, source);
     id = make_string(out, STRBLK_DYNAMIC);
     return id;
@@ -518,7 +519,7 @@ int far STRING_COPY_ovr095_DC7(int far *args)
 
 /* The script's "find": the 1-based position of value arg1 in the arg2 words of the
    array at arg3 (passed by address, not read through), or 0. */
-int far conv_find_ovr095_E36(int far *args)
+int far conv_find_ovr095_E36(int16 far *args)
 {
     int value, count;
     register int i;
@@ -535,24 +536,24 @@ int far conv_find_ovr095_E36(int far *args)
 
 /* The script's "length" and "val": a string's length, and its value as a decimal
    number. */
-int far conv_length_ovr095_E8D(int far *args)
+int far conv_length_ovr095_E8D(int16 far *args)
 {
     return str_len(get_string(getmem(args[-1])));
 }
 
-int far DoVal_ovr095_EB2(int far *args)
+int far DoVal_ovr095_EB2(int16 far *args)
 {
     return seg039_3452_89A(get_string(getmem(args[-1])));
 }
 
 /* Appends src at dest inside the growing buffer *buffer, enlarging it if needed. */
-void far add_to(register char far **buffer, char far *dest, int *capacity, char far *src)
+void far add_to(register char far **buffer, char far *dest, int16 *capacity, char far *src)
 {
     int needed;
     register int offset;
     offset = dest - *buffer;
     if ((needed = offset + str_len(src) + 1) >= *capacity) {
-        *buffer = bab_realloc(*buffer, (long)(needed + 16));
+        *buffer = bab_realloc(*buffer, (int32)(needed + 16));
         *capacity = needed + 16;
         dest = *buffer + offset;
     }
@@ -579,16 +580,16 @@ char far * far convert_string(char far *text)
     char far *conv;
     char far *str;
     int number;
-    int capacity;
+    int16 capacity;
     char digits[20];
     register int value;
     register int extra;
     if (FindStringDelimiter(text, '@') == 0)
         return text;
     capacity = (str_len(text) + 0x40) * 2;
-    buffer = bab_malloc((long)capacity);
+    buffer = bab_malloc((int32)capacity);
     s = text;
-    out = buffer;
+    out = FARNULLTRAP(buffer);  /* not checked: 0 when the heap is full */
     while (*s != 0) {
         if (*s == '@') {
             s++;
@@ -635,7 +636,7 @@ char far * far convert_string(char far *text)
         *out++ = *s++;
     }
     *out = 0;
-    buffer = bab_realloc(buffer, (long)(out - buffer) + 1);
+    buffer = bab_realloc(buffer, (int32)(out - buffer) + 1);
     return buffer;
 }
 
@@ -688,33 +689,33 @@ int far DoReadHeader_ovr095_12C3(void)
     register int i;
     register int len;
     arc_buffer += 4;
-    code_size = *(long far *)arc_buffer;
+    code_size = *(int32 far *)arc_buffer;
     arc_buffer += 4;
-    code = (int far *)bab_malloc(code_size << 1);
-    hdr_word = *(int far *)arc_buffer;
+    code = (int16 far *)bab_malloc(code_size << 1);
+    hdr_word = *(int16 far *)arc_buffer;
     arc_buffer += 2;
-    CutsceneOrConversationStringBlock = *(int far *)arc_buffer;
+    CutsceneOrConversationStringBlock = *(int16 far *)arc_buffer;
     arc_buffer += 2;
-    babl_nvars = *(int far *)arc_buffer;
+    babl_nvars = *(int16 far *)arc_buffer;
     arc_buffer += 2;
-    nimports = *(int far *)arc_buffer;
+    nimports = *(int16 far *)arc_buffer;
     arc_buffer += 2;
     func_count = 0;
     babl_import_table = (struct BablImport far *)bab_malloc(
-        (long)((nimports + 1) * sizeof(struct BablImport)));
+        (int32)((nimports + 1) * sizeof(struct BablImport)));
     for (i = 0; i < nimports; i++) {
-        len = *(int far *)arc_buffer;
+        len = *(int16 far *)arc_buffer;
         arc_buffer += 2;
-        movedata(FP_SEG(arc_buffer), FP_OFF(arc_buffer), FP_SEG(name), FP_OFF(name), len);
+        FAR_COPY(name, arc_buffer, len);
         arc_buffer += len;
         name[len] = 0;
-        index = *(int far *)arc_buffer;
+        index = *(int16 far *)arc_buffer;
         arc_buffer += 2;
-        count = *(int far *)arc_buffer;
+        count = *(int16 far *)arc_buffer;
         arc_buffer += 2;
-        kind = *(int far *)arc_buffer;
+        kind = *(int16 far *)arc_buffer;
         arc_buffer += 2;
-        type = *(int far *)arc_buffer;
+        type = *(int16 far *)arc_buffer;
         arc_buffer += 2;
         str_copy(babl_import_table[i].name, name);
         babl_import_table[i].index = index;
@@ -728,7 +729,7 @@ int far DoReadHeader_ovr095_12C3(void)
     babl_import_table[i].index = 0;
     if (func_count > 0)
         funcs = (void (far * far *)())bab_malloc(
-            (long)(func_count * sizeof(void (far *)())));
+            (int32)(func_count * sizeof(void (far *)())));
     for (i = 0; i < func_count; i++)
         funcs[i] = (void (far *)())unbound;
     return 1;
@@ -736,8 +737,7 @@ int far DoReadHeader_ovr095_12C3(void)
 
 void far DoCopyCode_ovr095_14B1(void)
 {
-    movedata(FP_SEG(arc_buffer), FP_OFF(arc_buffer), FP_SEG(code), FP_OFF(code),
-        (unsigned)code_size << 1);
+    FAR_COPY(code, arc_buffer, (unsigned)code_size << 1);
 }
 
 /* At the end of a script: drop the dynamic strings, save the private globals. */
@@ -1070,9 +1070,9 @@ void far BABL_STORE_ovr095_1D11(void)
    the last pushed before the count). The result replaces the count and goes into reg. */
 void far talk_calli_ovr095_1D44(void)
 {
-    int (far *fn)(int far *);
+    int (far *fn)(int16 far *);
     register int result;
-    fn = (int (far *)(int far *))funcs[code[pc + 1]];
+    fn = (int (far *)(int16 far *))funcs[code[pc + 1]];
     current_func = code[pc + 1];
     result = fn(stack + sp);
     stack[sp] = result;
@@ -1139,7 +1139,7 @@ void far babl_respond_ovr095_1F4A(void)
     }
     if (text != source) bab_free(text);
 }
-int far * far getmem_addr(int addr)
+int16 far * far getmem_addr(int addr)
 {
     return mem + addr;
 }
@@ -1172,7 +1172,7 @@ void far bab_fun(char *name, void (far *fn)())
 }
 /* Copy count values into the imported variable called name (at most its declared
    count). The lowercased copy of name it builds is never used. */
-void far bab_var(char *name, int *values, int count)
+void far bab_var(char *name, int16 *values, int count)
 {
     struct BablImport far *entry;
     char lower[26];
@@ -1191,7 +1191,7 @@ void far bab_var(char *name, int *values, int count)
         entry++;
     }
 }
-void far bab_var_out(char *name, int *values, int count)
+void far bab_var_out(char *name, int16 *values, int count)
 {
     struct BablImport far *entry;
     register int i;

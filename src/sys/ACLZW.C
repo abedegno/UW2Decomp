@@ -21,7 +21,7 @@ struct LzwWork far *globals = 0;
 /* Points globals at stdat (LZSS.C's struct LzwWork, 722Fh bytes) and returns the rest of
    the buffer after it, 8DD0h bytes from stdat+722Fh, as the file read or write buffer: so
    stdat is at least 10000h bytes long. */
-void far ac_setup_lzw(char far **work, unsigned *worksize)
+void far ac_setup_lzw(char far **work, uint16 *worksize)
 {
     globals = (struct LzwWork far *)stdat;
     *work = (char far *)globals + sizeof(struct LzwWork);
@@ -34,9 +34,9 @@ void far ac_setup_lzw(char far **work, unsigned *worksize)
    the output. */
 unsigned far ac_unshrink_disk(char far *dst, int fd, unsigned n)
 {
-    unsigned long len;
+    uint32 len;
     char far *work;
-    unsigned worksize;
+    uint16 worksize;
 
     intoFarBuffer_ovr167_5DA(fd, &len, 4);
     ac_setup_lzw(&work, &worksize);
@@ -55,9 +55,9 @@ unsigned far ac_unshrink_disk(char far *dst, int fd, unsigned n)
    there is discarded). */
 unsigned far ac_shrink_disk(char far *src, int fd, unsigned n)
 {
-    unsigned long len;
+    uint32 len;
     char far *work;
-    unsigned worksize;
+    uint16 worksize;
     unsigned done;
 
     len = n;

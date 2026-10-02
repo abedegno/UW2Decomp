@@ -74,40 +74,40 @@ typedef void (far *WalFn)(unsigned char *pts, unsigned char shade, unsigned char
 
    name: FM Towns has p_gloc as a static (_gr_wcall+4), so its name is provisional and
    chosen for its key; pt_spare (DS:2F74, two bytes nothing refers to) likewise. */
-int cWCol;                              /* DS:2C68 */
-int loopx, loopy;                       /* DS:2C6A, 2C6C */
+int16 cWCol;                            /* DS:2C68 */
+int16 loopx, loopy;                     /* DS:2C6A, 2C6C */
 struct Object far *UsPtr;               /* DS:2C6E */
-int cTmSz;                              /* DS:2C72 */
+int16 cTmSz;                            /* DS:2C72 */
 static struct Gloc far *p_gloc;         /* DS:2C74 */
 unsigned char *qdec;                    /* DS:2C78 */
 unsigned char AnimObjInPipe;            /* DS:2C7A */
 unsigned char TxmCol[64];               /* DS:2C7B */
-int color_to_map[172];                  /* DS:2CBC */
-int color_to_obj[172];                  /* DS:2E14 */
+int16 color_to_map[172];                /* DS:2CBC */
+int16 color_to_obj[172];                /* DS:2E14 */
 unsigned char PickUp;                   /* DS:2F6C */
 struct Tile far *mlowptr;               /* DS:2F6E */
-int ptnuminq;                           /* DS:2F72 */
+int16 ptnuminq;                         /* DS:2F72 */
 static char pt_spare[2];                /* DS:2F74 */
 struct Tile far *mhighptr;              /* DS:2F76 */
 unsigned char sqmod;                    /* DS:2F7A */
 unsigned char flat_case;                /* DS:2F7B */
 struct Tile far *tmptr;                 /* DS:2F7C */
-int pipeexp;                            /* DS:2F80 */
-int cTmBm, cTmDm;                       /* DS:2F82, 2F84 */
+int16 pipeexp;                          /* DS:2F80 */
+int16 cTmBm, cTmDm;                     /* DS:2F82, 2F84 */
 FlrFn gr_fcall, gr_ccall;               /* DS:2F86, 2F8A */
 WalFn gr_wcall;                         /* DS:2F8E */
-int cTmHg;                              /* DS:2F92 */
+int16 cTmHg;                            /* DS:2F92 */
 char tCacheOK;                          /* DS:2F94 */
 
 /* Settings. distpoly is the distance shade from which txtflr and txtwal fall back to
    flat polygons; tmapson (texture mapping at all) and gftab/gctab[1] are set by
    set_graphics_level; lighton 0 turns distance shading off (process_grid does that on
    the levels it treats as unlit); ciels 0 leaves out the ceiling. */
-int dist8 = 4;
-int distpoly = 7;                       /* shades from here on are drawn flat */
-int tmapson = 1;
-int lighton = 1;
-int ciels = 1;
+int16 dist8 = 4;
+int16 distpoly = 7;                     /* shades from here on are drawn flat */
+int16 tmapson = 1;
+int16 lighton = 1;
+int16 ciels = 1;
 unsigned char curautocode = 0;
 unsigned char SpecShadeMode = 1;
 /* Floor, ceiling and wall drawing, flat [0] or texture mapped [1]. */
@@ -116,7 +116,7 @@ FlrFn gctab[2] = { polycie, polyflr };
 WalFn gwtab[2] = { polywal, txtwal };
 /* The tile-index step of the pick frame's columns and rows in each quadrant (sd_xmod,
    sd_ymod, which GAMESORT.C uses to find the tile an object stands in). */
-int quad_mod[4][2] = { { 1, MAP_SIZE }, { -MAP_SIZE, 1 }, { -1, -MAP_SIZE }, { MAP_SIZE, -1 } };
+int16 quad_mod[4][2] = { { 1, MAP_SIZE }, { -MAP_SIZE, 1 }, { -1, -MAP_SIZE }, { MAP_SIZE, -1 } };
 /* Which corner of a floor texture each of the four points gets, by quadrant (qdec),
    so the texture keeps its orientation on the map whichever way the camera faces. */
 unsigned char qudecode[4][4] = {

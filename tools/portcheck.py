@@ -38,7 +38,9 @@ FLAGS = ['-x', 'c', '-std=gnu89', '-fsigned-char', '-D_POSIX_C_SOURCE=200809L', 
          # widths: what a 16-bit int and 32-bit long become on a 64-bit host
          '-Wpointer-to-int-cast', '-Wint-to-pointer-cast', '-Wshorten-64-to-32',
          '-Wno-unused-value', '-Wno-parentheses', '-Wno-dangling-else',
-         '-Wno-logical-op-parentheses', '-Wno-bitwise-op-parentheses', '-Wno-shift-op-parentheses']
+         '-Wno-logical-op-parentheses', '-Wno-bitwise-op-parentheses', '-Wno-shift-op-parentheses',
+         # compat.h sets #pragma pack(1) for the game's structs on purpose
+         '-Wno-pragma-pack']
 DIAG = re.compile(r'^(?P<file>[^:\n]+):(?P<line>\d+):(?P<col>\d+): (?P<kind>error|warning): '
                   r'(?P<msg>.*?)(?: \[(?P<flag>-W[^\]]+)\])?$')
 
@@ -93,6 +95,12 @@ def category(msg, flag, text):
     for name, test in CATEGORIES:
         if test(msg, flag, text): return name
     return OTHER
+
+
+def dos_only(path):
+    """A source whose header comment says `port: dos-only` is DOS-specific (EMS.C's int 67h
+    calls); the port replaces it in src/port/ and never compiles it."""
+    return 'port: dos-only' in open(path, encoding='latin1').read(4000)
 
 
 def compile_one(cc, path):
@@ -182,7 +190,7 @@ def main(argv):
     ap.add_argument('--json', action='store_true', help='also write build/port/summary.json')
     a = ap.parse_args(argv)
     os.makedirs(OUT, exist_ok=True)
-    srcs = [p for p in sources.all_sources() if p.upper().endswith('.C')]
+    srcs = [p for p in sources.all_sources() if p.upper().endswith('.C') and not dos_only(p)]
     if a.diag:
         want = a.diag.upper()
         srcs = [p for p in srcs if sources.stem(p) == os.path.splitext(os.path.basename(want))[0]]
@@ -254,6 +262,12 @@ def main(argv):
     unresolved = {n: s for n, s in undefined.items() if n not in defined}
     pubs, syms, bor = asm_publics(), symbol_table(), borland_names()
     failed_text = {rel(p): open(p, encoding='latin1').read() for p, rc, e, o in results if not o}
+    dosonly_text = {rel(p): open(p, encoding='latin1').read() for p in sources.all_sources()
+                    if p.upper().endswith('.C') and dos_only(p)}
+    def defined_in(n, texts):
+        for f, text in texts.items():
+            if re.search(r'(?m)^(?!\s|#|/\*|extern\b|static\b)[^;=(]*\b' + re.escape(n) + r'\s*(\(|\[|=|;|,)', text):
+                return f
     def defined_in_failed(n):
         for f, text in failed_text.items():
             if re.search(r'(?m)^(?!\s|#|/\*|extern\b|static\b)[^;=(]*\b' + re.escape(n) + r'\s*(\(|\[|=|;|,)', text):
@@ -266,6 +280,7 @@ def main(argv):
         elif n in bor: g = f'Borland library ({bor[n]})'
         elif libc_has(n): continue
         elif defined_in_failed(n): g = 'C that does not compile yet: ' + defined_in_failed(n)
+        elif defined_in(n, dosonly_text): g = 'C replaced by the port (dos-only): ' + defined_in(n, dosonly_text)
         elif t in syms and syms[t].startswith('DS:'): g = 'no source: DGROUP gaps placed by tools/extract.py'
         elif t in syms: g = 'no source: far data taken from the EXE, or a name inside another array (' + syms[t].split(':')[0] + ')'
         else: g = 'unknown (not in symbols.tsv)'

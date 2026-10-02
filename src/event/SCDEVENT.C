@@ -39,14 +39,14 @@ void far set_numbered_variable(int left, int op, int right);
 
 /* Calls code(npc, param) for the first (loop clear) or every active critter of a race,
    skipping loners. code returns true when it removed the critter from the active list. */
-void far gronk_race(int race, unsigned char loop, int param,
-                                 char (far *code)(struct Object far *, int))
+void far gronk_race(int race, unsigned char loop, NEARPTR param,
+                                 char (far *code)(struct Object far *, NEARPTR))
 {
     unsigned char far *list;
     struct Object far *npc;
 
     list = (unsigned char far *)MK_FP(FP_SEG(ActiveMob), FP_OFF(ActiveMob));
-    while ((unsigned)list < FP_OFF(LastActiveMob)) {
+    while (FP_OFF(list) < FP_OFF(LastActiveMob)) {
         npc = Obj_IntTMem(*list);
         if (OBJ_MAJOR(npc) == MAJOR_CREATURE &&
             Creature[npc->id & ID_INMAJOR].race == race &&
@@ -61,14 +61,14 @@ void far gronk_race(int race, unsigned char loop, int param,
 }
 
 /* As gronk_race, for every active critter. */
-void far gronk_all_critters(unsigned char loop, int param,
-                                    char (far *code)(struct Object far *, int))
+void far gronk_all_critters(unsigned char loop, NEARPTR param,
+                                    char (far *code)(struct Object far *, NEARPTR))
 {
     unsigned char far *list;
     struct Object far *npc;
 
     list = (unsigned char far *)MK_FP(FP_SEG(ActiveMob), FP_OFF(ActiveMob));
-    while ((unsigned)list < FP_OFF(LastActiveMob)) {
+    while (FP_OFF(list) < FP_OFF(LastActiveMob)) {
         npc = Obj_IntTMem(*list);
         if (OBJ_MAJOR(npc) == MAJOR_CREATURE) {
             if (code(npc, param))
@@ -83,8 +83,8 @@ void far gronk_all_critters(unsigned char loop, int param,
 
 /* Selects critters by params: the low byte is the mode (0 by whoami, 1 by race, 2 the
    object with that index, 3 all), the high byte the value matched. */
-void far gronk_critid(int params, unsigned char all, int row,
-                      char (far *fn)(struct Object far *, int))
+void far gronk_critid(int params, unsigned char all, NEARPTR row,
+                      char (far *fn)(struct Object far *, NEARPTR))
 {
     int mode = params & 0xFF;
     int filter = (unsigned char)(params >> 8);
@@ -108,9 +108,9 @@ char far gronkify_change_goal(struct Object far *npc, char *row)
 char far ev_change_goal(char far *row)
 {
     struct SCDRow copy;
-    movedata(FP_SEG(row), FP_OFF(row), FP_SEG(&copy), FP_OFF(&copy), 16);
-    gronk_critid(copy.p.npc.critters, 1, (int)&copy,
-                 (char (far *)(struct Object far *, int))gronkify_change_goal);
+    FAR_COPY(&copy, row, 16);
+    gronk_critid(copy.p.npc.critters, 1, (NEARPTR)&copy,
+                 (char (far *)(struct Object far *, NEARPTR))gronkify_change_goal);
     return 0;
 }
 
@@ -158,7 +158,7 @@ char far gronkify_teleport(struct Object far *npc, unsigned char *row)
     }
     if (row[12] > 0) {
         copy = *(struct EventRow *)row;
-        *(unsigned *)copy.b = (unsigned)(player->xclock[XC_TIME] + row[12]) % DAY_STEPS;
+        *(uint16 *)copy.b = (unsigned)(player->xclock[XC_TIME] + row[12]) % DAY_STEPS;
         copy.b[3] = 1;
         Sched_Migrate((struct SCDRow far *)&copy);
     }
@@ -168,9 +168,9 @@ char far gronkify_teleport(struct Object far *npc, unsigned char *row)
 char far ev_teleport(char far *row)
 {
     struct SCDRow copy;
-    movedata(FP_SEG(row), FP_OFF(row), FP_SEG(&copy), FP_OFF(&copy), 16);
-    gronk_critid(copy.p.teleport.critters, 1, (int)&copy,
-                 (char (far *)(struct Object far *, int))gronkify_teleport);
+    FAR_COPY(&copy, row, 16);
+    gronk_critid(copy.p.teleport.critters, 1, (NEARPTR)&copy,
+                 (char (far *)(struct Object far *, NEARPTR))gronkify_teleport);
     return 0;
 }
 
@@ -202,18 +202,18 @@ char far gronkify_slay(struct Object far *npc, unsigned char *row)
 char far ev_kill(char far *row)
 {
     char copy[18];
-    movedata(FP_SEG(row), FP_OFF(row), FP_SEG(copy), FP_OFF(copy), 18);
-    gronk_critid(*(unsigned *)(copy + 5), 1, (int)copy,
-                 (char (far *)(struct Object far *, int))gronkify_slay);
+    FAR_COPY(copy, row, 18);
+    gronk_critid(*(uint16 *)(copy + 5), 1, (NEARPTR)copy,
+                 (char (far *)(struct Object far *, NEARPTR))gronkify_slay);
     return 0;
 }
 
 char far ev_remove(char far *row)
 {
     struct SCDRow copy;
-    movedata(FP_SEG(row), FP_OFF(row), FP_SEG(&copy), FP_OFF(&copy), 16);
-    gronk_critid(copy.p.npc.critters, 1, (int)&copy,
-                 (char (far *)(struct Object far *, int))gronkify_remove);
+    FAR_COPY(&copy, row, 16);
+    gronk_critid(copy.p.npc.critters, 1, (NEARPTR)&copy,
+                 (char (far *)(struct Object far *, NEARPTR))gronkify_remove);
     return 0;
 }
 
@@ -224,8 +224,8 @@ char far ev_set_qbit(unsigned char far *row)
     struct SCDRow far *params = (struct SCDRow far *)row;
     player->quests[(unsigned)params->p.qbit.quest >> 2] =
         (player->quests[(unsigned)params->p.qbit.quest >> 2]
-         & (long)~(1 << (params->p.qbit.quest & 3)))
-        + (long)(params->p.qbit.value << (params->p.qbit.quest & 3));
+         & (int32)~(1 << (params->p.qbit.quest & 3)))
+        + (int32)(params->p.qbit.value << (params->p.qbit.quest & 3));
     return 0;
 }
 
@@ -275,8 +275,8 @@ char far ev_nystul_hack(char far *row)
     unsigned char *p;
     copy = *(struct EventRow far *)row;
     p = copy.b + 6;
-    gronk_critid(*(unsigned *)p, 1, (int)copy.b,
-                 (char (far *)(struct Object far *, int))gronkify_nystul);
+    gronk_critid(*(uint16 *)p, 1, (NEARPTR)copy.b,
+                 (char (far *)(struct Object far *, NEARPTR))gronkify_nystul);
     return 0;
 }
 
@@ -305,8 +305,8 @@ char far ev_gotha_hack(char far *row)
     unsigned char *p;
     copy = *(struct EventRow far *)row;
     p = copy.b + 6;
-    gronk_critid(*(unsigned *)p, 1, (int)copy.b,
-                 (char (far *)(struct Object far *, int))gronkify_gotha);
+    gronk_critid(*(uint16 *)p, 1, (NEARPTR)copy.b,
+                 (char (far *)(struct Object far *, NEARPTR))gronkify_gotha);
     return 0;
 }
 
@@ -322,7 +322,7 @@ char far gronkify_garg(struct Object far *npc, unsigned char *row)
     if (OBJ_HOMEX(npc) == p[2] &&
         OBJ_HOMEY(npc) == p[3])
         set_numbered_variable(
-            *(unsigned *)(p + 4), p[6], *(unsigned *)(p + 7));
+            *(uint16 *)(p + 4), p[6], *(uint16 *)(p + 7));
     return 0;
 }
 
@@ -332,8 +332,8 @@ char far ev_garg_hack(char far *row)
     unsigned char *p;
     copy = *(struct EventRow far *)row;
     p = copy.b + 6;
-    gronk_critid(*(unsigned *)p, 1, (int)copy.b,
-                 (char (far *)(struct Object far *, int))gronkify_garg);
+    gronk_critid(*(uint16 *)p, 1, (NEARPTR)copy.b,
+                 (char (far *)(struct Object far *, NEARPTR))gronkify_garg);
     return 0;
 }
 
@@ -356,8 +356,8 @@ char far gronkify_soldier(struct Object far *npc, unsigned char *row)
 move:
     max = (p[6] - p[4] + 1) * (p[7] - p[5] + 1);
     for (retry = 0; retry < max; retry++) {
-        x = p[4] + (int)(((long)rand() * (p[6] - p[4] + 1)) / 0x8000L);
-        y = p[5] + (int)(((long)rand() * (p[7] - p[5] + 1)) / 0x8000L);
+        x = p[4] + (int)(((int32)rand() * (p[6] - p[4] + 1)) / 0x8000L);
+        y = p[5] + (int)(((int32)rand() * (p[7] - p[5] + 1)) / 0x8000L);
         if (teleport_critter(npc, x, y, PlayerLevel)) {
             npc->qn.f.quality = x;
             npc->ol.f.owner = y;
@@ -374,8 +374,8 @@ char far ev_soldier_hack(char far *row)
     unsigned char *p;
     copy = *(struct EventRow far *)row;
     p = copy.b + 6;
-    gronk_critid(*(unsigned *)(p + 2), 1, (int)copy.b,
-                 (char (far *)(struct Object far *, int))gronkify_soldier);
+    gronk_critid(*(uint16 *)(p + 2), 1, (NEARPTR)copy.b,
+                 (char (far *)(struct Object far *, NEARPTR))gronkify_soldier);
     return 0;
 }
 
@@ -385,7 +385,7 @@ char far ev_soldier_hack(char far *row)
 char far ev_freeze_hack(unsigned char far *row)
 {
     struct SCDRow far *params = (struct SCDRow far *)row;
-    unsigned long values = params->p.freeze.values;
+    uint32 values = params->p.freeze.values;
     struct Tile far *tile;
     int x, y;
     for (x = 0; x < MAP_SIZE; x++) {
@@ -432,9 +432,9 @@ char far gronkify_attitude(struct Object far *npc, int attitude)
 char far ev_attitude(char far *row)
 {
     struct SCDRow copy;
-    movedata(FP_SEG(row), FP_OFF(row), FP_SEG(&copy), FP_OFF(&copy), 16);
+    FAR_COPY(&copy, row, 16);
     gronk_critid(copy.p.npc.critters, 1, copy.p.npc.arg[0],
-                 (char (far *)(struct Object far *, int))gronkify_attitude);
+                 (char (far *)(struct Object far *, NEARPTR))gronkify_attitude);
     return 0;
 }
 

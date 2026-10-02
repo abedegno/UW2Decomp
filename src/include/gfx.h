@@ -11,12 +11,12 @@ struct FontInfo;
 /* A font's header (cur_font): the first 12 bytes of a FONT*.SYS file (UW-Formats 3.5),
    then the characters' bitmaps, each followed by its width. */
 struct FontInfo {
-    int widthsize;                      /* 0x00, the size of a character's width field: 1 */
-    int charsize;                       /* 0x02, one character's bitmap, in bytes */
-    int spacewidth;                     /* 0x04, the width of a space, in pixels */
-    int height;                         /* 0x06, the line height */
-    int rowwidth;                       /* 0x08, a row of a character's bitmap, in bytes */
-    int maxwidth;                       /* 0x0A, the widest character, in pixels */
+    int16 widthsize;                    /* 0x00, the size of a character's width field: 1 */
+    int16 charsize;                     /* 0x02, one character's bitmap, in bytes */
+    int16 spacewidth;                   /* 0x04, the width of a space, in pixels */
+    int16 height;                       /* 0x06, the line height */
+    int16 rowwidth;                     /* 0x08, a row of a character's bitmap, in bytes */
+    int16 maxwidth;                     /* 0x0A, the widest character, in pixels */
 };
 
 /* The state of a cutscene, on show_anm's stack, 0x5C bytes. Field names are ours, from
@@ -24,36 +24,39 @@ struct FontInfo {
    and frame3F the frame a pause is on and its length (in 256-tick units), repeat41 and
    repeat43 the loops left and the frame that loops, fade45 the speech file playing (-1
    none), fade47 and fade49 a pending fade-in and fade-out length (-1 none, -2 done). */
+HOST_LAYOUT_BEGIN
 struct CutsState {
     char name[0x13];                    /* CUTS\csXXX.nXX */
-    int x, y, w, h;                     /* 0x13, the window; 320 by 200 for full screen */
+    int16 x, y, w, h;                   /* 0x13, the window; 320 by 200 for full screen */
     unsigned char windowed;             /* 0x1B */
     unsigned char far *palette;         /* 0x1C */
     char far *text_lines[6];            /* 0x20 */
     unsigned char color38;              /* 0x38 */
-    int flag39;                         /* 0x39, subtitle lines to draw */
-    int frame3B, frame3D;               /* 0x3B */
-    unsigned frame3F;                   /* 0x3F, pause length */
-    unsigned repeat41;                  /* 0x41, loops left */
-    int repeat43;                       /* 0x43 */
-    int fade45, fade47, fade49;         /* 0x45, speech playing, fade in, fade out */
-    int file4B, file4D;                 /* 0x4B */
-    int vscr4F;                         /* 0x4F */
-    int panx51, pany53, dir55, step57, remaining59; /* 0x51 */
+    int16 flag39;                       /* 0x39, subtitle lines to draw */
+    int16 frame3B, frame3D;             /* 0x3B */
+    uint16 frame3F;                     /* 0x3F, pause length */
+    uint16 repeat41;                    /* 0x41, loops left */
+    int16 repeat43;                     /* 0x43 */
+    int16 fade45, fade47, fade49;       /* 0x45, speech playing, fade in, fade out */
+    int16 file4B, file4D;               /* 0x4B */
+    int16 vscr4F;                       /* 0x4F */
+    int16 panx51, pany53, dir55, step57, remaining59; /* 0x51 */
     union {
         unsigned char value;
-        struct { unsigned b0:1, b1:1, b2:1, b3:1, b4:1, b5:1, b6:1, b7:1; } bit;
+        struct { uint16 b0:1, b1:1, b2:1, b3:1, b4:1, b5:1, b6:1, b7:1; } bit;
     } flags;                            /* 0x5B: b0 skipping, b1 input arrived, b2 play on
                                            in this file, b3 play on in the cutscene, b4
                                            Escape allowed, b5 speech available, b6 speech
                                            playing, b7 the wait ignores keys */
 };
+HOST_LAYOUT_END
 
 /* SPRITE.ASM */
 void far change_sprite(int spr, int x, int y, int w, int h);
 /* The sprite library, seg000. create_sprite is called with one argument and with three.
-   match: its callers had no prototype for it, so it is declared without one. */
-int far create_sprite();
+   match: its callers had no prototype for it, so Turbo C sees none (OLDSTYLE); the port
+   sees a variadic one. */
+int far create_sprite OLDSTYLE((int layer, ...));
 void far draw_mask(int spr, int frame);
 void far draw_sprite(int spr, int frame);
 void far erase_sprite(int spr);
@@ -74,8 +77,8 @@ extern unsigned char far cXfer[];
 extern unsigned char far Transparency;  /* 370D:0DC5 */
 
 /* GRCORE.ASM */
-extern int far *Color_data_ptr;  /* DS:21B8 */
-extern unsigned far *Ytab;
+extern int16 far *Color_data_ptr;  /* DS:21B8 */
+extern uint16 far *Ytab;
 extern unsigned char far *background_color;  /* DS:21C8, reused from SKILLCHK.C */
 void far box(int a, int b, int c, int d);
 extern unsigned char far *bytefont;
@@ -109,10 +112,10 @@ void far uvline(int x, int y1, int y2);
 void far vcopy(int sx, int sy, int w, int h, int x, int y);
 void far vcopyfb(int x, int y, int w, int h, int handle);  /* 0085:517B, FM Towns vcopyfb_ */
 void far vscreen_focus(int, int);
-extern int far *wbot;  /* DS:21E0 */
-extern int far *wleft;  /* DS:21E8 */
-extern int far *wright;  /* DS:21E4 */
-extern int far *wtop;  /* DS:21DC */
+extern int16 far *wbot;  /* DS:21E0 */
+extern int16 far *wleft;  /* DS:21E8 */
+extern int16 far *wright;  /* DS:21E4 */
+extern int16 far *wtop;  /* DS:21DC */
 extern struct FontInfo far *cur_font;  /* DS:21CC */
 extern unsigned char far *foreground_color;  /* DS:21C4 */
 void far rectangle(int x, int y, int w, int h);
@@ -127,12 +130,12 @@ struct Bitmap {
     unsigned char height;               /* 0x02 */
     union {
         struct {
-            unsigned size;              /* 0x03 */
+            uint16 size;                /* 0x03 */
             unsigned char data[1];      /* 0x05 */
         } b8;                           /* type BM_8BIT */
         struct {
             unsigned char auxpal;       /* 0x03, which 16-colour palette of Palettes */
-            unsigned size;              /* 0x04 */
+            uint16 size;                /* 0x04 */
             unsigned char data[1];      /* 0x06 */
         } b4;                           /* the 4-bit types */
     } u;
@@ -143,7 +146,7 @@ struct Bitmap {
 
 /* GRSPIC.C: graphic resource lookup, decoding, cursor drawing and image scaling */
 void far * far seg009_7(int icon);
-void far seg009_73(int icon, int x, int y, int height, int width);
+void far seg009_73(int icon, int x, int y, int16 height, int16 width);
 void far * far grs_unpack(void far *data);
 void far grs_fbplot(int icon, int x, int y);
 /* name: seg009 (1A6D): grs_which1 and pic_to_fbuf are FM Towns names, called the same
@@ -151,7 +154,7 @@ void far grs_fbplot(int icon, int x, int y);
    page holding the cursor art first; it has no FM Towns name. */
 int far grs_which1(int icon);
 void far pic_to_screen(int icon, int x, int y, int height, int width);
-void far seg009_2CC(int icon, int width, int height);
+void far seg009_2CC(int icon, NEARPTR width, NEARPTR height);
 void far pic_to_fbuf(int icon, int x, int y);
 void far mask_to_screen(int icon, int x, int y, int width, int height, int clip);
 /* seg009, no FM Towns counterpart known: the first returns a segment for a picture
@@ -200,9 +203,9 @@ void far grfx_palrange(void far *src, int start, int count);
 void far fadeout(unsigned char far *src, int count, int pump);
 
 /* LOADGR.C: art loading */
-extern unsigned first_button;
-extern unsigned first_tmobj;
-extern unsigned first_vram;
+extern uint16 first_button;
+extern uint16 first_tmobj;
+extern uint16 first_vram;
 /* match: declared before load_gr_ems: the two names have the same public-order key (404),
    and Turbo C lists such publics in reverse order of first sight, as the stub order needs */
 unsigned char far load_tr_ems(char *art);
@@ -218,37 +221,37 @@ typedef unsigned char (far *ArtMoveFn)(void far *p, int size, int n);
 unsigned char far gronk_gr(char *art, int start, int count, ArtAllocFn adr, ArtMoveFn move);
 
 /* CUTS.C: the cutscene player */
-int far cutsop_txt(unsigned far *code, struct CutsState *st);
-int far cutsop_erase(unsigned far *code, struct CutsState *st);
-int far cutsop_func(unsigned far *code, struct CutsState *st);
-int far cutsop_pause(unsigned far *code, struct CutsState *st);
-int far cutsop_next(unsigned far *code, struct CutsState *st);
-int far cutsop_end(unsigned far *code, struct CutsState *st);
-int far cutsop_loop(unsigned far *code, struct CutsState *st);
-int far cutsop_data(unsigned far *code, struct CutsState *st);
-int far cutsop_fadeout(unsigned far *code, struct CutsState *st);
-int far cutsop_fadein(unsigned far *code, struct CutsState *st);
-int far cutsop_jump(unsigned far *code, struct CutsState *st);
-int far cutsop_punt(unsigned far *code, struct CutsState *st);
-int far cutsop_say(unsigned far *code, struct CutsState *st);
-int far cutsop_wait(unsigned far *code, struct CutsState *st);
+int far cutsop_txt(uint16 far *code, struct CutsState *st);
+int far cutsop_erase(uint16 far *code, struct CutsState *st);
+int far cutsop_func(uint16 far *code, struct CutsState *st);
+int far cutsop_pause(uint16 far *code, struct CutsState *st);
+int far cutsop_next(uint16 far *code, struct CutsState *st);
+int far cutsop_end(uint16 far *code, struct CutsState *st);
+int far cutsop_loop(uint16 far *code, struct CutsState *st);
+int far cutsop_data(uint16 far *code, struct CutsState *st);
+int far cutsop_fadeout(uint16 far *code, struct CutsState *st);
+int far cutsop_fadein(uint16 far *code, struct CutsState *st);
+int far cutsop_jump(uint16 far *code, struct CutsState *st);
+int far cutsop_punt(uint16 far *code, struct CutsState *st);
+int far cutsop_say(uint16 far *code, struct CutsState *st);
+int far cutsop_wait(uint16 far *code, struct CutsState *st);
 /* match: cutsop_skip and cutsop_wait share a public-order key (875); Turbo C lists such
    publics in reverse order of first sight, and the stub order puts cutsop_skip first, so
    it is declared later */
-int far cutsop_skip(unsigned far *code, struct CutsState *st);
-int far cutsop_clang(unsigned far *code, struct CutsState *st);
-int far cutsop_palrange(unsigned far *code, struct CutsState *st);
-int far cutsop_palfade(unsigned far *code, struct CutsState *st);
-int far cutsop_palset(unsigned far *code, struct CutsState *st);
-int far cutsop_palsimplefade(unsigned far *code, struct CutsState *st);
-int far cutsop_vscreen(unsigned far *code, struct CutsState *st);
-int far cutsop_focus(unsigned far *code, struct CutsState *st);
-int far cutsop_lback(unsigned far *code, struct CutsState *st);
-int far cutsop_pan(unsigned far *code, struct CutsState *st);
-int far cutsop_splity(unsigned far *code, struct CutsState *st);
-int far cutsop_music(unsigned far *code, struct CutsState *st);
-int far cutsop_test(unsigned far *code, struct CutsState *st);
-int far cutsop_wait_for_sound(unsigned far *code, struct CutsState *st);
+int far cutsop_skip(uint16 far *code, struct CutsState *st);
+int far cutsop_clang(uint16 far *code, struct CutsState *st);
+int far cutsop_palrange(uint16 far *code, struct CutsState *st);
+int far cutsop_palfade(uint16 far *code, struct CutsState *st);
+int far cutsop_palset(uint16 far *code, struct CutsState *st);
+int far cutsop_palsimplefade(uint16 far *code, struct CutsState *st);
+int far cutsop_vscreen(uint16 far *code, struct CutsState *st);
+int far cutsop_focus(uint16 far *code, struct CutsState *st);
+int far cutsop_lback(uint16 far *code, struct CutsState *st);
+int far cutsop_pan(uint16 far *code, struct CutsState *st);
+int far cutsop_splity(uint16 far *code, struct CutsState *st);
+int far cutsop_music(uint16 far *code, struct CutsState *st);
+int far cutsop_test(uint16 far *code, struct CutsState *st);
+int far cutsop_wait_for_sound(uint16 far *code, struct CutsState *st);
 int far gobble_input_events(struct CutsState *st);
 void far run_timebased_tasks(int reset);
 void far punt_tasks(void);
@@ -286,7 +289,7 @@ void far free_panelflip(void);
 char far do_panel_frame(void);
 int far get_wfr(int f);
 void far do_fbuf_bms(void);
-extern int weap_frame;
+extern int16 weap_frame;
 void far set_flask(int which);
 void far set_compass(void);
 void far reset_scrgr(void);
@@ -304,7 +307,7 @@ extern unsigned char RightPanel;
 void far set_screen_frame(char which, int val);
 char far load_weapcm(void);
 extern char ShowStupidFirstPersonWeapon;
-void far player_look_grave();  /* match: no prototype: callers pass an argument it ignores */
+void far player_look_grave(int unused);  /* callers pass an argument it ignores */
 
 /* CREDITS.C: the credits */
 void far show_credits(void);
@@ -314,7 +317,7 @@ extern unsigned char far cmpbuf1_start[];
 extern unsigned char far cmpbuf2_start[];
 /* the digital effects' buffer (SOUND.C); name provisional */
 extern char far dfx_buffer[];
-extern unsigned long far gr_offs[];
+extern uint32 far gr_offs[];
 extern unsigned char far seg_5DFD[];
 /* The shared far work buffer (at least 10000h bytes), which each user lays out its own
    way: the archive tables (ARC.C), the LZSS work area (ACLZW.C), the pathfinder's

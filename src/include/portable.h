@@ -1,0 +1,119 @@
+/* portable.h: the types and macros that let the same sources build for DOS and for the port
+   (docs/PORT.md). Under Turbo C (__TURBOC__) every name here maps to the original tokens, so
+   the DOS build compiles to the same bytes and the gate proves it; on a modern host (the port,
+   with src/port/compat.h force-included) they take the host's meaning. Included by uw2.h, so
+   every source that includes a shared header sees it. */
+#ifndef PORTABLE_H
+#define PORTABLE_H
+
+/* OLDSTYLE((params)): the parameter list of a function whose callers push an int where the
+   definition takes a char (docs/CONTRIBUTING.md, "Where files disagreed"). Turbo C sees an
+   old-style declaration, f(), so the callers' pushes keep their bytes; the port sees the
+   real prototype, so the call converts the argument as the DOS callee reads it (the low
+   byte of the pushed word). */
+#ifdef __TURBOC__
+#define OLDSTYLE(params) ()
+#else
+#define OLDSTYLE(params) params
+#endif
+
+/* Explicit widths. Turbo C's int is 16 bits and its long 32; a modern host's int is 32 bits
+   and its long 64. Declarations whose width matters (file records, structs laid over
+   buffers, globals, and the locals the promotion audit lists) use these names, which are
+   the original types under Turbo C and the exact-width types on the host, so a stored value
+   wraps as it did in DOS. Plain int stays where any width of at least 16 bits gives the
+   same result (docs/PORT.md, "Integer widths and wrap", has the policy). */
+#ifdef __TURBOC__
+typedef int int16;
+typedef unsigned uint16;
+typedef long int32;
+typedef unsigned long uint32;
+#else
+#include <stdint.h>
+typedef int16_t int16;
+typedef uint16_t uint16;
+typedef int32_t int32;
+typedef uint32_t uint32;
+#endif
+
+/* NEARPTR: a near pointer carried in an integer, a parameter or a field that holds either a
+   number or the address of near data (gronk_critid's row, an input handler's argument).
+   An int under Turbo C, where a near pointer is 16 bits; pointer-sized on the host, so the
+   address survives the round trip. UNEARPTR is the unsigned form, for comparing two near
+   pointers as Turbo C does (by offset, unsigned). */
+#ifdef __TURBOC__
+typedef int NEARPTR;
+typedef unsigned UNEARPTR;
+#else
+typedef intptr_t NEARPTR;
+typedef uintptr_t UNEARPTR;
+#endif
+
+/* NULLTRAP(p) and FARNULLTRAP(p): the pointer p, at a dereference that the null-pointer
+   audit found can see a null pointer in the original game (docs/PORT.md, "Null pointers").
+   NULLTRAP is for a near pointer (in DOS a null one reads DS:0), FARNULLTRAP for a far one
+   (in DOS a null one reads the interrupt vector table at 0000:0000).
+
+   - The DOS build: the original tokens, (p), so the bytes are the same; the gate proves it.
+   - A modding build of chosen sources compiled with -DNULLTRAP (tools/tcc.mjs, then
+     tools/link.py --obj STEM=PATH): each hit appends the file and line to NULLTRAP.LOG and
+     the code goes on with the null pointer, as DOS does.
+   - The port: a null p becomes a pointer to the port's copy of the bytes DOS would read
+     (port_null_near: DGROUP from DS:0; port_null_far: the interrupt vector table), and the
+     hit is logged, so the faithful port gives DOS's result and never crashes. */
+#ifdef __TURBOC__
+#ifdef NULLTRAP
+#undef NULLTRAP
+#include <io.h>
+#include <fcntl.h>
+#include <string.h>
+static void nulltrap_hit(char *file, int line)
+{
+    char buf[48];
+    int fd = open("NULLTRAP.LOG", O_WRONLY | O_CREAT | O_APPEND | O_TEXT, 0x180);
+    if (fd < 0) return;
+    write(fd, file, strlen(file));
+    itoa(line, buf, 10);
+    write(fd, ":", 1); write(fd, buf, strlen(buf)); write(fd, "\n", 1);
+    close(fd);
+}
+#define NULLTRAP(p)     ((p) ? (p) : (nulltrap_hit(__FILE__, __LINE__), (p)))
+#define FARNULLTRAP(p)  ((p) ? (p) : (nulltrap_hit(__FILE__, __LINE__), (p)))
+#else
+#define NULLTRAP(p)     (p)
+#define FARNULLTRAP(p)  (p)
+#endif
+#else
+void *port_null_near(const char *file, int line);
+void *port_null_far(const char *file, int line);
+#define NULLTRAP(p)     ((p) ? (p) : (__typeof__(p))port_null_near(__FILE__, __LINE__))
+#define FARNULLTRAP(p)  ((p) ? (p) : (__typeof__(p))port_null_far(__FILE__, __LINE__))
+#endif
+
+/* FAR_COPY(dst, src, n): copy n bytes between far buffers, written in DOS as
+   movedata(FP_SEG(src), FP_OFF(src), FP_SEG(dst), FP_OFF(dst), n), which is what the macro
+   expands to under Turbo C, token for token (FP_SEG and FP_OFF come from <dos.h>, which every
+   user includes). The port copies with flat pointers, forwards a byte at a time as
+   movedata does, with no paragraph map lookup. */
+#ifdef __TURBOC__
+#define FAR_COPY(dst, src, n) movedata(FP_SEG(src), FP_OFF(src), FP_SEG(dst), FP_OFF(dst), n)
+#else
+void port_far_copy(void *dst, const void *src, unsigned n);
+#define FAR_COPY(dst, src, n) port_far_copy((void *)(dst), (const void *)(src), (unsigned)(n))
+#endif
+
+/* HOST_LAYOUT_BEGIN and HOST_LAYOUT_END, around a struct that holds pointers. The port packs
+   every struct as Turbo C does (src/port/compat.h), so that file records and the structs laid
+   over buffers keep their DOS layout; a struct with pointer fields cannot keep it, since a
+   host pointer is 8 bytes, and it only ever lives in memory (tools/layoutcheck.py checks
+   that none is copied as bytes). Between these two the port lays structs out naturally, so
+   their pointers are aligned. Nothing at all under Turbo C. */
+#ifdef __TURBOC__
+#define HOST_LAYOUT_BEGIN
+#define HOST_LAYOUT_END
+#else
+#define HOST_LAYOUT_BEGIN _Pragma("pack(push, 8)")
+#define HOST_LAYOUT_END _Pragma("pack(pop)")
+#endif
+
+#endif

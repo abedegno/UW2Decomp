@@ -410,8 +410,8 @@ void far mob_init(struct Object far *obj, int x, int y)
 void far do_filanium(struct Object far *obj, int x, int y)
 {
     struct Tile far *tile;
-    int major;
-    int minor;
+    int16 major;
+    int16 minor;
     unsigned char flag;
 
     tile = Map_GetAddr(x, y);

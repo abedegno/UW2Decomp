@@ -172,4 +172,13 @@ extern unsigned char _ctype[];
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
+/* Struct layout. Turbo C lays structs out with byte alignment (no game source is compiled
+   with -a), so a 16-bit field can sit at an odd offset and a record takes only the bytes it
+   needs; the file records (PLAYER.DAT, LEV.ARK blocks, SCD rows) depend on it. Every struct
+   the game declares is therefore packed, as by Turbo C. This comes after every host header
+   the game includes (above), so the host's own structs keep their alignment; port C that
+   includes a game header must include this file first, so that both see the same layout.
+   tools/layoutcheck.py compares the result with Turbo C's, record by record. */
+#pragma pack(1)
+
 #endif

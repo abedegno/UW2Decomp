@@ -13,19 +13,21 @@ struct Object;
 /* One inventory slot on screen, 14 bytes: the rectangle the mouse hits (y counts up from
    the bottom of the screen, so top >= bottom) and where its picture goes. */
 struct InvRect {
-    int left, top, right, bottom;       /* 0x00 */
-    int x, y;                           /* 0x08 */
+    int16 left, top, right, bottom;     /* 0x00 */
+    int16 x, y;                         /* 0x08 */
     unsigned char w, h;                 /* 0x0C */
 };
 
 /* An open bag in the inventory panel, 12 bytes: bags opened inside bags form a chain
    (OpenBag is the innermost). */
+HOST_LAYOUT_BEGIN
 struct Bag {
     struct Bag far *next;               /* 0x00, the bag opened inside this one */
     struct Bag far *prev;               /* 0x04, the bag this one was opened from */
     union Link obj;                     /* 0x08, the bag object */
-    int weight;                         /* 0x0A */
+    int16 weight;                       /* 0x0A */
 };
+HOST_LAYOUT_END
 
 /* BAGS.C: open bags in the inventory panel */
 extern unsigned char display_inventory_no_show;
@@ -34,7 +36,7 @@ void far FixOpenBag(void);
 void far DisplayOpenBag(void);
 void far ScrollItemsUp(void);
 void far ScrollItemsDown(void);
-void far BagWeight(union Link far *head, int far *total);
+void far BagWeight(union Link far *head, int16 far *total);
 void far DoSpecialActions(int slot);
 void far FixBagArea(void);
 void far OpenTheBag(int slot);
@@ -52,7 +54,7 @@ void far RedisplayInvSlot(int slot);
 struct Object far * far AskInventory(int slot);
 unsigned char far AddToInventory(struct Object far *obj, int slot);
 int far FindSlot(struct Object far *obj);
-struct Object far * far FindObj(int major, int minor, int cls, int how, int *where);
+struct Object far * far FindObj(int major, int minor, int cls, int how, int16 *where);
 struct Object far * far pick_inv(int how);
 char far InvRemoveObject(struct Object far *obj);
 char far InvRemoveOneObject(struct Object far *obj);
@@ -78,7 +80,7 @@ unsigned char far invRemoveObject(struct Object far *obj, int qty);
    0 the body, 1..5 the armour (SlotToDisplay maps slots 3, 0, 1, 2, 4 to 1..5), 6..19
    slots 5..18 (an open bag's 20..27 take 12..19), 20 the open bag, 21 and 22 its scroll
    arrows; FindInventoryHit adds 0x17 for the 3D view and 0x18 for the barter area. */
-extern int SaveHandles[23];
+extern int16 SaveHandles[23];
 extern struct Object far *CursorObjPtr;
 extern struct Bag far *OpenBagList;
 extern struct Bag far *OpenBag;

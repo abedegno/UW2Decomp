@@ -34,9 +34,9 @@
 
 /* The open archive. */
 struct ArcFile {
-    int fd;                             /* 0x00 */
-    unsigned count;                     /* 0x02, number of blocks */
-    unsigned long hdr;                  /* 0x04, the long after the count */
+    int16 fd;                           /* 0x00 */
+    uint16 count;                       /* 0x02, number of blocks */
+    uint32 hdr;                         /* 0x04, the long after the count */
     char name[0x50];                    /* 0x08, the file's path */
 };
 
@@ -48,19 +48,19 @@ static struct ArcFile far arcfile;
 /* The table copies, in the big shared buffer stdat; arc_read_tables fills them and
    arc_write_tables writes them back, both only when put_arc rebuilds a file. arcstr is
    not used in this file or elsewhere. */
-unsigned long far *offtab = (unsigned long far *)(stdat + 0x2000);
-unsigned long far *flagtab = (unsigned long far *)(stdat + 0x2800);
-unsigned long far *lentab = (unsigned long far *)(stdat + 0x3000);
-unsigned long far *alloctab = (unsigned long far *)(stdat + 0x3800);
+uint32 far *offtab = (uint32 far *)(stdat + 0x2000);
+uint32 far *flagtab = (uint32 far *)(stdat + 0x2800);
+uint32 far *lentab = (uint32 far *)(stdat + 0x3000);
+uint32 far *alloctab = (uint32 far *)(stdat + 0x3800);
 char far *arcstr = (char far *)stdat + 0x4000;
 
 /* Reads the four tables into offtab and the rest, leaving the file position alone. */
 void far arc_read_tables(register int fd)
 {
-    long pos = tell(fd);
+    int32 pos = tell(fd);
     register int ok = 1;
     unsigned n;
-    long hdr;
+    int32 hdr;
 
     lseek(fd, 0L, 0);
     ok &= intoFarBuffer_ovr167_5DA(fd, &n, 2) == 2;
@@ -75,7 +75,7 @@ void far arc_read_tables(register int fd)
 /* Writes the four tables of n blocks back at offset 6; nonzero if all went out. */
 int far arc_write_tables(int fd, register unsigned n)
 {
-    long pos = tell(fd);
+    int32 pos = tell(fd);
     register int ok = 1;
 
     lseek(fd, 6L, 0);
@@ -90,22 +90,22 @@ int far arc_write_tables(int fd, register unsigned n)
 /* Reads (get_ulong) or writes (put_ulong) the long at offset off of the file, leaving
    the file position where it was. The block tables are read and patched through these,
    one entry at a time. */
-unsigned long far get_ulong(register int fd, int off)
+uint32 far get_ulong(register int fd, int off)
 {
-    unsigned long val;
-    long pos = tell(fd);
+    uint32 val;
+    int32 pos = tell(fd);
 
-    lseek(fd, (long)off, 0);
+    lseek(fd, (int32)off, 0);
     read(fd, &val, 4);
     lseek(fd, pos, 0);
     return val;
 }
 
-void far put_ulong(register int fd, int off, unsigned long val)
+void far put_ulong(register int fd, int off, uint32 val)
 {
-    long pos = tell(fd);
+    int32 pos = tell(fd);
 
-    lseek(fd, (long)off, 0);
+    lseek(fd, (int32)off, 0);
     write(fd, &val, 4);
     lseek(fd, pos, 0);
 }
@@ -161,7 +161,7 @@ unsigned char far open_arc(int which, char *dir)
 {
     unsigned char ok = 1;
     unsigned count;
-    unsigned long hdr;
+    uint32 hdr;
     char name[0x50];
     register int fd;
 
@@ -202,19 +202,19 @@ unsigned char far close_arc(int arc)
    Any short write is fatal (E002). Returns 1. */
 unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len)
 {
-    unsigned long off;
-    unsigned long flags;
-    unsigned long alloc;
-    unsigned long size;
-    unsigned long writepos;
-    unsigned long allocsize;
-    unsigned long newflags;
+    uint32 off;
+    uint32 flags;
+    uint32 alloc;
+    uint32 size;
+    uint32 writepos;
+    uint32 allocsize;
+    uint32 newflags;
     unsigned i;
     int ok;
     int memfd;
     unsigned char extra;
     unsigned char compressed;
-    long done;
+    int32 done;
     unsigned n;
     int m;
     unsigned w;
@@ -380,8 +380,8 @@ unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len)
 /* Reads block blk into buf, decompressing it if need be; its length, or 0. */
 unsigned far get_arc(int arc, unsigned blk, char far *buf)
 {
-    unsigned long off;
-    unsigned long flags;
+    uint32 off;
+    uint32 flags;
     unsigned t;
     register unsigned size;
     register unsigned n;
@@ -411,7 +411,7 @@ unsigned far get_arc(int arc, unsigned blk, char far *buf)
 int far check_arc(int which, char *dir, int blk)
 {
     unsigned count;
-    unsigned long off;
+    uint32 off;
     char name[0x50];
     register int fd;
 

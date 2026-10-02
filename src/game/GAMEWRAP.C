@@ -61,7 +61,7 @@
    current drive. Returns 0 (start-up then stops with "Not enough disk space") if not. */
 unsigned char far init_save(void)
 {
-    long space;
+    int32 space;
     struct dfree df;
     char dir[66];
 
@@ -71,7 +71,7 @@ unsigned char far init_save(void)
     clear_dir(HomeDir);
     getdfree(0, &df);
     if (df.df_sclus != 0xFFFF) {
-        space = (long)df.df_avail * df.df_bsec * df.df_sclus;
+        space = (int32)df.df_avail * df.df_bsec * df.df_sclus;
         if (space < 0x4B0)
             return 0;
     } else
@@ -139,7 +139,7 @@ char far SaveLevel(int level)
 /* Reads SAVE1\DESC to SAVE4\DESC (the slot digit replaces the last '0' of HomeDir) into
    descs, setting bit n - 1 of *found for each slot n that exists; the rest read
    "<not used yet>". */
-void far get_save_descs(char descs[][40], int *found)
+void far get_save_descs(char descs[][40], int16 *found)
 {
     int i;
     char *num;
@@ -166,7 +166,7 @@ void far get_save_descs(char descs[][40], int *found)
 
 void far ShowSaveRest(void)
 {
-    int found;
+    int16 found;
     char *labels[4] = { "I- ", "II- ", "III- ", "IV- " };
     char descs[4][40];
     int i;
@@ -191,7 +191,7 @@ void far ShowSaveRest(void)
    the physics are brought up to date. */
 void far DoSaveRest(int restore, int slot)
 {
-    int found;
+    int16 found;
     char descs[4][40];
     int msg;
 

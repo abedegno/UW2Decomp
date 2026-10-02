@@ -52,7 +52,7 @@ struct Pnt {
     unsigned char tile;
     unsigned char x;
     unsigned char y;
-    unsigned flags;
+    uint16 flags;
 };
 
 /* Uninitialised data, DS:251A..2587. nvokHgt and nvokTerr are can_place's results: the
@@ -69,14 +69,14 @@ static char ypos;                       /* the mover's position within its tile 
 static char ylow;
 static char yhigh;
 struct Collision oCollisions[8];
-static int tiles[9];                    /* terrain words of the 3x3 tiles, 0x1111 unread */
+static int16 tiles[9];                  /* terrain words of the 3x3 tiles, 0x1111 unread */
 struct MotionCalc near *curP;
 static struct Pnt pnt[5];
 struct Tile far *centptr;               /* the centre tile */
-int nvokHgt;
+int16 nvokHgt;
 static char firstsolve;
 static char pos_x;
-int nvokTerr;
+int16 nvokTerr;
 
 /* Initialised data, DS:03B6..03D1. tile_off: the map offset of each of the 3x3 tiles
    from the centre, in tiles[] order (rows of 64). */

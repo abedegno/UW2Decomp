@@ -29,7 +29,7 @@
 
 /* This file's _BSS, DS:8186: where the answer starts. Only this file uses it. */
 /* name: static in FM Towns, so static here; provisional name. */
-static int answer_x;
+static int16 answer_x;
 
 void far init_scroll(void)
 {
@@ -45,7 +45,7 @@ void far init_scroll(void)
    is over the scroll. Used by the \p and \P escapes and the [MORE] prompt. */
 void far scroll_wait(int ticks, char mouse)
 {
-    unsigned long end;
+    uint32 end;
     int key;
 
     mouse_release(1);
@@ -266,7 +266,7 @@ int far wdialog(char *prompt, char *initial, char *result, char anychar, int max
     }
     mouse_show();
     if (key == 27) {
-        strcpy(result, initial);
+        strcpy(result, NULLTRAP(initial));  /* initial is 0 for a conversation's answer */
         set_the_color(0x71);
         rectangle(answer_x, scroll->cur_y, scroll->bottom, scroll->cur_y - cur_font->height + 1);
         scroll->cur_x = answer_x;

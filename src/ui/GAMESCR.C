@@ -33,10 +33,10 @@
 
 /* This file's uninitialised data: the four mouse-area handles, FM Towns names. Defined
    here, they land at DS:817C to DS:8183 in the EXE's order. */
-int inforMshandle;               /* DS:817C */
-int actspMshandle;               /* DS:817E */
-int flaskMshandle;               /* DS:8180 */
-int spellMshandle;               /* DS:8182 */
+int16 inforMshandle;             /* DS:817C */
+int16 actspMshandle;             /* DS:817E */
+int16 flaskMshandle;             /* DS:8180 */
+int16 spellMshandle;             /* DS:8182 */
 
 
 /* Flips the right-hand panel: from the inventory (RightPanel 0) to the statistics page
@@ -137,7 +137,7 @@ void far start_gameinp(void)
 {
     LeftPanel = 0;
     setup_icon_buttons();
-    spellMshandle = input_addmouse(0xA9, 0x22, 0xDF, 0x34, 0, 1, try_cast);
+    spellMshandle = input_addmouse(0xA9, 0x22, 0xDF, 0x34, 0, 1, (InputFn)try_cast);
     actspMshandle = input_addmouse(0x11, 0x22, 0x42, 0x34, 0, 1, (InputFn)try_clear);
     inforMshandle = input_addmouse(0x5B, 0x22, 0x94, 0x34, 0, 1, (InputFn)print_info);
     flaskMshandle = input_addmouse(0xF3, 0x24, 0x13C, 0x45, 0, 1, (InputFn)flask_info);

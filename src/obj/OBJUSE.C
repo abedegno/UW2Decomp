@@ -36,7 +36,7 @@ int far useNSpellCharges(struct Object far *obj, char n);
 
 /* The next time the player may cast from an object, and a flag that makes
    decode_obj_spell always identify the spell. */
-long nextSpellTime = 0;
+int32 nextSpellTime = 0;
 unsigned char always_decode = 0;
 
 /* Uses obj on behalf of who (the player or a critter). how is 1 when the player uses it
@@ -199,9 +199,9 @@ void far UseKey(struct Object far *obj, unsigned char how)
     if (!how)
         return;
     if (OBJ_ITEM(obj) == ITEM_LOCKPICK)
-        UseThing(obj, UseLockpickOn);
+        UseThing(obj, (void (far *)())UseLockpickOn);
     else if (OBJ_ITEM(obj) < ITEM_LOCK)
-        UseThing(obj, UseKeyOn);
+        UseThing(obj, (void (far *)())UseKeyOn);
 }
 
 /* Starts a two-object use: prints "Use <name> on what?", puts obj on the cursor and
@@ -352,8 +352,8 @@ int far checkLock(struct Object far *who, struct Object far *door, int key)
    when cast. */
 char far checkSpell(int x, int y, struct Object far *who, struct Object far *obj, char how)
 {
-    int major;
-    int effect;
+    int16 major;
+    int16 effect;
     unsigned char flag;
     struct Object far *src;
 
@@ -442,7 +442,7 @@ void far BlastFunction(void)
    when they are 0, and effect is link bits 0-5; otherwise major is link >> 4 and effect
    the low 4 bits (probably a passive enchantment, such as a weapon's). *flag is bit 11. Returns 1
    when there is a spell. */
-char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag)
+char far decode_obj_spell(struct Object far *obj, int16 *major, int16 *effect, unsigned char *flag)
 {
     union Link far *link;
     struct Object far *spell;
@@ -454,7 +454,7 @@ char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsig
         link = &obj->ol.link;
         spell = Obj_InList(&link, 0, MAJOR_SPEC, 2, 0);
         if (spell != 0 && spell->qn.f.quality == 0 && !always_decode &&
-            (int)(((long)rand() * 10) / 0x8000L) < 4)
+            (int)(((int32)rand() * 10) / 0x8000L) < 4)
             return 0;
     } else if (OBJ_ISQUANT(obj) && (obj->id & ID_ENCHANT) && OBJ_MAJOR(obj) != MAJOR_RECT)
         spell = obj;
@@ -500,7 +500,7 @@ int far useNSpellCharges(struct Object far *obj, char n)
         charges = spell->qn.f.quality - n;
         if (charges >= 0)
             spell->qn.f.quality = charges < 0x40 ? charges : 0x3F;
-        else if ((int)(((long)rand() * 10) / 0x8000L) < 4) {
+        else if ((int)(((int32)rand() * 10) / 0x8000L) < 4) {
             if (Obj_Rem(link, spell))
                 Obj_Free(spell);
         }

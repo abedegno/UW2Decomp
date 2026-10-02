@@ -51,14 +51,14 @@
 /* This file's _BSS, DS:8178..817B. */
 /* match: laid out by name: save_rest 843, music_sound 925. Only this file uses them.
    (DS:8174..8177, after ovr134's ComObjData, is never referenced.) */
-int save_rest;
-int music_sound;
+int16 save_rest;
+int16 music_sound;
 
 unsigned char plyregen[2] = { 0, 0 };   /* used by ovr135 */
-int save_or_rest = 0;
-int hilit_pics[5] = { 8, 9, 10, 11, 12 };
-int unhilit_pics[5] = { 3, 4, 5, 6, 7 };
-int message_pics[5] = { -1, 13, -1, 14, 15 };
+int16 save_or_rest = 0;
+int16 hilit_pics[5] = { 8, 9, 10, 11, 12 };
+int16 unhilit_pics[5] = { 3, 4, 5, 6, 7 };
+int16 message_pics[5] = { -1, 13, -1, 14, 15 };
 char last_sr_file_num = 1;
 
 /* True if button b of the current group does something. */
@@ -73,7 +73,7 @@ unsigned char far is_really_button(int b)
    returns the button it was released on, or -1. */
 int far better_mouse_release(void)
 {
-    int input, x, y;
+    int16 input, x, y;
     register int button = -1;
     register int old = current_hilit_button;
 
@@ -406,7 +406,7 @@ void far new_hilit_button(int b)
 /* The button under the mouse (0..6 from the bottom of the panel up), or -1. */
 int far get_buttonreg_button(void)
 {
-    int x, y;
+    int16 x, y;
     register int b;
 
     mouse_getxy(&x, &y);

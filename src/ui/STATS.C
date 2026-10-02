@@ -36,7 +36,7 @@ static unsigned char skill_top = 0;
 /* name: DOS only (FM Towns prints no ordinal), so the name is ours. */
 static char ordinals[4][3] = { "ST", "ND", "RD", "TH" };
 /* Saved screen areas, DS:1B9F. FM Towns has 12 bytes here, three pointers. */
-int spsave[3] = { 0, 0, 0 };
+int16 spsave[3] = { 0, 0, 0 };
 
 
 /* The header: the name (up to 15 characters, upper-cased, centred), the class and the
@@ -159,8 +159,8 @@ void far RedispStat(void)
    overwritten and has no effect. */
 void far mous_in_stat(void)
 {
-    int v;
-    unsigned long start;
+    int16 v;
+    uint32 start;
     int key;
     int dir;
 

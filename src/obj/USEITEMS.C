@@ -451,7 +451,7 @@ void far UseOilOn(struct Object far *obj, unsigned char how, unsigned char other
 void far UseBook(struct Object far *obj, unsigned char how)
 {
     char far *str;
-    int where;
+    int16 where;
     int owner;
     char link;
     char text[100];
@@ -691,7 +691,7 @@ void far UseUnique(struct Object far *who, struct Object far *obj, unsigned char
         break;
     default:
         if (OBJ_ITEM(obj) >= FIRST_BLACKROCK_GEM && how)
-            UseThing(obj, UseKeyGem);
+            UseThing(obj, (void (far *)())UseKeyGem);
         break;
     }
 }
@@ -934,8 +934,8 @@ void far UseRect(struct Object far *who, struct Object far *obj)
 void far UseMagic(struct Object far *who, struct Object far *obj, char how)
 {
     struct Object far *fish;
-    int spell;
-    int power;
+    int16 spell;
+    int16 power;
     char flag;
 
     if (how)
@@ -958,7 +958,7 @@ void far UseMagic(struct Object far *who, struct Object far *obj, char how)
             using_punt(obj, how, 1);
             break;
         case ITEM_ROCK_HAMMER:
-            UseThing(obj, UseRockHammerOn);
+            UseThing(obj, (void (far *)())UseRockHammerOn);
             break;
         case ITEM_FISHING_POLE:
             if (go_fish())
@@ -969,7 +969,7 @@ void far UseMagic(struct Object far *who, struct Object far *obj, char how)
             mouse_release(1);
             break;
         case ITEM_OIL_FLASK:
-            UseThing(obj, UseOilOn);
+            UseThing(obj, (void (far *)())UseOilOn);
             break;
         }
     }
@@ -1057,15 +1057,15 @@ void far UseUtil(struct Object far *obj, char how)
     if (OBJ_ITEM(obj) >= ITEM_SKULL_C2 && OBJ_ITEM(obj) <= ITEM_PILE_OF_BONES_C6)
     {
         if (how)
-            UseThing(obj, UseBonesOn);
+            UseThing(obj, (void (far *)())UseBonesOn);
     }
     else if (OBJ_ITEM(obj) == ITEM_ANVIL)
-        UseThing(obj, UseAnvilOn);
+        UseThing(obj, (void (far *)())UseAnvilOn);
     else if (OBJ_ITEM(obj) == ITEM_POLE)
     {
         UsingPole = 1;
         FixPlayerEquips();
-        UseThing(obj, UsePoleOn);
+        UseThing(obj, (void (far *)())UsePoleOn);
     }
     else if (how && (OBJ_ITEM(obj) == ITEM_PLANT_CE || OBJ_ITEM(obj) == ITEM_PLANT_CF))
         UseFood(ThePlayer, obj, how);

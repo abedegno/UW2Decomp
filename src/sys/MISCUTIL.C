@@ -87,9 +87,8 @@ int far octant(char x, char y)
     }
 }
 
-int far postodir(x1, y1, x2, y2)
-char x1, y1, x2, y2;
-{ return mpos(x2 - x1, y2 - y1); }
+int far postodir(int x1, int y1, int x2, int y2)
+{ return mpos((char)x2 - (char)x1, (char)y2 - (char)y1); }
 
 /* Prints s and then where something is, to the message scroll: with radius < 0, the
    direction -radius - 1 given by the caller; otherwise, if (ox, oy) is further than
@@ -144,13 +143,13 @@ int far get_theta(int sx, int sy, int x, int y)
 {
     int dx = x - sx;
     int result;
-    long vx, vy;
+    int32 vx, vy;
     register int dy = y - sy;
     register int dist;
-    dist = cSqRt((long)(dx * dx + dy * dy));
+    dist = cSqRt((int32)(dx * dx + dy * dy));
     if (dist == 0) return 0;
-    vx = (long)dx * 0x7FFF;
-    vy = (long)dy * 0x7FFF;
+    vx = (int32)dx * 0x7FFF;
+    vy = (int32)dy * 0x7FFF;
     vx /= dist;
     vy /= dist;
     result = cAtan2((int)vx, (int)vy);
@@ -196,7 +195,7 @@ int far OkEnoughMem_ovr167_463(void)
    "Resource problem or internal error". */
 void far check_fds(void)
 {
-    int handles[8];
+    int16 handles[8];
     char name[6] = "a.tmp";
     unsigned char ok = 1;
     register int i;

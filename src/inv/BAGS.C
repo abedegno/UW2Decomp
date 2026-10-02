@@ -34,7 +34,7 @@
 
 /* This file's _BSS, DS:6A76..6A85: the backpack slots' screen saves while a bag is open. */
 /* match: ovr122's _BSS starts at 6A86; only this file uses it. */
-int BagSaveHandles[8];
+int16 BagSaveHandles[8];
 /* This file's _DATA, DS:15D0. */
 /* match: ovr119's strings end there and ovr122's data starts at 15D2; of ovr120 and
    ovr121, the two files between, only this one uses it. */
@@ -508,7 +508,7 @@ char far SwapItemsInBag(struct Object far *obj, int slot)
 }
 
 /* Adds the weight of every object in the list head, and of their contents, to *total. */
-void far BagWeight(union Link far *head, int far *total)
+void far BagWeight(union Link far *head, int16 far *total)
 {
     struct Object far *obj;
     int qty;

@@ -17,35 +17,35 @@ struct Tile;
    ComObjData (UW-Formats documents the file). Names not in the format document are
    provisional, taken from the sources that use the fields. */
 struct ComObj {
-    unsigned height:8;                  /* 0x00 */
-    unsigned radius:3;                  /* 0x01 */
-    unsigned animated:1;
-    unsigned mass:12;                   /* in tenths of a stone */
-    unsigned b3_0:1;                    /* 0x03 */
-    unsigned solid:1;
-    unsigned c3_2:1;
-    unsigned no_hit:1;
-    unsigned b3_4:1;
-    unsigned pickup:1;
-    unsigned stack:2;
-    unsigned value;                     /* 0x04, monetary value */
-    unsigned touch:1;                   /* 0x06 */
-    unsigned usable:1;
-    unsigned qualclass:2;               /* quality class: this times 6 plus the quality
+    uint16 height:8;                    /* 0x00 */
+    uint16 radius:3;                    /* 0x01 */
+    uint16 animated:1;
+    uint16 mass:12;                     /* in tenths of a stone */
+    uint16 b3_0:1;                      /* 0x03 */
+    uint16 solid:1;
+    uint16 c3_2:1;
+    uint16 no_hit:1;
+    uint16 b3_4:1;
+    uint16 pickup:1;
+    uint16 stack:2;
+    uint16 value;                       /* 0x04, monetary value */
+    uint16 touch:1;                     /* 0x06 */
+    uint16 usable:1;
+    uint16 qualclass:2;                 /* quality class: this times 6 plus the quality
                                            indexes string block 5 */
-    unsigned light:1;
-    unsigned bounce:4;
-    unsigned fate:4;                    /* 0x07, bits 1-4 */
-    unsigned pickable:1;
-    unsigned b7_6:1;
-    unsigned can_own:1;                 /* the object can have an owner */
+    uint16 light:1;
+    uint16 bounce:4;
+    uint16 fate:4;                      /* 0x07, bits 1-4 */
+    uint16 pickable:1;
+    uint16 b7_6:1;
+    uint16 can_own:1;                   /* the object can have an owner */
     unsigned char resist;               /* 0x08 */
     unsigned char render:2;             /* 0x09 */
     unsigned char tenacity:4;
     unsigned char b9_6:2;
-    unsigned qualtype:4;                /* 0x0A, quality type: a group of 6 strings in block 4 */
-    unsigned lookable:1;                /* a printable "look at" description */
-    unsigned bA_5:3;
+    uint16 qualtype:4;                  /* 0x0A, quality type: a group of 6 strings in block 4 */
+    uint16 lookable:1;                  /* a printable "look at" description */
+    uint16 bA_5:3;
 };
 
 /* An object: 27 bytes for a mobile one (critters, missiles and anything else that moves,
@@ -53,37 +53,37 @@ struct ComObj {
    UW-Formats (4.2, the master object list) documents the fields; names it lacks are
    provisional, taken from the sources that use them. */
 struct Object {
-    unsigned id;                        /* 0x00: item 0-8 (major class 6-8, minor 4-5,
+    uint16 id;                          /* 0x00: item 0-8 (major class 6-8, minor 4-5,
                                            index 0-3), flags 9-12, tenacious 13,
                                            is_quant 15 */
-    unsigned pos;                       /* 0x02: z 0-6, heading 7-9, fine y 10-12,
+    uint16 pos;                         /* 0x02: z 0-6, heading 7-9, fine y 10-12,
                                            fine x 13-15 */
     union {
-        unsigned word;
-        struct { unsigned quality:6, next:10; } f;
+        uint16 word;
+        struct { uint16 quality:6, next:10; } f;
         union Link link;
     } qn;                               /* 0x04: the quality and the next object in the
                                            list */
     union {
-        unsigned word;
-        struct { unsigned owner:6, link:10; } f;
+        uint16 word;
+        struct { uint16 owner:6, link:10; } f;
         union Link link;
     } ol;                               /* 0x06: the owner, and the contents (or, if
                                            is_quant, the quantity) */
     unsigned char hp;                   /* 0x08, mobile objects only from here on */
     unsigned char heading;              /* 0x09 */
     unsigned char b0A;                  /* 0x0A */
-    unsigned goal_word;                 /* 0x0B: goal 0-3, target 4-11; a missile's
+    uint16 goal_word;                   /* 0x0B: goal 0-3, target 4-11; a missile's
                                            fine x */
-    unsigned attitude_word;             /* 0x0D: level 0-3, talked to 13, attitude
+    uint16 attitude_word;               /* 0x0D: level 0-3, talked to 13, attitude
                                            14-15; a missile's fine y */
-    unsigned b0F;                       /* 0x0F; a missile's fine z */
+    uint16 b0F;                         /* 0x0F; a missile's fine z */
     unsigned char b11;                  /* 0x11 */
     unsigned char last_hit;             /* 0x12 */
     unsigned char b13;                  /* 0x13 */
     unsigned char b14;                  /* 0x14 */
     unsigned char b15;                  /* 0x15 */
-    unsigned home;                      /* 0x16: y 4-9, x 10-15 */
+    uint16 home;                        /* 0x16: y 4-9, x 10-15 */
     unsigned char b18;                  /* 0x18, fine heading in bits 0-4 */
     unsigned char b19;                  /* 0x19 */
     unsigned char whoami;               /* 0x1A, the conversation to run */
@@ -91,16 +91,16 @@ struct Object {
 
 /* A static object: the first 8 bytes of struct Object, all a static object has. */
 struct StaticObj {
-    unsigned id;
-    unsigned pos;
+    uint16 id;
+    uint16 pos;
     union {
-        unsigned word;
-        struct { unsigned quality:6, next:10; } f;
+        uint16 word;
+        struct { uint16 quality:6, next:10; } f;
         union Link link;
     } qn;
     union {
-        unsigned word;
-        struct { unsigned owner:6, link:10; } f;
+        uint16 word;
+        struct { uint16 owner:6, link:10; } f;
         union Link link;
     } ol;
 };
@@ -109,14 +109,14 @@ struct StaticObj {
    left (-1 for ever), and its tile. */
 struct Anim {
     union Link link;
-    int len;
+    int16 len;
     unsigned char x, y;
 };
 
 /* Per animation class (an object of class 7, by its low 4 bits): what to do each frame,
    and the run of frames it cycles through. */
 struct AnimClass {
-    unsigned flags;                     /* 1 cycle, 2 random, 4 door, 0x20 remove at end,
+    uint16 flags;                       /* 1 cycle, 2 random, 4 door, 0x20 remove at end,
                                            0x80 finish the motion first */
     char start;
     unsigned char count;
@@ -342,18 +342,18 @@ struct Object far * far Obj_Find(union Link far *head, char recurse, int index);
 unsigned char far IsMobElem(struct Object far *obj);
 struct Object far * far Obj_InList(union Link far **head, char recurse, int major, int minor, int index);
 unsigned char far HasOrIsObj(struct Object far *obj, int id);
-struct Object far * far Obj_FindInMap(int major, int minor, int index, int *x, int *y);
+struct Object far * far Obj_FindInMap(int major, int minor, int index, int16 *x, int16 *y);
 int far check_weight(union Link far *head, int min, int z, int adjust);
 unsigned char far ObjCrunch(char how);
 extern struct StaticObj far *objdata;
 extern unsigned char far *LastActiveMob;
 extern unsigned char far *ActiveMob;
-extern unsigned far *objtop;  /* the free static list; objtop and crittop tie objbot and critbot */
-extern unsigned far *objbot;
-extern unsigned far *objptr;
-extern unsigned far *crittop;  /* the free mobile list */
-extern unsigned far *critbot;
-extern unsigned far *critptr;
+extern uint16 far *objtop;    /* the free static list; objtop and crittop tie objbot and critbot */
+extern uint16 far *objbot;
+extern uint16 far *objptr;
+extern uint16 far *crittop;    /* the free mobile list */
+extern uint16 far *critbot;
+extern uint16 far *critptr;
 
 /* MAPADDR.C: Map_GetAddr and CreateObj */
 struct Tile far * far Map_GetAddr(int x, int y);
@@ -415,7 +415,7 @@ char * far misc_class_data(void);
 /* One container type, 3 bytes: OBJECTS.DAT's container table (Guide, "Containers table"). */
 struct Container {
     unsigned char capacity;             /* 0x00, 0 for no limit */
-    int mask;                           /* 0x01, what it accepts: an item id, 0x200.. a kind, or -1 */
+    int16 mask;                         /* 0x01, what it accepts: an item id, 0x200.. a kind, or -1 */
 };
 /* The kinds a container's mask can name, as INVPANEL.C's ItemFitsSlot tests them. */
 #define CONT_RUNES      0x200           /* runestones (the rune bag) */
@@ -458,12 +458,12 @@ void far UseThing(struct Object far *obj, void (far *fn)());
 int far checkLock(struct Object far *who, struct Object far *door, int key);
 void far BlastFunction(void);
 void far remove_spell(struct Object far *obj);
-extern long nextSpellTime;
+extern int32 nextSpellTime;
 extern unsigned char always_decode;
 struct Object far * far UseObj(struct Object far *who, struct Object far *obj, unsigned char how);
 int far using_punt(struct Object far *obj, char inv, char how);
 char far flip_switch(struct Object far *obj, int state);
-char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
+char far decode_obj_spell(struct Object far *obj, int16 *major, int16 *effect, unsigned char *flag);
 
 /* USEITEMS.C: using objects */
 extern char door_type;
@@ -515,7 +515,7 @@ void far set_animlen(struct Object far *obj, int len);
 unsigned char far rem_timer_obj(int index);
 extern char animcount;
 extern struct AnimClass animclassd[16];
-extern int timerlist[0x40];
+extern int16 timerlist[0x40];
 extern char timercount;
 extern struct Anim animlist[0x40];
 int far add_animobj(int index, int len, unsigned char a, unsigned char x, unsigned char y);

@@ -145,7 +145,7 @@ int far punt_idle_crpage(void)
    found: in the IDA listing only its overlay stub jumps to it. */
 /* name: FM Towns grfx_init at this position has different behaviour, so retain IDA
    name. */
-int far ovr117_2FD(int count, int *out)
+int far ovr117_2FD(int count, int16 *out)
 {
     int page;
     int cr;

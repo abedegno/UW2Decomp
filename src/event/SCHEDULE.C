@@ -157,7 +157,7 @@ unsigned char far Sched_Save(unsigned char block)
     return Sched_Should_Save(block, scdBlockHasBeenModified_dseg_67d6_1A7E);
 }
 
-unsigned char far Sched_GetTime(unsigned *out)
+unsigned char far Sched_GetTime(uint16 *out)
 {
     *out = SCD_dseg_67d6_8634->clocks[PlayerLevel].time;
     return 0;
@@ -233,7 +233,7 @@ unsigned char far Sched_IncrTime(unsigned n, unsigned char mode)
    passed for this level are run at once. */
 unsigned char far Sched_InsertLong(int count, struct SCDRow far *src, unsigned char run)
 {
-    union { int tmp; struct { unsigned char lo, result; } b; } v;
+    union { int16 tmp; struct { unsigned char lo, result; } b; } v;
     register int i, j;
     if (count < 1) return 0;
     for (i = SCD_dseg_67d6_8634->rows - 1; i >= 0; i--) {
@@ -241,7 +241,7 @@ unsigned char far Sched_InsertLong(int count, struct SCDRow far *src, unsigned c
         /* match: compiled-out debugging: Turbo C drops the call but keeps the strings
            (DS:1A7F, 1A9B); where in the file they were is not known, only their order */
         if (0) printf("i = %d comparison: %d < %d\n", i, src->time, v.tmp);
-        if (0) printf("looking at %lx\n", (long)i);
+        if (0) printf("looking at %lx\n", (int32)i);
         if (src->time >= v.tmp) break;
         SCD_dseg_67d6_8634->record[i + count] = SCD_dseg_67d6_8634->record[i];
     }
@@ -269,8 +269,7 @@ unsigned char far Sched_Delete(struct SCDRow far *row)
 {
     register int i;
     register int n = row - &SCD_dseg_67d6_8634->record[0];
-    movedata(FP_SEG((char far *)row + 16), FP_OFF((char far *)row + 16), FP_SEG(row), FP_OFF(row),
-             (SCD_dseg_67d6_8634->rows - n - 1) << 4);
+    FAR_COPY(row, (char far *)row + 16, (SCD_dseg_67d6_8634->rows - n - 1) << 4);
     for (i = 0; i < 80; i++)
         if (SCD_dseg_67d6_8634->clocks[i].next > n) SCD_dseg_67d6_8634->clocks[i].next--;
     SCD_dseg_67d6_8634->rows--;

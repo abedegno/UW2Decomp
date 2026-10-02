@@ -50,8 +50,8 @@ char missile_hit = 0;
 static unsigned char swing_kind[9] = { 2, 2, 2, 0, 0, 0, 1, 1, 1 };
 /* By swing / 3: the scan code of the key that holds the swing. */
 static unsigned char swing_keys[3] = { 0x34, 0x27, 0x19 };
-int pQatt = 0;
-int attackKey = -1;
+int16 pQatt = 0;
+int16 attackKey = -1;
 /* By hit location: the height of the blood splash. [4] is set to -hitz before use. */
 static signed char hitz_tab[5] = { 5, 3, 1, 7, 0 };
 /* Damage and attack bonuses of the special weapons, both indexed by specweap (1-8); the
@@ -64,27 +64,27 @@ static unsigned char spec_skill[9] = { 5, 0, 0, 0, 0, 0, 0, 0, 0 };
    (some hash), not by declaration, so the static names were chosen (by compiling
    candidates) to land where the EXE has them: otime, elapsed, swing_state, fire_mode,
    curr_weapon and weapon_data are not original names. */
-int askill;
-int wsize;
-int towhere;
-int ddone;
-static long otime;
-static int elapsed;
-int specweap;
-static int swing_state;
+int16 askill;
+int16 wsize;
+int16 towhere;
+int16 ddone;
+static int32 otime;
+static int16 elapsed;
+int16 specweap;
+static int16 swing_state;
 unsigned char play_pow;
-int targx;
-int targy;
-int hitobj;
+int16 targx;
+int16 targy;
+int16 hitobj;
 signed char cmbModTH[4];
 signed char hitz;
-int damage;
-int hitloc;
+int16 damage;
+int16 hitloc;
 static unsigned char fire_mode;
 unsigned char hitangle;
 unsigned char player_weapon;
 char criti;
-int fromwho;
+int16 fromwho;
 static struct Object far *curr_weapon;
 unsigned char using_altaras_dagger;
 static unsigned char *weapon_data;
@@ -131,8 +131,8 @@ int far set_hitobj(struct MotionCalc *c)
     int t;
     int dx;
     int dy;
-    long dist;
-    long best;
+    int32 dist;
+    int32 best;
     struct Object far *obj;
     struct Object far *att;
     int i;
@@ -180,8 +180,8 @@ int far set_hitobj(struct MotionCalc *c)
    sound, effect 7 with a weapon, 8 bare handed. */
 void far find_wall_coll(int heading, int dist, struct MotionCalc *c)
 {
-    int fx;
-    int fy;
+    int16 fx;
+    int16 fy;
     struct Object far *obj;
     int tx;
     int ty;
@@ -447,8 +447,10 @@ void far do_damage(int type)
     if (result)
         def = 0;
     if (((item & ID_CLASS) >> 4) == CLASS_DOOR || item == ITEM_MOVING_DOOR) {
-        if (OBJ_Z(def) > hitz) {
-            hitz = OBJ_Z(def) + 2;
+        /* def is 0 when the blow destroyed the door: then this reads the interrupt vector
+           table (docs/PORT.md, "Null pointers") */
+        if (OBJ_Z(FARNULLTRAP(def)) > hitz) {
+            hitz = OBJ_Z(FARNULLTRAP(def)) + 2;
             put_effect(def, 0xB, 1, level, -hitz, targx, targy);
         } else
             put_effect(def, 0xB, 1, level, -hitz, targx, targy);
@@ -544,7 +546,7 @@ char far do_attack(void)
    have no <ammunition>.'. */
 int far check_ammo(int weapon)
 {
-    int found;
+    int16 found;
     struct StaticObj fake;
     char buf[50];
     struct StaticObj *p;
@@ -613,8 +615,8 @@ int far GetPlayerWeapon(unsigned char **wd, struct Object far **weap)
    applies after a hit. */
 void far DoPlayerWeapon(register unsigned char *wd, struct Object far *weap, int swing)
 {
-    int major;
-    int effect;
+    int16 major;
+    int16 effect;
     unsigned char flag;
     register int skill;
 
@@ -695,7 +697,7 @@ void far clear_fight_state(void)
    blow sets the player's noise (10 charging, 15 striking), which critters hear. */
 void far player_attack(int swing)
 {
-    int charge;
+    int16 charge;
     unsigned char held;
     int tx;
     int ty;
@@ -936,7 +938,7 @@ void far player_killed_a(struct Object far *npc)
         exp = Creature[npc->id & ID_INMAJOR].exp;
         exp = exp * 4 + rollem(2, exp);
         if (OBJ_POWERFUL(npc))
-            exp = (long)exp * (rand() % 24 + 24) / 16;
+            exp = (int32)exp * (rand() % 24 + 24) / 16;
         player_get_exp(exp);
     }
 }

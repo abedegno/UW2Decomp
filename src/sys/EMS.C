@@ -16,7 +16,9 @@
    the string compare against the EMM device name and one `mov bx,0`, which need inline
    assembly. The file went through TASM (#pragma inline): the call from seg013_1D3C_A to
    the later seg013_1D3C_138 is `push cs; call near; nop`, TASM's rewrite of a far call
-   into its own segment, where TCC alone emits a far call. */
+   into its own segment, where TCC alone emits a far call.
+   port: dos-only. The port never compiles this file (tools/portcheck.py skips it): its
+   EMS emulation (src/port/mem/, docs/PORT.md "EMS") defines the same functions. */
 #pragma inline
 #include <dos.h>
 #include "sys.h"
@@ -29,11 +31,11 @@ static char emm_id[] = "EMMXXXX0";          /* DS:116 */
 
 /* match: _BSS is laid out by name; the statics have no original name, so theirs were
    chosen to land where the EXE has them around ems_frame (tools/bssorder.py) */
-static unsigned ems_pages;                  /* DS:22CA, pages allocated */
-static unsigned ems_avail;                  /* DS:22CC, pages free when checked */
-unsigned ems_frame;                         /* DS:22CE, segment of the EMS page frame */
-static unsigned ems_handle;                 /* DS:22D0 */
-static unsigned ems_page_map[8];         /* DS:22D2, logical and physical page pairs */
+static uint16 ems_pages;                    /* DS:22CA, pages allocated */
+static uint16 ems_avail;                    /* DS:22CC, pages free when checked */
+uint16 ems_frame;                           /* DS:22CE, segment of the EMS page frame */
+static uint16 ems_handle;                   /* DS:22D0 */
+static uint16 ems_page_map[8];           /* DS:22D2, logical and physical page pairs */
 
 /* Opens EMS: the int 67h vector's segment must hold a driver whose device name (at
    offset 10) is "EMMXXXX0"; then version (46h, at least 4.0), status (40h) and page
@@ -145,7 +147,7 @@ void far seg013_1D3C_138(unsigned handle, char far *name)
    mapping a handle's page 0 into the next of the four physical pages in turn (forgetting
    the pages TMPALLOC.C's callers think are mapped), and freeing a handle. Probably an
    older or unused interface for small separate allocations. */
-int far seg013_1D3C_14D(unsigned *handle)
+int far seg013_1D3C_14D(uint16 *handle)
 {
     _BX = 1;
     _AX = 0x4300;

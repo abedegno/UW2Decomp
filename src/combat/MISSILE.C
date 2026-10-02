@@ -40,12 +40,12 @@ unsigned char magical_missile = 0;
    after Valor), so static here, with provisional names whose keys put them where UW2 has
    them: missile_class 69, missile_x and missile_y 677, missile_item 917, then missile_src,
    missile_arc, missile_trx and missile_try all 957, in definition order. */
-static int missile_class;               /* DS:2508 */
-static int missile_x, missile_y;        /* DS:250A, 250C */
-static int missile_item;                /* DS:250E */
+static int16 missile_class;             /* DS:2508 */
+static int16 missile_x, missile_y;      /* DS:250A, 250C */
+static int16 missile_item;              /* DS:250E */
 static struct Object far *missile_src;  /* DS:2510 */
-static int missile_arc;                 /* DS:2514, always 1 */
-int missile_trx, missile_try;           /* DS:2516, 2518 */
+static int16 missile_arc;               /* DS:2514, always 1 */
+int16 missile_trx, missile_try;         /* DS:2516, 2518 */
 
 /* The player's aim from the mouse position in the 3D view: missile_trx turns the shot
    up to about 40 heading units (of 256 a turn) either side of straight ahead, and
@@ -54,7 +54,7 @@ int missile_trx, missile_try;           /* DS:2516, 2518 */
    drop should be a throw. */
 char far player_settr(void)
 {
-    int x, y;
+    int16 x, y;
 
     mouse_getxy(&x, &y);
     if ((x -= 0x10) > 0xD0)
@@ -196,8 +196,8 @@ char far ReturnObject(struct Object far *obj, char message)
 {
     struct Object far *thrown;
     struct Tile far *tile;
-    int x;
-    int y;
+    int16 x;
+    int16 y;
     unsigned char dist;
     unsigned char cannot;
     struct Object far *hit;

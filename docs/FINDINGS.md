@@ -160,10 +160,30 @@ Each entry was re-read against the source before it was written here. The sectio
 - **Effect:** a keyword test on substituted text is case-sensitive; no script was checked for one.
 - **For a port:** a consideration only.
 
+### Smashing a door reads the interrupt vector table
+
+- **What happens:** at the end of a melee hit, `def` is set to 0 when `damage_item` reports the target destroyed. For a door the code then tests `OBJ_Z(def)` against the hit height, so a blow that breaks a door reads the `pos` word of a null far pointer: 0000:0002, the segment half of the int 0 vector, which `init_world` points at `int0_trap`. Its low seven bits become the height of the debris effect when they are above the hit height.
+- **Where:** the end of the melee damage function in [combat/COMBAT.C](../src/combat/COMBAT.C), marked `FARNULLTRAP`.
+- **Evidence:** code reading, and clang's static analyzer (docs/PORT.md, "Null pointers"). `damage_item` returns `remove_object`'s result for an object it destroys ([combat/DAMAGE.C](../src/combat/DAMAGE.C)). Not checked in the game.
+- **Confidence:** likely.
+- **Effect:** the height of the splinters from a smashed door depends on the segment DOS loaded the game at, so it can differ between machines. Nothing else follows from it.
+- **For a port:** a faithful port reads the vector table it models; using the door's height from before the blow is the evident fix.
+
+### Escape at a conversation's typed answer reads DS:0
+
+- **What happens:** when a conversation asks the player to type an answer, CONVERSE.C calls `wdialog` with no initial text (a null pointer). If the player presses Escape, `wdialog` copies the initial text into the answer anyway, so the answer becomes the string at DS:0. In UW2.EXE DS:0 holds the tail of an overlay stub (docs/PORT.md, "Null pointers"): the answer is `'` and byte 06h while ovr167 is not in the overlay buffer, and byte 06h followed by the overlay's segment bytes while it is.
+- **Where:** `wdialog` in [ui/SCROLLIO.C](../src/ui/SCROLLIO.C), marked `NULLTRAP`; its caller in [conv/CONVERSE.C](../src/conv/CONVERSE.C).
+- **Evidence:** code reading, and clang's static analyzer. The other two callers pass real text. Not checked in the game.
+- **Confidence:** likely.
+- **Effect:** probably none visible: a short string of control bytes is no keyword, so the script takes its default answer. What the script does with it was not traced.
+- **For a port:** a faithful port gives the bytes at DS:0; an empty answer is the evident fix.
+
 ### Smaller slips with no known effect
 
 - `SetOffTrap` ([event/TRIGGER.C](../src/event/TRIGGER.C)) has no return statement. Its callers use the result, which is `UseTrap`'s, still in AX because the stores after the call do not touch AX. It works by accident.
 - `seg004_0849_CB` ([3d/EXPAND.ASM](../src/3d/EXPAND.ASM)) compares DH with 0FFh and then overwrites the flags, so an unshaded 8-bit image would index past `lightabs`; probably no caller asks for one.
+- `convert_string` ([conv/BABL.C](../src/conv/BABL.C)) does not check `bab_malloc`'s result. With the conversation heap full it would write the substituted text through a null far pointer over the interrupt vector table, and `add_to` would pass the null buffer to `bab_realloc`, which reads below it. The heap is sized so that this probably never happens.
+- `get_pals` ([gfx/LOADGR.C](../src/gfx/LOADGR.C)) reads and writes through `PalStore`, which nothing sets, so it would use DS:0, an overlay stub entry; but only `.CR` art files reach it, and nothing loads one.
 - Three slips are in code nothing calls (see [Dead code](#dead-code)): `get_dist` ([3d/SPHERE.ASM](../src/3d/SPHERE.ASM)) adds the y term's sign correction to CX instead of SI; `seg020_1` ([gfx/PLANECPY.ASM](../src/gfx/PLANECPY.ASM)) puts the last column in the wrong byte for blocks starting at x & 3 of 2 or 3; `seg009_2CC` ([gfx/GRSPIC.C](../src/gfx/GRSPIC.C)) loses its result in the video memory branch.
 
 ### Candidates that did not hold up

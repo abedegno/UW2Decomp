@@ -51,7 +51,7 @@ static unsigned char tile_pattern[5][3][3] = {
     { { 0, 0, 2 }, { 0, 2, 1 }, { 2, 1, 1 } },
     { { 2, 0, 0 }, { 1, 2, 0 }, { 1, 1, 2 } },
 };
-static int registered = 0;              /* the automap's input handlers are in place */
+static int16 registered = 0;            /* the automap's input handlers are in place */
 static signed char diag_side[4] = { 1, 2, 0, 3 };
 static signed char door_dy[4] = { -1, 0, -1, 1 };
 static signed char door_dx[4] = { 0, -1, -1, -1 };
@@ -63,11 +63,11 @@ static signed char door_dx[4] = { 0, -1, -1, -1 };
    door_dir, notes_dirty, level, old_strings, num_words and map_mouse are ours. */
 static signed char door_dir;
 static unsigned char notes_dirty;
-static int level;
+static int16 level;
 unsigned char PlayersMap[MAP_SIZE][MAP_SIZE];
-static int old_strings;
-static int num_words;
-static int map_mouse;
+static int16 old_strings;
+static int16 num_words;
+static int16 map_mouse;
 
 
 /* Opens the map screen: registers its key and mouse handlers once, saves the current
@@ -80,7 +80,7 @@ void far AutoMap(void)
 
     noauto = !player->automap;
     if (!registered) {
-        _input_addkey(KEY_ESC, 1, 2, newscr);
+        _input_addkey(KEY_ESC, 1, 2, (InputFn)newscr);
         map_mouse = input_addmouse(0, 0, 0x13F, 0xC7, 0, 2, (InputFn)ManageDungeonMap);
         registered = 1;
     }
@@ -114,8 +114,8 @@ void far AutoMap(void)
    the tile type and its floor's terrain class. The loop over the tile's objects checks
    bridges, doors and wall decals but records nothing for them (assignments of terr to
    itself, as in DOS). Used by Map Area (SPELLS.C) and the whole-level map below. */
-void far automap_area(int x0, int y0, int x1, int y1, int *arg,
-                      char (far *fn)(int x, int y, int *arg))
+void far automap_area(int x0, int y0, int x1, int y1, int16 *arg,
+                      char (far *fn)(int x, int y, int16 *arg))
 {
     int y;
     unsigned char terr;
@@ -161,7 +161,7 @@ void far automap_area(int x0, int y0, int x1, int y1, int *arg,
 /* automap_area's callback for the whole level. */
 /* name: DOS only; the name is provisional (IDA's SetALTo1_ovr094_2A1), chosen so that its
    tools/bssorder.py key puts it in the EXE's overlay stub order. */
-char far ReturnOne_ovr094_2A1(int x, int y, int *arg)
+char far ReturnOne_ovr094_2A1(int x, int y, int16 *arg)
 {
     return 1;
 }
@@ -388,7 +388,7 @@ void far DoTile(int type, int x, int y)
     case 0x20:
         for (j = 0; j < 3; j++)
             for (i = 0; i < 3; i++)
-                gr_pixel(px + i, py + j, (int)((long)rand() * 3 / 0x8000L) + 0xE9);
+                gr_pixel(px + i, py + j, (int)((int32)rand() * 3 / 0x8000L) + 0xE9);
         break;
     case 0x10:
         DoDoorTile(x, y, px, py);
@@ -482,11 +482,11 @@ int far true_gem_region(int x, int y)
    pick a world at the same depth. */
 void far ManageDungeonMap(void)
 {
-    int mx;
-    int my;
+    int16 mx;
+    int16 my;
     int w;
     int i;
-    int but;
+    int16 but;
     int key;
     struct ATM far *note;
     struct ATM far *best;
@@ -670,9 +670,7 @@ void far SaveTheWords(int lev)
         return;
     for (i = 0; i < num_words; i++) {
         if (ATM_Strings[i].x < 0) {
-            movedata(FP_SEG(&ATM_Strings[i + 1]), FP_OFF(&ATM_Strings[i + 1]),
-                     FP_SEG(&ATM_Strings[i]), FP_OFF(&ATM_Strings[i]),
-                     (100 - i) * sizeof(struct ATM));
+            FAR_COPY(&ATM_Strings[i], &ATM_Strings[i + 1], (100 - i) * sizeof(struct ATM));
             num_words--;
         }
     }
@@ -879,7 +877,7 @@ void far update_map_scraps(int scrap, int lev, unsigned char sections)
             }
         }
     }
-    movedata(FP_SEG(PlayersMap), FP_OFF(PlayersMap), FP_SEG(buf), FP_OFF(buf), MAP_TILES);
+    FAR_COPY(buf, PlayersMap, MAP_TILES);
     GetAutoMapLevel(0, lev);
     for (y = 0x3F; y >= 1; y--) {
         for (x = 1; x < 0x3F; x++) {
@@ -900,8 +898,7 @@ void far update_map_scraps(int scrap, int lev, unsigned char sections)
     SaveAutoMapLevel(0, lev);
     GetTheWords(scrap);
     count = num_words;
-    movedata(FP_SEG(ATM_Strings), FP_OFF(ATM_Strings), FP_SEG(buf), FP_OFF(buf),
-             count * sizeof(struct ATM));
+    FAR_COPY(buf, ATM_Strings, count * sizeof(struct ATM));
     GetTheWords(lev);
     for (x = 0; x < count; x++) {
         note = (struct ATM far *)buf + x;

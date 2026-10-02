@@ -41,53 +41,54 @@ int far getmem(int addr);
 int far conv_local_ovr095_2030(int addr);
 void far bab_var_clear(void);
 int far unbound(void);
-int far BabRand_ovr095_A5B(int far *args);
-int far bab_compare_ovr095_A8B(int far *args);
-int far babPluralize_ovr095_B95(int far *args);
-int far StringContains_ovr095_BDB(int far *args);
-int far babl_str_append_ovr095_D0A(int far *args);
-int far STRING_COPY_ovr095_DC7(int far *args);
-int far conv_find_ovr095_E36(int far *args);
-int far conv_length_ovr095_E8D(int far *args);
-int far DoVal_ovr095_EB2(int far *args);
-char far * far bab_malloc(long n);
+int far BabRand_ovr095_A5B(int16 far *args);
+int far bab_compare_ovr095_A8B(int16 far *args);
+int far babPluralize_ovr095_B95(int16 far *args);
+int far StringContains_ovr095_BDB(int16 far *args);
+int far babl_str_append_ovr095_D0A(int16 far *args);
+int far STRING_COPY_ovr095_DC7(int16 far *args);
+int far conv_find_ovr095_E36(int16 far *args);
+int far conv_length_ovr095_E8D(int16 far *args);
+int far DoVal_ovr095_EB2(int16 far *args);
+char far * far bab_malloc(int32 n);
 void far bab_free(char far *data);
 int far init_babl(void);
-int far * far getmem_addr(int addr);
+int16 far * far getmem_addr(int addr);
 void far babl_setmem(int addr, int value);
-void far bab_var(char *name, int *values, int count);
-void far bab_var_out(char *name, int *values, int count);
-/* Binds a conversation built-in by name: bab_fun(char *name, void (far *fn)()). */
+void far bab_var(char *name, int16 *values, int count);
+void far bab_var_out(char *name, int16 *values, int count);
+/* A conversation built-in; they take many types, so each is cast where it is bound. */
+typedef void (far *BablFn)();
 int far load_script(char *name, char far *work);
-void far bab_fun();  /* match: no prototype: the built-ins passed have many types */
+void far bab_fun(char *name, BablFn fn);  /* binds a built-in by name */
 int far babl_run(void);
 
 /* BABLHACK.C: conversation built-ins that reach into the game */
 struct Object far * far place_pitfighter(int power, int x, int y);
 void far do_babl_teleport(void);
 extern unsigned char running_away;
-void far teleport_player(int far *args);  /* ties teleport_talker */
-int far teleport_talker(int far *args);
+void far teleport_player(int16 far *args);  /* ties teleport_talker */
+int far teleport_talker(int16 far *args);
 /* The built-ins CONVERSE.C binds with bab_fun, given the argument stack. */
-int far babl_hack(int far *args);
-void far set_sequence(int far *args);
-int far x_exp(int far *args);
-void far set_attitude(int far *args);
-void far set_race_attitude(int far *args);
-int far x_skills(int far *args);
-int far x_traps(int far *args);
-int far place_object(int far *args);
-int far take_from_npc_inv(int far *args);
-void far add_to_npc_inv(int far *args);
-void far transform_talker(int far *args);
+int far babl_hack(int16 far *args);
+void far set_sequence(int16 far *args);
+int far x_exp(int16 far *args);
+void far set_attitude(int16 far *args);
+void far set_race_attitude(int16 far *args);
+int far x_skills(int16 far *args);
+int far x_traps(int16 far *args);
+int far place_object(int16 far *args);
+int far take_from_npc_inv(int16 far *args);
+void far add_to_npc_inv(int16 far *args);
+void far transform_talker(int16 far *args);
 void far remove_talker(void);
-void far set_quest(int far *args);
-int far get_quest(int far *args);
-int far x_clock(int far *args);
-int far sex(int far *args);
-int far gronk_door(int far *args);
-void far x_obj_stuff(int far *args);
-void far x_obj_pos(int far *args);
+void far set_quest(int16 far *args);
+int far get_quest(int16 far *args);
+int far x_clock(int16 far *args);
+int far sex(int16 far *args);
+int far gronk_door(int16 far *args);
+void far x_obj_stuff(int16 far *args);
+void far x_obj_pos(int16 far *args);
 
 /* BARTER.C: bartering in conversations */
 /* A trade adjustment set by a conversation, read when bartering. Defined in ovr097: it is
@@ -95,24 +96,24 @@ void far x_obj_pos(int far *args);
 extern char fudge;
 void far drawTradeSlot_ovr097_A91(int side, int slot);
 void far showSelection_ovr097_E83(int side, int slot);
-void far UseTradeSlot_ovr097_6E8(int side, int slot, int *content, unsigned char *active);
-void far PickUpFromSlot_ovr097_C39(int slot, int *content, unsigned char split);
-void far ovr097_CDB(int side, int slot, int *content);
+void far UseTradeSlot_ovr097_6E8(int16 side, int16 slot, int16 *content, unsigned char *active);
+void far PickUpFromSlot_ovr097_C39(int slot, int16 *content, unsigned char split);
+void far ovr097_CDB(int side, int slot, int16 *content);
 unsigned char far CombineToSlot_ovr097_D30(struct Object far *obj, int side, int slot,
-                                           int *content);
+                                           int16 *content);
 int far assess_value(int use_likes, int item, int accuracy);
 int far does_npc_like(int index);
 int far range(int base, int min, int max);
-int far total_offering_ovr097_17CB(int use_likes, int *items, unsigned char *selected, int *values,
+int far total_offering_ovr097_17CB(int use_likes, int16 *items, unsigned char *selected, int16 *values,
                                    int accuracy);
 void far npc_inv_add(struct Object far *obj);
-extern int npc_assess;
-extern int greed;
+extern int16 npc_assess;
+extern int16 greed;
 void far barter_init(void);
 void far end_barter(void);
 void far conv_inv_special(void);
 void far RedisplayBarterSlots(int side);
-int far player_barter_items(int *items, int *indices);
+int far player_barter_items(int16 *items, int16 *indices);
 void far player_barter_give(int index);
 int far npc_barter_find(int item, int from_player);
 int far npc_barter_give(int item);
@@ -120,59 +121,60 @@ int far npc_barter_give_id(int index);
 int far npc_inv_create(int item);
 int far npc_inv_delete(int item);
 void far play_barter(void);
+int far play_slot_hit_abs(int x, int y);
 void far npc_barter(void);
 /* The built-ins CONVERSE.C binds with bab_fun. */
 void far setup_to_barter(void);
-int far do_offer(int far *args);
-int far do_demand(int far *args);
+int far do_offer(int16 far *args);
+int far do_demand(int16 far *args);
 void far do_decline(void);
 void far do_judgement(void);
-int far npc_likes_dislikes(int far *args);
+int far npc_likes_dislikes(int16 far *args);
 int far give_all_stuff(void);
 
 /* CONVERSE.C: conversations */
 extern struct Object far *talking_to;
-extern unsigned cnv_id;
+extern uint16 cnv_id;
 char far * far adr_convpic(int n);
 int far move_convpic(char far *image, int ok, int which);
 void far Converse(unsigned char who, int subclass);
-int far conv_choice_ovr103_A13(int far *stack);
-int far conv_fmenu_ovr103_BF2(int far *stack);
+int far conv_choice_ovr103_A13(int16 far *stack);
+int far conv_fmenu_ovr103_BF2(int16 far *stack);
 /* match: declared before conv_check_inv, because Turbo C lists publics of equal key
    (595 for both) in reverse order of first sight, and the stub order needs this one last */
 void far conv_play_menu(int option);
 void far npc_say(char far *s);
 void far play_respond(char far *s);
 void far play_say(char far *s);
-void far conv_print(int far *stack);
-int far conv_pause_ovr103_10DD(int far *stack);
+void far conv_print(int16 far *stack);
+int far conv_pause_ovr103_10DD(int16 far *stack);
 int far getInputText_ovr103_1117(void);
-int far conv_check_inv(int far *stack);
-int far conv_give_inv(int far *stack);
-int far conv_find_inv(int far *stack);
-int far conv_take_inv(int far *stack);
-int far conv_take_inv_id(int far *stack);
-int far conv_inv_name(int far *stack);
-int far conv_inv_create(int far *stack);
-int far conv_inv_delete(int far *stack);
-int far check_inv_quality(int far *stack);
-int far count_inv(int far *stack);
-int far find_barter(int far *stack);
-int far find_barter_total(int far *stack);
-int far give_ptr_npc(int far *stack);
-int far switch_pic(int far *stack);
+int far conv_check_inv(int16 far *stack);
+int far conv_give_inv(int16 far *stack);
+int far conv_find_inv(int16 far *stack);
+int far conv_take_inv(int16 far *stack);
+int far conv_take_inv_id(int16 far *stack);
+int far conv_inv_name(int16 far *stack);
+int far conv_inv_create(int16 far *stack);
+int far conv_inv_delete(int16 far *stack);
+int far check_inv_quality(int16 far *stack);
+int far count_inv(int16 far *stack);
+int far find_barter(int16 far *stack);
+int far find_barter_total(int16 far *stack);
+int far give_ptr_npc(int16 far *stack);
+int far switch_pic(int16 far *stack);
 void far TalkTo(struct Object far *thing);
 void far free_converse(void);
 void far strt_converse(void);
 void far do_escape_key(void);
-int far set_inv_quality(int far *stack);
+int far set_inv_quality(int16 far *stack);
 
 /* CONVVARS.C: handing variables to a conversation and taking them back */
 void far setup_converse_data(struct Object far *npc);
 char far update_converse_data(struct Object far *npc);
 
 /* GRDB.C: the label table of the conversation (babl) bytecode assembler */
-extern int far *dbptr;
+extern int16 far *dbptr;
 void far grdb_blank(void);
 int far Clk(int n);
 void far gr_entry(void);
@@ -181,6 +183,6 @@ void far Ref(unsigned char lab, int rel);
 void far gr_putlab(unsigned char lab);
 
 /* Defined where no source has it yet: data the link takes from the EXE. */
-extern int CutsceneOrConversationStringBlock;
+extern int16 CutsceneOrConversationStringBlock;
 
 #endif

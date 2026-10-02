@@ -67,40 +67,42 @@
 #include "view3d.h"
 
 /* A colour cycle of the LPF header, 8 bytes, 16 of them at +0x80. */
-struct Cycle { unsigned started, period; char pad4[2]; unsigned char first, last; };
+struct Cycle { uint16 started, period; char pad4[2]; unsigned char first, last; };
 
 /* The cutscene player's far work area (seg049). */
+HOST_LAYOUT_BEGIN
 struct Stdat {
-    int n0x_fd, pad2;                   /* 0x00, the opcode file */
-    int anm_fd, pad6;                   /* 0x04, the LPF file */
-    int ems_page, padA;                 /* 0x08 */
-    int lp_index, padE;                 /* 0x0C */
-    int ahead_page, pad12;              /* 0x10 */
-    int ahead_index, pad16;             /* 0x14 */
-    int frame, pad1A;                   /* 0x18 */
-    unsigned far *code;                 /* 0x1C, the next opcode */
+    int16 n0x_fd, pad2;                 /* 0x00, the opcode file */
+    int16 anm_fd, pad6;                 /* 0x04, the LPF file */
+    int16 ems_page, padA;               /* 0x08 */
+    int16 lp_index, padE;               /* 0x0C */
+    int16 ahead_page, pad12;            /* 0x10 */
+    int16 ahead_index, pad16;           /* 0x14 */
+    int16 frame, pad1A;                 /* 0x18 */
+    uint16 far *code;                   /* 0x1C, the next opcode */
     unsigned char far *n00;             /* 0x20, the opcode buffer, then the LPF header */
     unsigned char far *screen;          /* 0x24 */
     unsigned char far *lptab;           /* 0x28 */
-    unsigned long start;                /* 0x2C */
-    unsigned long tick;                 /* 0x30 */
+    uint32 start;                       /* 0x2C */
+    uint32 tick;                        /* 0x30 */
     char pad34[4];
     unsigned char n00buf[0x400];        /* 0x38 */
 };
+HOST_LAYOUT_END
 
 /* A large page's descriptor, 6 bytes: the first record in it, the records and the bytes. */
 struct LpDesc {
-    unsigned base;                      /* 0x00 */
-    unsigned nrecords;                  /* 0x02 */
-    unsigned nbytes;                    /* 0x04 */
+    uint16 base;                        /* 0x00 */
+    uint16 nrecords;                    /* 0x02 */
+    uint16 nbytes;                      /* 0x04 */
 };
 
 /* A large page as readlp reads it into EMS: its descriptor again, a pad word, the sizes of
    its records, then the records. */
 struct LpPage {
     struct LpDesc desc;                 /* 0x00 */
-    unsigned pad;                       /* 0x06 */
-    unsigned sizes[1];                  /* 0x08, nrecords of them */
+    uint16 pad;                         /* 0x06 */
+    uint16 sizes[1];                    /* 0x08, nrecords of them */
 };
 
 /* The LPF file's header as read_anmhdr leaves it, 0xB00 bytes: colour cycles at 0x80, the
@@ -109,14 +111,14 @@ struct LpPage {
    three tables. */
 struct AnmHdr {
     char id[4];                         /* 0x00, "LPF " */
-    unsigned maxlps;                    /* 0x04 */
-    unsigned nlps;                      /* 0x06, large pages */
-    unsigned long nrecords;             /* 0x08 */
-    unsigned maxrecsperlp;              /* 0x0C */
-    unsigned lptableoffset;             /* 0x0E */
+    uint16 maxlps;                      /* 0x04 */
+    uint16 nlps;                        /* 0x06, large pages */
+    uint32 nrecords;                    /* 0x08 */
+    uint16 maxrecsperlp;                /* 0x0C */
+    uint16 lptableoffset;               /* 0x0E */
     char contenttype[4];                /* 0x10, "ANIM" */
-    unsigned width;                     /* 0x14 */
-    unsigned height;                    /* 0x16 */
+    uint16 width;                       /* 0x14 */
+    uint16 height;                      /* 0x16 */
     unsigned char variant;              /* 0x18 */
     unsigned char version;              /* 0x19 */
     unsigned char lastdelta;            /* 0x1A, the last record is a delta back to the first */
@@ -126,9 +128,9 @@ struct AnmHdr {
     unsigned char otherrecsperfrm;      /* 0x1E */
     unsigned char bitmaptype;           /* 0x1F */
     unsigned char recordtypes[32];      /* 0x20 */
-    unsigned long nframes;              /* 0x40 */
-    unsigned rate;                      /* 0x44, frames per second */
-    unsigned pad46[29];                 /* 0x46 */
+    uint32 nframes;                     /* 0x40 */
+    uint16 rate;                        /* 0x44, frames per second */
+    uint16 pad46[29];                   /* 0x46 */
     struct Cycle cycles[16];            /* 0x80 */
     unsigned char palette[0x400];       /* 0x100, 256 of blue, green, red and 0 */
     struct LpDesc lps[256];             /* 0x500 */
@@ -136,7 +138,7 @@ struct AnmHdr {
 /* Large page n's descriptor */
 #define LPDESC(anm, n) (&(anm)->lps[n])
 
-typedef int (far *CutsOp)(unsigned far *code, struct CutsState *st);
+typedef int (far *CutsOp)(uint16 far *code, struct CutsState *st);
 
 /* stdat as the cutscene player's state. */
 #define STDAT (*(struct Stdat far *)stdat)
@@ -155,13 +157,13 @@ static unsigned char far speech_fpage;
     else if (obj_inpage1 != 0xFF) MapMemory_seg013_1D3C_C7(2, obj_inpage1)
 
 /* Initialised data, DS:1064 to DS:1141. */
-static int lp_page = -1;                /* the LPF page readlpinc is reading */
-static int lp_left = -1;                /* and the bytes of it still to read */
-int pan_dx[4] = { 0, 1, 0, -1 };
-int pan_dy[4] = { 1, 0, -1, 0 };
-int focus_x = 0;
-int focus_y = 0xC7;
-int splity = -1;
+static int16 lp_page = -1;              /* the LPF page readlpinc is reading */
+static int16 lp_left = -1;              /* and the bytes of it still to read */
+int16 pan_dx[4] = { 0, 1, 0, -1 };
+int16 pan_dy[4] = { 1, 0, -1, 0 };
+int16 focus_x = 0;
+int16 focus_y = 0xC7;
+int16 splity = -1;
 CutsOp cuts_dispatch[29] = {
     cutsop_txt, cutsop_erase, cutsop_func, cutsop_pause, cutsop_skip, cutsop_next,
     cutsop_end, cutsop_loop, cutsop_data, cutsop_fadeout, cutsop_fadein, cutsop_jump,
@@ -176,34 +178,34 @@ unsigned char rmask[4] = { 0x01, 0x03, 0x07, 0x0F };    /* planes up to the last
    match: Turbo C lays _BSS out by a hash of the names (tools/bssorder.py). The publics are
    the FM Towns names; FM Towns has no names for the statics, so theirs are ours, chosen to
    land where the EXE has them. */
-static unsigned long tclock;            /* DS:5550 (12) */
-static unsigned long prev_time;         /* DS:5554 (24) */
-static int prevunused;                  /* DS:5558 (24), never referenced */
-int task_residue[16];                   /* DS:555A (28) */
-static long voc_left;                   /* DS:557A (166), speech bytes not yet queued */
+static uint32 tclock;                   /* DS:5550 (12) */
+static uint32 prev_time;                /* DS:5554 (24) */
+static int16 prevunused;                /* DS:5558 (24), never referenced */
+int16 task_residue[16];                 /* DS:555A (28) */
+static int32 voc_left;                  /* DS:557A (166), speech bytes not yet queued */
 unsigned char far *task_pointer_data[16];   /* DS:557E (340) */
-static long sp_pos;                     /* DS:55BE (363), the next chunk's place in the file */
-static long sp_nread;                   /* DS:55C2 (379), bytes read into EMS */
-static long voc_length;                 /* DS:55C6 (406) */
+static int32 sp_pos;                    /* DS:55BE (363), the next chunk's place in the file */
+static int32 sp_nread;                  /* DS:55C2 (379), bytes read into EMS */
+static int32 voc_length;                /* DS:55C6 (406) */
 unsigned char start_pal[0x300];         /* DS:55CA (443) */
 static unsigned char sp_npages;         /* DS:58CA (475), EMS pages holding speech */
 Task tasks[16];                         /* DS:58CC (524) */
-int pan_dir;                            /* DS:590C (632) */
-static int audio_fd;                    /* DS:590E (657) */
-int pan_step;                           /* DS:5910 (664) */
-int num_buf;                            /* DS:5912 (726) */
-int task_sofar[16];                     /* DS:5914 (764) */
-int task_total[16];                     /* DS:5934 (764) */
-int task_data1[16];                     /* DS:5954 (764) */
-int task_data2[16];                     /* DS:5974 (764) */
-static unsigned long task_time[16];     /* DS:5994 (796) */
-int task_flags[16];                     /* DS:59D4 (812) */
+int16 pan_dir;                          /* DS:590C (632) */
+static int16 audio_fd;                  /* DS:590E (657) */
+int16 pan_step;                         /* DS:5910 (664) */
+int16 num_buf;                          /* DS:5912 (726) */
+int16 task_sofar[16];                   /* DS:5914 (764) */
+int16 task_total[16];                   /* DS:5934 (764) */
+int16 task_data1[16];                   /* DS:5954 (764) */
+int16 task_data2[16];                   /* DS:5974 (764) */
+static uint32 task_time[16];            /* DS:5994 (796) */
+int16 task_flags[16];                   /* DS:59D4 (812) */
 unsigned char end_pal[0x300];           /* DS:59F4 (813) */
-static int cuts_number;                 /* DS:5CF4 (843) */
+static int16 cuts_number;               /* DS:5CF4 (843) */
 static unsigned char audio_inpage;      /* DS:5CF6 (921), the speech page last read */
-int logw;                               /* DS:5CF8 (932) */
-int logh;                               /* DS:5CFA (932) */
-int task_period[16];                    /* DS:5CFC (940) */
+int16 logw;                             /* DS:5CF8 (932) */
+int16 logh;                             /* DS:5CFA (932) */
+int16 task_period[16];                  /* DS:5CFC (940) */
 
 /* 0x0: starts SOUND\BSP<file>.VOC: reads up to pages 16 KB EMS pages of it from page on
    (the rest is read later by update_big_speech), queues the first 2 KB chunk, header
@@ -213,7 +215,7 @@ unsigned char far big_speech_play(unsigned char file, unsigned char volume,
     unsigned char pan, unsigned char page, unsigned char pages)
 {
     char num[4];
-    long amount;
+    int32 amount;
     char name[80];
     struct stat sb;
     register int i, buf;
@@ -248,8 +250,7 @@ unsigned char far big_speech_play(unsigned char file, unsigned char volume,
     buf = 0;
     MapMemory_seg013_1D3C_C7(2, page);
     amount = voc_left > 0x800 ? 0x800 : voc_left;
-    movedata(FP_SEG(SPEECH_BUF(0)), FP_OFF(SPEECH_BUF(0)), FP_SEG(dsdata[buf]),
-        FP_OFF(dsdata[buf]), amount);
+    FAR_COPY(dsdata[buf], SPEECH_BUF(0), amount);
     RESTORE_EMS();
     if (!AIL_index_VOC_block(sphdriver, dsdata[buf], -1, &dsbuf[buf])) goto fail_sound;
     dsbuf[1] = dsbuf[0];
@@ -273,10 +274,10 @@ fail:
    crosses into a new page, and restarts playback. Called every frame and from the fades. */
 void far update_big_speech(void)
 {
-    long amount;
+    int32 amount;
     unsigned char page;
     char done[2];
-    long off;
+    int32 off;
     register int i;
 
     done[0] = done[1] = 0;
@@ -300,8 +301,7 @@ void far update_big_speech(void)
             page = page % sp_npages;
             MapMemory_seg013_1D3C_C7(2, speech_fpage + page);
             amount = voc_left > 0x800 ? 0x800 : voc_left;
-            movedata(FP_SEG(SPEECH_BUF(off)), FP_OFF(SPEECH_BUF(off)), FP_SEG(dsdata[i]),
-                FP_OFF(dsdata[i]), amount);
+            FAR_COPY(dsdata[i], SPEECH_BUF(off), amount);
             RESTORE_EMS();
             voc_left -= amount;
             sp_pos += amount;
@@ -356,7 +356,7 @@ void far free_cuts_ems(void)
 }
 
 /* 0x671 */
-char * far makeFourChars_ovr108_671(unsigned long value, char *out)
+char * far makeFourChars_ovr108_671(uint32 value, char *out)
 {
     int i;
     for (i = 0; i < 4; i++) out[i] = (value >> (i * 8)) & 0xFF;
@@ -408,7 +408,7 @@ int far readlp(unsigned page, struct LpDesc far *desc, void far *dst)
 {
     int size;
     register int got;
-    lseek(STDAT.anm_fd, ((long)page << 16) + 0xB00L, 0);
+    lseek(STDAT.anm_fd, ((int32)page << 16) + 0xB00L, 0);
     size = desc->nbytes + desc->nrecords * 2 + 8;
     got = intoFarBuffer_ovr167_5DA(STDAT.anm_fd, dst, size);
 }
@@ -423,7 +423,7 @@ int far readlpinc(unsigned page, struct LpDesc far *desc, unsigned n, void far *
     out_size = desc->nrecords * 2 + desc->nbytes + 8;
     if (page != lp_page) {
         lp_page = page;
-        lseek(STDAT.anm_fd, ((long)page << 16) + 0xB00L, 0);
+        lseek(STDAT.anm_fd, ((int32)page << 16) + 0xB00L, 0);
         lp_left = out_size;
     }
     if (lp_left == 0) return 0;
@@ -471,9 +471,9 @@ void far anm_cycle(struct Cycle far *cycles)
 
 /* 0x9FE, opcode 27: wait_for_sound(n): keeps the speech going until it ends, cutting it
    off after n * 256 ticks. */
-int far cutsop_wait_for_sound(unsigned far *code, struct CutsState *st)
+int far cutsop_wait_for_sound(uint16 far *code, struct CutsState *st)
 {
-    unsigned long until;
+    uint32 until;
     until = *Time + (*code << 8);
     while (!speech_over()) {
         if (*Time >= until) {
@@ -547,21 +547,21 @@ void far do_pan(struct CutsState *st)
 }
 
 /* 0xBE9, opcode 26 */
-int far cutsop_test(unsigned far *code, struct CutsState *st)
+int far cutsop_test(uint16 far *code, struct CutsState *st)
 {
     return 1;
 }
 
 /* 0xBF1, opcode 24: splity(y): the row where the picture stops and the subtitle bar
    begins, or none (999). */
-int far cutsop_splity(unsigned far *code, struct CutsState *st)
+int far cutsop_splity(uint16 far *code, struct CutsState *st)
 {
     splity = *code == 999 ? -1 : *code - 1;
     return 1;
 }
 
 /* 0xC12, opcode 25: music(theme), 0 stops the music. */
-int far cutsop_music(unsigned far *code, struct CutsState *st)
+int far cutsop_music(uint16 far *code, struct CutsState *st)
 {
     if (*code == 0) stop_music();
     else set_new_music(*(unsigned char far *)code);
@@ -571,7 +571,7 @@ int far cutsop_music(unsigned far *code, struct CutsState *st)
 /* 0xC38, opcode 0: txt(colour, string): a subtitle, string string of the cutscene's
    string block, split at newlines and then to lines 320 pixels wide; drawn by
    cuts_draw_text after the frame. String FFFFh clears it. */
-int far cutsop_txt(unsigned far *code, struct CutsState *st)
+int far cutsop_txt(uint16 far *code, struct CutsState *st)
 {
     char far *text;
     char far *next;
@@ -626,20 +626,20 @@ int far cutsop_txt(unsigned far *code, struct CutsState *st)
 }
 
 /* 0xE4D, opcode 1 */
-int far cutsop_erase(unsigned far *code, struct CutsState *st)
+int far cutsop_erase(uint16 far *code, struct CutsState *st)
 {
     st->flag39 = 0;
     return 0;
 }
 
 /* 0xE5C, opcode 2 */
-int far cutsop_func(unsigned far *code, struct CutsState *st)
+int far cutsop_func(uint16 far *code, struct CutsState *st)
 {
     return 2;
 }
 
 /* 0xE64, opcode 3: pause(n): hold this frame for n * 256 ticks or until a key. */
-int far cutsop_pause(unsigned far *code, struct CutsState *st)
+int far cutsop_pause(uint16 far *code, struct CutsState *st)
 {
     if (st->flags.bit.b0) return 1;
     st->flags.bit.b1 = 0;
@@ -649,7 +649,7 @@ int far cutsop_pause(unsigned far *code, struct CutsState *st)
 }
 
 /* 0xE91, opcode 14: wait(a, b): pause for a, or for b, ignoring keys, when speech is on. */
-int far cutsop_wait(unsigned far *code, struct CutsState *st)
+int far cutsop_wait(uint16 far *code, struct CutsState *st)
 {
     if (st->flags.bit.b0) return 2;
     st->flags.bit.b1 = 0;
@@ -663,7 +663,7 @@ int far cutsop_wait(unsigned far *code, struct CutsState *st)
 
 /* 0xED8, opcode 4: skip(frame, n): a key pressed from here skips (draws nothing) up to
    frame; without speech, also pauses n before it. */
-int far cutsop_skip(unsigned far *code, struct CutsState *st)
+int far cutsop_skip(uint16 far *code, struct CutsState *st)
 {
     if (st->flags.bit.b0) return 2;
     st->flags.bit.b1 = 0;
@@ -676,14 +676,14 @@ int far cutsop_skip(unsigned far *code, struct CutsState *st)
 }
 
 /* 0xF19, opcode 5: next: end this LPF file and go on to the next. */
-int far cutsop_next(unsigned far *code, struct CutsState *st)
+int far cutsop_next(uint16 far *code, struct CutsState *st)
 {
     st->flags.bit.b2 = 0;
     return 0;
 }
 
 /* 0xF27, opcode 6: end: end the cutscene after this file. */
-int far cutsop_end(unsigned far *code, struct CutsState *st)
+int far cutsop_end(uint16 far *code, struct CutsState *st)
 {
     st->flags.bit.b2 = 0;
     st->flags.bit.b3 = 0;
@@ -691,7 +691,7 @@ int far cutsop_end(unsigned far *code, struct CutsState *st)
 }
 
 /* 0xF3B, opcode 7: loop(n): when this frame is next reached, replay the file n times. */
-int far cutsop_loop(unsigned far *code, struct CutsState *st)
+int far cutsop_loop(uint16 far *code, struct CutsState *st)
 {
     st->repeat41 = code[0];
     st->repeat43 = code[-2];
@@ -705,7 +705,7 @@ int far cutsop_loop(unsigned far *code, struct CutsState *st)
    034..037 (octal) at random. For any other value file is never set, so the digits
    come from whatever the stack held; the scripts probably only use 996 (an inference from
    the code, not checked against every script). */
-int far cutsop_data(unsigned far *code, struct CutsState *st)
+int far cutsop_data(uint16 far *code, struct CutsState *st)
 {
     int file;
     if (code[0] == 996) file = rand() % 4 + 0x1C;
@@ -720,7 +720,7 @@ int far cutsop_data(unsigned far *code, struct CutsState *st)
 
 /* 0xFDA, opcode 13: say(colour, string, voc): speech file BSP<voc>.VOC, or its subtitle
    (txt) when speech is off or fails; 999 is text only, 998 nothing when speech is on. */
-int far cutsop_say(unsigned far *code, register struct CutsState *st)
+int far cutsop_say(uint16 far *code, register struct CutsState *st)
 {
     if (st->flags.bit.b5) {
         st->fade45 = code[2];
@@ -737,7 +737,7 @@ int far cutsop_say(unsigned far *code, register struct CutsState *st)
 }
 
 /* 0x104C, opcode 9: fadeout(n): fade out over n (fadeout's count), full screen only. */
-int far cutsop_fadeout(unsigned far *code, struct CutsState *st)
+int far cutsop_fadeout(uint16 far *code, struct CutsState *st)
 {
     if (st->windowed == 0 && st->fade49 > -2) st->fade49 = code[0];
     cuts_do_fadeout(st, STDAT.frame);
@@ -745,7 +745,7 @@ int far cutsop_fadeout(unsigned far *code, struct CutsState *st)
 }
 
 /* 0x1080, opcode 10: fadein(n). */
-int far cutsop_fadein(unsigned far *code, struct CutsState *st)
+int far cutsop_fadein(uint16 far *code, struct CutsState *st)
 {
     if (st->windowed == 0 && st->fade47 > -2) st->fade47 = code[0];
     cuts_do_fadein(st, STDAT.frame);
@@ -753,9 +753,9 @@ int far cutsop_fadein(unsigned far *code, struct CutsState *st)
 }
 
 /* 0x10B4, opcode 11: jump(frame): skip ahead to frame, unless it is the next one. */
-int far cutsop_jump(unsigned far *code, struct CutsState *st)
+int far cutsop_jump(uint16 far *code, struct CutsState *st)
 {
-    if (code[-2] != code[0] - 1) {
+    if (code[-2] != (uint16)(code[0] - 1)) {
         st->frame3B = code[0] - 1;
         st->frame3D = 0;
         st->frame3F = 0;
@@ -765,20 +765,20 @@ int far cutsop_jump(unsigned far *code, struct CutsState *st)
 }
 
 /* 0x10ED, opcode 12: punt(flag): whether Escape may end the cutscene. */
-int far cutsop_punt(unsigned far *code, struct CutsState *st)
+int far cutsop_punt(uint16 far *code, struct CutsState *st)
 {
     st->flags.bit.b4 = code[0];
     return 1;
 }
 
 /* 0x110B, opcode 15 */
-int far cutsop_clang(unsigned far *code, struct CutsState *st)
+int far cutsop_clang(uint16 far *code, struct CutsState *st)
 {
     return 0;
 }
 
 /* 0x1112, opcode 16: set palette entries from the script */
-int far cutsop_palrange(unsigned far *code, struct CutsState *st)
+int far cutsop_palrange(uint16 far *code, struct CutsState *st)
 {
     int first, end, i;
     first = code[0] * 3;
@@ -789,7 +789,7 @@ int far cutsop_palrange(unsigned far *code, struct CutsState *st)
 }
 
 /* 0x1165, opcode 17: fade palette entries towards the script's colours */
-int far cutsop_palfade(unsigned far *code, register struct CutsState *st)
+int far cutsop_palfade(uint16 far *code, register struct CutsState *st)
 {
     int task;
     int first;
@@ -809,13 +809,13 @@ int far cutsop_palfade(unsigned far *code, register struct CutsState *st)
 }
 
 /* 0x1221, opcode 18 */
-int far cutsop_palset(unsigned far *code, struct CutsState *st)
+int far cutsop_palset(uint16 far *code, struct CutsState *st)
 {
     return 4;
 }
 
 /* 0x1229, opcode 19: fade the whole palette towards one of PALS.DAT */
-int far cutsop_palsimplefade(unsigned far *code, register struct CutsState *st)
+int far cutsop_palsimplefade(uint16 far *code, register struct CutsState *st)
 {
     int task;
     register int i;
@@ -831,7 +831,7 @@ int far cutsop_palsimplefade(unsigned far *code, register struct CutsState *st)
 
 /* 0x12D3, opcode 20: vscreen(w, h, split): a virtual screen of w by h; 320, 200, 999 is
    the plain screen. */
-int far cutsop_vscreen(unsigned far *code, register struct CutsState *st)
+int far cutsop_vscreen(uint16 far *code, register struct CutsState *st)
 {
     virtual_screen(code[0], code[1], code[2] == 999 ? -1 : code[2] - 1);
     if (code[0] == 320 && code[1] == 200 && code[2] == 999) {
@@ -841,7 +841,7 @@ int far cutsop_vscreen(unsigned far *code, register struct CutsState *st)
 }
 
 /* 0x1337, opcode 21: focus(x, y): the point of the virtual screen shown. */
-int far cutsop_focus(unsigned far *code, struct CutsState *st)
+int far cutsop_focus(uint16 far *code, struct CutsState *st)
 {
     vscreen_focus(code[0], code[1] == 999 ? -1 : code[1]);
     focus_x = code[0];
@@ -851,7 +851,7 @@ int far cutsop_focus(unsigned far *code, struct CutsState *st)
 
 /* 0x1375, opcode 22: lback(x, y, n): draw background CUTS\lbackNNN.byt into the virtual
    screen. */
-int far cutsop_lback(unsigned far *code, struct CutsState *st)
+int far cutsop_lback(uint16 far *code, struct CutsState *st)
 {
     lback_vscreen(code[0], code[1], code[2]);
     return 3;
@@ -859,7 +859,7 @@ int far cutsop_lback(unsigned far *code, struct CutsState *st)
 
 /* 0x1393, opcode 23: pan(dir, step, count): pan from the current focus for count frames
    (do_pan). */
-int far cutsop_pan(unsigned far *code, register struct CutsState *st)
+int far cutsop_pan(uint16 far *code, register struct CutsState *st)
 {
     int dir, step, count;
     dir = code[0];
@@ -996,8 +996,8 @@ int far run_time_critical_things(struct CutsState *st, struct AnmHdr far *hdr)
 /* 0x1693: holds the frame for frame3F * 256 ticks, until a key (unless b7) or b1. */
 int far cuts_run_pause(register struct CutsState *st, struct AnmHdr far *hdr)
 {
-    unsigned long last;
-    unsigned long now;
+    uint32 last;
+    uint32 now;
     register int in;
     in = -1;
     last = (*Time - STDAT.start) >> 8;
@@ -1018,15 +1018,15 @@ int far cuts_run_pause(register struct CutsState *st, struct AnmHdr far *hdr)
 void far cuts_process_opcodes(int frame, register struct CutsState *st)
 {
     while (*STDAT.code == frame && st->repeat41 == 0) {
-        if ((unsigned far *)STDAT.n00 + 0x200 - ((*STDAT.code >> 5) ? 1 << (*STDAT.code >> 5) : 4) > STDAT.code) {
+        if ((uint16 far *)STDAT.n00 + 0x200 - ((*STDAT.code >> 5) ? 1 << (*STDAT.code >> 5) : 4) > STDAT.code) {
             STDAT.code += 2;
             if (STDAT.code[-1] < 0x1D)
                 STDAT.code += cuts_dispatch[STDAT.code[-1]](STDAT.code, st);
             else return;
         } else {
-            lseek(STDAT.n0x_fd, (STDAT.code - (unsigned far *)STDAT.n00 - 0x200) * 2, 1);
+            lseek(STDAT.n0x_fd, (STDAT.code - (uint16 far *)STDAT.n00 - 0x200) * 2, 1);
             intoFarBuffer_ovr167_5DA(STDAT.n0x_fd, STDAT.n00, 0x400);
-            STDAT.code = (unsigned far *)STDAT.n00;
+            STDAT.code = (uint16 far *)STDAT.n00;
         }
     }
 }
@@ -1044,8 +1044,8 @@ void far cuts_process_opcodes(int frame, register struct CutsState *st)
         } else if (*src != 0x80) { \
             type = 1; count = *src & 0x7F; src++; \
         } else { \
-            unsigned far *w; \
-            if ((w = (unsigned far *)++src, *w) >= 0x8000) { \
+            uint16 far *w; \
+            if ((w = (uint16 far *)++src, *w) >= 0x8000) { \
                 if (*w >= 0xC000) { type = 0; count = *w & 0x3FFF; } \
                 else { type = 2; count = *w & 0x7FFF; } \
             } else { \
@@ -1064,7 +1064,7 @@ void far cuts_process_opcodes(int frame, register struct CutsState *st)
 
 /* Fill k pixels with the run's byte. */
 #define RUN(k) { \
-    unsigned char mask; int i; int last; \
+    unsigned char mask; int16 i; int16 last; \
     i = 0; \
     last = (plane + (k) - 1) / 4; \
     if (i == last) { \
@@ -1099,7 +1099,7 @@ void far cuts_process_opcodes(int frame, register struct CutsState *st)
 
 /* Copy k literal pixels, one plane at a time. */
 #define DUMP(k) { \
-    int n4; unsigned char far *s; unsigned char far *d; int p; int cnt; \
+    int16 n4; unsigned char far *s; unsigned char far *d; int16 p; int16 cnt; \
     unsigned char far *s2; unsigned char far *d2; \
     s = src; d = dst; p = plane; cnt = (k) + 3; \
     DUMP_PLANE() NEXT_PLANE() \
@@ -1214,12 +1214,12 @@ int far cuts_process_lp(register struct CutsState *st, struct AnmHdr far *anm,
     unsigned char far *page;
     unsigned char far *ems2;
     unsigned perrec;
-    unsigned far *sizes;
+    uint16 far *sizes;
     unsigned char far *data;
     int size;
     int last;
     int nrec;
-    unsigned long now;
+    uint32 now;
     unsigned char first;
     unsigned char flipped;
     register int i;
@@ -1229,11 +1229,11 @@ int far cuts_process_lp(register struct CutsState *st, struct AnmHdr far *anm,
     page = set_cuts_ems(STDAT.ems_page);
     sizes = ((struct LpPage far *)page)->sizes;
     data = (unsigned char far *)(sizes + lp->nrecords);
-    last = anm->nlps - 1 == STDAT.lp_index && anm->lastdelta ? 1 : 0;
+    last = (uint16)(anm->nlps - 1) == (uint16)STDAT.lp_index && anm->lastdelta ? 1 : 0;
     nrec = lp->nrecords - last;
     st->frame3D = st->frame3F = 0;
     st->flags.bit.b1 = 0;
-    if (nrec > 0 && anm->nlps - 1 > STDAT.lp_index) {
+    if (nrec > 0 && (uint16)(anm->nlps - 1) > (uint16)STDAT.lp_index) {
         struct LpDesc far *d;
         register unsigned sz;
         d = LPDESC(anm, STDAT.lptab[STDAT.lp_index + 1]);
@@ -1255,7 +1255,7 @@ int far cuts_process_lp(register struct CutsState *st, struct AnmHdr far *anm,
             int wd;
             int off;
             hb = data[1];
-            wd = (*(unsigned far *)(data + 2) + 1) & ~1;
+            wd = (*(uint16 far *)(data + 2) + 1) & ~1;
             off = hb ? wd + 4 : 2;
             if (!st->flags.bit.b0) {
                 if (splity == -1 && st->vscr4F == 0 && !flipped) grSoftPageFlip();
@@ -1413,9 +1413,9 @@ void far show_anm(int cuts, int x, int y, int w, int h)
         }
         if (st.windowed == 0) grfx_clear();
         intoFarBuffer_ovr167_5DA(STDAT.n0x_fd, STDAT.n00, 0x400);
-        STDAT.code = (unsigned far *)STDAT.n00;
+        STDAT.code = (uint16 far *)STDAT.n00;
         cuts_init_info(&st);
-        movedata(FP_SEG(palette), FP_OFF(palette), FP_SEG(st.palette), FP_OFF(st.palette), 0x300);
+        FAR_COPY(st.palette, palette, 0x300);
         if (st.windowed == 0) fadeout(st.palette, 2, 1);
         st.file4B = st.file4D = 1;
         while (st.flags.bit.b3) {
@@ -1520,9 +1520,9 @@ void far writeCutsValue_ovr108_2EAC(unsigned n, int value)
    total, and removed. reset starts the clock again. */
 void far run_timebased_tasks(int reset)
 {
-    static int residue = 0;
-    static unsigned long last = 0;
-    unsigned long diff;
+    static int16 residue = 0;
+    static uint32 last = 0;
+    uint32 diff;
     int old;
     register int i, steps;
     if (reset) {

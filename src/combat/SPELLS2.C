@@ -43,7 +43,7 @@ int far useNSpellCharges(struct Object far *obj, int n);
 
 
 char dtypes[6] = { 3, 4, 8, 0x10, 0x20, 0x40 };
-int demons[5] = { ITEM_IMP, ITEM_IMP, ITEM_HORDLING, ITEM_DESPOILER, ITEM_DESTROYER };
+int16 demons[5] = { ITEM_IMP, ITEM_IMP, ITEM_HORDLING, ITEM_DESPOILER, ITEM_DESTROYER };
 
 /* Appends the spells a casting critter can use to str ('X, Y and Z.'): its three
    Creature spells, plus for race 0x17 (liches, inferred) more by its abilities (flying,
@@ -309,8 +309,8 @@ void far sp_enchant_destroy(struct Object far *obj, char inv, int x, int y)
    enchant that.' or 'You have enchanted the <object>.'. */
 void far sp_enchant(struct Object far *obj, unsigned char inv, int x, int y)
 {
-    int major;
-    int effect;
+    int16 major;
+    int16 effect;
     unsigned char flag;
     char failed;
     unsigned char already;
@@ -473,8 +473,8 @@ void far creat_spell(struct Object far *caster, char which)
     struct Object far *obj;
     struct Object far *save;
     int heading;
-    int x;
-    int y;
+    int16 x;
+    int16 y;
     int homex;
     int homey;
     unsigned char lvl;
@@ -665,7 +665,7 @@ char far tremor_area(int x, int y, struct Object far *target, struct Tile far *t
         boulder = CreateObj(rand() % 3 + ITEM_LARGE_BOULDER_154, 0);
     else {
         int floor = tile->floor;
-        int items[5] = { ITEM_SKULL_C2, ITEM_MUSHROOM, ITEM_FISH, ITEM_RESILIENT_SPHERE_129, ITEM_COIN };
+        int16 items[5] = { ITEM_SKULL_C2, ITEM_MUSHROOM, ITEM_FISH, ITEM_RESILIENT_SPHERE_129, ITEM_COIN };
 
         if (floor < 5)
             boulder = CreateObj(items[floor], 0);
@@ -695,8 +695,8 @@ char far tremor_area(int x, int y, struct Object far *target, struct Tile far *t
 void far xt_spells(struct Object far *caster, char stab, char sub)
 {
     int heading;
-    int x;
-    int y;
+    int16 x;
+    int16 y;
     int z;
     register int dist;
     register int h;

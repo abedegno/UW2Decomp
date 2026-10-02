@@ -56,7 +56,7 @@ int far lget(char *name, unsigned off, unsigned seg, unsigned n)
 /* name: FM Towns set_light_: same shades.dat lookup and smooth parameters. */
 void far set_light(signed char lightLevel)
 {
-    int ShadesDataRow_var_C[6];
+    int16 ShadesDataRow_var_C[6];
     int handle;
     int diValue;
 
@@ -91,7 +91,7 @@ void far set_light(signed char lightLevel)
 void far init_lighting(void)
 {
     lget("light.dat", FP_OFF(cLightTabs), FP_SEG(cLightTabs), 0x1000);
-    lget("xfer.dat", (unsigned)cXfer,
+    lget("xfer.dat", FP_OFF(cXfer),
                          (unsigned)FP_SEG(cXfer), 0x500);
 }
 

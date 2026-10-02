@@ -36,11 +36,11 @@ struct Creature {
     unsigned char flier:1;
     unsigned char speed;                /* 0x0B */
     unsigned char run;                  /* 0x0C */
-    unsigned level:4;                   /* 0x0D-0x0E, the trading temper (FM Towns reads the
+    uint16 level:4;                     /* 0x0D-0x0E, the trading temper (FM Towns reads the
                                            same nibbles); bartering calls this one wit */
-    unsigned shrewd:4;
-    unsigned haggle:4;                  /* 0x0E */
-    unsigned patience:4;
+    uint16 shrewd:4;
+    uint16 haggle:4;                    /* 0x0E */
+    uint16 patience:4;
     unsigned char b0F;                  /* 0x0F */
     unsigned char sound:4;              /* 0x10 */
     unsigned char armour_kind:2;
@@ -65,14 +65,14 @@ struct Creature {
         unsigned char item:7;
     } arms[2];                          /* 0x20, arms[0].item is the missile it fires */
     struct {
-        unsigned prob:4;
-        unsigned item:12;
+        uint16 prob:4;
+        uint16 item:12;
     } other[2];                         /* 0x22 */
-    unsigned treasure_prob:4;           /* 0x26 */
-    unsigned treasure_rate:4;
-    unsigned food_prob:4;               /* 0x27 */
-    unsigned food_item:4;
-    int exp;                            /* 0x28 */
+    uint16 treasure_prob:4;             /* 0x26 */
+    uint16 treasure_rate:4;
+    uint16 food_prob:4;                 /* 0x27 */
+    uint16 food_item:4;
+    int16 exp;                          /* 0x28 */
     unsigned char spells[3];            /* 0x2A */
     unsigned char b2D_0:1;              /* 0x2D */
     unsigned char caster:7;
@@ -106,20 +106,20 @@ struct StaticTile {
 #define STILES ((struct StaticTile (far *)[MAP_SIZE])stdat)
 
 /* PATHFIND.C: critter motion, homing projectiles, path traversal and doors */
-extern int crit_terr;
-extern int tdx;
-extern int tdy;
+extern int16 crit_terr;
+extern int16 tdx;
+extern int16 tdy;
 extern unsigned char control;
 extern struct Handler near *tp_act;
 extern unsigned char txpos;
 extern unsigned char aligned;
 extern unsigned char dontchangedz;
-extern unsigned txpost;
+extern uint16 txpost;
 extern unsigned char myid;
-extern unsigned tdistsqr;
+extern uint16 tdistsqr;
 extern unsigned char failed;
 extern unsigned char typos;
-extern unsigned long tdisttsqr;
+extern uint32 tdisttsqr;
 extern struct Creature near *mycst;
 extern struct Object far *meptr;
 extern unsigned char pathlen;
@@ -127,7 +127,7 @@ extern unsigned char myxpos;
 extern unsigned char myypos;
 extern unsigned char myzpos;
 extern unsigned char hitwall;
-extern unsigned typost;
+extern uint16 typost;
 /* The current critter's target, set up by set_up_target. */
 extern struct Object far *mytarget;
 extern unsigned char myxhome;
@@ -139,9 +139,9 @@ extern unsigned char hitadoor;
 extern struct Phys near *pn_act;
 extern unsigned char myoldspeed;
 extern signed char tzpos;
-extern int XP;
+extern int16 XP;
 extern unsigned char myoldfacing;
-extern int YP;
+extern int16 YP;
 extern unsigned char myoldheading;
 void far make_path_from_flood_data(unsigned char length, unsigned char x, unsigned char y);
 void far try_to_open_door(struct Object far *door);
@@ -160,17 +160,17 @@ void far init_ai(void);
 int far get_terrain(struct Object far *obj);
 void far crit_head_for_loc(unsigned char x, unsigned char y, char z);
 /* The current critter's position, set up by set_critter_vars and critter_ai (AI.C). */
-extern int myxpost;
-extern int myypost;
-extern unsigned freepaths;
+extern int16 myxpost;
+extern int16 myypost;
+extern uint16 freepaths;
 unsigned char far do_crit_phys(struct Phys *pn, struct Handler *tp);
 unsigned char far flood_path(char x, char y, unsigned char height0, char destx, char desty, char destz, unsigned char range);
 unsigned char far line_of_sight(int x1, int y1, int z1, int x2, int y2, int z2);
 void far set_loc(unsigned char x, unsigned char y, unsigned char z);
 
 /* AI.C: critter movement and AI */
-extern int lastXeye;
-extern int lastYeye;
+extern int16 lastXeye;
+extern int16 lastYeye;
 extern unsigned char hitx;
 extern unsigned char hity;
 extern unsigned char seq_len;
@@ -204,8 +204,8 @@ void far set_critter_vars(struct Object far *obj);
 unsigned char far acceptable_danger(void);
 unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
                                  struct Object far *from);
-extern long lastcombattime;
-extern unsigned long crithittime;
+extern int32 lastcombattime;
+extern uint32 crithittime;
 extern signed char curBin;
 extern unsigned char crithit;
 extern unsigned char typehit;
@@ -225,7 +225,7 @@ void far player_grabbed(struct Object far *obj, unsigned char owner);
 void far maybe_rescue_guy_from_fire(struct Object far *obj);
 void far maybe_cheat_arena_fire(void);
 void far arena_opponent_runs(struct Object far *obj);
-void far where_shall_we_hang_out(struct Object far *npc, int *x, int *y);
+void far where_shall_we_hang_out(struct Object far *npc, int16 *x, int16 *y);
 char far maybe_go_hang_out(struct Object far *npc);
 char far teleport_critter(struct Object far *critter, int x, int y, int how);
 

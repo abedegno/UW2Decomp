@@ -21,12 +21,12 @@ struct Tile;
 union SCDParams {
     unsigned char b[11];
     struct {                            /* 1 change goal, 3 kill, 8 attitude, 11 remove */
-        unsigned critters;              /* 0x05 */
+        uint16 critters;                /* 0x05 */
         unsigned char arg[9];           /* 0x07: the goal and target; the attitude */
     } npc;
     struct {                            /* 2 teleport */
         unsigned char x, y;             /* 0x05, the destination */
-        unsigned critters;              /* 0x07 */
+        uint16 critters;                /* 0x07 */
         unsigned char level;            /* 0x09 */
         unsigned char unseen;           /* 0x0A, move even when the player could see it */
         unsigned char sethome;          /* 0x0B, make the destination its home */
@@ -42,24 +42,24 @@ union SCDParams {
     } hack;
     struct {                            /* hack 3 */
         unsigned char hack;             /* 0x05 */
-        unsigned long values;           /* 0x06: the floor to change, its new texture, and
+        uint32 values;                  /* 0x06: the floor to change, its new texture, and
                                            (high word) the height to add */
     } freeze;
     struct {                            /* 9 set a variable */
-        unsigned var;                   /* 0x05 */
+        uint16 var;                     /* 0x05 */
         unsigned char op;               /* 0x07 */
-        unsigned value;                 /* 0x08 */
+        uint16 value;                   /* 0x08 */
     } trapvar;
     struct {                            /* 10 test variables */
-        unsigned var;                   /* 0x05, the first */
+        uint16 var;                     /* 0x05, the first */
         unsigned char count;            /* 0x07 */
         unsigned char op;               /* 0x08, how to combine them */
         unsigned char invert;           /* 0x09 */
-        int value;                      /* 0x0A, what to compare with */
+        int16 value;                    /* 0x0A, what to compare with */
     } checkvar;
 };
 struct SCDRow {
-    unsigned time;                      /* 0x00 */
+    uint16 time;                        /* 0x00 */
     unsigned char level;                /* 0x02: 0xFF any level, 0xF6 + n world n */
     unsigned char once;                 /* 0x03, delete the row once it has run */
     signed char event;                  /* 0x04, negative to skip the row */
@@ -75,7 +75,7 @@ void far fire_trigger_at(int x, int y);
 void far genocide(int race);
 void far arena_player_runs(void);
 unsigned char far vend_check_gold(char x, char y, unsigned char money, unsigned char check);
-void far pass_time(long seconds);
+void far pass_time(int32 seconds);
 void far do_change_grokking(struct Object far *trap, struct Object far *link, int x, int y);
 int far whack_thing(int index, int damage, int how, int extra);
 int far inanimate_spell(int x, int y, struct Object far *trap, struct Object far *who, int major,
@@ -112,7 +112,7 @@ void far ruin_cure_potions(int x, int y);
 void far remove_TK_wand(void);
 void far go_vend(int which, int machine, int x, int y, int choice);
 void far put_player_in_jail(void);
-unsigned char far find_good_x_and_y(struct Object far *obj, int x, int y, int *nx, int *ny, char clear);
+unsigned char far find_good_x_and_y(struct Object far *obj, int x, int y, int16 *nx, int16 *ny, char clear);
 int far do_teleport(struct Object far *who, int x, int y, int level);
 int far change_terrain(int x, int y, int wall, int floor, int height, int type, int dx, int dy, int adjust);
 void far talk_to_disembodied(char whoami);
@@ -123,8 +123,8 @@ unsigned char far instant_kill(struct Object far *obj);
 void far Killorn_just_crashed(unsigned char entering);
 
 /* SCDEVENT.C: SCD event handling */
-void far gronk_race(int race, unsigned char loop, int param,
-                    char (far *code)(struct Object far *, int));
+void far gronk_race(int race, unsigned char loop, NEARPTR param,
+                    char (far *code)(struct Object far *, NEARPTR));
 unsigned char far player_looking(int x, int y);
 char far gronkify_attitude(struct Object far *npc, int attitude);
 char far Sched_DoEvent(unsigned char far *row);
@@ -153,7 +153,7 @@ int far get_numbered_variable(int index);
 #define TW_NORTH        0x10
 #define TW_SLOPE        0x20
 extern unsigned char tile_walls[16];
-extern int trap_teleport_data;
+extern int16 trap_teleport_data;
 extern struct Tile far *TriggerChainTileData_dseg_67d6_1BB9;  /* name: FM Towns: map_sq */
 struct Object far * far place_bridge(int x, int y, int zarg, int headingarg);
 void far destroy_bridge(int x, int y, int zarg, int headingarg);
@@ -185,13 +185,13 @@ void far Sched_SetBuf(int ofs, int seg);
 unsigned char far Sched_IncrTime(unsigned n, unsigned char mode);
 unsigned char far Sched_WrapTime(unsigned time, unsigned span, unsigned char mode);
 /* One level's place in a schedule: the time it has reached and the next row to run. */
-struct SCDClock { unsigned time, next; };
+struct SCDClock { uint16 time, next; };
 /* The work area: the migration queue, then the block as stored in SCD.ARK (row count,
    block number, the 80 clocks, the rows). */
 struct SCDWork {
-    int migrations;
+    int16 migrations;
     struct SCDRow migrationRecord[16];
-    unsigned rows;
+    uint16 rows;
     unsigned char block;
     char spare;
     struct SCDClock clocks[80];

@@ -38,11 +38,13 @@
 #include "sys.h"
 #include "ui.h"
 
+HOST_LAYOUT_BEGIN
 struct StringBlock {
-    int block;
+    int16 block;
     char far *strings[512];
-    int count;
+    int16 count;
 };
+HOST_LAYOUT_END
 
 /* The string decoder's buffer and the two cached string blocks: far, so a segment each
    (617D:0000 and 627D:0000, segment table entries 72 and 73), defined in this order. Only
@@ -52,9 +54,9 @@ struct StringBlock {
 char far str_buff[0x1000];
 static struct StringBlock far Strings[2];
 
-int OutString = 0;
-int string_bits_used = 8;
-int string_blocks = 0;
+int16 OutString = 0;
+int16 string_bits_used = 8;
+int16 string_blocks = 0;
 char SPACE[] = " ";
 char aStrings_pak[] = "strings.pak";
 char aRb_4[] = "rb";
@@ -242,7 +244,7 @@ char far * far read_string(int block, int string)
     unsigned char c;
     char far *result;
     int count, item, relative, string_count;
-    long address;
+    int32 address;
     register int index, found;
     result = str_buff + OutString;
     index = 0;

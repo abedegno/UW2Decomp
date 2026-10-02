@@ -50,8 +50,8 @@
 /* name: only Triggers has an FM Towns name (ovr162 uses it too); the others only this
    file uses, so they are static, their provisional names chosen for their keys. */
 unsigned char Triggers[16];
-static int RemoveTrapIndex;                             /* DS:863C */
-static int RemoveTrapFlags;                             /* DS:863E */
+static int16 RemoveTrapIndex;                           /* DS:863C */
+static int16 RemoveTrapFlags;                           /* DS:863E */
 static struct Object far *ObjRunCodeAround;             /* DS:8640 */
 static struct Object far *CharacterThatTriggeredTrap;   /* DS:8644 */
 static struct Object far *TriggeringButton;             /* DS:8648 */
@@ -211,7 +211,7 @@ int far get_numbered_variable(int index)
     if (index < 0x100) return player->vars[index];
     index -= 0x100;
     if (index < 0x80)
-        return (int)((player->quests[(unsigned)index >> 2] & (long)(1 << (index & 3))) >> (index & 3));
+        return (int)((player->quests[(unsigned)index >> 2] & (int32)(1 << (index & 3))) >> (index & 3));
     index -= 0x80;
     if (index < 0x10) return player->quest_bytes[index];
     index -= 0x10;
@@ -224,7 +224,7 @@ int far get_numbered_variable(int index)
    together, the same 16 bytes then the pointer, and moves the small scalars between them
    elsewhere, as it does all of them. */
 unsigned char tile_walls[16] = { 30, 0, 19, 21, 11, 13, 32, 32, 32, 32, 0, 0, 0, 0, 0, 30 };
-int trap_teleport_data = -1;                                    /* DS:1BB6 */
+int16 trap_teleport_data = -1;                                  /* DS:1BB6 */
 unsigned char CreatedObjectFound_dseg_67d6_1BB8 = 0;            /* DS:1BB8 */
 struct Tile far *TriggerChainTileData_dseg_67d6_1BB9 = 0;       /* DS:1BB9, FM Towns map_sq */
 
@@ -294,7 +294,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
     int power;
     int result = 2;
     unsigned char continue_chain = 1;
-    int slot;
+    int16 slot;
     register int i;
     register int v;
 
@@ -503,7 +503,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
         player_get_exp(g);
         break;
     case TRAP_DAMAGE:
-        if ((int)(((long)rand() * 10) / 0x8000L) < 7)
+        if ((int)(((int32)rand() * 10) / 0x8000L) < 7)
             g = 2;
         else
             g = 0;
@@ -522,7 +522,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
     case TRAP_CREATE_OBJECT: {
         unsigned char random_critter = 0;
         unsigned char placed;
-        if ((int)(((long)rand() * 0x3F) / 0x8000L) < trap->qn.f.quality)
+        if ((int)(((int32)rand() * 0x3F) / 0x8000L) < trap->qn.f.quality)
             return 2;
         continue_chain = 0;
         if OBJ_ISQUANT(trap)
@@ -681,7 +681,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
             (trap->qn.f.quality == 0x3F ||
              trap->qn.f.quality == OBJ_INCLASS(CharacterThatTriggeredTrap))) {
             int damage;
-            damage = (int)(((long)rand() * player->skills[SKILL_CASTING]) / 0x8000L) + 3;
+            damage = (int)(((int32)rand() * player->skills[SKILL_CASTING]) / 0x8000L) + 3;
             print_path_to(get_string(0x304), OBJ_HOMEX(ThePlayer), OBJ_HOMEY(ThePlayer), 0,
             /* 'Your Rune of Warding has been set off ' */
                           OBJ_HOMEX(CharacterThatTriggeredTrap),
@@ -890,9 +890,9 @@ int far do_trap_hack(struct Object far *trap, register int x, register int y)
                 : Obj_MemTPtr(CharacterThatTriggeredTrap);
         /* match: this call pushes `all` as an int, not converted to gronk_whoami's
            unsigned char */
-        ((void (far *)(int, int, int, WhoamiFn))gronk_whoami)(
+        ((void (far *)(int, int, NEARPTR, WhoamiFn))gronk_whoami)(
             ((OBJ_HEADING(trap) > 0 ? 1 : 0) << 7) + OBJ_Z(trap),
-            OBJ_FINEX(trap) > 0 ? 1 : 0, (int)info, (WhoamiFn)gronkify_change_goal);
+            OBJ_FINEX(trap) > 0 ? 1 : 0, (NEARPTR)info, (WhoamiFn)gronkify_change_goal);
         break;
     case 44:
         player_sleep(trap->ol.f.owner);
@@ -1031,8 +1031,8 @@ char far check_alert(unsigned char is_player, int x, int y)
    when time passes for the level (inferred). */
 void far DoWanderingMonsters(unsigned char is_player)
 {
-    int x = 0;
-    int y = 0;
+    int16 x = 0;
+    int16 y = 0;
     struct Object far *obj;
     struct Object far *newobj;
     while ((obj = Obj_FindInMap(6, 0, 7, &x, &y)) != 0) {
@@ -1052,15 +1052,15 @@ void far DoWanderingMonsters(unsigned char is_player)
    doors are also run to the end. */
 void far DoClosingDoors(unsigned char is_player)
 {
-    int x = 0;
-    int y = 0;
+    int16 x = 0;
+    int16 y = 0;
     struct Object far *door;
     int i;
     quick_time = 1;
     while ((door = Obj_FindInMap(5, 0, -1, &x, &y)) != 0) {
         if (((Map_GetAddr(x, y)->door & 2) >> 1) == 0 &&
             OBJ_INCLASS(door) >= 8 &&
-            (int)(((long)rand() * 10) / 0x8000L) < 3) {
+            (int)(((int32)rand() * 10) / 0x8000L) < 3) {
             MapObj_X = x;
             MapObj_Y = y;
             if (check_alert(is_player, x, y))

@@ -33,7 +33,7 @@
 /* This file's _DATA starts at DS:0920 (seg040's ends at 091F, odd) with these, then its
    string. Only this file uses all five; seg041, the other file between seg040's data and
    this, uses none. */
-int dseg_67d6_920 = 0;                  /* DOS EMS page count; no confirmed FM Towns counterpart. */
+int16 dseg_67d6_920 = 0;                /* DOS EMS page count; no confirmed FM Towns counterpart. */
 unsigned char ws_active = 0;            /* DS:0922 */
 unsigned char gfx_inpage = 0;           /* DS:0923 */
 unsigned char obj_inpage2 = 0;          /* DS:0924 */
@@ -74,7 +74,7 @@ void far free_mem(void) { seg013_1D3C_B2(); }
 void far mem_setup(int page)
 {
     crit_fpage = 0x21;
-    crit_nlpages = (page - crit_fpage) >> 1;
+    crit_nlpages = (uint16)(page - crit_fpage) >> 1;
     crit_inpage = 0xFF;
     obj_inpage1 = 0xFF;
     scrgr_fpage = 0x0A;

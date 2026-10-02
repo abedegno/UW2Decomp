@@ -41,7 +41,7 @@
    before ovr163's LootCreature; of the files between, only this one uses them. */
 unsigned char inanmMapX, inanmMapY;
 
-int area_spell_state = 0;
+int16 area_spell_state = 0;
 unsigned char mspell_mused = 0;
 
 void far spend_mana(int cost)
@@ -674,8 +674,8 @@ void far process_area(char count, unsigned char src, SpellFn fn, unsigned char t
 void far gronk_area(struct Object far *who, char count, SpellFn fn, unsigned char type,
                     unsigned char dist, unsigned char radius)
 {
-    int x;
-    int y;
+    int16 x;
+    int16 y;
     int index;
     unsigned char src;
     int heading;
@@ -700,8 +700,8 @@ void far gronk_area(struct Object far *who, char count, SpellFn fn, unsigned cha
 
 /* Calls fn(npc, arg) for the first (or with all, every) active critter whose whoami
    matches. fn returns true when it removed the critter from the active list. */
-void far gronk_whoami(int whoami, unsigned char all, int arg,
-                      char (far *fn)(struct Object far *npc, int arg))
+void far gronk_whoami(int whoami, unsigned char all, NEARPTR arg,
+                      char (far *fn)(struct Object far *npc, NEARPTR arg))
 {
     unsigned char far *p;
     struct Object far *npc;
@@ -717,15 +717,17 @@ void far gronk_whoami(int whoami, unsigned char all, int arg,
     }
 }
 
+HOST_LAYOUT_BEGIN
 struct AreaSpell {
     SpellFn fn;
     char count;
     unsigned char dist;
     unsigned char radius;
 };
+HOST_LAYOUT_END
 
 struct AreaSpell area_spells[8] = {
-    { sp_true_sight, 100, 1, 2 },
+    { (SpellFn)sp_true_sight, 100, 1, 2 },
     { sp_sheet_light, 6, 4, 2 },
     { sp_confusion, 12, 4, 2 },
     { sp_meteor, 10, 4, 2 },
@@ -735,7 +737,7 @@ struct AreaSpell area_spells[8] = {
 };
 
 SpellFn area1_spells[8] = {
-    sp_bleed, sp_fear, sp_ward_undead, sp_charm, sp_poison, sp_hold, sp_smite,
+    sp_bleed, sp_fear, sp_ward_undead, (SpellFn)sp_charm, sp_poison, sp_hold, sp_smite,
     (SpellFn)sp_study_monster
 };
 
@@ -807,8 +809,8 @@ void far obj_spells(struct Object far *target, int how, unsigned char b)
     union Link far *link;
     unsigned char ok;
     int item;
-    int x;
-    int y;
+    int16 x;
+    int16 y;
     struct Object far *found;
     char name[80];
     int i;
@@ -919,7 +921,7 @@ void far obj_spells(struct Object far *target, int how, unsigned char b)
 /* Map Area's test: is (x, y) inside the circle {cx, cy, r}? */
 /* name: IDA MapAreaCallBack. FM Towns clip_circle_ sits at this position, between obj_spells_
    and special_spells_, and computes the same test: (x - cx)^2 + (y - cy)^2 <= r^2. */
-int far clip_circle(int x, int y, int *circle)
+int far clip_circle(int x, int y, int16 *circle)
 {
     int dx;
     int dy;
@@ -946,7 +948,7 @@ void far special_spells(struct Object far *who, struct Object far *target, char 
     int cint;
     int pint;
     int result;
-    int circle[3];
+    int16 circle[3];
     int r;
     int py;
 
@@ -960,8 +962,8 @@ void far special_spells(struct Object far *who, struct Object far *target, char 
     case 2:
         cint = Creature[OBJ_INMAJOR(who)].attr[2];
         pint = playerdat->attr[2];
-        result = cint - pint + (int)((long)rand() * 6 / 0x8000L)
-                 - (int)((long)rand() * 6 / 0x8000L);
+        result = cint - pint + (int)((int32)rand() * 6 / 0x8000L)
+                 - (int)((int32)rand() * 6 / 0x8000L);
         if (result < 2)
             result = 2;
         set_effect(0x40, result);
@@ -974,7 +976,7 @@ void far special_spells(struct Object far *who, struct Object far *target, char 
         break;
     case 3:
     case 4:
-        chg_plyp((int)((long)rand() * 2 / 0x8000L) * 6 - 3);
+        chg_plyp((int)((int32)rand() * 2 / 0x8000L) * 6 - 3);
         if (player->shrooms || skill_check(playerdat->attr[2], 20) > 0) {
             if (inplist->mode == 1)
                 fill_FB(0x5F);

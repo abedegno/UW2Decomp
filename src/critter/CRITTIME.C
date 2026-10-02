@@ -616,8 +616,8 @@ void far arena_opponent_runs(struct Object far *obj)
    teleported there at once. Always returns 1. */
 char far maybe_go_hang_out(struct Object far *npc)
 {
-    int x;
-    int y;
+    int16 x;
+    int16 y;
 
     where_shall_we_hang_out(npc, &x, &y);
     npc->qn.f.quality = x;
@@ -643,7 +643,7 @@ char far maybe_go_hang_out(struct Object far *npc)
    (0x82) once XC_CASTLE reaches 12. Names from string block 7 at whoami + 16. */
 /* name: IDA: CastleNPC_Schedule. FM Towns' where_shall_we_hang_out, called by
    maybe_go_hang_out with the same time of day switch and castle tables. */
-void far where_shall_we_hang_out(struct Object far *npc, int *x, int *y)
+void far where_shall_we_hang_out(struct Object far *npc, int16 *x, int16 *y)
 {
     int hour;
     int x1;

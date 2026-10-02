@@ -31,6 +31,7 @@ The declarations the sources share live in `src/include/`, one header per subsys
 | Header | Covers |
 | --- | --- |
 | `uw2.h` | included by every header: `union Link`, the link word that chains objects into lists, and Turbo C's `<stdio.h>` |
+| `portable.h` | included by `uw2.h`: the explicit-width types and the macros both builds share, each the original tokens under Turbo C ([PORT.md](PORT.md)) |
 | `sys.h` | start-up, the main loop, memory and EMS, errors, seg017's helpers |
 | `file.h` | archives, file I/O, compression, saves |
 | `object.h` | object lists, classes, use and look |
@@ -62,7 +63,7 @@ A header declaration is the first sight of a name for every file that includes i
 The callers were made to agree. Each name has one declaration, the defining file's type unless another type compiles the same in the definer (a function returning only constants can be `unsigned char` or `char`; `TxmTerr` is `unsigned`), and a caller that read it another way casts at the use: `(unsigned char)f()` for a return its file tested with the other signedness, `*(int *)&PickUp` where a file read a byte global as a word.
 
 - Function-pointer parameters have typedefs (`InputFn`, `ArtAllocFn`, `WhoamiFn` and others), and handlers of another type are cast where they are registered.
-- A few functions are declared without a prototype, `f()`, because their callers pass arguments the definition does not take (`editexit`, `bab_fun`, `RestoreGame`; each says so).
+- Where callers pass an argument the definition does not take, the definition now takes it as an unused `int` (`editexit`, `clearobj`, `player_look_grave`, `seg011_6`, `seg011_2C6`), which costs no byte. Where a caller pushes an `int` for a `char` parameter, the declaration is `OLDSTYLE((params))` from `portable.h` (`RestoreGame`, `SaveGame`, and `create_sprite`, which is called with one argument and with three): Turbo C sees `f()`, the port the real prototype.
 - Buffers several files lay out their own way have one declaration and a macro per view (`stdat` is `STILES` in `critter.h`, `STDAT` in `CUTS.C`), and `PlayerDat` is a union of `struct Player` and its 0x37E bytes.
 
 Six names stay declared in their files, because one shared declaration would change a caller's bytes and no cast at the call can undo it: a `char` parameter where callers push an `int` (`advance`, `set_light`, `useNSpellCharges`, `set_numbered_variable`), a name tied with another file's statics (`missile_try`), and an uninitialised far variable (`pathsq`, which an earlier `extern` would make near data). Each declaration says why.
@@ -70,6 +71,19 @@ Six names stay declared in their files, because one shared declaration would cha
 ### Adding a name
 
 Declare it in its subsystem's header and delete the file's own declarations of it, then run `make check`. If a file's bytes change, that file needs the name declared its own way: put the declaration back in that file and take the name out of the header.
+
+## Writing for both builds
+
+The sources also build the native port (PORT.md). Every change still has to pass the gate, and these keep a change portable:
+
+- Declare struct fields, globals and file-scope statics with the explicit widths of `src/include/portable.h` (`int16`, `uint16`, `int32`, `uint32`), and never write `long`. A pointer to an integer points to an explicit width. Plain `int` is fine for a scalar local, parameter or return value whose 16-bit wrap does not matter (PORT.md, "Integer widths and wrap"). `tools/widths.py FILE` applies the policy to a file.
+- A value that carries a near pointer is a `NEARPTR`; a far pointer's offset is `FP_OFF(p)`; a far copy is `FAR_COPY(dst, src, n)`.
+- Cast handlers of another type where they are registered; never leave a call without a prototype.
+- A struct with pointer fields goes between `HOST_LAYOUT_BEGIN` and `HOST_LAYOUT_END`.
+- A dereference that can see a null pointer in DOS is written through `NULLTRAP(p)` (near) or `FARNULLTRAP(p)` (far), with a comment.
+- A file whose code is DOS-only says `port: dos-only` in its header comment, and the port replaces it.
+
+Each of these is the original tokens under Turbo C. After a change, `make port-check` should show no new error or warning, and `make port` should still link.
 
 ## Named constants
 

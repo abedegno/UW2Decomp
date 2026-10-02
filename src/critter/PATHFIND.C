@@ -68,47 +68,47 @@ struct PathOffset { signed char x,y; };
    Many of these are used only by seg007 (critter AI), which declares them extern. */
 /* name: the names are the FM Towns ones; FM Towns keeps the six marked static as statics
    (at _tp_act+N), so their names are chosen here to land at the right address. */
-int crit_terr;                          /* 222C */
+int16 crit_terr;                        /* 222C */
 unsigned char doorx, doory;             /* 222E */
-int tdx, tdy;                           /* 2230 */
+int16 tdx, tdy;                         /* 2230 */
 unsigned char control;                  /* 2234 */
-static int proj_ycoord;                 /* 2236, homing dart's fine y; name chosen for layout */
+static int16 proj_ycoord;               /* 2236, homing dart's fine y; name chosen for layout */
 struct Object far *collobject;          /* 2238 */
 struct Handler near *tp_act;             /* 223C */
 unsigned char txpos;                    /* 223E */
-static int hdist;                       /* 2240, nearest homing target's distance; for layout */
+static int16 hdist;                     /* 2240, nearest homing target's distance; for layout */
 unsigned char aligned;                  /* 2242 */
-static int htarget;                     /* 2244, nearest homing target; for layout */
+static int16 htarget;                   /* 2244, nearest homing target; for layout */
 unsigned char dontchangedz;             /* 2246 */
-unsigned txpost;                        /* 2248 */
+uint16 txpost;                          /* 2248 */
 unsigned char myid;                     /* 224A */
 static unsigned char jump;              /* 224B, the last step needs a jump; for layout */
-unsigned tdistsqr;                      /* 224C */
+uint16 tdistsqr;                        /* 224C */
 unsigned char failed;                   /* 224E */
 unsigned char typos;                    /* 224F */
-unsigned long tdisttsqr;                /* 2250 */
+uint32 tdisttsqr;                       /* 2250 */
 struct Creature near *mycst;            /* 2254 */
 struct Object far *meptr;               /* 2256 */
 unsigned char pathlen;                  /* 225A */
 unsigned char myxpos, myypos, myzpos;   /* 225B */
 unsigned char hitwall;                  /* 225E */
-unsigned typost;                        /* 2260 */
+uint16 typost;                          /* 2260 */
 struct Object far *mytarget;            /* 2262 */
 unsigned char myxhome, myyhome;         /* 2266 */
 unsigned char myheight;                 /* 2268 */
 unsigned char didhitobj;                /* 2269 */
-int myxpost, myypost;                   /* 226A */
+int16 myxpost, myypost;                 /* 226A */
 unsigned char didmove;                  /* 226E */
 unsigned char hitadoor;                 /* 226F */
 struct Phys near *pn_act;           /* 2270 */
 static unsigned char cur_danger;        /* 2272, danger a path may cross; for layout */
 unsigned char myoldspeed;               /* 2273 */
 signed char tzpos;                      /* 2274 */
-int XP;                                 /* 2276 */
+int16 XP;                               /* 2276 */
 unsigned char myoldfacing;              /* 2278 */
-int YP;                                 /* 227A */
+int16 YP;                               /* 227A */
 unsigned char myoldheading;             /* 227C */
-static int projxpos;                    /* 227E, homing dart's fine x; name chosen for layout */
+static int16 projxpos;                  /* 227E, homing dart's fine x; name chosen for layout */
 /* The squares of the path being built (pathsq, pathlen of them; beeline keeps each
    square's floor height in the unused byte, flood_path marks a step that needs a jump in
    flag) and the 16 stored paths, one per critter following a path (its slot in the low
@@ -132,7 +132,7 @@ static struct PathPt far flood_list0[64], far flood_list1[64];
 /* name: FM Towns keeps the three tables as statics (__D16Infoseg+N), so their names are
    provisional. */
 static struct PathOffset PathingOffset[4] = { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } };
-unsigned freepaths = 0xFFFF;
+uint16 freepaths = 0xFFFF;
 static unsigned char path_turns[3][3] = {
     { 0xFF, 3, 0xFF }, { 2, 0xFF, 0 }, { 0xFF, 1, 0xFF } };
 static unsigned char slope_for_dir[4] = { 6, 8, 7, 9 };
@@ -309,9 +309,9 @@ void far check_sat(void) {
     int dist, turn, pitch, zdiff, zpitch, newpitch;
     struct Object far *src;
     int heading;
-    unsigned theta;
+    uint16 theta;
     int divisor = 2;
-    register unsigned vector;
+    register uint16 vector;
     register int diff;
     src = Obj_IntTMem(meptr->last_hit);
     srcx = (OBJ_HOMEX(src) << 3) + OBJ_FINEX(src);
@@ -356,13 +356,13 @@ void far init_ai(void) {
     CN3.acc[0] = 0; CN3.acc[1] = 0; CN3.flags = 0;
     CN4.acc[0] = 0; CN4.acc[1] = 0; CN4.flags = 0x80;
     CT1.mask = 0x1F30; CT1.noclimb = 0x1010; CT1.w6 = 0x20;
-    CT1.ignore = 0; CT1.special = (unsigned char (far *)())crit_hndlr_walk;
+    CT1.ignore = 0; CT1.special = (unsigned char (far *)(uint16 *))crit_hndlr_walk;
     CT2.mask = 0x700; CT2.noclimb = 0x80; CT2.w6 = 0;
-    CT2.ignore = 0x1000; CT2.special = crit_hndlr_fly;
+    CT2.ignore = 0x1000; CT2.special = (unsigned char (far *)(uint16 *))crit_hndlr_fly;
     CT3.mask = 0; CT3.noclimb = 0; CT3.w6 = 0;
-    CT3.ignore = 0; CT3.special = crit_hndlr_obj;
+    CT3.ignore = 0; CT3.special = (unsigned char (far *)(uint16 *))crit_hndlr_obj;
     CT4.mask = 0x1728; CT4.noclimb = 0x10A8; CT4.w6 = 0;
-    CT4.ignore = 0x10; CT4.special = crit_hndlr_swim;
+    CT4.ignore = 0x10; CT4.special = (unsigned char (far *)(uint16 *))crit_hndlr_swim;
 }
 /* The collision bits (MOTION.C's list) for obj where it stands, from TerrainCheck. */
 int far get_terrain(struct Object far *obj) {
@@ -895,24 +895,24 @@ int far beeline(int x1, int y1, int x2, int y2) {
     if (dx >= dy) {
         if (dx >= -dy) {
             major = &x; minor = &y;
-            slope = ((long)dy << 7) / dx;
+            slope = ((int32)dy << 7) / dx;
             step = 1;
             side = dy > 0 ? 1 : -1;
         } else {
             major = &y; minor = &x;
-            slope = ((long)dx << 7) / dy;
+            slope = ((int32)dx << 7) / dy;
             step = -1;
             side = dx > 0 ? 1 : -1;
         }
     } else {
         if (dx >= -dy) {
             major = &y; minor = &x;
-            slope = ((long)dx << 7) / dy;
+            slope = ((int32)dx << 7) / dy;
             step = 1;
             side = dx > 0 ? 1 : -1;
         } else {
             major = &x; minor = &y;
-            slope = ((long)dy << 7) / dx;
+            slope = ((int32)dy << 7) / dx;
             step = -1;
             side = dy > 0 ? 1 : -1;
         }
@@ -963,10 +963,10 @@ unsigned char far line_of_sight(int x1, int y1, int z1, int x2, int y2, int z2) 
             step = 1;
             dir = dy > 0 ? 1 : -1;
             if (dir == 1) {
-                slope = ((long)dy << 7) / dx;
+                slope = ((int32)dy << 7) / dx;
                 frac = ((y1 & 7) << 4) + slope * (7 - (x1 & 7)) / 8;
             } else {
-                slope = ((long)-dy << 7) / dx;
+                slope = ((int32)-dy << 7) / dx;
                 frac = ((7 - (y1 & 7)) << 4) + slope * (7 - (x1 & 7)) / 8;
             }
         } else {
@@ -976,10 +976,10 @@ unsigned char far line_of_sight(int x1, int y1, int z1, int x2, int y2, int z2) 
             step = -1;
             dir = dx > 0 ? 1 : -1;
             if (dir == 1) {
-                slope = ((long)dx << 7) / -dy;
+                slope = ((int32)dx << 7) / -dy;
                 frac = ((7 - (x1 & 7)) << 4) + slope * (y1 & 7) / 8;
             } else {
-                slope = ((long)-dx << 7) / -dy;
+                slope = ((int32)-dx << 7) / -dy;
                 frac = ((x1 & 7) << 4) + slope * (y1 & 7) / 8;
             }
         }
@@ -991,10 +991,10 @@ unsigned char far line_of_sight(int x1, int y1, int z1, int x2, int y2, int z2) 
             step = 1;
             dir = dx > 0 ? 1 : -1;
             if (dir == 1) {
-                slope = ((long)dx << 7) / dy;
+                slope = ((int32)dx << 7) / dy;
                 frac = ((x1 & 7) << 4) + slope * (7 - (y1 & 7)) / 8;
             } else {
-                slope = ((long)-dx << 7) / dy;
+                slope = ((int32)-dx << 7) / dy;
                 frac = ((7 - (x1 & 7)) << 4) + slope * (7 - (y1 & 7)) / 8;
             }
         } else {
@@ -1004,10 +1004,10 @@ unsigned char far line_of_sight(int x1, int y1, int z1, int x2, int y2, int z2) 
             step = -1;
             dir = dy > 0 ? 1 : -1;
             if (dir == 1) {
-                slope = ((long)dy << 7) / -dx;
+                slope = ((int32)dy << 7) / -dx;
                 frac = ((7 - (y1 & 7)) << 4) + slope * (x1 & 7) / 8;
             } else {
-                slope = ((long)-dy << 7) / -dx;
+                slope = ((int32)-dy << 7) / -dx;
                 frac = ((y1 & 7) << 4) + slope * (x1 & 7) / 8;
             }
         }

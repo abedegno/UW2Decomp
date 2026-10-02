@@ -50,17 +50,17 @@ unsigned char tsteps = 0;
 signed char bobEffect[16] = { 1, 3, 4, 3, 1, -3, 0, 0, 1, 3, 4, 3, 1, -3, 0, 0 };
 signed char sliEffect[16] = { 0, 0, -1, -2, -3, -4, -5, -6, -6, -4, -3, -2, -1, 0, 0, 0 };
 signed char rorEffect[16] = { -4, -3, -2, -1, 0, 1, 2, 3, 4, 3, 2, 1, 0, -1, -2, -3 };
-int PlayerInput = 0;
-int PlayerTurn = 15;
+int16 PlayerInput = 0;
+int16 PlayerTurn = 15;
 /* Nothing reads these two. */
 /* name: their 3 bytes split as char and int, as in FM Towns, where _oldPlayerInput sits
    on the next even address after _IgnoringInput. */
 char IgnoringInput = 0;
-int oldPlayerInput = 0;
+int16 oldPlayerInput = 0;
 unsigned char water_eff = 0xFF;
 char MoveCamera = 0;
-int ForwInpRate = 0;
-int TurnInpRate = 0;
+int16 ForwInpRate = 0;
+int16 TurnInpRate = 0;
 unsigned char KeybUsed = 0;
 /* name: the statics below have no FM Towns names (it addresses them from _TurnInpRate),
    so their names are ours. */
@@ -69,7 +69,7 @@ unsigned char KeybUsed = 0;
    ice with grip and slippery ice; step_pan: the left and right foot's pan. */
 static unsigned char mouse_moves[3] = { 9, 8, 10 };
 static unsigned char move_keys[9] = { 0x11, 0x1F, 0x1E, 0x20, 0x2C, 0x2E, 0x2D, 0x12, 0x10 };
-static unsigned long last_time = 0;
+static uint32 last_time = 0;
 static unsigned char frame_inc = 0;
 static unsigned char step_sfx[6] = { 1, 2, 0x2F, 0x30, 0x1D, 0x1D };
 static unsigned char step_pan[2] = { 0x38, 0x48 };
@@ -85,14 +85,14 @@ static unsigned char noise_count = 0;
    vort_theta 406, playerMod and PlayerPitch 552, PlayerBank 576, camang 595, campos 603,
    vort_x and vort_y 1006. */
 unsigned char doMod;
-int playerMod[4];
-int PlayerPitch;
-int PlayerBank;
-int campos[3];
-int camang[3];
-int vort_rad;
-int vort_timer;
-int vort_theta;
+int16 playerMod[4];
+int16 PlayerPitch;
+int16 PlayerBank;
+int16 campos[3];
+int16 camang[3];
+int16 vort_rad;
+int16 vort_timer;
+int16 vort_theta;
 unsigned char vort_x, vort_y;
 
 /* The mouse button is down in the 3D view (ui/INTERACT.C): moves the Wizard Eye camera,
@@ -119,7 +119,7 @@ void far player_mous_move(void)
    (game/PLAYER.C): 6 and 7 the jumps, 0 stop, the rest read through do_player_keyboard. */
 void far parse_playin(int command)
 {
-    int buttons;
+    int16 buttons;
 
     if (!(KeybUsed = command >= 0))
     {
@@ -243,7 +243,7 @@ void far do_player_keyboard(void)
    passed since the key. */
 void far player_simple_move(int dir)
 {
-    unsigned long start;
+    uint32 start;
     int frames;
 
     start = *Time;
@@ -276,7 +276,7 @@ void far player_simple_move(int dir)
    of the file). The animated objects advance once per 0x40 units of time. */
 void far check_physics(void)
 {
-    unsigned long delta;
+    uint32 delta;
     unsigned char frames;
 
     delta = *Time - last_time;
@@ -602,7 +602,7 @@ void far set_effect(unsigned char which, char amount)
    vortex (critdata - 2). */
 void far get_eye(void)
 {
-    int x, y;
+    int16 x, y;
 
     if (UsPtr == ThePlayer)
     {

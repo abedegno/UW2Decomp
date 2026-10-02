@@ -18,13 +18,13 @@ extern char HomeDir[0x42];
 /* DS:5D60, FM Towns _scrmode.
    name: IDA's label "InGameMode" here is wrong: a different global, DS:2506, exists
    under that name already. */
-extern int scrmode;
-extern int scrnum;
-extern int notdone;
-extern int changed;
-extern int NewPlayerX;
-extern int NewPlayerY;
-extern int NewPlayerLevel;
+extern int16 scrmode;
+extern int16 scrnum;
+extern int16 notdone;
+extern int16 changed;
+extern int16 NewPlayerX;
+extern int16 NewPlayerY;
+extern int16 NewPlayerLevel;
 void far init_world(int argc, char *argv[]);
 void far titlescr(void);
 void far init_edit(int argc, char *argv[]);
@@ -39,15 +39,15 @@ unsigned char far new_player_pos(void);
 void far ReadCfg_ovr112_839(void);
 void far move_initial_files(void);
 extern void (far *editor_dispatch[3][16])();
-extern int change_state[3];
+extern int16 change_state[3];
 extern char NewPlyFade;
 void far newscr(int mode);
 void far real_death(int how);
 extern char in_game;
 extern void (far *npp_func)();
 void far free_world(char flag);
-void far editexit();  /* match: no prototype: callers pass an argument it ignores */
-void far clearobj();  /* match: no prototype: callers pass an argument it ignores */
+void far editexit(int unused);  /* callers pass an argument it ignores */
+void far clearobj(int unused);  /* callers pass an argument it ignores */
 
 /* MAINLOOP.C: the main loop and the per-screen change dispatcher */
 extern unsigned char dsfx_playing;
@@ -58,7 +58,7 @@ void far editchng(int bits);
 /* EMS.C: EMS (LIM expanded memory) driver calls */
 /* The segment of the EMS page frame, set by seg013 from INT 67h function 41h.
    name: provisional; no FM Towns counterpart (FM Towns has no EMS). */
-extern unsigned ems_frame;
+extern uint16 ems_frame;
 void far seg013_1D3C_138(unsigned handle, char far *name);
 int far seg013_1D3C_A(unsigned min_pages, unsigned max_pages);
 void far seg013_1D3C_B2(void);
@@ -94,17 +94,17 @@ void far pfatal_code(int code);
 void far pfatal(char *message);
 
 /* UTIL.C: small helpers */
-int far mvcheck(int *val, int limit, int step, int dir);
-void far move_along(int heading, int dist, int *x, int *y);
+int far mvcheck(int16 *val, int limit, int step, int dir);
+void far move_along(int heading, int dist, int16 *x, int16 *y);
 int far rollem(int dice, int sides);
 
 /* DEBUG.C: debugging hooks */
 void far init_debug(void);
 
 /* MODEX.ASM */
-void far DRAW_RELATED_seg017_2179_2A2();
-void far DRAW_RELATED_seg017_2179_320(unsigned offset, int far *width, int far *height);
-void far DRAW_RELATED_seg017_2179_361();
+void far DRAW_RELATED_seg017_2179_2A2(unsigned char far *src, unsigned dst, int w, int h);
+void far DRAW_RELATED_seg017_2179_320(unsigned offset, int16 far *width, int16 far *height);
+int far DRAW_RELATED_seg017_2179_361(unsigned char far *src, unsigned n, int unused);
 char far * far FindStringDelimiter(char far *s, int c);
 void far PrintStringToConsole_seg017_DE(char far *text);
 void far gr_pixel(int x, int y, int color);  /* provisional: 1F8C:0255 */
@@ -119,8 +119,8 @@ void far str_ncopy(char far *dst, char far *src, int n);
 char far * far str_str(char far *s, char far *find);
 
 /* INT0TRAP.ASM */
-extern unsigned far int0_sp;
-extern unsigned far int0_ss;
+extern uint16 far int0_sp;
+extern uint16 far int0_ss;
 /* The divide-by-zero trap in seg018 (assembly), and the two words in its code segment
    where it finds the stack to return to. name: DOS only; the names are ours. */
 void interrupt far int0_trap();
@@ -132,16 +132,16 @@ extern unsigned char far *Asc;  /* DS:2148, FM Towns _Asc */
    it). name: ours; FM Towns has no counterpart. */
 extern unsigned char far *CapsLock;  /* DS:212C */
 extern unsigned char far *Ctrl;  /* DS:2134 */
-extern int far *MouseDx;  /* DS:214C, FM Towns _MouseDx */
-extern int far *MouseDy;  /* DS:2150, FM Towns _MouseDy */
-extern int far *MouseOn;  /* DS:2154, FM Towns _MouseOn */
+extern int16 far *MouseDx;  /* DS:214C, FM Towns _MouseDx */
+extern int16 far *MouseDy;  /* DS:2150, FM Towns _MouseDy */
+extern int16 far *MouseOn;  /* DS:2154, FM Towns _MouseOn */
 extern unsigned char far *Shift;  /* DS:2128 */
 extern char far *cExitMessage;
-extern int far *cJoyInit;
+extern int16 far *cJoyInit;
 /* The fatal-exit message: cPerror gets the offset of cExitMessage. */
-extern int far *cPerror;
-extern int far *joy_buttons;
-extern int far *joy_position;
+extern int16 far *cPerror;
+extern int16 far *joy_buttons;
+extern int16 far *joy_position;
 /* The asm input module (2110): FM Towns key_, mouse_ and mbuttons. key returns the next key
    event (0 for none, else the character in the low byte and the scan code in the high);
    mouse leaves the motion in *MouseDx and *MouseDy. */
@@ -153,7 +153,7 @@ void far seg021_22FD_755(void);    /* seg021's start-up (grfx_init) */
 void far seg021_22FD_791(void);    /* and shut-down (grfx_close) */
 void far seg021_22FD_7CD(void);    /* read the joystick into *joy_position */
 void far seg021_22FD_809(void);    /* read its buttons into *joy_buttons */
-extern unsigned long far *Time;  /* DS:2158 */
+extern uint32 far *Time;         /* DS:2158 */
 
 /* C3DENTRY.ASM: the C entry points into the 3D renderer (seg004) and the frame buffer
    (seg003's GRENTRY.ASM). cRender draws a frame from the render database and in fact
@@ -161,21 +161,21 @@ extern unsigned long far *Time;  /* DS:2158 */
    screen at (x, y), y counting up from the bottom; cFrmtoRaw decodes a picture. */
 void far Callback_seg021_22FD_CEA(int);    /* FM Towns cLiteFB */
 int far cAtan2(int x, int y);
-extern int far *cDbase;  /* DS:216C, start of the bytecode buffer */
-extern int far *cDbbase;  /* DS:2180, where gr_entry records dbptr */
-extern int far *cEntryStrt;  /* DS:2170 */
+extern int16 far *cDbase;  /* DS:216C, start of the bytecode buffer */
+extern int16 far *cDbbase;  /* DS:2180, where gr_entry records dbptr */
+extern int16 far *cEntryStrt;  /* DS:2170 */
 void far cFBtoScreen(void);
 void far cFillFB(int);
 void far * far cFrmtoRaw(void far *data, unsigned char far *pal, unsigned char mode);
-void far cFstSinCos(int angle, int *a, int *b);
+void far cFstSinCos(int angle, int16 *a, int16 *b);
 void far cInit3d(void);
 extern unsigned char far *cLightTabs;
-extern int far *cPixXferStuff;
+extern int16 far *cPixXferStuff;
 void far cPlaceFB(int x, int y, int w, int h);
 extern struct Camera far *cPlayer;
 void far cRender(void);
-void far cSinCos(int angle, int *x, int *y);
-int far cSqRt(long v);
+void far cSinCos(int angle, int16 *x, int16 *y);
+int far cSqRt(int32 v);
 void far cZoom(unsigned zoom);
 
 /* STUBS2.C: screen changes */
@@ -188,7 +188,7 @@ void far ovr165_E(void);
 int far SetPnt(char x, char y, char z);
 
 /* STATS.C: the character panel's statistics page */
-extern int spsave[3];  /* DS:1B9F; FM Towns reads _spsave+4 */
+extern int16 spsave[3];  /* DS:1B9F; FM Towns reads _spsave+4 */
 void far sp_hp(void);
 void far sp_mp(void);
 void far sp_xp(void);

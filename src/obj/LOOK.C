@@ -36,7 +36,7 @@
 #include "ui.h"
 
 /* Copy a far string, terminator included, to any address. */
-#define far_strcpy(d, s) movedata(FP_SEG(s), FP_OFF(s), FP_SEG(d), FP_OFF(d), str_len(s) + 1)
+#define far_strcpy(d, s) FAR_COPY(d, s, str_len(s) + 1)
 
 
 
@@ -124,8 +124,8 @@ void far LookAt(struct Object far *obj, int lore)
    its owner field is set. Returns 1 when it added a word. */
 char far do_mods(struct Object far *obj, int lore, char *s)
 {
-    int major;
-    int effect;
+    int16 major;
+    int16 effect;
     unsigned char flag;
     char far *str;
 
@@ -154,8 +154,8 @@ char far do_mods(struct Object far *obj, int lore, char *s)
    whose spell has charges, ' with N full charges' (a potion always shows 1). */
 char far do_of(struct Object far *obj, int lore, char *s)
 {
-    int major;
-    int effect;
+    int16 major;
+    int16 effect;
     unsigned char flag;
     char far *name;
     char found;

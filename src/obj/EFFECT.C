@@ -41,11 +41,11 @@
 #include "view3d.h"
 unsigned char lengset = 0;              /* DS:98E, check_door set the length itself */
 unsigned char DoAnimO = 1;              /* DS:98F */
-static int timer_tick = 0;              /* DS:990; name: FM Towns keeps it in _spec_col */
+static int16 timer_tick = 0;            /* DS:990; name: FM Towns keeps it in _spec_col */
 
 char animcount;                         /* DS:34B4 */
 struct AnimClass animclassd[16];        /* DS:34B6 */
-int timerlist[0x40];                    /* DS:34F6 */
+int16 timerlist[0x40];                  /* DS:34F6 */
 char timercount;                        /* DS:3576 */
 struct Anim animlist[0x40];             /* DS:3578 */
 
@@ -325,8 +325,8 @@ void far fireball_effect(struct Object far *src, int x, int y)
    missile). */
 unsigned char far mts_doanim(struct Object far *obj, int x, int y, char who)
 {
-    int from[3] = { ITEM_FIREBALL_14, ITEM_LIGHTNING_BOLT, ITEM_FIREBALL_1D };
-    int to[3] = { ITEM_EXPLOSION_1C2, ITEM_LIGHTNING_1C5, ITEM_EXPLOSION_1C2 };
+    int16 from[3] = { ITEM_FIREBALL_14, ITEM_LIGHTNING_BOLT, ITEM_FIREBALL_1D };
+    int16 to[3] = { ITEM_EXPLOSION_1C2, ITEM_LIGHTNING_1C5, ITEM_EXPLOSION_1C2 };
     int i;
 
     for (i = 0; i < 3; i++)

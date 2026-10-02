@@ -55,11 +55,11 @@ unsigned char Hasted = 0;
 unsigned char WizEye = 0;
 unsigned char Blessed = 0;
 unsigned char Valor = 0;                /* DS:0383 */
-int LeftPanel = 2;
-int PickDist = 0x90;
+int16 LeftPanel = 2;
+int16 PickDist = 0x90;
 unsigned char quick_time = 0;
 unsigned char def_mode = 0;
-long lastDurCheck = 0;
+int32 lastDurCheck = 0;
 unsigned char DurCount = 0;
 unsigned char realDScheck = 1;
 unsigned char releaseable = 0;
@@ -72,18 +72,18 @@ unsigned char releaseable = 0;
    releasePtr 914, GameInputMode 935. CrownTmap is the FM Towns name in the same group with
    a key that fits the unreferenced byte at DS:2500 (one byte in FM Towns too; DS:2501 is
    padding, as Turbo C puts anything wider than a byte at an even offset). */
-int pTxtId;
-int current_button;
+int16 pTxtId;
+int16 current_button;
 ActorFn ObjectActor;
 struct Object far *ObjectActing;
-int RightButtonThing;
-int ObjectActorArg;
+int16 RightButtonThing;
+int16 ObjectActorArg;
 struct Tile far *PickMap;
-int MapObj_X, MapObj_Y;
+int16 MapObj_X, MapObj_Y;
 struct Object far *newPlObj;
 unsigned char CrownTmap;
 union Link far *releasePtr;
-int GameInputMode;
+int16 GameInputMode;
 
 
 /* Called every frame: drives the player's attack, redraws the health and mana flasks and
@@ -244,7 +244,7 @@ unsigned char far check_around(unsigned char far *map, int x, int y)
 {
     unsigned char c;
     int side, k, r;
-    int d[2] = { 0, 1 };
+    int16 d[2] = { 0, 1 };
 
     for (r = 1; r < 10; r++) {
         for (side = 0; side < 1; side++) {
@@ -254,7 +254,7 @@ unsigned char far check_around(unsigned char far *map, int x, int y)
                 if (x >= 1 && x <= xwid + 1 && y >= 0 && y <= xhgt) {
                     c = (map + y * (xwid + 2))[x + 2];
                     /* match: this file read PickUp as a word */
-                    if (c >= 1 && c < *(int *)&PickUp)
+                    if (c >= 1 && c < *(int16 *)&PickUp)
                         return c;
                 }
             }
@@ -287,7 +287,7 @@ struct Object far * far pick_3d(int how)
     p += inplist->y * (xwid + 2) + inplist->x + 2;
     idx = 0;
     pTxtId = 0;
-    if (*p >= 1 && *p < *(int *)&PickUp) {
+    if (*p >= 1 && *p < *(int16 *)&PickUp) {
         idx = color_to_obj[*p - 1];
         PickMap = mlowptr + color_to_map[*p - 1];
     } else if (*p >= 0xAC && *p <= 0xFC || *p == 0) {

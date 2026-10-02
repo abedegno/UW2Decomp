@@ -64,7 +64,7 @@ int far move_opbtn(unsigned char far *p, int size, register int n)
 /* The introduction plays before the menu when there are no saved games. */
 void far do_intro_scene(int intro)
 {
-    int found;
+    int16 found;
     char descs[4][40];
 
     if (intro) {
@@ -116,7 +116,7 @@ void far draw_start_buttons(int n, struct Button far *b, unsigned char text, int
    fails shows 'Error: Bad save file' and returns to the menu. */
 void far real_start(int intro)
 {
-    int found;
+    int16 found;
     unsigned char done;
     char ok;
     int n;
@@ -226,7 +226,7 @@ void far real_start(int intro)
 int far parse_start_mouse(int n, struct Button far *b, unsigned char text)
 {
     int none;
-    int x, y;
+    int16 x, y;
     struct Button far *p;
     int left, bottom, w, h;
     char **s;
@@ -337,7 +337,7 @@ int far parse_start_input(register int n, struct Button far *b, int text, int se
 int far do_journey(void)
 {
     int i;
-    int found;
+    int16 found;
     int count;
     int j;
     char *descs[4];

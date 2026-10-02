@@ -48,27 +48,27 @@
 /* Initialised data, DS:268..291, in definition order. FM Towns keeps the statics after
    _current_buttongroup (+4 onwards) and the four publics in its small-data group, in this
    same order. */
-static int mouse_x = 100;               /* DS:268 */
-static int mouse_y = 100;               /* DS:26A */
-static int mouse_shown = 0;             /* DS:26C, mouse_show/mouse_hide nesting count */
+static int16 mouse_x = 100;             /* DS:268 */
+static int16 mouse_y = 100;             /* DS:26A */
+static int16 mouse_shown = 0;           /* DS:26C, mouse_show/mouse_hide nesting count */
 static unsigned char mouse_saved = 0;   /* DS:26E, the background under the cursor is saved */
-static int q_button = -1;               /* DS:26F, the queued button press, -1 for none */
-static int q_x = 0;                     /* DS:271, where it was pressed */
-static int q_y = 0;                     /* DS:273 */
-static int q_release = 0;               /* DS:275 */
+static int16 q_button = -1;             /* DS:26F, the queued button press, -1 for none */
+static int16 q_x = 0;                   /* DS:271, where it was pressed */
+static int16 q_y = 0;                   /* DS:273 */
+static int16 q_release = 0;             /* DS:275 */
 static unsigned char q_taken = 0;       /* DS:277, the last input came from the queue */
-static int last_button = 0;             /* DS:278 */
-static int in_x0 = -1;                  /* DS:27A, the region the pointer is in, -1 none */
-int joymovecur = 0;                     /* DS:27C, FM Towns _joymovecur */
-int fauxright = 0;                      /* DS:27E, FM Towns _fauxright */
-static int num_regions = 0;             /* DS:280 */
+static int16 last_button = 0;           /* DS:278 */
+static int16 in_x0 = -1;                /* DS:27A, the region the pointer is in, -1 none */
+int16 joymovecur = 0;                   /* DS:27C, FM Towns _joymovecur */
+int16 fauxright = 0;                    /* DS:27E, FM Towns _fauxright */
+static int16 num_regions = 0;           /* DS:280 */
 static char force_depth = 0;            /* DS:282, force_mouse_cursor nesting */
-static int warp_x = -1;                 /* DS:283, keyboard warp target, -1 for none */
+static int16 warp_x = -1;               /* DS:283, keyboard warp target, -1 for none */
 char mouse_hand = 0;                    /* DS:285, FM Towns _mouse_hand: swap the buttons */
 unsigned char calledfrom3d = 0;         /* DS:286, FM Towns _calledfrom3d */
-static int key_index = 0;               /* DS:287, where the key array scan resumes */
-static unsigned long warp_time = 0;     /* DS:289 */
-static unsigned long key_time = 0;      /* DS:28D */
+static int16 key_index = 0;             /* DS:287, where the key array scan resumes */
+static uint32 warp_time = 0;            /* DS:289 */
+static uint32 key_time = 0;             /* DS:28D */
 static char mouse_first = 1;            /* DS:291, get_input alternates mouse and keys */
 
 /* Uninitialised data, DS:22E6..23E1. */
@@ -78,35 +78,35 @@ static char mouse_first = 1;            /* DS:291, get_input alternates mouse an
    one bucket (909). The statics are FM Towns _mcurhndl+0x10 to +0xDA, which has no names
    for them, so these names are ours, chosen to land where the EXE has them (bucket in
    brackets). */
-static int m_curs;                      /* DS:22E6 (125), the cursor set_mouse_data chose */
-static int rgn_ylo[20];                 /* DS:22E8 (146), the mouse regions */
-static int hotspot_x;                   /* DS:2310 (160), the cursor's hot spot */
-static int hotspot_y;                   /* DS:2312 (160) */
-static int rgn_left[20];                /* DS:2314 (162), 10000 marks a free region */
-static int con_x0;                      /* DS:233C (163), mouse_constrain's box */
-static int con_y0;                      /* DS:233E (171) */
-static int rgn_x1[20];                  /* DS:2340 (178) */
-static int m_warp_dx;                   /* DS:2368 (205), keyboard warp steps */
-static int m_warp_dy;                   /* DS:236A (205) */
-static int rgn_ytop[20];                /* DS:236C (234) */
-static int cur_h;                       /* DS:2394 (411), the cursor's size */
-static int max_x;                       /* DS:2396 (421) */
-static int max_y;                       /* DS:2398 (421) */
-static int m_cursor_pic;                /* DS:239A (437), the cursor being drawn */
-static int m_warp_rate;                 /* DS:239C (461) */
-static int curs_w;                      /* DS:239E (475) */
-static int warp_y;                      /* DS:23A0 (495) */
-static int warp_key;                    /* DS:23A2 (671), the key driving the warp */
-static int hit_y0;                      /* DS:23A4 (688), the bounds of the region in_x0 is */
-static int reg_icon[20];                /* DS:23A6 (746), each region's cursor */
-static int curs_stack[3];               /* DS:23CE (763), force_mouse_cursor's saved cursors */
-static int in_x1;                       /* DS:23D4 (873) */
-static int in_y1;                       /* DS:23D6 (881) */
-int m3dx;                               /* DS:23D8, the 3D view, from mous_3d_set */
-int m3dy;                               /* DS:23DA */
-int m3dw;                               /* DS:23DC */
-int m3dh;                               /* DS:23DE */
-int m3dt;                               /* DS:23E0, cursor against it: 0 outside, 1 across, 2 inside */
+static int16 m_curs;                    /* DS:22E6 (125), the cursor set_mouse_data chose */
+static int16 rgn_ylo[20];               /* DS:22E8 (146), the mouse regions */
+static int16 hotspot_x;                 /* DS:2310 (160), the cursor's hot spot */
+static int16 hotspot_y;                 /* DS:2312 (160) */
+static int16 rgn_left[20];              /* DS:2314 (162), 10000 marks a free region */
+static int16 con_x0;                    /* DS:233C (163), mouse_constrain's box */
+static int16 con_y0;                    /* DS:233E (171) */
+static int16 rgn_x1[20];                /* DS:2340 (178) */
+static int16 m_warp_dx;                 /* DS:2368 (205), keyboard warp steps */
+static int16 m_warp_dy;                 /* DS:236A (205) */
+static int16 rgn_ytop[20];              /* DS:236C (234) */
+static int16 cur_h;                     /* DS:2394 (411), the cursor's size */
+static int16 max_x;                     /* DS:2396 (421) */
+static int16 max_y;                     /* DS:2398 (421) */
+static int16 m_cursor_pic;              /* DS:239A (437), the cursor being drawn */
+static int16 m_warp_rate;               /* DS:239C (461) */
+static int16 curs_w;                    /* DS:239E (475) */
+static int16 warp_y;                    /* DS:23A0 (495) */
+static int16 warp_key;                  /* DS:23A2 (671), the key driving the warp */
+static int16 hit_y0;                    /* DS:23A4 (688), the bounds of the region in_x0 is */
+static int16 reg_icon[20];              /* DS:23A6 (746), each region's cursor */
+static int16 curs_stack[3];             /* DS:23CE (763), force_mouse_cursor's saved cursors */
+static int16 in_x1;                     /* DS:23D4 (873) */
+static int16 in_y1;                     /* DS:23D6 (881) */
+int16 m3dx;                             /* DS:23D8, the 3D view, from mous_3d_set */
+int16 m3dy;                             /* DS:23DA */
+int16 m3dw;                             /* DS:23DC */
+int16 m3dh;                             /* DS:23DE */
+int16 m3dt;                             /* DS:23E0, cursor against it: 0 outside, 1 across, 2 inside */
 
 /* The asm graphics module's pointer table. DS:21B8 points at seg048:434; its words 0x100
    and 0x101 are the save-under buffer FM Towns keeps at _Color_data_ptr+0x400 (4-byte
@@ -187,7 +187,7 @@ char far mous_in_3d_p(void)
 void far mous_3d_hide(void)
 {
     int x0, x1;
-    int y1, y0;
+    int16 y1, y0;
 
     x0 = mouse_x - curs_w + hotspot_x;
     x1 = mouse_x + curs_w - hotspot_x;
@@ -211,7 +211,7 @@ void far mous_3d_show(void)
 {
 }
 
-void far mouse_getxy(int *x, int *y)
+void far mouse_getxy(int16 *x, int16 *y)
 {
     *x = mouse_x;
     *y = mouse_y;
@@ -219,7 +219,7 @@ void far mouse_getxy(int *x, int *y)
 
 /* Where the last button event happened: the queued position if that event came from the
    queue (q_taken), else the pointer now. */
-void far mouse_Qgetxy(int *x, int *y)
+void far mouse_Qgetxy(int16 *x, int16 *y)
 {
     if (q_taken) {
         *x = q_x;
@@ -254,7 +254,7 @@ void far mouse_putxy(int x, int y)
     mouse_show();
 }
 
-int far mouse_getbut(int *b)
+int far mouse_getbut(int16 *b)
 {
     if ((*b = mouse_btns()) == 0)
         q_button = -1;
@@ -295,9 +295,9 @@ void far mouse_release(char how)
    player_3dlook). */
 unsigned char far mouse_dragged(char how)
 {
-    int x0, y0;
-    int b;
-    int x1, y1;
+    int16 x0, y0;
+    int16 b;
+    int16 x1, y1;
     unsigned char moved;
 
     moved = 0;
@@ -515,7 +515,7 @@ void far unforce_mouse_cursor(int how)
    hidden (SCROLL.C's set_mouse_in) and whether the pointer is over the 3D view. */
 char far mouse_check_reg(int x0, int y0, int x1, int y1)
 {
-    int dy, dx;
+    int16 dy, dx;
 
     dy = (cur_h + 1) >> 1;
     dx = (curs_w + 1) >> 1;
@@ -582,7 +582,7 @@ void far checkMouse(void)
 void far moveMouse(void)
 {
     int wl, wt, wr, wb;
-    int dx, dy;
+    int16 dx, dy;
     int axes, n;
 
     dx = 0;

@@ -35,7 +35,7 @@ struct Tile;
 
 struct Spell {
     unsigned char cls;                  /* class in bits 3-7 */
-    int runes;                          /* the three runes, 5 bits each */
+    int16 runes;                        /* the three runes, 5 bits each */
     unsigned char sub;
 };
 
@@ -62,7 +62,7 @@ void far trap_fire(struct Object far *trap, int x, int y);
 /* SPELLS.C: casting spells */
 extern unsigned char inanmMapX;
 extern unsigned char inanmMapY;
-extern int area_spell_state;
+extern int16 area_spell_state;
 extern unsigned char mspell_mused;
 void far restore_mana(struct Object far *who, char amount);
 void far healing(struct Object far *who, char sub);
@@ -90,8 +90,8 @@ typedef char (far *SpellFn)(int x, int y, struct Object far *target, struct Tile
                             unsigned char src);
 void far gronk_area(struct Object far *who, char count, SpellFn fn, unsigned char type, unsigned char dist, unsigned char radius);
 /* What gronk_whoami (and gronk_race) do to each critter they find. */
-typedef char (far *WhoamiFn)(struct Object far *npc, int arg);
-void far gronk_whoami(int whoami, unsigned char all, int arg, WhoamiFn fn);
+typedef char (far *WhoamiFn)(struct Object far *npc, NEARPTR arg);
+void far gronk_whoami(int whoami, unsigned char all, NEARPTR arg, WhoamiFn fn);
 void far process_area(char count, unsigned char src, SpellFn fn, unsigned char type, char x0, char y0, char w, char h);
 extern struct Spell far spells[69];
 
@@ -110,7 +110,7 @@ void far thump_your_magic_twanger_froggie(void);
 char far sp_study_monster(struct Object far *caster, struct Object far *target);
 
 /* RUNES.C: the rune bag and casting from runes */
-extern unsigned long lstime;
+extern uint32 lstime;
 char far add_rune(struct Object far *obj);
 void far clear_runes(void);
 void far RedispRune(void);

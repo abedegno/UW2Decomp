@@ -45,10 +45,11 @@
 
 /* An edge of the vision arc walking the grid. The list is chained by the low nibble of link,
    15 ending it; bit 7 of link says which side of the arc the edge is on. */
+HOST_LAYOUT_BEGIN
 struct Gvec {
     char link;                          /* 0x00 */
-    int dx;                             /* 0x01 */
-    int dy;                             /* 0x03 */
+    int16 dx;                           /* 0x01 */
+    int16 dy;                           /* 0x03 */
     signed char x;                      /* 0x05, tile column relative to the eye */
     unsigned char fx;                   /* 0x06 */
     signed char y;                      /* 0x07, tile row */
@@ -57,13 +58,14 @@ struct Gvec {
     struct Gloc *loc;                   /* 0x0D */
     struct Gloc *loc2;                  /* 0x0F */
 };
+HOST_LAYOUT_END
 
 /* Map steps for the four quadrants: along x, along y, and the diagonal. */
-int chgtable[4][3] = {
+int16 chgtable[4][3] = {
     { 1, MAP_SIZE, -1 }, { -MAP_SIZE, 1, MAP_SIZE }, { -1, -MAP_SIZE, 1 }, { MAP_SIZE, -1, -MAP_SIZE }
 };
 /* The heading of each quadrant's turn, subtracted from the camera's heading. */
-unsigned headmod[4] = { 0, 0x4000, 0x8000, 0xC000 };
+uint16 headmod[4] = { 0, 0x4000, 0x8000, 0xC000 };
 /* Tile types as seen from each quadrant. */
 unsigned char trans_grid[4][16] = {
     { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 },
@@ -91,29 +93,29 @@ unsigned char enc_dat[16][7] = {
 unsigned char flciel[16] = { 0x00, 0x80, 0xC0, 0xC1, 0xC2, 0xC3, 0x84, 0x85, 0x86, 0x87 };
 unsigned char tile_to_five[16] = { 0, 0, 0, 0, 0, 0, 1, 2, 3, 4 };
 /* Per side of the arc (0 left, 1 right). */
-static int side_dark[2] = { TW_NORTH, 0 };
-static int side_wall[2] = { TW_WEST, TW_EAST };
-static int side_tile[2] = { 2, 3 };
-static int side_step[2] = { -1, 1 };
+static int16 side_dark[2] = { TW_NORTH, 0 };
+static int16 side_wall[2] = { TW_WEST, TW_EAST };
+static int16 side_tile[2] = { 2, 3 };
+static int16 side_step[2] = { -1, 1 };
 
 /* match: this file's _BSS, DS:26EA..2C67 (seg031's ends at 26E9; seg019's starts at 2C68 with
    cWCol, key 27), laid out by name (tools/bssorder.py): lcldblen 148, xhgt 176, glocs 191,
    mxY 237, quad 377, strtime 411, mapptr 653, curZoom 667, gvecs 703, demo_mode 708,
    trans 804, gvechead 879, loct 900, DbEntry 916, xwid 960. All FM Towns names. */
-int lcldblen;
-int xwid, xhgt;
+int16 lcldblen;
+int16 xwid, xhgt;
 char demo_mode;
-unsigned curZoom;
+uint16 curZoom;
 char quad;
 char loct;
 unsigned char *trans;
-unsigned long strtime;
+uint32 strtime;
 struct Tile far *mapptr;
-int mxY;
+int16 mxY;
 struct Gloc glocs[17][33];
 struct Gvec gvecs[15];
 char gvechead;
-int far *DbEntry;
+int16 far *DbEntry;
 /* seg_5DFD (declared in gfx.h) is the 4 KB far buffer at 5DFD:0000 (segment table entry
    60) that seg004's texture loader copies a bitmap into; seg032_2E9B_195 points the
    bitmap table's segments back at it.
@@ -153,7 +155,7 @@ void far place_3d_view(int x, int y, int w, int h)
    place_3d_view_ and does the same. */
 void far set_cyb(char on)
 {
-    int far *p = (int far *)&bmsegoff;
+    int16 far *p = (int16 far *)&bmsegoff;
 
     p = MK_FP(FP_SEG(&bmsegoff), bmsegoff);
     p++;
@@ -199,7 +201,7 @@ void far seg032_2E9B_18B(void)
 
 void far seg032_2E9B_195(int on)
 {
-    int far *p;
+    int16 far *p;
     register unsigned char old;
     register unsigned char want;
 
@@ -209,7 +211,7 @@ void far seg032_2E9B_195(int on)
     else
         want = on;
     if (want != old) {
-        p = (int far *)&bmsegoff;
+        p = (int16 far *)&bmsegoff;
         p = MK_FP(FP_SEG(&bmsegoff), bmsegoff);
         if (SpecShadeMode) {
             p[4] = FP_SEG(seg_5DFD);
@@ -455,7 +457,7 @@ char far enc_n_chk(register struct Gvec *v, char dir, char want)
     else {
         if (code & 0x10) {
             if ((tile_walls[other = trans_grid[quad][v->map[chgtable[quad][1]].type]] & TW_SOUTH) == 0) {
-                if (v->map[chgtable[quad][1]].height + ((tile_walls[other] & TW_SLOPE) == TW_SLOPE) - (other == TILE_SLOPE_N)
+                if ((uint16)(v->map[chgtable[quad][1]].height + ((tile_walls[other] & TW_SLOPE) == TW_SLOPE) - (other == TILE_SLOPE_N))
                     <= v->map->height + (here == 6) + (other == here && here != 1))
                     code -= 0x10;
                 else
@@ -464,7 +466,7 @@ char far enc_n_chk(register struct Gvec *v, char dir, char want)
         }
         if (code & 0x20) {
             if ((tile_walls[other = trans_grid[quad][v->map[chgtable[quad][0]].type]] & TW_WEST) == 0) {
-                if (v->map[chgtable[quad][0]].height + ((tile_walls[other] & TW_SLOPE) == TW_SLOPE) - (other == TILE_SLOPE_E)
+                if ((uint16)(v->map[chgtable[quad][0]].height + ((tile_walls[other] & TW_SLOPE) == TW_SLOPE) - (other == TILE_SLOPE_E))
                     <= v->map->height + (here == 8) + (other == here && here != 1))
                     code -= 0x20;
                 else
@@ -473,7 +475,7 @@ char far enc_n_chk(register struct Gvec *v, char dir, char want)
         }
         if (code & 8) {
             if ((tile_walls[other = trans_grid[quad][(v->map - chgtable[quad][0])->type]] & TW_EAST) == 0) {
-                if ((v->map - chgtable[quad][0])->height + ((tile_walls[other] & TW_SLOPE) == TW_SLOPE) - (other == TILE_SLOPE_W)
+                if ((uint16)((v->map - chgtable[quad][0])->height + ((tile_walls[other] & TW_SLOPE) == TW_SLOPE) - (other == TILE_SLOPE_W))
                     <= v->map->height + (here == 9) + (other == here && here != 1))
                     code -= 8;
                 else
@@ -565,12 +567,12 @@ void far move_to_next(struct Gvec *v)
     else if (v->dx == 0)
         go = 0;
     else
-        go = (long)side_step[side] * v->dx * (0x100 - v->fy) > (long)rem * v->dy;
+        go = (int32)side_step[side] * v->dx * (0x100 - v->fy) > (int32)rem * v->dy;
     while (go) {
         if (!(tile_walls[t = trans_grid[quad][v->map->type]] & side_wall[side])
             && !(tile_walls[trans_grid[quad][v->map[side_step[side] * chgtable[quad][0]].type]]
                 & side_wall[(side + 1) % 2])) {
-            v->fy += (long)v->dy * rem / ((long)side_step[side] * v->dx);
+            v->fy += (int32)v->dy * rem / ((int32)side_step[side] * v->dx);
             v->fx = ((side + 1) % 2) * 0xFF;
             rem = 0x100;
             if (!((v->link & 0x80) ^ (side << 7)))
@@ -608,9 +610,9 @@ void far move_to_next(struct Gvec *v)
         if (v->dy == 0)
             go = 1;
         else
-            go = (long)side_step[side] * v->dx * (0x100 - v->fy) > (long)rem * v->dy;
+            go = (int32)side_step[side] * v->dx * (0x100 - v->fy) > (int32)rem * v->dy;
     }
-    v->fx += side_step[side] * (int)((long)side_step[side] * v->dx * (0xFFL - (unsigned)v->fy) / v->dy);
+    v->fx += side_step[side] * (int)((int32)side_step[side] * v->dx * (0xFFL - (unsigned)v->fy) / v->dy);
     v->fy = 0xFF;
     if ((v->link & 0x80) ^ (side << 7))
         v->loc2 = v->loc;

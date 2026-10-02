@@ -63,13 +63,13 @@ struct Scroll npc_scroll = { 0x78, 0x28, 0x15, 0xDA, 0x18, 0x76, 0x18, 0x76, 0, 
 struct Scroll menu_scroll = { 0x1E, 1, 8, 0x137, 8, 0x1E, 8, 0x1E, 0, 0, 0x76 };
 /* DS:0962 */
 unsigned char spec_col[7] = { 0x75, 0x68, 0x01, 0x02, 0x21, 0x50, 0x48 };    /* DS:0977, colours for \0..\6 */
-int scroll_mode = 0;                    /* DS:097E */
-int start_line = 0;                     /* DS:0980 */
+int16 scroll_mode = 0;                  /* DS:097E */
+int16 start_line = 0;                   /* DS:0980 */
 unsigned char menus_active = 0;         /* DS:0982 */
 unsigned char didMouseInput = 0;        /* DS:0983 */
-static long click_time = 0;             /* DS:0984 */
-static int edge_phase = 0;              /* DS:0988 */
-static int conv_edge_phase = 0;         /* DS:098A */
+static int32 click_time = 0;            /* DS:0984 */
+static int16 edge_phase = 0;            /* DS:0988 */
+static int16 conv_edge_phase = 0;       /* DS:098A */
 char scroll_esc = 1;                    /* DS:098C */
 
 /* Whether the cursor touches the current scroll's box, so printing must hide it first. */
@@ -182,7 +182,7 @@ int far scroll_print(char far *s)
     chunklen = 0;
     remaining = str_len(s);
     while (remaining > 0x31) {
-        movedata(FP_SEG(s), FP_OFF(s), FP_SEG(copy), FP_OFF(copy), 0x31);
+        FAR_COPY(copy, s, 0x31);
         sentinel = 0;
         found = strrchr(copy, ' ');
         if (found == 0)
@@ -195,7 +195,7 @@ int far scroll_print(char far *s)
         *found = saved;
         remaining -= chunklen;
     }
-    movedata(FP_SEG(s), FP_OFF(s), FP_SEG(copy), FP_OFF(copy), remaining + 1);
+    FAR_COPY(copy, s, remaining + 1);
     scroll_print1(copy, 0);
 
     click_time = *Time;

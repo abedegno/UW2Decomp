@@ -80,21 +80,21 @@
    these names it gives exactly the EXE's layout. The array sizes are the gaps between
    neighbours. */
 char HomeDir[0x42];                     /* the save directory, "<UWHOME>\SAVE0\" */
-int scrmode;
+int16 scrmode;
 /* The divide-by-zero vector found at startup, DS:5D62, chained to by div_zero after the
    game has shut down. */
 /* name: DOS only, so the name is ours, chosen because it lands between scrmode and
    scrnum as the EXE has it. */
 static void interrupt (far *int0_save)();
-int scrnum;
-int notdone;
+int16 scrnum;
+int16 notdone;
 char WorkPath[0x42];
-int changed;
+int16 changed;
 char CurDir[0x44];
 char dungeonf[0x12];
-int lastscrmode;
-int NewPlayerX, NewPlayerY;
-int NewPlayerLevel;
+int16 lastscrmode;
+int16 NewPlayerX, NewPlayerY;
+int16 NewPlayerLevel;
 
 
 /* name: elsewhere in the game. Names not confirmed by the map come from FM Towns init_world,
@@ -117,12 +117,12 @@ void (far *editor_dispatch[3][16])() = {
     { 0, AutoMap, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, automap_scr, 0, 0, ExitAutoMap },
     { strt_converse, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, free_converse }
 };
-int change_state[3] = { 0x3800, 0x1000, 0 };  /* bits kept set per screen */
+int16 change_state[3] = { 0x3800, 0x1000, 0 };  /* bits kept set per screen */
 char NewPlyFade = 3;                    /* new_player_pos: 1 fade out, 2 fade in */
 char in_game = 0;                       /* set once the start menu has been left */
-unsigned _heaplen = 0x0C00;
-unsigned _stklen = 0x1000;
-unsigned _ovrbuffer = 0x300;
+uint16 _heaplen = 0x0C00;
+uint16 _stklen = 0x1000;
+uint16 _ovrbuffer = 0x300;
 void (far *npp_func)() = 0;             /* run by new_player_pos after a level change,
                                            before the player is placed (the moonstone
                                            spells set it to do_mstone) */
@@ -236,7 +236,7 @@ void far init_edit(int argc, char *argv[])
     strcpy(WorkPath, "DATA\\");
     getcurdir(0, CurDir);
     _input_addkey(KEY_ALT | 'x', 0, 1, (InputFn)graceful_exit);
-    _input_addkey(KEY_ALT | 'q', FP_SEG(stdat) + 1, 0xFF, save_screenshot);
+    _input_addkey(KEY_ALT | 'q', FP_SEG(stdat) + 1, 0xFF, (InputFn)save_screenshot);
     notdone = 1;
     changed = 0x7FFF;
     scrmode = 0;
@@ -249,12 +249,12 @@ void far graceful_exit(void)
     busywaiting_new_options(&quit_buttongroup);
 }
 
-void far editexit(void)
+void far editexit(int unused)
 {
     notdone = 0;
 }
 
-void far clearobj(void)
+void far clearobj(int unused)
 {
     Map_ObjFix();
     editchng(2);
@@ -299,7 +299,7 @@ void far newscr(int mode)
         editchng(0x7FFE);
 }
 
-void far ovr112_389(int *bits)
+void far ovr112_389(int16 *bits)
 {
     *bits = changed;
 }
@@ -314,8 +314,7 @@ void far strt_demscr(void)
     mouse_hide();
     demous_player();
     place_3d_view(0x10, 0xB6, 0xD0, 0x80);
-    movedata(FP_SEG(palette), FP_OFF(palette), FP_SEG((unsigned char far *)pal),
-             FP_OFF((unsigned char far *)pal), 0x300);
+    FAR_COPY((unsigned char far *)pal, palette, 0x300);
     fadeout(pal, 2, 0);
     if (!(unsigned char)display_screen(-1, 4))
         pfatal_code(ERR_READ | 0xB);
@@ -411,8 +410,7 @@ void far real_death(int how)
     if (how == 1)
         mouse_hide();
     reset_game();
-    movedata(FP_SEG(palette), FP_OFF(palette), FP_SEG((unsigned char far *)pal),
-             FP_OFF((unsigned char far *)pal), 0x300);
+    FAR_COPY((unsigned char far *)pal, palette, 0x300);
     fadeout(pal, 2, 0);
     in_game = 1;
     real_start(0);
@@ -433,9 +431,8 @@ void far div_zero_ovr112_661(void)
     char msg[0x50];
 
     strcpy(msg, "Underworld exiting, divide by zero.\r\n$");
-    *cPerror = (int)cExitMessage;
-    movedata(FP_SEG((char far *)msg), FP_OFF((char far *)msg), FP_SEG(cExitMessage),
-             FP_OFF(cExitMessage), strlen(msg));
+    *cPerror = FP_OFF(cExitMessage);
+    FAR_COPY(cExitMessage, (char far *)msg, strlen(msg));
     free_world(1);
     (*int0_save)();
 }
@@ -449,7 +446,7 @@ void far div_zero_ovr112_661(void)
    and, with NewPlyFade bit 1, the screen fades back in. */
 unsigned char far new_player_pos(void)
 {
-    int x, y;
+    int16 x, y;
 
     if (NewPlayerX > 0) {
         if (NewPlyFade & 1) {

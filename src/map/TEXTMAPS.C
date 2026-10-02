@@ -28,8 +28,8 @@
 
 /* This file's _BSS, DS:8188..8287, by name: TxmTerr 420, TxmID 988. They follow ovr139's
    answer_x (857) in a new run; this file loads them, with ActDoors, from the level. */
-int TxmID[0x40];                        /* the level's texture numbers */
-unsigned TxmTerr[0x40];                     /* each texture's terrain type */
+int16 TxmID[0x40];                      /* the level's texture numbers */
+uint16 TxmTerr[0x40];                       /* each texture's terrain type */
 
 
 char far init_txtlib(void)
@@ -64,7 +64,7 @@ void far ovr140_4F(int n, int x, int y)
 unsigned char far Txm_Load(int arc, int lev, int flags)
 {
     unsigned char ok;
-    int buf[0x46];
+    int16 buf[0x46];
     register int i;
 
     ok = 1;
@@ -93,7 +93,7 @@ unsigned char far Txm_Load(int arc, int lev, int flags)
 unsigned char far Txm_Save(int arc, int lev, register int flags)
 {
     unsigned char ok;
-    int buf[0x46];
+    int16 buf[0x46];
     register int i;
 
     ok = 1;
@@ -118,7 +118,7 @@ void far load_txtmaps(void)
 /* name: IDA's LoadTerrainDat_ovr140_24B. FM Towns has Load_Terrains_ at the same place, after
    load_txtmaps_, doing the same: fopen the terrain file, then for each of the 64 textures
    fseek to twice its number and fread two bytes into TxmTerr. */
-void far Load_Terrains(int *ids)
+void far Load_Terrains(int16 *ids)
 {
     register int i;
     FILE *fp;
@@ -126,7 +126,7 @@ void far Load_Terrains(int *ids)
     fp = fopen("DATA\\terrain.dat", "rb");
     if (fp != NULL) {
         for (i = 0; i < 0x40; i++) {
-            fseek(fp, (long)ids[i] * 2, SEEK_SET);
+            fseek(fp, (int32)ids[i] * 2, SEEK_SET);
             fread(&TxmTerr[i], 2, 1, fp);
         }
         fclose(fp);

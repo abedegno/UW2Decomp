@@ -44,7 +44,7 @@
    camera, so ending it reattaches the eye and leaves that input mode. Any other motion
    spell sets fiz_update so the physics picks up the change. The last spell is moved
    into the freed slot and *i is stepped back so the caller's loop sees it. */
-char far dispel_spell(int *i)
+char far dispel_spell(int16 *i)
 {
     if (SPELL_CLASS(player->spells[*i]) == SPELLC_MOTION
         && (SPELL_SUB(player->spells[*i]) == 3 || SPELL_SUB(player->spells[*i]) == 5))
@@ -70,7 +70,7 @@ char far dispel_spell(int *i)
 
 void far duration_check(void)
 {
-    int i;
+    int16 i;
     char changed;
     int dmg;
     int stab;
@@ -198,7 +198,7 @@ char far DegradeLights(int amount, unsigned char counter)
                 burn += amount / light;
             if (burn == 0)
                 continue;
-            if (OBJ_QUALITY(obj) - 1 > burn)
+            if ((uint16)(OBJ_QUALITY(obj) - 1) > burn)
                 OBJ_QUALITY(obj) = OBJ_QUALITY(obj) - burn;
             else
             {

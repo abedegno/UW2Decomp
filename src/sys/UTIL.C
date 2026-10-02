@@ -16,7 +16,7 @@
 
 /* Steps *val by step in direction dir (-1 or 1) unless that passes limit; returns whether
    it moved. */
-int far mvcheck(int *val, int limit, int step, int dir)
+int far mvcheck(int16 *val, int limit, int step, int dir)
 {
     int ok;
 
@@ -32,10 +32,10 @@ int far mvcheck(int *val, int limit, int step, int dir)
    further round and the other way), and the high byte form (<< 8) is what cFstSinCos
    indexes by. The sine and cosine (+-7FFFh) are scaled to dist and each nonzero step is
    rounded away from zero, so a move is never lost to truncation. */
-void far move_along(int heading, int dist, int *x, int *y)
+void far move_along(int heading, int dist, int16 *x, int16 *y)
 {
-    int dy;
-    int dx;
+    int16 dy;
+    int16 dx;
 
     heading = (0x140 - heading) & 0xFF;
     heading = heading << 8;
@@ -62,7 +62,7 @@ void far move_along(int heading, int dist, int *x, int *y)
    it. Waits until ticks more have passed. */
 void far seg041_35D7_E9(unsigned ticks)
 {
-    unsigned long start;
+    uint32 start;
 
     start = *Time;
     while (*Time < start + ticks)
@@ -76,6 +76,6 @@ int far rollem(int dice, register int sides)
 
     if (sides > 0 && dice > 0)
         while (dice--)
-            total += (int)(((long)rand() * sides) / 0x8000L);
+            total += (int)(((int32)rand() * sides) / 0x8000L);
     return total;
 }

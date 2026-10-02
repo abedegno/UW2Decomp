@@ -82,9 +82,8 @@ void far pfatal_code(int code)
     message[0x2B] = ((code >> 6) & 7) + '0';
     message[0x2C] = ((code >> 3) & 7) + '0';
     message[0x2D] = (code & 7) + '0';
-    *cPerror = (int)cExitMessage;
-    movedata(FP_SEG((char far *)message), FP_OFF((char far *)message),
-        FP_SEG(cExitMessage), FP_OFF(cExitMessage), strlen(message));
+    *cPerror = FP_OFF(cExitMessage);
+    FAR_COPY(cExitMessage, (char far *)message, strlen(message));
     free_world(0);
     exit(-24);
 }
@@ -93,9 +92,8 @@ void far pfatal_code(int code)
 void far pfatal(char *message)
 {
     register char *s = message;
-    *cPerror = (int)cExitMessage;
-    movedata(FP_SEG(s), FP_OFF(s), FP_SEG(cExitMessage),
-                                     FP_OFF(cExitMessage), strlen(s));
+    *cPerror = FP_OFF(cExitMessage);
+    FAR_COPY(cExitMessage, s, strlen(s));
     free_world(0);
     exit(-24);
 }

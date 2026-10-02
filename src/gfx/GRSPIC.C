@@ -41,7 +41,7 @@ void far * far seg009_7(int icon)
 
 /* Draws slot icon at x, y on the screen. The height and width arguments are overwritten
    with the picture's own size before use, so the callers' values do not matter. */
-void far seg009_73(int icon, int x, int y, int height, int width)
+void far seg009_73(int icon, int x, int y, int16 height, int16 width)
 {
     struct Bitmap far *raw;
     void far *picture;
@@ -118,16 +118,16 @@ void far pic_to_screen(int icon, int x, int y, int height, int width)
 /* Reads an icon's width and height. Nothing in the C calls it. The EMS branch stores
    through width and height as near int pointers; the video memory branch passes the
    addresses of the parameters themselves, so its result is lost. */
-void far seg009_2CC(int icon, int width, int height)
+void far seg009_2CC(int icon, NEARPTR width, NEARPTR height)
 {
     unsigned char far *p;
     icon = grs_which1(icon);
     if (icon >= first_vram)
-        DRAW_RELATED_seg017_2179_320(grs_off[icon], &width, &height);
+        DRAW_RELATED_seg017_2179_320(grs_off[icon], (int16 far *)&width, (int16 far *)&height);
     else {
         p = seg009_7(icon);
-        *(int *)width = p[1];
-        *(int *)height = p[2];
+        *(int16 *)width = p[1];
+        *(int16 *)height = p[2];
     }
 }
 

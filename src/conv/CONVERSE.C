@@ -63,27 +63,27 @@
    also never used, is left out: it may as well be ovr104's.) */
 static unsigned char RightPanelSaved;           /* DS:47FC, the right panel before the conversation */
 static char far *convoPics[17];                 /* DS:47FE, the portrait images */
-static int convo_mode;                          /* DS:4842 */
+static int16 convo_mode;                        /* DS:4842 */
 static char far *convoScreen;                   /* DS:4844 */
-static int convoWorkspace;                      /* DS:4848 */
+static int16 convoWorkspace;                    /* DS:4848 */
 static char far *convo_askstr;                  /* DS:484A */
-static int convoContinue;                       /* DS:484E */
+static int16 convoContinue;                     /* DS:484E */
 static char far *convo_facedata;                /* DS:4850, the portrait data */
 static char babl_unref4854[4];                  /* DS:4854, never used */
-static int convo_line_option[10];               /* DS:4858 */
-static int babl_choice;                         /* DS:486C, the selected option */
+static int16 convo_line_option[10];             /* DS:4858 */
+static int16 babl_choice;                       /* DS:486C, the selected option */
 static char far *babl_opts[20];                 /* DS:486E */
 static char far *babl_display[20];              /* DS:48BE */
 struct Object far *talking_to;                  /* DS:490E, FM Towns name */
-static int bablOptionIds[10];                   /* DS:4912 */
-static int bablOptCount;                        /* DS:4926 */
+static int16 bablOptionIds[10];                 /* DS:4912 */
+static int16 bablOptCount;                      /* DS:4926 */
 
 /* Initialised data, in the order of the EXE. */
 static unsigned char convo_say_flag = 0;    /* set by respond, cleared by say */
-static int babl_ask_handle = 0;             /* the string babl_ask returns */
+static int16 babl_ask_handle = 0;           /* the string babl_ask returns */
 char far *conv_buffer = 0;
 static char cnv_file[] = "DATA\\cnv.ark";
-unsigned cnv_id = 0;
+uint16 cnv_id = 0;
 
 /* Start a conversation with thing, if it will talk. A wisp is talked to through
    talk_to_disembodied(0x30). Anything not a creature, a critter with goal 15, or any
@@ -260,57 +260,57 @@ void far Converse(unsigned char who, int subclass)
         scroll_print(get_string(0xe01));  /* "You get no response.\n" */
         return;
     }
-    bab_fun("babl_menu", conv_choice_ovr103_A13);
-    bab_fun("babl_fmenu", conv_fmenu_ovr103_BF2);
-    bab_fun("say", npc_say);
-    bab_fun("respond", play_respond);
-    bab_fun("get_quest", get_quest);
-    bab_fun("set_quest", set_quest);
-    bab_fun("sex", sex);
-    bab_fun("babl_ask", getInputText_ovr103_1117);
-    bab_fun("print", conv_print);
-    bab_fun("show_inv", conv_check_inv);
-    bab_fun("give_to_npc", conv_give_inv);
-    bab_fun("find_inv", conv_find_inv);
-    bab_fun("take_from_npc", conv_take_inv);
-    bab_fun("take_id_from_npc", conv_take_inv_id);
-    bab_fun("identify_inv", conv_inv_name);
-    bab_fun("do_offer", do_offer);
-    bab_fun("do_demand", do_demand);
-    bab_fun("do_decline", do_decline);
-    bab_fun("do_judgement", do_judgement);
-    bab_fun("end_barter", end_barter);
-    bab_fun("setup_to_barter", setup_to_barter);
-    bab_fun("pause", conv_pause_ovr103_10DD);
-    bab_fun("set_likes_dislikes", npc_likes_dislikes);
-    bab_fun("do_inv_create", conv_inv_create);
-    bab_fun("do_inv_delete", conv_inv_delete);
-    bab_fun("check_inv_quality", check_inv_quality);
-    bab_fun("set_inv_quality", set_inv_quality);
-    bab_fun("count_inv", count_inv);
-    bab_fun("babl_hack", babl_hack);
-    bab_fun("give_all_stuff", give_all_stuff);
-    bab_fun("gronk_door", gronk_door);
-    bab_fun("set_sequence", set_sequence);
-    bab_fun("set_attitude", set_attitude);
-    bab_fun("set_race_attitude", set_race_attitude);
-    bab_fun("take_from_npc_inv", take_from_npc_inv);
-    bab_fun("add_to_npc_inv", add_to_npc_inv);
-    bab_fun("place_object", place_object);
-    bab_fun("transform_talker", transform_talker);
-    bab_fun("remove_talker", remove_talker);
-    bab_fun("x_skills", x_skills);
-    bab_fun("x_traps", x_traps);
-    bab_fun("x_obj_stuff", x_obj_stuff);
-    bab_fun("x_obj_pos", x_obj_pos);
-    bab_fun("find_barter", find_barter);
-    bab_fun("find_barter_total", find_barter_total);
-    bab_fun("give_ptr_npc", give_ptr_npc);
-    bab_fun("x_clock", x_clock);
-    bab_fun("x_exp", x_exp);
-    bab_fun("teleport_player", teleport_player);
-    bab_fun("teleport_talker", teleport_talker);
-    bab_fun("switch_pic", switch_pic);
+    bab_fun("babl_menu", (BablFn)conv_choice_ovr103_A13);
+    bab_fun("babl_fmenu", (BablFn)conv_fmenu_ovr103_BF2);
+    bab_fun("say", (BablFn)npc_say);
+    bab_fun("respond", (BablFn)play_respond);
+    bab_fun("get_quest", (BablFn)get_quest);
+    bab_fun("set_quest", (BablFn)set_quest);
+    bab_fun("sex", (BablFn)sex);
+    bab_fun("babl_ask", (BablFn)getInputText_ovr103_1117);
+    bab_fun("print", (BablFn)conv_print);
+    bab_fun("show_inv", (BablFn)conv_check_inv);
+    bab_fun("give_to_npc", (BablFn)conv_give_inv);
+    bab_fun("find_inv", (BablFn)conv_find_inv);
+    bab_fun("take_from_npc", (BablFn)conv_take_inv);
+    bab_fun("take_id_from_npc", (BablFn)conv_take_inv_id);
+    bab_fun("identify_inv", (BablFn)conv_inv_name);
+    bab_fun("do_offer", (BablFn)do_offer);
+    bab_fun("do_demand", (BablFn)do_demand);
+    bab_fun("do_decline", (BablFn)do_decline);
+    bab_fun("do_judgement", (BablFn)do_judgement);
+    bab_fun("end_barter", (BablFn)end_barter);
+    bab_fun("setup_to_barter", (BablFn)setup_to_barter);
+    bab_fun("pause", (BablFn)conv_pause_ovr103_10DD);
+    bab_fun("set_likes_dislikes", (BablFn)npc_likes_dislikes);
+    bab_fun("do_inv_create", (BablFn)conv_inv_create);
+    bab_fun("do_inv_delete", (BablFn)conv_inv_delete);
+    bab_fun("check_inv_quality", (BablFn)check_inv_quality);
+    bab_fun("set_inv_quality", (BablFn)set_inv_quality);
+    bab_fun("count_inv", (BablFn)count_inv);
+    bab_fun("babl_hack", (BablFn)babl_hack);
+    bab_fun("give_all_stuff", (BablFn)give_all_stuff);
+    bab_fun("gronk_door", (BablFn)gronk_door);
+    bab_fun("set_sequence", (BablFn)set_sequence);
+    bab_fun("set_attitude", (BablFn)set_attitude);
+    bab_fun("set_race_attitude", (BablFn)set_race_attitude);
+    bab_fun("take_from_npc_inv", (BablFn)take_from_npc_inv);
+    bab_fun("add_to_npc_inv", (BablFn)add_to_npc_inv);
+    bab_fun("place_object", (BablFn)place_object);
+    bab_fun("transform_talker", (BablFn)transform_talker);
+    bab_fun("remove_talker", (BablFn)remove_talker);
+    bab_fun("x_skills", (BablFn)x_skills);
+    bab_fun("x_traps", (BablFn)x_traps);
+    bab_fun("x_obj_stuff", (BablFn)x_obj_stuff);
+    bab_fun("x_obj_pos", (BablFn)x_obj_pos);
+    bab_fun("find_barter", (BablFn)find_barter);
+    bab_fun("find_barter_total", (BablFn)find_barter_total);
+    bab_fun("give_ptr_npc", (BablFn)give_ptr_npc);
+    bab_fun("x_clock", (BablFn)x_clock);
+    bab_fun("x_exp", (BablFn)x_exp);
+    bab_fun("teleport_player", (BablFn)teleport_player);
+    bab_fun("teleport_talker", (BablFn)teleport_talker);
+    bab_fun("switch_pic", (BablFn)switch_pic);
     setup_converse_data(talking_to);
     convo_askstr = bab_malloc(0xa0L);
     if (!OBJ_HAS_INV(talking_to))
@@ -362,7 +362,7 @@ dispatch:
 
 /* babl_menu(arg1 array): show the strings of a 0-terminated array of string ids as a
    numbered menu and return the number chosen (from 1). Only 1..5 have keys. */
-int far conv_choice_ovr103_A13(int far *stack)
+int far conv_choice_ovr103_A13(int16 far *stack)
 {
     int i, base, string_no, used;
     char line[0xa0];
@@ -377,7 +377,7 @@ int far conv_choice_ovr103_A13(int far *stack)
         babl_opts[bablOptCount] = get_string(string_no);
         babl_display[bablOptCount] = convert_string(babl_opts[bablOptCount]);
         if (babl_display[bablOptCount] == babl_opts[bablOptCount]) {
-            babl_display[bablOptCount] = bab_malloc((long)(str_len(babl_opts[bablOptCount]) + 1));
+            babl_display[bablOptCount] = bab_malloc((int32)(str_len(babl_opts[bablOptCount]) + 1));
             str_copy(babl_display[bablOptCount], babl_opts[bablOptCount]);
         }
         bablOptionIds[bablOptCount] = string_no;
@@ -408,7 +408,7 @@ int far conv_choice_ovr103_A13(int far *stack)
 
 /* babl_fmenu(arg1 strings, arg2 flags): the same, showing only the strings whose flag
    is non-zero, and returning the chosen string's id rather than its number. */
-int far conv_fmenu_ovr103_BF2(int far *stack)
+int far conv_fmenu_ovr103_BF2(int16 far *stack)
 {
     int i, base, string_no, value, value_base, used;
     char line[0xa0];
@@ -427,7 +427,7 @@ int far conv_fmenu_ovr103_BF2(int far *stack)
             babl_opts[bablOptCount] = get_string(string_no);
             babl_display[bablOptCount] = convert_string(babl_opts[bablOptCount]);
             if (babl_display[bablOptCount] == babl_opts[bablOptCount]) {
-                babl_display[bablOptCount] = bab_malloc((long)(str_len(babl_opts[bablOptCount]) + 1));
+                babl_display[bablOptCount] = bab_malloc((int32)(str_len(babl_opts[bablOptCount]) + 1));
                 str_copy(babl_display[bablOptCount], babl_opts[bablOptCount]);
             }
             bablOptionIds[bablOptCount] = string_no;
@@ -530,7 +530,7 @@ void far play_say(char far *s)
 }
 
 /* print(arg1 string): narration, in colour \2. */
-void far conv_print(int far *stack)
+void far conv_print(int16 far *stack)
 {
     char far *original, far *expanded;
     register int id;
@@ -548,7 +548,7 @@ void far conv_print(int far *stack)
 }
 
 /* pause(arg1): wait arg1 * 0x1F4 (scroll_wait units). */
-int far conv_pause_ovr103_10DD(int far *stack)
+int far conv_pause_ovr103_10DD(int16 far *stack)
 {
     register int duration;
     duration = getmem(stack[-1]);
@@ -583,9 +583,9 @@ int far getInputText_ovr103_1117(void)
 
 /* show_inv(arg1 indices, arg2 item ids): fill the two arrays (6 entries) with the
    player's selected trade items; returns how many. */
-int far conv_check_inv(int far *stack)
+int far conv_check_inv(int16 far *stack)
 {
-    int ids[6], indices[6];
+    int16 ids[6], indices[6];
     register int i, count;
     count = player_barter_items(ids, indices);
     for (i = 0; i < 6; i++) {
@@ -602,9 +602,9 @@ int far conv_check_inv(int far *stack)
 
 /* find_barter(arg1 item): the object index of the player's selected trade item of that
    type, or (1000 and up) of major (item - 1000) >> 2, minor (item - 1000) & 3; else 0. */
-int far find_barter(int far *stack)
+int far find_barter(int16 far *stack)
 {
-    int count, ids[6], indices[6];
+    int16 count, ids[6], indices[6];
     register int i, wanted;
     wanted = getmem(stack[-1]);
     count = player_barter_items(ids, indices);
@@ -625,9 +625,9 @@ int far find_barter(int far *stack)
    A class search (1000 and up) is coded in the test but the enclosing check skips it,
    so it always finds nothing. Its arrays hold 5 entries, but player_barter_items can
    write 6 when all six player slots are selected. */
-int far find_barter_total(int far *stack)
+int far find_barter_total(int16 far *stack)
 {
-    int wanted, matches, ids[5], indices[5], matching[5], count;
+    int16 wanted, matches, ids[5], indices[5], matching[5], count;
     struct Object far *obj;
     register int i, total;
     wanted = getmem(stack[-4]);
@@ -654,9 +654,9 @@ int far find_barter_total(int far *stack)
 
 /* give_to_npc(arg2 count, arg1 indices): give the listed objects to the NPC if every
    one is among the player's selected trade items; 1 if given, else 0. */
-int far conv_give_inv(int far *stack)
+int far conv_give_inv(int16 far *stack)
 {
-    int count, have, ids[6], indices[6], slot_of[6], item_of[6];
+    int16 count, have, ids[6], indices[6], slot_of[6], item_of[6];
     register int j, i;
     count = getmem(stack[-2]);
     if ((have = player_barter_items(ids, indices)) < count) return 0;
@@ -677,11 +677,11 @@ int far conv_give_inv(int far *stack)
 
 /* give_ptr_npc(arg2 object, arg1 qty): give the NPC qty of one object, splitting a
    stack if need be, from the trade slots or else from the player's inventory. */
-int far give_ptr_npc(int far *stack)
+int far give_ptr_npc(int16 far *stack)
 {
     int index;
     struct Object far *obj, far *copy;
-    int ids[6], indices[6];
+    int16 ids[6], indices[6];
     register int i, qty;
     index = getmem(stack[-2]);
     qty = getmem(stack[-1]);
@@ -714,20 +714,20 @@ int far give_ptr_npc(int far *stack)
 /* do_inv_delete, find_inv, take_from_npc, take_id_from_npc and do_inv_create: thin
    wrappers of BARTER.C's npc_inv_delete, npc_barter_find, npc_barter_give,
    npc_barter_give_id and npc_inv_create. */
-int far conv_inv_delete(int far *stack) { return npc_inv_delete(getmem(stack[-1])); }
+int far conv_inv_delete(int16 far *stack) { return npc_inv_delete(getmem(stack[-1])); }
 
-int far conv_find_inv(int far *stack) { return npc_barter_find(getmem(stack[-2]), getmem(stack[-1])); }
+int far conv_find_inv(int16 far *stack) { return npc_barter_find(getmem(stack[-2]), getmem(stack[-1])); }
 
-int far conv_take_inv(int far *stack) { return npc_barter_give(getmem(stack[-1])); }
+int far conv_take_inv(int16 far *stack) { return npc_barter_give(getmem(stack[-1])); }
 
-int far conv_take_inv_id(int far *stack) { return npc_barter_give_id(getmem(stack[-1])); }
+int far conv_take_inv_id(int16 far *stack) { return npc_barter_give_id(getmem(stack[-1])); }
 
-int far conv_inv_create(int far *stack) { return npc_inv_create(getmem(stack[-1])); }
+int far conv_inv_create(int16 far *stack) { return npc_inv_create(getmem(stack[-1])); }
 
 /* identify_inv(arg4 object, arg3 with article, arg2 name out, arg1 identified): the
    object's name with an article or a count, as a new dynamic string stored in arg2, and
    its value to the NPC (assess_value with likes, blurred by npc_assess) returned. */
-int far conv_inv_name(int far *stack)
+int far conv_inv_name(int16 far *stack)
 {
     int index, value, handle, describe;
     struct Object far *obj;
@@ -781,7 +781,7 @@ int far conv_inv_name(int far *stack)
 }
 
 /* how many of an object: its quantity, or 1 */
-int far count_inv(int far *stack)
+int far count_inv(int16 far *stack)
 {
     struct Object far *obj;
     register int qty, index;
@@ -794,7 +794,7 @@ int far count_inv(int far *stack)
 
 /* check_inv_quality: reads the quality but never returns it, so the script gets
    whatever AX holds at the end. */
-int far check_inv_quality(int far *stack)
+int far check_inv_quality(int16 far *stack)
 {
     struct Object far *obj;
     register int quality;
@@ -805,7 +805,7 @@ int far check_inv_quality(int far *stack)
 }
 
 /* set_inv_quality(arg2 object, arg1 quality): set it, to 6 bits. */
-int far set_inv_quality(int far *stack)
+int far set_inv_quality(int16 far *stack)
 {
     struct Object far *obj;
     register int index;
@@ -817,7 +817,7 @@ int far set_inv_quality(int far *stack)
 
 /* switch_pic(arg1): show another portrait and name for the NPC: whoami arg1 below
    0x100, else generic head arg1 - 0x100 (up to 0x140), else ghed 0. */
-int far switch_pic(int far *stack)
+int far switch_pic(int16 far *stack)
 {
     int which;
     char far *saved;

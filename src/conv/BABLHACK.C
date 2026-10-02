@@ -94,7 +94,7 @@ char far set_me_loner(struct Object far *npc, char loner)
    short to a `jmp` to the shared final return, which Turbo C only leaves in place when
    the tails are merged returns; a `break` gets its jumps threaded straight to the end
    and the function comes out 3 bytes long. */
-int far babl_hack(int far *args)
+int far babl_hack(int16 far *args)
 {
     int mode;
     int i, n;
@@ -260,7 +260,7 @@ char far set_mob_seq_n_frame(struct Object far *npc, int n)
 
 /* set_sequence(arg3 whoami, arg2 sequence, arg1 frame): set the animation of every
    critter with that whoami. */
-void far set_sequence(int far *args)
+void far set_sequence(int16 far *args)
 {
     int frame;
     int seq;
@@ -269,11 +269,11 @@ void far set_sequence(int far *args)
     frame = getmem(args[-1]);
     seq = getmem(args[-2]);
     who = getmem(args[-3]);
-    gronk_whoami(who, 0, seq << 3 | frame & 7, set_mob_seq_n_frame);
+    gronk_whoami(who, 0, seq << 3 | frame & 7, (WhoamiFn)set_mob_seq_n_frame);
 }
 
 /* x_exp: give the player arg1 experience; returns the new total / 16. */
-int far x_exp(int far *args)
+int far x_exp(int16 far *args)
 {
     int n;
 
@@ -285,7 +285,7 @@ int far x_exp(int far *args)
 
 /* teleport_player(arg3 x, arg2 y, arg1 level) and teleport_talker(arg2 x, arg1 y) only
    record where to go; do_babl_teleport moves them when the conversation is over. */
-void far teleport_player(int far *args)
+void far teleport_player(int16 far *args)
 {
     int x, y, level;
 
@@ -297,7 +297,7 @@ void far teleport_player(int far *args)
     tele_y = y;
 }
 
-int far teleport_talker(int far *args)
+int far teleport_talker(int16 far *args)
 {
     talker_x = getmem(args[-2]);
     talker_y = getmem(args[-1]);
@@ -328,20 +328,20 @@ char far set_mob_att(struct Object far *npc, int att)
     return 0;
 }
 
-void far set_attitude(int far *args)
+void far set_attitude(int16 far *args)
 {
     int att;
     int who;
 
     att = getmem(args[-1]);
     who = getmem(args[-2]);
-    gronk_whoami(who, 0, att, set_mob_att);
+    gronk_whoami(who, 0, att, (WhoamiFn)set_mob_att);
 }
 
 /* set_race_attitude(arg3 race, arg2 attitude, arg1 range): set the attitude of every
    critter of the talker's item type and the given race, not a loner, within range tiles
    of the talker's home (clipped to 1..63). */
-void far set_race_attitude(int far *args)
+void far set_race_attitude(int16 far *args)
 {
     int range, att, race;
     int y;
@@ -379,7 +379,7 @@ void far set_race_attitude(int far *args)
 /* x_skills(arg2 skill, arg1 value): above 10000 spend one of the player's skill points
    to advance the skill (1 if done, else 0); exactly 10000 calls get_skill; 0..30 sets
    the skill; anything else only reads it. Returns the skill's value. */
-int far x_skills(int far *args)
+int far x_skills(int16 far *args)
 {
     int skill, val;
 
@@ -401,7 +401,7 @@ int far x_skills(int far *args)
 
 /* x_traps(arg2 variable, arg1 value): set a numbered game variable (the ones traps use,
    inferred from the name) when the value is 0..0x3FF; returns its value. */
-int far x_traps(int far *args)
+int far x_traps(int16 far *args)
 {
     int var, val;
 
@@ -416,7 +416,7 @@ int far x_traps(int far *args)
    at tile (x, y), or at the player's feet if x is negative. Returns 1 when placed (or
    when it was in the talker's inventory but could not be unlinked), 0 when off the map
    or there is no room. */
-int far place_object(int far *args)
+int far place_object(int16 far *args)
 {
     int index;
     struct Object far *obj;
@@ -454,7 +454,7 @@ int far place_object(int far *args)
 
 /* take_from_npc_inv(arg1 n): the object index n links into the talker's inventory (0
    the first), or 0 past the end. Nothing is moved. */
-int far take_from_npc_inv(int far *args)
+int far take_from_npc_inv(int16 far *args)
 {
     union Link far *link;
     int i, n;
@@ -466,7 +466,7 @@ int far take_from_npc_inv(int far *args)
     return link->f.index;
 }
 
-void far add_to_npc_inv(int far *args)
+void far add_to_npc_inv(int16 far *args)
 {
     int index;
 
@@ -475,7 +475,7 @@ void far add_to_npc_inv(int far *args)
 }
 
 /* transform_talker: transform_creature on the talker with arg4..arg1. */
-void far transform_talker(int far *args)
+void far transform_talker(int16 far *args)
 {
     transform_creature(talking_to, getmem(args[-4]), getmem(args[-3]), getmem(args[-2]),
                        getmem(args[-1]));
@@ -494,7 +494,7 @@ void far remove_talker(void)
    unsigned long (only the low four bits of each are used); 128..143 are the bytes
    quest_bytes[0..15]; others are ignored. A value other than 0 or 1 is added in
    unmasked and spills into the neighbouring bits. */
-void far set_quest(int far *args)
+void far set_quest(int16 far *args)
 {
     int quest, val;
 
@@ -511,7 +511,7 @@ void far set_quest(int far *args)
 }
 
 /* get_quest(arg1 quest): as set_quest, and above 143 player->bF6; negative gives 0. */
-int far get_quest(int far *args)
+int far get_quest(int16 far *args)
 {
     int quest;
 
@@ -528,7 +528,7 @@ int far get_quest(int far *args)
 /* x_clock(arg2 clock, arg1 value): with value above 0x100 read X clock arg2; else set
    it and return 0. Setting clock 0 moves game_clock by 0x4B000 for each step it
    changes, and resets lastDurCheck to game_clock >> 8. */
-int far x_clock(int far *args)
+int far x_clock(int16 far *args)
 {
     int clock;
     int val;
@@ -538,7 +538,7 @@ int far x_clock(int far *args)
     if (val > 0x100)
         return player->xclock[clock];
     if (clock == 0) {
-        player->game_clock += (long)(val - player->xclock[clock]) * 0x4B000L;
+        player->game_clock += (int32)(val - player->xclock[clock]) * 0x4B000L;
         lastDurCheck = player->game_clock >> 8;
     }
     player->xclock[clock] = val;
@@ -546,7 +546,7 @@ int far x_clock(int far *args)
 }
 
 /* sex: arg2 for a male player, arg1 for a female one (player->female is 0 or 1). */
-int far sex(int far *args)
+int far sex(int16 far *args)
 {
     return getmem(args[-2 + player->female]);
 }
@@ -554,7 +554,7 @@ int far sex(int far *args)
 /* gronk_door(arg3 x, arg2 y, arg1 how): open (0), close (1) or toggle (2) the door at
    tile (x, y): the first MAJOR_RECT object of minor 0 there, or else an animated object
    of minor 0, index 0xF (Obj_InList). Returns 0 when there is none. */
-int far gronk_door(int far *args)
+int far gronk_door(int16 far *args)
 {
     union Link far *head;
     struct Object far *door;
@@ -589,15 +589,15 @@ int far gronk_door(int far *args)
    variables, else read them into the variables; a variable holding -1 is left alone.
    The heading is skipped for MAJOR_RECT objects and those with render type 2. Read
    back, flag10 and flag9 are the raw bits 0x400 and 0x200, not 0 or 1. */
-void far x_obj_stuff(int far *args)
+void far x_obj_stuff(int16 far *args)
 {
-    int far *heading;
-    int far *owner;
-    int far *flags;
-    int far *link;
-    int far *flag10;
-    int far *flag9;
-    int far *quality;
+    int16 far *heading;
+    int16 far *owner;
+    int16 far *flags;
+    int16 far *link;
+    int16 far *flag10;
+    int16 far *flag9;
+    int16 far *quality;
     struct Object far *obj;
 
     heading = getmem_addr(args[-7]);
@@ -645,11 +645,11 @@ void far x_obj_stuff(int far *args)
    fine position and height (a z above 0x7F means the floor height of tile (x, y)),
    2 reads its tile and height, anything else reads its fine position and height. A
    variable holding -1 is left alone. */
-void far x_obj_pos(int far *args)
+void far x_obj_pos(int16 far *args)
 {
-    int far *x;
-    int far *y;
-    int far *z;
+    int16 far *x;
+    int16 far *y;
+    int16 far *z;
     struct Object far *obj;
 
     x = getmem_addr(args[-3]);

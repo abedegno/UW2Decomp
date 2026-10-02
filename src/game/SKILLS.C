@@ -138,7 +138,7 @@ void far add_to_skill(int skill)
     stat = playerdat->attr[prime(skill)];
     player->skills[skill] += base;
     player->skills[skill] += stat / divisor;
-    player->skills[skill] += (long)rand() * rolls / 0x8000L;
+    player->skills[skill] += (int32)rand() * rolls / 0x8000L;
     for (; rolls > 0; rolls--)
         player->skills[skill] += skill_check(stat, 20);
     if (player->skills[skill] > 30)
@@ -213,7 +213,7 @@ char far grant_skill_advance(int which)
         if (start == SKILL_MANA && player->skills[SKILL_MANA] < 8 && (rand() & 2))
             skill = SKILL_MANA;
         else
-            skill = start + (int)(((long)rand() * count) / 0x8000L);
+            skill = start + (int)(((int32)rand() * count) / 0x8000L);
         if (get_skill(skill))
             result = 1;
     }
@@ -336,7 +336,7 @@ unsigned char far dream(int sleepfactor)
     int found = -1;
     int counter;
     unsigned char xclocks[4] = { 4, 6, 10, 14 };
-    unsigned long timer;
+    uint32 timer;
     int dreamflags;
 
     if (player->sleepbits != 0)
@@ -563,7 +563,7 @@ void far player_sleep(int how)
    else camps. */
 void far player_key_sleep(int bedroll)
 {
-    int where;
+    int16 where;
 
     if (FindObj(4, 2, 1, 4, &where) == 0)
         bedroll = 0;
@@ -646,8 +646,8 @@ void far cs_check(void)
    current level; returns 0 if level is not the current one. */
 char far moveto(int level, int item)
 {
-    int x = 0;
-    int y = 0;
+    int16 x = 0;
+    int16 y = 0;
 
     npp_func = 0;
     if (level == PlayerLevel)
@@ -666,8 +666,8 @@ char far moveto(int level, int item)
    left on the floor of an open square. */
 void far do_gem(void)
 {
-    int x;
-    int y;
+    int16 x;
+    int16 y;
     int xoff;
     struct Tile far *tile;
     struct Object far *stain;

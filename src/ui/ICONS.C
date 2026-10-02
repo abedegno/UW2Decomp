@@ -26,8 +26,8 @@
 /* _BSS. */
 /* match: laid out by name (tools/bssorder.py): gameopts_done sorts before
    icon_button_handle. */
-int gameopts_done;                     /* DS:67D6+22E2, also written by the options overlay */
-static int icon_button_handle;         /* DS:67D6+22E4, only ever used in this file */
+int16 gameopts_done;                   /* DS:67D6+22E2, also written by the options overlay */
+static int16 icon_button_handle;       /* DS:67D6+22E4, only ever used in this file */
 
 
 /* This file's _DATA, DS:0120..0267, in definition order: the option panel's button groups.
@@ -74,7 +74,7 @@ struct buttongroup *current_buttongroup = &gameopts_buttongroup;   /* DS:0265 */
    the mouse, draw the icon bar, show the mouse). */
 void far setup_icon_buttons(void)
 {
-    icon_button_handle = input_addmouse(0xF2, 0, 0x13E, 0x1C, -1, 1, deal_with_icons);
+    icon_button_handle = input_addmouse(0xF2, 0, 0x13E, 0x1C, -1, 1, (InputFn)deal_with_icons);
     mouse_hide();
     pic_to_screen(0x20C1, 0xF3, 0x1C, 0x4D, 0x1D);
     mouse_show();
@@ -89,7 +89,7 @@ void far term_icon_buttons(void)
    lower row 3 to 5. */
 int far get_iconreg_button(void)
 {
-    int x, y;
+    int16 x, y;
     int col;
 
     mouse_getxy(&x, &y);

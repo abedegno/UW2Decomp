@@ -41,24 +41,26 @@
 #include "view3d.h"
 
 /* One chargen question from DATA\chrgen.dat, 0x12 bytes. */
+HOST_LAYOUT_BEGIN
 struct ChrOpt {
-    int question;                       /* 0x00, string number, or 0 */
+    int16 question;                     /* 0x00, string number, or 0 */
     char *name;                         /* 0x02, the name typed, for the name question */
-    unsigned far *strings;              /* 0x04, the answers' strings, 0-terminated */
-    int count;                          /* 0x08, how many answers */
-    int pic;                            /* 0x0A, the button picture */
-    int rows;                           /* 0x0C */
-    int cols;                           /* 0x0E */
-    int spacing;                        /* 0x10 */
+    uint16 far *strings;                /* 0x04, the answers' strings, 0-terminated */
+    int16 count;                        /* 0x08, how many answers */
+    int16 pic;                          /* 0x0A, the button picture */
+    int16 rows;                         /* 0x0C */
+    int16 cols;                         /* 0x0E */
+    int16 spacing;                      /* 0x10 */
 };
+HOST_LAYOUT_END
 
 /* stdat holding DATA\SKILLS.DAT: four bytes a class, its three attributes and its skill points. */
 #define CLASS_TAB ((unsigned char (far *)[4])stdat)
 /* This file's _BSS, DS:47B8..47BF (ovr097's ends at 47B8). */
 /* match: laid out by name: sknow 43, chroff 275, chrbuf 395. */
 /* name: FM Towns keeps the three together too. */
-int sknow;
-int *chroff;                            /* offsets of the button pictures in chrbuf */
+int16 sknow;
+int16 *chroff;                          /* offsets of the button pictures in chrbuf */
 unsigned char far *chrbuf;
 
 
@@ -372,7 +374,7 @@ void far selopt(struct ChrOpt far *opt, unsigned char new, unsigned char old)
    Towns jname_input is the Japanese name entry and has no DOS counterpart. */
 int far mousopt(struct ChrOpt far *opt, int cur)
 {
-    int mx, my, h, w, sel, hstep, wstep, q;
+    int16 mx, my, h, w, sel, hstep, wstep, q;
     unsigned char far *pic;
     register int xleft;
     register int ytop;
@@ -539,7 +541,7 @@ char far gen_char(unsigned char far *buf, unsigned char far *dat, struct ChrOpt 
     unsigned char skills[6];
     unsigned char far *dat32;
     char far *done;
-    unsigned far *strs;
+    uint16 far *strs;
     char far *s;
     char name[30];
     register int stage;
@@ -697,11 +699,11 @@ char far strt_chargen(void)
     unsigned char far *pic;
     unsigned char far *pal;
     unsigned char far *buf;
-    unsigned far *strs;
+    uint16 far *strs;
     struct ChrOpt far *opts;
     unsigned char result;
     unsigned char ok;
-    int offs[28];
+    int16 offs[28];
     register int i;
     register int fd;
 
@@ -729,7 +731,7 @@ char far strt_chargen(void)
     intoFarBuffer_ovr167_5DA(fd, buf + n, 10000);
     close(fd);
     opts = (struct ChrOpt far *)(buf + n);
-    strs = (unsigned far *)(opts + 8);
+    strs = (uint16 far *)(opts + 8);
     for (i = 0; i < 8; i++) {
         opts[i].strings = strs;
         while (*strs++ != 0)

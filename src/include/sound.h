@@ -16,23 +16,27 @@ struct SoundBuff;
 /* AIL's sound buffer, 12 bytes: what AIL_register_sound_buffer plays. SOUND.C fills two
    of them (dsbuf) in turn from its EMS cache; AIL_index_VOC_block sets pack_type and
    sample_rate from a .VOC header. */
+HOST_LAYOUT_BEGIN
 struct SoundBuff {
-    unsigned pack_type;
-    unsigned sample_rate;
+    uint16 pack_type;
+    uint16 sample_rate;
     char far *data;                     /* 0x04 */
-    unsigned long len;                  /* 0x08 */
+    uint32 len;                         /* 0x08 */
 };
+HOST_LAYOUT_END
 
 /* AIL's description of a driver, returned by AIL_describe_driver. AIL_init_driver also
    reads a word at 0x14, past these fields, as the driver's service rate in hertz (-1
    for none). */
+HOST_LAYOUT_BEGIN
 struct DrvrDesc {
-    unsigned min_api;
-    unsigned drvr_type;                 /* 0x02: 2 digital, 3 XMIDI */
+    uint16 min_api;
+    uint16 drvr_type;                   /* 0x02: 2 digital, 3 XMIDI */
     char data_suffix[4];                /* 0x04 */
     char far *dev_names;                /* 0x08 */
-    int io, irq, dma, drq;              /* 0x0C */
+    int16 io, irq, dma, drq;            /* 0x0C */
 };
+HOST_LAYOUT_END
 
 /* Music themes, for set_new_music and load_new_music: theme n is SOUND\UWAnn.XMI (UWRnn.XMI
    for the Roland card) with nn the number in octal (load_new_music builds the name). The
@@ -52,14 +56,14 @@ struct DrvrDesc {
 /* SOUND.C: sound and music */
 extern struct SoundBuff dsbuf[2];
 extern unsigned char speechok;
-extern int sphdriver;
+extern int16 sphdriver;
 extern char far *dsdata[2];
 unsigned char far digi_fx_play(unsigned char fx, unsigned char vol, unsigned char pan);
 void far stop_digi_file(unsigned char chan);
 void far free_s_mem(void);
 unsigned char far init_speech(void);
 unsigned char far init_fx(void);
-void far do_settings(struct DrvrDesc far *d, int *s);
+void far do_settings(struct DrvrDesc far *d, int16 *s);
 void far set_random_walking_music(int pick);
 unsigned char far read_fx_data(void);
 void far kill_all_effects(void);
@@ -126,7 +130,7 @@ void far AIL_set_digital_playback_panpot(int drv, int p);
 void far AIL_set_digital_playback_volume(int drv, int v);
 void far AIL_set_relative_tempo(int drv, int seq, int percent, int ms);
 void far AIL_set_relative_volume(int drv, int seq, int percent, int ms);
-void far AIL_set_timer_frequency(int timer, unsigned long hertz);
+void far AIL_set_timer_frequency(int timer, uint32 hertz);
 void far AIL_shutdown(char far *msg);
 void far AIL_shutdown_driver(int drv, char far *msg);
 unsigned far AIL_sound_buffer_status(int driver, int buffer);

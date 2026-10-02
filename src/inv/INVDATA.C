@@ -123,7 +123,7 @@ int far FindSlot(struct Object far *obj)
 /* Finds an object by major, minor and class (-1 for any) in the inventory and sets *where
    to its slot. how limits the search: 1 the paperdoll and hands (slots 0..10) only, 2 and
    3 the backpack too (to 18), anything else also inside the containers carried. */
-struct Object far * far FindObj(int major, int minor, int cls, int how, register int *where)
+struct Object far * far FindObj(int major, int minor, int cls, int how, register int16 *where)
 {
     struct Object far *contents;
     struct Object far *objs[19];
@@ -449,7 +449,7 @@ int far DamageInventory(int slot, unsigned char damage, unsigned char type, int 
    times quantity for a stack, or its own mass plus its contents for a container. */
 int far ItemWeight(struct Object far *obj)
 {
-    int mass;
+    int16 mass;
     register struct ComObj *com;
 
     com = &ComObjData[OBJ_ITEM(obj)];

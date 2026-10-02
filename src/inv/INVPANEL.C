@@ -41,8 +41,8 @@
    stays extern. */
 char invArmorObj[6];
 char invArmorQ[6];
-int SaveHandles[23];
-static int panel_mouse;                 /* DS:6B0A */
+int16 SaveHandles[23];
+static int16 panel_mouse;               /* DS:6B0A */
 struct Object far *CursorObjPtr;
 
 char ValidLightSlots[4] = { 5, 6, 7, 8 };
@@ -81,8 +81,8 @@ char DisplayToSlot[21] = {
     1, 3, 0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
 };
 /* name: FM Towns keeps the next four as unnamed statics; the names are mine. */
-static int panel_input = 0;             /* DS:1799, the panel's mouse handler */
-static int shown_capacity = -1;         /* DS:179B, the weight figure on screen */
+static int16 panel_input = 0;           /* DS:1799, the panel's mouse handler */
+static int16 shown_capacity = -1;       /* DS:179B, the weight figure on screen */
 unsigned char InvUpArrow = 0;
 unsigned char InvDownArrow = 0;
 static unsigned char inv_begun = 0;     /* DS:179F */
@@ -169,8 +169,8 @@ void far DoInventoryMouse(int how)
 {
     int x0;
     int y0;
-    int x;
-    int y;
+    int16 x;
+    int16 y;
     char pick;
     int newhit;
     struct Object far *obj;
@@ -269,9 +269,9 @@ void far DoInventoryMouse(int how)
    down where the button is released. */
 void far DoInventoryDrag(struct Object far *obj)
 {
-    int x;
-    int y;
-    int buttons;
+    int16 x;
+    int16 y;
+    int16 buttons;
     register int hit;
 
     CursorObjPtr = obj;
@@ -499,7 +499,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
     int major;
     int minor;
     int sub;
-    int weight;
+    int16 weight;
     int id;
     register int cap;
     register int i;
@@ -813,7 +813,7 @@ void far displayInventoryArray(int from, int to)
     char font_set;
     char any_qty;
     int slot;
-    int qty[23];
+    int16 qty[23];
     register int i;
     register int n;
 

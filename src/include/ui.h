@@ -20,10 +20,10 @@ struct buttongroup;
 /* The mouse and keyboard state handed to an input handler, 10 bytes (seg010's dispatcher
    fills it in; reached through the near pointer inplist). */
 struct Inplist {
-    int x, y;                           /* relative to the region that took the click */
-    int mouse;                          /* 0x04: 1 for a mouse event, 0 for a key */
-    int cmd;                            /* 0x06: the input code, the buttons for a mouse event */
-    int mode;                           /* 0x08: mask of the screen modes */
+    int16 x, y;                         /* relative to the region that took the click */
+    int16 mouse;                        /* 0x04: 1 for a mouse event, 0 for a key */
+    int16 cmd;                          /* 0x06: the input code, the buttons for a mouse event */
+    int16 mode;                         /* 0x08: mask of the screen modes */
 };
 
 /* A message scroll's state. Field names beyond the ones the code clearly uses (coordinates,
@@ -31,39 +31,43 @@ struct Inplist {
    the struct's three instances (_main_scroll, _npc_scroll, _menu_scroll). Byte-packed,
    21 (0x15) bytes, matching the spacing between those three instances in the EXE. */
 struct Scroll {
-    int x0;                             /* 0x00 */
-    int y0;                             /* 0x02 */
-    int top;                            /* 0x04 */
-    int bottom;                         /* 0x06 */
-    int cur_x;                          /* 0x08 */
-    int cur_y;                          /* 0x0A */
-    int left;                           /* 0x0C */
-    int last_y;                         /* 0x0E */
+    int16 x0;                           /* 0x00 */
+    int16 y0;                           /* 0x02 */
+    int16 top;                          /* 0x04 */
+    int16 bottom;                       /* 0x06 */
+    int16 cur_x;                        /* 0x08 */
+    int16 cur_y;                        /* 0x0A */
+    int16 left;                         /* 0x0C */
+    int16 last_y;                       /* 0x0E */
     unsigned char more_pending;         /* 0x10 */
-    int start_line;                     /* 0x11 */
-    int font_color;                     /* 0x13 */
+    int16 start_line;                   /* 0x11 */
+    int16 font_color;                   /* 0x13 */
 };
 
 /* A button group of the options panel: an init function, the art row for its pictures
    (or -1), and for each of its seven buttons a handler, the handler's argument and a
    group to go to next. */
+HOST_LAYOUT_BEGIN
 struct buttongroup {
     void (far *init)(void);             /* 0x00 */
-    int images;                         /* 0x04 */
+    int16 images;                       /* 0x04 */
     void (far *fn[7])(int);             /* 0x06 */
-    int arg[7];                         /* 0x22 */
+    int16 arg[7];                       /* 0x22 */
     struct buttongroup *sub[7];         /* 0x30 */
 };
+HOST_LAYOUT_END
 
 /* One menu button, 16 bytes: the picture when not selected and when selected, and the
    button's bottom left corner and size. */
+HOST_LAYOUT_BEGIN
 struct Button {
     unsigned char far *img[2];          /* 0x00 */
-    int x;                              /* 0x08 */
-    int y;                              /* 0x0A, the bottom row */
-    int w;                              /* 0x0C */
-    int h;                              /* 0x0E */
+    int16 x;                            /* 0x08 */
+    int16 y;                            /* 0x0A, the bottom row */
+    int16 w;                            /* 0x0C */
+    int16 h;                            /* 0x0E */
 };
+HOST_LAYOUT_END
 
 struct StringNode { unsigned char value, pad, left, right; };
 
@@ -73,14 +77,14 @@ void far init_input(void);
 void far free_input(void);
 void far input_del(int hndl);
 /* A key or mouse region's handler, called with the argument it was registered with. */
-typedef void (far *InputFn)(int arg);
+typedef void (far *InputFn)(NEARPTR arg);
 extern struct Inplist *inplist;
-int far input_addmouse(int ulx, int uly, int lrx, int lry, int arg, int mask, InputFn func);
-int far _input_addkey(int key, int arg, int mask, InputFn func);
+int far input_addmouse(int ulx, int uly, int lrx, int lry, NEARPTR arg, int mask, InputFn func);
+int far _input_addkey(int key, NEARPTR arg, int mask, InputFn func);
 void far input_dispatch(struct Inplist *in);
 
 /* ICONS.C: the icon bar */
-extern int gameopts_done;
+extern int16 gameopts_done;
 extern char dseg_67d6_120;
 extern char current_hilit_button;
 extern unsigned char button_to_mode[6];
@@ -131,8 +135,8 @@ extern struct buttongroup quit_buttongroup;
 #define KEY_BACKTAB     0xA3            /* Shift+Tab */
 
 /* MOUSE.C: the mouse */
-extern int joymovecur;
-extern int fauxright;
+extern int16 joymovecur;
+extern int16 fauxright;
 extern char mouse_hand;
 char far mouse_check_reg(int x0, int y0, int x1, int y1);
 void far set_mouse_data(int id);
@@ -152,11 +156,11 @@ void far mous_3d_set(int x, int y, int w, int h);
 char far mous_in_3d_p(void);
 void far mous_3d_hide(void);
 void far mous_3d_show(void);
-void far mouse_getxy(int *x, int *y);
-void far mouse_Qgetxy(int *x, int *y);
+void far mouse_getxy(int16 *x, int16 *y);
+void far mouse_Qgetxy(int16 *x, int16 *y);
 void far mouse_clearQ(void);
 void far mouse_putxy(int x, int y);
-int far mouse_getbut(int *b);
+int far mouse_getbut(int16 *b);
 void far mouse_constrain(int x0, int y0, int x1, int y1);
 void far mouse_freereign(void);
 int far mouse_get_input(void);
@@ -225,8 +229,8 @@ extern struct Scroll near *scroll;  /* DS:34B0 */
 extern unsigned char mouse_in_scroll;  /* DS:34B2 */
 extern struct Scroll main_scroll;  /* DS:938 */
 extern struct Scroll npc_scroll;  /* DS:94D */
-extern int scroll_mode;  /* DS:97E */
-extern int start_line;  /* DS:980 */
+extern int16 scroll_mode;  /* DS:97E */
+extern int16 start_line;  /* DS:980 */
 extern unsigned char menus_active;
 extern unsigned char didMouseInput;  /* DS:983 */
 extern char scroll_esc;  /* DS:98C */
@@ -257,15 +261,15 @@ extern unsigned char Hasted;
 extern unsigned char WizEye;
 extern unsigned char Blessed;
 extern unsigned char Valor;
-extern int LeftPanel;
+extern int16 LeftPanel;
 extern unsigned char quick_time;
 extern unsigned char realDScheck;
 extern struct Object far *ObjectActing;
-extern int RightButtonThing;
+extern int16 RightButtonThing;
 extern struct Tile far *PickMap;
-extern int MapObj_X;
-extern int MapObj_Y;
-extern int GameInputMode;  /* DS:2506, declared in SKILLS.C */
+extern int16 MapObj_X;
+extern int16 MapObj_Y;
+extern int16 GameInputMode;  /* DS:2506, declared in SKILLS.C */
 void far player_3dtalk(void);
 void far player_3duse(void);
 void far display_scr(void);
@@ -275,12 +279,12 @@ void far inv_look(void);
 void far mous_in_panel(void);
 void far deal_with_icons(int mode);
 void far toggle_fightmode(void);
-extern int PickDist;
-extern long lastDurCheck;
+extern int16 PickDist;
+extern int32 lastDurCheck;
 /* What a click on an object in the 3D view does, while a spell or skill wants a target. */
 typedef void (far *ActorFn)(struct Object far *obj, int a, int b);
 extern ActorFn ObjectActor;
-extern int ObjectActorArg;
+extern int16 ObjectActorArg;
 void far mous_in_3d(void);
 void far punt_fightmode(void);
 
@@ -288,8 +292,8 @@ void far punt_fightmode(void);
 /* One map note: its text and where it sits on the map, 0x36 bytes. */
 struct ATM {
     char text[0x32];
-    int x;                              /* 0x32, -1 once erased */
-    int y;                              /* 0x34 */
+    int16 x;                            /* 0x32, -1 once erased */
+    int16 y;                            /* 0x34 */
 };
 
 /* The map notes, up to 100 (FARDATA.ASM's far segment). */
@@ -314,8 +318,8 @@ unsigned char far GetAutoMapLevel(int flags, int lev);
 extern unsigned char PlayersMap[MAP_SIZE][MAP_SIZE];
 unsigned char far SaveAutoMapLevel(int flags, int lev);
 /* What automap_area does to each tile. */
-typedef char (far *AreaMapFn)(int x, int y, int *arg);
-void far automap_area(int x0, int y0, int x1, int y1, int *arg, AreaMapFn fn);
+typedef char (far *AreaMapFn)(int x, int y, int16 *arg);
+void far automap_area(int x0, int y0, int x1, int y1, int16 *arg, AreaMapFn fn);
 void far update_map_scraps(int scrap, int lev, unsigned char sections);
 
 /* String blocks of DATA\STRINGS.PAK. A string id is the block shifted left 9 plus the
@@ -371,11 +375,11 @@ int far get_name(char far *dst, struct Object far *obj, char article, char plura
 /* Defined where no source has it yet: data the link takes from the EXE. */
 extern struct StringNode far *StringsPak_Address_Indices;
 extern FILE *StringsPak_FileHandle;
-extern int StringsPak_NoOfNodes;
-extern int string_bits;
+extern int16 StringsPak_NoOfNodes;
+extern int16 string_bits;
 
 /* JOYSTICK.C */
-void far seg011_6();  /* match: no prototype: callers pass an argument it ignores */
+void far seg011_6(int unused);  /* callers pass an argument it ignores */
 void far JoyStickCalibration_seg011_1B8(void);
-void far seg011_2C6();  /* match: no prototype: MOUSE.C passes a third argument it ignores */
+void far seg011_2C6(int16 *out_x, int16 *out_y, int unused);  /* MOUSE.C passes a third argument it ignores */
 #endif

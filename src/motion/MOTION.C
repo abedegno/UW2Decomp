@@ -87,7 +87,7 @@ unsigned char res_to_terr[18] = { 0, 0, 1, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0
    ComputeHeading finds (0 to 7, eighths of a turn) or by major * 2 for a plain wall
    across the major axis. */
 struct MotionParams MP = {
-    0, (int *)&Ppd, { 0 }, { 0 }, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, (int16 *)&Ppd, { 0 }, { 0 }, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     { 0, 0xE000, 0xC000, 0xA000, 0x8000, 0x6000, 0x4000, 0x2000 }
 };
 
@@ -204,11 +204,11 @@ void far set_targz(char how)
    object checks first (always for the player, index 1). Returns 0 when nothing moves. */
 unsigned char far space_to_motion(char pos, char check)
 {
-    int s;
-    int c;
-    long t;
-    long a;
-    long b;
+    int16 s;
+    int16 c;
+    int32 t;
+    int32 a;
+    int32 b;
 
     cSinCos(CP->heading, &s, &c);
     t = s;
@@ -376,7 +376,7 @@ static void seg031_2CFA_A3F(void)
    flags 0x40 refuses any change. Returns 0 when the mover cannot be redirected. */
 unsigned char far rehead(unsigned heading)
 {
-    register int diff;
+    register int16 diff;
     int t;
     unsigned char fx;
     unsigned char fy;
@@ -604,7 +604,7 @@ void far do_zbounce(void)
    in z the terrain byte is 0x10, in the air. */
 unsigned char far full_move(int crossed, int dir)
 {
-    long z;
+    int32 z;
     register int dz;
 
     if (MP.steps + (dir == -1) > MP.done) {
@@ -803,7 +803,7 @@ int far get_pcoll(void)
    starts gravity, -4. */
 void far check_positions(void)
 {
-    unsigned state;
+    uint16 state;
     unsigned char bounce2d = 0;
 
     state = get_pcoll();

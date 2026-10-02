@@ -100,7 +100,7 @@ unsigned char far read_quikpal(int n, void far *dest)
     register int got;
     fd = our_open(pals_name, 1, 0);
     if (fd < 0) return 0;
-    lseek(fd, (long)(n * 0x300), 0);
+    lseek(fd, (int32)(n * 0x300), 0);
     got = intoFarBuffer_ovr167_5DA(fd, dest, 0x300);
     close(fd);
     if (got != 0x300) return 0;
@@ -118,7 +118,7 @@ unsigned char far grfx_quikpal(int n)
 
 void far grfx_setpal(void far *src)
 {
-    movedata(FP_SEG(src), FP_OFF(src), FP_SEG(palette), FP_OFF(palette), 0x300);
+    FAR_COPY(palette, src, 0x300);
     local_do_palette(0x100, 0);
 }
 
@@ -137,12 +137,12 @@ void far fadeout(unsigned char far *src, int count, int pump)
 {
     int step;
     unsigned char far *buf;
-    unsigned far *acc;
-    unsigned long start;
+    uint16 far *acc;
+    uint32 start;
     register int i;
     register int scale = count;
     buf = fade_buffer;
-    acc = (unsigned far *)(buf + 0x300);
+    acc = (uint16 far *)(buf + 0x300);
     start = *Time;
     if (pump) anm_sound_callback();
     if (scale == 0) {
@@ -169,12 +169,12 @@ void far fadein(unsigned char far *src, int count, int pump)
 {
     int step;
     unsigned char far *buf;
-    unsigned far *acc;
-    unsigned long start;
+    uint16 far *acc;
+    uint32 start;
     register int i;
     register int scale = count;
     buf = fade_buffer;
-    acc = (unsigned far *)(buf + 0x300);
+    acc = (uint16 far *)(buf + 0x300);
     start = *Time;
     if (pump) anm_sound_callback();
     if (scale == 0) grfx_setpal(src);
@@ -214,7 +214,7 @@ void far out3d(int count, void (far *callback)(int), int colour)
    copy after each callback(i) and send. Does nothing if the workspace is in use. */
 void far in3d(int count, void (far *callback)(int), int colour)
 {
-    unsigned far *screen;
+    uint16 far *screen;
     register int i = count;
     register int seg;
     mouse_hide();
@@ -224,7 +224,7 @@ void far in3d(int count, void (far *callback)(int), int colour)
     }
     {
         screen = MK_FP(seg, 0);
-        movedata(FP_SEG(stdat), FP_OFF(stdat), FP_SEG(screen), FP_OFF(screen), 0x6800);
+        FAR_COPY(screen, stdat, 0x6800);
         ShowStupidFirstPersonWeapon = 0;
         cFillFB(colour);
         send_FB();
@@ -232,7 +232,7 @@ void far in3d(int count, void (far *callback)(int), int colour)
             callback(i);
             send_FB();
             set_workspace();
-            movedata(FP_SEG(screen), FP_OFF(screen), FP_SEG(stdat), FP_OFF(stdat), 0x6800);
+            FAR_COPY(stdat, screen, 0x6800);
             i--;
         }
         send_FB();

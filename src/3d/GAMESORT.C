@@ -38,16 +38,16 @@
    sortlist 267, sortdata 275, mptrmod 421, sd_xmod and sd_ymod 427, dirval 492,
    refugees 666, objxloc, objyloc and objzloc 935, objptrs 959. All FM Towns names: FM Towns
    has objptrs, the same 60 entries, right after refugees. */
-unsigned short holdmid[9], holdtmp[9];
+uint16 holdmid[9], holdtmp[9];
 unsigned char locsqmod;
 signed char sortlist[60];
 signed char sortdata[60][4];
-int mptrmod;
-int sd_xmod, sd_ymod;
+int16 mptrmod;
+int16 sd_xmod, sd_ymod;
 signed char dirval;
-unsigned short refugees[33][9];               /* 0x252 bytes: the memset clears them all */
-int objxloc, objyloc, objzloc;
-unsigned short objptrs[60];
+uint16 refugees[33][9];                       /* 0x252 bytes: the memset clears them all */
+int16 objxloc, objyloc, objzloc;
+uint16 objptrs[60];
 /* An object's fine x and y (0..7 within the tile) turned into the view's frame: for
    quadrant q, entry q * 16 + f * 2 is the turned x and the next byte the turned y;
    set_sds adds the x and y parts.
@@ -119,10 +119,10 @@ void far build_sort(int count)
    (sortdata[i][from_data], or the height for from_data 0) is above height go to one
    end of sortlist, the rest to the other, reverse saying which end is drawn first.
    The slot left between them, *point, gets skip itself. */
-void far do_partition(char reverse, int *point, int skip, int count,
+void far do_partition(char reverse, int16 *point, int skip, int count,
                       int height, int from_data)
 {
-    int ends[2], steps[2];
+    int16 ends[2], steps[2];
     int value;
     int side;
     register int i;
@@ -156,7 +156,7 @@ void far do_partition(char reverse, int *point, int skip, int count,
 
 /* Partition around a bridge by height: objects above it are drawn first when the
    eye is below the bridge (a table counts its own height). */
-void far z_part(int index, int *point, int count)
+void far z_part(int index, int16 *point, int count)
 {
     struct Object far *object;
     int z;
@@ -170,7 +170,7 @@ void far z_part(int index, int *point, int count)
 /* Partition around a door along the axis it lies across. Which side is drawn first
    comes from the half of the row (dirval) or, in the middle column, from the eye's
    position; probably the side away from the eye, which has not been checked. */
-void far door_part(int index, int *point, int count)
+void far door_part(int index, int16 *point, int count)
 {
     char reverse;
     int pos, axis;
@@ -224,8 +224,8 @@ void far do_objsort(union Link far *link)
 {
     register int word;
     struct Object far *next;
-    unsigned short *dest;
-    int visited, i, item, radius, partition, n, pivot;
+    uint16 *dest;
+    int16 visited, i, item, radius, partition, n, pivot;
     unsigned char candidate, held;
     int temp, distance;
 

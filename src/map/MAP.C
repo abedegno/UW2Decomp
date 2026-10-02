@@ -35,7 +35,7 @@
    and mapdata lie between ovr126's data and MapDirty; of the two files there, ovr127 is
    Okumura's LZSS.C and uses neither, this file loads the map mapdata points at. FM Towns
    has hgt_val as the same 34 bytes, after ovr126's strings. */
-int hgt_val[17] = { 0x000, 0x040, 0x080, 0x0C0, 0x100, 0x140, 0x180, 0x1C0, 0x200,
+int16 hgt_val[17] = { 0x000, 0x040, 0x080, 0x0C0, 0x100, 0x140, 0x180, 0x1C0, 0x200,
                     0x240, 0x280, 0x2C0, 0x300, 0x340, 0, 0, 0x400 };      /* DS:1874 */
 struct Tile far *mapdata = 0;           /* DS:1896 */
 /* name: FM Towns _MapDirty: its Map_Load_ and Map_Save_ clear it as these do. DS:189A. */
@@ -56,12 +56,12 @@ char far Map_Init(void)
 
 /* Sets all 4096 tiles to one 4-byte tile value and marks the map dirty. Nothing in the
    sources calls it, and FM Towns has no name for it; probably an editor routine. */
-void far OverwriteAllTiles_ovr128_37(unsigned long *tile)
+void far OverwriteAllTiles_ovr128_37(uint32 *tile)
 {
-    unsigned long far *p;
+    uint32 far *p;
     unsigned i;
 
-    p = (unsigned long far *)mapdata;
+    p = (uint32 far *)mapdata;
     for (i = 0; i < 0x1000; i++) {
         *p = *tile;
         p++;
@@ -78,7 +78,7 @@ void far OverwriteAllTiles_ovr128_37(unsigned long *tile)
    Returns 0 only when the archive cannot be opened. */
 unsigned char far Map_Load(int arc, int level, int folderType)
 {
-    unsigned far *end;                  /* the block's magic word; the counts before it */
+    uint16 far *end;                    /* the block's magic word; the counts before it */
 
     end = &LEVEL->magic;
     *end = 0;
@@ -108,16 +108,16 @@ unsigned char far Map_Load(int arc, int level, int folderType)
    Returns put_arc's result. */
 char far Map_Save(int arc, int level, int folderType)
 {
-    unsigned far *end;
+    uint16 far *end;
     unsigned result;
     unsigned char answer;
 
     end = &LEVEL->magic;
     end[-3] = LastActiveMob - ActiveMob;    /* nactive */
-    end[-2] = ((long)FP_OFF(critptr)       /* nmobfree */
-        - (long)FP_OFF(critbot)) / 2L;
-    end[-1] = ((long)FP_OFF(objptr)        /* nstaticfree */
-        - (long)FP_OFF(objbot)) / 2L;
+    end[-2] = ((int32)FP_OFF(critptr)      /* nmobfree */
+        - (int32)FP_OFF(critbot)) / 2L;
+    end[-1] = ((int32)FP_OFF(objptr)       /* nstaticfree */
+        - (int32)FP_OFF(objbot)) / 2L;
     *end = LEVEL_MAGIC;
     MapDirty = 0;
     Anim_Save((char far *)LEVEL->anims);
@@ -150,10 +150,8 @@ char far Anim_Load(char far *source)
 
     animcount = 0;
     timercount = 0;
-    movedata(FP_SEG(source), FP_OFF(source), FP_SEG(animlist),
-                                    FP_OFF(animlist), 0x180);
-    movedata(FP_SEG(source + 0x180), FP_OFF(source + 0x180), FP_SEG(timerlist),
-                                    FP_OFF(timerlist), 0x80);
+    FAR_COPY(animlist, source, 0x180);
+    FAR_COPY(timerlist, source + 0x180, 0x80);
     for (count = 0; count < 0x40; count++)
         if (animlist[count].link.f.index == 0)
             break;
@@ -174,9 +172,7 @@ char far Anim_Save(char far *destination)
                              0x180 - animcount * 6);
     mem_set((char far *)&timerlist[timercount], 0,
                              0x80 - timercount * 2);
-    movedata(FP_SEG(animlist), FP_OFF(animlist),
-                                    FP_SEG(destination), FP_OFF(destination), 0x180);
-    movedata(FP_SEG(timerlist), FP_OFF(timerlist),
-                                    FP_SEG(destination + 0x180), FP_OFF(destination + 0x180), 0x80);
+    FAR_COPY(destination, animlist, 0x180);
+    FAR_COPY(destination + 0x180, timerlist, 0x80);
     return 1;
 }

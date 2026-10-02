@@ -44,13 +44,13 @@ void far set_light(signed char n);
    playerdat 440, ThePlayer 444, PlayerLevel 568, PlayerFacing 704, PlayerHeading 768. It
    follows ovr140's TxmID (988) and ends where ovr143's IsJoy (1) starts another run, and
    ovr143's run holds its own static region handles, so this run is not ovr143's. */
-int player_name_handle;
+int16 player_name_handle;
 struct Player *player;
 struct Creature *playerdat;
 struct Object far *ThePlayer;
-int PlayerLevel;
-int PlayerFacing;
-int PlayerHeading;
+int16 PlayerLevel;
+int16 PlayerFacing;
+int16 PlayerHeading;
 
 /* This file's _DATA runs from DS:19AC to the end of "dl.dat" at DS:19DB. */
 /* Body slot to defence index: inventory slots 0 to 4 (probably helm, chest, gloves,
@@ -195,7 +195,7 @@ void far set_drugged(char on)
 /* name: FM Towns player_affected_by_ is between set_drugged_ and parse_aspells_ and
    applies the same spell classes; IDA left its DOS name descriptive. */
 unsigned char far player_affected_by(unsigned char major, unsigned char minor,
-                                    register unsigned *bonuses, int slot)
+                                    register uint16 *bonuses, int slot)
 {
     register int i;
     switch (major) {
@@ -249,7 +249,7 @@ unsigned char far player_affected_by(unsigned char major, unsigned char minor,
     case 12:
         if (slot < 0) break;
         {
-        int slots[2] = {-1, -1};
+        int16 slots[2] = {-1, -1};
         i = 0;
         if (slot > 4) {
             slots[0] = 0;
@@ -291,7 +291,7 @@ void far parse_aspells(unsigned char *out)
 /* Applies the bits player_affected_by gathered: bit 1 cuts noise by 16, bit 2
    visibility by 5, bit 3 visibility by 16 (none below 0); the high nibble is added to
    all four armour values. Then redraws the active spell icons. */
-void far parse_spells(unsigned bonuses)
+void far parse_spells(uint16 bonuses)
 {
     unsigned char i;
     unsigned char spells[3];
@@ -347,9 +347,9 @@ int far armor_val(struct Object far *obj)
 void far FixPlayerEquips(void)
 {
     int brightness, best_slot, armour;
-    unsigned bonuses;
+    uint16 bonuses;
     unsigned char flag;
-    int major, effect;
+    int16 major, effect;
     struct Object far *item;
     register int slot;
     unsigned char *data;
@@ -431,7 +431,7 @@ void far load_dl(void)
     register int fd;
     fd = our_open("dl.dat", 1, 0);
     if (fd >= 0) {
-        lseek(fd, (long)(PlayerLevel - 1), 0);
+        lseek(fd, (int32)(PlayerLevel - 1), 0);
         read(fd, &value, 1);
         close(fd);
         light_mod = value % 10;

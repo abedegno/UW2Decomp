@@ -32,35 +32,39 @@
    left" and "lower right" in the field names (ulx, uly) is the bottom left corner and
    (lrx, lry) the top right:
    a point is inside when ulx <= x <= lrx and uly <= y <= lry. */
+HOST_LAYOUT_BEGIN
 struct MouseDispatch {
-    int hndl;
-    int lrx, lry;                       /* 0x02: the corner with the larger x and y */
-    int ulx, uly;                       /* 0x06: the corner with the smaller x and y */
-    int arg;                            /* 0x0A: handed to the handler */
-    int mask;                           /* 0x0C: the modes it answers in */
-    void (far *func)(int arg);          /* 0x0E */
+    int16 hndl;
+    int16 lrx, lry;                     /* 0x02: the corner with the larger x and y */
+    int16 ulx, uly;                     /* 0x06: the corner with the smaller x and y */
+    NEARPTR arg;                        /* 0x0A: handed to the handler */
+    int16 mask;                         /* 0x0C: the modes it answers in */
+    void (far *func)(NEARPTR arg);          /* 0x0E */
 };
+HOST_LAYOUT_END
 
 /* A key handler, 0x0C bytes. */
+HOST_LAYOUT_BEGIN
 struct KeyDispatch {
-    int hndl;
-    int key;                            /* 0x02 */
-    int arg;                            /* 0x04 */
-    int mask;                           /* 0x06 */
-    void (far *func)(int arg);          /* 0x08 */
+    int16 hndl;
+    int16 key;                          /* 0x02 */
+    NEARPTR arg;                        /* 0x04 */
+    int16 mask;                         /* 0x06 */
+    void (far *func)(NEARPTR arg);          /* 0x08 */
 };
+HOST_LAYOUT_END
 
 /* Uninitialised data, DS:22B6 to DS:22C9. */
-int mcurhndl;                           /* the next mouse handle, counting up from 1 */
+int16 mcurhndl;                         /* the next mouse handle, counting up from 1 */
 struct MouseDispatch *mous_dispatch;
-int kdispcnt;
-int mdispcnt;
+int16 kdispcnt;
+int16 mdispcnt;
 static struct Inplist inp;
 struct KeyDispatch *key_dispatch;
 
 /* Initialised data, DS:E4 onwards. */
 struct Inplist *inplist = &inp;
-int kcurhndl = -666;                    /* the next key handle, counting down from -1;
+int16 kcurhndl = -666;                  /* the next key handle, counting down from -1;
                                            -666 while the tables are not allocated */
 
 void far init_input(void)
@@ -85,8 +89,8 @@ void far free_input(void)
     }
 }
 
-int far input_addmouse(int ulx, int uly, int lrx, int lry, int arg, int mask,
-                       void (far *func)(int))
+int far input_addmouse(int ulx, int uly, int lrx, int lry, NEARPTR arg, int mask,
+                       void (far *func)(NEARPTR))
 {
     struct MouseDispatch *p;
 
@@ -107,7 +111,7 @@ int far input_addmouse(int ulx, int uly, int lrx, int lry, int arg, int mask,
     return p->hndl;
 }
 
-int far _input_addkey(int key, int arg, int mask, void (far *func)(int))
+int far _input_addkey(int key, NEARPTR arg, int mask, void (far *func)(NEARPTR))
 {
     struct KeyDispatch *p;
 
@@ -175,7 +179,7 @@ void far input_del(int hndl)
 void far input_dispatch(struct Inplist *in)
 {
     int code;
-    int x, y;
+    int16 x, y;
     register int i;
 
     if ((code = mouse_get_input_sp()) < 0)

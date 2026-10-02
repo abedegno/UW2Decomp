@@ -39,7 +39,7 @@
 
 void far setup_converse_data(struct Object far *npc)
 {
-    int val;
+    int16 val;
     struct Creature near *crit;
     int who;
 
@@ -125,8 +125,8 @@ void far setup_converse_data(struct Object far *npc)
    though nothing here kills anything. */
 char far update_converse_data(struct Object far *npc)
 {
-    int val;
-    int gtarg;
+    int16 val;
+    int16 gtarg;
     char killed;
 
     killed = 0;

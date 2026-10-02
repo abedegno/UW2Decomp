@@ -43,7 +43,7 @@
    6A90, 6A94). */
 static union Link far *invSlots;        /* the inventory slots in the workspace */
 static struct StaticObj far *saveObjs;     /* the saved objects, numbered from 1 */
-static int saveNum;                     /* the number of saved objects */
+static int16 saveNum;                   /* the number of saved objects */
 static void far *saveBuf;               /* the workspace */
 static char cursorSaved;                /* the copy holds a cursor object */
 
@@ -121,7 +121,7 @@ char far SavePlayerInv(char *name)
 }
 
 /* Copies the list at src, and every list inside it, to the save area, pointing dst at it. */
-void far InvSaveNexts(union Link far *src, unsigned far *dst)
+void far InvSaveNexts(union Link far *src, uint16 far *dst)
 {
     struct Object far *obj;
     struct Object far *copy;
@@ -176,7 +176,7 @@ void far putInInv(union Link far *mem, union Link far *saved)
 }
 
 /* Restores the saved list at src, and every list inside it, pointing dst at it. */
-void far InvRestoreNexts(unsigned far *dst, union Link far *src)
+void far InvRestoreNexts(uint16 far *dst, union Link far *src)
 {
     struct Object far *obj;
     struct Object far *saved;

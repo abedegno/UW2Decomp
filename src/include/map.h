@@ -20,12 +20,12 @@ struct Tile;
    follows at +0x17), reached through curP: what seg028's collision checks find under and
    around a mover's footprint. */
 struct MotionCalc {
-    int x, y, z;                        /* 0x00, in 1/8 tiles */
-    unsigned heading;                   /* 0x06, the heading in bits 13-15 */
+    int16 x, y, z;                      /* 0x00, in 1/8 tiles */
+    uint16 heading;                     /* 0x06, the heading in bits 13-15 */
     unsigned char radius;               /* 0x08 */
     unsigned char height;               /* 0x09 */
-    int index;                          /* 0x0A */
-    int hits0, hits1;                   /* 0x0C */
+    int16 index;                        /* 0x0A */
+    int16 hits0, hits1;                 /* 0x0C */
     unsigned char floor;                /* 0x10, the height under the centre */
     unsigned char top;                  /* 0x11, the highest under the footprint */
     unsigned char slope;                /* 0x12 */
@@ -42,11 +42,11 @@ struct MotionCalc {
    (TRIGGER.C), as UW-Formats has them. floor indexes TxmID; the wall index is in the
    object link (TILE_WALL). */
 struct Tile {
-    unsigned type:4;                    /* 0x00: solid, open, the diagonals and slopes */
-    unsigned height:4;
-    unsigned light:2;                   /* 0x01 */
-    unsigned floor:4;                   /* the floor texture */
-    unsigned door:2;
+    uint16 type:4;                      /* 0x00: solid, open, the diagonals and slopes */
+    uint16 height:4;
+    uint16 light:2;                     /* 0x01 */
+    uint16 floor:4;                     /* the floor texture */
+    uint16 door:2;
     union Link objects;                 /* 0x02, the head of the tile's object list; its
                                            low six bits are the wall texture */
 };
@@ -59,7 +59,7 @@ struct Collision {
     unsigned char top;                  /* 0x00 */
     unsigned char bottom;               /* 0x01 */
     union Link link;                    /* 0x02: the object, with flags in the low six bits */
-    int offset;                         /* 0x04, the tile's offset in the map */
+    int16 offset;                       /* 0x04, the tile's offset in the map */
 };
 
 /* Tile types, struct Tile's type (UW-Formats 4.2, "Underworld tile types"). The
@@ -97,7 +97,7 @@ enum TileType {
 #define TERRAIN_ICE     3
 
 /* MAP.C: loading and saving the level map. hgt_val converts a floor height to a z. */
-extern int hgt_val[17];
+extern int16 hgt_val[17];
 char far Anim_Load(char far *source);
 char far Anim_Save(char far *destination);
 unsigned char far Map_Load(int arc, int level, int folderType);
@@ -106,10 +106,10 @@ extern struct Tile far *mapdata;
 char far Map_Init(void);
 
 /* TEXTMAPS.C: a level's texture map */
-extern int TxmID[0x40];
+extern int16 TxmID[0x40];
 void far load_txtmaps(void);
-void far Load_Terrains(int *ids);
-extern unsigned TxmTerr[0x40];
+void far Load_Terrains(int16 *ids);
+extern uint16 TxmTerr[0x40];
 char far init_txtlib(void);
 unsigned char far Txm_Load(int arc, int lev, int flags);
 unsigned char far Txm_Save(int arc, int lev, int flags);
@@ -121,8 +121,8 @@ void far random_light(char enabled);
 /* COLLIDE.C: terrain and object collision for anything that moves or is placed */
 extern struct Collision oCollisions[8];
 extern struct MotionCalc near *curP;
-extern int nvokHgt;
-extern int nvokTerr;
+extern int16 nvokHgt;
+extern int16 nvokTerr;
 int far GetSlopeHgt(int x, int y);
 void far ComputeHeading(void);
 int far get_home_tile(void);

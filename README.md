@@ -56,7 +56,7 @@ Each DOS code segment is one original source file. A file's DOS segment is its `
 | `src/sys/` | seg021's 17 system modules, memory and EMS, archives and compression, errors, helpers | [sys.md](docs/subsystems/sys.md) |
 | `src/lib/` | Borland's overlay manager (`OVERLAY.ASM`, from OVERLAY.LIB) | [sys.md](docs/subsystems/sys.md#the-overlay-manager) |
 | `src/include/` | the shared headers, one per subsystem | [CONTRIBUTING.md](docs/CONTRIBUTING.md#shared-headers) |
-| `src/port/` | the port's portability layer (`compat.h`) and stand-ins for Borland's headers; never compiled by the DOS build | [PORT.md](docs/PORT.md) |
+| `src/port/` | the port's portability layer (`compat.h`), stand-ins for Borland's headers and the link stubs; never compiled by the DOS build | [PORT.md](docs/PORT.md) |
 
 No UW2 build names its source files, so the file names come from System Shock's source release, the FM Towns names, or what the file does. `map/filenames.tsv` gives the evidence for each ([MAP.md](docs/MAP.md#source-file-names)).
 
@@ -76,4 +76,4 @@ The rest of the top level:
 - [LINKING.md](docs/LINKING.md): the exact link, the two bytes, what is taken from your EXE, and the modding build.
 - [LAYOUT.md](docs/LAYOUT.md): every address written as a number, and what still depends on the original layout.
 - [MAP.md](docs/MAP.md): the map, the target tables, `symbols.tsv`, `matched.txt` and the source file names.
-- [PORT.md](docs/PORT.md): the design of a native port built from these sources, and the Milestone 1 measurement of the C on a modern host.
+- [PORT.md](docs/PORT.md): the design of a native port built from these sources, Milestones 1 and 2 (the C compiles and links natively, `make port`), and the plan for Milestone 3.

@@ -36,7 +36,7 @@ static char dseg_67d6_6A96;     /* provisional */
 
 
 unsigned char spell_delay = 0;
-unsigned long lstime = 0;
+uint32 lstime = 0;
 
 /* Puts a runestone into the rune bag: the object is freed and the rune's bit set (bit
    7 - (rune & 7) of runebag[rune / 8]). Returns 0 for an object that is not a runestone. */
@@ -135,7 +135,7 @@ void far not_a_spell(void)
    <= 2 is 'is nearly done', <= 10 'is unstable', more 'is stable'. Left click dispels it. */
 void far try_clear(void)
 {
-    int idx;
+    int16 idx;
     unsigned char active[4];
     int stab;
 

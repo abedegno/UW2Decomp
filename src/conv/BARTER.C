@@ -62,16 +62,16 @@ static void far ReturnTradeObjectsToNPC_ovr097_F76(int only_unselected);
    EXE has them (it orders a file's _BSS by a hash of the name, see tools/bssorder.py). */
 static unsigned char barter_result;     /* the last offer or demand succeeded */
 static unsigned char barter_selected[2][6];
-static int npc_wit;                     /* worked out by barter_init, never read */
-static int far *npc_likes;              /* lists set by npc_likes_dislikes, ending in -1 */
-int npc_assess;                         /* how far off the NPC's appraisals may be, in % */
-static int patience;                    /* bad offers left before the NPC gives up */
-static int far *npc_dislikes;
-int greed;                              /* the % gain the NPC wants from a trade */
-static int last_offer;                  /* the % gain of the previous offer */
-static int barter_vals[2][2][6];        /* the player's and the NPC's valuations, -1 unknown */
-static int barter_saves[2][6];          /* what was on screen under each slot */
-static int barter_items[2][6];          /* the object in each slot, 0 for none */
+static int16 npc_wit;                   /* worked out by barter_init, never read */
+static int16 far *npc_likes;            /* lists set by npc_likes_dislikes, ending in -1 */
+int16 npc_assess;                       /* how far off the NPC's appraisals may be, in % */
+static int16 patience;                  /* bad offers left before the NPC gives up */
+static int16 far *npc_dislikes;
+int16 greed;                            /* the % gain the NPC wants from a trade */
+static int16 last_offer;                /* the % gain of the previous offer */
+static int16 barter_vals[2][2][6];      /* the player's and the NPC's valuations, -1 unknown */
+static int16 barter_saves[2][6];        /* what was on screen under each slot */
+static int16 barter_items[2][6];        /* the object in each slot, 0 for none */
 
 /* Conversation built-in: fill the NPC's trade slots from its inventory (at most 0x28
    objects looked at), generating the inventory first if it has none. Once all six are
@@ -247,8 +247,8 @@ int far npc_slot_hit_abs(int x, int y)
    filled in, or 0. */
 /* name: Unnamed (static) in the FM Towns build, which has it straight after
    npc_slot_hit_abs. */
-static int far ovr097_5F0(int x, int y, int *side, int *slot,
-                   int **content, register unsigned char **active)
+static int16 far ovr097_5F0(int x, int y, int16 *side, int16 *slot,
+                   int16 **content, register unsigned char **active)
 {
     register int i;
     if ((i = play_slot_hit_abs(x, y)) > -1) {
@@ -271,7 +271,7 @@ static int far ovr097_5F0(int x, int y, int *side, int *slot,
 /* A click on the player's slots during a conversation, at the mouse position. */
 void far conv_inv_special(void)
 {
-    int x, y;
+    int16 x, y;
     register int slot;
     mouse_getxy(&x, &y);
     slot = play_slot_hit_abs(x, y);
@@ -299,13 +299,13 @@ void far npc_barter(void)
    nothing can be put down in the NPC's slots. Looking uses the lore skill: an NPC item
    gets detail 2 on a lore check against 20, the player's own 1 plus the result of a
    check against 15. */
-void far UseTradeSlot_ovr097_6E8(int side, int slot, int *content,
+void far UseTradeSlot_ovr097_6E8(int16 side, int16 slot, int16 *content,
                                                  unsigned char *active)
 {
     struct Object far *found;
     struct Object far *moved;
-    int x;
-    int y;
+    int16 x;
+    int16 y;
     unsigned char had_cursor;
     struct Object far *obj;
     register int lore;
@@ -420,7 +420,7 @@ void far drawTradeSlot_ovr097_A91(int side, register int slot)
 }
 
 /* Pick up what is in a slot; with split, the rest of a divided stack stays there. */
-void far PickUpFromSlot_ovr097_C39(register int slot, register int *content, unsigned char split)
+void far PickUpFromSlot_ovr097_C39(register int slot, register int16 *content, unsigned char split)
 {
     unsigned char had_cursor;
 
@@ -438,7 +438,7 @@ void far PickUpFromSlot_ovr097_C39(register int slot, register int *content, uns
 }
 
 /* Put what is held into a slot, or onto a stack already there. */
-void far ovr097_CDB(int side, register int slot, register int *content)
+void far ovr097_CDB(int side, register int slot, register int16 *content)
 {
     if (content[slot] == 0) {
         content[slot] = Obj_MemTPtr(CursorObjPtr);
@@ -450,7 +450,7 @@ void far ovr097_CDB(int side, register int slot, register int *content)
 /* Add a held stack to the like stack in a slot, or else swap the two. Returns 1 when
    the held object was merged and freed. */
 unsigned char far CombineToSlot_ovr097_D30(struct Object far *obj, int side,
-                                                 register int slot, int *content)
+                                                 register int slot, int16 *content)
 {
     struct Object far *found;
     unsigned char merged;
@@ -565,7 +565,7 @@ static void far probablyTradeObjects_ovr097_100A(void)
 }
 
 /* 1 when no slot of a side is both filled and selected. */
-unsigned char far nothing_there(int *content, unsigned char *selected)
+unsigned char far nothing_there(int16 *content, unsigned char *selected)
 {
     register int i;
     for (i = 0; i < 6; i++)
@@ -585,7 +585,7 @@ unsigned char far nothing_there(int *content, unsigned char *selected)
    offer worse than the last costs 2; and later an offer that closed less than a third
    of the gap left by the last one (inferred from (greed - last) * 3 / 2 > greed - eval)
    costs 1. An offer that costs nothing says nothing. */
-int far do_offer(int far *args)
+int far do_offer(int16 far *args)
 {
     int player_value;
     int yes_str, no_str, worse_str, tired_str, none_str;
@@ -646,12 +646,12 @@ int far do_offer(int far *args)
    0x11 (PlayerLevel). The player must score more. Giving in lowers npc_attitude by one
    (not below 1), as does demanding nothing; refusing sets the NPC to attack the player
    (goal 5, target 1). */
-int far do_demand(int far *args)
+int far do_demand(int16 far *args)
 {
     int player_score;
     int npc_score;
     int armed;
-    int attitude;
+    int16 attitude;
     int insist_str;
     int wont_str;
     int what_str;
@@ -759,9 +759,9 @@ void far do_judgement(void)
 
 /* The total value of a side's selected items, valuing each once and caching it in
    values. With use_likes the NPC's likes and dislikes count. */
-int far total_offering_ovr097_17CB(int use_likes, int *items,
+int far total_offering_ovr097_17CB(int use_likes, int16 *items,
                                             unsigned char *selected,
-                                            int *values, int accuracy)
+                                            int16 *values, int accuracy)
 {
     register int i;
     register int total;
@@ -804,7 +804,7 @@ int far assess_value(int use_likes, int item, int accuracy)
     if (OBJ_ITEM(obj) == ITEM_COIN) quality = 0x3F;
     if (value > 0) {
         if (quality > 0) {
-            value = (int)(((long)value * quality) >> 6);
+            value = (int)(((int32)value * quality) >> 6);
             if (value == 0) value = 1;
         } else value = 0;
     }
@@ -817,11 +817,11 @@ int far assess_value(int use_likes, int item, int accuracy)
 /* base plus a random min..max % of it (max itself excluded). */
 int far range(int base, int min, int max)
 {
-    return base + base * (min + (int)(((long)rand() * (max - min)) / 0x8000L)) / 100;
+    return base + base * (min + (int)(((int32)rand() * (max - min)) / 0x8000L)) / 100;
 }
 
 /* The item types and indexes of the player's selected items; returns how many. */
-int far player_barter_items(int *items, int *indices)
+int far player_barter_items(int16 *items, int16 *indices)
 {
     struct Object far *obj;
     register int slot;
@@ -1024,7 +1024,7 @@ int far npc_inv_delete(int item)
 
 /* set_likes_dislikes(arg2 likes, arg1 dislikes): point at the NPC's lists of liked and
    disliked items, two script arrays ending in -1. */
-int far npc_likes_dislikes(int far *args)
+int far npc_likes_dislikes(int16 far *args)
 {
     npc_likes = getmem_addr(args[-2]);
     npc_dislikes = getmem_addr(args[-1]);

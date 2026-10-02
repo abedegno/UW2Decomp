@@ -55,18 +55,18 @@
 struct Object far *critdata;            /* the mobile objects */
 unsigned char far *LastActiveMob;       /* the end of the active mobile list */
 union Link far *Obj_Find_Head;         /* the list in which Obj_Find found its object */
-static int mobcount;                    /* Obj_ListOkay's counts */
+static int16 mobcount;                  /* Obj_ListOkay's counts */
 unsigned char far *ActiveMob;           /* the active mobile list */
-static int total_weight;                /* check_weight's running total */
-static int cull_range;                  /* chkTenacious's limit */
-unsigned far *objtop;                   /* the free static list */
-unsigned far *objbot;
-unsigned far *objptr;
-unsigned far *crittop;                  /* the free mobile list */
-unsigned far *critbot;
-unsigned far *critptr;
+static int16 total_weight;              /* check_weight's running total */
+static int16 cull_range;                /* chkTenacious's limit */
+uint16 far *objtop;                     /* the free static list */
+uint16 far *objbot;
+uint16 far *objptr;
+uint16 far *crittop;                    /* the free mobile list */
+uint16 far *critbot;
+uint16 far *critptr;
 struct StaticObj far *objdata;          /* the static objects */
-static int objcount;
+static int16 objcount;
 
 /* Empties the object store: clears every tile's object list, points critdata, objdata and
    the free stacks into the level block, fills the free stacks with every index from 2 to
@@ -76,7 +76,7 @@ static int objcount;
 void far Map_ObjFix(void)
 {
     struct Tile far *t;
-    unsigned far *p;
+    uint16 far *p;
     int i;
 
     for (t = mapdata, i = 0; i < MAP_SIZE * MAP_SIZE; i++, t++)
@@ -150,7 +150,7 @@ unsigned char far Obj_Elem_Fate(int range, struct Object far *obj)
     if (obj == 0)
         return 0;
     if (range)
-        range += (int)(((long)rand() * 3) / 0x8000L);
+        range += (int)(((int32)rand() * 3) / 0x8000L);
     cull_range = range;
     if (chkTenacious(obj))
         return 0;
@@ -158,7 +158,7 @@ unsigned char far Obj_Elem_Fate(int range, struct Object far *obj)
         if (Obj_Check(Obj_PtrTMem(&obj->ol.link), chkTenacious))
             return 0;
     }
-    if ((int)(((long)rand() * 10) / 0x8000L) < cull_range)
+    if ((int)(((int32)rand() * 10) / 0x8000L) < cull_range)
         return 1;
     return 0;
 }
@@ -431,7 +431,7 @@ void far free_critter(int index)
    nothing calls it, so it keeps the IDA name. */
 unsigned char far UNREFERENCED_seg029_2A8E_B04(int index)
 {
-    unsigned far *p;
+    uint16 far *p;
 
     if (index <= 0xFF) {
         for (p = critptr; p >= critbot; p--)
@@ -489,7 +489,7 @@ unsigned char far HasOrIsObj(struct Object far *obj, int id)
 /* Scans the map's tile lists (and their contents) for a match from tile (*x, *y) onward,
    row by row, and returns it with *x and *y at its tile. The caller resumes the search by
    advancing *x; an *x past the row moves to the next row. */
-struct Object far * far Obj_FindInMap(int major, int minor, int index, int *x, int *y)
+struct Object far * far Obj_FindInMap(int major, int minor, int index, int16 *x, int16 *y)
 {
     struct Tile far *t;
     union Link far *head;
@@ -607,7 +607,7 @@ unsigned char far count_list(struct Object far *obj, unsigned char *counts)
    all is consistent. ObjCrunch passes its argument on, but nothing here reads it. */
 unsigned char far Obj_ListOkay(char how)
 {
-    unsigned far *p;
+    uint16 far *p;
     int nstatic;
     int y;
     int nmobile;
@@ -660,7 +660,7 @@ unsigned char far Obj_ListOkay(char how)
    through errmsg and returns 0. */
 unsigned char far ObjCrunch(char how)
 {
-    unsigned far *p;
+    uint16 far *p;
 
     if (!Obj_ListOkay(how)) {
         errmsg("Cantcrunch", "badobjlist");

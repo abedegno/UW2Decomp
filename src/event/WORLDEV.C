@@ -63,7 +63,7 @@ void far set_numbered_variable(int var, int how, int val);
         visited[(tx) - xmin] |= 1 << ((ty) - ymin); \
     }
 unsigned char far find_good_x_and_y(struct Object far *obj, int x, int y,
-                                    int *nx, int *ny, char clear)
+                                    int16 *nx, int16 *ny, char clear)
 {
     unsigned char ncur, nnext;
     signed char xmin, ymin, xmax, ymax;
@@ -73,7 +73,7 @@ unsigned char far find_good_x_and_y(struct Object far *obj, int x, int y,
     union Link far *link;
     struct Object far *o;
     char cur_list[20][2], next_list[20][2];
-    unsigned visited[9];
+    uint16 visited[9];
     register char (*next)[2];
     register char (*cur)[2];
 
@@ -160,9 +160,9 @@ unsigned char far find_good_x_and_y(struct Object far *obj, int x, int y,
    moves on, the day clock XC_TIME becomes clock / 0x4B000 modulo 72 (so a step is 20
    minutes and the cycle a day), and the schedules catch up. */
 /* name: 2: AddTimeToClock_ovr110_949, target size 0x79. */
-void far pass_time(long seconds)
+void far pass_time(int32 seconds)
 {
-    long elapsed = seconds << 8;
+    int32 elapsed = seconds << 8;
     player->game_clock += elapsed;
     player->xclock[XC_TIME] = (player->game_clock / 0x4B000L) % 0x48L;
     Sched_SetAllClocks(1);
@@ -179,7 +179,7 @@ void far pass_time(long seconds)
 /* name: 3: Teleport_ovr110_9C2, target size 0x211. */
 int far do_teleport(struct Object far *who, int x, int y, int level)
 {
-    int new_x, new_y;
+    int16 new_x, new_y;
     unsigned char ok;
     int old_x, old_y;
     register int dest = level;
@@ -423,9 +423,9 @@ void far do_change_grokking(struct Object far *trap, struct Object far *link,
                             int x, int y)
 {
     int xstart, ystart, xend, yend, tx;
-    int trapv[4];
-    int linkv[4];
-    int cur[4];
+    int16 trapv[4];
+    int16 linkv[4];
+    int16 cur[4];
     unsigned char limits[4] = {0x3F, 0x0F, 0x0A, 0x0F};
     struct Tile far *tile;
     unsigned char ok;
@@ -521,8 +521,8 @@ int far inanimate_spell(int x, int y, struct Object far *trap,
 /* name: 11: UseFishingPole_ovr110_152B, target size 0xF7. */
 unsigned char far go_fish(void)
 {
-    int x;
-    int y;
+    int16 x;
+    int16 y;
     struct Tile far *tile;
     x = PN.x >> 5;
     y = PN.y >> 5;
@@ -531,7 +531,7 @@ unsigned char far go_fish(void)
     if (tile->type != TILE_SOLID) {
         if (((TxmTerr[tile->floor] & TERR_CLASS) >> 6) != TERRAIN_WATER)
             goto bad_place;
-        if ((OBJ_Z(ThePlayer) >> 3) <= tile->height - 1)
+        if ((OBJ_Z(ThePlayer) >> 3) <= (uint16)(tile->height - 1))
             goto bad_place;
     } else
         goto bad_place;
@@ -705,7 +705,7 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
     unsigned char pit;
     pit = 0;
     if (mode && is_my_race(obj, 0xB))
-        gronk_race(0xB, 1, 0, gronkify_attitude);
+        gronk_race(0xB, 1, 0, (char (far *)(struct Object far *, NEARPTR))gronkify_attitude);
     if (mode && OBJ_ITEM(obj) == ITEM_BLOODWORM && PlayerLevel == 4
         && player->quest_bytes[QB_WORMS_KILLED] < 0xC8)
         player->quest_bytes[QB_WORMS_KILLED]++;
@@ -1001,7 +1001,7 @@ int far get_rep_diff(struct Object far *obj)
    quality, or destroys the item when a random 0..63 beats quality + skill. Returns 3 fully
    repaired, 2 partly, 1 no effect, -1 damaged, -2 destroyed, 0 not repairable. */
 /* name: 24: RepairItem_ovr110_2491, target size 0x118. */
-int far do_repair(struct Object far *obj, int skill, int *time)
+int far do_repair(struct Object far *obj, int skill, int16 *time)
 {
     int repair_time, result, durability;
     register int new_quality, quality;
@@ -1046,7 +1046,7 @@ int far do_repair(struct Object far *obj, int skill, int *time)
 /* name: 25: ItemRepairLogic_ovr110_25A9, target size 0x1F0. */
 void far repair_item(struct Object far *obj, int skill, char who)
 {
-    int time;
+    int16 time;
     int durability;
     int reply;
     unsigned char answer;
@@ -1182,20 +1182,20 @@ unsigned char far kill_plants(struct Object far *obj)
     int x;
     register int y;
     register int item = -1;
-    if ((int)(((long)rand() * 3) / 0x8000L) == 0) {
+    if ((int)(((int32)rand() * 3) / 0x8000L) == 0) {
         switch OBJ_ITEM(obj) {
         case ITEM_PLANT_D9:
             item = ITEM_PLANT_DA;
             break;
         case ITEM_PLANT_DA:
             item = ITEM_PILE_OF_DEBRIS_D6;
-            if ((int)(((long)rand() * 2) / 0x8000L))
+            if ((int)(((int32)rand() * 2) / 0x8000L))
                 item = ITEM_GRASS;
-            if ((int)(((long)rand() * 2) / 0x8000L))
+            if ((int)(((int32)rand() * 2) / 0x8000L))
                 item = ITEM_MUSHROOM;
             break;
         case ITEM_GRASS:
-            switch ((int)(((long)rand() * 0xF) / 0x8000L)) {
+            switch ((int)(((int32)rand() * 0xF) / 0x8000L)) {
             case 0: item = ITEM_MUSHROOM; return 0;     /* the new item is never used (as in DOS) */
             case 1: item = ITEM_PILE_OF_DEBRIS_D6; return 0;
             }
@@ -1207,11 +1207,11 @@ unsigned char far kill_plants(struct Object far *obj)
         x = OBJ_FINEX(obj);
         y = OBJ_FINEY(obj);
         if (x != 0 && x != 7)
-            SET_FINEX(obj, x + (int)(((long)rand() * 2) / 0x8000L)
-                           + (int)(((long)rand() * 2) / 0x8000L) - 1);
+            SET_FINEX(obj, x + (int)(((int32)rand() * 2) / 0x8000L)
+                           + (int)(((int32)rand() * 2) / 0x8000L) - 1);
         if (y != 0 && y != 7)
-            SET_FINEY(obj, y + (int)(((long)rand() * 2) / 0x8000L)
-                           + (int)(((long)rand() * 2) / 0x8000L) - 1);
+            SET_FINEY(obj, y + (int)(((int32)rand() * 2) / 0x8000L)
+                           + (int)(((int32)rand() * 2) / 0x8000L) - 1);
     }
     return 0;
 }
@@ -1224,7 +1224,7 @@ void far courtyard_hacking(int x, int y, struct Object far *trap)
 {
     /* the castle plot stages already handled */
     /* name: no FM Towns name (static) */
-    static int dried = 0;
+    static int16 dried = 0;
     struct Tile far *tile;
     int hour;
     int xmax, ymax;
@@ -1245,9 +1245,9 @@ void far courtyard_hacking(int x, int y, struct Object far *trap)
             if (head->f.index > 0)
                 Obj_Check(Obj_PtrTMem(head), kill_plants);
             if (hour >= 13) {
-                if ((int)(((long)rand() * 100) / 0x8000L) < 0x2B) {
-                    nx = (int)(((long)rand() * 6) / 0x8000L) + 1;
-                    ny = (int)(((long)rand() * 6) / 0x8000L) + 1;
+                if ((int)(((int32)rand() * 100) / 0x8000L) < 0x2B) {
+                    nx = (int)(((int32)rand() * 6) / 0x8000L) + 1;
+                    ny = (int)(((int32)rand() * 6) / 0x8000L) + 1;
                     if (can_place(ITEM_MUSHROOM, 0, (i << 3) + nx, (j << 3) + ny,
                                   tile->height << 3, 0, 0)) {
                         obj = CreateObj(ITEM_MUSHROOM, 0);
@@ -1315,7 +1315,7 @@ void far standing_wave(int x, int y, int owner)
     struct Tile far *tile;
     int adjustment, height;
     register int i, tile_y = y;
-    int oscillator[8] = {0, 1, 2, 1, 0, -1, -2, -1};
+    int16 oscillator[8] = {0, 1, 2, 1, 0, -1, -2, -1};
     tile = Map_GetAddr(x, tile_y);
     height = tile->height;
     adjustment = owner < 8 ? 4 - abs(4 - owner) : abs(12 - owner) - 4;
@@ -1483,7 +1483,7 @@ void far change_weapon_playerbest(int x, int y, int owner)
             break;
         case SKILL_MISSILE:
             item = ITEM_SLING_STONE;
-            qty = (int)(((long)rand() << 3) / 0x8000L) + (int)(((long)rand() << 2) / 0x8000L) + 0x1E;
+            qty = (int)(((int32)rand() << 3) / 0x8000L) + (int)(((int32)rand() << 2) / 0x8000L) + 0x1E;
             break;
         case SKILL_SWORD:
             item = ITEM_SHORTSWORD;
@@ -1549,7 +1549,7 @@ unsigned char far maybe_flip_a_switch(struct Object far *obj)
 {
     switch OBJ_CLASS(obj) {
     case CLASS_SWITCH:
-        if ((int)(((long)rand() * 2) / 0x8000L))
+        if ((int)(((int32)rand() * 2) / 0x8000L))
             flip_switch(obj, 3);
     }
     return 0;
@@ -1880,16 +1880,16 @@ void far black_gem_rotate(void)
 void far do_qbert(int owner)
 {
     static unsigned char gate_links[7] = { 0x21, 0x7F, 0x4F, 0x5B, 0x10, 0x29, 0xC2 };
-    int *seq;
-    int *done;
+    int16 *seq;
+    int16 *done;
     int colour;
     int top;
     struct Tile far *trig;
-    int *last_tile;
+    int16 *last_tile;
     unsigned char complete;
     register int i;
     register int j;
-    seq = (int *)(player->vars + 100);
+    seq = (int16 *)(player->vars + 100);
     done = seq + 7;
     trig = 0L;
     last_tile = seq + 8;
@@ -2104,14 +2104,14 @@ void far ruin_cure_potions(int x, int y)
 /* The telekinesis wand's object index, found by find_TK_wand_check. */
 /* name: FM Towns keeps it as an unnamed static (it shows as _update_vscreen+1); the name
    is ours. */
-static int TK_wand;
+static int16 TK_wand;
 
 /* Obj_Check callback: finds the telekinesis wand (a wand with id bit 13, spell major -1
    effect 0x27) and remembers its index. */
 /* name: 62: FindAcademyWand_ovr110_48EC, target size 0x6E. */
 unsigned char far find_TK_wand_check(struct Object far *obj)
 {
-    int major, effect;
+    int16 major, effect;
     unsigned char flag;
     if (!OBJ_DOORDIR(obj) || OBJ_ITEM(obj) != ITEM_WAND_9B)
         return 0;
@@ -2175,7 +2175,7 @@ void far remove_TK_wand(void)
 /* name: 64: HackTrapVendingMachine_ovr110_4B3C, target size 0x1ED. */
 void far go_vend(int which, int machine, int x, int y, int choice)
 {
-    static int vend_items[8] = {
+    static int16 vend_items[8] = {
         ITEM_FISH, ITEM_PIECE_OF_MEAT_B0, ITEM_BOTTLE_OF_ALE, ITEM_LEECHES,
         ITEM_BOTTLE_OF_WATER, ITEM_DAGGER, ITEM_LOCKPICK, ITEM_TORCH
     };
@@ -2269,7 +2269,7 @@ unsigned char far vend_check_gold(char x, char y, unsigned char money, unsigned 
 /* name: 66: StoreReverseObjectLookupResultInVar_ovr110_4E7A, target size 0x1C. Named
    gronkify_find_ in FM Towns, at the same position among its neighbours, and the code
    corresponds. */
-char far gronkify_find(struct Object far *obj, register int *result)
+char far gronkify_find(struct Object far *obj, register int16 *result)
 {
     *result = Obj_MemTPtr(obj);
     return 0;
@@ -2284,7 +2284,7 @@ void far put_player_in_jail(void)
 {
     int lb_index;
     struct Object far *lb;
-    long hour;
+    int32 hour;
     char row[16];
     ThePlayer->hp = playerdat->attr[0];
     SET_SEQ(ThePlayer, 1);
@@ -2296,11 +2296,11 @@ void far put_player_in_jail(void)
     do_teleport(ThePlayer, 0x2A, 0x26, 1);
     row[7] = 1;
     row[8] = 0;
-    gronk_race(0x1C, 1, 2, gronkify_attitude);
-    gronk_race(0x1C, 1, (int)row, (char (far *)(struct Object far *, int))gronkify_change_goal);
+    gronk_race(0x1C, 1, 2, (char (far *)(struct Object far *, NEARPTR))gronkify_attitude);
+    gronk_race(0x1C, 1, (NEARPTR)row, (char (far *)(struct Object far *, NEARPTR))gronkify_change_goal);
     SET_QUEST(112, 1);
     update_all_critters_whilst_player_snoozes();
-    gronk_whoami(0x8E, 1, (int)&lb_index, (WhoamiFn)gronkify_find);
+    gronk_whoami(0x8E, 1, (NEARPTR)&lb_index, (WhoamiFn)gronkify_find);
     lb = Obj_IntTMem(lb_index);
     if (lb) {
         teleport_critter(lb, 0x2A, 0x22, 0);

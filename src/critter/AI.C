@@ -59,11 +59,11 @@
 #include "ui.h"
 #include "view3d.h"
 
-int lastXeye, lastYeye;                 /* DS:2294, this file's _BSS (see below) */
+int16 lastXeye, lastYeye;               /* DS:2294, this file's _BSS (see below) */
 /* match: MISSILE.C's missile_try ties with that file's statics missile_src and missile_arc
    (key 957), which a header cannot declare first, so it is declared only here. */
-extern int missile_try;
-long lastcombattime;                    /* DS:2280, this file's _BSS (see below) */
+extern int16 missile_try;
+int32 lastcombattime;                   /* DS:2280, this file's _BSS (see below) */
 
 /* The charge of a critter's blow, by attack frame (the 4-bit attack frame in the word at
    0x0F, which crit_attack counts up while the critter stands in reach and critter_ai
@@ -95,7 +95,7 @@ static struct AtkCharge far atk_charge[16] = {
 /* name: hitpz (DS:228A) is static in FM Towns (_seq_lframe+1 there, read by critter_mv_
    for set_loc beside _hitx and _hity), so it has no original name: provisional, chosen
    for its key. FM Towns' _hitz is another variable, seg024's combat height (DS:24CE). */
-unsigned long crithittime;
+uint32 crithittime;
 unsigned char hitx, hity;
 static unsigned char hitpz;
 signed char curBin;
@@ -892,15 +892,15 @@ void far constrain_movement(void)
    turn of 0x20 at most. */
 unsigned char far turn_real_fine(signed char dx, signed char dy)
 {
-    long d2;
+    int32 d2;
     unsigned ang;
     unsigned char cur;
     unsigned char want;
     unsigned char diff;
     unsigned char newf;
     int sy;
-    long ly;
-    long lx;
+    int32 ly;
+    int32 lx;
     unsigned char done = 0;
     register unsigned dist;
     register int sx;

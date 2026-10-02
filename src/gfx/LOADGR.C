@@ -48,18 +48,18 @@
 /* Graphics slot bookkeeping: where each range of grs_off starts.
    match: these words start the file's _DATA, straight after ovr118's "pals.dat"; FM Towns
    keeps the first five as public globals. */
-unsigned first_obj = 0;             /* DS:14FE */
-unsigned first_button = 0;          /* DS:1500 */
-unsigned first_tmobj = 0;           /* DS:1502 */
-unsigned first_vram = 0;            /* DS:1504 */
+uint16 first_obj = 0;               /* DS:14FE */
+uint16 first_button = 0;            /* DS:1500 */
+uint16 first_tmobj = 0;             /* DS:1502 */
+uint16 first_vram = 0;              /* DS:1504 */
 void far *load_adr = 0;             /* DS:1506, not used by the DOS code */
 /* name: FM Towns keeps the rest as statics after _grfx_driver (+0x38 onwards), so no names. */
-static unsigned mapped_page = 0;    /* EMS page now mapped at physical page 2 */
-static unsigned gr_index = 0;       /* next graphics slot in grs_off */
-static unsigned ems_off = 0;        /* next free paragraph in the EMS page */
+static uint16 mapped_page = 0;      /* EMS page now mapped at physical page 2 */
+static uint16 gr_index = 0;         /* next graphics slot in grs_off */
+static uint16 ems_off = 0;          /* next free paragraph in the EMS page */
 static unsigned char ems_page = 4;  /* EMS logical page being filled */
 static char gr_ext[6][4] = { "", ".gr", ".tr", ".cr", ".sr", ".ar" };
-static int reload_base = -1;        /* object slot that reload_obj_ems starts at */
+static int16 reload_base = -1;      /* object slot that reload_obj_ems starts at */
 
 /* match: this file's _BSS, DS:6734..6945, laid out by name (tools/bssorder.py): gsize 119,
    constadr 131, npals 270, tmpoffs and tmpcnt 612, Palettes 632, grfp 663, PalStore 736;
@@ -67,29 +67,31 @@ static int reload_base = -1;        /* object slot that reload_obj_ems starts at
 char gsize;                         /* texture edge, from the .tr header */
 void far *constadr;                 /* where read_gr_far puts its picture */
 unsigned char npals;
-unsigned long far *tmpoffs;         /* the open file's offset table */
-unsigned tmpcnt;                    /* pictures in the open file */
+uint32 far *tmpoffs;                /* the open file's offset table */
+uint16 tmpcnt;                      /* pictures in the open file */
 unsigned char Palettes[32][16];
 FILE *grfp;
-unsigned *PalStore;
+UNEARPTR *PalStore;
 /* the 3D engine's buffers: gr_offs holds 570 offsets (FM Towns _gr_end follows it) */
 #define GR_OFFS_MAX 570
 
 
 /* Reads a .CR file's palette count and palettes (32 bytes each). They are kept in a
    malloc'd block whose near address goes to *PalStore when *PalStore is nonzero, and
-   skipped otherwise. */
+   skipped otherwise. Nothing sets PalStore, so it is a null pointer and *PalStore reads
+   (and would write) DS:0, the tail of an overlay stub (docs/PORT.md, "Null pointers"); but
+   _ld_open is only called for types 1 and 2, so this never runs. */
 unsigned char far get_pals(void)
 {
     if (fread(&npals, 1, 1, grfp) != 1)
         return 0;
-    if (*PalStore > 0) {
-        *PalStore = (unsigned)malloc((unsigned)npals << 5);
-        if (fread((void *)*PalStore, 1, (unsigned)npals << 5, grfp) !=
+    if (*NULLTRAP(PalStore) > 0) {
+        *NULLTRAP(PalStore) = (UNEARPTR)malloc((unsigned)npals << 5);
+        if (fread((void *)*NULLTRAP(PalStore), 1, (unsigned)npals << 5, grfp) !=
               ((unsigned)npals << 5))
             return 0;
     } else {
-        fseek(grfp, (long)((int)npals << 5), 1);
+        fseek(grfp, (int32)((int)npals << 5), 1);
     }
     return 1;
 }
@@ -120,7 +122,7 @@ unsigned char far _ld_open(char *art, char type)
         goto bad;
     tmpoffs = gr_offs;
     fseek(grfp, 0L, 1);
-    if (intoFarBuffer_ovr167_5DA(grfp->fd, tmpoffs, (tmpcnt + 1) << 2) !=
+    if (intoFarBuffer_ovr167_5DA(fileno(grfp), tmpoffs, (tmpcnt + 1) << 2) !=
           ((tmpcnt + 1) << 2)) {
         goto bad;
     }
@@ -140,7 +142,7 @@ void far _ld_close(void)
 /* Read one picture into dst; returns its size, or -1. */
 int far _ld_gr(int image, void far *dst)
 {
-    long end;
+    int32 end;
     int size;
     if (image != tmpcnt - 1) {
         size = (unsigned)tmpoffs[image + 1] - (unsigned)tmpoffs[image];
@@ -153,7 +155,7 @@ int far _ld_gr(int image, void far *dst)
         return -1;
     if (!size)
         return 0;
-    if (intoFarBuffer_ovr167_5DA(grfp->fd, dst, size) != size)
+    if (intoFarBuffer_ovr167_5DA(fileno(grfp), dst, size) != size)
         return -1;
     return size;
 }
@@ -340,7 +342,7 @@ unsigned char far load_tr_ems(char *art)
         }
         if (tmpoffs[TxmID[i]] == tmpoffs[TxmID[i] + 1])
             mem_set(MK_FP(EmsBuff + ems_off + 0xC00, 0), 0, bytes);
-        else if (intoFarBuffer_ovr167_5DA(grfp->fd, MK_FP(EmsBuff + ems_off + 0xC00, 0),
+        else if (intoFarBuffer_ovr167_5DA(fileno(grfp), MK_FP(EmsBuff + ems_off + 0xC00, 0),
                                    bytes) != bytes)
             break;
         TxmCol[i] = *(unsigned char far *)MK_FP(EmsBuff + 0xC00, ems_off << 4);
@@ -366,11 +368,11 @@ int far LoadScaled_ovr119_804(char *art, void far *destination, int unused)
             break;
         if (tmpoffs[i] == tmpoffs[i+1])
             mem_set(cmpbuf1_start, 0, bytes);
-        else if (intoFarBuffer_ovr167_5DA(grfp->fd, cmpbuf1_start, bytes) != bytes)
+        else if (intoFarBuffer_ovr167_5DA(fileno(grfp), cmpbuf1_start, bytes) != bytes)
             break;
         source = grs_scaledown(cmpbuf1_start, gsize, gsize, 4);
-        movedata(FP_SEG(source), FP_OFF(source), FP_SEG(dst), FP_OFF(dst), 0x100);
-        *((unsigned *)&dst) += 0x100;
+        FAR_COPY(dst, source, 0x100);
+        *((uint16 *)&dst) += 0x100;
         i++;
     } while (i < 0x100);
     _ld_close();

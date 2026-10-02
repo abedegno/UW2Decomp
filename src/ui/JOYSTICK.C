@@ -26,27 +26,27 @@
 
 
 /* this file's _DATA, DS:00E8 to DS:0106, in definition order */
-int joy_center_x = 0, joy_center_y = 0;
-int joy_min_x = -127, joy_max_x = 127, joy_min_y = -127, joy_max_y = 127;
-int joy_divisor = 16, joy_interval = 5, joy_clamp = 16, joy_gain = 20, joy_limit = 40;
-int joy_filter_x = 0, joy_filter_y = 0;
-long joy_last_tick = 0;
+int16 joy_center_x = 0, joy_center_y = 0;
+int16 joy_min_x = -127, joy_max_x = 127, joy_min_y = -127, joy_max_y = 127;
+int16 joy_divisor = 16, joy_interval = 5, joy_clamp = 16, joy_gain = 20, joy_limit = 40;
+int16 joy_filter_x = 0, joy_filter_y = 0;
+int32 joy_last_tick = 0;
 
 
 /* The stick as movement: the reading is scaled to -127..127 by the calibration. With
    button 1 up, a dead zone of 20 each way; pulled back (y above 20) sets PlayerInput 8,
    which PLAYMOVE.C also uses for the X key (step back), with no rate; pushed forward walks
    at a rate of the push less 20 and left or right turns likewise. */
-void far seg011_6(void)
+void far seg011_6(int unused)
 {
     int x, y;
     seg021_22FD_7CD();
     x = joy_position[0] - joy_center_x;
     y = joy_position[1] - joy_center_y;
-    if (x > 0) x = (int)((long)x * 127) / joy_max_x;
-    else x = (int)((long)x * 127) / -joy_min_x;
-    if (y > 0) y = (int)((long)y * 127) / joy_max_y;
-    else y = (int)((long)y * 127) / -joy_min_y;
+    if (x > 0) x = (int)((int32)x * 127) / joy_max_x;
+    else x = (int)((int32)x * 127) / -joy_min_x;
+    if (y > 0) y = (int)((int32)y * 127) / joy_max_y;
+    else y = (int)((int32)y * 127) / -joy_min_y;
     if (x > 127) x = 127;
     else if (x < -127) x = -127;
     if (y > 127) y = 127;
@@ -76,7 +76,7 @@ void far seg011_6(void)
 /* For calibration: waits for both buttons to be released, then for a press (playing
    music meanwhile), and returns the stick's offset from the centre in *x and *y. Escape
    aborts and returns 0. */
-unsigned char far seg011_12B(int *x, int *y)
+unsigned char far seg011_12B(int16 *x, int16 *y)
 {
     int key;
     for (seg021_22FD_809(); joy_buttons[0] || joy_buttons[1]; seg021_22FD_809()) ;
@@ -105,10 +105,10 @@ check_press:
 void far JoyStickCalibration_seg011_1B8(void)
 {
     unsigned char ok;
-    int low_x = joy_min_x;
-    int high_x = joy_max_x;
-    int low_y = joy_min_y;
-    int high_y = joy_max_y;
+    int16 low_x = joy_min_x;
+    int16 high_x = joy_max_x;
+    int16 low_y = joy_min_y;
+    int16 high_y = joy_max_y;
     if (!IsJoy) return;
     scroll_clear(0);
     seg021_22FD_7CD();
@@ -146,21 +146,21 @@ void far JoyStickCalibration_seg011_1B8(void)
    running value that is then multiplied by a gain proportional to the deflection
    (joy_gain / joy_limit, at most 20/40 of it at full push) and clamped to +-16 pixels a
    step. Between steps it reports no motion. */
-void far seg011_2C6(int *out_x, int *out_y)
+void far seg011_2C6(int16 *out_x, int16 *out_y, int unused)
 {
     register int x, y;
     int scaled_x, rate_x, rate_y, max_step, abs_x, abs_y;
     x = joy_position[0] - joy_center_x;
     y = joy_position[1] - joy_center_y;
-    if (x > 0) x = (int)((long)x * 127) / joy_max_x;
-    else x = (int)((long)x * 127) / -joy_min_x;
-    if (y > 0) y = (int)((long)y * 127) / joy_max_y;
-    else y = (int)((long)y * 127) / -joy_min_y;
+    if (x > 0) x = (int)((int32)x * 127) / joy_max_x;
+    else x = (int)((int32)x * 127) / -joy_min_x;
+    if (y > 0) y = (int)((int32)y * 127) / joy_max_y;
+    else y = (int)((int32)y * 127) / -joy_min_y;
     if (x > 127) x = 127;
     else if (x < -127) x = -127;
     if (y > 127) y = 127;
     else if (y < -127) y = -127;
-    if ((unsigned long)(*Time - joy_last_tick) > (long)joy_interval) {
+    if ((uint32)(*Time - joy_last_tick) > (int32)joy_interval) {
         register int scaled_y;
         joy_last_tick = *Time;
         max_step = 127 / joy_divisor;

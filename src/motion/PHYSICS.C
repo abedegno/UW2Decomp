@@ -51,32 +51,32 @@ void far set_light(int level);
 /* name: the publics are FM Towns names; the statics have none there (FM Towns keeps them
    as unnamed statics), so old_dz, lasth, lasts and saved_dz were chosen from names
    compiled as probes because they land where the EXE has them. */
-int oldh;                               /* the heading before this tick's ice or current */
-int olds;                               /* the speed before it */
+int16 oldh;                             /* the heading before this tick's ice or current */
+int16 olds;                             /* the speed before it */
 unsigned char frictionless;             /* standing on ice */
-static int old_dz;                      /* PN.dz when the motion was set up */
-int pTurn;                              /* the turn rate for the current motion state */
-int GrSq;                               /* the player's tile, as an index into mapdata */
-int pFPS[3];                            /* forward, side and backward speeds */
-static int lasth;                       /* the heading and speed a current set, or -1 */
-static int lasts;
-static long saved_dz;
-int lastTerr;                           /* the terrain bits parse_player_terr last saw */
+static int16 old_dz;                    /* PN.dz when the motion was set up */
+int16 pTurn;                            /* the turn rate for the current motion state */
+int16 GrSq;                             /* the player's tile, as an index into mapdata */
+int16 pFPS[3];                          /* forward, side and backward speeds */
+static int16 lasth;                     /* the heading and speed a current set, or -1 */
+static int16 lasts;
+static int32 saved_dz;
+int16 lastTerr;                         /* the terrain bits parse_player_terr last saw */
 
 
 
 /* Initialised data, DS:C8 onwards. Speeds are in PN.speed's units, 0x2F to an object's
    OBJ_SPEED step (OBJPHYS.C). MaxPlayerAccel is the most the speed may change in a tick;
    newFPS lowers it when the player carries more than half the most they can. */
-int MaxPlayerAccel = 0x60;
-int Back_FPS = 0xBC;
-int Side_FPS = 0xEB;
-int Run_FPS = 0x3AC;
-int plyMoType = 0;
+int16 MaxPlayerAccel = 0x60;
+int16 Back_FPS = 0xBC;
+int16 Side_FPS = 0xEB;
+int16 Run_FPS = 0x3AC;
+int16 plyMoType = 0;
 unsigned char motionbits = 0;
 unsigned char fiz_update = 1;
 /* The kind of slope or current carrying the player, -1 for none. No FM Towns name. */
-static int slide = -1;
+static int16 slide = -1;
 
 /* Starts swimming if terr has the water bit: swim_count (the head's dip below the
    surface, PLAYMOVE.C's parse_effect) and leaving combat mode. Returns 1 if swimming. */
@@ -195,8 +195,8 @@ void far unreferenced_seg008_1B09_160(void)
 char far simple_fizix(int turn)
 {
     int heading;
-    int x;
-    int y;
+    int16 x;
+    int16 y;
     unsigned char backwards;
     unsigned char flying;
     int sq;
@@ -295,17 +295,17 @@ char far simple_fizix(int turn)
    first towards the second by strength / 64 (strength at most 0x40), type 3 (a current
    or a slope) adds them. The result is in *outh and *outs. */
 void far munge_vectors(int type, int heading, int speed, int heading2, int speed2,
-                       int strength, int *outh, register int *outs)
+                       int strength, int16 *outh, register int16 *outs)
 {
-    int x1;
-    int y1;
-    int x2;
-    int y2;
+    int16 x1;
+    int16 y1;
+    int16 x2;
+    int16 y2;
     int dxa;
     int dya;
     int vx;
-    long lx;
-    long ly;
+    int32 lx;
+    int32 ly;
     register int vy;
 
     if (strength <= 0)
@@ -331,8 +331,8 @@ void far munge_vectors(int type, int heading, int speed, int heading2, int speed
     case 2:
         dxa = x2 - x1;
         dya = y2 - y1;
-        vx = x1 + (int)((long)dxa * strength / 0x40);
-        vy = y1 + (int)((long)dya * strength / 0x40);
+        vx = x1 + (int)((int32)dxa * strength / 0x40);
+        vy = y1 + (int)((int32)dya * strength / 0x40);
         break;
     case 3:
         vx = x2 + x1;
@@ -370,10 +370,10 @@ void far munge_vectors(int type, int heading, int speed, int heading2, int speed
    falling) when levitating or flying. */
 void far set_player_phys_params(int rate)
 {
-    int speed;
+    int16 speed;
     int angle;
-    int newh;
-    int news;
+    int16 newh;
+    int16 news;
     int bits;
     register int t;
     register int d;
@@ -499,7 +499,7 @@ void far player_setup(int x, int y, int how)
     struct MotionCalc calc;
 
     change_GrSq(-1, -1);
-    PT.special = (unsigned char (far *)())player_sqhandler;
+    PT.special = (unsigned char (far *)(uint16 *))player_sqhandler;
     PT.mask = 0x1100;
     PT.ignore = 0;
     PN.speed = 0;
@@ -554,7 +554,7 @@ void far phys_affect_player(void)
     int sq;
     int dmg;
     int vol;
-    register int h;
+    register int16 h;
     register int z;
 
     z = ThePlayer->pos & POS_Z;
@@ -584,9 +584,9 @@ void far phys_affect_player(void)
         h = PN.heading - (plyMoType << 14);
         if ((PN.flags & 0x80) && slide == -1)
         {
-            if (abs(PlayerFacing - h) < 0x600)
+            if (abs((int16)(PlayerFacing - h)) < 0x600)
                 PlayerFacing = h;
-            else if ((unsigned)(PlayerFacing - h) < 0x7FFF)
+            else if ((uint16)(PlayerFacing - h) < 0x7FFF)
                 PlayerFacing -= 0x600;
             else
                 PlayerFacing += 0x600;
@@ -636,7 +636,7 @@ void far player_newsq(int sq)
 /* PT's special function (called by MOTION.C's check_positions with the collision
    state): a player walking slowly (under 3/10 of the run speed) off a ledge, not
    swimming or on ice, is stopped at the edge instead (returns 1, so the step is undone). */
-char far player_sqhandler(unsigned *w)
+char far player_sqhandler(uint16 *w)
 {
     if ((*w & 0x1000) && PN.vel[2] == 0 && PN.speed * 10 < pFPS[0] * 3 && !(lastTerr & 0xA))
     {
@@ -651,9 +651,9 @@ char far player_sqhandler(unsigned *w)
    (starts at half the run speed, then as 7), 7 a jump (vertical speed 0x263, less above
    z 0x280 and again above 0x2C0, with gravity -4, or -2 with Leap), 12 and 13 up and down while
    levitating or flying. Paralysis stops everything. */
-void far do_player_input(int input, int rate, register int *speed)
+void far do_player_input(int input, int rate, register int16 *speed)
 {
-    register int h;
+    register int16 h;
 
     if (player->paralyzed)
     {

@@ -71,44 +71,46 @@
 struct GtlHdr {
     unsigned char patch;
     unsigned char bank;                 /* 0xFF ends the directory */
-    unsigned long offset;
+    uint32 offset;
 };
 
 /* A digital channel's playback state, 13 bytes. */
 struct DsChannel {
-    unsigned priority;                  /* 0x00 */
+    uint16 priority;                    /* 0x00 */
     unsigned char slot;                 /* 0x02: index into ds_sounds_in_ems */
-    int loops;                          /* 0x03 */
-    long pos;                           /* 0x05 */
-    long remaining;                     /* 0x09 */
+    int16 loops;                        /* 0x03 */
+    int32 pos;                          /* 0x05 */
+    int32 remaining;                    /* 0x09 */
 };
 
 /* A digitised sound held in EMS pages, 14 bytes. */
 struct EmsSound {
     unsigned char sound;                /* 0xFF when free */
     char pages[4];                      /* 0x01: -1 when unused */
-    int loops;                          /* 0x05 */
-    long size;                          /* 0x07 */
-    unsigned priority;                  /* 0x0B */
+    int16 loops;                        /* 0x05 */
+    int32 size;                         /* 0x07 */
+    uint16 priority;                    /* 0x0B */
     unsigned char channels;             /* 0x0D: mask of the channels playing it */
 };
 
 /* Where the sound playing on the digital channel comes from. */
+HOST_LAYOUT_BEGIN
 struct DigiSrc {
-    int x, y, z;
+    int16 x, y, z;
     char type;                          /* 0x06: 1 a position, 2 an object */
     char pad7;
     struct Object far *obj;             /* 0x08 */
 };
+HOST_LAYOUT_END
 
 /* An entry of SOUNDS.DAT, 8 bytes. */
 struct Effect {
     unsigned char patch;                /* in bank 1 of the timbres */
     unsigned char note;                 /* 0x01 */
     unsigned char vol;                  /* 0x02 */
-    unsigned length;                    /* 0x03 */
+    uint16 length;                      /* 0x03 */
     unsigned char digi;                 /* 0x05: nonzero when there is a .VOC */
-    unsigned priority;                  /* 0x06 */
+    uint16 priority;                    /* 0x06 */
 };
 
 /* The effects table, SOUNDS.DAT's entries (49 at most). */
@@ -126,37 +128,37 @@ struct Effect far effects[49];
    MOUSE.C for the hash). The publics are the FM Towns names; FM Towns has no names for
    the statics, so theirs are ours, chosen to land where the EXE has them (bucket in
    brackets). */
-static unsigned timbre_size;            /* DS:23E2 (4), the size of the timbre being read */
+static uint16 timbre_size;              /* DS:23E2 (4), the size of the timbre being read */
 static struct GtlHdr timbre_entry;      /* DS:23E4 (4), its directory entry */
-static int seq_state_sz;                /* DS:23EA (11), AIL's state table size */
+static int16 seq_state_sz;              /* DS:23EA (11), AIL's state table size */
 struct SoundBuff dsbuf[2];              /* DS:23EC (76) */
-static int htimer;                      /* DS:2404 (272), the game clock's AIL timer */
-static int m_settings[3];               /* DS:2406 (293), the music card's IRQ, port and DMA */
-static int fx_clock;                    /* DS:240C (382), the effects' AIL timer */
+static int16 htimer;                    /* DS:2404 (272), the game clock's AIL timer */
+static int16 m_settings[3];             /* DS:2406 (293), the music card's IRQ, port and DMA */
+static int16 fx_clock;                  /* DS:240C (382), the effects' AIL timer */
 static unsigned char fx_mask;           /* DS:240E (446), the MIDI effects playing */
 static unsigned char fx_note[3];        /* DS:240F (454), each one's note */
 static void far *speech_mem;            /* DS:2412 (539), the digital driver */
-static int speech_cfg[3];               /* DS:2416 (547), the speech card's IRQ, port and DMA */
+static int16 speech_cfg[3];             /* DS:2416 (547), the speech card's IRQ, port and DMA */
 static unsigned char fx_timbre[3];      /* DS:241C (566), each effect's patch */
 struct DsChannel ds_channel_info[1];    /* DS:2420 (596) */
 static unsigned char fx_midi_chan[3];   /* DS:242D (622), each effect's MIDI channel */
 static struct DrvrDesc far *speech_descr;   /* DS:2430 (651) */
-unsigned ds_page_status;                /* DS:2434 (652), the EMS pages in use */
+uint16 ds_page_status;                  /* DS:2434 (652), the EMS pages in use */
 void far *state_table;                  /* DS:2436 (659) */
 unsigned char which_buffer;             /* DS:243A (671) */
 unsigned char pending[2];               /* DS:243B (672), buffers waiting to be registered */
 static unsigned char curmusic;          /* DS:243D (683), the theme playing */
 static unsigned char newmusic;          /* DS:243E (694), the theme wanted next */
 struct EmsSound ds_sounds_in_ems[4];    /* DS:2440 (716) */
-static int fx_ticks_left[3];            /* DS:2478 (726), -1 for an effect that holds */
-static unsigned long theme_changed;     /* DS:247E (732), when a combat theme last began */
+static int16 fx_ticks_left[3];          /* DS:2478 (726), -1 for an effect that holds */
+static uint32 theme_changed;            /* DS:247E (732), when a combat theme last began */
 struct DigiSrc digi_src;                /* DS:2482 (756) */
 static void far *midi_drv;              /* DS:248E (765), the XMIDI driver */
 static void far *midi_buf;              /* DS:2492 (789), the XMI file being played */
-int ds_channel_status;                  /* DS:2496 (844), the digital channels playing */
+int16 ds_channel_status;                /* DS:2496 (844), the digital channels playing */
 static void far *drv_mem[2];            /* DS:2498 (844), the blocks the drivers sit in */
 static unsigned char numeffects;        /* DS:24A0 (910), the entries of SOUNDS.DAT */
-static int xmi_sequence;                /* DS:24A2 (912), the music's AIL sequence, -1 for none */
+static int16 xmi_sequence;              /* DS:24A2 (912), the music's AIL sequence, -1 for none */
 static void far *timbre_cache;          /* DS:24A4 (948) */
 static struct DrvrDesc far *drv_desc;   /* DS:24A8 (1020), the XMIDI driver's description */
 
@@ -176,13 +178,13 @@ static unsigned char walking_music[9][3] = {
     { 0x0E, 0x09, 0x08 }, { 0x0F, 0x0B, 0x0A }, { 0x08, 0x0C, 0x09 }
 };
 static unsigned char music_world = 0xFF;
-static int music_driver = -1;
-int sphdriver = -1;
-static int timbre_fd = -1;
+static int16 music_driver = -1;
+int16 sphdriver = -1;
+static int16 timbre_fd = -1;
 char far *dsdata[2] = { 0, 0 };
 unsigned char ds_volume = 0;
 unsigned char ds_pan = 0;
-static unsigned fx_channels = 0;
+static uint16 fx_channels = 0;
 unsigned char channel_punt = 0;
 unsigned char channel_sem = 0;
 unsigned char load_only = 0;
@@ -306,14 +308,13 @@ void far free_dfx_ems(char slot, char *list, char *count)
    AIL. The first chunk of a sound (page 0, offset 0) starts with the .VOC header, which
    AIL_index_VOC_block parses for the sample rate and packing; its 0x20 header bytes are
    not counted as sound. Returns 0 if the .VOC is not one AIL accepts. */
-unsigned char far load_dfx_page(int chan, int page, long off, int buf)
+unsigned char far load_dfx_page(int chan, int page, int32 off, int buf)
 {
-    long len;
+    int32 len;
 
     MapMemory_seg013_1D3C_C7(2, sound_fpage + ds_sounds_in_ems[ds_channel_info[chan].slot].pages[page]);
     len = ds_channel_info[chan].remaining > 0x800 ? 0x800L : ds_channel_info[chan].remaining;
-    movedata(FP_SEG(MK_FP(EmsBuff + 0x800, (unsigned)off)), FP_OFF(MK_FP(EmsBuff + 0x800, (unsigned)off)),
-             FP_SEG(dsdata[buf]), FP_OFF(dsdata[buf]), (unsigned)len);
+    FAR_COPY(dsdata[buf], MK_FP(EmsBuff + 0x800, (unsigned)off), (unsigned)len);
     RESTORE_EMS();
     if (page == 0 && off == 0) {
         if (AIL_index_VOC_block(sphdriver, dsdata[buf], -1, &dsbuf[buf]) == 0) {
@@ -352,8 +353,8 @@ unsigned char far digi_fx_play(unsigned char fx, unsigned char vol, unsigned cha
     char eof_hit;
     char paused;
     char slot;
-    long total;
-    long needed;
+    int32 total;
+    int32 needed;
     char i;
     char count;
     int fd;
@@ -554,18 +555,18 @@ fail_sem:
    pan is 0x40 less the sideways part of the direction to the source in the player's
    frame, clamped to 0..0x7F; volume is vol within one tile, nothing beyond six tiles,
    and falls off linearly between (vol * (48 - d) / 40), clamped to 0..0x7F. */
-void far sound_move(int x, int y, int vol, int *pan, int *volume)
+void far sound_move(int x, int y, int vol, int16 *pan, int16 *volume)
 {
-    long ldx;
-    long ldy;
-    long d2;
+    int32 ldx;
+    int32 ldy;
+    int32 d2;
     unsigned dist;
     int angle;
     int side;
     int nx;
     int ny;
-    int b;
-    int a;
+    int16 b;
+    int16 a;
     int px;
     int py;
 
@@ -611,12 +612,12 @@ void far sound_move(int x, int y, int vol, int *pan, int *volume)
 void far update_digi_playback(void)
 {
     unsigned char chan;
-    int st[2];
+    int16 st[2];
     char page;
     unsigned char slot;
-    long off;
-    int vol;
-    int pan;
+    int32 off;
+    int16 vol;
+    int16 pan;
     register int i;
 
     channel_sem = 1;
@@ -790,7 +791,7 @@ fail:
    or 0. */
 void far * far load_global_timbre(int fd, unsigned char bank, unsigned char patch)
 {
-    unsigned far *p;
+    uint16 far *p;
 
     if (fd == -1)
         return 0;
@@ -911,7 +912,7 @@ fail:
 void far * far load_sound_driver(char *name, int n)
 {
     void far *p;
-    long len;
+    int32 len;
     register FILE *fp;
     register int fd;
 
@@ -940,7 +941,7 @@ void far play_music(void)
 /* Reads a whole file into a new far block. Nothing in the sources calls it. */
 void far * far seg016_1E73_19DE(char *name)
 {
-    long len;
+    int32 len;
     void far *p;
     register FILE *fp;
     register int fd;
@@ -961,7 +962,7 @@ fail:
 
 unsigned char far read_file_to_mbuf(char *name)
 {
-    long len;
+    int32 len;
     register FILE *fp;
     register int fd;
 
@@ -1081,8 +1082,8 @@ unsigned char far play_effect(unsigned char fx, int x, int y, char vol)
 {
     struct Effect far *e;
     unsigned char midi;
-    int v;
-    int pan;
+    int16 v;
+    int16 pan;
     unsigned char r;
 
     midi = 0;
@@ -1175,8 +1176,8 @@ unsigned char far play_effect_on_mobile(unsigned char fx, struct Object far *obj
 unsigned char far play_effect_on_mobile_src(unsigned char fx, struct Object far *obj, char vol)
 {
     struct Effect far *e;
-    int pan;
-    int v;
+    int16 pan;
+    int16 v;
     int r;
 
     if (!fx_ok || !fx_on || fx == 0xFF)
@@ -1414,7 +1415,7 @@ void far play_instrument(register int which)
     char hpos;
     char n;
     int k;
-    long t = -1;
+    int32 t = -1;
     unsigned char ch;
     unsigned char inst[3] = { 0x39, 0x48, 0x5C };
     char notes[10] = { 0x3C, 0x3E, 0x40, 0x41, 0x43, 0x45, 0x47, 0x48, 0x4A, 0x4C };
@@ -1627,7 +1628,7 @@ unsigned char far music_over(void)
 
 /* Overrides the driver's default port, IRQ and DMA with UW.CFG's (s: IRQ, port, DMA)
    where both are set (not -1). */
-void far do_settings(struct DrvrDesc far *d, register int *s)
+void far do_settings(struct DrvrDesc far *d, register int16 *s)
 {
     if (d->io != -1 && s[1] != -1)
         d->io = s[1];

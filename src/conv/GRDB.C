@@ -36,18 +36,19 @@
    gr_entry writes dbptr through cDbbase, gr_tostrt loads dbptr from cEntryStrt, and so
    on). */
 
+#include <dos.h>
 #include <stdlib.h>
 #include "sys.h"
 
 /* match: This file's _BSS, DS:86F8..8C84, laid out by name (tools/bssorder.py). */
-int lstrel;                             /* DS:86F8 */
+int16 lstrel;                           /* DS:86F8 */
 unsigned char prelblnum;                /* DS:86FA */
-unsigned lstpos;                        /* DS:86FC */
+uint16 lstpos;                          /* DS:86FC */
 unsigned char freelblptr;               /* DS:86FE */
 unsigned char refs[32];                 /* DS:86FF, references per label */
-int far *dbptr;                         /* DS:8720, output pointer */
-unsigned lblrefs[32][16];               /* DS:8724, reference positions */
-unsigned loc[160];                      /* DS:8B24, label positions */
+int16 far *dbptr;                       /* DS:8720, output pointer */
+uint16 lblrefs[32][16];                 /* DS:8724, reference positions */
+uint16 loc[160];                        /* DS:8B24, label positions */
 unsigned char freelbls[32];             /* DS:8C64, free label stack */
 
 void far grdb_blank(void)
@@ -84,12 +85,12 @@ int far grdb_size(void)
    index. */
 int far Clk(int n)
 {
-    return (int)((int *)((unsigned)cDbase - 0x24) + n);
+    return (int)(NEARPTR)((int16 *)(NEARPTR)(FP_OFF(cDbase) - 0x24) + n);
 }
 
 void far gr_entry(void)
 {
-    *cDbbase = (int)dbptr;
+    *cDbbase = FP_OFF(dbptr);
 }
 
 void far gr_tostrt(void)
@@ -106,7 +107,7 @@ void far Ref(unsigned char lab, int rel)
         lstpos = dbptr - cDbase;
         lstrel = rel;
         *dbptr = 0;
-    } else if (loc[lab] == -1) {
+    } else if (loc[lab] == (uint16)-1) {
         if (refs[lab] == 16 || lab >= 32 || lab < 0)
             exit(-20);
         lblrefs[lab][refs[lab]] = dbptr - cDbase;

@@ -35,17 +35,19 @@ static unsigned char gif_image[10] = {
    prefix codes, codes and suffix bytes; pixels a row of the screen; bytes the sub-block
    being built.
    match: the field order follows the DOS offsets. */
+HOST_LAYOUT_BEGIN
 static struct {
-    int bits, bitpos;
-    unsigned far *codes;
-    int bytepos, clear;
+    int16 bits, bitpos;
+    uint16 far *codes;
+    int16 bytepos, clear;
     unsigned char far *pixels;
-    unsigned far *hash;
+    uint16 far *hash;
     unsigned char far *bytes;
-    int codebits, x, y, end, limit;
+    int16 codebits, x, y, end, limit;
     unsigned char far *suffix;
-    int next;
+    int16 next;
 } gif;
+HOST_LAYOUT_END
 
 static void far ovr116_149(int bits);
 static void far ovr116_1C3(int fd, int code);
@@ -109,7 +111,7 @@ void far ovr116_194(int fd, char size)
    bytes are full. */
 static void far ovr116_1C3(int fd, int code)
 {
-    long value;
+    int32 value;
     gif.bytepos = gif.bitpos >> 3;
     gif.bits = gif.bitpos & 7;
     if (gif.bytepos >= 0xFE) {
@@ -119,7 +121,7 @@ static void far ovr116_1C3(int fd, int code)
         gif.bytepos = 0;
     }
     if (gif.bits > 0) {
-        value = ((long)code << gif.bits) | gif.bytes[gif.bytepos];
+        value = ((int32)code << gif.bits) | gif.bytes[gif.bytepos];
         gif.bytes[gif.bytepos] = value;
         gif.bytes[gif.bytepos + 1] = value >> 8;
         gif.bytes[gif.bytepos + 2] = (value >> 16);

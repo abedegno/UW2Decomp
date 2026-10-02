@@ -51,7 +51,7 @@ static unsigned char old_time;
 unsigned char weap_x[0x1F];
 unsigned char weap_y[0x1F];
 unsigned char setting[9];
-int weap_offs[0x20];
+int16 weap_offs[0x20];
 unsigned char frmtot[3];
 unsigned char wframe[0x1F];
 unsigned char goal[9];
@@ -64,42 +64,46 @@ unsigned char RightPanel = 0;
 /* Which screen elements to redraw: now, on every 32nd tick, and on every 64th tick. One
    bit per element, by its index in `adjust`. */
 /* name: static (no FM Towns names); ours. */
-static int slow_adjust = 0;             /* DS:79F */
-static int fast_adjust = 0;             /* DS:7A1 */
-static int now_adjust = 0;              /* DS:7A3 */
+static int16 slow_adjust = 0;           /* DS:79F */
+static int16 fast_adjust = 0;           /* DS:7A1 */
+static int16 now_adjust = 0;            /* DS:7A3 */
 char weapid = -1;
 char last_weap = -2;
 char wlstate = 6;
-int weap_frame = -1;
-int wxo = 0;
-int wfo = 1;
-int FL_X[2] = { 0xF8, 0x120 };
-int liquid_y[14] = { 0x25, 0x29, 0x2B, 0x2D, 0x2F, 0x31, 0x33, 0x34, 0x35, 0x36, 0x38, 0x3A, 0x3C, 0x3E };
-int liquid_h[14] = { 0x0, 0x4, 0x5, 0x6, 0x7, 0x7, 0x7, 0x7, 0x6, 0x5, 0x4, 0x4, 0x4, 0x4 };
+int16 weap_frame = -1;
+int16 wxo = 0;
+int16 wfo = 1;
+int16 FL_X[2] = { 0xF8, 0x120 };
+int16 liquid_y[14] = { 0x25, 0x29, 0x2B, 0x2D, 0x2F, 0x31, 0x33, 0x34, 0x35, 0x36, 0x38, 0x3A, 0x3C, 0x3E };
+int16 liquid_h[14] = { 0x0, 0x4, 0x5, 0x6, 0x7, 0x7, 0x7, 0x7, 0x6, 0x5, 0x4, 0x4, 0x4, 0x4 };
 unsigned char bubbling[2] = { 0, 0 };
 unsigned char swishing[2] = { 0, 0 };
-int nedl_x[16] = { -0x5, -0xC, -0x12, -0x18, -0x1A, -0x1B, -0x14, -0xD, -0x6, 0x2, 0xC, 0x10, 0x13, 0x10, 0xB, 0x3 };
-int nedl_y[16] = { 0x8, 0x8, 0x7, 0x5, 0x3, 0x2, -0x1, -0x2, -0x3, -0x2, -0x1, 0x2, 0x3, 0x5, 0x7, 0x8 };
+int16 nedl_x[16] = { -0x5, -0xC, -0x12, -0x18, -0x1A, -0x1B, -0x14, -0xD, -0x6, 0x2, 0xC, 0x10, 0x13, 0x10, 0xB, 0x3 };
+int16 nedl_y[16] = { 0x8, 0x8, 0x7, 0x5, 0x3, 0x2, -0x1, -0x2, -0x3, -0x2, -0x1, 0x2, 0x3, 0x5, 0x7, 0x8 };
 /* The sliding panel's progress. FM Towns keeps the panel buffer's pointer in pbuf too;
    here the buffer is in EMS. */
 struct {
     unsigned char frame;
     unsigned char flag;
 } pbuf = { 0, 0 };
+HOST_LAYOUT_BEGIN
 struct {
     unsigned char far *buf;
     unsigned char flag;
     char spare;
 } wbuf = { 0, 0, 0 };
-int eyes_seq[5] = { 0x2080, 0x2081, 0x2082, 0x2081, 0x2080 };
-int eyes = 0;
-int eyes_frame = 0;
-int rune_x[3] = { 0xB3, 0xC1, 0xCF };
-int spell_x[3] = { 0x2F, 0x21, 0x13 };
+HOST_LAYOUT_END
+int16 eyes_seq[5] = { 0x2080, 0x2081, 0x2082, 0x2081, 0x2080 };
+int16 eyes = 0;
+int16 eyes_frame = 0;
+int16 rune_x[3] = { 0xB3, 0xC1, 0xCF };
+int16 spell_x[3] = { 0x2F, 0x21, 0x13 };
 void (far *panel_dispatch[3])(void) = { RedispInv, RedispRune, RedispStat };
-int level[4] = { 0, 0, 0, 0 };
-void (far *adjust[9])() = { adjust_flasks, adjust_flasks, adjust_compass, adjust_power, 0, 0,
-                            adjust_panel, adjust_eyes, adjust_weapon };
+int16 level[4] = { 0, 0, 0, 0 };
+void (far *adjust[9])(int which) = { adjust_flasks, adjust_flasks,
+    (void (far *)(int))adjust_compass, (void (far *)(int))adjust_power, 0, 0,
+    (void (far *)(int))adjust_panel, (void (far *)(int))adjust_eyes,
+    (void (far *)(int))adjust_weapon };
 
 /* Draws flask which (0 vitality, 1 mana) at its goal level at once. */
 void far set_flask(int which)
@@ -310,10 +314,10 @@ void far update_screen(void)
    bubbles; the vitality flask switches to the green set while the player is poisoned. */
 void far adjust_flasks(int which)
 {
-    static int bub_frame[2] = { 0x2019, 0x2032 };
-    static int bub_spr[2] = { 0, 0 };
-    static int drain_spr[2] = { 0, 0 };
-    static int mask_spr[2] = { 0, 0 };
+    static int16 bub_frame[2] = { 0x2019, 0x2032 };
+    static int16 bub_spr[2] = { 0, 0 };
+    static int16 drain_spr[2] = { 0, 0 };
+    static int16 mask_spr[2] = { 0, 0 };
     /* match: the flask is used through a register copy, but the bit for `slow_adjust` is
        shifted by the parameter itself (FM Towns does the same); without the copy the
        compiler puts `base` in DI and leaves the parameter on the stack. */
@@ -425,9 +429,9 @@ void far adjust_compass(void)
    charges); 9 pulses between two frames. */
 void far adjust_power(void)
 {
-    static int spr = 0;
-    static int last = 0;
-    static int frame = 9;
+    static int16 spr = 0;
+    static int16 last = 0;
+    static int16 frame = 9;
     char p;
 
     p = goal[3];
@@ -699,7 +703,7 @@ char far load_weapcm(void)
 /* Shows the three runes on the shelf (RUNE_NONE leaves a place empty). */
 void far set_runes(unsigned char *runes)
 {
-    static int spr[3] = { 0, 0, 0 };
+    static int16 spr[3] = { 0, 0, 0 };
     int i;
 
     if (spr[0] == 0) {
@@ -722,7 +726,7 @@ void far set_runes(unsigned char *runes)
 /* Shows the icons of up to three active spells (0..0x1D) in the 3D view mode. */
 void far active_spells(unsigned char *spells)
 {
-    static int spr[3] = { 0, 0, 0 };
+    static int16 spr[3] = { 0, 0, 0 };
     int i;
 
     if (inplist->mode == 1) {
@@ -911,6 +915,6 @@ void far player_look_shaft(void)
 {
 }
 
-void far player_look_grave(void)
+void far player_look_grave(int unused)
 {
 }
