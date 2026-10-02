@@ -126,7 +126,7 @@ int far get_name(char far *dst, struct Object far *obj, char article, char plura
     int item = obj->id & ID_ITEM;
     char far *name;
     unsigned char who;
-    if (((obj->id & ID_MAJOR) >> 6) == MAJOR_CREATURE) {
+    if (OBJ_MAJOR(obj) == MAJOR_CREATURE) {
         who = obj->whoami;
         if (who > 0 && (unsigned char)who < 0xf0) {
             name = get_string(((unsigned char)who + 0x10) | STR_CONV);

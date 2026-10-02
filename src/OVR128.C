@@ -23,16 +23,14 @@ extern char far *objptr;
 extern char far *critbot;
 extern char far *critptr;
 extern char animcount;
-extern unsigned char timerlist[];
+extern int timerlist[];
 extern char timercount;
-extern unsigned char animlist[];
-struct OverlayWord { unsigned pad:6; unsigned id:10; };
+extern struct Anim animlist[];
 
 extern void far * far farmalloc(unsigned long size);
 extern int far get_arc(int type, int block, void far *dst);
 extern unsigned char far put_arc(int type, int block, void far *src, unsigned size);
 extern void far close_arc(int close);
-extern unsigned char far ObjCrunch(char n);
 extern int far wyorn(int a, int b, char *answer);
 extern void far movedata(unsigned srcseg, unsigned srcoff,
                                                 unsigned dstseg, unsigned dstoff, unsigned size);
@@ -62,46 +60,46 @@ void far OverwriteAllTiles_ovr128_37(unsigned long *tile)
 
 unsigned char far Map_Load(int arc, int level, int folderType)
 {
-    unsigned char far *end;
+    unsigned far *end;                  /* the block's magic word; the counts before it */
 
-    end = (unsigned char far *)mapdata + 0x7C06;
-    *(unsigned far *)end = 0;
+    end = &LEVEL->magic;
+    *end = 0;
     if (!open_arc(1,
             folderType & 2 ? HomeDir : "DATA\\"))
         return 0;
     get_arc(1, level - 1, mapdata);
-    if ((folderType & 1) || *(unsigned far *)end != 0x7577)
+    if ((folderType & 1) || *end != LEVEL_MAGIC)
         close_arc(1);
-    if (*(unsigned far *)end != 0x7577) {
+    if (*end != LEVEL_MAGIC) {
         pfatal_code(3);
     } else {
         critptr = (char far *)critbot
-            + *(unsigned far *)(end - 4) * 2;
+            + end[-2] * 2;                  /* nmobfree */
         objptr = (char far *)objbot
-            + *(unsigned far *)(end - 2) * 2;
+            + end[-1] * 2;                  /* nstaticfree */
         LastActiveMob =
-            (char far *)ActiveMob + *(unsigned far *)(end - 6);
+            (char far *)ActiveMob + end[-3]; /* nactive */
         MapDirty = 0;
     }
-    Anim_Load((char far *)mapdata + 0x7C08);
+    Anim_Load((char far *)LEVEL->anims);
     return 1;
 }
 
 char far Map_Save(int arc, int level, int folderType)
 {
-    unsigned char far *end;
+    unsigned far *end;
     unsigned result;
     unsigned char answer;
 
-    end = (unsigned char far *)mapdata + 0x7C06;
-    *(unsigned far *)(end - 6) = LastActiveMob - ActiveMob;
-    *(unsigned far *)(end - 4) = ((long)FP_OFF(critptr)
+    end = &LEVEL->magic;
+    end[-3] = LastActiveMob - ActiveMob;    /* nactive */
+    end[-2] = ((long)FP_OFF(critptr)       /* nmobfree */
         - (long)FP_OFF(critbot)) / 2L;
-    *(unsigned far *)(end - 2) = ((long)FP_OFF(objptr)
+    end[-1] = ((long)FP_OFF(objptr)        /* nstaticfree */
         - (long)FP_OFF(objbot)) / 2L;
-    *(unsigned far *)end = 0x7577;
+    *end = LEVEL_MAGIC;
     MapDirty = 0;
-    Anim_Save((char far *)mapdata + 0x7C08);
+    Anim_Save((char far *)LEVEL->anims);
     if (!ObjCrunch(0)) {
         answer = 0;
         wyorn(0, 0x96, &answer);
@@ -112,7 +110,7 @@ char far Map_Save(int arc, int level, int folderType)
             folderType & 2 ? HomeDir : "DATA\\") == 0)
         return 0;
     result = put_arc(1, level - 1,
-                         mapdata, 0x7E08);
+                         mapdata, sizeof(struct LevelBlock));
     if (folderType & 1)
         close_arc(1);
     return result;
@@ -132,12 +130,12 @@ char far Anim_Load(char far *source)
     movedata(FP_SEG(source + 0x180), FP_OFF(source + 0x180), FP_SEG(timerlist),
                                     FP_OFF(timerlist), 0x80);
     for (count = 0; count < 0x40; count++)
-        if (((struct OverlayWord *)(animlist + count * 6))->id == 0)
+        if (animlist[count].link.f.index == 0)
             break;
     animcount = count;
     count = 0;
     while (count < 0x40) {
-        if (*(unsigned *)(timerlist + count * 2) == 0)
+        if (timerlist[count] == 0)
             break;
         count++;
     }
@@ -147,11 +145,9 @@ char far Anim_Load(char far *source)
 
 char far Anim_Save(char far *destination)
 {
-    mem_set((char far *)animlist
-                             + animcount * 6, 0,
+    mem_set((char far *)&animlist[animcount], 0,
                              0x180 - animcount * 6);
-    mem_set(timerlist
-                             + timercount * 2, 0,
+    mem_set((char far *)&timerlist[timercount], 0,
                              0x80 - timercount * 2);
     movedata(FP_SEG(animlist), FP_OFF(animlist),
                                     FP_SEG(destination), FP_OFF(destination), 0x180);

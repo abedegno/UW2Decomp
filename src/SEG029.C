@@ -20,16 +20,6 @@
 #include "uw2.h"
 #include "view3d.h"
 
-#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
-#define OBJ_INDEX(o)    ((o)->id & ID_INCLASS)
-#define OBJ_TENACIOUS(o) (((o)->id & ID_DOORDIR) >> 13)
-#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
-#define OBJ_Z(o)        ((o)->pos & POS_Z)
-#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
-
 /* An object pointer's index in the object store. */
 #define MEMTPTR(o)      ((o) < (struct Object far *)objdata ? (o) - critdata \
                          : (struct StaticObj far *)(o) - objdata + NUM_MOBILE)
@@ -64,23 +54,17 @@ extern unsigned char timercount;
 /* Elsewhere in the game. */
 void far trap_obj_del(union Link far *head, struct Object far *obj);
 
-/* This file. */
-struct Object far * far Obj_PtrTMem(union Link far *link);
-struct Object far * far Obj_IntTMem(int index);
-void far Obj_FreeChain(union Link far *head);
-void far Obj_FreeLinkChain(union Link far *head, struct Object far *obj);
-
 void far Map_ObjFix(void)
 {
     struct Tile far *t;
     unsigned far *p;
     int i;
 
-    for (t = mapdata, i = 0; i < 0x1000; i++, t++)
+    for (t = mapdata, i = 0; i < MAP_SIZE * MAP_SIZE; i++, t++)
         t->objects.f.index = 0;
-    critdata = (struct Object far *)(mapdata + 0x1000);
+    critdata = LEVEL->mobile;
     objdata = (struct StaticObj far *)(critdata + NUM_MOBILE);
-    critbot = (unsigned far *)(mapdata + 0x1CC0);
+    critbot = LEVEL->mobfree;
     critptr = crittop = critbot + 0xFD;
     objbot = crittop + 1;
     objptr = objtop = objbot + 0x2FF;
@@ -124,7 +108,7 @@ unsigned char far chkTenacious(struct Object far *obj)
 {
     int extra;
 
-    if (OBJ_TENACIOUS(obj))
+    if (OBJ_DOORDIR(obj))
         return 1;
     if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL))
         extra = obj->ol.f.link - 1;
@@ -419,7 +403,7 @@ struct Object far * far Obj_InList(union Link far **head, char recurse, int majo
     for (obj = Obj_PtrTMem(*head); obj; obj = Obj_PtrTMem(&obj->qn.link)) {
         if ((major == -1 || OBJ_MAJOR(obj) == major)
          && (minor == -1 || OBJ_MINOR(obj) == minor)
-         && (index == -1 || OBJ_INDEX(obj) == index))
+         && (index == -1 || OBJ_INCLASS(obj) == index))
             return obj;
         if (recurse && !OBJ_ISQUANT(obj) && (sub = &obj->ol.link)->f.index != 0) {
             list = sub;

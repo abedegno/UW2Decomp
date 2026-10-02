@@ -21,7 +21,7 @@ char * far hack_class_data(void)
 {
     register int subclass;
     register int minor;
-    minor = (ActiveObj->id & ID_MINOR) >> 4;
+    minor = OBJ_MINOR(ActiveObj);
     subclass = ActiveObj->id & ID_INCLASS;
     switch (minor) {
     case 1: return Missile + subclass * 3;

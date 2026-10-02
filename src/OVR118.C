@@ -11,8 +11,7 @@
 
 /* FM Towns names; the target table still identifies these DOS entries by IDA name. */
 
-struct FontHead { unsigned width, height; };
-extern struct FontHead far *cur_font;
+extern struct FontInfo far *cur_font;
 extern unsigned long far *Time;
 /* This file's _BSS, DS:5E34..6733 (ovr116's ends at 5E33; ovr119's starts at 6734, its
    keys starting again from gsize's 119): only this file uses it. */
@@ -51,7 +50,7 @@ unsigned char far grfx_load_font(char *name)
     if ((fd = our_open(name, 1, 0)) < 0) return 0;
     font_loaded = 1;
     intoFarBuffer_ovr167_5DA(fd, cur_font, 12);
-    intoFarBuffer_ovr167_5DA(fd, bytefont, (cur_font->height + cur_font->width) << 7);
+    intoFarBuffer_ovr167_5DA(fd, bytefont, (cur_font->charsize + cur_font->widthsize) << 7);
     close(fd);
     setup_font();
     return 1;

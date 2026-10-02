@@ -16,8 +16,6 @@
 #include "player.h"
 #include "ui.h"
 
-#define OBJ_ID(o)       ((o)->id & ID_ITEM)
-
 extern struct Inplist near *inplist;
 extern char far Transparency;
 extern struct Spell far spells[];
@@ -36,7 +34,7 @@ char far add_rune(struct Object far *obj)
 {
     int rune;
 
-    rune = OBJ_ID(obj) - FIRST_RUNESTONE;
+    rune = OBJ_ITEM(obj) - FIRST_RUNESTONE;
     if (rune < 0 || rune > 0x18)
         return 0;
     Obj_Free(obj);

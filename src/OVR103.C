@@ -27,20 +27,10 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_TYPE(o)     (((o)->id & ID_INMAJOR) >> 0)
-#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
-#define OBJ_GOAL(o)     (((o)->goal_word & 0xF) >> 0)
-#define OBJ_GTARG(o)    (((o)->goal_word & 0xFF0) >> 4)
-#define OBJ_ATTITUDE(o) (((o)->attitude_word & 0xC000) >> 14)
-#define OBJ_HAS_INV(o)  (((o)->attitude_word & 0x1000) >> 12)
-#define OBJ_B19_6(o)    (((o)->b19 & 0x40) >> 6)
-
 extern unsigned char RightPanel;
 extern unsigned char far *foreground_color;
-extern void *inplist;
-extern unsigned char far *cur_font;
+extern struct Inplist near *inplist;
+extern struct FontInfo far *cur_font;
 
 /* This file's own uninitialised data, DS:47FC..4927, in its _BSS with talking_to. The FM
    Towns build keeps all of it static, so none of it has an original name and it is static
@@ -96,8 +86,6 @@ void far babl_run(void);
 unsigned char far update_converse_data(struct Object far *);
 void far wdialog(char *, char *, char *, char, int);
 void far replace_string(char far *, int);
-struct Object far * far Obj_IntTMem(int);
-struct Object far * far Obj_Alloc(int);
 unsigned char far invRemoveObject(struct Object far *, int);
 
 /* the built-ins of other files, all registered by Converse */
@@ -130,7 +118,7 @@ void far TalkTo(struct Object far *thing)
     }
     talking_to = thing;
     who = talking_to->whoami;
-    subclass = OBJ_TYPE(talking_to);
+    subclass = OBJ_INMAJOR(talking_to);
     if (TimeStop) {
         scroll_print(get_string(0xe01));
         return;
@@ -142,7 +130,7 @@ void far TalkTo(struct Object far *thing)
     if (OBJ_ATTITUDE(talking_to) != 0)
         goto who_check;
 hunger:
-    if (!OBJ_B19_6(talking_to))
+    if (!OBJ_ALLY(talking_to))
         goto goal_check;
 who_check:
     if (who != 0xff) goto ready;
@@ -212,7 +200,7 @@ void far strt_converse(void)
     if (who > 0)
         loaded = gronk_gr("charhead", who - 1, 1, adr_convpic, move_convpic);
     if (!loaded)
-        loaded = gronk_gr("ghed", OBJ_TYPE(talking_to), 1, adr_convpic, move_convpic);
+        loaded = gronk_gr("ghed", OBJ_INMAJOR(talking_to), 1, adr_convpic, move_convpic);
     if (!loaded)
         loaded = gronk_gr("ghed", 0, 1, adr_convpic, move_convpic);
     if (!loaded) pfatal_code(ERR_READ | 0x15);
@@ -235,7 +223,7 @@ void far strt_converse(void)
     set_workspace();
     pmouseHandled = 0;
     mouse_freereign();
-    Converse(talking_to->whoami, OBJ_TYPE(talking_to));
+    Converse(talking_to->whoami, OBJ_INMAJOR(talking_to));
     newscr(1);
 }
 
@@ -470,8 +458,8 @@ void far conv_play_menu(int option)
     if (convo_mode == 0) return;
     set_workspace();
     if (option == 0) {
-        y = ((int *)inplist)[1] + 1;
-        row = (0x1e - y) / *(int far *)(cur_font + 6);
+        y = inplist->y + 1;
+        row = (0x1e - y) / cur_font->height;
         selected = convo_line_option[row];
     } else selected = option;
     if (selected <= 0 || selected >= bablOptCount) return;

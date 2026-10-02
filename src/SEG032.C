@@ -21,12 +21,6 @@
 #include "ui.h"
 #include "view3d.h"
 
-/* One cell of the vision grid, 33 cells to a row and 17 rows, the eye at row 0 column 16. */
-struct Gloc {
-    unsigned char flags;                /* which faces are seen */
-    unsigned char shade;                /* distance shade in bits 0-3 */
-};
-
 /* A ray edge walking the vision grid. The list is chained by the low nibble of link,
    15 ending it; bit 7 of link says which side of the arc the edge is on. */
 struct Gvec {

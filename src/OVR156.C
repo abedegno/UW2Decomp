@@ -17,19 +17,6 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_INDEX(o)    (((o)->id & ID_INMAJOR) >> 0)
-#define OBJ_QUALITY(o)  ((o)->qn.f.quality)
-#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
-#define OBJ_GOAL(o)     (((o)->goal_word & 0xF) >> 0)
-#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
-#define SET_HEADING(o, v) ((o)->pos = (o)->pos & 0xFC7F | ((v) & 7) << 7)
-#define OBJ_Z(o)        ((o)->pos & POS_Z)
-#define SET_Z(o, v)     ((o)->pos = (o)->pos & 0xFF80 | (v) & POS_Z)
-#define SET_ATTITUDE(o, v) ((o)->attitude_word = (o)->attitude_word & 0x3FFF | ((v) & 3) << 14)
-
 #define SPELL_CLASS(s)  (((s).cls & 0xF8) >> 3)
 
 extern struct Object far *objdata;
@@ -51,20 +38,15 @@ unsigned char mspell_mused = 0;
 char far set_curmagic(char cls, char sub, char flags);
 void far show_cutscene(int n);
 struct Object far * far CreateObj(int id, int b);
-struct Object far * far Obj_IntTMem(int index);
-void far Obj_Add(unsigned far *head, struct Object far *obj);
 int far add_animobj(int index, int len, char a, char x, char y);
 void far put_effect(struct Object far *obj, int type, int size, int a, int b, int x, int y);
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
                      unsigned char damage, unsigned char type);
 void far remove_opponent(struct Object far *npc);
 void far set_screen_frame(int which, int frame);
-struct Object far * far Obj_PtrTMem(unsigned far *link);
 void far mouse_release(int n);
-void far Obj_Punt(unsigned far *head, struct Object far *obj, int how);
 void far scroll_print(char far *s);
 void far RemoveTrap(struct Object far *obj, int skill);
-struct Object far * far Obj_FindInMap(int major, int minor, int index, int *x, int *y);
 void far do_teleport(struct Object far *who, int x, int y, int level);
 void far set_effect(int which, char amount);
 void far automap_area(int x0, int y0, int x1, int y1, int *circle, int (far *fn)());
@@ -201,8 +183,8 @@ void far restore_hp(struct Object far *who, char amount)
 
 void far get_hp_back(struct Object far *who, unsigned char amount)
 {
-    who->hp = who->hp + amount > Creature[OBJ_INDEX(who)].avghit
-        ? Creature[OBJ_INDEX(who)].avghit : who->hp + amount;
+    who->hp = who->hp + amount > Creature[OBJ_INMAJOR(who)].avghit
+        ? Creature[OBJ_INMAJOR(who)].avghit : who->hp + amount;
     if (who == ThePlayer)
         panel_check_hpmp();
 }
@@ -279,7 +261,7 @@ char far sp_sheet_light(int x, int y, struct Object far *target, struct Tile far
     if (add_animobj(Obj_MemTPtr(obj), 4, rand() % 4, x, y) == -1)
         Obj_Free(obj);
     else
-        Obj_Add(&tile->objects.word, obj);
+        Obj_Add(&tile->objects, obj);
     return 1;
 }
 
@@ -307,7 +289,7 @@ char far sp_meteor(int x, int y, struct Object far *target, struct Tile far *til
     if (add_animobj(Obj_MemTPtr(obj), 4, 0, x, y) == -1)
         Obj_Free(obj);
     else {
-        Obj_Add(&tile->objects.word, obj);
+        Obj_Add(&tile->objects, obj);
         fireball_effect(obj, x, y);
     }
     if (npc)
@@ -487,7 +469,7 @@ char far sp_frost(int x, int y, struct Object far *target, struct Tile far *tile
         if (add_animobj(Obj_MemTPtr(obj), 4 - r, r, x, y) == -1)
             Obj_Free(obj);
         else
-            Obj_Add(&tile->objects.word, obj);
+            Obj_Add(&tile->objects, obj);
         return 0;
     } else if (OBJ_MAJOR(target) == MAJOR_CREATURE)
         return wound_foe(x, y, target, tile, src, damage, 0x23, 11, 0);
@@ -565,7 +547,7 @@ void far process_area(char count, unsigned char src, SpellFn fn, unsigned char t
     struct Tile far *tile;
     struct Tile far *start;
     int tries = 0;
-    unsigned far *link;
+    union Link far *link;
     int next;
     int x;
     int y;
@@ -613,16 +595,16 @@ void far process_area(char count, unsigned char src, SpellFn fn, unsigned char t
                 }
                 if (type == 0x40)
                     continue;
-                link = &tile->objects.word;
+                link = &tile->objects;
                 while ((obj = Obj_PtrTMem(link)) != 0) {
-                    next = *link >> 6 & 0x3FF;
+                    next = link->word >> 6 & 0x3FF;
                     if (type == 0x80
                         || type == 0 && OBJ_MAJOR(obj) == MAJOR_CREATURE && Obj_MemTPtr(obj) != src
                         || type == 0xC0)
                         if (fn(x, y, obj, tile, src) && --count <= 0)
                             return;
-                    if ((*link >> 6 & 0x3FF) == next)
-                        link = &obj->qn.word;
+                    if ((link->word >> 6 & 0x3FF) == next)
+                        link = &obj->qn.link;
                 }
             }
     } while (type == 0x40 && count > 0 && tries++ < 4);
@@ -640,7 +622,7 @@ void far gronk_area(struct Object far *who, char count, SpellFn fn, unsigned cha
     index = Obj_MemTPtr(who);
     if (index < NUM_MOBILE) {
         src = index;
-        heading = (OBJ_HEADING(who) << 5) + (who->b18 & 0x1F);
+        heading = (OBJ_HEADING(who) << 5) + OBJ_FINEHEAD(who);
         x = OBJ_HOMEX(who);
         y = OBJ_HOMEY(who);
     } else {
@@ -745,7 +727,7 @@ void far nail_1area(struct Object far *who, unsigned char sub)
 void far obj_spells(struct Object far *target, int how, unsigned char b)
 {
     struct Tile far *tile;
-    unsigned far *link;
+    union Link far *link;
     unsigned char ok;
     int item;
     int x;
@@ -762,7 +744,7 @@ void far obj_spells(struct Object far *target, int how, unsigned char b)
             mspell_mused = 0;
         } else {
             tile = Map_GetAddr(MapObj_X, MapObj_Y);
-            link = &tile->objects.word;
+            link = &tile->objects;
             Obj_Punt(link, target, 1);
         }
         break;
@@ -890,7 +872,7 @@ void far special_spells(struct Object far *who, struct Object far *target, char 
         thump_your_magic_twanger_froggie();
         break;
     case 2:
-        cint = Creature[OBJ_INDEX(who)].attr[2];
+        cint = Creature[OBJ_INMAJOR(who)].attr[2];
         pint = playerdat->attr[2];
         result = cint - pint + (int)((long)rand() * 6 / 0x8000L)
                  - (int)((long)rand() * 6 / 0x8000L);
@@ -993,9 +975,9 @@ void far damage_square(int x, int y, unsigned char kind, unsigned char src)
     if (kind-- == 0)
         return;
     kind &= 1;
-    obj = Obj_PtrTMem(&Map_GetAddr(tx, ty)->objects.word);
+    obj = Obj_PtrTMem(&Map_GetAddr(tx, ty)->objects);
     while (obj) {
-        next = Obj_PtrTMem(&obj->qn.word);
+        next = Obj_PtrTMem(&obj->qn.link);
         damage_item(obj, Obj_IntTMem(src), tx, ty, rollem(sq_dice[kind], sq_sides[kind]),
                     sq_type[kind]);
         obj = next;

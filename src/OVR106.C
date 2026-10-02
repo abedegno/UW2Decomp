@@ -12,25 +12,13 @@
 #include "player.h"
 #include "ui.h"
 
-#define OBJ_ID(o)       ((o)->id & ID_ITEM)
-#define OBJ_INDEX(o)    (((o)->id & ID_INMAJOR) >> 0)
-#define OBJ_QUALITY(o)  ((o)->qn.f.quality)
-#define OBJ_OWNER(o)    ((o)->ol.f.owner)
-#define OBJ_GOAL(o)     (((o)->goal_word & 0xF) >> 0)
-#define OBJ_GTARG(o)    (((o)->goal_word & 0xFF0) >> 4)
-#define OBJ_TALKEDTO(o) (((o)->attitude_word & 0x2000) >> 13)
-#define OBJ_ATTITUDE(o) (((o)->attitude_word & 0xC000) >> 14)
-#define OBJ_B19_6(o)    (((o)->b19 & 0x40) >> 6)
-#define OBJ_FED(o)      (((o)->b19 & 0x80) >> 7)
-#define SET_FED(o, v)   ((o)->b19 = (o)->b19 & 0x7F | ((v) & 1) << 7)
-
 void far setup_converse_data(struct Object far *npc)
 {
     int val;
     struct Creature near *crit;
     int who;
 
-    crit = &Creature[OBJ_INDEX(npc)];
+    crit = &Creature[OBJ_INMAJOR(npc)];
     val = npc->whoami;
     bab_var("npc_whoami", &val, 1);
     val = OBJ_FED(npc) ? 0x10 : 0xC0;
@@ -59,17 +47,17 @@ void far setup_converse_data(struct Object far *npc)
     val = OBJ_OWNER(npc);
     bab_var("npc_yhome", &val, 1);
     who = npc->whoami;
-    val = who ? (who + 0x10) | STR_CONV : OBJ_ID(npc) | STR_OBJNAMES;
+    val = who ? (who + 0x10) | STR_CONV : OBJ_ITEM(npc) | STR_OBJNAMES;
     bab_var("npc_name", &val, 1);
     if (OBJ_GOAL(npc) == 5 && OBJ_GTARG(npc) == 1)
         val = 0;
-    else if (OBJ_B19_6(npc))
+    else if (OBJ_ALLY(npc))
         val = 6;
     else
         val = OBJ_ATTITUDE(npc);
     bab_var("npc_attitude", &val, 1);
 
-    crit = &Creature[OBJ_INDEX(ThePlayer)];
+    crit = &Creature[OBJ_INMAJOR(ThePlayer)];
     val = player->hunger;
     bab_var("play_hunger", &val, 1);
     if (crit->avghit != 0)

@@ -33,9 +33,9 @@ void far creature_save_ovr104_17(int fd)
 
 struct Creature * far creature_class_data(void)
 {
-    cr_class = (ActiveObj->id & ID_MINOR) >> 4;
+    cr_class = OBJ_MINOR(ActiveObj);
     cr_type = ActiveObj->id & ID_INCLASS;
-    return (struct Creature *)((char *)Creature + (cr_class * 16 + cr_type) * 0x30);
+    return &Creature[cr_class * 16 + cr_type];
 }
 
 void far creature_obj_init(void)
@@ -52,51 +52,51 @@ char far init_this_critter(struct Object far *obj)
 
     x = 0x20;
     y = 0x20;
-    *(unsigned far *)((unsigned char far *)obj+0x16) = (*(unsigned far *)((unsigned char far *)obj+0x16) & 0x3ff) | ((x & 0x3f) << 10);
-    *(unsigned far *)((unsigned char far *)obj+0x16) = (*(unsigned far *)((unsigned char far *)obj+0x16) & 0xfc0f) | ((y & 0x3f) << 4);
+    SET_HOMEX(obj, x);
+    SET_HOMEY(obj, y);
     obj->qn.f.quality = x;
     obj->ol.f.owner = y;
-    cst = (struct Creature *)((char *)Creature + (obj->id & ID_INMAJOR) * 0x30);
-    ((unsigned char far *)obj)[8] = (cst->avghit * (rand() % 0x18 + 0x10)) / 0x20;
-    ((unsigned char far *)obj)[9] = ((obj->pos & POS_HEADING) >> 7) << 5;
-    *(unsigned far *)((unsigned char far *)obj+0xb) = (*(unsigned far *)((unsigned char far *)obj+0xb) & 0xfff0) | 8;
-    *(unsigned far *)((unsigned char far *)obj+0xb) = *(unsigned far *)((unsigned char far *)obj+0xb) & 0xf00f;
-    *(unsigned far *)((unsigned char far *)obj+0xd) = *(unsigned far *)((unsigned char far *)obj+0xd) & 0xfff0;
-    *(unsigned far *)((unsigned char far *)obj+0xf) = *(unsigned far *)((unsigned char far *)obj+0xf) & 0xffc0;
-    *(unsigned far *)((unsigned char far *)obj+0xf) = *(unsigned far *)((unsigned char far *)obj+0xf) & 0xf03f;
-    *(unsigned far *)((unsigned char far *)obj+0xd) = *(unsigned far *)((unsigned char far *)obj+0xd) & 0xff0f;
-    *(unsigned far *)((unsigned char far *)obj+0xd) = *(unsigned far *)((unsigned char far *)obj+0xd) & 0xfdff;
-    *(unsigned far *)((unsigned char far *)obj+0xd) = *(unsigned far *)((unsigned char far *)obj+0xd) & 0xfbff;
-    *(unsigned far *)((unsigned char far *)obj+0xd) = *(unsigned far *)((unsigned char far *)obj+0xd) & 0xf7ff;
-    *(unsigned far *)((unsigned char far *)obj+0xd) = *(unsigned far *)((unsigned char far *)obj+0xd) & 0xfeff;
-    ((unsigned char far *)obj)[0x18] &= 0xdf;
-    *(unsigned far *)((unsigned char far *)obj+0xf) = *(unsigned far *)((unsigned char far *)obj+0xf) & 0x0fff;
-    ((unsigned char far *)obj)[0xa] &= 0xf0;
-    ((unsigned char far *)obj)[0x14] = (((unsigned char far *)obj)[0x14] & 0xf8) | 4;
-    ((unsigned char far *)obj)[0x15] &= 0xc0;
-    *(unsigned far *)((unsigned char far *)obj+0xb) = *(unsigned far *)((unsigned char far *)obj+0xb) & 0x0fff;
-    ((unsigned char far *)obj)[0x14] = (((unsigned char far *)obj)[0x14] & 7) | 0x80;
-    ((unsigned char far *)obj)[0x13] &= 0x7f;
-    ((unsigned char far *)obj)[0x13] &= 0x80;
-    ((unsigned char far *)obj)[0x11] = 0;
-    ((unsigned char far *)obj)[0x12] = 0;
-    ((unsigned char far *)obj)[0x15] &= 0x7f;
-    ((unsigned char far *)obj)[0x18] &= 0x7f;
-    ((unsigned char far *)obj)[0x18] &= 0xbf;
-    *(unsigned far *)((unsigned char far *)obj+0x16) = *(unsigned far *)((unsigned char far *)obj+0x16) & 0xfff0;
-    ((unsigned char far *)obj)[0x15] &= 0xbf;
-    ((unsigned char far *)obj)[0x1a] = 0;
-    ((unsigned char far *)obj)[0x19] &= 0xfe;
-    ((unsigned char far *)obj)[0x19] &= 0xfd;
-    ((unsigned char far *)obj)[0x19] &= 0xef;
-    ((unsigned char far *)obj)[0x19] &= 0xdf;
-    ((unsigned char far *)obj)[0x19] &= 0xbf;
-    ((unsigned char far *)obj)[0x19] &= 0x7f;
-    *(unsigned far *)((unsigned char far *)obj+0xd) = *(unsigned far *)((unsigned char far *)obj+0xd) & 0xefff;
-    *(unsigned far *)((unsigned char far *)obj+0xd) = *(unsigned far *)((unsigned char far *)obj+0xd) & 0xdfff;
-    *(unsigned far *)((unsigned char far *)obj+0xd) = (*(unsigned far *)((unsigned char far *)obj+0xd) & 0x3fff) | 0x8000;
-    ((unsigned char far *)obj)[0xa] &= 0x7f;
-    ((unsigned char far *)obj)[0x19] &= 0xf3;
-    ((unsigned char far *)obj)[0xa] &= 0x8f;
+    cst = &Creature[obj->id & ID_INMAJOR];
+    obj->hp = (cst->avghit * (rand() % 0x18 + 0x10)) / 0x20;
+    obj->heading = OBJ_HEADING(obj) << 5;
+    SET_GOAL(obj, 8);
+    SET_GTARG(obj, 0);
+    SET_OLDGOAL(obj, 0);
+    SET_DESTX(obj, 0);
+    SET_DESTY(obj, 0);
+    SET_TARGETZ(obj, 0);
+    SET_NOHEAL(obj, 0);
+    SET_POWERFUL(obj, 0);
+    SET_B0D_11(obj, 0);
+    SET_TEMP(obj, 0);
+    SET_B18_5(obj, 0);
+    SET_ATKFRAME(obj, 0);
+    SET_BIN(obj, 0);
+    SET_RATE(obj, 4);
+    SET_SEQ(obj, 0);
+    SET_FRAME(obj, 0);
+    SET_PITCH(obj, 0x10);
+    SET_GRAVITY(obj, 0);
+    SET_SPEED(obj, 0);
+    obj->b11 = 0;
+    obj->last_hit = 0;
+    SET_B15_7(obj, 0);
+    SET_B18_7(obj, 0);
+    SET_B18_6(obj, 0);
+    SET_PATH(obj, 0);
+    SET_B15_6(obj, 0);
+    obj->whoami = 0;
+    SET_B19_0(obj, 0);
+    SET_B19_1(obj, 0);
+    SET_B19_4(obj, 0);
+    SET_B19_5(obj, 0);
+    SET_ALLY(obj, 0);
+    SET_FED(obj, 0);
+    SET_HAS_INV(obj, 0);
+    SET_TALKEDTO(obj, 0);
+    SET_ATTITUDE(obj, 2);
+    SET_LONER(obj, 0);
+    SET_CAST(obj, 0);
+    SET_TERRAIN(obj, 0);
     return 1;
 }

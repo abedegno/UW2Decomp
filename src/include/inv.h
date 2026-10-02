@@ -34,7 +34,7 @@ void far FixOpenBag(void);
 void far DisplayOpenBag(void);
 void far ScrollItemsUp(void);
 void far ScrollItemsDown(void);
-void far BagWeight(unsigned far *head, int far *total);
+void far BagWeight(union Link far *head, int far *total);
 void far DoSpecialActions(int slot);
 void far FixBagArea(void);
 void far OpenTheBag(int slot);

@@ -12,9 +12,6 @@
 #include "player.h"
 #include "sys.h"
 
-#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-
 /* This file's _BSS, DS:25C4..26E9 (seg030's ends at 25C3, seg032's starts at 26EA), laid
    out by name (tools/bssorder.py): Ppd 144, bounce_flag 298, PN 336, CN1..CN4 371,
    hit_obj 568, hit_flag 624, CP 731, targ_ceil 764, terr_type 820, PT 848, trycnt 868,
@@ -46,8 +43,6 @@ struct MotionParams MP = {
 /* Elsewhere in the game. */
 void far TerrainCheck(char radius);
 void far ObjectCheck(char a, int b);
-struct Object far * far Obj_IntTMem(int index);
-struct Object far * far Obj_PtrTMem(unsigned far *link);
 void far play_effect(char fx, int x, int y, char vol);
 long far labs(long v);
 
@@ -143,7 +138,7 @@ void far set_targz(char how)
         targ_ceil = 0;
     }
     if (MP.hit != -1)
-        MP.item = OBJ_ITEM(Obj_PtrTMem(&oCollisions[MP.hit].link.word));
+        MP.item = OBJ_ITEM(Obj_PtrTMem(&oCollisions[MP.hit].link));
 }
 
 unsigned char far space_to_motion(char pos, char check)
@@ -761,13 +756,13 @@ struct Object far * far IsaDoor(unsigned char *x, unsigned char *y)
     int t;
 
     for (i = 0; i < Ppd.count; i++) {
-        item = OBJ_ITEM(Obj_PtrTMem(&oCollisions[i + Ppd.first].link.word));
+        item = OBJ_ITEM(Obj_PtrTMem(&oCollisions[i + Ppd.first].link));
         t = oCollisions[i + Ppd.first].offset & 0x3F;
         *x = (Ppd.x >> 3) + t & 0x3F;
         t = *x - (Ppd.x >> 3);
         *y = (Ppd.y >> 3) + (oCollisions[i + Ppd.first].offset - t) / MAP_SIZE & 0x3F;
         if (item >> 4 == CLASS_DOOR && (item & ID_INCLASS) < 8)
-            return Obj_PtrTMem(&oCollisions[i + Ppd.first].link.word);
+            return Obj_PtrTMem(&oCollisions[i + Ppd.first].link);
     }
     return 0;
 }
@@ -776,6 +771,6 @@ struct Object far * far IsaDoor(unsigned char *x, unsigned char *y)
 struct Object far * far CollObject(void)
 {
     if (Ppd.count)
-        return Obj_PtrTMem(&oCollisions[Ppd.first].link.word);
+        return Obj_PtrTMem(&oCollisions[Ppd.first].link);
     return 0;
 }

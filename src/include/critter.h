@@ -94,6 +94,15 @@ struct PathRec {
     unsigned char index, directions[16], slopes[8];
 };
 
+/* A map square's path-finding record, 5 bytes: seg006 fills stdat (the shared far
+   buffer) with 64 by 64 of them while it searches for a path. */
+struct StaticTile {
+    unsigned char pathx, pathy;         /* 0x00, the square the path came from */
+    unsigned char height;               /* 0x02 */
+    unsigned char pathflag:1, dist:7;   /* 0x03 */
+    unsigned char step;                 /* 0x04 */
+};
+
 /* SEG006.C: critter motion, homing projectiles, path traversal and doors */
 extern int crit_terr;
 extern int tdx;

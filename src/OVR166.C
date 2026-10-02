@@ -17,31 +17,6 @@
 #include "ui.h"
 #include "uw2.h"
 
-#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
-#define OBJ_TYPE(o)     (((o)->id & ID_INMAJOR) >> 0)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
-#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
-#define OBJ_FLAGS(o)    (((o)->id & ID_FLAGS) >> 9)
-#define OBJ_Z(o)        ((o)->pos & POS_Z)
-#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
-#define SET_ID_14(o, v)   ((o)->id = (o)->id & 0xBFFF | ((v) & 1) << 14)
-#define SET_GOAL(o, v)    ((o)->goal_word = (o)->goal_word & 0xFFF0 | ((v) & 0xF) << 0)
-#define SET_ITEM(o, v)    ((o)->id = (o)->id & 0xFE00 | (v) & ID_ITEM)
-#define SET_LONER(o, v)   ((o)->b0A = (o)->b0A & 0x7F | ((v) & 1) << 7)
-#define SET_TEMP(o, v)    ((o)->attitude_word = (o)->attitude_word & 0xFEFF | ((v) & 1) << 8)
-#define SET_ATTITUDE(o, v) ((o)->attitude_word = (o)->attitude_word & 0x3FFF | ((v) & 3) << 14)
-#define SET_MAJOR(o, v)   ((o)->id = (o)->id & 0xFE3F | ((v) & 7) << 6)
-#define SET_MINOR(o, v)   ((o)->id = (o)->id & 0xFFCF | ((v) & 3) << 4)
-#define SET_SUB(o, v)     ((o)->id = (o)->id & 0xFFF0 | (v) & 0xF)
-#define SET_FLAGS(o, v)   ((o)->id = (o)->id & 0xE1FF | ((v) & 0xF) << 9)
-#define SET_Z(o, v)       ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
-#define SET_HEADING(o, v) ((o)->pos = (o)->pos & 0xFC7F | ((v) & 7) << 7)
-#define SET_FINEX(o, v)   ((o)->pos = (o)->pos & 0x1FFF | ((v) & 7) << 13)
-#define SET_FINEY(o, v)   ((o)->pos = (o)->pos & 0xE3FF | ((v) & 7) << 10)
 /* This file's _BSS, DS:863C..865B (ovr163's LootCreature ends at 863B; seg045's starts at
    865C), laid out by name (tools/bssorder.py): RemoveTrapIndex 58, RemoveTrapFlags 74,
    ObjRunCodeAround 447, CharacterThatTriggeredTrap 459, TriggeringButton 460, Triggers 996.
@@ -66,12 +41,11 @@ void far trap_init(int handle)
    ActiveObj and the same index into the trigger table. */
 unsigned char near * far trap_class_data(void)
 {
-    if (((ActiveObj->id & ID_MINOR) >> 4) & 2)
-        return Triggers + (ActiveObj->id & ID_INCLASS);
+    if (OBJ_MINOR(ActiveObj) & 2)
+        return Triggers + OBJ_INCLASS(ActiveObj);
     return 0;
 }
 
-struct Object far * far Obj_PtrTMem(unsigned far *link);
 int far UseTrigger(struct Object far *who, struct Object far *start,
                    struct Object far *trig, register int type)
 {
@@ -81,37 +55,37 @@ int far UseTrigger(struct Object far *who, struct Object far *start,
     int sub;
     int minor;
     register int result;
-    minor = (trig->id & ID_MINOR) >> 4;
+    minor = OBJ_MINOR(trig);
     sub = trig->id & ID_INCLASS;
     if (!(minor & 2)) return 2;
     if (type >= 0) {
-        if (start != 0 && ((start->id & ID_CLASS) >> 4) == CLASS_SWITCH &&
-            (start->id & ID_INCLASS) > 7 && trig->qn.f.next != 0) {
-            trig = Obj_PtrTMem(&trig->qn.word);
+        if (start != 0 && OBJ_CLASS(start) == CLASS_SWITCH &&
+            OBJ_INCLASS(start) > 7 && trig->qn.f.next != 0) {
+            trig = Obj_PtrTMem(&trig->qn.link);
             return UseTrigger(who, start, trig, type);
         }
         if (Triggers[sub] != type) return 2;
-        if ((who->id & ID_ITEM) == ITEM_ADVENTURER) {
+        if (OBJ_ITEM(who) == ITEM_ADVENTURER) {
             if (!(trig->id & ID_FLAG11)) return 2;
-            if (type == 5 && (trig->pos & POS_Z) > 0 &&
+            if (type == 5 && OBJ_Z(trig) > 0 &&
                 skill_check(player->skills[SKILL_SEARCH], trig->pos & POS_Z) <= 0)
                 return 2;
         } else {
-            if (((who->id & ID_MAJOR) >> 6) == MAJOR_CREATURE) {
+            if (OBJ_MAJOR(who) == MAJOR_CREATURE) {
                 if (!(trig->id & ID_ENCHANT) ||
-                    ((trig->id & ID_MAJOR) >> 6) == MAJOR_RECT) return 2;
+                    OBJ_MAJOR(trig) == MAJOR_RECT) return 2;
             }
-            if (((who->id & ID_MAJOR) >> 6) != MAJOR_CREATURE && !(trig->id & ID_FLAG9))
+            if (OBJ_MAJOR(who) != MAJOR_CREATURE && !(trig->id & ID_FLAG9))
                 return 2;
         }
     }
-    trap = Obj_PtrTMem(&trig->ol.word);
+    trap = Obj_PtrTMem(&trig->ol.link);
     quality = trig->qn.f.quality;
     owner = trig->ol.f.owner;
     if (trap == 0) return 2;
     result = SetOffTrap(who, start, trap, quality, owner);
     if (!(trig->id & ID_FLAG10) && trig->ol.f.link > 0) {
-        delete_trap(&Map_GetAddr(quality, owner)->objects.word, trap);
+        delete_trap(&Map_GetAddr(quality, owner)->objects, trap);
         result |= 0x20;
     }
     if ((type & 0xF07) == 7)
@@ -210,31 +184,23 @@ struct Tile far *TriggerChainTileData_dseg_67d6_1BB9 = 0;       /* DS:1BB9, FM T
 int far do_teleport(struct Object far *who, int x, int y, int level);
 int far change_terrain(int x, int y, int wall, int floor, int height,
                               int type, int dx, int dy, int extra);
-char far IsMobElem(struct Object far *obj);
-struct Object far * far Obj_Alloc(char mobile);
 unsigned char far put_at(int x, int y, int z, struct Object far *obj, int range, int nocull);
 int far add_animobj(int index, int len, int a, char x, char y);
-struct Object far * far Obj_IntTMem(int index);
-struct Object far * far Obj_InList(unsigned far **head, int recurse, int major, int minor,
-                                   int index);
-char far Obj_Rem(unsigned far *head, struct Object far *obj);
-void far Obj_Add(unsigned far *head, struct Object far *obj);
-void far Obj_FreeLinkChain(unsigned far *head, struct Object far *obj);
-void far trap_obj_del(unsigned far *head, struct Object far *obj);
+void far trap_obj_del(union Link far *head, struct Object far *obj);
 void far scroll_print(char far *s);
 
 /* Condition traps (variable, skill, proximity, inventory) branch by running the trap or
    trigger that follows the first object the trap links to, and return its result. */
 #define RUN_ELSE_CHAIN()                                                            \
-    obj = Obj_PtrTMem(&trap->ol.word);                                              \
+    obj = Obj_PtrTMem(&trap->ol.link);                                              \
     if (obj->qn.f.next > 0)                                                         \
-        return (OBJ_MINOR(Obj_PtrTMem(&obj->qn.word)) & 2)                          \
+        return (OBJ_MINOR(Obj_PtrTMem(&obj->qn.link)) & 2)                          \
             ? UseTrigger(CharacterThatTriggeredTrap,                 \
                          TriggeringButton,                           \
-                         Obj_PtrTMem(&obj->qn.word), -1)                            \
+                         Obj_PtrTMem(&obj->qn.link), -1)                            \
             : SetOffTrap(CharacterThatTriggeredTrap,                 \
                          TriggeringButton,                           \
-                         Obj_PtrTMem(&obj->qn.word), x, y);                         \
+                         Obj_PtrTMem(&obj->qn.link), x, y);                         \
     return 2
 
 int far UseTrap(struct Object far *trap, int x, int y)
@@ -243,7 +209,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
     struct Object far *linked;
     struct Object far *obj;
     struct Object far *lock;
-    unsigned far *head;
+    union Link far *head;
     int a;
     int b;
     int c;
@@ -260,7 +226,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
     register int i;
     register int v;
 
-    switch (OBJ_TYPE(trap)) {
+    switch (OBJ_INMAJOR(trap)) {
     case TRAP_ARROW:
         trap_fire(trap, x, y);
         break;
@@ -356,7 +322,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
             break;
         RUN_ELSE_CHAIN();
     case TRAP_CHANGE_FROM:
-        obj = Obj_PtrTMem(&trap->ol.word);
+        obj = Obj_PtrTMem(&trap->ol.link);
         do_change_grokking(trap, obj, x, y);
         break;
     case TRAP_OSCILLATOR: {
@@ -392,7 +358,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
             now = floor = g + i;
             break;
         case 2:
-            g = tile->objects.f.low;
+            g = TILE_WALL(tile);
             now = wall = g + i;
             break;
         }
@@ -487,9 +453,9 @@ int far UseTrap(struct Object far *trap, int x, int y)
         if ((int)(((long)rand() * 0x3F) / 0x8000L) < trap->qn.f.quality)
             return 2;
         continue_chain = 0;
-        if ((trap->id & ID_ISQUANT) >> 15)
+        if OBJ_ISQUANT(trap)
             break;
-        linked = Obj_PtrTMem(&trap->ol.word);
+        linked = Obj_PtrTMem(&trap->ol.link);
         if (linked == 0)
             break;
         if (OBJ_MAJOR(linked) == MAJOR_CREATURE && dont_create_wandering_monster_here(linked))
@@ -533,14 +499,14 @@ int far UseTrap(struct Object far *trap, int x, int y)
             stay_centered = 0;
             {
                 struct Object far *copy;
-                if (placed && !((obj->id & ID_ISQUANT) >> 15) && obj->ol.f.link > 0 &&
+                if (placed && !OBJ_ISQUANT(obj) && obj->ol.f.link > 0 &&
                     (copy = Obj_Alloc(0)) != 0) {
                     *(struct StaticObj far *)copy =
                         *(struct StaticObj far *)Obj_IntTMem(obj->ol.f.link);
                     obj->ol.f.link = Obj_MemTPtr(copy);
                     while (copy->qn.f.next != 0)
                         copy->qn.f.next = 0;
-                    if (!((copy->id & ID_ISQUANT) >> 15) && copy->ol.f.link > 0)
+                    if (!OBJ_ISQUANT(copy) && copy->ol.f.link > 0)
                         copy->ol.f.link = 0;
                 }
             }
@@ -556,7 +522,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
         int savex;
         int savey;
         tile = Map_GetAddr(x, y);
-        head = &tile->objects.word;
+        head = &tile->objects;
         linked = Obj_InList(&head, 0, MAJOR_RECT, 0, -1);
         savex = MapObj_X;
         savey = MapObj_Y;
@@ -592,13 +558,13 @@ int far UseTrap(struct Object far *trap, int x, int y)
         MapObj_X = savex;
         MapObj_Y = savey;
         if (linked != 0 && trap->ol.f.owner != 0) {
-            head = &linked->ol.word;
+            head = &linked->ol.link;
             lock = Obj_InList(&head, 0, MAJOR_SPEC, 0, 0xF);
             continue_chain = 0;
             if (lock != 0 && Obj_Rem(head, lock))
                 Obj_Free(lock);
-            if (!((trap->id & ID_ISQUANT) >> 15) && trap->ol.f.link != 0) {
-                lock = Obj_PtrTMem(&trap->ol.word);
+            if (!OBJ_ISQUANT(trap) && trap->ol.f.link != 0) {
+                lock = Obj_PtrTMem(&trap->ol.link);
                 if ((obj = Obj_Alloc(0)) != 0) {
                     *(struct StaticObj far *)obj = *(struct StaticObj far *)lock;
                     Obj_Add(head, obj);
@@ -608,8 +574,8 @@ int far UseTrap(struct Object far *trap, int x, int y)
         break;
     }
     case TRAP_DELETE_OBJECT:
-        head = &Map_GetAddr(trap->qn.f.quality, trap->ol.f.owner)->objects.word;
-        lock = Obj_PtrTMem(&trap->ol.word);
+        head = &Map_GetAddr(trap->qn.f.quality, trap->ol.f.owner)->objects;
+        lock = Obj_PtrTMem(&trap->ol.link);
         if (OBJ_MAJOR(lock) == MAJOR_TRAP)
             trap_obj_del(head, lock);
         else if (OBJ_MAJOR(lock) == MAJOR_ANIMOBJ) {
@@ -630,7 +596,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
             trip = 1;
         else if (OBJ_FINEX(trap) && !ObjWorn(i, slot))
             trip = 1;
-        else if (OBJ_Z(trap) > 0 && (obj->id & ID_ISQUANT) >> 15 &&
+        else if (OBJ_Z(trap) > 0 && OBJ_ISQUANT(obj) &&
                  !(obj->ol.f.link & LINK_SPECIAL) && OBJ_Z(trap) > obj->ol.f.link)
             trip = 1;
         if (trip) {
@@ -641,7 +607,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
     case TRAP_WARD:
         if (CharacterThatTriggeredTrap != 0 &&
             (trap->qn.f.quality == 0x3F ||
-             trap->qn.f.quality == (CharacterThatTriggeredTrap->id & ID_INCLASS))) {
+             trap->qn.f.quality == OBJ_INCLASS(CharacterThatTriggeredTrap))) {
             int damage;
             damage = (int)(((long)rand() * player->skills[SKILL_CASTING]) / 0x8000L) + 3;
             print_path_to(get_string(0x304), OBJ_HOMEX(ThePlayer), OBJ_HOMEY(ThePlayer), 0,
@@ -660,7 +626,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
     }
     }
     if (continue_chain && trap->ol.f.link > 0) {
-        struct Object far *next = Obj_PtrTMem(&trap->ol.word);
+        struct Object far *next = Obj_PtrTMem(&trap->ol.link);
         if (OBJ_MAJOR(next) == MAJOR_TRAP) {
             if (OBJ_MINOR(next) & 2)
                 result |= UseTrigger(CharacterThatTriggeredTrap,
@@ -672,17 +638,16 @@ int far UseTrap(struct Object far *trap, int x, int y)
     }
     return result;
 }
-char far Obj_Rem(unsigned far *head, struct Object far *obj);
-void far kill_triggers(unsigned far *head)
+void far kill_triggers(union Link far *head)
 {
     struct Object far *obj;
     struct Object far *next;
-    unsigned far *link;
+    union Link far *link;
     obj = Obj_PtrTMem(head);
     while (obj != 0) {
-        next = Obj_PtrTMem(&obj->qn.word);
-        if (((obj->id & ID_MAJOR) >> 6) == MAJOR_TRAP &&
-            ((obj->id & ID_MINOR) >> 4) >= 2 &&
+        next = Obj_PtrTMem(&obj->qn.link);
+        if (OBJ_MAJOR(obj) == MAJOR_TRAP &&
+            OBJ_MINOR(obj) >= 2 &&
             obj->ol.f.link == RemoveTrapIndex) {
             if (Triggers[obj->id & ID_INCLASS] == 10)
                 rem_timer_obj(Obj_MemTPtr(obj));
@@ -690,36 +655,32 @@ void far kill_triggers(unsigned far *head)
             obj->ol.word &= 0x3F;
             RemoveTrapFlags--;
         }
-        if (!((obj->id & ID_ISQUANT) >> 15)) {
-            if (((union Link far *)(link = &obj->ol.word))->f.index != 0)
+        if (!OBJ_ISQUANT(obj)) {
+            if ((link = &obj->ol.link)->f.index != 0)
                 kill_triggers(link);
         }
         obj = next;
     }
 }
 extern struct Tile far *mapdata;
-extern unsigned far *Obj_Find_Head;
-struct Object far * far Obj_Find(unsigned far *head, int recurse, int index);
-void far Obj_FreeLinkChain(unsigned far *head, struct Object far *obj);
-void far delete_trap(unsigned far *head, struct Object far *trap)
+void far delete_trap(union Link far *head, struct Object far *trap)
 {
     struct Tile far *tile;
-    unsigned far *tilehead;
+    union Link far *tilehead;
     register unsigned i;
-    RemoveTrapFlags = (trap->id & ID_FLAGS) >> 9;
+    RemoveTrapFlags = OBJ_FLAGS(trap);
     if (RemoveTrapFlags != 0) {
         RemoveTrapIndex = Obj_MemTPtr(trap);
         tile = mapdata;
         for (i = 0; RemoveTrapFlags > 0 && i < 0x1000; i++, tile++) {
-            tilehead = &tile->objects.word;
-            if (((union Link far *)tilehead)->f.index > 0)
+            tilehead = &tile->objects;
+            if (tilehead->f.index > 0)
                 kill_triggers(tilehead);
         }
     }
     if ((trap = Obj_Find(head, 1, Obj_MemTPtr(trap))) != 0)
         Obj_FreeLinkChain(Obj_Find_Head, trap);
 }
-struct Object far * far Obj_IntTMem(int index);
 void far Sched_SetAllClocks(int how);
 void far gronkify_change_goal();
 void far gronk_whoami(int who, int how, unsigned char near *info, void (far *fn)());
@@ -829,7 +790,7 @@ int far do_trap_hack(struct Object far *trap, register int x, register int y)
         ruin_cure_potions(x, y);
         break;
     case 39:
-        SET_ID_14(Obj_IntTMem(trap->ol.f.link), trap->ol.f.owner);
+        SET_INVIS(Obj_IntTMem(trap->ol.f.link), trap->ol.f.owner);
         editchng(2);
         break;
     case 40:
@@ -864,8 +825,6 @@ int far do_trap_hack(struct Object far *trap, register int x, register int y)
     }
     return 2;
 }
-struct Object far * far Obj_Alloc(char mobile);
-void far Obj_Add(unsigned far *head, struct Object far *obj);
 int far cast_trap_spell(int x, int y, int sub)
 {
     struct Object far *trigger;
@@ -883,7 +842,7 @@ int far cast_trap_spell(int x, int y, int sub)
     trigger->id = trigger->id & 0xDFFF | (1 & 1) << 13;
     SET_MAJOR(trigger, 6);
     SET_MINOR(trigger, 2);
-    SET_SUB(trigger, 0);
+    SET_INCLASS(trigger, 0);
     SET_Z(trigger, tile->height << 3);
     trigger->id = trigger->id & 0x7FFF | (1 & 1) << 15;
     SET_FINEX(trigger, 3);
@@ -897,10 +856,10 @@ int far cast_trap_spell(int x, int y, int sub)
     trigger->ol.f.link = Obj_MemTPtr(trap);
     trigger->qn.f.quality = x;
     trigger->ol.f.owner = y;
-    Obj_Add(&tile->objects.word, trigger);
+    Obj_Add(&tile->objects, trigger);
     SET_MAJOR(trap, 6);
     SET_MINOR(trap, 0);
-    SET_SUB(trap, sub);
+    SET_INCLASS(trap, sub);
     trap->id = trap->id & 0xBFFF | (1 & 1) << 14;
     trap->id = trap->id & 0xDFFF | (1 & 1) << 13;
     SET_Z(trap, tile->height << 3);
@@ -911,21 +870,21 @@ int far cast_trap_spell(int x, int y, int sub)
     trap->ol.f.link = 0;
     trap->qn.f.quality = 0x3F;
     SET_FLAGS(trap, 1);
-    Obj_Add(&tile->objects.word, trap);
+    Obj_Add(&tile->objects, trap);
     return Obj_MemTPtr(trigger);
 }
-void far trigger_obj_del(unsigned far *head, struct Object far *obj)
+void far trigger_obj_del(union Link far *head, struct Object far *obj)
 {
     struct Object far *linked;
     int x;
     register int flags;
     register int y;
-    linked = Obj_PtrTMem(&obj->ol.word);
-    flags = (linked->id & ID_FLAGS) >> 9;
+    linked = Obj_PtrTMem(&obj->ol.link);
+    flags = OBJ_FLAGS(linked);
     if (flags == 1) {
         x = obj->qn.f.quality;
         y = obj->ol.f.owner;
-        delete_trap(&Map_GetAddr(x, y)->objects.word, linked);
+        delete_trap(&Map_GetAddr(x, y)->objects, linked);
     } else if (Obj_Rem(head, obj)) {
         linked->id = linked->id & 0xE1FF | (((flags - 1) & 0xF) << 9);
         Obj_Free(obj);
@@ -933,9 +892,9 @@ void far trigger_obj_del(unsigned far *head, struct Object far *obj)
     if (Triggers[obj->id & ID_INCLASS] == 10)
         rem_timer_obj(Obj_MemTPtr(obj));
 }
-void far trap_obj_del(unsigned far *head, struct Object far *obj)
+void far trap_obj_del(union Link far *head, struct Object far *obj)
 {
-    if (((obj->id & ID_MINOR) >> 4) > 1)
+    if (OBJ_MINOR(obj) > 1)
         trigger_obj_del(head, obj);
     else
         delete_trap(head, obj);
@@ -944,7 +903,7 @@ void far trap_obj_del(unsigned far *head, struct Object far *obj)
 char far is_this_wandering(int x, int y, struct Object far *obj)
 {
     struct Object far *p = obj;
-    if (((p->attitude_word & 0x100) >> 8) &&
+    if (OBJ_TEMP(p) &&
         obj != ObjRunCodeAround &&
         p != ThePlayer)
         CreatedObjectFound_dseg_67d6_1BB8 = 1;
@@ -964,15 +923,12 @@ char far check_alert(unsigned char is_player, int x, int y)
 {
     int px, py;
     if (!is_player) return 1;
-    px = (ThePlayer->home & HOME_X) >> 10;
-    py = (ThePlayer->home & HOME_Y) >> 4;
+    px = OBJ_HOMEX(ThePlayer);
+    py = OBJ_HOMEY(ThePlayer);
     if (abs(px - x) < 8 && abs(py - y) < 8)
         return 0;
     return 1;
 }
-struct Object far * far Obj_FindInMap(int major, int minor, int index, int *x, int *y);
-struct Object far * far Obj_PtrTMem(unsigned far *link);
-char far IsMobElem(struct Object far *obj);
 void far DoWanderingMonsters(unsigned char is_player)
 {
     int x = 0;
@@ -980,8 +936,8 @@ void far DoWanderingMonsters(unsigned char is_player)
     struct Object far *obj;
     struct Object far *newobj;
     while ((obj = Obj_FindInMap(6, 0, 7, &x, &y)) != 0) {
-        if (((obj->id & ID_FLAGS) >> 9) == 0) {
-            newobj = Obj_PtrTMem(&obj->ol.word);
+        if (OBJ_FLAGS(obj) == 0) {
+            newobj = Obj_PtrTMem(&obj->ol.link);
             if (IsMobElem(newobj)) {
                 newobj->attitude_word = newobj->attitude_word & 0xFEFF | 0x100;
                 if (check_alert(is_player, x, y))
@@ -1000,7 +956,7 @@ void far DoClosingDoors(unsigned char is_player)
     quick_time = 1;
     while ((door = Obj_FindInMap(5, 0, -1, &x, &y)) != 0) {
         if (((Map_GetAddr(x, y)->door & 2) >> 1) == 0 &&
-            (door->id & ID_INCLASS) >= 8 &&
+            OBJ_INCLASS(door) >= 8 &&
             (int)(((long)rand() * 10) / 0x8000L) < 3) {
             MapObj_X = x;
             MapObj_Y = y;
@@ -1022,7 +978,6 @@ int far Ply_Weight(void)
         weight += ItemWeight(CursorObjPtr);
     return weight;
 }
-int far check_weight(unsigned far *head, int threshold, int z, int weight);
 char far check_pplate(struct Object far *who, struct Tile far *tile, int z, int how)
 {
     register int type = how;
@@ -1032,20 +987,20 @@ char far check_pplate(struct Object far *who, struct Tile far *tile, int z, int 
     struct Object far *previous = 0;
     register int weight_result;
     TriggerChainTileData_dseg_67d6_1BB9 = tile;
-    trig = Obj_PtrTMem(&TriggerChainTileData_dseg_67d6_1BB9->objects.word);
+    trig = Obj_PtrTMem(&TriggerChainTileData_dseg_67d6_1BB9->objects);
     while (trig != 0) {
-        if (((((trig->id & ID_CLASS) >> 4) & 0x1E) == CLASS_TRIGGER)) {
+        if (((OBJ_CLASS(trig) & 0x1E) == CLASS_TRIGGER)) {
             if (Triggers[trig->id & ID_INCLASS] == type && (type & 7) == 6)
                 UseTrigger(who, 0, trig, type);
             if ((type & 7) == 6) type++;
             if ((type & 7) == 7 && Triggers[trig->id & ID_INCLASS] == type) {
                     result = 1;
-                    if ((trig->pos & POS_Z) != z) goto advance_pressure;
+                    if (OBJ_Z(trig) != z) goto advance_pressure;
                     {
-                        if (((((trig->pos & POS_YFINE) >> 10) & 1) && type == 15) ||
-                            (!(((trig->pos & POS_YFINE) >> 10) & 1) && type == 7)) {
-                        weight_result = check_weight(&tile->objects.word,
-                            4 + (((((trig->pos & POS_YFINE) >> 10) & 4) >> 2) * 80),
+                        if (((OBJ_FINEY(trig) & 1) && type == 15) ||
+                            (!(OBJ_FINEY(trig) & 1) && type == 7)) {
+                        weight_result = check_weight(&tile->objects,
+                            4 + (((OBJ_FINEY(trig) & 4) >> 2) * 80),
                             trig->pos & POS_Z, Ply_Weight());
                         if ((weight_result == 0 && type == 15) ||
                             (weight_result == 1 && type == 7)) {
@@ -1059,15 +1014,15 @@ char far check_pplate(struct Object far *who, struct Tile far *tile, int z, int 
                 previous = trig;
         }
 advance_pressure:
-        trig = Obj_PtrTMem(&trig->qn.word);
+        trig = Obj_PtrTMem(&trig->qn.link);
     }
     if (previous != 0 && !ran) {
         result = 1;
         trig = previous;
-        if (((((trig->pos & POS_YFINE) >> 10) & 1) && type == 15) ||
-            (!(((trig->pos & POS_YFINE) >> 10) & 1) && type == 7)) {
-            weight_result = check_weight(&tile->objects.word,
-                4 + (((((trig->pos & POS_YFINE) >> 10) & 4) >> 2) * 80),
+        if (((OBJ_FINEY(trig) & 1) && type == 15) ||
+            (!(OBJ_FINEY(trig) & 1) && type == 7)) {
+            weight_result = check_weight(&tile->objects,
+                4 + (((OBJ_FINEY(trig) & 4) >> 2) * 80),
                 trig->pos & POS_Z, Ply_Weight());
             if ((weight_result == 0 && type == 15) ||
                 (weight_result == 1 && type == 7))
@@ -1080,17 +1035,17 @@ advance_pressure:
 void far update_pplate(struct Object far *trig)
 {
     struct Object far *next;
-    register int yset = ((trig->pos & POS_YFINE) >> 10) & 1;
+    register int yset = OBJ_FINEY(trig) & 1;
     register int notset = yset ? 0 : 1;
-    next = Obj_PtrTMem(&TriggerChainTileData_dseg_67d6_1BB9->objects.word);
+    next = Obj_PtrTMem(&TriggerChainTileData_dseg_67d6_1BB9->objects);
     while (next != 0) {
-        if (((((next->id & ID_CLASS) >> 4) & 0x1E) == CLASS_TRIGGER) &&
+        if (((OBJ_CLASS(next) & 0x1E) == CLASS_TRIGGER) &&
             ((Triggers[next->id & ID_INCLASS] & 7) == 7))
             next->pos = next->pos & 0xE3FF |
-                ((notset + (((next->pos & POS_YFINE) >> 10) & 6)) & 7) << 10;
-        next = Obj_PtrTMem(&next->qn.word);
+                ((notset + (OBJ_FINEY(next) & 6)) & 7) << 10;
+        next = Obj_PtrTMem(&next->qn.link);
     }
-    if (((((trig->pos & POS_YFINE) >> 10) & 2) >> 1) != 0) {
+    if (((OBJ_FINEY(trig) & 2) >> 1) != 0) {
         yset = TriggerChainTileData_dseg_67d6_1BB9->floor;
         if (notset) yset++; else yset--;
         TriggerChainTileData_dseg_67d6_1BB9->floor = yset;
@@ -1103,17 +1058,17 @@ void far do_ice_hack(struct Object far *trap)
     int skill_result;
     register int height;
     register int weight;
-    tile = Map_GetAddr((ThePlayer->home & HOME_X) >> 10,
-                       (ThePlayer->home & HOME_Y) >> 4);
+    tile = Map_GetAddr(OBJ_HOMEX(ThePlayer),
+                       OBJ_HOMEY(ThePlayer));
     height = tile->height - 1;
-    texture = (((trap->pos & POS_YFINE) >> 10) << 3) |
-              ((trap->pos & POS_XFINE) >> 13);
+    texture = (OBJ_FINEY(trap) << 3) |
+              OBJ_FINEX(trap);
     weight = player->weight / 12;
     skill_result = skill_check(player->skills[SKILL_ACROBAT], weight > 20 ? weight : 0);
     if (tile->floor == trap->ol.f.owner && skill_result < 0) {
         if (height < 0) height = 0;
-        change_terrain((ThePlayer->home & HOME_X) >> 10,
-                               (ThePlayer->home & HOME_Y) >> 4,
+        change_terrain(OBJ_HOMEX(ThePlayer),
+                               OBJ_HOMEY(ThePlayer),
                                0x3F, texture, height, 0x10, 0, 0, 0);
     }
 }
@@ -1122,17 +1077,17 @@ unsigned char far put_at(int x, int y, int z, struct Object far *obj, int a, int
 struct Object far * far place_bridge(int x, int y, int zarg, int headingarg)
 {
     struct Object far *obj;
-    unsigned far *head;
+    union Link far *head;
     register int z = zarg;
     register int heading = headingarg;
-    head = &Map_GetAddr(x, y)->objects.word;
+    head = &Map_GetAddr(x, y)->objects;
     obj = Obj_PtrTMem(head);
     while (obj != 0) {
-        if ((obj->id & ID_ITEM) == ITEM_BRIDGE &&
-            ((obj->pos & POS_HEADING) >> 7) == heading &&
-            (obj->pos & POS_Z) == z)
+        if (OBJ_ITEM(obj) == ITEM_BRIDGE &&
+            OBJ_HEADING(obj) == heading &&
+            OBJ_Z(obj) == z)
             break;
-        obj = Obj_PtrTMem(&obj->qn.word);
+        obj = Obj_PtrTMem(&obj->qn.link);
     }
     if (obj == 0) {
         obj = CreateObj(ITEM_BRIDGE, 0);
@@ -1148,20 +1103,20 @@ struct Object far * far place_bridge(int x, int y, int zarg, int headingarg)
 void far destroy_bridge(int x, int y, int zarg, int headingarg)
 {
     struct Object far *obj;
-    unsigned far *head;
+    union Link far *head;
     register int z = zarg;
     register int heading = headingarg;
-    head = &Map_GetAddr(x, y)->objects.word;
+    head = &Map_GetAddr(x, y)->objects;
     obj = Obj_PtrTMem(head);
     while (obj != 0) {
-        if ((obj->id & ID_ITEM) == ITEM_BRIDGE &&
-            ((obj->pos & POS_HEADING) >> 7) == heading &&
-            (obj->pos & POS_Z) == z)
+        if (OBJ_ITEM(obj) == ITEM_BRIDGE &&
+            OBJ_HEADING(obj) == heading &&
+            OBJ_Z(obj) == z)
             break;
-        obj = Obj_PtrTMem(&obj->qn.word);
+        obj = Obj_PtrTMem(&obj->qn.link);
     }
     if (obj != 0)
-        if (Obj_Rem(&Map_GetAddr(x, y)->objects.word, obj))
+        if (Obj_Rem(&Map_GetAddr(x, y)->objects, obj))
             Obj_Free(obj);
 }
 /* IDA: Critter_RNG_STR_CHECK. FM Towns' eligible_castle_monster, between destroy_bridge and

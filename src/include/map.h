@@ -42,6 +42,8 @@ struct Tile {
     union Link objects;                 /* 0x02, the head of the tile's object list; its
                                            low six bits are the wall texture */
 };
+/* A tile's wall texture, the low six bits of its object link (an lvalue) */
+#define TILE_WALL(t)    ((t)->objects.f.low)
 
 /* A collision record, 6 bytes: what seg028's object checks found in a mover's way, in
    oCollisions. */
@@ -113,5 +115,8 @@ unsigned char far drop_around_place(struct Object far *obj, int x, int y, int z,
 
 /* Defined where no source has it yet: data the link takes from the EXE. */
 extern unsigned char far ModelData_seg052_519C_2600;
+
+#define MAP_H_COMPLETE
+#include "level.h"
 
 #endif

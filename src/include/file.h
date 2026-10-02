@@ -40,13 +40,13 @@ unsigned far ac_unshrink_disk(char far *dst, int fd, unsigned n);
 unsigned far ac_shrink_disk(char far *src, int fd, unsigned n);
 
 /* OVR122.C: saving and restoring the player's inventory in player.dat */
-void far FreePlayerInv(unsigned far *head);
-void far InvSaveNexts(unsigned far *src, unsigned far *dst);
+void far FreePlayerInv(union Link far *head);
+void far InvSaveNexts(union Link far *src, unsigned far *dst);
 void far replaceInInv(union Link far *old, union Link far *new);
 struct Object far * far allocSaveObj(void);
 struct Object far * far getSaveObj(int n);
 void far putInInv(union Link far *mem, union Link far *saved);
-void far InvRestoreNexts(unsigned far *dst, unsigned far *src);
+void far InvRestoreNexts(unsigned far *dst, union Link far *src);
 void far getPlayerInvCopy(void far *ws);
 void far Punt_player_inv(void);
 char far SavePlayerInv(char *name);

@@ -19,14 +19,6 @@
 #include "ui.h"
 #include "view3d.h"
 
-#define OBJ_INDEX(o)    (((o)->id & ID_INMAJOR) >> 0)
-#define OBJ_Z(o)        ((o)->pos & POS_Z)
-#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
-
 /* The file's _DATA starts with these, DS:19DC to DS:19E6, where ovr142's data ends: the
    string after them is at the odd DS:19E7, so this file's word-aligned _DATA starts earlier,
    and watertime (to DS:19E6) began at DS:19E3, nextstep at DS:19DF, PMsHndle at DS:19DD,
@@ -69,7 +61,6 @@ void far _input_addkey(int key, int a, int b, void (far *handler)());
 int far input_addmouse(int x0, int y0, int x1, int y1, int buttons, int mode, void (far *handler)());
 void far set_light(int level);
 void far scroll_print(char far *s);
-struct Object far * far Obj_IntTMem(int index);
 
 /* Input handlers. */
 void far player_attack(int how);
@@ -117,7 +108,7 @@ void far init_player(void)
     IsJoy = (cJoyInit[0] | cJoyInit[1] | cJoyInit[2] | cJoyInit[3]) > 0;
     player = (struct Player near *)PlayerDat;
     InitPlayerRec();
-    playerdat = &Creature[OBJ_INDEX(ThePlayer)];
+    playerdat = &Creature[OBJ_INMAJOR(ThePlayer)];
     ThePlayer->hp = playerdat->avghit;
     if (player_name_handle == 0)
         player_name_handle = make_string((char far *)player, STRBLK_PLAYER);

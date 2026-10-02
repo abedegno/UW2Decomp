@@ -17,14 +17,6 @@
 #include "ui.h"
 #include "view3d.h"
 
-#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
-#define OBJ_Z(o)        ((o)->pos & POS_Z)
-#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
-
 /* This file's data, DS:073E to DS:079D. */
 unsigned char pmouseHandled = 0;
 unsigned char combEfflen = 0;           /* effect 0x20 */
@@ -584,7 +576,7 @@ void far get_eye(void)
         cPlayer->x = (OBJ_HOMEX(UsPtr) << 8) + (OBJ_FINEX(UsPtr) << 5);
         cPlayer->y = (OBJ_HOMEY(UsPtr) << 8) + (OBJ_FINEY(UsPtr) << 5);
         cPlayer->z = (OBJ_Z(UsPtr) << 3) + 0xB0;
-        cPlayer->heading = (OBJ_HEADING(UsPtr) << 13) + ((UsPtr->b18 & 0x1F) << 8);
+        cPlayer->heading = (OBJ_HEADING(UsPtr) << 13) + (OBJ_FINEHEAD(UsPtr) << 8);
     }
     else if (UsPtr == critdata - 1)
     {

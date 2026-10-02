@@ -8,10 +8,15 @@
 struct CutsState;
 struct FontInfo;
 
-/* The current font (cur_font); the sources use only its line height. */
+/* A font's header (cur_font): the first 12 bytes of a FONT*.SYS file (UW-Formats 3.5),
+   then the characters' bitmaps, each followed by its width. */
 struct FontInfo {
-    char pad0[6];
+    int widthsize;                      /* 0x00, the size of a character's width field: 1 */
+    int charsize;                       /* 0x02, one character's bitmap, in bytes */
+    int spacewidth;                     /* 0x04, the width of a space, in pixels */
     int height;                         /* 0x06, the line height */
+    int rowwidth;                       /* 0x08, a row of a character's bitmap, in bytes */
+    int maxwidth;                       /* 0x0A, the widest character, in pixels */
 };
 
 /* The state of a cutscene, on show_anm's stack, 0x5C bytes. */
@@ -100,6 +105,29 @@ extern int far *wbot;  /* DS:21E0 */
 extern int far *wleft;  /* DS:21E8 */
 extern int far *wright;  /* DS:21E4 */
 extern int far *wtop;  /* DS:21DC */
+
+/* A bitmap of a .GR file (UW-Formats 3.2): its type, its size, for a 4-bit bitmap the
+   auxiliary palette, and then a word with the data's size (in nibbles for a 4-bit bitmap)
+   and the data. seg009_7 returns one; cFrmtoRaw decodes a 4-bit one from its size word. */
+struct Bitmap {
+    unsigned char type;                 /* 0x00: BM_8BIT, BM_4BIT_RLE or BM_4BIT */
+    unsigned char width;                /* 0x01 */
+    unsigned char height;               /* 0x02 */
+    union {
+        struct {
+            unsigned size;              /* 0x03 */
+            unsigned char data[1];      /* 0x05 */
+        } b8;                           /* type BM_8BIT */
+        struct {
+            unsigned char auxpal;       /* 0x03, which 16-colour palette of Palettes */
+            unsigned size;              /* 0x04 */
+            unsigned char data[1];      /* 0x06 */
+        } b4;                           /* the 4-bit types */
+    } u;
+};
+#define BM_8BIT         4               /* 8-bit, uncompressed */
+#define BM_4BIT_RLE     8               /* 4-bit, run-length */
+#define BM_4BIT         0xA             /* 4-bit, uncompressed */
 
 /* SEG009.C: graphic resource lookup, decoding, cursor drawing and image scaling */
 void far * far seg009_7(int icon);

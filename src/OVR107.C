@@ -19,42 +19,6 @@
 #include "ui.h"
 #include "uw2.h"
 
-#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
-#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
-#define OBJ_MINOR4(o)   ((o)->id & ID_INCLASS)
-#define OBJ_TYPE(o)     (((o)->id & ID_INMAJOR) >> 0)
-#define OBJ_Z(o)        ((o)->pos & POS_Z)
-#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
-#define OBJ_GOAL(o)     (((o)->goal_word & 0xF) >> 0)
-#define OBJ_ATTITUDE(o) (((o)->attitude_word & 0xC000) >> 14)
-#define OBJ_TEMP(o)     (((o)->attitude_word & 0x100) >> 8)
-#define OBJ_NOHEAL(o)   (((o)->attitude_word & 0x200) >> 9)
-#define OBJ_B0A_7(o)    (((o)->b0A & 0x80) >> 7)
-#define OBJ_B19_0(o)    (((o)->b19 & 1) >> 0)
-
-#define SET_Z(o, v)       ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
-#define SET_HEADING(o, v) ((o)->pos = (o)->pos & 0xFC7F | ((v) & 7) << 7)
-#define SET_FINEX(o, v)   ((o)->pos = (o)->pos & 0x1FFF | ((unsigned)(v) & 7) << 13)
-#define SET_FINEY(o, v)   ((o)->pos = (o)->pos & 0xE3FF | ((v) & 7) << 10)
-#define SET_HOMEX(o, v)   ((o)->home = (o)->home & 0x3FF | ((v) & 0x3F) << 10)
-#define SET_HOMEY(o, v)   ((o)->home = (o)->home & 0xFC0F | ((v) & 0x3F) << 4)
-#define SET_GOAL(o, v)    ((o)->goal_word = (o)->goal_word & 0xFFF0 | (v) & 0xF)
-#define SET_ATTITUDE(o, v) ((o)->attitude_word = (o)->attitude_word & 0x3FFF | ((v) & 3) << 14)
-#define SET_FED(o, v)     ((o)->b19 = (o)->b19 & 0x7F | ((v) & 1) << 7)
-#define SET_B19_0(o, v)   ((o)->b19 = (o)->b19 & 0xFE | ((v) & 1) << 0)
-
-/* The static data of a map square. */
-struct StDat {
-    char pad0[2];
-    unsigned char height;               /* 0x02 */
-    char pad3[5 - 3];
-};
-
 typedef char (far *SpellFn)(int x, int y, struct Object far *target, struct Tile far *tile,
                             unsigned char src);
 
@@ -70,16 +34,10 @@ extern char typehit;
 extern long crithittime;
 extern int freepaths;
 extern struct PathSq far pathsq[];
-extern struct StDat far stdat[MAP_SIZE][MAP_SIZE];
+extern struct StaticTile far stdat[MAP_SIZE][MAP_SIZE];
 
 void far critter_set_goal(char goal, int gtarg);
-void far Obj_FreeLinkChain(union Link far *head, struct Object far *obj);
-struct Object far * far Obj_PtrTMem(union Link far *link);
-struct Object far * far Obj_IntTMem(int index);
 unsigned char far can_place(int item, int index, int x, int y, int z, char flier, char dist);
-unsigned char far Obj_Rem(union Link far *head, struct Object far *obj);
-void far Obj_Add(union Link far *head, struct Object far *obj);
-struct Object far * far Obj_Punt(union Link far *head, struct Object far *obj, int how);
 void far gronk_area(struct Object far *who, char count, SpellFn fn, unsigned char type,
                     unsigned char dist, unsigned char radius);
 void far process_area(char count, unsigned char src, SpellFn fn, unsigned char type,
@@ -90,7 +48,6 @@ void far set_loc(int x, int y, int z);
 char far line_of_sight(int x, int y, int z, int tx, int ty, int tz);
 void far get_name(char far *buf, struct Object far *obj, int article, int plural);
 void far scroll_print(char far *s);
-void far Obj_Check(struct Object far *obj, char (far *fn)(struct Object far *obj));
 void far remove_opponent(struct Object far *npc);
 
 void far change_critter_goal(struct Object far *npc, char goal, int gtarg)
@@ -162,7 +119,7 @@ void far up_crit(struct Object far *npc, char *counts)
     unsigned char z;
     struct Creature near *cst;
 
-    cst = &Creature[OBJ_TYPE(npc)];
+    cst = &Creature[OBJ_INMAJOR(npc)];
     xhome = OBJ_HOMEX(npc);
     yhome = OBJ_HOMEY(npc);
     hometile = Map_GetAddr(xhome, yhome);
@@ -180,7 +137,7 @@ void far up_crit(struct Object far *npc, char *counts)
         SET_HEADING(npc, rand() % 8);
     if (npc->hp < cst->avghit && !OBJ_NOHEAL(npc))
         npc->hp = (npc->hp + cst->avghit) / 2;
-    if (!OBJ_B0A_7(npc)) {
+    if (!OBJ_LONER(npc)) {
         switch (OBJ_ATTITUDE(npc)) {
         case 0:
             counts[cst->race] = counts[cst->race] - 1;
@@ -262,9 +219,9 @@ void far update_all_critters_whilst_player_snoozes(void)
     }
     for (p = ActiveMob; p < LastActiveMob; p++) {
         npc = &critdata[*p];
-        if (OBJ_B0A_7(npc) != 0)
+        if (OBJ_LONER(npc) != 0)
             continue;
-        cst = &Creature[OBJ_TYPE(npc)];
+        cst = &Creature[OBJ_INMAJOR(npc)];
         c = counts[cst->race];
         if (c != 0) {
             char att;
@@ -342,7 +299,7 @@ char far wander_that_monster(int x, int y, struct Object far *target, struct Til
                 next = Obj_PtrTMem(link);
                 if (OBJ_CLASS(next) == CLASS_TRIGGER && next->ol.f.link > 0) {
                     trap = Obj_PtrTMem(&next->ol.link);
-                    if (OBJ_MAJOR(trap) == MAJOR_TRAP && OBJ_MINOR(trap) == 0 && OBJ_MINOR4(trap) == 9)
+                    if (OBJ_MAJOR(trap) == MAJOR_TRAP && OBJ_MINOR(trap) == 0 && OBJ_INCLASS(trap) == 9)
                         UseTrap(trap, pathsq[i].x, pathsq[i].y);
                 }
             }
@@ -477,10 +434,10 @@ char far critter_get_told(int x, int y, struct Object far *target, struct Tile f
     int att;
 
     npc = target;
-    cst = &Creature[OBJ_TYPE(npc)];
+    cst = &Creature[OBJ_INMAJOR(npc)];
     if (cst->race != (grab_owner & 0x1F)
-        || OBJ_B0A_7(npc) != 0 && !(grab_owner & 0x20)
-        || grab_owner == 0x20 && !OBJ_B0A_7(npc))
+        || OBJ_LONER(npc) != 0 && !(grab_owner & 0x20)
+        || grab_owner == 0x20 && !OBJ_LONER(npc))
         return 0;
     nx = (x << 3) + OBJ_FINEX(npc);
     ny = (y << 3) + OBJ_FINEY(npc);
@@ -508,7 +465,7 @@ char far critter_get_told(int x, int y, struct Object far *target, struct Tile f
 }
 
 /* IDA: ClearOwnerShip. FM Towns' clear_owner, which player_grabbed passes to Obj_Check. */
-char far clear_owner(struct Object far *obj)
+unsigned char far clear_owner(struct Object far *obj)
 {
     if (ComObjData[OBJ_ITEM(obj)].can_own)
         obj->ol.f.owner = 0;

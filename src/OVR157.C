@@ -20,30 +20,6 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_Z(o)        ((o)->pos & POS_Z)
-#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
-#define OBJ_XFINE(o)    (((o)->pos & POS_XFINE) >> 13)
-#define OBJ_YFINE(o)    (((o)->pos & POS_YFINE) >> 10)
-#define SET_Z(o, v)     ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
-#define SET_XFINE(o, v) ((o)->pos = (o)->pos & 0x1FFF | ((unsigned)(v) & 7) << 13)
-#define SET_YFINE(o, v) ((o)->pos = (o)->pos & 0xE3FF | ((unsigned)(v) & 7) << 10)
-#define SET_HOMEX(o, v) ((o)->home = (o)->home & 0x3FF | ((v) & 0x3F) << 10)
-#define SET_HOMEY(o, v) ((o)->home = (o)->home & 0xFC0F | ((v) & 0x3F) << 4)
-#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
-#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
-#define OBJ_KIND(o)     (((o)->id & ID_MINOR) >> 4)
-/* An enchantment: link 0x200 plus the effect in the low bits. */
-#define SET_ENCHANT(o, v) ((o)->ol.f.link = (o)->ol.f.link & 0x1F0 | (v) & 0xF | LINK_SPECIAL)
-
-#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-/* Two spellings of the critter index: sp_study_monster's bytes have no shift, mdetect's
-   have a `shr ax,0`, so the original used both. */
-#define OBJ_INDEX(o)    ((o)->id & ID_INMAJOR)
-#define OBJ_TYPE(o)     (((o)->id & ID_INMAJOR) >> 0)
-#define OBJ_UNDEAD(o)   (((o)->attitude_word & 0x400) >> 10)
-
 #define SPELL_CLASS(s)  (((s).cls & 0xF8) >> 3)
 
 extern struct Spell far spells[];
@@ -58,15 +34,10 @@ int demons[5] = { ITEM_IMP, ITEM_IMP, ITEM_HORDLING, ITEM_DESPOILER, ITEM_DESTRO
 
 void far scroll_print(char far *s);
 int far add_animobj(int index, int len, int a, char x, char y);
-void far Obj_Add(unsigned far *head, struct Object far *obj);
-struct Object far * far Obj_InList(unsigned far **head, int a, int major, int minor, int idx);
-char far Obj_Rem(unsigned far *head, struct Object far *obj);
 int far useNSpellCharges(struct Object far *obj, int n);
 unsigned char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
-struct Object far * far Obj_PtrTMem(unsigned far *link);
 unsigned char far can_place(int item, int a, int x, int y, int z, int b, char dist);
 struct Object far * far CreateObj(int item, char mobile);
-unsigned char far IsMobElem(struct Object far *obj);
 struct Object far * far obj_deal(struct Object far *obj, int x, int y, char how);
 int far mpos(char dx, char dy);
 unsigned char far put_at(int x, int y, int z, struct Object far *obj, int a, int b);
@@ -164,14 +135,14 @@ char far sp_study_monster(struct Object far *caster, struct Object far *target)
     isnpc = OBJ_MAJOR(target) == MAJOR_CREATURE;
     hasres = 0;
     flags = 0;
-    crit = &Creature[OBJ_INDEX(target)];
+    crit = &Creature[OBJ_INMAJOR_NOSHIFT(target)];
     if (!isnpc) {
         if (OBJ_ITEM(target) == ITEM_SKULL_13)
             flags |= 2;
         else if (OBJ_ITEM(target) != ITEM_WISP)
             return 0;
     } else {
-        if (OBJ_UNDEAD(target))
+        if (OBJ_POWERFUL(target))
             flags |= 1;
         if (check_res(target, 1, 0x80) == 0)
             flags |= 2;
@@ -189,7 +160,7 @@ char far sp_study_monster(struct Object far *caster, struct Object far *target)
     game_sprint(0x60);
     game_sprint(0x139);
     if (isnpc) {
-        if (target->whoami == 100 && !((target->b0A & 0x70) >> 4))
+        if (target->whoami == 100 && !OBJ_TERRAIN(target))
             itoa(0x1E, str, 10);
         else
             itoa(target->hp, str, 10);
@@ -244,7 +215,7 @@ char far chargeable(struct Object far *obj, int major, int effect)
 {
     int cls;
 
-    cls = (obj->id & ID_CLASS) >> 4;
+    cls = OBJ_CLASS(obj);
     if (major == 7 && effect == 0xE)
         return 0;
     if (major == 0xD && effect >= 0xC && effect <= 0xF)
@@ -277,7 +248,7 @@ void far sp_enchant_faildestroymess(struct Object far *obj, int x, int y)
     if (add_animobj(Obj_MemTPtr(boom), 4, 0, x, y) == -1)
         Obj_Free(boom);
     else {
-        Obj_Add(&tile->objects.word, boom);
+        Obj_Add(&tile->objects, boom);
         fireball_effect(boom, x, y);
     }
 }
@@ -287,14 +258,14 @@ char far charge_object(struct Object far *obj, int effect, int x, int y)
     char base;
     char diff;
     char q;
-    unsigned far *head;
+    union Link far *head;
     struct Object far *spell;
     int chance;
 
     base = effect < 0x40 ? effect / 8 + 1 : 4;
     diff = (player->level + 1) / 2 - base + 8;
     spell = 0;
-    head = &obj->ol.word;
+    head = &obj->ol.link;
     spell = Obj_InList(&head, 0, MAJOR_SPEC, 2, 0);
     q = spell->qn.f.quality / diff;
     chance = ((0x10 - diff + q) << 10) / (q + 0x18);
@@ -360,11 +331,11 @@ void far sp_enchant(struct Object far *obj, unsigned char inv, int x, int y)
             attempt = 0;
             if (OBJ_MAJOR(obj) != MAJOR_HACK)
                 goto report;
-            if (OBJ_KIND(obj) <= 1 && effect < 8 && (effect & ~4) < 3) {
+            if (OBJ_MINOR(obj) <= 1 && effect < 8 && (effect & ~4) < 3) {
                 attempt = 1;
                 diff = effect & ~4;
                 skill = (player->level - 8) / 4 + player->skills[SKILL_CASTING] / 11;
-            } else if (OBJ_KIND(obj) >= 2 && (effect & ~8) < 7) {
+            } else if (OBJ_MINOR(obj) >= 2 && (effect & ~8) < 7) {
                 attempt = 1;
                 diff = effect & ~8;
                 skill = player->level + player->skills[SKILL_CASTING] / 11 - 10;
@@ -381,12 +352,12 @@ void far sp_enchant(struct Object far *obj, unsigned char inv, int x, int y)
         }
     }
     if (!already && OBJ_MAJOR(obj) == MAJOR_HACK
-        && (OBJ_ISQUANT(obj) || Obj_PtrTMem(&obj->ol.word) == 0)) {
+        && (OBJ_ISQUANT(obj) || Obj_PtrTMem(&obj->ol.link) == 0)) {
         obj->ol.f.link = 0x201;
         obj->id = obj->id & 0xEFFF | ID_ENCHANT;
         obj->id = obj->id & 0xF7FF;
         obj->id = obj->id & 0x7FFF | ID_ISQUANT;
-        switch (OBJ_KIND(obj)) {
+        switch (OBJ_MINOR(obj)) {
         case 0:
         case 1:
             obj->ol.f.link = obj->ol.f.link & 0xF | 0x2C0;
@@ -424,16 +395,16 @@ char far mendable(struct Object far *obj)
     case MAJOR_HACK:
         return 1;
     case MAJOR_MISC:
-        switch (OBJ_KIND(obj)) {
+        switch (OBJ_MINOR(obj)) {
         case 1:
-            return (obj->id & ID_CLASS) >> 4 != 0x90 && (obj->id & ID_CLASS) >> 4 != 0x94;
+            return OBJ_CLASS(obj) != 0x90 && OBJ_CLASS(obj) != 0x94;
         case 3:
             return 1;
         default:
             return 0;
         }
     case MAJOR_RECT:
-        switch (OBJ_KIND(obj)) {
+        switch (OBJ_MINOR(obj)) {
         case 0:
             return 1;
         default:
@@ -446,7 +417,7 @@ char far mendable(struct Object far *obj)
 
 char far sp_true_sight(struct Object far *caster, struct Object far *target)
 {
-    unsigned far *head;
+    union Link far *head;
     struct Object far *trig;
     int search;
 
@@ -456,7 +427,7 @@ char far sp_true_sight(struct Object far *caster, struct Object far *target)
         return 0;
     if (OBJ_MAJOR(target) == MAJOR_TRAP)
         return 0;
-    head = &target->ol.word;
+    head = &target->ol.link;
     trig = Obj_InList(&head, 0, MAJOR_TRAP, 2, 3);
     if (trig) {
         search = player->skills[SKILL_SEARCH];
@@ -485,9 +456,9 @@ void far creat_spell(struct Object far *caster, char which)
     int z;
 
     dist = 9;
-    heading = ((OBJ_HEADING(caster) << 5) + (caster->b18 & 0x1F) + (rand() % 0x1B - 0xD)) % 0xFF;
-    x = (OBJ_HOMEX(caster) << 3) + OBJ_XFINE(caster);
-    y = (OBJ_HOMEY(caster) << 3) + OBJ_YFINE(caster);
+    heading = ((OBJ_HEADING(caster) << 5) + OBJ_FINEHEAD(caster) + (rand() % 0x1B - 0xD)) % 0xFF;
+    x = (OBJ_HOMEX(caster) << 3) + OBJ_FINEX(caster);
+    y = (OBJ_HOMEY(caster) << 3) + OBJ_FINEY(caster);
     move_along(heading, dist, &x, &y);
     homex = x >> 3;
     homey = y >> 3;
@@ -523,8 +494,8 @@ void far creat_spell(struct Object far *caster, char which)
     }
     if (can_place(item, 0, x, y, z, 1, 8)) {
         obj = CreateObj(item, which >= 4);
-        SET_XFINE(obj, x & 7);
-        SET_YFINE(obj, y);
+        SET_FINEX_UNSIGNED(obj, x & 7);
+        SET_FINEY(obj, y);
         if (!IsMobElem(obj))
             obj->qn.f.quality = 0x3F;
         if (which == 4 || which == 5) {
@@ -563,7 +534,7 @@ void far creat_spell(struct Object far *caster, char which)
         } else
             obj->qn.f.quality = 0x3F;
         SET_Z(obj, z);
-        Obj_Add(&tile->objects.word, obj);
+        Obj_Add(&tile->objects, obj);
         if (which < 4)
             obj_deal(obj, homex, homey, 1);
         editchng(2);
@@ -604,10 +575,10 @@ void far mdetect(int dist, int skill)
         xv = OBJ_HOMEX(obj) - px;
         yv = OBJ_HOMEY(obj) - py;
         if (abs(xv) < dist && abs(yv) < dist) {
-            if ((res = skill_check(skill, 0xF - Creature[OBJ_TYPE(obj)].noise)) > 0)
+            if ((res = skill_check(skill, 0xF - Creature[OBJ_INMAJOR(obj)].noise)) > 0)
                 counts[mpos(xv, yv)]++;
             if (res == 2)
-                cands[mpos(xv, yv)] = OBJ_TYPE(obj);
+                cands[mpos(xv, yv)] = OBJ_INMAJOR(obj);
         }
     }
     for (max = i = 0; i < 8; i++)
@@ -688,7 +659,7 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
             set_curmagic(0xB, 2, stab);
             break;
         case 1:                         /* portal */
-            heading = (OBJ_HEADING(caster) << 5) + (caster->b18 & 0x1F);
+            heading = (OBJ_HEADING(caster) << 5) + OBJ_FINEHEAD(caster);
             for (dist = 2; dist <= 2; dist++) {
                 x = OBJ_HOMEX(ThePlayer);
                 y = OBJ_HOMEY(ThePlayer);
@@ -762,7 +733,7 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
             set_curmagic(0xB, 0, stab);
             break;
         case 12:                        /* armageddon */
-            FreePlayerInv(&ThePlayer->ol.word);
+            FreePlayerInv(&ThePlayer->ol.link);
             clearobj(0);
             clear_runes();
             clear_shelf();
@@ -798,14 +769,14 @@ char far check_Guardian_magic_marker(int x, int y, struct Object far *obj, struc
 
     cut = 0;
     bit = 1 << ((PlayerLevel - 1) / LEVELS_PER_WORLD - 1);
-    if (OBJ_ITEM(obj) != ITEM_GUARDIAN_SIGNET_RING || !((obj->id & ID_DOORDIR) >> 13) || !((obj->id & ID_INVIS) >> 14))
+    if (OBJ_ITEM(obj) != ITEM_GUARDIAN_SIGNET_RING || !OBJ_DOORDIR(obj) || !OBJ_INVIS(obj))
         return 0;
     obj->id = obj->id & 0xDFFF;
     if (player->quest_bytes[QB_LINES_OF_POWER] & bit)
         cut = 1;
     if (!cut)
         put_effect(obj, 7, 4, 0, 7, x, y);
-    if (Obj_Rem(&tile->objects.word, obj))
+    if (Obj_Rem(&tile->objects, obj))
         Obj_Free(obj);
     if (cut)
         return 1;

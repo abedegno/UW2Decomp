@@ -17,13 +17,6 @@
 #include "ui.h"
 #include "uw2.h"
 
-#define OBJ_ID(o)       ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
-#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
-#define OBJ_INVIS(o)    (((o)->id & ID_INVIS) >> 14)
-#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
-
 extern struct Player PlayerDat;
 extern union Link Inventory[];
 /* This file's _BSS, DS:6A76..6A85 (ovr122's starts at 6A86): only this file uses it. */
@@ -34,11 +27,6 @@ unsigned char display_inventory_no_show = 0;
 extern char RightPanel;
 extern struct Inplist near *inplist;
 
-struct Object far * far Obj_PtrTMem(unsigned far *link);
-struct Object far * far Obj_IntTMem(int index);
-void far Obj_Add(unsigned far *head, struct Object far *obj);
-void far Obj_AddEnd(unsigned far *head, struct Object far *obj);
-char far HasOrIsObj(struct Object far *obj, int id);
 void far UseObj(struct Object far *who, struct Object far *obj, int how);
 void far set_screen_frame(int frame, int how);
 
@@ -81,8 +69,8 @@ void far DoSpecialActions(int slot)
     case 8:
     case 9:
         if (9 - player->lefty == slot) {
-            obj = Obj_PtrTMem(&Inventory[DisplayToSlot[slot]].word);
-            id = OBJ_ID(obj);
+            obj = Obj_PtrTMem(&Inventory[DisplayToSlot[slot]]);
+            id = OBJ_ITEM(obj);
             cls = OBJ_CLASS(obj);
             if (cls == CLASS_WEAPON || id == ITEM_SLING || id == ITEM_BOW || id == ITEM_CROSSBOW || id == ITEM_JEWELED_BOW) {
                 toggle_fightmode();
@@ -90,7 +78,7 @@ void far DoSpecialActions(int slot)
             }
         }
     default:
-        if ((obj = Obj_PtrTMem(&Inventory[DisplayToSlot[slot]].word)) != 0)
+        if ((obj = Obj_PtrTMem(&Inventory[DisplayToSlot[slot]])) != 0)
             UseObj(ThePlayer, obj, 1);
     }
     if (held && CursorObjPtr == 0) {
@@ -171,7 +159,7 @@ void far CloseTheBag(void)
             farfree(bag);
             OpenBag->next = 0;
             Inventory[19] = OpenBag->obj;
-            Inventory[20].f.index = Obj_PtrTMem(&OpenBag->obj.word)->ol.f.link;
+            Inventory[20].f.index = Obj_PtrTMem(&OpenBag->obj)->ol.f.link;
             FixOpenBag();
             DisplayOpenBag();
             displayInventoryArray(0x14, 0x14);
@@ -186,9 +174,9 @@ void far DisplayOpenBag(void)
 
     mouse_hide();
     displayInventoryArray(0xC, 0x13);
-    obj = Obj_PtrTMem(&Obj_PtrTMem(&Inventory[19].word)->ol.word);
+    obj = Obj_PtrTMem(&Obj_PtrTMem(&Inventory[19])->ol.link);
     while (obj != 0 && OBJ_INVIS(obj))
-        obj = Obj_PtrTMem(&obj->qn.word);
+        obj = Obj_PtrTMem(&obj->qn.link);
     if (Obj_MemTPtr(obj) == Inventory[20].f.index)
         InvDownArrow = 0;
     else
@@ -210,14 +198,14 @@ void far FixOpenBag(void)
     for (i = 20; i <= 27; i++)
         if (Inventory[i].f.index != 0)
             break;
-    obj = Obj_PtrTMem(&Obj_PtrTMem(&Inventory[19].word)->ol.word);
+    obj = Obj_PtrTMem(&Obj_PtrTMem(&Inventory[19])->ol.link);
     if (i > 27) {
         for (i = 20; i <= 27; i++) {
             Inventory[i].f.index = Obj_MemTPtr(obj);
             if (obj != 0) {
                 if (OBJ_INVIS(obj))
                     i--;
-                obj = Obj_PtrTMem(&obj->qn.word);
+                obj = Obj_PtrTMem(&obj->qn.link);
             }
         }
         while (obj != 0) {
@@ -228,13 +216,13 @@ void far FixOpenBag(void)
                 if (obj != 0) {
                     if (OBJ_INVIS(obj))
                         i--;
-                    obj = Obj_PtrTMem(&obj->qn.word);
+                    obj = Obj_PtrTMem(&obj->qn.link);
                 }
             }
         }
     } else {
-        while (Obj_PtrTMem(&Inventory[i].word) != obj) {
-            obj = Obj_PtrTMem(&obj->qn.word);
+        while (Obj_PtrTMem(&Inventory[i]) != obj) {
+            obj = Obj_PtrTMem(&obj->qn.link);
             if (obj == 0)
                 return;
         }
@@ -243,7 +231,7 @@ void far FixOpenBag(void)
             if (obj != 0) {
                 if (OBJ_INVIS(obj))
                     i--;
-                obj = Obj_PtrTMem(&obj->qn.word);
+                obj = Obj_PtrTMem(&obj->qn.link);
             }
         }
     }
@@ -259,10 +247,10 @@ void far OpenTheBag(int slot)
     int cls;
     int j;
 
-    obj = Obj_PtrTMem(&Inventory[slot].word);
+    obj = Obj_PtrTMem(&Inventory[slot]);
     if (OBJ_MAJOR(obj) != MAJOR_MISC || OBJ_MINOR(obj) != 0)
         return;
-    if ((obj->id & ID_INCLASS) == 0xF) {
+    if (OBJ_INCLASS(obj) == 0xF) {
         if (inplist->mode == 1)
             set_screen_frame(6, 1);
         return;
@@ -310,17 +298,17 @@ void far OpenTheBag(int slot)
     OpenBag->next = 0;
     OpenBag->weight = 0;
     Inventory[19].f.index = OpenBag->obj.f.index = Inventory[slot].f.index;
-    first = Obj_PtrTMem(&Obj_PtrTMem(&Inventory[19].word)->ol.word);
-    BagWeight(&Obj_PtrTMem(&Inventory[19].word)->ol.word, &OpenBag->weight);
+    first = Obj_PtrTMem(&Obj_PtrTMem(&Inventory[19])->ol.link);
+    BagWeight(&Obj_PtrTMem(&Inventory[19])->ol.link, &OpenBag->weight);
     for (i = 20; i <= 27; i++) {
         Inventory[i].f.index = Obj_MemTPtr(first);
         if (first != 0) {
             if (OBJ_INVIS(first))
                 i--;
-            first = Obj_PtrTMem(&first->qn.word);
+            first = Obj_PtrTMem(&first->qn.link);
         }
     }
-    cont = Obj_PtrTMem(&Inventory[19].word);
+    cont = Obj_PtrTMem(&Inventory[19]);
     cls = cont->id & ID_INCLASS;
     if (cls < 12 && !(cls & 1))
         cont->id = cont->id & 0xFFF0 | (cls + 1) & 0xF;
@@ -348,12 +336,12 @@ void far ScrollItemsDown(void)
 
     if (OpenBagList == 0 || !InvDownArrow)
         return;
-    first = obj = Obj_PtrTMem(&Obj_PtrTMem(&OpenBag->obj.word)->ol.word);
-    target = Obj_PtrTMem(&Inventory[20].word);
+    first = obj = Obj_PtrTMem(&Obj_PtrTMem(&OpenBag->obj)->ol.link);
+    target = Obj_PtrTMem(&Inventory[20]);
     while (obj != target) {
         first = obj;
         for (i = 0; i < 4; i++) {
-            obj = Obj_PtrTMem(&obj->qn.word);
+            obj = Obj_PtrTMem(&obj->qn.link);
             if (obj == 0)
                 return;
             if (obj == target)
@@ -392,15 +380,15 @@ char far PutObjectInBag(struct Object far *obj, int slot)
         bag = 0;
     } else if (slot == 19 && OpenBag->prev != 0) {
         bag = OpenBag->prev;
-        cont = Obj_PtrTMem(&bag->obj.word);
+        cont = Obj_PtrTMem(&bag->obj);
     } else {
-        cont = Obj_PtrTMem(&Inventory[slot].word);
+        cont = Obj_PtrTMem(&Inventory[slot]);
         if (slot > 19)
             bag = OpenBag;
         else
             bag = 0;
     }
-    if (OBJ_ID(cont) == ITEM_RUNE_BAG) {
+    if (OBJ_ITEM(cont) == ITEM_RUNE_BAG) {
         if (add_rune(obj))
             return 1;
         game_sprint(0x106);
@@ -412,7 +400,7 @@ char far PutObjectInBag(struct Object far *obj, int slot)
         bag->weight += weight;
         bag = bag->prev;
     }
-    if ((next = Obj_PtrTMem(&cont->ol.word)) != 0) {
+    if ((next = Obj_PtrTMem(&cont->ol.link)) != 0) {
         do {
             if (AddTogether(obj, next)) {
                 if (!OBJ_ISQUANT(next)) {
@@ -428,10 +416,10 @@ char far PutObjectInBag(struct Object far *obj, int slot)
                 Obj_Free(obj);
                 break;
             }
-        } while ((next = Obj_PtrTMem(&next->qn.word)) != 0);
+        } while ((next = Obj_PtrTMem(&next->qn.link)) != 0);
     }
     if (next == 0) {
-        Obj_AddEnd(&cont->ol.word, obj);
+        Obj_AddEnd(&cont->ol.link, obj);
         if (found)
             Inventory[i].f.index = Obj_MemTPtr(obj);
     }
@@ -440,8 +428,8 @@ char far PutObjectInBag(struct Object far *obj, int slot)
         displayInventoryArray(0xC, 0x13);
     } else if (displayEnc(1))
         grfx_quikfont(FONT_5X6P);
-    if (OBJ_ID(obj) >= FIRST_LIT_LIGHT && OBJ_ID(obj) < FIRST_WAND)
-        obj->id = obj->id & 0xFFF0 | ((obj->id & ID_INCLASS) - 4) & 0xF;
+    if (OBJ_ITEM(obj) >= FIRST_LIT_LIGHT && OBJ_ITEM(obj) < FIRST_WAND)
+        obj->id = obj->id & 0xFFF0 | (OBJ_INCLASS(obj) - 4) & 0xF;
     return 1;
 }
 
@@ -449,24 +437,24 @@ char far SwapItemsInBag(struct Object far *obj, int slot)
 {
     struct Object far *target;
     struct Object far *cur;
-    unsigned far *head;
+    union Link far *head;
     struct Bag far *bag;
     char result;
     int diff;
 
     result = 1;
-    head = &Obj_PtrTMem(&OpenBag->obj.word)->ol.word;
-    target = Obj_PtrTMem(&Inventory[slot].word);
+    head = &Obj_PtrTMem(&OpenBag->obj)->ol.link;
+    target = Obj_PtrTMem(&Inventory[slot]);
     while ((cur = Obj_PtrTMem(head)) != target) {
         if (cur == 0)
             return 0;
-        head = &cur->qn.word;
+        head = &cur->qn.link;
     }
     SetCursorObj(slot, 0);
     if (!ItemFitsSlot(obj, slot)) {
         CursorObjPtr = obj;
         unforce_mouse_cursor(3);
-        force_mouse_cursor(OBJ_ID(CursorObjPtr));
+        force_mouse_cursor(OBJ_ITEM(CursorObjPtr));
         result = 0;
         obj = target;
     }
@@ -482,7 +470,7 @@ char far SwapItemsInBag(struct Object far *obj, int slot)
     return result;
 }
 
-void far BagWeight(unsigned far *head, int far *total)
+void far BagWeight(union Link far *head, int far *total)
 {
     struct Object far *obj;
     int qty;
@@ -493,9 +481,9 @@ void far BagWeight(unsigned far *head, int far *total)
             qty = obj->ol.f.link;
         else
             qty = 1;
-        *total = *total + ComObjData[OBJ_ID(obj)].mass * qty;
-        BagWeight(&obj->qn.word, total);
+        *total = *total + ComObjData[OBJ_ITEM(obj)].mass * qty;
+        BagWeight(&obj->qn.link, total);
         if (!OBJ_ISQUANT(obj))
-            BagWeight(&obj->ol.word, total);
+            BagWeight(&obj->ol.link, total);
     }
 }

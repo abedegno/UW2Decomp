@@ -21,18 +21,12 @@
 #include "sys.h"
 #include "view3d.h"
 
-/* One square of the view's visibility grid: which faces of the tile to draw. */
-struct GLoc {
-    unsigned char flags;                /* 0x80 visible, 0x44 slope, 0x20/0x10/0x08 walls */
-    unsigned char sq;                   /* low nibble the shade; high bits wall faces */
-};
-
 typedef void (far *FlrFn)(unsigned char *pts, unsigned char shade, unsigned char tex);
 typedef void (far *WalFn)(unsigned char *pts, unsigned char shade, unsigned char height,
                           unsigned char tex);
 
 extern unsigned TxmTerr[];
-extern struct GLoc glocs[][33];
+extern struct Gloc glocs[][33];
 extern unsigned char PlayersMap[MAP_SIZE][MAP_SIZE];
 extern signed char quad;
 
@@ -53,7 +47,7 @@ int cWCol;                              /* DS:2C68 */
 int loopx, loopy;                       /* DS:2C6A, 2C6C */
 struct Object far *UsPtr;               /* DS:2C6E */
 int cTmSz;                              /* DS:2C72 */
-static struct GLoc far *p_gloc;         /* DS:2C74 */
+static struct Gloc far *p_gloc;         /* DS:2C74 */
 unsigned char *qdec;                    /* DS:2C78 */
 unsigned char AnimObjInPipe;            /* DS:2C7A */
 unsigned char TxmCol[64];               /* DS:2C7B */
@@ -238,7 +232,7 @@ void far do_3d_pickup(void)
 
 void far subprocess(void)
 {
-    struct GLoc *gloc;
+    struct Gloc *gloc;
     struct Tile far *row;
     int idx;
     unsigned char *am;
@@ -431,7 +425,7 @@ void far grdb_elem(unsigned char *automap)
     int bit;
     int bit2;
     unsigned char vis;
-    void far *link;
+    union Link far *link;
     unsigned char code;
     unsigned char nh;
     unsigned char h2;
@@ -451,7 +445,7 @@ void far grdb_elem(unsigned char *automap)
     }
     ptnuminq = 0xC8;
     ht = tmptr->height;
-    sqmod = p_gloc->sq & 0xF;
+    sqmod = p_gloc->shade & 0xF;
     if (sqmod < 8) {
         code = tmptr->type;
         code = code | TxmTerr[tmptr->floor] & TERR_CLASS;
@@ -495,7 +489,7 @@ void far grdb_elem(unsigned char *automap)
         bit = bit >> 1;
         if (flags & bit) {
             wm = wallmodtab[w];
-            if (p_gloc->sq & bit2) {
+            if (p_gloc->shade & bit2) {
                 nh = tmptr[chgtable[quad][wall_nbr[w]]].height;
                 nt = trans_grid[quad][tmptr[chgtable[quad][wall_nbr[w]]].type];
                 if ((tile_walls[nt] & 0x20) == 0x20)
@@ -514,7 +508,7 @@ void far grdb_elem(unsigned char *automap)
             *p++ = SetPnt(loopx + wm[3], loopy + wm[4], h2);
             *p++ = SetPnt(loopx + wm[3], loopy + wm[4], ht + hm[wm[5]]);
             *p++ = SetPnt(loopx + wm[0], loopy + wm[1], ht + hm[wm[2]]);
-            (*gr_wcall)(pts, sqmod, sh, tmptr->objects.f.low);
+            (*gr_wcall)(pts, sqmod, sh, TILE_WALL(tmptr));
         }
     } while (++w < 3);
     if ((flags & 0x44) == 0x44) {
@@ -526,10 +520,10 @@ void far grdb_elem(unsigned char *automap)
             *p++ = SetPnt(loopx + dxp[2], loopy + dxp[3], 0x10);
             *p++ = SetPnt(loopx + dxp[2], loopy + dxp[3], ht);
             *p++ = SetPnt(loopx + dxp[0], loopy + dxp[1], ht);
-            (*gr_wcall)(pts, sqmod, 0x10 - ht, tmptr->objects.f.low);
+            (*gr_wcall)(pts, sqmod, 0x10 - ht, TILE_WALL(tmptr));
         }
     }
-    link = (char far *)tmptr + 2;
+    link = &tmptr->objects;
     do_objsort(link);
     if (link && curautocode) {
         if (sqmod < 8)

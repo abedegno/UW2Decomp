@@ -23,20 +23,6 @@
 #include "ui.h"
 #include "view3d.h"
 
-#define OBJ_ID(o)       ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_BIT13(o)    (((o)->id & ID_DOORDIR) >> 13)
-#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
-#define OBJ_Z(o)        ((o)->pos & POS_Z)
-#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
-#define OBJ_LINK(o)     ((o)->ol.f.link)
-
-#define SET_HEADING(o, v) ((o)->pos = (o)->pos & 0xFC7F | ((v) & 7) << 7)
-
 #define TERRAIN(t)      ((TxmTerr[(t)->floor] & 0xC0) >> 6)
 
 /* This file's data, in DS order from 0x37E. The six spell-effect flags lead it: they lie
@@ -82,18 +68,12 @@ struct Tile far *PickMap;
 int MapObj_X, MapObj_Y;
 struct Object far *newPlObj;
 unsigned char CrownTmap;
-unsigned far *releasePtr;
+union Link far *releasePtr;
 int GameInputMode;
 
 void far player_attack(int swing);
 void far set_screen_frame(int frame, int how);
-struct Object far * far Obj_PtrTMem(unsigned far *link);
-struct Object far * far Obj_IntTMem(int index);
-unsigned char far IsMobElem(struct Object far *obj);
 void far scroll_print(char far *s);
-char far Obj_Rem(unsigned far *head, struct Object far *obj);
-void far Obj_Add(unsigned far *head, struct Object far *obj);
-char far HasOrIsObj(struct Object far *obj, int id);
 void far check_pplate(struct Object far *obj, struct Tile far *tile, int z, int how);
 void far UseObj(struct Object far *who, struct Object far *obj, int how);
 void far mouse_release(int how);
@@ -115,7 +95,7 @@ void far display_scr(void)
     v = player->play_mana;
     set_screen_frame(1, v);
     if ((PlayerLevel - 1) / LEVELS_PER_WORLD != 8) {
-        v = (OBJ_HEADING(ThePlayer) << 5) + (ThePlayer->b18 & 0x1F);
+        v = (OBJ_HEADING(ThePlayer) << 5) + OBJ_FINEHEAD(ThePlayer);
         v = (v + 8 & 0xFF) >> 4;
         set_screen_frame(2, v);
     }
@@ -177,8 +157,8 @@ int far BridgeHeight(struct Tile far *tile)
     struct Object far *obj;
     int h = -1;
 
-    for (obj = Obj_PtrTMem(&tile->objects.word); obj; obj = Obj_PtrTMem(&obj->qn.word))
-        if (OBJ_ID(obj) == ITEM_BRIDGE && (int)OBJ_Z(obj) > h)
+    for (obj = Obj_PtrTMem(&tile->objects); obj; obj = Obj_PtrTMem(&obj->qn.link))
+        if (OBJ_ITEM(obj) == ITEM_BRIDGE && (int)OBJ_Z(obj) > h)
             h = OBJ_Z(obj);
     return h;
 }
@@ -298,8 +278,8 @@ struct Object far * far pick_3d(int how)
     if (idx == 0)
         return 0;
     obj = Obj_IntTMem(idx);
-    co = &ComObjData[OBJ_ID(obj)];
-    releasePtr = &PickMap->objects.word;
+    co = &ComObjData[OBJ_ITEM(obj)];
+    releasePtr = &PickMap->objects;
     releaseable = co->pickable && !IsMobElem(obj);
     return obj;
 }
@@ -347,17 +327,17 @@ void far player_3dget(void)
             if ((split = AskHowMany(newPlObj)) == 0)
                 return;
             if (split != newPlObj)
-                Obj_Add(&newPlObj->qn.word, split);
+                Obj_Add(&newPlObj->qn.link, split);
         }
         if (!EncumCheck(newPlObj)) {
             if (split && split != newPlObj) {
                 newPlObj->ol.f.link += split->ol.f.link;
-                if (Obj_Rem(&newPlObj->qn.word, split))
+                if (Obj_Rem(&newPlObj->qn.link, split))
                     Obj_Free(split);
             }
             game_sprint(0x6C);
         } else {
-            if (OBJ_ID(newPlObj) == ITEM_BOOK_138 && OBJ_BIT13(newPlObj)) {
+            if (OBJ_ITEM(newPlObj) == ITEM_BOOK_138 && OBJ_DOORDIR(newPlObj)) {
                 player->quests[26] = (player->quests[26] & 0xFFFFFFFBL) + 4;
                 player_did_bad(0x1C);
             }
@@ -377,12 +357,12 @@ void far player_3dget(void)
         game_sprint(inrange + 0x6A);
         mouse_release(1);
     } else if (def_mode) {
-        if (IsMobElem(newPlObj) && OBJ_MAJOR(newPlObj) == MAJOR_CREATURE || OBJ_ID(newPlObj) == ITEM_WISP)
+        if (IsMobElem(newPlObj) && OBJ_MAJOR(newPlObj) == MAJOR_CREATURE || OBJ_ITEM(newPlObj) == ITEM_WISP)
             player_3dtalk();
         else
             player_3duse();
     } else {
-        if (OBJ_ID(newPlObj) == ITEM_FROST) {
+        if (OBJ_ITEM(newPlObj) == ITEM_FROST) {
             if (inrange && clear)
                 UseObj(ThePlayer, newPlObj, 0);
         } else
@@ -512,7 +492,7 @@ void far inv_look(void)
     if (newPlObj == 0)
         newPlObj = pick_inv(2);
     ident = OBJ_MAJOR(newPlObj) != MAJOR_RECT && OBJ_MAJOR(newPlObj) != MAJOR_TRAP
-        && ComObjData[OBJ_ID(newPlObj)].render != 2;
+        && ComObjData[OBJ_ITEM(newPlObj)].render != 2;
     if (ident == 1) {
         head = OBJ_HEADING(newPlObj);
         if (head & 4)

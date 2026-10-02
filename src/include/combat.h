@@ -53,6 +53,16 @@ struct Weapon {
     unsigned char durability;           /* 0x07 */
 };
 
+/* One armour or wearable's properties, 4 bytes, 32 of them from OBJECTS.DAT (UW-Formats,
+   "Armour and wearables table"), in ovr120's Armor. */
+struct Armour {
+    unsigned char protection;           /* 0x00 */
+    unsigned char durability;           /* 0x01 */
+    unsigned char b2;                   /* 0x02 */
+    unsigned char category;             /* 0x03: 0 shield, 1 body armour, 3 leggings,
+                                           4 gloves, 5 boots, 8 hat, 9 ring */
+};
+
 /* SEG024.C: combat */
 int far check_ammo(int weapon);
 void far clear_fight_state(void);

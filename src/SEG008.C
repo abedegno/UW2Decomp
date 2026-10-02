@@ -15,15 +15,6 @@
 #include "player.h"
 #include "sys.h"
 
-#define SET_Z(o, v)       ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
-#define SET_HEADING(o, v) ((o)->pos = (o)->pos & 0xFC7F | ((v) & 7) << 7)
-#define SET_FINEX(o, v)   ((o)->pos = (o)->pos & 0x1FFF | ((unsigned)(v) & 7) << 13)
-#define SET_FINEY(o, v)   ((o)->pos = (o)->pos & 0xE3FF | (v) << 10)
-#define SET_HOMEX(o, v)   ((o)->home = (o)->home & 0x3FF | ((v) & 0x3F) << 10)
-#define SET_HOMEY(o, v)   ((o)->home = (o)->home & 0xFC0F | ((v) & 0x3F) << 4)
-#define SET_FRAME(o, v)   ((o)->goal_word = (o)->goal_word & 0xFFF | ((v) & 0xF) << 12)
-#define SET_FINEHEAD(o, v) ((o)->b18 = (o)->b18 & 0xE0 | ((v) & 0x1F) << 0)
-
 extern struct Tile far *mapdata;
 extern unsigned TxmTerr[];
 extern unsigned char PlayersMap[];
@@ -55,15 +46,12 @@ void far set_effect(int which, char amount);
 void far set_screen_frame(int which, int frame);
 unsigned char far can_place(int item, int index, int x, int y, int z, char b, int dist);
 void far ObjectCheck(int a, int b);
-struct Object far * far Obj_PtrTMem(unsigned far *link);
 void far UseTrigger(struct Object far *who, void far *a, struct Object far *trig, int how);
 void far TerrainCheck(char a);
 unsigned char far set_resterr(int bits);
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
                      unsigned char damage, unsigned char type);
 void far play_effect_here(int fx, int vol, char c);
-void far Obj_Rem(unsigned far *list, struct Object far *obj);
-void far Obj_Add(unsigned far *list, struct Object far *obj);
 char far check_pplate(struct Object far *obj, struct Tile far *tile, int z, int how);
 void far set_light(int level);
 
@@ -239,7 +227,7 @@ char far simple_fizix(int turn)
                     SET_HOMEX(ThePlayer, PN.x >> 8);
                     SET_HOMEY(ThePlayer, PN.y >> 8);
                 }
-                SET_FINEX(ThePlayer, (PN.x >> 5) & 7);
+                SET_FINEX_UNSIGNED(ThePlayer, (PN.x >> 5) & 7);
                 SET_FINEY(ThePlayer, (PN.y >> 5) & 7);
                 if (!(backwards || flying) || (PN.z >> 3) - 8 <= nvokHgt)
                 {
@@ -262,8 +250,8 @@ char far simple_fizix(int turn)
                 process_objlist();
                 for (i = curP->first; i < curP->first + curP->count; i++)
                 {
-                    obj = Obj_PtrTMem(&oCollisions[i].link.word);
-                    if ((obj->id & ID_ITEM) == ITEM_MOVE_TRIGGER_1A0)
+                    obj = Obj_PtrTMem(&oCollisions[i].link);
+                    if (OBJ_ITEM(obj) == ITEM_MOVE_TRIGGER_1A0)
                         UseTrigger(ThePlayer, 0L, obj, 0);
                 }
                 curP = oldP;
@@ -491,7 +479,7 @@ void far player_setup(int x, int y, int how)
     SET_Z(ThePlayer, PN.z >> 3);
     SET_HOMEX(ThePlayer, x);
     SET_HOMEY(ThePlayer, y);
-    SET_FINEX(ThePlayer, 3);
+    SET_FINEX_UNSIGNED(ThePlayer, 3);
     SET_FINEY(ThePlayer, 3);
     ThePlayer->b15 = ThePlayer->b15 & 0xC0 | 1;
     ThePlayer->qn.f.next = ThePlayer->qn.f.quality = 0;
@@ -527,7 +515,7 @@ void far phys_affect_player(void)
         PlayerHeading = lasth;
         PN.speed = lasts;
     }
-    SET_FINEX(ThePlayer, (PN.x >> 5) & 7);
+    SET_FINEX_UNSIGNED(ThePlayer, (PN.x >> 5) & 7);
     SET_FINEY(ThePlayer, (PN.y >> 5) & 7);
     SET_FRAME(ThePlayer, ((unsigned)*Time & 0xFF) >> 6);
     if ((sq = (PN.x >> 8) + ((PN.y >> 8) << 6)) != GrSq)
@@ -728,7 +716,7 @@ void far change_GrSq(int sq, register int z)
 
     if (GrSq >= 0)
     {
-        Obj_Rem(&(mapdata + GrSq)->objects.word, ThePlayer);
+        Obj_Rem(&(mapdata + GrSq)->objects, ThePlayer);
         check_pplate(ThePlayer, mapdata + GrSq, PN.z >> 3, 0xE);
     }
     GrSq = sq;
@@ -738,7 +726,7 @@ void far change_GrSq(int sq, register int z)
         SET_Z(ThePlayer, z);
     if (GrSq >= 0)
     {
-        Obj_Add(&(mapdata + GrSq)->objects.word, ThePlayer);
+        Obj_Add(&(mapdata + GrSq)->objects, ThePlayer);
         check_pplate(ThePlayer, mapdata + GrSq, z, 6);
         if (light_mod)
         {

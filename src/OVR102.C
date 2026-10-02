@@ -26,11 +26,11 @@ int far ObjsBeCombinable(struct Object far *a, struct Object far *b)
     register int i;
     unsigned first, second;
 
-    if (((a->id & ID_ISQUANT) >> 15) && a->ol.f.link > 1 ||
-        !((a->id & ID_ISQUANT) >> 15) && a->ol.f.link > 0)
+    if (OBJ_ISQUANT(a) && a->ol.f.link > 1 ||
+        !OBJ_ISQUANT(a) && a->ol.f.link > 0)
         return -1;
-    if (((b->id & ID_ISQUANT) >> 15) && b->ol.f.link > 1 ||
-        !((b->id & ID_ISQUANT) >> 15) && b->ol.f.link > 0)
+    if (OBJ_ISQUANT(b) && b->ol.f.link > 1 ||
+        !OBJ_ISQUANT(b) && b->ol.f.link > 0)
         return -1;
     ids[1] = a->id & ID_ITEM;
     ids[0] = b->id & ID_ITEM;

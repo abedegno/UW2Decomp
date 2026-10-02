@@ -111,7 +111,7 @@ char far SaveLevel(int level)
     int sq;
 
     SavePlayerInv(0);
-    FreePlayerInv(&ThePlayer->ol.word);
+    FreePlayerInv(&ThePlayer->ol.link);
     sq = GrSq;
     change_GrSq(-1, -1);
     ThePlayer->id = ThePlayer->id & 0xFE3F;

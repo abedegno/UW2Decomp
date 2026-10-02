@@ -12,21 +12,13 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_ID(o)       ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
-#define OBJ_INDEX(o)    (((o)->id & ID_INMAJOR) >> 0)
-
 extern struct MissileInfo Missile[];
 /* This file's _BSS, DS:863A: only this file uses it; no FM Towns name, so static. */
 static struct Creature near *LootCreature;
 
-struct Object far * far Obj_PtrTMem(unsigned far *link);
-char far IsMobElem(struct Object far *obj);
 char far put_at(int x, int y, int z, struct Object far *obj, int a, int b);
 void far UseTrigger(struct Object far *who, int a, int b, struct Object far *trig, int how);
 struct Object far * far CreateObj(int id, int b);
-void far Obj_Add(unsigned far *head, struct Object far *obj);
 
 char far drop_link_chain(struct Object far *cont, int owner)
 {
@@ -37,29 +29,29 @@ char far drop_link_chain(struct Object far *cont, int owner)
 
     remove_lock(cont, 1);
     if (cont->ol.f.link != 0) {
-        obj = Obj_PtrTMem(&cont->ol.word);
+        obj = Obj_PtrTMem(&cont->ol.link);
         cont->ol.f.link = 0;
         if (IsMobElem(cont)) {
-            x = (cont->home & HOME_X) >> 10;
-            y = (cont->home & HOME_Y) >> 4;
+            x = OBJ_HOMEX(cont);
+            y = OBJ_HOMEY(cont);
         } else {
             x = MapObj_X;
             y = MapObj_Y;
         }
         z = cont->pos & POS_Z;
-        x = (x << 3) + ((cont->pos & POS_XFINE) >> 13);
-        y = (y << 3) + ((cont->pos & POS_YFINE) >> 10);
+        x = (x << 3) + OBJ_FINEX(cont);
+        y = (y << 3) + OBJ_FINEY(cont);
         while (obj != 0) {
-            next = Obj_PtrTMem(&obj->qn.word);
-            if (owner && ComObjData[OBJ_ID(obj)].can_own)
+            next = Obj_PtrTMem(&obj->qn.link);
+            if (owner && ComObjData[OBJ_ITEM(obj)].can_own)
                 obj->ol.f.owner = owner;
-            if (OBJ_ID(obj) >= FIRST_LIT_LIGHT && OBJ_ID(obj) <= ITEM_LIT_LIGHT_SPHERE)
-                obj->id = obj->id & 0xFE00 | (OBJ_ID(obj) - 4) & ID_ITEM;
+            if (OBJ_ITEM(obj) >= FIRST_LIT_LIGHT && OBJ_ITEM(obj) <= ITEM_LIT_LIGHT_SPHERE)
+                obj->id = obj->id & 0xFE00 | (OBJ_ITEM(obj) - 4) & ID_ITEM;
             put_at(x, y, z, obj, 6, 0);
             if (OBJ_MAJOR(obj) == MAJOR_TRAP && OBJ_MINOR(obj) >= 2) {
                 cont->ol.f.link = Obj_MemTPtr(next);
                 UseTrigger(ThePlayer, 0, 0, obj, 4);
-                next = Obj_PtrTMem(&cont->ol.word);
+                next = Obj_PtrTMem(&cont->ol.link);
                 cont->ol.f.link = 0;
             }
             obj = next;
@@ -71,7 +63,7 @@ char far drop_link_chain(struct Object far *cont, int owner)
 
 void far drop_some_objects(struct Object far *critter)
 {
-    drop_link_chain(critter, Creature[OBJ_INDEX(critter)].race);
+    drop_link_chain(critter, Creature[OBJ_INMAJOR(critter)].race);
 }
 
 void far generate_treasure(struct Object far *npc)
@@ -113,7 +105,7 @@ void far generate_treasure(struct Object far *npc)
         return;
     obj = CreateObj(type + FIRST_TREASURE, 0);
     obj->ol.f.link = qty;
-    Obj_Add(&npc->ol.word, obj);
+    Obj_Add(&npc->ol.link, obj);
 }
 
 void far generate_food(struct Object far *npc)
@@ -126,7 +118,7 @@ void far generate_food(struct Object far *npc)
     item = LootCreature->food_item;
     if (rand() % 16 < prob) {
         obj = CreateObj(item + FIRST_FOOD, 0);
-        Obj_Add(&npc->ol.word, obj);
+        Obj_Add(&npc->ol.link, obj);
     }
 }
 
@@ -150,7 +142,7 @@ void far generate_weapons(struct Object far *npc)
         obj->qn.f.quality = quality;
         if (OBJ_MINOR(obj) == 1 && (unsigned char)Missile[obj->id & ID_INCLASS].ammo == 0xC0)
             obj->ol.f.link = rand() % 8 + 4;
-        Obj_Add(&npc->ol.word, obj);
+        Obj_Add(&npc->ol.link, obj);
     }
 }
 
@@ -171,7 +163,7 @@ void far generate_equipment(struct Object far *npc)
             if (ComObjData[id].qualtype == 0xF)
                 quality = 40;
             obj->qn.f.quality = quality;
-            Obj_Add(&npc->ol.word, obj);
+            Obj_Add(&npc->ol.link, obj);
         }
     }
 }
@@ -180,7 +172,7 @@ void far generate_inventory(struct Object far *npc)
 {
     int minor, index;
 
-    if ((npc->attitude_word & 0x1000) >> 12)
+    if OBJ_HAS_INV(npc)
         return;
     minor = OBJ_MINOR(npc);
     index = npc->id & ID_INCLASS;

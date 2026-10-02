@@ -42,8 +42,11 @@ struct Player {
     unsigned long exp;                  /* 0x4E, in tenths */
     unsigned char skill_points;         /* 0x52 */
     unsigned char skill_points_earned;  /* 0x53 */
-    char pad54[0x5E - 0x54];            /* 0x54: PN's x, y and z, PlayerFacing and
-                                           PlayerLevel, stored here when saving */
+    int saved_x;                        /* 0x54: PN's x, y and z, PlayerFacing and */
+    int saved_y;                        /* PlayerLevel, stored here when saving */
+    int saved_z;
+    int saved_facing;                   /* 0x5A */
+    int saved_level;                    /* 0x5C */
     unsigned char moonstones[2];        /* 0x5E, the level each moonstone is on */
     unsigned drawn:1;                   /* word 0x60: the weapon is drawn */
     unsigned poison:4;
@@ -85,8 +88,8 @@ struct Player {
     unsigned music:2;
     unsigned detail:4;
     unsigned fps:3;                     /* 0x303 */
-    unsigned b303_3:5;
-    unsigned char b304;                 /* 0x304 */
+    unsigned terrain:8;                 /* word 0x303, bits 3-10: PN.terrain, saved */
+    unsigned b304_3:5;
     unsigned char paralyzed;            /* 0x305 */
     unsigned char motion_state;         /* 0x306 */
     unsigned char swim_count;           /* 0x307 */

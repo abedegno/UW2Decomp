@@ -18,32 +18,6 @@
 #include "ui.h"
 #include "view3d.h"
 
-/* A static object: the first 8 bytes of every object. */
-struct SObject {
-    unsigned id;
-    unsigned pos;
-    unsigned qn;
-    unsigned ol;
-};
-
-#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
-#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
-#define OBJ_INDEX(o)    (((o)->id & ID_INMAJOR) >> 0)
-#define OBJ_Z(o)        ((o)->pos & POS_Z)
-#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
-#define OBJ_POWERFUL(o) (((o)->attitude_word & 0x400) >> 10)
-#define OBJ_SIDE(o)     (((o)->b19 & 0x40) >> 6)
-
-#define SET_Z(o, v)       ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
-#define SET_FINEX(o, v)   ((o)->pos = (o)->pos & 0x1FFF | ((unsigned)(v) & 7) << 13)
-#define SET_FINEY(o, v)   ((o)->pos = (o)->pos & 0xE3FF | (v) << 10)
-
 extern struct MissileInfo Missile[];
 extern struct Weapon Weapons[];
 extern int PlayerPitch;
@@ -52,11 +26,7 @@ extern long far *Time;
 /* The player's own critter record. No FM Towns name: static there. */
 
 /* Elsewhere in the game. */
-struct Object far * far Obj_IntTMem(int index);
-char far IsMobElem(struct Object far *obj);
 int far add_animobj(int index, int len, int a, char x, char y);
-void far Obj_Add(unsigned far *list, struct Object far *obj);
-void far Obj_AddEnd(unsigned far *list, struct Object far *obj);
 struct Object far * far CreateObj(int id, int b);
 void far TerrainCheck(int a);
 void far ObjectCheck(int a, int b);
@@ -173,7 +143,7 @@ int far set_hitobj(struct MotionCalc *c)
             continue;
         if (idx == fromwho)
             continue;
-        if (fromwho == 1 && IsMobElem(obj) && OBJ_SIDE(obj) && (last - 1 != i || best != 100000L))
+        if (fromwho == 1 && IsMobElem(obj) && OBJ_ALLY(obj) && (last - 1 != i || best != 100000L))
             continue;
         t = oCollisions[i].offset & 0x3F;
         targx = ((c->x >> 3) + t) & 0x3F;
@@ -215,7 +185,7 @@ void far find_wall_coll(int heading, int dist, struct MotionCalc *c)
         if ((curP->hits0 | curP->hits1) & 0x300) {
             if ((obj = CreateObj(ITEM_FLASH, 0)) == 0)
                 return;
-            SET_FINEX(obj, curP->x & 7);
+            SET_FINEX_UNSIGNED(obj, curP->x & 7);
             SET_FINEY(obj, curP->y & 7);
             tx = curP->x >> 3;
             ty = curP->y >> 3;
@@ -230,7 +200,7 @@ void far find_wall_coll(int heading, int dist, struct MotionCalc *c)
             if (add_animobj(Obj_MemTPtr(obj), 2, 0, tx, ty) == -1)
                 Obj_Free(obj);
             else
-                Obj_AddEnd(&Map_GetAddr(tx, ty)->objects.word, obj);
+                Obj_AddEnd(&Map_GetAddr(tx, ty)->objects, obj);
             return;
         }
         move_along(heading, 0x10, &fx, &fy);
@@ -257,7 +227,7 @@ unsigned char far resolve_attack(void)
     hitz = curP->z + ComObjData[OBJ_ITEM(att)].height / 6;
     curP->x = (OBJ_HOMEX(att) << 3) + OBJ_FINEX(att);
     curP->y = (OBJ_HOMEY(att) << 3) + OBJ_FINEY(att);
-    heading = (OBJ_HEADING(att) << 5) + (att->b18 & 0x1F);
+    heading = (OBJ_HEADING(att) << 5) + OBJ_FINEHEAD(att);
     move_along(heading, wsize + 3, &curP->x, &curP->y);
     ObjectCheck(0, 1);
     if (curP->found) {
@@ -314,7 +284,7 @@ int far frp_check(int attacker, int defender)
         }
         return 0;
     }
-    cr = &Creature[OBJ_INDEX(def)];
+    cr = &Creature[OBJ_INMAJOR(def)];
     if (hitobj == 1)
         askill -= cmbModTH[hitloc];
     result = skill_check(askill + hitangle, cr->defence);
@@ -508,7 +478,7 @@ char far do_attack(void)
     if (!resolve_attack())
         return do_miss(0);
     if (fromwho != 1 && hitobj != 1 && IsMobElem(Obj_IntTMem(hitobj))
-        && !(OBJ_SIDE(Obj_IntTMem(hitobj)) ^ OBJ_SIDE(Obj_IntTMem(fromwho))))
+        && !(OBJ_ALLY(Obj_IntTMem(hitobj)) ^ OBJ_ALLY(Obj_IntTMem(fromwho))))
         return 0;
     compute_hitangle();
     if ((result = frp_check(fromwho, hitobj)) != 0) {
@@ -522,15 +492,15 @@ char far do_attack(void)
 int far check_ammo(int weapon)
 {
     int found;
-    struct SObject fake;
+    struct StaticObj fake;
     char buf[50];
-    struct SObject *p;
+    struct StaticObj *p;
     int ammo;
 
     ammo = Missile[weapon].ammo;
     if (FindObj(MAJOR_HACK, 1, ammo, 4, &found) == 0) {
         p = &fake;
-        p->id = p->id & 0xFE00 | ammo + FIRST_MISSILE & ID_ITEM;
+        SET_ITEM(p, ammo + FIRST_MISSILE);
         game_sprint(0xCF);
         get_name(buf, (struct Object far *)p, 0, 1);
         scroll_print(buf);
@@ -694,7 +664,7 @@ void far player_attack(int swing)
                 }
                 if (!held) {
                     if (mous_in_3d_p())
-                        player_fire(curr_weapon->id & ID_INCLASS);
+                        player_fire(OBJ_INCLASS(curr_weapon));
                     missile_finish();
                 }
                 return;
@@ -758,7 +728,7 @@ void far player_attack(int swing)
                     if (add_animobj(Obj_MemTPtr(obj), 4, 0, tx, ty) == -1)
                         Obj_Free(obj);
                     else {
-                        Obj_Add(&tile->objects.word, obj);
+                        Obj_Add(&tile->objects, obj);
                         fireball_effect(obj, tx, ty);
                     }
                     damage_square(tx, ty, 1, 1);

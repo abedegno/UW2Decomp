@@ -18,20 +18,9 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_ID(o)       ((o)->id & ID_ITEM)
-#define OBJ_INDEX(o)    (((o)->id & ID_INMAJOR) >> 0)
-#define OBJ_TYPE(o)     ((o)->id & ID_INCLASS)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
-#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
-#define OBJ_FLAGS(o)    (((o)->id & ID_FLAGS) >> 9)
-#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
-#define OBJ_Z(o)        ((o)->pos & POS_Z)
-
 extern struct Inplist near *inplist;
 extern void (far *ObjectActor)();
 extern char ObjectActorArg;
-extern unsigned far *Obj_Find_Head;
 
 /* The next time the player may cast from an object, and a flag that makes
    decode_obj_spell always identify the spell. */
@@ -39,13 +28,6 @@ long nextSpellTime = 0;
 unsigned char always_decode = 0;
 
 void far UseKeyOn(struct Object far *obj, unsigned char how);
-struct Object far * far Obj_PtrTMem(unsigned far *link);
-void far Obj_FreeLinkChain(unsigned far *head, struct Object far *obj);
-struct Object far * far Obj_Punt(unsigned far *head, struct Object far *obj, char how);
-struct Object far * far Obj_Find(unsigned far *head, int a, int index);
-void far Obj_FreeChain(unsigned far *head);
-struct Object far * far Obj_InList(unsigned far **head, int a, int major, int minor, int idx);
-char far Obj_Rem(unsigned far *head, struct Object far *obj);
 struct Object far * far CreateObj(int item, char mobile);
 void far mouse_release(int n);
 void far get_name(char far *buf, struct Object far *obj, int article, char plural);
@@ -79,9 +61,9 @@ struct Object far * far UseObj(struct Object far *who, struct Object far *obj, u
             UseCont(who, obj, how);
             break;
         case 1:
-            if (OBJ_TYPE(obj) < 8)
+            if (OBJ_INCLASS(obj) < 8)
                 UseLight(obj, how);
-            else if (OBJ_TYPE(obj) >= 8) {
+            else if (OBJ_INCLASS(obj) >= 8) {
                 UseWand(obj, how);
                 trap = 0;
             }
@@ -89,9 +71,9 @@ struct Object far * far UseObj(struct Object far *who, struct Object far *obj, u
         case 2:
             if (!how)
                 break;
-            if (OBJ_TYPE(obj) == 0xF)
+            if (OBJ_INCLASS(obj) == 0xF)
                 UseWatch();
-            else if (OBJ_ID(obj) == ITEM_STORAGE_CRYSTAL)
+            else if (OBJ_ITEM(obj) == ITEM_STORAGE_CRYSTAL)
                 UseCrystal(obj->qn.f.quality);
             break;
         case 3:
@@ -132,11 +114,11 @@ struct Object far * far UseObj(struct Object far *who, struct Object far *obj, u
         UseRect(who, obj);
         break;
     case MAJOR_TRAP:
-        if (OBJ_ID(obj) == ITEM_FLAM_RUNE || OBJ_ID(obj) == ITEM_TYM_RUNE)
+        if (OBJ_ITEM(obj) == ITEM_FLAM_RUNE || OBJ_ITEM(obj) == ITEM_TYM_RUNE)
             UseRune(who, obj);
         break;
     case MAJOR_ANIMOBJ:
-        switch (OBJ_TYPE(obj)) {
+        switch (OBJ_INCLASS(obj)) {
         case 0xF:
             if ((obj->ol.f.owner & 0xF) < 8)
                 CloseDoor(who, obj);
@@ -145,8 +127,8 @@ struct Object far * far UseObj(struct Object far *who, struct Object far *obj, u
             break;
         case 9:
             if (obj->qn.f.next != 0) {
-                fount = Obj_PtrTMem(&obj->qn.word);
-                if (OBJ_ID(fount) == ITEM_FOUNTAIN_12E)
+                fount = Obj_PtrTMem(&obj->qn.link);
+                if (OBJ_ITEM(fount) == ITEM_FOUNTAIN_12E)
                     UseMagic(who, fount, how);
             }
             break;
@@ -163,25 +145,22 @@ struct Object far * far UseObj(struct Object far *who, struct Object far *obj, u
 int far using_punt(struct Object far *obj, char inv, char how)
 {
     struct Tile far *tile;
-    union {
-        unsigned word;
-        struct { unsigned owner:6, link:10; } f;
-    } head;
+    union Link head;
 
     if (inv) {
         if (!OBJ_ISQUANT(obj) && obj->ol.f.link > 0)
-            Obj_FreeLinkChain(&obj->ol.word, Obj_PtrTMem(&obj->ol.word));
+            Obj_FreeLinkChain(&obj->ol.link, Obj_PtrTMem(&obj->ol.link));
         InvRemoveOneObject(obj);
         obj->ol.f.link = 0;
         obj = Obj_Punt(0L, obj, how);
     } else {
         tile = Map_GetAddr(MapObj_X, MapObj_Y);
-        if (Obj_Find(&tile->objects.word, 1, Obj_MemTPtr(obj)) != 0) {
+        if (Obj_Find(&tile->objects, 1, Obj_MemTPtr(obj)) != 0) {
             obj = Obj_Punt(Obj_Find_Head, obj, how);
             editchng(2);
         } else {
-            head.f.link = Obj_MemTPtr(obj);
-            Obj_FreeChain(&head.word);
+            head.f.index = Obj_MemTPtr(obj);
+            Obj_FreeChain(&head);
             obj = 0;
         }
     }
@@ -193,7 +172,7 @@ struct Object far * far place_new(struct Object far *obj, int item)
     if (CursorObjPtr != 0)
         return 0;
     if (obj != 0)
-        item = OBJ_ID(obj);
+        item = OBJ_ITEM(obj);
     else
         obj = CreateObj(item, 0);
     GameInputMode = 1;
@@ -206,9 +185,9 @@ void far UseKey(struct Object far *obj, unsigned char how)
 {
     if (!how)
         return;
-    if (OBJ_ID(obj) == ITEM_LOCKPICK)
+    if (OBJ_ITEM(obj) == ITEM_LOCKPICK)
         UseThing(obj, UseLockpickOn);
-    else if (OBJ_ID(obj) < ITEM_LOCK)
+    else if (OBJ_ITEM(obj) < ITEM_LOCK)
         UseThing(obj, UseKeyOn);
 }
 
@@ -220,7 +199,7 @@ void far UseThing(struct Object far *obj, void (far *fn)())
     get_name(buf + strlen(buf), obj, 0, 0);
     strcat(buf, " on what?\n");
     scroll_print(buf);
-    force_mouse_cursor(OBJ_ID(obj));
+    force_mouse_cursor(OBJ_ITEM(obj));
     CursorObjPtr = obj;
     GameInputMode = 2;
     ObjectActing = obj;
@@ -229,19 +208,19 @@ void far UseThing(struct Object far *obj, void (far *fn)())
 
 void far UseWand(struct Object far *wand, unsigned char how)
 {
-    unsigned far *link;
+    union Link far *link;
     struct Object far *spell;
 
     if (!how)
         return;
-    if (OBJ_TYPE(wand) < 0xC || OBJ_TYPE(wand) > 0xF) {
+    if (OBJ_INCLASS(wand) < 0xC || OBJ_INCLASS(wand) > 0xF) {
         checkTrap(ThePlayer, wand, 4, MapObj_X, MapObj_Y);
         checkSpell(MapObj_X, MapObj_Y, ThePlayer, wand, how);
         if (!OBJ_ISQUANT(wand)) {
-            link = &wand->ol.word;
+            link = &wand->ol.link;
             spell = Obj_InList(&link, 0, MAJOR_SPEC, 2, 0);
             if (spell == 0) {
-                wand->id = wand->id & 0xFFF0 | (OBJ_TYPE(wand) + 4) & 0xF;
+                wand->id = wand->id & 0xFFF0 | (OBJ_INCLASS(wand) + 4) & 0xF;
                 game_sprint(0x8B);
                 RedisplayInvSlot(FindSlot(wand));
             }
@@ -256,7 +235,7 @@ char far UseReag(struct Object far *who, struct Object far *obj, char how)
 {
     int id;
 
-    id = OBJ_ID(obj);
+    id = OBJ_ITEM(obj);
     if (id >= 0xE1 && id <= 0xE7) {
         if (how != 0)
             UseFood(who, obj, how);
@@ -269,7 +248,7 @@ char far flip_switch(struct Object far *obj, int state)
 {
     int type;
 
-    type = OBJ_TYPE(obj);
+    type = OBJ_INCLASS(obj);
     if (state == 0)
         return 0;
     if (state != 3 && (type > 7) != (state > 2))
@@ -284,18 +263,18 @@ char far flip_switch(struct Object far *obj, int state)
 int far checkLock(struct Object far *who, struct Object far *door, int key)
 {
     struct Object far *lock;
-    unsigned far *link;
+    union Link far *link;
     int result;
 
     if (!OBJ_ISQUANT(door) && door->ol.f.link > 0) {
-        link = &door->ol.word;
+        link = &door->ol.link;
         lock = Obj_InList(&link, 0, MAJOR_SPEC, 0, 0xF);
         if (lock == 0)
             return 1;
         if (!(lock->id & ID_FLAG9)) {
             if (key > 0) {
-                if ((OBJ_CLASS(door) == CLASS_DOOR && OBJ_TYPE(door) >= 8) ||
-                    (OBJ_CLASS(door) == CLASS_CONTAINER && OBJ_TYPE(door) < 0xC && (door->id & 1)))
+                if ((OBJ_CLASS(door) == CLASS_DOOR && OBJ_INCLASS(door) >= 8) ||
+                    (OBJ_CLASS(door) == CLASS_CONTAINER && OBJ_INCLASS(door) < 0xC && (door->id & 1)))
                     return 4;
                 if ((lock->ol.f.link & 0x1FF) == key) {
                     lock->id = lock->id & 0xFDFF | 0x200;
@@ -343,7 +322,7 @@ char far checkSpell(int x, int y, struct Object far *who, struct Object far *obj
             nextSpellTime = player->game_clock + 0x2FD;
             src = who;
         } else {
-            if (who == ThePlayer && OBJ_ID(obj) >= ITEM_WAND_98 && OBJ_ID(obj) <= ITEM_WAND_9B)
+            if (who == ThePlayer && OBJ_ITEM(obj) >= ITEM_WAND_98 && OBJ_ITEM(obj) <= ITEM_WAND_9B)
                 return 0;
             src = obj;
         }
@@ -356,7 +335,7 @@ char far checkSpell(int x, int y, struct Object far *who, struct Object far *obj
 
 void far checkTrap(struct Object far *who, struct Object far *obj, int how, int x, int y)
 {
-    unsigned far *link;
+    union Link far *link;
     struct Object far *trap;
     struct Object far *next;
     char runnext;
@@ -364,12 +343,12 @@ void far checkTrap(struct Object far *who, struct Object far *obj, int how, int 
     runnext = 1;
     if (OBJ_ISQUANT(obj) || obj->ol.f.link == 0)
         return;
-    link = &obj->ol.word;
+    link = &obj->ol.link;
     trap = Obj_InList(&link, 0, MAJOR_TRAP, -1, -1);
     if (OBJ_CLASS(obj) == CLASS_SWITCH) {
         runnext = 0;
-        if (OBJ_TYPE(obj) > 7) {
-            link = &trap->qn.word;
+        if (OBJ_INCLASS(obj) > 7) {
+            link = &trap->qn.link;
             next = Obj_InList(&link, 0, MAJOR_TRAP, -1, -1);
             if (next != 0)
                 trap = next;
@@ -377,14 +356,14 @@ void far checkTrap(struct Object far *who, struct Object far *obj, int how, int 
     }
     while (trap != 0) {
         if (OBJ_MINOR(trap) >= 2) {
-            link = &trap->qn.word;
+            link = &trap->qn.link;
             next = Obj_InList(&link, 0, MAJOR_TRAP, -1, -1);
             UseTrigger(who, obj, trap, how);
             if (runnext)
                 trap = next;
             else
                 trap = 0;
-        } else if (OBJ_FLAGS(trap) == 0 && how == 4 && OBJ_INDEX(trap) != 8) {
+        } else if (OBJ_FLAGS(trap) == 0 && how == 4 && OBJ_INMAJOR(trap) != 8) {
             SetOffTrap(who, obj, trap, x, y);
             delete_trap(link, trap);
             trap = 0;
@@ -403,14 +382,14 @@ void far BlastFunction(void)
 
 char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag)
 {
-    unsigned far *link;
+    union Link far *link;
     struct Object far *spell;
 
     spell = 0;
     if (OBJ_MAJOR(obj) == MAJOR_TRAP)
         return 0;
     if (!OBJ_ISQUANT(obj) && obj->ol.f.link > 0) {
-        link = &obj->ol.word;
+        link = &obj->ol.link;
         spell = Obj_InList(&link, 0, MAJOR_SPEC, 2, 0);
         if (spell != 0 && spell->qn.f.quality == 0 && !always_decode &&
             (int)(((long)rand() * 10) / 0x8000L) < 4)
@@ -443,13 +422,13 @@ void far remove_spell(struct Object far *obj)
 
 int far useNSpellCharges(struct Object far *obj, char n)
 {
-    unsigned far *link;
+    union Link far *link;
     struct Object far *spell;
     char charges;
 
     if (OBJ_ISQUANT(obj) || obj->ol.f.link == 0)
         return 0;
-    link = &obj->ol.word;
+    link = &obj->ol.link;
     spell = Obj_InList(&link, 0, MAJOR_SPEC, 2, 0);
     if (spell != 0 && (spell->id & ID_FLAG11)) {
         charges = spell->qn.f.quality - n;

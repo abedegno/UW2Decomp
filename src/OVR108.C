@@ -52,18 +52,53 @@ struct Stdat {
     unsigned char n00buf[0x400];        /* 0x38 */
 };
 
-/* The LPF file's header as read_anmhdr leaves it, 0xB00 bytes: colour cycles at 0x80, the
-   palette at 0x100, the large page descriptors at 0x500. */
-struct AnmHdr {
-    char pad0[6];
-    unsigned nlps;                      /* 0x06, large pages */
-    char pad8[0x1A - 8];
-    unsigned char lastdelta;            /* 0x1A */
-    char pad1B[0x44 - 0x1B];
-    unsigned rate;                      /* 0x44, frames per second */
+/* A large page's descriptor, 6 bytes: the first record in it, the records and the bytes. */
+struct LpDesc {
+    unsigned base;                      /* 0x00 */
+    unsigned nrecords;                  /* 0x02 */
+    unsigned nbytes;                    /* 0x04 */
 };
-/* Large page n's descriptor: its first record, its records and its bytes. */
-#define LPDESC(anm, n) ((unsigned far *)((unsigned char far *)(anm) + 0x500 + (n) * 6))
+
+/* A large page as readlp reads it into EMS: its descriptor again, a pad word, the sizes of
+   its records, then the records. */
+struct LpPage {
+    struct LpDesc desc;                 /* 0x00 */
+    unsigned pad;                       /* 0x06 */
+    unsigned sizes[1];                  /* 0x08, nrecords of them */
+};
+
+/* The LPF file's header as read_anmhdr leaves it, 0xB00 bytes: colour cycles at 0x80, the
+   palette at 0x100, the large page descriptors at 0x500. Field names are those of
+   DeluxePaint Animate's published LPF layout; the code reads nlps, lastdelta, rate and the
+   three tables. */
+struct AnmHdr {
+    char id[4];                         /* 0x00, "LPF " */
+    unsigned maxlps;                    /* 0x04 */
+    unsigned nlps;                      /* 0x06, large pages */
+    unsigned long nrecords;             /* 0x08 */
+    unsigned maxrecsperlp;              /* 0x0C */
+    unsigned lptableoffset;             /* 0x0E */
+    char contenttype[4];                /* 0x10, "ANIM" */
+    unsigned width;                     /* 0x14 */
+    unsigned height;                    /* 0x16 */
+    unsigned char variant;              /* 0x18 */
+    unsigned char version;              /* 0x19 */
+    unsigned char lastdelta;            /* 0x1A, the last record is a delta back to the first */
+    unsigned char lastdeltavalid;       /* 0x1B */
+    unsigned char pixeltype;            /* 0x1C */
+    unsigned char compression;          /* 0x1D */
+    unsigned char otherrecsperfrm;      /* 0x1E */
+    unsigned char bitmaptype;           /* 0x1F */
+    unsigned char recordtypes[32];      /* 0x20 */
+    unsigned long nframes;              /* 0x40 */
+    unsigned rate;                      /* 0x44, frames per second */
+    unsigned pad46[29];                 /* 0x46 */
+    struct Cycle cycles[16];            /* 0x80 */
+    unsigned char palette[0x400];       /* 0x100, 256 of blue, green, red and 0 */
+    struct LpDesc lps[256];             /* 0x500 */
+};
+/* Large page n's descriptor */
+#define LPDESC(anm, n) (&(anm)->lps[n])
 
 typedef int (far *CutsOp)(unsigned far *code, struct CutsState *st);
 typedef void (far *Task)(int task, int done);
@@ -314,7 +349,7 @@ char * far makeFourChars_ovr108_671(unsigned long value, char *out)
 }
 
 /* 0x6AD */
-void far build_lptab(unsigned far *desc, unsigned n, unsigned char far *order)
+void far build_lptab(struct LpDesc far *desc, unsigned n, unsigned char far *order)
 {
     int tmp;
     unsigned char changed;
@@ -324,7 +359,7 @@ void far build_lptab(unsigned far *desc, unsigned n, unsigned char far *order)
     do {
         changed = 1;
         for (i = 1; i < n; i++) {
-            if (desc[order[i - 1] * 3] > desc[order[i] * 3]) {
+            if (desc[order[i - 1]].base > desc[order[i]].base) {
                 changed = 0;
                 tmp = order[i - 1];
                 order[i - 1] = order[i];
@@ -343,29 +378,29 @@ unsigned char far read_anmhdr(unsigned char far *dst)
     wanted = 0xB00;
     actual = intoFarBuffer_ovr167_5DA(stdat.anm_fd, dst, wanted);
     for (i = 0; i < 16; i++) {
-        value = *(unsigned far *)(dst + 0x82 + i * 8);
-        *(unsigned far *)(dst + 0x82 + i * 8) = (value >> 8) & 0x3F;
+        value = ((struct AnmHdr far *)dst)->cycles[i].period;
+        ((struct AnmHdr far *)dst)->cycles[i].period = (value >> 8) & 0x3F;
     }
     return actual == wanted;
 }
 
 /* 0x7BF */
-int far readlp(unsigned page, unsigned far *desc, void far *dst)
+int far readlp(unsigned page, struct LpDesc far *desc, void far *dst)
 {
     int size;
     register int got;
     lseek(stdat.anm_fd, ((long)page << 16) + 0xB00L, 0);
-    size = desc[2] + desc[1] * 2 + 8;
+    size = desc->nbytes + desc->nrecords * 2 + 8;
     got = intoFarBuffer_ovr167_5DA(stdat.anm_fd, dst, size);
 }
 
 /* 0x819 */
-int far readlpinc(unsigned page, unsigned far *desc, unsigned n, void far *dst)
+int far readlpinc(unsigned page, struct LpDesc far *desc, unsigned n, void far *dst)
 {
     char far *target = dst;
     int out_size, amount;
     if (page < 0 || n == 0) return 0;
-    out_size = desc[1] * 2 + desc[2] + 8;
+    out_size = desc->nrecords * 2 + desc->nbytes + 8;
     if (page != lp_page) {
         lp_page = page;
         lseek(stdat.anm_fd, ((long)page << 16) + 0xB00L, 0);
@@ -643,11 +678,11 @@ int far cutsop_data(unsigned far *code, struct CutsState *st)
 {
     int file;
     if (code[0] == 996) file = rand() % 4 + 0x1C;
-    ((char *)st)[7] = ((file >> 6) & 7) + '0';
-    ((char *)st)[8] = ((file >> 3) & 7) + '0';
-    ((char *)st)[9] = (file & 7) + '0';
-    ((char *)st)[12] = ((code[1] >> 3) & 7) + '0';
-    ((char *)st)[13] = (code[1] & 7) + '0';
+    st->name[7] = ((file >> 6) & 7) + '0';
+    st->name[8] = ((file >> 3) & 7) + '0';
+    st->name[9] = (file & 7) + '0';
+    st->name[12] = ((code[1] >> 3) & 7) + '0';
+    st->name[13] = (code[1] & 7) + '0';
     st->file4B = code[1];
     return 2;
 }
@@ -907,7 +942,7 @@ void far cuts_draw_text(register struct CutsState *st)
 /* 0x162B */
 int far run_time_critical_things(struct CutsState *st, struct AnmHdr far *hdr)
 {
-    anm_cycle((struct Cycle far *)((unsigned char far *)hdr + 0x80));
+    anm_cycle(hdr->cycles);
     anm_sound(st);
     if (*Time - stdat.tick >= 8) {
         stdat.tick = *Time;
@@ -1122,7 +1157,7 @@ void far draw_rsd(unsigned char far *src, int x, int y, int w, int h,
 
 /* 0x2359 */
 int far cuts_process_lp(register struct CutsState *st, struct AnmHdr far *anm,
-    unsigned far *lp)
+    struct LpDesc far *lp)
 {
     unsigned char far *page;
     unsigned char far *ems2;
@@ -1140,17 +1175,17 @@ int far cuts_process_lp(register struct CutsState *st, struct AnmHdr far *anm,
     first = 1;
     stdat.start = *Time;
     page = set_cuts_ems(stdat.ems_page);
-    sizes = (unsigned far *)(page + 8);
-    data = (unsigned char far *)(sizes + lp[1]);
+    sizes = ((struct LpPage far *)page)->sizes;
+    data = (unsigned char far *)(sizes + lp->nrecords);
     last = anm->nlps - 1 == stdat.lp_index && anm->lastdelta ? 1 : 0;
-    nrec = lp[1] - last;
+    nrec = lp->nrecords - last;
     st->frame3D = st->frame3F = 0;
     st->flags.bit.b1 = 0;
     if (nrec > 0 && anm->nlps - 1 > stdat.lp_index) {
-        unsigned far *d;
+        struct LpDesc far *d;
         register unsigned sz;
         d = LPDESC(anm, stdat.lptab[stdat.lp_index + 1]);
-        sz = d[2] + d[1] * 2 + 8;
+        sz = d->nbytes + d->nrecords * 2 + 8;
         perrec = (nrec + sz - 1) / nrec;
     } else perrec = -2;
     for (i = 0; i < nrec && st->flags.bit.b2 && st->flags.bit.b3; i++) {
@@ -1242,7 +1277,7 @@ void far cuts_process_anm(struct CutsState *st)
     unsigned char far *img;
     unsigned char far *n0x;
     struct AnmHdr far *hdr;
-    unsigned char far *desc;
+    struct LpDesc far *desc;
     int result;
     int i;
 
@@ -1250,7 +1285,7 @@ void far cuts_process_anm(struct CutsState *st)
     run_timebased_tasks(1);
     n0x = stdat.n00 + 0x400;
     hdr = (struct AnmHdr far *)n0x;
-    desc = n0x + 0x500;
+    desc = ((struct AnmHdr far *)n0x)->lps;
     st->palette = n0x + 0xB00;
     stdat.lptab = st->palette + 0x300;
     cuts_process_opcodes(0x3E5, st);
@@ -1262,13 +1297,13 @@ void far cuts_process_anm(struct CutsState *st)
         st->flags.bit.b3 = 0;
         goto done;
     }
-    if (st->windowed == 0) conv_anmpal(n0x + 0x100, st->palette);
-    build_lptab((unsigned far *)desc, hdr->nlps, stdat.lptab);
+    if (st->windowed == 0) conv_anmpal(((struct AnmHdr far *)n0x)->palette, st->palette);
+    build_lptab(desc, hdr->nlps, stdat.lptab);
     lp_page = -1;
     for (i = 0; i < num_buf && i < hdr->nlps; i++) {
         img = set_cuts_ems(i);
         if (img != 0)
-            if (readlp(stdat.lptab[i], (unsigned far *)(desc + stdat.lptab[i] * 6), img) == -1) ;
+            if (readlp(stdat.lptab[i], &desc[stdat.lptab[i]], img) == -1) ;
     }
     stdat.ahead_page = 1 - num_buf;
     stdat.ems_page = 0;
@@ -1280,7 +1315,7 @@ void far cuts_process_anm(struct CutsState *st)
     if (st->repeat41 == 0) cuts_process_opcodes(stdat.frame, st);
     for (i = 0; i < hdr->nlps && st->flags.bit.b2 && st->flags.bit.b3 && !result; i++) {
         result = cuts_process_lp(st, (struct AnmHdr far *)n0x,
-            (unsigned far *)(desc + stdat.lptab[stdat.lp_index] * 6));
+            &desc[stdat.lptab[stdat.lp_index]]);
         stdat.lp_index++;
         stdat.ahead_index++;
         if (++stdat.ems_page >= num_buf) stdat.ems_page = 0;

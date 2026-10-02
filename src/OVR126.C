@@ -19,15 +19,6 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_ID(o)       ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
-#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
-#define OBJ_FLAGS(o)    (((o)->id & ID_FLAGS) >> 9)
-#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
-#define OBJ_GOAL(o)     (((o)->goal_word & 0xF) >> 0)
-#define OBJ_ATTITUDE(o) (((o)->attitude_word & 0xC000) >> 14)
-
 /* Copy a far string, terminator included, to any address. */
 #define far_strcpy(d, s) movedata(FP_SEG(s), FP_OFF(s), FP_SEG(d), FP_OFF(d), str_len(s) + 1)
 
@@ -38,7 +29,6 @@ void far scroll_print(char far *s);
 void far scroll_clear(int n);
 void far get_name(char far *buf, struct Object far *obj, int article, char plural);
 char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
-struct Object far * far Obj_InList(unsigned far **head, int a, int major, int minor, int idx);
 void far player_look_grave(int n);
 void far show_cutscene(int n);
 
@@ -59,7 +49,7 @@ void far LookAt(struct Object far *obj, int lore)
     plural = 0;
     if (obj == 0)
         return;
-    com = &ComObjData[OBJ_ID(obj)];
+    com = &ComObjData[OBJ_ITEM(obj)];
     if (com->lookable) {
         strcpy(text, "You see ");
         first = 0;
@@ -104,7 +94,7 @@ void far LookAt(struct Object far *obj, int lore)
         pos = text + strlen(text);
         get_name(pos, obj, first == 0, plural);
         do_of(obj, lore, text);
-        if (ComObjData[OBJ_ID(obj)].can_own && obj->ol.f.owner > 0 && (obj->ol.f.owner & 0x1F) <= 0x1E) {
+        if (ComObjData[OBJ_ITEM(obj)].can_own && obj->ol.f.owner > 0 && (obj->ol.f.owner & 0x1F) <= 0x1E) {
             strcat(text, " belonging to");
             owner = get_string(((obj->ol.f.owner & 0x1F) + 0x172) | STR_GAME);
             str_cat(text, owner);
@@ -129,7 +119,7 @@ char far do_mods(struct Object far *obj, int lore, char *s)
                 strcat(s, "cursed ");
                 return 1;
             }
-        } else if (lore == 2 || (OBJ_CLASS(obj) == CLASS_BOOK && (obj->id & ID_INCLASS) <= 8)) {
+        } else if (lore == 2 || (OBJ_CLASS(obj) == CLASS_BOOK && OBJ_INCLASS(obj) <= 8)) {
             strcat(s, "magical ");
             return 1;
         }
@@ -149,13 +139,13 @@ char far do_of(struct Object far *obj, int lore, char *s)
     unsigned char flag;
     char far *name;
     char found;
-    unsigned far *link;
+    union Link far *link;
     struct Object far *spell;
     int charges;
 
     always_decode = 1;
-    if (lore == 3 && OBJ_ID(obj) >= FIRST_POTION && OBJ_ID(obj) <= ITEM_BROWN_POTION && !OBJ_ISQUANT(obj)) {
-        link = &obj->ol.word;
+    if (lore == 3 && OBJ_ITEM(obj) >= FIRST_POTION && OBJ_ITEM(obj) <= ITEM_BROWN_POTION && !OBJ_ISQUANT(obj)) {
+        link = &obj->ol.link;
         if (Obj_InList(&link, 0, 6, 0, 0) != 0) {
             strcat(s, " of Poison");
             return 1;
@@ -182,7 +172,7 @@ char far do_of(struct Object far *obj, int lore, char *s)
         far_strcpy(s + strlen(s), name);
         if (!OBJ_ISQUANT(obj)) {
             charges = -1;
-            link = &obj->ol.word;
+            link = &obj->ol.link;
             spell = Obj_InList(&link, 0, MAJOR_SPEC, 2, 0);
             if (spell != 0 && (spell->id & 0x800))
                 charges = spell->qn.f.quality;
@@ -191,7 +181,7 @@ char far do_of(struct Object far *obj, int lore, char *s)
                 if (charges > 0) {
                     char num[3] = "00";
 
-                    if (OBJ_ID(obj) >= FIRST_POTION && OBJ_ID(obj) <= ITEM_BROWN_POTION)
+                    if (OBJ_ITEM(obj) >= FIRST_POTION && OBJ_ITEM(obj) <= ITEM_BROWN_POTION)
                         charges = 1;
                     num[1] = charges % 10 + '0';
                     if (charges > 9) {
@@ -218,11 +208,11 @@ void far BookLook(struct Object far *obj, int print)
 
     if (print < 1)
         return;
-    if (OBJ_ID(obj) == ITEM_MAP) {
+    if (OBJ_ITEM(obj) == ITEM_MAP) {
         game_sprint(0xA5);
         return;
     }
-    if (OBJ_ID(obj) == ITEM_BIT_OF_A_MAP)
+    if (OBJ_ITEM(obj) == ITEM_BIT_OF_A_MAP)
         return;
     if ((obj->id & ID_ENCHANT) && OBJ_MAJOR(obj) != MAJOR_RECT)
         return;
@@ -258,7 +248,7 @@ void far RectLook(struct Object far *obj, int look)
 
     base = 0x160;
     c = 0;
-    switch (obj->id & ID_INCLASS) {
+    switch OBJ_INCLASS(obj) {
     case 14:
     case 15:
         if (look >= 0)
@@ -278,7 +268,7 @@ void far RectLook(struct Object far *obj, int look)
         base += 0x10;
     case 5:
         index = OBJ_ISQUANT(obj) ? obj->ol.f.link & 0x1FF : obj->ol.f.owner;
-        if ((obj->id & ID_INCLASS) == 5) {
+        if (OBJ_INCLASS(obj) == 5) {
             ok = (fd = open("DATA\\grave.dat", O_RDONLY | O_BINARY)) != -1;
             ok &= lseek(fd, index, 0) != -1L;
             ok &= read(fd, &c, 1) == 1;
@@ -288,7 +278,7 @@ void far RectLook(struct Object far *obj, int look)
         }
         if ((grave = get_string(index | STR_WRITING)) != 0 && c != 0)
             scroll_clear(1);
-        if ((obj->id & ID_INCLASS) == 6 || c == 0) {
+        if (OBJ_INCLASS(obj) == 6 || c == 0) {
             base = base + OBJ_FLAGS(obj);
             str = get_string(base | STR_WRITING);
             scroll_print(str);
@@ -316,7 +306,7 @@ void far BonesLook(struct Object far *obj, int print)
     if (print != 0 && obj->ol.f.owner != 0 && obj->ol.f.owner != 0x28
         && (obj->ol.f.owner < 0x3C || obj->ol.f.owner == 0x3F)) {
         id = 0x1A;
-        if (OBJ_ID(obj) == ITEM_PILE_OF_BONES_C6 || obj->ol.f.link > 1)
+        if (OBJ_ITEM(obj) == ITEM_PILE_OF_BONES_C6 || obj->ol.f.link > 1)
             id++;
         game_sprint(id);
         if (obj->ol.f.owner == 0x3D)
@@ -351,10 +341,10 @@ void far CritterLook(struct Object far *obj, char *s)
     char far *attitude;
     unsigned char who;
 
-    desc = get_string(OBJ_ID(obj) | STR_OBJNAMES);
+    desc = get_string(OBJ_ITEM(obj) | STR_OBJNAMES);
     if (*desc == 0) {
         if (OBJ_GOAL(obj) == 11)
-            desc = get_string(((obj->b15 & 0x3F) + 0x115) | STR_GAME);
+            desc = get_string((OBJ_SEQ(obj) + 0x115) | STR_GAME);
         else
             desc = 0;
     }
@@ -398,17 +388,17 @@ void far SpecialLook(struct Object far *obj, int print)
     minor = OBJ_MINOR(obj);
     switch (OBJ_MAJOR(obj)) {
     case MAJOR_SPEC:
-        if (minor == 3 && (obj->id & ID_INCLASS) < 10)
+        if (minor == 3 && OBJ_INCLASS(obj) < 10)
             BookLook(obj, print);
         else if (minor == 0)
             KeyLook(obj, print);
         break;
     case MAJOR_STUFF:
-        if (minor == 0 && OBJ_ID(obj) >= ITEM_SKULL_C2 && OBJ_ID(obj) <= ITEM_PILE_OF_BONES_C6)
+        if (minor == 0 && OBJ_ITEM(obj) >= ITEM_SKULL_C2 && OBJ_ITEM(obj) <= ITEM_PILE_OF_BONES_C6)
             BonesLook(obj, print);
         break;
     case MAJOR_RECT:
-        if (minor == 0 && (obj->id & ID_INCLASS) < 8 && (obj->ol.f.owner & 1))
+        if (minor == 0 && OBJ_INCLASS(obj) < 8 && (obj->ol.f.owner & 1))
             game_sprint(0x91);
         break;
     }
@@ -424,7 +414,7 @@ int far GetObjDesc(struct Object far *obj, int lore, char *s)
     struct ComObj *com;
 
     qty = 1;
-    com = &ComObjData[OBJ_ID(obj)];
+    com = &ComObjData[OBJ_ITEM(obj)];
     q = 0;
     *s = 0;
     if (OBJ_MAJOR(obj) == MAJOR_CREATURE)

@@ -11,8 +11,6 @@
 #include "object.h"
 #include "sys.h"
 
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-
 /* This file's _BSS, DS:6B70..8173, by name: ActiveObj 145, ComObjData 355. This file loads
    ComObjData (0x1600 bytes, from comobj.dat) and finds the active object's class data. */
 struct Object far *ActiveObj;

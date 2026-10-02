@@ -95,12 +95,6 @@ extern unsigned long lastcombattime;
 unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
 unsigned char far OkEnoughMem_ovr167_463(void);
 
-#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
-
 /* The workspace may have taken EMS page 2: put back whichever mapping it should have. */
 #define RESTORE_EMS() \
     if (ws_active) { seg013_1D3C_E4(0, 0, 4); seg042_35ED_12B(); } \
@@ -527,7 +521,7 @@ void far sound_move(int x, int y, int vol, int *pan, int *volume)
 
     px = (OBJ_HOMEX(ThePlayer) << 3) + OBJ_FINEX(ThePlayer);
     py = (OBJ_HOMEY(ThePlayer) << 3) + OBJ_FINEY(ThePlayer);
-    angle = ((OBJ_HEADING(ThePlayer) << 5) + (ThePlayer->b18 & 0x1F)) << 8;
+    angle = ((OBJ_HEADING(ThePlayer) << 5) + OBJ_FINEHEAD(ThePlayer)) << 8;
     angle = (0x4000 - angle) & 0xFFFF;
     cFstSinCos(angle, &a, &b);
     ldx = x - px;

@@ -22,7 +22,7 @@ char * far misc_class_data(void)
 {
     register int subclass;
     register int minor;
-    minor = (ActiveObj->id & ID_MINOR) >> 4;
+    minor = OBJ_MINOR(ActiveObj);
     subclass = ActiveObj->id & ID_INCLASS;
     switch (minor) {
     case 0: return Containers + subclass * 3;

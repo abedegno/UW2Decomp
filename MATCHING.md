@@ -85,7 +85,18 @@ What replacing literals with names showed (the gate passed each):
 - **Constant expressions fold before code generation** where the operands are all constants: `first_punt(ERR_LOWMEM | 2)` and `return ERR_READ | 5;` give the same `push`/`mov` of the single value. This does not extend to rewriting an inverse mask as `~NAME` or splitting a literal that is combined with variables, which can change the code (see `~` constants above), so those literals are left as they are.
 - **Adding an `#include` changes nothing but the object's comment records,** provided the header declares no name the file defines.
 
-## Data
+## Struct fields and accessors
+
+What replacing cast-pointer offsets with fields, and per-file macros with shared ones, showed (the gate passed each):
+
+- **A field compiles like the cast it replaces** when the address is the same and is reached the same way: `*(unsigned far *)((unsigned char far *)obj + 0x16)` is `obj->home`, `((unsigned char *)&CN1)[0x17]` is `CN1.flags`, `(char far *)SCD + 0x102` is `&SCD->rows`, and an element of a struct array is the cast arithmetic it replaces (`&Creature[i]` for `(char *)Creature + i * 0x30`, `&desc[i]` of 6-byte records for `desc + i * 6` on a char pointer, `Weapons[i].skill` for `Weapons[i * 8 + 6]` on a byte array).
+- **Not when the scaling differs:** `((unsigned *)combos)[i * 3 + 2]` scales after the add, `(i * 3 + 2) * 2`, where `combos[i].output` folds the field's offset into the displacement; ovr102 keeps the cast.
+- **Not when the base pointer differs:** Map_Load keeps a pointer at the level block's magic word and reads the counts before it at `[bx-4]`; fields from the block's start would be `[bx+7C02h]`. It keeps that pointer (`end = &LEVEL->magic`, `end[-2]`). cuts_process_anm computes the descriptor table from `n0x` although `hdr` holds the same address, so it writes `((struct AnmHdr far *)n0x)->lps`.
+- **Bitfields pack as one stream of bits** with byte granularity: struct Player's `terrain:8` after `fps:3` lies at bits 3-10 of the word at 0x303 and compiles like ovr142's former cast to a struct at 0x303; `sleepbits` and `in_void` read like its cast to a word at 0x62, and `lefty` like a 16-bit view at 0x65.
+- **Setter macros fold constants:** `x = x & 0xF00F | ((0) & 0xFF) << 4` compiles like `x = x & 0xF00F` and like `x &= 0xF00F`, so init_this_critter is written with the shared setters. Masking the argument (`((v) & 7) << 10` against `(v) << 10`) costs an `and` only when the argument is a variable not already masked; `((v) & 7)` of `x & 7` merges into one `and`, unless the macro casts first (`(unsigned)(v) & 7`), which keeps both: hence `SET_FINEX_UNSIGNED`. A shift by 0 always costs `shr ax,0`, hence `OBJ_INMAJOR_NOSHIFT`.
+- **Pointer types of the same address are free:** retyping `unsigned far *` link variables to `union Link far *` (and `&tile->objects.word` to `&tile->objects`, `*head` to `head->word`, a local bitfield struct cast to `head->f.index`) changed no byte; moving seg029's prototypes into `object.h` first drew 234 "Suspicious pointer conversion" warnings at the callers, and the retyping cleared them all; so did returning `unsigned char` rather than `char` from a function that returns a constant (clear_owner, passed to Obj_Check).
+- **Two headers that include each other** can share a struct that needs both complete only from a third header that each includes at its end (`level.h`).
+
 
 - A file's `_DATA` holds its initialised data in definition order, including the initialisers of local arrays (emitted where the function is), and then the string-literal pool in order of first use. `verify.py` compares it with the EXE, so data the code reads by a fixed DS address may belong to the file itself: look at the bytes around it.
 - Static data doesn't appear in the FM Towns symbol table, so an unnamed table inside a file's data range was probably `static`.

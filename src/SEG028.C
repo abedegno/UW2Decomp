@@ -13,21 +13,6 @@
 #include "object.h"
 #include "uw2.h"
 
-#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_Z(o)        ((o)->pos & POS_Z)
-#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
-#define OBJ_B15_7(o)    (((o)->b15 & 0x80) >> 7)
-
-#define SET_Z(o, v)       ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
-#define SET_FINEX(o, v)   ((o)->pos = (o)->pos & 0x1FFF | ((unsigned)(v) & 7) << 13)
-#define SET_FINEY(o, v)   ((o)->pos = (o)->pos & 0xE3FF | (v) << 10)
-#define SET_HOMEX(o, v)   ((o)->home = (o)->home & 0x3FF | ((v) & 0x3F) << 10)
-#define SET_HOMEY(o, v)   ((o)->home = (o)->home & 0xFC0F | ((v) & 0x3F) << 4)
-
 /* A tile's terrain word: type 0-3, height 4-7, the floor texture's terrain bits 6-7
    in 8-9. */
 #define TILE_TERR(t)    (t)->type + ((t)->height << 4) + ((TxmTerr[(t)->floor] & TERR_CLASS) << 2)
@@ -45,12 +30,6 @@ extern int TxmTerr[];
 extern struct Object far *objdata;
 
 /* Elsewhere in the game. */
-struct Object far * far Obj_IntTMem(int index);
-struct Object far * far Obj_PtrTMem(union Link far *link);
-unsigned char far IsMobElem(struct Object far *obj);
-void far Obj_Add(union Link far *head, struct Object far *obj);
-void far Obj_AddEnd(union Link far *head, struct Object far *obj);
-void far Obj_FreeLinkChain(union Link far *head, struct Object far *obj);
 struct Object far * far obj_deal(struct Object far *obj, int x, int y, int a);
 
 /* Uninitialised data, DS:251A..2587. Turbo C lays _BSS out by a hash of the names, ties
@@ -584,7 +563,7 @@ unsigned char far put_at(int x, int y, int z, struct Object far *obj, int range,
     if (drop_around_place(obj, x, y, z, range))
         return 1;
     if (nocull || !Obj_Elem_Fate(10, obj)) {
-        SET_FINEX(obj, x & 7);
+        SET_FINEX_UNSIGNED(obj, x & 7);
         SET_FINEY(obj, y & 7);
         Obj_Add(&Map_GetAddr(x >> 3, y >> 3)->objects, obj);
         return 1;
@@ -622,7 +601,7 @@ unsigned char far drop_around_place(struct Object far *obj, int x, int y, int z,
         zz = z;
         if (can_place(OBJ_ITEM(obj), Obj_MemTPtr(obj), tx, ty, zz, 1, 0)) {
             tile = Map_GetAddr(tx >> 3, ty >> 3);
-            SET_FINEX(obj, tx & 7);
+            SET_FINEX_UNSIGNED(obj, tx & 7);
             SET_FINEY(obj, ty & 7);
             SET_Z(obj, zz);
             Obj_AddEnd(&tile->objects, obj);

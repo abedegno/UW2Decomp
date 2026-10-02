@@ -20,14 +20,6 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_ID(o)       ((o)->id & ID_ITEM)
-#define OBJ_TYPE(o)     ((o)->id & ID_INCLASS)
-#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
-#define DOOR_STATE(o)   (((o)->id & ID_FLAGS) >> 9)
-#define OBJ_OWNER(o)    ((o)->ol.f.owner)
-#define TILE_X(o)       (((o)->home & HOME_X) >> 10)
-#define TILE_Y(o)       (((o)->home & HOME_Y) >> 4)
-
 /* One map note: its text and where it sits on the map, 0x36 bytes. */
 struct ATM {
     char text[0x32];
@@ -50,7 +42,6 @@ int far do_keyboard_input(int n);
 unsigned far get_arc(int arc, int blk, char far *buf);
 unsigned char far put_arc(int arc, int blk, char far *buf, unsigned len);
 void far close_arc(int arc);
-struct Object far * far Obj_PtrTMem(unsigned far *link);
 void far grfx_clear(void);
 void far grfx_quikpal(int pal);
 void far rectangle(int x0, int y0, int x1, int y1);
@@ -130,7 +121,7 @@ void far automap_area(int x0, int y0, int x1, int y1, int *arg,
     int y;
     unsigned char terr;
     struct Tile far *tile;
-    unsigned far *link;
+    union Link far *link;
     struct Object far *obj;
     register int x;
     register int t;
@@ -150,12 +141,12 @@ void far automap_area(int x0, int y0, int x1, int y1, int *arg,
             tile = Map_GetAddr(x, y);
             terr = tile->type;
             terr |= TxmTerr[tile->floor] & TERR_CLASS;
-            for (link = &tile->objects.word; (obj = Obj_PtrTMem(link)) != 0; link = &obj->qn.word) {
-                if (OBJ_ID(obj) == ITEM_BRIDGE && DOOR_STATE(obj) < 2)
+            for (link = &tile->objects; (obj = Obj_PtrTMem(link)) != 0; link = &obj->qn.link) {
+                if (OBJ_ITEM(obj) == ITEM_BRIDGE && OBJ_FLAGS(obj) < 2)
                     terr = terr;
                 if (OBJ_CLASS(obj) == CLASS_DOOR)
                     terr = terr;
-                if (OBJ_TYPE(obj) == 0xE || OBJ_TYPE(obj) == 0xF) {
+                if (OBJ_INCLASS(obj) == 0xE || OBJ_INCLASS(obj) == 0xF) {
                     t = TxmTerr[OBJ_OWNER(obj)] & 7;
                     if (t == 3)
                         terr = terr;
@@ -737,8 +728,8 @@ void far ShowAutoMapLevel(int lev)
         ShowDungeonMap();
         show_gem_parts(lev);
         if (lev == PlayerLevel && player->automap) {
-            px = (TILE_X(ThePlayer) - 1) * 3 + 10 - 1;
-            py = (TILE_Y(ThePlayer) - 1) * 3 + 12;
+            px = (OBJ_HOMEX(ThePlayer) - 1) * 3 + 10 - 1;
+            py = (OBJ_HOMEY(ThePlayer) - 1) * 3 + 12;
             Transparency = 1;
             pic_to_screen(0x103F, px, py, 5, 8);
             Transparency = 0;

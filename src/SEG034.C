@@ -8,8 +8,6 @@
 #include "sys.h"
 #include "view3d.h"
 
-struct ObjectIndex { unsigned low:6; unsigned index:10; };
-
 /* This file's _BSS, DS:2F9C..33C5 (seg033's ActDoors ends at 2F9B; seg035's starts at 33C6),
    laid out by name (tools/bssorder.py): holdmid 112, holdtmp 144, locsqmod 228,
    sortlist 267, sortdata 275, mptrmod 421, sd_xmod and sd_ymod 427, dirval 492,
@@ -36,9 +34,6 @@ extern signed char quad;
 extern unsigned char PickUp;
 extern unsigned char far smooth_base;
 
-void far *far Obj_IntTMem(unsigned index);
-struct Object far *far Obj_PtrTMem(struct Object far *object);
-unsigned char far IsMobElem(struct Object far *object);
 void far memset(void near *dest, int value, unsigned count);
 void far memcpy(void near *dest, void near *src, unsigned count);
 
@@ -133,7 +128,7 @@ void far z_part(int index, int *point, int count)
     int z;
     object = Obj_IntTMem(objptrs[index]);
     z = object->pos & POS_Z;
-    if ((object->id & ID_ITEM) == ITEM_TABLE)
+    if (OBJ_ITEM(object) == ITEM_TABLE)
         z = z + ComObjData[object->id & ID_ITEM].height;
     do_partition(z * 8 > cPlayer->z, point, index, count, z, 0);
 }
@@ -158,10 +153,10 @@ void far door_part(int index, int *point, int count)
 
 void far set_sds(signed char *data, struct Object far *object)
 {
-    data[1] = trans_pos_x[quad * 16 + ((object->pos & POS_XFINE) >> 13) * 2]
-            + trans_pos_x[((quad + 1) & 3) * 16 + ((object->pos & POS_YFINE) >> 10) * 2];
-    data[2] = trans_pos_x[quad * 16 + ((object->pos & POS_XFINE) >> 13) * 2 + 1]
-            + trans_pos_x[((quad + 1) & 3) * 16 + ((object->pos & POS_YFINE) >> 10) * 2 + 1];
+    data[1] = trans_pos_x[quad * 16 + OBJ_FINEX(object) * 2]
+            + trans_pos_x[((quad + 1) & 3) * 16 + OBJ_FINEY(object) * 2];
+    data[2] = trans_pos_x[quad * 16 + OBJ_FINEX(object) * 2 + 1]
+            + trans_pos_x[((quad + 1) & 3) * 16 + OBJ_FINEY(object) * 2 + 1];
     data[3] = object->pos & POS_Z;
 }
 
@@ -180,7 +175,7 @@ void far clear_objsort(void)
     if (holdtmp[0] > 0) do_objsort(0L);
 }
 
-void far do_objsort(struct Object far *object)
+void far do_objsort(union Link far *link)
 {
     register int word;
     struct Object far *next;
@@ -216,7 +211,7 @@ void far do_objsort(struct Object far *object)
         refugees[loopx][0] = 0;
     holdtmp[0] = 0;
 
-    next = Obj_PtrTMem(object);
+    next = Obj_PtrTMem(link);
     while (next && visited < 60) {
         register signed char *data;
         candidate = held = 0;
@@ -237,7 +232,7 @@ void far do_objsort(struct Object far *object)
             }
             if (word) {
                 candidate = 1;
-                word |= (object->id >> 6) & 0x3ff;
+                word |= (link->word >> 6) & 0x3ff;
                 if ((item & ID_MAJOR) == FIRST_ANIMOBJ) word |= 0x8000;
                 if ((word & 0x5000) == 0x5000) dest = holdtmp;
                 else if (word & 0x4000) dest = refugees[loopx];
@@ -259,11 +254,11 @@ void far do_objsort(struct Object far *object)
             if (held && item != ITEM_TABLE) data[0] -= radius * 2;
             if ((item & ID_MAJOR) == FIRST_ANIMOBJ) data[0]--;
             else if ((item & 0x1fe) == ITEM_TMAP_C) data[0] += 0x20;
-            objptrs[n] = ((struct ObjectIndex far *)object)->index;
+            objptrs[n] = link->f.index;
             if (n < 60) n++;
         }
-        object = (struct Object far *)((char far *)next + 4);
-        next = Obj_PtrTMem(object);
+        link = &next->qn.link;
+        next = Obj_PtrTMem(link);
         visited++;
     }
     if (partition && n > 1) {
@@ -282,10 +277,10 @@ void far do_objsort(struct Object far *object)
         next = Obj_IntTMem(objptrs[word]);
         objxloc = ((loopx - 16) << 8) + ((int)sortdata[word][1] << 5) + 16;
         objzloc = (loopy << 8) + ((int)sortdata[word][2] << 5) + 16;
-        if (((next->id & ID_MAJOR) >> 6) == MAJOR_CREATURE || !IsMobElem(next))
-            objyloc = (next->pos & POS_Z) << 3;
+        if (OBJ_MAJOR(next) == MAJOR_CREATURE || !IsMobElem(next))
+            objyloc = OBJ_Z(next) << 3;
         else
-            objyloc = *(int far *)((char far *)next + 15);
+            objyloc = next->b0F;
         if (PickUp) {
             mptrmod = (sortdata[word][2] / 8) * sd_ymod;
             mptrmod += ((sortdata[word][1] + 64) / 8 - 8) * sd_xmod;

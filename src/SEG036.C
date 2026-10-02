@@ -9,8 +9,6 @@
 
 extern struct Tile far *mapdata;
 
-struct Object far * far Obj_Alloc(char mobile);
-
 struct Tile far * far Map_GetAddr(int x, int y)
 {
     return ((x & ~0x3F) + (y & ~0x3F)) == 0 ? mapdata + (x + (y << 6)) : 0L;
@@ -45,7 +43,7 @@ struct Object far * far CreateObj(int item, char mobile)
         obj->id = obj->id & 0x7FFF;
         obj->ol.f.link = 0;
     }
-    if (((obj->id & ID_MAJOR) >> 6) == MAJOR_CREATURE)
+    if (OBJ_MAJOR(obj) == MAJOR_CREATURE)
         init_this_critter(obj);
     return obj;
 }

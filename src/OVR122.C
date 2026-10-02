@@ -24,10 +24,6 @@
 #include "ui.h"
 #include "uw2.h"
 
-#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
-#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
-
 extern union Link Inventory[];
 
 /* FM Towns keeps these as statics after BagSaveHandles, so their names are not known; these
@@ -38,16 +34,12 @@ static int saveNum;                     /* the number of saved objects */
 static void far *saveBuf;               /* the workspace */
 static char cursorSaved;                /* the copy holds a cursor object */
 
-struct Object far * far Obj_PtrTMem(unsigned far *link);
-void far Obj_FreeChain(unsigned far *head);
-struct Object far * far Obj_Alloc(char mobile);
-char far Obj_Rem(unsigned far *head, struct Object far *obj);
 unsigned far get_workspace(void);
 
 void far Punt_player_inv(void)
 {
     FixBagArea();
-    FreePlayerInv(&ThePlayer->ol.word);
+    FreePlayerInv(&ThePlayer->ol.link);
     ClearInventory();
 }
 
@@ -68,13 +60,13 @@ void far makePlayerInvCopy(void far *ws)
     saveNum = 0;
     for (i = 0; i <= 0x12; i++)
         invSlots[i].f.index = invSlots[i].f.low = 0;
-    InvSaveNexts(&ThePlayer->ol.word, &p->ol.word);
+    InvSaveNexts(&ThePlayer->ol.link, &p->ol.word);
     if (GameInputMode == 1 || (GameInputMode == 0 && CursorObjPtr != 0)) {
         *cursor = *(struct StaticObj far *)CursorObjPtr;
         if (!OBJ_ISQUANT(CursorObjPtr))
-            InvSaveNexts(&CursorObjPtr->ol.word, &cursor->ol.word);
+            InvSaveNexts(&CursorObjPtr->ol.link, &cursor->ol.word);
         chain.f.index = Obj_MemTPtr(CursorObjPtr);
-        Obj_FreeChain(&chain.word);
+        Obj_FreeChain(&chain);
         CursorObjPtr = 0;
         cursorSaved = 1;
     } else
@@ -111,7 +103,7 @@ char far SavePlayerInv(char *name)
 }
 
 /* Copies the list at src, and every list inside it, to the save area, pointing dst at it. */
-void far InvSaveNexts(unsigned far *src, unsigned far *dst)
+void far InvSaveNexts(union Link far *src, unsigned far *dst)
 {
     struct Object far *obj;
     struct Object far *copy;
@@ -123,12 +115,12 @@ void far InvSaveNexts(unsigned far *src, unsigned far *dst)
         *(struct StaticObj far *)copy = *(struct StaticObj far *)obj;
         ((union Link far *)dst)->f.index = saveNum;
         replaceInInv((union Link far *)src, (union Link far *)dst);
-        src = &obj->qn.word;
+        src = &obj->qn.link;
         dst = &copy->qn.word;
         contents = &obj->ol.link;
         copied = &copy->ol.link;
         if (!OBJ_ISQUANT(obj) && contents->f.index != 0)
-            InvSaveNexts(&contents->word, &copied->word);
+            InvSaveNexts(contents, &copied->word);
     }
 }
 
@@ -166,7 +158,7 @@ void far putInInv(union Link far *mem, union Link far *saved)
 }
 
 /* Restores the saved list at src, and every list inside it, pointing dst at it. */
-void far InvRestoreNexts(unsigned far *dst, unsigned far *src)
+void far InvRestoreNexts(unsigned far *dst, union Link far *src)
 {
     struct Object far *obj;
     struct Object far *saved;
@@ -179,15 +171,15 @@ void far InvRestoreNexts(unsigned far *dst, unsigned far *src)
         ((union Link far *)dst)->f.index = Obj_MemTPtr(obj);
         putInInv((union Link far *)dst, (union Link far *)src);
         dst = &obj->qn.word;
-        src = &saved->qn.word;
+        src = &saved->qn.link;
         contents = &obj->ol.link;
         copied = &saved->ol.link;
         if (!OBJ_ISQUANT(saved) && copied->f.index != 0)
-            InvRestoreNexts(&contents->word, &copied->word);
+            InvRestoreNexts(&contents->word, copied);
     }
 }
 
-void far FreePlayerInv(unsigned far *head)
+void far FreePlayerInv(union Link far *head)
 {
     struct Object far *obj;
     union Link far *link;
@@ -197,10 +189,10 @@ void far FreePlayerInv(unsigned far *head)
         return;
     link = &obj->ol.link;
     if (!OBJ_ISQUANT(obj) && link->f.index != 0)
-        FreePlayerInv(&obj->ol.word);
+        FreePlayerInv(&obj->ol.link);
     link = &obj->qn.link;
     if (link->f.index != 0)
-        FreePlayerInv(&link->word);
+        FreePlayerInv(link);
     if (Obj_Rem(head, obj))
         Obj_Free(obj);
 }
@@ -215,12 +207,12 @@ void far getPlayerInvCopy(void far *ws)
     invSlots = (union Link far *)(cursor + 1);
     saveObjs = (struct StaticObj far *)(invSlots + 0x1C);
     *ThePlayer = *p;
-    InvRestoreNexts(&ThePlayer->ol.word, &p->ol.word);
+    InvRestoreNexts(&ThePlayer->ol.word, &p->ol.link);
     if (cursorSaved) {
         CursorObjPtr = Obj_Alloc(0);
         *(struct StaticObj far *)CursorObjPtr = *cursor;
         if (!OBJ_ISQUANT(cursor))
-            InvRestoreNexts(&CursorObjPtr->ol.word, &cursor->ol.word);
+            InvRestoreNexts(&CursorObjPtr->ol.word, &cursor->ol.link);
     }
 }
 

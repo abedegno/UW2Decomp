@@ -25,19 +25,20 @@ void far * far seg009_7(int icon)
 
 void far seg009_73(int icon, int x, int y, int height, int width)
 {
-    unsigned char far *raw;
+    struct Bitmap far *raw;
     void far *picture;
     if (icon >= first_vram) {
         DRAW_RELATED_seg017_2179_320(grs_off[icon], &width, &height);
         seg003_0272_5025(grs_off[icon] + 1, x, y, width, height, 0, 0);
     } else {
         raw = seg009_7(icon);
-        width = raw[1];
-        height = raw[2];
-        if (raw[0] != 4)
-            picture = cFrmtoRaw(raw + 4, Palettes + ((unsigned)raw[3] << 4), raw[0]);
+        width = raw->width;
+        height = raw->height;
+        if (raw->type != BM_8BIT)
+            picture = cFrmtoRaw(&raw->u.b4.size, Palettes + ((unsigned)raw->u.b4.auxpal << 4),
+                                raw->type);
         else
-            picture = raw + 5;
+            picture = raw->u.b8.data;
         show(x, y, picture, height, width, 0, 0);
     }
 }
@@ -46,25 +47,25 @@ void far seg009_73(int icon, int x, int y, int height, int width)
 void far * far grs_unpack(void far *data)
 {
     void far *result;
-    if (((unsigned char far *)data)[0] != 4)
-        result = cFrmtoRaw((unsigned char far *)data + 4,
-                   Palettes + ((unsigned)((unsigned char far *)data)[3] << 4),
-                   ((unsigned char far *)data)[0]);
+    if (((struct Bitmap far *)data)->type != BM_8BIT)
+        result = cFrmtoRaw(&((struct Bitmap far *)data)->u.b4.size,
+                   Palettes + ((unsigned)((struct Bitmap far *)data)->u.b4.auxpal << 4),
+                   ((struct Bitmap far *)data)->type);
     else
-        result = (unsigned char far *)data + 5;
+        result = ((struct Bitmap far *)data)->u.b8.data;
     return result;
 }
 
 /* FM Towns grs_fbplot_ decodes the icon, then sends it to fbshow_. */
 void far grs_fbplot(int icon, int x, int y)
 {
-    unsigned char far *p = seg009_7(icon);
-    int width = p[1], height = p[2];
+    struct Bitmap far *p = seg009_7(icon);
+    int width = p->width, height = p->height;
     void far *picture;
-    if (p[0] != 4)
-        picture = cFrmtoRaw(p + 4, Palettes + ((unsigned)p[3] << 4), p[0]);
+    if (p->type != BM_8BIT)
+        picture = cFrmtoRaw(&p->u.b4.size, Palettes + ((unsigned)p->u.b4.auxpal << 4), p->type);
     else
-        picture = p + 5;
+        picture = p->u.b8.data;
     fbshow(picture, x, y, width, height);
 }
 

@@ -83,7 +83,7 @@ unsigned char far do_migrations(void)
         if (result) return result;
     }
     for (i = 0; i < SCD_dseg_67d6_8634->migrations; i++) {
-        result = Sched_Insert((struct SCDRow far *)((unsigned char far *)&SCD_dseg_67d6_8634->migrations + i * 16 + 2), 0);
+        result = Sched_Insert(&SCD_dseg_67d6_8634->migrationRecord[i], 0);
         if (result) return result;
     }
     SCD_dseg_67d6_8634->migrations = 0;
@@ -100,7 +100,7 @@ unsigned char far Sched_Load(unsigned char block)
 {
     register int ok = open_arc(5, HomeDir);
     if (ok) {
-        get_arc(5, block, (char far *)SCD_dseg_67d6_8634 + 0x102);
+        get_arc(5, block, (char far *)&SCD_dseg_67d6_8634->rows);
         close_arc(5);
         SCD_dseg_67d6_8634->block = block;
         scdBlockHasBeenModified_dseg_67d6_1A7E = 0;
@@ -115,7 +115,7 @@ unsigned char far Sched_Should_Save(unsigned char block, unsigned char save)
     if (!save) return 0;
     ok = open_arc(5, HomeDir);
     if (ok) {
-        ok &= put_arc(5, block, (char far *)SCD_dseg_67d6_8634 + 0x102,
+        ok &= put_arc(5, block, (char far *)&SCD_dseg_67d6_8634->rows,
                       (SCD_dseg_67d6_8634->rows << 4) + 0x144);
         close_arc(5);
         if (ok) {

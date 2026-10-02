@@ -14,30 +14,6 @@
 #include "player.h"
 #include "ui.h"
 
-#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
-#define OBJ_MINOR4(o)   ((o)->id & ID_INCLASS)
-#define OBJ_Z(o)        ((o)->pos & POS_Z)
-#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
-#define ITEM_CLASS(i)   (((i) & ID_CLASS) >> 4)
-#define OBJ_TERRAIN(o)  (((o)->b0A & 0x70) >> 4)
-
-#define SET_Z(o, v)       ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
-#define SET_HEADING(o, v) ((o)->pos = (o)->pos & 0xFC7F | ((v) & 7) << 7)
-#define SET_FINEX(o, v)   ((o)->pos = (o)->pos & 0x1FFF | ((unsigned)(v) & 7) << 13)
-#define SET_FINEY(o, v)   ((o)->pos = (o)->pos & 0xE3FF | (v) << 10)
-#define SET_HOMEX(o, v)   ((o)->home = (o)->home & 0x3FF | ((v) & 0x3F) << 10)
-#define SET_HOMEY(o, v)   ((o)->home = (o)->home & 0xFC0F | ((v) & 0x3F) << 4)
-#define SET_SPEED(o, v)   ((o)->b13 = (o)->b13 & 0x80 | ((v) & 0x7F) << 0)
-#define SET_GRAVITY(o, v) ((o)->b13 = (o)->b13 & 0x7F | ((v) & 1) << 7)
-#define SET_PITCH(o, v)   ((o)->b14 = (o)->b14 & 7 | ((v) & 0x1F) << 3)
-#define SET_TERRAIN(o, v) ((o)->b0A = (o)->b0A & 0x8F | ((v) & 7) << 4)
-
 extern struct Object far *objdata;
 extern struct MissileInfo Missile[];
 extern unsigned char curBin;
@@ -55,20 +31,14 @@ static unsigned char deal_blocked;          /* DS:25C2 */
 
 /* Elsewhere in the game. */
 int far rand(void);
-struct Object far * far Obj_IntTMem(int index);
-struct Object far * far Obj_PtrTMem(unsigned far *link);
 void far missile_thwack(int who, struct Object far *proj, struct Object far *hit,
                         int x, int y, int damage, char type);
 void far UseObj(struct Object far *who, struct Object far *obj, int how);
 int far UseTrigger(struct Object far *who, void far *a, struct Object far *trig, int b);
-char far Obj_Rem(unsigned far *head, struct Object far *obj);
-void far Obj_Add(unsigned far *head, struct Object far *obj);
 void far check_pplate(struct Object far *obj, struct Tile far *tile, int z, int how);
 void far play_effect_on_mobile(int fx, struct Object far *obj, int vol);
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
                      unsigned char damage, unsigned char type);
-struct Object far * far Obj_Alloc(int mobile);
-struct Object far * far Obj_Punt(unsigned far *head, struct Object far *obj, int a);
 unsigned char far decode_obj_spell(struct Object far *obj, int *major, int *minor, unsigned char *flag);
 void far put_effect(struct Object far *obj, int type, int size, int a, int b, int x, int y);
 void far TerrainCheck(char radius);
@@ -171,7 +141,7 @@ int far do_objhit(int ci, int index)
         item = OBJ_ITEM(other);
         touch = ComObjData[item].touch;
         if (oCollisions[ci].link.f.index < NUM_MOBILE && index < NUM_MOBILE) {
-            if (my_item >> 6 != MAJOR_CREATURE && (unsigned char)((obj->b15 & 0x80) >> 7)
+            if (my_item >> 6 != MAJOR_CREATURE && (unsigned char)(OBJ_B15_7(obj))
                 && my_item != ITEM_FIREBALL_1D && my_item != ITEM_RESILIENT_SPHERE_13F)
                 return 2;
             if (my_item >> 6 != MAJOR_CREATURE)
@@ -225,7 +195,7 @@ void far get_phys_data(struct Object far *obj, struct Phys *pp)
         pp->y = pp->y + (OBJ_HOMEY(obj) << 3);
         pp->heading = obj->heading << 8;
         pp->terrain = 1 << OBJ_TERRAIN(obj);
-        pp->vel[2] = (((obj->b14 & 0xF8) >> 3) - 0x10) << 6;
+        pp->vel[2] = (OBJ_PITCH(obj) - 0x10) << 6;
         pp->acc[2] = ((obj->b13 & 0x80) >> 7) * -4;
         pp->hp = obj->hp;
         if (OBJ_MAJOR(obj) != MAJOR_CREATURE) {
@@ -239,7 +209,7 @@ void far get_phys_data(struct Object far *obj, struct Phys *pp)
             if (pp->light * 2 + 2 >= pp->speed)
                 pp->speed = 0;
             else
-                pp->speed = (obj->b13 & 0x7F) * ((pp->light << 2) + 0x29);
+                pp->speed = OBJ_SPEED(obj) * ((pp->light << 2) + 0x29);
         } else {
             pp->speed *= 0x2F;
             if (OBJ_MAJOR(obj) == MAJOR_CREATURE)
@@ -270,22 +240,22 @@ unsigned char far set_phys_data(struct Object far *obj, struct Phys *pp)
         ymoved = 1;
     if (xmoved || ymoved) {
         struct Tile far *tile;
-        unsigned far *head;
+        union Link far *head;
 
         tile = Map_GetAddr(XP, YP);
-        head = &tile->objects.word;
+        head = &tile->objects;
         Obj_Rem(head, obj);
         check_pplate(obj, tile, OBJ_Z(obj), 0xE);
         XP = pp->x >> 8;
         YP = pp->y >> 8;
         tile = Map_GetAddr(XP, YP);
-        head = &tile->objects.word;
+        head = &tile->objects;
         Obj_Add(head, obj);
         SET_Z(obj, pp->z >> 3);
         check_pplate(obj, tile, OBJ_Z(obj), 6);
     } else if (OBJ_Z(obj) != pp->z >> 3)
         hgt_change(obj, Map_GetAddr(XP, YP), pp->z >> 3);
-    SET_FINEX(obj, pp->x >> 5 & 7);
+    SET_FINEX_UNSIGNED(obj, pp->x >> 5 & 7);
     SET_FINEY(obj, pp->y >> 5 & 7);
     if (obj < objdata)
         obj->hp = pp->hp;
@@ -352,10 +322,10 @@ struct Object far * far static_to_mob(struct Object far *obj)
 {
     struct Object far *mob;
     struct Tile far *tile;
-    unsigned far *head;
+    union Link far *head;
 
     tile = Map_GetAddr(XP, YP);
-    head = &tile->objects.word;
+    head = &tile->objects;
     if ((mob = Obj_Alloc(1)) != 0) {
         *(struct StaticObj far *)mob = *(struct StaticObj far *)obj;
         mob_init(mob, XP, YP);
@@ -413,7 +383,7 @@ struct Object far * far mob_to_static(struct Object far *obj)
 {
     struct Object far *st;
     struct Tile far *tile;
-    unsigned far *head;
+    union Link far *head;
     char keep = 1;
     char who;
     unsigned fate;
@@ -427,14 +397,14 @@ struct Object far * far mob_to_static(struct Object far *obj)
     if (fate > 0 && fate <= 8 && (rand() & 7) < fate && Obj_Elem_Fate(10, obj))
         keep = 0;
     tile = Map_GetAddr(XP, YP);
-    head = &tile->objects.word;
+    head = &tile->objects;
     if (keep && (st = Obj_Alloc(0)) != 0) {
         *(struct StaticObj far *)st = *(struct StaticObj far *)obj;
         obj->ol.f.link = 0;
         if (OBJ_MAJOR(st) == MAJOR_ANIMOBJ)
             Change_AnimPtr(st, obj);
-        else if (OBJ_CLASS(st) == CLASS_LIGHT && OBJ_MINOR4(st) >= 4 && OBJ_MINOR4(st) <= 6)
-            st->id = st->id & 0xFFF0 | OBJ_MINOR4(st) - 4 & 0xF;
+        else if (OBJ_CLASS(st) == CLASS_LIGHT && OBJ_INCLASS(st) >= 4 && OBJ_INCLASS(st) <= 6)
+            st->id = st->id & 0xFFF0 | OBJ_INCLASS(st) - 4 & 0xF;
         st->qn.f.quality = obj->hp;
         if (OBJ_MAJOR(st) != MAJOR_RECT && OBJ_MAJOR(st) != MAJOR_TRAP && ComObjData[OBJ_ITEM(st)].render != 2)
             SET_HEADING(st, obj->whoami);
@@ -510,7 +480,7 @@ again:
         for (curP->first--; curP->first >= 0; curP->first--) {
             if (oCollisions[curP->first].top == curP->z) {
                 MP.hit = curP->first;
-                MP.item = OBJ_ITEM(Obj_PtrTMem(&oCollisions[MP.hit].link.word));
+                MP.item = OBJ_ITEM(Obj_PtrTMem(&oCollisions[MP.hit].link));
                 if (ComObjData[MP.item].solid == 1) {
                     if (oCollisions[MP.hit].link.f.low & 0x10) {
                         deal_blocked = 1;
@@ -556,6 +526,6 @@ again:
         }
     }
     if (destroy)
-        return Obj_Punt(&Map_GetAddr(x, y)->objects.word, obj, 0);
+        return Obj_Punt(&Map_GetAddr(x, y)->objects, obj, 0);
     return obj;
 }

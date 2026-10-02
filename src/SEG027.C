@@ -15,27 +15,6 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
-#define OBJ_MINOR4(o)   ((o)->id & ID_INCLASS)
-#define OBJ_FLAGS(o)    (((o)->id & ID_FLAGS) >> 9)
-#define OBJ_BIT13(o)    (((o)->id & ID_DOORDIR) >> 13)
-#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
-#define OBJ_Z(o)        ((o)->pos & POS_Z)
-#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
-
-#define SET_ISQUANT(o, v) ((o)->id = (o)->id & 0x7FFF | ((v) & 1) << 15)
-#define SET_FLAGS(o, v)   ((o)->id = (o)->id & 0xE1FF | ((v) & 0xF) << 9)
-#define SET_BIT13(o, v)   ((o)->id = (o)->id & 0xDFFF | ((v) & 1) << 13)
-#define SET_Z(o, v)       ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
-#define SET_FINEX(o, v)   ((o)->pos = (o)->pos & 0x1FFF | ((unsigned)(v) & 7) << 13)
-#define SET_FINEY(o, v)   ((o)->pos = (o)->pos & 0xE3FF | (v) << 10)
-
 extern struct Object far *objdata;
 extern struct Inplist near *inplist;
 extern struct MissileInfo Missile[];
@@ -61,11 +40,9 @@ int missile_trx, missile_try;           /* DS:2516, 2518 */
 char far play_effect_here(int fx, int vol, int c);
 void far play_effect_on_mobile(int fx, struct Object far *obj, int vol);
 unsigned char far can_place(int item, int a, int x, int y, int z, int b, char dist);
-void far Obj_AddEnd(unsigned far *list, struct Object far *obj);
 struct Object far * far obj_deal(struct Object far *obj, int x, int y, int a);
 void far check_pplate(struct Object far *obj, struct Tile far *tile, int z, int how);
 struct Object far * far CreateObj(int id, int b);
-void far Obj_Add(unsigned far *list, struct Object far *obj);
 void far ObjectCheck(int a, int b);
 void far TerrainCheck(int a);
 
@@ -122,7 +99,7 @@ void far player_fire(int weapon)
             SET_FLAGS(proj, OBJ_FLAGS(ammo_obj));
             proj->hp = ammo_obj->qn.f.quality;
             proj->ol.f.owner = ammo_obj->ol.f.owner;
-            SET_BIT13(proj, OBJ_BIT13(ammo_obj));
+            SET_DOORDIR(proj, OBJ_DOORDIR(ammo_obj));
             if (OBJ_MAJOR(ammo_obj) != MAJOR_RECT && ComObjData[OBJ_ITEM(ammo_obj)].render != 2)
                 proj->whoami = OBJ_HEADING(ammo_obj);
             Obj_Free(ammo_obj);
@@ -216,7 +193,7 @@ char far ReturnObject(struct Object far *obj, char message)
             SET_FLAGS(thrown, OBJ_FLAGS(obj));
             thrown->hp = obj->qn.f.quality;
             thrown->ol.f.owner = obj->ol.f.owner;
-            SET_BIT13(thrown, OBJ_BIT13(obj));
+            SET_DOORDIR(thrown, OBJ_DOORDIR(obj));
             if (OBJ_MAJOR(obj) != MAJOR_RECT && ComObjData[OBJ_ITEM(obj)].render != 2)
                 thrown->whoami = OBJ_HEADING(obj);
             Obj_Free(obj);
@@ -229,21 +206,21 @@ char far ReturnObject(struct Object far *obj, char message)
         y = (missile_y << 3) + OBJ_FINEY(ThePlayer);
         SET_Z(obj, OBJ_Z(ThePlayer));
         dist = ComObjData[OBJ_ITEM(ThePlayer)].radius + ComObjData[OBJ_ITEM(obj)].radius + 1;
-        move_along((OBJ_HEADING(ThePlayer) << 5) + (ThePlayer->b18 & 0x1F), dist, &x, &y);
+        move_along((OBJ_HEADING(ThePlayer) << 5) + OBJ_FINEHEAD(ThePlayer), dist, &x, &y);
         cannot = !can_place(OBJ_ITEM(obj), 0, x, y, OBJ_Z(ThePlayer), 1, dist);
         if (!cannot) {
-            move_along((OBJ_HEADING(ThePlayer) << 5) + (ThePlayer->b18 & 0x1F), 3, &x, &y);
+            move_along((OBJ_HEADING(ThePlayer) << 5) + OBJ_FINEHEAD(ThePlayer), 3, &x, &y);
             cannot = !can_place(OBJ_ITEM(obj), 0, x, y, OBJ_Z(ThePlayer), 1, dist);
         }
         tx = x >> 3;
         ty = y >> 3;
         tile = Map_GetAddr(tx, ty);
         if (!cannot) {
-            SET_FINEX(obj, x & 7);
+            SET_FINEX_UNSIGNED(obj, x & 7);
             SET_FINEY(obj, y & 7);
-            Obj_AddEnd(&tile->objects.word, obj);
-            if (OBJ_CLASS(obj) == CLASS_LIGHT && OBJ_MINOR4(obj) >= 4 && OBJ_MINOR4(obj) <= 6)
-                obj->id = obj->id & 0xFFF0 | OBJ_MINOR4(obj) - 4 & 0xF;
+            Obj_AddEnd(&tile->objects, obj);
+            if (OBJ_CLASS(obj) == CLASS_LIGHT && OBJ_INCLASS(obj) >= 4 && OBJ_INCLASS(obj) <= 6)
+                obj->id = obj->id & 0xFFF0 | OBJ_INCLASS(obj) - 4 & 0xF;
             if ((hit = obj_deal(obj, tx, ty, 1)) != 0 && hit > objdata)
                 check_pplate(hit, tile, OBJ_Z(hit), 7);
             obj = 0;
@@ -294,9 +271,9 @@ struct Object far * far missile_fire(void)
         proj->pos = proj->pos & 0xFC7F | (missile_arc >> 5 & 7) << 7;
         proj->b18 = proj->b18 & 0xE0 | ((unsigned char)missile_arc & 0x1F) << 0;
         proj->heading = missile_arc;
-        SET_BIT13(proj, 0);
+        SET_DOORDIR(proj, 0);
         SET_Z(proj, OBJ_Z(missile_src));
-        SET_FINEX(proj, OBJ_FINEX(missile_src));
+        SET_FINEX_UNSIGNED(proj, OBJ_FINEX(missile_src));
         SET_FINEY(proj, OBJ_FINEY(missile_src) & 7);
         if (ComObjData[OBJ_ITEM(missile_src)].height != 0) {
             z = OBJ_Z(proj);
@@ -325,7 +302,7 @@ struct Object far * far missile_fire(void)
         proj->b13 = proj->b13 & 0x80 | ((unsigned char)missile_class & 0x7F) << 0;
         if (ComObjData[missile_item].can_own)
             proj->ol.f.owner = 0;
-        Obj_Add(&Map_GetAddr(OBJ_HOMEX(proj), OBJ_HOMEY(proj))->objects.word, proj);
+        Obj_Add(&Map_GetAddr(OBJ_HOMEX(proj), OBJ_HOMEY(proj))->objects, proj);
         if (!using_bow && !magical_missile)
             play_effect_on_mobile(0x1C, proj, 0);
         return proj;
@@ -348,7 +325,7 @@ unsigned char far push_missile(struct Object far *proj, struct Object far *src, 
     curP->x = (OBJ_HOMEX(proj) << 3) + OBJ_FINEX(proj);
     curP->y = (OBJ_HOMEY(proj) << 3) + OBJ_FINEY(proj);
     if (launch)
-        move_along((OBJ_HEADING(proj) << 5) + (proj->b18 & 0x1F),
+        move_along((OBJ_HEADING(proj) << 5) + OBJ_FINEHEAD(proj),
                    ComObjData[OBJ_ITEM(src)].radius + ComObjData[OBJ_ITEM(proj)].radius + 4,
                    &curP->x, &curP->y);
     curP->z = OBJ_Z(proj);
@@ -364,7 +341,7 @@ unsigned char far push_missile(struct Object far *proj, struct Object far *src, 
     if (launch) {
         proj->home = proj->home & 0x3FF | (curP->x >> 3 & 0x3F) << 10;
         proj->home = proj->home & 0xFC0F | (curP->y >> 3 & 0x3F) << 4;
-        SET_FINEX(proj, curP->x & 7);
+        SET_FINEX_UNSIGNED(proj, curP->x & 7);
         SET_FINEY(proj, curP->y & 7);
     }
     return 1;

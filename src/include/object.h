@@ -105,6 +105,23 @@ struct StaticObj {
     } ol;
 };
 
+/* One running animation (SEG044.C's animlist): the animated object, the frames it has
+   left (-1 for ever), and its tile. */
+struct Anim {
+    union Link link;
+    int len;
+    unsigned char x, y;
+};
+
+/* Per animation class (an object of class 7, by its low 4 bits): what to do each frame,
+   and the run of frames it cycles through. */
+struct AnimClass {
+    unsigned flags;                     /* 1 cycle, 2 random, 4 door, 0x20 remove at end,
+                                           0x80 finish the motion first */
+    char start;
+    unsigned char count;
+};
+
 /* The fields of an object's first four words (UW-Formats 4.2, "general object info").
    The id word: */
 #define ID_ITEM         0x1FF           /* bits 0-8, the item id (items.h) */
@@ -140,6 +157,154 @@ struct StaticObj {
 #define HOME_Y          0x3F0           /* bits 4-9 */
 #define HOME_X          0xFC00          /* bits 10-15 */
 
+/* Accessors for an object's fields. The getters are written mask then shift, as the
+   original's macros were (MATCHING.md, "Bitfields versus macros"): a shift by 0 is kept,
+   because Turbo C emits it (shr ax,0). A setter rewrites the whole word or byte. Two
+   fields need a second spelling, because files compile them differently:
+   OBJ_INMAJOR_NOSHIFT leaves out the shift by 0 (one instruction fewer; ovr157, seg007),
+   and SET_FINEX_UNSIGNED casts the new value to unsigned, which stops Turbo C merging the
+   macro's "& 7" with the same mask in the argument (SET_FINEX(o, x & 7) is one "and", the
+   _UNSIGNED form two; seg008, seg024, seg027, seg028, seg030). Other differences between
+   the files' old copies (an unmasked value, a missing "<< 0") changed no bytes, because
+   those files pass constants or values already masked.
+   Names of the mobile fields come from the code that uses them; UnderworldGodot's
+   uwobject.cs (Hank Morgan's reading of the same bytes) agrees where noted, and names
+   with only a byte and bit (OBJ_B19_4) are fields whose meaning is not known. */
+/* The id word */
+#define OBJ_ITEM(o)         ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)        (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_MINOR(o)        (((o)->id & ID_MINOR) >> 4)
+#define OBJ_CLASS(o)        (((o)->id & ID_CLASS) >> 4)
+#define OBJ_CLASSID(o)      ((o)->id & ID_CLASS)        /* the class's first item id */
+#define OBJ_INMAJOR(o)      (((o)->id & ID_INMAJOR) >> 0)
+#define OBJ_INMAJOR_NOSHIFT(o) ((o)->id & ID_INMAJOR)
+#define OBJ_INCLASS(o)      ((o)->id & ID_INCLASS)
+#define OBJ_FLAGS(o)        (((o)->id & ID_FLAGS) >> 9) /* for a door, its state */
+#define OBJ_DOORDIR(o)      (((o)->id & ID_DOORDIR) >> 13)
+#define OBJ_INVIS(o)        (((o)->id & ID_INVIS) >> 14)
+#define OBJ_ISQUANT(o)      (((o)->id & ID_ISQUANT) >> 15)
+#define ITEM_CLASS(item)    (((item) & ID_CLASS) >> 4)  /* of an item id, not an object */
+#define SET_ITEM(o, v)      ((o)->id = (o)->id & 0xFE00 | (v) & ID_ITEM)
+#define SET_MAJOR(o, v)     ((o)->id = (o)->id & 0xFE3F | ((v) & 7) << 6)
+#define SET_MINOR(o, v)     ((o)->id = (o)->id & 0xFFCF | ((v) & 3) << 4)
+#define SET_INCLASS(o, v)   ((o)->id = (o)->id & 0xFFF0 | (v) & 0xF)
+#define SET_FLAGS(o, v)     ((o)->id = (o)->id & 0xE1FF | ((v) & 0xF) << 9)
+#define SET_FLAG9(o, v)     ((o)->id = (o)->id & 0xFDFF | ((v) & 1) << 9)
+#define SET_FLAG10(o, v)    ((o)->id = (o)->id & 0xFBFF | ((v) & 1) << 10)
+#define SET_DOORDIR(o, v)   ((o)->id = (o)->id & 0xDFFF | ((v) & 1) << 13)
+#define SET_INVIS(o, v)     ((o)->id = (o)->id & 0xBFFF | ((v) & 1) << 14)
+#define SET_ISQUANT(o, v)   ((o)->id = (o)->id & 0x7FFF | ((v) & 1) << 15)
+/* The position word */
+#define OBJ_Z(o)            ((o)->pos & POS_Z)
+#define OBJ_HEADING(o)      (((o)->pos & POS_HEADING) >> 7)
+#define OBJ_FINEY(o)        (((o)->pos & POS_YFINE) >> 10)
+#define OBJ_FINEX(o)        (((o)->pos & POS_XFINE) >> 13)
+#define SET_Z(o, v)         ((o)->pos = (o)->pos & 0xFF80 | (v) & POS_Z)
+#define SET_HEADING(o, v)   ((o)->pos = (o)->pos & 0xFC7F | ((v) & 7) << 7)
+#define SET_FINEY(o, v)     ((o)->pos = (o)->pos & 0xE3FF | ((v) & 7) << 10)
+#define SET_FINEX(o, v)     ((o)->pos = (o)->pos & 0x1FFF | ((v) & 7) << 13)
+#define SET_FINEX_UNSIGNED(o, v) ((o)->pos = (o)->pos & 0x1FFF | ((unsigned)(v) & 7) << 13)
+/* The quality and next word, and the owner and link word */
+#define OBJ_QUALITY(o)      ((o)->qn.f.quality)
+#define OBJ_OWNER(o)        ((o)->ol.f.owner)
+#define OBJ_LINK(o)         ((o)->ol.f.link)
+#define SET_ENCHANT(o, v)   ((o)->ol.f.link = (o)->ol.f.link & 0x1F0 | (v) & 0xF | LINK_SPECIAL)
+/* A mobile object's byte 0x0A: bits 0-3 a frame counter (NextFrame in uwobject.cs), 4-6
+   the terrain it stands on (TileState), 7 set for a critter that keeps to itself */
+#define OBJ_BIN(o)          ((o)->b0A & 0xF)
+#define OBJ_TERRAIN(o)      (((o)->b0A & 0x70) >> 4)
+#define OBJ_LONER(o)        (((o)->b0A & 0x80) >> 7)
+#define SET_BIN(o, v)       ((o)->b0A = (o)->b0A & 0xF0 | ((v) & 0xF) << 0)
+#define SET_TERRAIN(o, v)   ((o)->b0A = (o)->b0A & 0x8F | ((v) & 7) << 4)
+#define SET_LONER(o, v)     ((o)->b0A = (o)->b0A & 0x7F | ((v) & 1) << 7)
+/* The goal word (0x0B): the goal, its target, and an animation frame */
+#define OBJ_GOAL(o)         (((o)->goal_word & 0xF) >> 0)
+#define OBJ_GTARG(o)        (((o)->goal_word & 0xFF0) >> 4)
+#define OBJ_FRAME(o)        (((o)->goal_word & 0xF000) >> 12)
+#define SET_GOAL(o, v)      ((o)->goal_word = (o)->goal_word & 0xFFF0 | ((v) & 0xF) << 0)
+#define SET_GTARG(o, v)     ((o)->goal_word = (o)->goal_word & 0xF00F | ((v) & 0xFF) << 4)
+#define SET_FRAME(o, v)     ((o)->goal_word = (o)->goal_word & 0xFFF | ((v) & 0xF) << 12)
+/* The attitude word (0x0D): bits 0-3 the goal saved while another runs (npc_level in
+   UW-Formats), 4-7 a target height (TargetZHeight, provisional), 8 a summoned, temporary critter (SpawnedCritter), 9 no healing
+   (StopHPRegen), 10 powerful (IsPowerful; ovr157 reads it as undead), 12 its inventory
+   has been generated (LootSpawnedFlag), 13 talked to, 14-15 the attitude */
+#define OBJ_OLDGOAL(o)      (((o)->attitude_word & 0xF) >> 0)
+#define OBJ_TARGETZ(o)      (((o)->attitude_word & 0xF0) >> 4)
+#define OBJ_TEMP(o)         (((o)->attitude_word & 0x100) >> 8)
+#define OBJ_NOHEAL(o)       (((o)->attitude_word & 0x200) >> 9)
+#define OBJ_POWERFUL(o)     (((o)->attitude_word & 0x400) >> 10)
+#define OBJ_B0D_11(o)       (((o)->attitude_word & 0x800) >> 11)
+#define OBJ_HAS_INV(o)      (((o)->attitude_word & 0x1000) >> 12)
+#define OBJ_TALKEDTO(o)     (((o)->attitude_word & 0x2000) >> 13)
+#define OBJ_ATTITUDE(o)     (((o)->attitude_word & 0xC000) >> 14)
+#define SET_OLDGOAL(o, v)   ((o)->attitude_word = (o)->attitude_word & 0xFFF0 | ((v) & 0xF) << 0)
+#define SET_TARGETZ(o, v)   ((o)->attitude_word = (o)->attitude_word & 0xFF0F | ((v) & 0xF) << 4)
+#define SET_TEMP(o, v)      ((o)->attitude_word = (o)->attitude_word & 0xFEFF | ((v) & 1) << 8)
+#define SET_NOHEAL(o, v)    ((o)->attitude_word = (o)->attitude_word & 0xFDFF | ((v) & 1) << 9)
+#define SET_POWERFUL(o, v)  ((o)->attitude_word = (o)->attitude_word & 0xFBFF | ((v) & 1) << 10)
+#define SET_B0D_11(o, v)    ((o)->attitude_word = (o)->attitude_word & 0xF7FF | ((v) & 1) << 11)
+#define SET_HAS_INV(o, v)   ((o)->attitude_word = (o)->attitude_word & 0xEFFF | ((v) & 1) << 12)
+#define SET_TALKEDTO(o, v)  ((o)->attitude_word = (o)->attitude_word & 0xDFFF | ((v) & 1) << 13)
+#define SET_ATTITUDE(o, v)  ((o)->attitude_word = (o)->attitude_word & 0x3FFF | ((v) & 3) << 14)
+/* The word at 0x0F: a destination tile (TargetTileX/Y) and an attack frame
+   (SwingChargeIndex) */
+#define OBJ_DESTX(o)        (((o)->b0F & 0x3F) >> 0)
+#define OBJ_DESTY(o)        (((o)->b0F & 0xFC0) >> 6)
+#define OBJ_ATKFRAME(o)     (((o)->b0F & 0xF000) >> 12)
+#define SET_ATKFRAME(o, v)  ((o)->b0F = (o)->b0F & 0xFFF | ((v) & 0xF) << 12)
+#define SET_DESTX(o, v)     ((o)->b0F = (o)->b0F & 0xFFC0 | ((v) & 0x3F) << 0)
+#define SET_DESTY(o, v)     ((o)->b0F = (o)->b0F & 0xF03F | ((v) & 0x3F) << 6)
+/* Byte 0x11, damage taken (AccumulatedDamage) */
+#define OBJ_DAMAGE(o)       (((o)->b11 & 0xFF) >> 0)
+#define SET_DAMAGE(o, v)    ((o)->b11 = (o)->b11 & 0 | ((v) & 0xFF) << 0)
+/* Byte 0x13: speed, and bit 7 gravity */
+#define OBJ_SPEED(o)        ((o)->b13 & 0x7F)
+#define SET_SPEED(o, v)     ((o)->b13 = (o)->b13 & 0x80 | ((v) & 0x7F) << 0)
+#define SET_GRAVITY(o, v)   ((o)->b13 = (o)->b13 & 0x7F | ((v) & 1) << 7)
+/* Byte 0x14: a rate and a pitch (Projectile_Speed and Projectile_Pitch) */
+#define OBJ_RATE(o)         ((o)->b14 & 7)
+#define OBJ_PITCH(o)        (((o)->b14 & 0xF8) >> 3)
+#define SET_RATE(o, v)      ((o)->b14 = (o)->b14 & 0xF8 | (v))
+#define SET_PITCH(o, v)     ((o)->b14 = (o)->b14 & 7 | ((v) & 0x1F) << 3)
+/* Byte 0x15: the animation sequence (npc_animation), and two flags */
+#define OBJ_SEQ(o)          ((o)->b15 & 0x3F)
+#define OBJ_B15_6(o)        (((o)->b15 & 0x40) >> 6)
+#define OBJ_B15_7(o)        (((o)->b15 & 0x80) >> 7)
+#define SET_SEQ(o, v)       ((o)->b15 = (o)->b15 & 0xC0 | ((v) & 0x3F) << 0)
+#define SET_B15_6(o, v)     ((o)->b15 = (o)->b15 & 0xBF | (v) << 6)
+#define SET_B15_7(o, v)     ((o)->b15 = (o)->b15 & 0x7F | (v) << 7)
+/* The home word (0x16): bits 0-3 a path index (PathFindIndex), then the home tile */
+#define OBJ_PATH(o)         ((o)->home & 0xF)
+#define OBJ_HOMEY(o)        (((o)->home & HOME_Y) >> 4)
+#define OBJ_HOMEX(o)        (((o)->home & HOME_X) >> 10)
+#define SET_PATH(o, v)      ((o)->home = (o)->home & 0xFFF0 | (v) & 0xF)
+#define SET_HOMEY(o, v)     ((o)->home = (o)->home & 0xFC0F | ((v) & 0x3F) << 4)
+#define SET_HOMEX(o, v)     ((o)->home = (o)->home & 0x3FF | ((v) & 0x3F) << 10)
+/* Byte 0x18: the fine heading, and three flags */
+#define OBJ_FINEHEAD(o)     ((o)->b18 & 0x1F)
+#define OBJ_B18_6(o)        (((o)->b18 & 0x40) >> 6)
+#define OBJ_B18_7(o)        (((o)->b18 & 0x80) >> 7)
+#define SET_FINEHEAD(o, v)  ((o)->b18 = (o)->b18 & 0xE0 | ((v) & 0x1F) << 0)
+#define SET_B18_5(o, v)     ((o)->b18 = (o)->b18 & 0xDF | (v) << 5)
+#define SET_B18_6(o, v)     ((o)->b18 = (o)->b18 & 0xBF | ((v) & 1) << 6)
+#define SET_B18_7(o, v)     ((o)->b18 = (o)->b18 & 0x7F | ((v) & 1) << 7)
+/* Byte 0x19: flags, the spell being cast (npc_spellindex), bit 6 on the player's side
+   (IsAlly) and bit 7 fed */
+#define OBJ_B19_0(o)        (((o)->b19 & 1) >> 0)
+#define OBJ_B19_1(o)        (((o)->b19 & 2) >> 1)
+#define OBJ_CAST(o)         (((o)->b19 & 0xC) >> 2)
+#define OBJ_B19_4(o)        (((o)->b19 & 0x10) >> 4)
+#define OBJ_B19_5(o)        (((o)->b19 & 0x20) >> 5)
+#define OBJ_ALLY(o)         (((o)->b19 & 0x40) >> 6)
+#define OBJ_FED(o)          (((o)->b19 & 0x80) >> 7)
+#define SET_B19_0(o, v)     ((o)->b19 = (o)->b19 & 0xFE | ((v) & 1) << 0)
+#define SET_B19_1(o, v)     ((o)->b19 = (o)->b19 & 0xFD | ((v) & 1) << 1)
+#define SET_CAST(o, v)      ((o)->b19 = (o)->b19 & 0xF3 | ((v) & 3) << 2)
+#define SET_B19_4(o, v)     ((o)->b19 = (o)->b19 & 0xEF | (v) << 4)
+#define SET_B19_5(o, v)     ((o)->b19 = (o)->b19 & 0xDF | (v) << 5)
+#define SET_ALLY(o, v)      ((o)->b19 = (o)->b19 & 0xBF | ((v) & 1) << 6)
+#define SET_FED(o, v)       ((o)->b19 = (o)->b19 & 0x7F | ((v) & 1) << 7)
+
 /* The master object list (UW-Formats 4.2): 1024 objects, the first 256 mobile (27 bytes,
    struct Object) and the rest static (8 bytes, struct StaticObj); an index below
    NUM_MOBILE is a mobile object. */
@@ -151,6 +316,7 @@ struct StaticObj {
 
 /* SEG029.C: the object lists */
 extern struct Object far *critdata;
+extern union Link far *Obj_Find_Head;
 int far Obj_MemTPtr(struct Object far *obj);
 void far active_critter(int index);
 void far free_critter(int index);
@@ -159,6 +325,23 @@ unsigned char far Obj_Elem_Fate(int range, struct Object far *obj);
 void far Obj_GarbageCollect(int range, int count);
 void far Obj_Free(struct Object far *obj);
 struct Object far * far Obj_FindInMapSquare(int major, int minor, int index, int x, int y);
+struct Object far * far Obj_PtrTMem(union Link far *link);
+struct Object far * far Obj_IntTMem(int index);
+void far Obj_FreeChain(union Link far *head);
+void far Obj_FreeLinkChain(union Link far *head, struct Object far *obj);
+unsigned char far Obj_Check(struct Object far *obj, unsigned char (far *fn)(struct Object far *obj));
+struct Object far * far Obj_Alloc(char mobile);
+void far Obj_Add(union Link far *head, struct Object far *obj);
+void far Obj_AddEnd(union Link far *head, struct Object far *obj);
+unsigned char far Obj_Rem(union Link far *head, struct Object far *obj);
+struct Object far * far Obj_Punt(union Link far *head, struct Object far *obj, char force);
+struct Object far * far Obj_Find(union Link far *head, char recurse, int index);
+unsigned char far IsMobElem(struct Object far *obj);
+struct Object far * far Obj_InList(union Link far **head, char recurse, int major, int minor, int index);
+unsigned char far HasOrIsObj(struct Object far *obj, int id);
+struct Object far * far Obj_FindInMap(int major, int minor, int index, int *x, int *y);
+int far check_weight(union Link far *head, int min, int z, int adjust);
+unsigned char far ObjCrunch(char how);
 
 /* SEG036.C: Map_GetAddr and CreateObj */
 struct Tile far * far Map_GetAddr(int x, int y);
@@ -254,5 +437,8 @@ unsigned char far mts_doanim(struct Object far *obj, int x, int y, char who);
 int far get_animlen(struct Object far *obj);
 void far set_animlen(struct Object far *obj, int len);
 unsigned char far rem_timer_obj(int index);
+
+#define OBJECT_H_COMPLETE
+#include "level.h"
 
 #endif

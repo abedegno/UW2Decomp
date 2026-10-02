@@ -12,7 +12,59 @@ struct Tile;
 #include "map.h"
 #include "object.h"
 
-struct SCDRow { unsigned time; char data[14]; };
+/* A row of a schedule in SCD.ARK, 16 bytes: an event and when and where it runs. The
+   header bytes are Sched_DoEvent's; the parameters are the handlers' in ovr113, with names
+   from what each handler does with them (UnderworldGodot's scd.cs reads them the same
+   way). Many events act on a set of critters chosen by a word (critters): its low byte
+   is gronk_critid's mode (0 by whoami, 1 by race, 2 one object, 3 all), the high byte
+   what that mode matches. */
+union SCDParams {
+    unsigned char b[11];
+    struct {                            /* 1 change goal, 3 kill, 8 attitude, 11 remove */
+        unsigned critters;              /* 0x05 */
+        unsigned char arg[9];           /* 0x07: the goal and target; the attitude */
+    } npc;
+    struct {                            /* 2 teleport */
+        unsigned char x, y;             /* 0x05, the destination */
+        unsigned critters;              /* 0x07 */
+        unsigned char level;            /* 0x09 */
+        unsigned char unseen;           /* 0x0A, move even when the player could see it */
+        unsigned char sethome;          /* 0x0B, make the destination its home */
+        unsigned char retry;            /* 0x0C, try again this many steps later */
+    } teleport;
+    struct {                            /* 4 set a quest bit */
+        unsigned char quest;            /* 0x05 */
+        unsigned char value;            /* 0x06 */
+    } qbit;
+    struct {                            /* 7 a special case: hack chooses the handler */
+        unsigned char hack;             /* 0x05 */
+        unsigned char arg[10];          /* 0x06 */
+    } hack;
+    struct {                            /* hack 3 */
+        unsigned char hack;             /* 0x05 */
+        unsigned long values;           /* 0x06: the floor to change, its new texture, and
+                                           (high word) the height to add */
+    } freeze;
+    struct {                            /* 9 set a variable */
+        unsigned var;                   /* 0x05 */
+        unsigned char op;               /* 0x07 */
+        unsigned value;                 /* 0x08 */
+    } trapvar;
+    struct {                            /* 10 test variables */
+        unsigned var;                   /* 0x05, the first */
+        unsigned char count;            /* 0x07 */
+        unsigned char op;               /* 0x08, how to combine them */
+        unsigned char invert;           /* 0x09 */
+        int value;                      /* 0x0A, what to compare with */
+    } checkvar;
+};
+struct SCDRow {
+    unsigned time;                      /* 0x00 */
+    unsigned char level;                /* 0x02: 0xFF any level, 0xF6 + n world n */
+    unsigned char once;                 /* 0x03, delete the row once it has run */
+    signed char event;                  /* 0x04, negative to skip the row */
+    union SCDParams p;                  /* 0x05 */
+};
 
 /* OVR110.C: world events */
 unsigned char far in_arena(int x, int y);
@@ -71,7 +123,7 @@ char far Sched_DoEvent(unsigned char far *row);
 /* OVR166.C: triggers and traps */
 extern unsigned char Triggers[16];
 void far update_pplate(struct Object far *trig);
-void far delete_trap(unsigned far *head, struct Object far *trap);
+void far delete_trap(union Link far *head, struct Object far *trap);
 int far SetOffTrap(struct Object far *who, struct Object far *context, struct Object far *trap,
                    int x, int y);
 int far do_math_op(int value, int op, int right);

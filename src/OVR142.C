@@ -14,10 +14,6 @@
 #include "ui.h"
 #include "view3d.h"
 
-struct MotionOpts { unsigned low:3, state:8, high:5; };
-struct HandBits { unsigned hand:1, high:15; };
-struct DreamOpts { unsigned low:6, dream:3, active:1, high:6; };
-
 /* This file's _BSS, DS:8288..8297, laid out by name (tools/bssorder.py): player_name_handle
    80, player 280, playerdat 440, ThePlayer 444, PlayerLevel 568, PlayerFacing 704,
    PlayerHeading 768. It follows ovr140's TxmID (988) and ends where ovr143's IsJoy (1)
@@ -75,14 +71,14 @@ void far save_player_data(int fd)
     player->intelligence = playerdat->attr[2];
     player->health = ThePlayer->hp;
     player->maxhealth = playerdat->avghit;
-    *(int *)((char *)player + 0x54) = PN.x;
-    *(int *)((char *)player + 0x56) = PN.y;
-    *(int *)((char *)player + 0x58) = PN.z;
-    *(int *)((char *)player + 0x5A) = PlayerFacing;
-    *(int *)((char *)player + 0x5C) = PlayerLevel;
+    player->saved_x = PN.x;
+    player->saved_y = PN.y;
+    player->saved_z = PN.z;
+    player->saved_facing = PlayerFacing;
+    player->saved_level = PlayerLevel;
     player->sound = (unsigned)fx_is_on();
     player->music = (unsigned)music_is_on();
-    ((struct MotionOpts *)((char *)player + 0x303))->state = PN.terrain;
+    player->terrain = PN.terrain;
     write(fd, &key, 1);
     xorwrite(fd, key, player, 0x37D);
 }
@@ -97,17 +93,17 @@ void far read_player_data(int fd)
     playerdat->attr[2] = player->intelligence;
     ThePlayer->hp = player->health;
     playerdat->avghit = player->maxhealth;
-    PN.x = *(int *)((char *)player + 0x54);
-    PN.y = *(int *)((char *)player + 0x56);
-    PN.z = *(int *)((char *)player + 0x58);
-    PlayerFacing = *(int *)((char *)player + 0x5A);
-    PlayerLevel = *(int *)((char *)player + 0x5C);
-    PN.terrain = ((struct MotionOpts *)((char *)player + 0x303))->state;
+    PN.x = player->saved_x;
+    PN.y = player->saved_y;
+    PN.z = player->saved_z;
+    PlayerFacing = player->saved_facing;
+    PlayerLevel = player->saved_level;
+    PN.terrain = player->terrain;
     lastDurCheck = player->game_clock >> 8;
     turn_fx(player->sound);
     turn_music(player->music);
     set_graphics_level();
-    newFPS(((struct MotionOpts *)((char *)player + 0x303))->low);
+    newFPS(player->fps);
 }
 
 void far init_spells(void)
@@ -178,7 +174,7 @@ unsigned char far player_affected_by(unsigned char major, unsigned char minor,
             ComObjData[127].resist |= damage_protection_flags[minor - 5];
             break;
         case 9:
-            Valor = 10 + (*(unsigned char *)((char *)player + 0x2A)) / 5;
+            Valor = 10 + player->skills[SKILL_CASTING] / 5;
             break;
         case 10:
             PoisonWeap = 1;
@@ -234,7 +230,7 @@ static unsigned char spell_class_values[16] = {
     0x14, 0xFF, 0x13, 0x05, 0x80, 0x80, 0x80, 0x80,
     0x80, 0x80, 0x80, 0x11, 0x80, 0x80, 0x80, 0x80
 };
-extern unsigned char Armor[];
+extern struct Armour Armor[];
 
 void far parse_aspells(unsigned char *out)
 {
@@ -276,16 +272,16 @@ int far armor_val(struct Object far *obj)
 {
     register int armour;
     register int protection;
-    if (((obj->id & ID_MAJOR) >> 6) == MAJOR_HACK && ((obj->id & ID_MINOR) >> 4) < 2)
+    if (OBJ_MAJOR(obj) == MAJOR_HACK && OBJ_MINOR(obj) < 2)
         return 0;
-    armour = Armor[((obj->id & ID_ITEM) - FIRST_ARMOR) * 4];
+    armour = Armor[OBJ_ITEM(obj) - FIRST_ARMOR].protection;
     protection = ((unsigned)(obj->qn.f.quality * armour)) >> 6;
     protection++;
     return protection;
 }
 
 extern signed char ValidLightSlots[];
-extern unsigned char Weapons[];
+extern struct Weapon Weapons[];
 char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
 void far set_light(signed char n);
 void far newFPS(int n);
@@ -305,38 +301,38 @@ void far FixPlayerEquips(void)
         if (item = AskInventory(slot))
             playerdat->armour[defence_slot_index[slot]] += armor_val(item);
     }
-    item = AskInventory((((struct HandBits *)((char *)player + 0x65))->hand) + 7);
-    if (item && ((item->id & ID_MAJOR) >> 6) == MAJOR_HACK &&
-        ((item->id & ID_MINOR) >> 4) == 3 &&
-        (item->id & ID_INCLASS) >= 11 && (item->id & ID_INCLASS) <= 15) {
+    item = AskInventory(player->lefty + 7);
+    if (item && OBJ_MAJOR(item) == MAJOR_HACK &&
+        OBJ_MINOR(item) == 3 &&
+        OBJ_INCLASS(item) >= 11 && OBJ_INCLASS(item) <= 15) {
         armour = armor_val(item);
         playerdat->armour[0] += armour;
         playerdat->armour[1] += armour;
     }
     playerdat->defence = player->skills[SKILL_DEFENSE];
-    ActiveObj = AskInventory(8 - (((struct HandBits *)((char *)player + 0x65))->hand));
+    ActiveObj = AskInventory(8 - player->lefty);
     armour = 2;
-    if (ActiveObj && ((ActiveObj->id & ID_MAJOR) >> 6) == MAJOR_HACK &&
-        ((ActiveObj->id & ID_MINOR) >> 4) < 2) {
-        if (((ActiveObj->id & ID_MINOR) >> 4) == 0) {
-            armour = Weapons[(ActiveObj->id & ID_INCLASS) * 8 + 6];
+    if (ActiveObj && OBJ_MAJOR(ActiveObj) == MAJOR_HACK &&
+        OBJ_MINOR(ActiveObj) < 2) {
+        if (OBJ_MINOR(ActiveObj) == 0) {
+            armour = Weapons[ActiveObj->id & ID_INCLASS].skill;
             if (armour < 3) armour = 3;
             else if (armour > 5) armour = 5;
             load_weapon((unsigned char)armour + 0xFD);
-        } else if ((ActiveObj->id & ID_INCLASS) <= 7)
+        } else if (OBJ_INCLASS(ActiveObj) <= 7)
             load_weapon(3);
         else
             load_weapon(-1);
     } else load_weapon(3);
-    playerdat->defence = playerdat->defence + (((unsigned char *)player + armour)[0x21] >> 1);
+    playerdat->defence = playerdat->defence + (player->skills[armour] >> 1);
     init_spells();
     best_slot = 0;
     brightness = 0;
     for (slot = 0; slot <= 4; slot++) {
         if (slot == 4) ActiveObj = CursorObjPtr;
         else ActiveObj = AskInventory(ValidLightSlots[slot]);
-        if (ActiveObj && ((ActiveObj->id & ID_CLASS) >> 4) == CLASS_LIGHT &&
-            (ActiveObj->id & ID_INCLASS) >= 4 && (ActiveObj->id & ID_INCLASS) < 8) {
+        if (ActiveObj && OBJ_CLASS(ActiveObj) == CLASS_LIGHT &&
+            OBJ_INCLASS(ActiveObj) >= 4 && OBJ_INCLASS(ActiveObj) < 8) {
             data = get_class_data();
             if (data[1] > brightness) {
                 brightness = data[1];
@@ -361,8 +357,7 @@ void far FixPlayerEquips(void)
     if (light_act > loc_lght) set_light(light_act);
     else set_light(loc_lght);
     set_drugged(player->shrooms > 0);
-    if (((struct DreamOpts *)((char *)player + 0x62))->dream &&
-        ((struct DreamOpts *)((char *)player + 0x62))->active)
+    if (player->sleepbits && player->in_void)
         motionbits |= 0x10;
     fizix_update();
     newFPS(-1);

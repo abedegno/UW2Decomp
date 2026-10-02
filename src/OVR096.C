@@ -28,49 +28,11 @@
 /* Jospur's debt to the player for fights won in the pits: quest 133. */
 #define JOSPUR_DEBT     quest_bytes[0x85 - 0x80]
 
-#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_TYPE(o)     (((o)->id & ID_INMAJOR) >> 0)
-#define OBJ_FLAGS(o)    (((o)->id & ID_FLAGS) >> 9)
-#define OBJ_Z(o)        ((o)->pos & POS_Z)
-#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
-#define OBJ_B0A_7(o)    (((o)->b0A & 0x80) >> 7)
-
-#define SET_FLAGS(o, v)   ((o)->id = (o)->id & 0xE1FF | ((v) & 0xF) << 9)
-#define SET_ID_10(o, v)   ((o)->id = (o)->id & 0xFBFF | ((v) & 1) << 10)
-#define SET_ID_9(o, v)    ((o)->id = (o)->id & 0xFDFF | ((v) & 1) << 9)
-#define SET_Z(o, v)       ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
-#define SET_HEADING(o, v) ((o)->pos = (o)->pos & 0xFC7F | ((v) & 7) << 7)
-#define SET_FINEX(o, v)   ((o)->pos = (o)->pos & 0x1FFF | ((v) & 7) << 13)
-#define SET_FINEY(o, v)   ((o)->pos = (o)->pos & 0xE3FF | ((v) & 7) << 10)
-#define SET_HOMEX(o, v)   ((o)->home = (o)->home & 0x3FF | ((v) & 0x3F) << 10)
-#define SET_HOMEY(o, v)   ((o)->home = (o)->home & 0xFC0F | ((v) & 0x3F) << 4)
-#define SET_GOAL(o, v)    ((o)->goal_word = (o)->goal_word & 0xFFF0 | (v) & 0xF)
-#define SET_GTARG(o, v)   ((o)->goal_word = (o)->goal_word & 0xF00F | ((v) & 0xFF) << 4)
-#define SET_FRAME(o, v)   ((o)->goal_word = (o)->goal_word & 0x0FFF | ((v) & 0xF) << 12)
-#define SET_TEMP(o, v)    ((o)->attitude_word = (o)->attitude_word & 0xFEFF | ((v) & 1) << 8)
-#define SET_POWER(o, v)   ((o)->attitude_word = (o)->attitude_word & 0xFBFF | ((v) & 1) << 10)
-#define SET_ATTITUDE(o, v) ((o)->attitude_word = (o)->attitude_word & 0x3FFF | ((v) & 3) << 14)
-#define SET_SEQ(o, v)     ((o)->b15 = (o)->b15 & 0xC0 | ((v) & 0x3F) << 0)
-#define SET_LONER(o, v)   ((o)->b0A = (o)->b0A & 0x7F | ((v) & 1) << 7)
-
 extern union Link Inventory[];
 extern void (far *npp_func)();
 extern unsigned char stay_centered;
 extern long lastDurCheck;
 
-struct Object far * far Obj_PtrTMem(union Link far *link);
-struct Object far * far Obj_IntTMem(int index);
-void far Obj_Add(union Link far *head, struct Object far *obj);
-void far Obj_AddEnd(union Link far *head, struct Object far *obj);
-unsigned char far Obj_Rem(union Link far *head, struct Object far *obj);
-struct Object far * far Obj_Punt(union Link far *head, struct Object far *obj, int how);
-struct Object far * far Obj_InList(union Link far **head, int recurse, int major, int minor,
-                                   int index);
 struct Object far * far CreateObj(int item, char mobile);
 unsigned char far can_place(int item, int index, int x, int y, int z, char flier, char dist);
 unsigned char far put_at(int x, int y, int z, struct Object far *obj, int range,
@@ -243,7 +205,7 @@ struct Object far * far place_pitfighter(int power, int x, int y)
         obj->ol.f.owner = y;
         SET_Z(obj, tile->height << 3);
         obj->whoami = 0x66;
-        SET_POWER(obj, strong);
+        SET_POWERFUL(obj, strong);
         SET_TEMP(obj, 1);
         SET_ATTITUDE(obj, 0);
         SET_GOAL(obj, 5);
@@ -369,8 +331,8 @@ void far set_race_attitude(int far *args)
         for (x = x0; x <= x1; x++) {
             head = &Map_GetAddr(x, y)->objects;
             for (obj = Obj_PtrTMem(head); obj; obj = Obj_PtrTMem(&obj->qn.link))
-                if (OBJ_ITEM(obj) == item && !OBJ_B0A_7(obj)
-                    && Creature[OBJ_TYPE(obj)].race == race)
+                if (OBJ_ITEM(obj) == item && !OBJ_LONER(obj)
+                    && Creature[OBJ_INMAJOR(obj)].race == race)
                     SET_ATTITUDE(obj, att);
         }
 }
@@ -592,9 +554,9 @@ void far x_obj_stuff(int far *args)
         if (*link != -1)
             obj->ol.f.link = *link;
         if (*flag10 != -1)
-            SET_ID_10(obj, *flag10);
+            SET_FLAG10(obj, *flag10);
         if (*flag9 != -1)
-            SET_ID_9(obj, *flag9);
+            SET_FLAG9(obj, *flag9);
         if (*quality != -1)
             obj->qn.f.quality = *quality;
     } else {

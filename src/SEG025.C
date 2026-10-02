@@ -15,26 +15,10 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
-#define OBJ_FLAG13(o)   (((o)->id & ID_DOORDIR) >> 13)
-#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
-#define OBJ_QUALITY(o)  ((o)->qn.f.quality)
-#define OBJ_OWNER(o)    ((o)->ol.f.owner)
-#define OBJ_LINK(o)     ((o)->ol.f.link)
-
-#define ITEM_CLASS(i)   (((i) & ID_CLASS) >> 4)
-
 extern struct Object far *objdata;
 extern struct Weapon Weapons[];
 
 /* Elsewhere in the game. */
-struct Object far * far Obj_InList(unsigned far **head, int a, int major, int minor, int idx);
-char far Obj_Rem(unsigned far *head, struct Object far *obj);
-struct Object far * far Obj_Punt(unsigned far *head, struct Object far *obj, int a);
-void far Obj_FreeChain(unsigned far *head);
-char far IsMobElem(struct Object far *obj);
 struct Object far * far obj_deal(struct Object far *obj, int x, int y, int a);
 void far put_effect(struct Object far *obj, int type, int size, int a, int b, int x, int y);
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
@@ -42,13 +26,13 @@ char far damage_item(struct Object far *obj, struct Object far *who, int x, int 
 
 char far remove_lock(struct Object far *obj, char all)
 {
-    unsigned far *head;
+    union Link far *head;
     struct Object far *lock;
     char found = 0;
 
     if (!OBJ_ISQUANT(obj) && OBJ_LINK(obj) > 0)
     {
-        for (head = &obj->ol.word; (lock = Obj_InList(&head, 1, MAJOR_SPEC, 0, 0xF)) != 0; )
+        for (head = &obj->ol.link; (lock = Obj_InList(&head, 1, MAJOR_SPEC, 0, 0xF)) != 0; )
         {
             if (Obj_Rem(head, lock))
                 Obj_Free(lock);
@@ -62,7 +46,7 @@ char far remove_lock(struct Object far *obj, char all)
     return found;
 }
 
-char far try_remove(unsigned far *head, struct Object far *obj)
+char far try_remove(union Link far *head, struct Object far *obj)
 {
     if (obj >= objdata)
         return Obj_Punt(head, obj, 0) == 0;
@@ -74,7 +58,7 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
 {
     int debris = -2;
     int item;
-    unsigned far *head;
+    union Link far *head;
 
     if (x < 0)
         return 1;
@@ -91,7 +75,7 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
     }
     else if (item == ITEM_CHEST || item == ITEM_BARREL)
     {
-        if (OBJ_FLAG13(obj))
+        if (OBJ_DOORDIR(obj))
             debris = -1;
         else
         {
@@ -120,8 +104,8 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
         if (player->xclock[XC_DJINN] < 5)
         {
             game_sprint(0x171);
-            damage_item(ThePlayer, 0L, (ThePlayer->home & HOME_X) >> 10,
-                        (ThePlayer->home & HOME_Y) >> 4, 0xFF, 0);
+            damage_item(ThePlayer, 0L, OBJ_HOMEX(ThePlayer),
+                        OBJ_HOMEY(ThePlayer), 0xFF, 0);
         }
         else if (PlayerLevel == 0x45 && x >= 0x15 && x <= 0x16 && y >= 0x34 && y <= 0x35)
         {
@@ -131,7 +115,7 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
             if (player->xclock[XC_CASTLE] == 0xD)
                 player->xclock[XC_CASTLE] = 0xE;
             player->quests[26] = (player->quests[26] & 0xFFFFFFFDL) + 2;
-            if (try_remove(&Map_GetAddr(x, y)->objects.word, obj))
+            if (try_remove(&Map_GetAddr(x, y)->objects, obj))
                 return 1;
             debris = -1;
         }
@@ -144,7 +128,7 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
         {
             if (OBJ_ITEM(obj) == ITEM_PILE_OF_DEBRIS_D6)
             {
-                if (try_remove(&Map_GetAddr(x, y)->objects.word, obj))
+                if (try_remove(&Map_GetAddr(x, y)->objects, obj))
                     return 1;
                 debris = -1;
             }
@@ -156,7 +140,7 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
         }
         if (!OBJ_ISQUANT(obj) && OBJ_LINK(obj) > 0)
         {
-            head = &obj->ol.word;
+            head = &obj->ol.link;
             Obj_FreeChain(head);
         }
     }
@@ -231,7 +215,7 @@ char far damage_object(struct Object far *obj, struct Object far *who, int damag
     int scale;
     int hp;
 
-    if ((OBJ_FLAG13(obj) && OBJ_CLASS(obj) != CLASS_DOOR) || (scale = co->qualclass) == 3)
+    if ((OBJ_DOORDIR(obj) && OBJ_CLASS(obj) != CLASS_DOOR) || (scale = co->qualclass) == 3)
         return 0;
     damage >>= scale;
     if (damage <= 0)

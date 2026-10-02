@@ -23,25 +23,10 @@
 #include "ui.h"
 #include "uw2.h"
 
-#define OBJ_ID(o)       ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
-#define OBJ_INDEX(o)    ((o)->id & ID_INCLASS)
-#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
-#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
-
 extern struct Player PlayerDat;
 extern union Link Inventory[];
 extern struct Inplist near *inplist;
-extern unsigned far *Obj_Find_Head;
 
-struct Object far * far Obj_PtrTMem(unsigned far *link);
-struct Object far * far Obj_Find(unsigned far *head, int recurse, int index);
-struct Object far * far Obj_Alloc(int mobile);
-void far Obj_Add(unsigned far *head, struct Object far *obj);
-void far Obj_AddEnd(unsigned far *head, struct Object far *obj);
-unsigned char far Obj_Rem(unsigned far *head, struct Object far *obj);
-void far Obj_Punt(unsigned far *head, struct Object far *obj, int how);
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
                      unsigned char damage, unsigned char type);
 struct Object far * far CreateObj(int item, char mobile);
@@ -58,7 +43,7 @@ void far RedisplayInvSlot(int slot)
 
 struct Object far * far AskInventory(int slot)
 {
-    return Obj_PtrTMem(&Inventory[slot].word);
+    return Obj_PtrTMem(&Inventory[slot]);
 }
 
 /* The first empty slot from 5 to 18, or -1. Not in the FM Towns build and not called; IDA's
@@ -91,13 +76,13 @@ unsigned char far AddToInventory(struct Object far *obj, int slot)
         mass = ItemWeight(obj);
         if (slot >= 0) {
             if (slot > 18) {
-                owner = Obj_PtrTMem(&OpenBag->obj.word);
+                owner = Obj_PtrTMem(&OpenBag->obj);
                 for (bag = OpenBag; bag; bag = bag->prev)
                     bag->weight += mass;
             }
             Inventory[slot].f.index = Obj_MemTPtr(obj);
         }
-        Obj_AddEnd(&owner->ol.word, obj);
+        Obj_AddEnd(&owner->ol.link, obj);
         PlayerDat.weight += mass;
         done = 1;
     } else if (fits == -1)
@@ -120,9 +105,9 @@ int far FindSlot(struct Object far *obj)
         if (Inventory[slot].f.index != 0) {
             if (Inventory[slot].f.index == index)
                 return slot;
-            inslot = Obj_PtrTMem(&Inventory[slot].word);
+            inslot = Obj_PtrTMem(&Inventory[slot]);
             if (!OBJ_ISQUANT(inslot) && Inventory[slot].f.index != OpenBag->obj.f.index
-                && inslot != 0 && Obj_Find(&inslot->ol.word, 1, index) != 0)
+                && inslot != 0 && Obj_Find(&inslot->ol.link, 1, index) != 0)
                 return -slot;
         }
     }
@@ -136,10 +121,10 @@ struct Object far * far FindObj(int major, int minor, int cls, int how, register
     register int i;
 
     for (i = 0; i < 11; i++) {
-        objs[i] = Obj_PtrTMem(&Inventory[i].word);
+        objs[i] = Obj_PtrTMem(&Inventory[i]);
         if (objs[i] != 0 && (major < 0 || OBJ_MAJOR(objs[i]) == major)
             && (minor < 0 || OBJ_MINOR(objs[i]) == minor)
-            && (cls < 0 || OBJ_INDEX(objs[i]) == cls)) {
+            && (cls < 0 || OBJ_INCLASS(objs[i]) == cls)) {
             *where = i;
             return objs[i];
         }
@@ -147,10 +132,10 @@ struct Object far * far FindObj(int major, int minor, int cls, int how, register
     if (how == 1)
         return 0;
     for (; i <= 18; i++) {
-        objs[i] = Obj_PtrTMem(&Inventory[i].word);
+        objs[i] = Obj_PtrTMem(&Inventory[i]);
         if (objs[i] != 0 && (major < 0 || OBJ_MAJOR(objs[i]) == major)
             && (minor < 0 || OBJ_MINOR(objs[i]) == minor)
-            && (cls < 0 || OBJ_INDEX(objs[i]) == cls)) {
+            && (cls < 0 || OBJ_INCLASS(objs[i]) == cls)) {
             *where = i;
             return objs[i];
         }
@@ -161,7 +146,7 @@ struct Object far * far FindObj(int major, int minor, int cls, int how, register
         return 0;
     for (i = 0; i <= 18; i++) {
         if (objs[i] != 0 && !OBJ_ISQUANT(objs[i])) {
-            contents = Obj_PtrTMem(&objs[i]->ol.word);
+            contents = Obj_PtrTMem(&objs[i]->ol.link);
             objs[i] = find_obj(major, minor, cls, &contents);
             if (objs[i] != 0) {
                 *where = i;
@@ -180,18 +165,18 @@ struct Object far * far find_obj(int major, int minor, register int cls, registe
     while (*list != 0) {
         if ((major < 0 || OBJ_MAJOR(*list) == major)
             && (minor < 0 || OBJ_MINOR(*list) == minor)
-            && (cls < 0 || OBJ_INDEX(*list) == cls)) {
+            && (cls < 0 || OBJ_INCLASS(*list) == cls)) {
             found = *list;
             *list = 0;
             return found;
         }
-        if (!OBJ_ISQUANT(*list) && (next = Obj_PtrTMem(&(*list)->ol.word)) != 0
+        if (!OBJ_ISQUANT(*list) && (next = Obj_PtrTMem(&(*list)->ol.link)) != 0
             && (found = find_obj(major, minor, cls, &next)) != 0) {
             if (next != 0)
                 *list = next;
             return found;
         }
-        *list = Obj_PtrTMem(&(*list)->qn.word);
+        *list = Obj_PtrTMem(&(*list)->qn.link);
     }
     return 0;
 }
@@ -215,7 +200,7 @@ struct Object far * far pick_inv(int how)
 /* The same as AskInventory; the FM Towns map gives both names one address. */
 struct Object far * far WhatsInSlot(int slot)
 {
-    return Obj_PtrTMem(&Inventory[slot].word);
+    return Obj_PtrTMem(&Inventory[slot]);
 }
 
 char far InvRemoveObject(struct Object far *obj)
@@ -252,7 +237,7 @@ char far invRemoveObject(struct Object far *obj, int qty)
         } else
             DisplayInvObject(SlotToDisplay[i]);
     } else {
-        obj = Obj_Find(&ThePlayer->ol.word, 1, index);
+        obj = Obj_Find(&ThePlayer->ol.link, 1, index);
         if (obj == 0)
             return 0;
         if (qty > 0 && OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL)
@@ -261,7 +246,7 @@ char far invRemoveObject(struct Object far *obj, int qty)
             *(struct StaticObj far *)copy = *(struct StaticObj far *)obj;
             copy->ol.f.link = have - qty;
             obj->ol.f.link = qty;
-            Obj_Add(&obj->qn.word, copy);
+            Obj_Add(&obj->qn.link, copy);
         }
         if (!Obj_Rem(Obj_Find_Head, obj))
             return 0;
@@ -278,7 +263,7 @@ struct Object far * far RemoveAllFromSlot(int major, int minor, int cls, registe
     struct Object far *inslot;
 
     taken = removeFromSlot(major, minor, cls, slot, 0);
-    if ((inslot = Obj_PtrTMem(&Inventory[slot].word)) != 0 && OBJ_MAJOR(inslot) == MAJOR_MISC
+    if ((inslot = Obj_PtrTMem(&Inventory[slot])) != 0 && OBJ_MAJOR(inslot) == MAJOR_MISC
         && OBJ_MINOR(inslot) == 0 && OpenBag != 0) {
         FixOpenBag();
         DisplayOpenBag();
@@ -293,7 +278,7 @@ struct Object far * far RemoveOneFromSlot(int major, int minor, int cls, registe
     struct Object far *inslot;
 
     taken = removeFromSlot(major, minor, cls, slot, 1);
-    if ((inslot = Obj_PtrTMem(&Inventory[slot].word)) != 0 && OBJ_MAJOR(inslot) == MAJOR_MISC
+    if ((inslot = Obj_PtrTMem(&Inventory[slot])) != 0 && OBJ_MAJOR(inslot) == MAJOR_MISC
         && OBJ_MINOR(inslot) == 0 && OpenBag != 0) {
         FixOpenBag();
         DisplayOpenBag();
@@ -323,16 +308,16 @@ struct Object far * far takeFromSlot(int major, int minor, int cls, int slot, in
     register int mass;
 
     copy = 0;
-    obj = Obj_PtrTMem(&Inventory[slot].word);
+    obj = Obj_PtrTMem(&Inventory[slot]);
     if (obj == 0)
         return 0;
     if (slot <= 18)
         owner = ThePlayer;
     else
-        owner = Obj_PtrTMem(&OpenBag->obj.word);
+        owner = Obj_PtrTMem(&OpenBag->obj);
     if (major >= 0 || minor >= 0 || cls >= 0) {
         if ((major >= 0 && OBJ_MAJOR(obj) != major) || (minor >= 0 && OBJ_MINOR(obj) != minor)
-            || (cls >= 0 && OBJ_INDEX(obj) != cls)) {
+            || (cls >= 0 && OBJ_INCLASS(obj) != cls)) {
             if ((obj = find_obj(major, minor, cls, &owner)) == 0)
                 return 0;
         }
@@ -343,7 +328,7 @@ struct Object far * far takeFromSlot(int major, int minor, int cls, int slot, in
         *(struct StaticObj far *)copy = *(struct StaticObj far *)obj;
         copy->ol.f.link = have - qty;
         obj->ol.f.link = qty;
-        Obj_Add(&obj->qn.word, copy);
+        Obj_Add(&obj->qn.link, copy);
     }
     if (owner == ThePlayer || slot >= 20) {
         if (copy != 0)
@@ -351,7 +336,7 @@ struct Object far * far takeFromSlot(int major, int minor, int cls, int slot, in
         else
             Inventory[slot].f.index = 0;
     }
-    if (!Obj_Rem(&owner->ol.word, obj))
+    if (!Obj_Rem(&owner->ol.link, obj))
         return 0;
     mass = ItemWeight(obj);
     PlayerDat.weight -= mass;
@@ -400,13 +385,13 @@ int far DamageInventory(int slot, unsigned char damage, unsigned char type, int 
         if (how == 0) {
             if (OBJ_CLASS(obj) != CLASS_WEAPON)
                 return -2;
-        } else if (!ObjWorn(OBJ_ID(obj), slot))
+        } else if (!ObjWorn(OBJ_ITEM(obj), slot))
             return -2;
     }
     quality = obj->qn.f.quality;
     if (damage_item(obj, 0L, -1, -1, damage, type)) {
         if (debris) {
-            junk = CreateObj(debris_type(OBJ_ID(obj), type), 0);
+            junk = CreateObj(debris_type(OBJ_ITEM(obj), type), 0);
             near_mob_put_at(ThePlayer, junk, 6, 0);
         }
         InvRemoveOneObject(obj);
@@ -438,13 +423,13 @@ int far ItemWeight(struct Object far *obj)
     int mass;
     register struct ComObj *com;
 
-    com = &ComObjData[OBJ_ID(obj)];
+    com = &ComObjData[OBJ_ITEM(obj)];
     if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL))
         mass = obj->ol.f.link * com->mass;
     else {
         mass = com->mass;
         if (!OBJ_ISQUANT(obj) && obj->ol.f.link > 0)
-            BagWeight(&obj->ol.word, &mass);
+            BagWeight(&obj->ol.link, &mass);
     }
     return mass;
 }

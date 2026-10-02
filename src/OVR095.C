@@ -137,7 +137,7 @@ char far * far bab_malloc(long n)
             current->next = current;
             tail = current;
             result = (char far *)current + 8;
-            ((char far * far *)tail)[(((unsigned far *)current)[0] >> 2) - 1] = result;
+            ((char far * far *)tail)[((unsigned)current->size >> 2) - 1] = result;
             break;
         }
         previous = current;
@@ -208,7 +208,7 @@ char far * far bab_realloc(char far *p, long n)
                 split->size = block->size - n;
                 block->size = n;
                 tail = block;
-                ((char far * far *)tail)[(((unsigned far *)block)[0] >> 2) - 1] =
+                ((char far * far *)tail)[((unsigned)block->size >> 2) - 1] =
                     (char far *)block + 8;
                 free_list = split;
                 return result;
@@ -225,7 +225,7 @@ char far * far bab_realloc(char far *p, long n)
                         block->size = n;
                         tail = block;
                         result = (char far *)block + 8;
-                        ((char far * far *)tail)[(((unsigned far *)block)[0] >> 2) - 1] = result;
+                        ((char far * far *)tail)[((unsigned)block->size >> 2) - 1] = result;
                         current->next = split;
                         return result;
                     }

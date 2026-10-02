@@ -16,8 +16,6 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_QUALITY(o)  ((o)->qn.f.quality)
-
 struct Light {
     unsigned char duration;             /* burn rate, 0 for an unlit light */
     unsigned char pad;
@@ -170,7 +168,7 @@ char far DegradeLights(int amount, unsigned char counter)
             if ((obj = AskInventory(ValidLightSlots[i])) == 0)
                 continue;
             light = obj->id & ID_INCLASS;
-            if ((obj->id & ID_CLASS) >> 4 != CLASS_LIGHT || light < 4 || light >= 8)
+            if (OBJ_CLASS(obj) != CLASS_LIGHT || light < 4 || light >= 8)
                 continue;
             if ((light = Lights[light].duration) == 0)
                 continue;
@@ -186,7 +184,7 @@ char far DegradeLights(int amount, unsigned char counter)
             else
             {
                 OBJ_QUALITY(obj) = 1;
-                obj->id = obj->id & 0xFFF0 | ((obj->id & ID_INCLASS) - 4) & 0x0F;
+                obj->id = obj->id & 0xFFF0 | (OBJ_INCLASS(obj) - 4) & 0x0F;
                 RedisplayInvSlot(ValidLightSlots[i]);
                 changed = 1;
             }

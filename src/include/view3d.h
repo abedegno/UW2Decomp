@@ -33,6 +33,14 @@ struct Grs3d {
     char b1;
 };
 
+/* One cell of the vision grid (seg032's glocs), 33 cells to a row and 17 rows, the eye at
+   row 0 column 16: which faces of the tile are seen and drawn. */
+struct Gloc {
+    unsigned char flags;                /* 0x80 visible, 0x44 slope, 0x20/0x10/0x08 walls */
+    unsigned char shade;                /* bits 0-3 the distance shade; the high bits wall
+                                           faces (seg019) */
+};
+
 /* SEG019.C: building the 3D view's render database from the map */
 extern int loopx;
 extern int loopy;
@@ -98,7 +106,7 @@ extern int objxloc;
 extern int objyloc;
 extern int objzloc;
 void far sort_setup(char mode);
-void far do_objsort(struct Object far *object);
+void far do_objsort(union Link far *link);
 void far clear_objsort(void);
 
 /* SEG004F.ASM */

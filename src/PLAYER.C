@@ -20,13 +20,6 @@
 #include "ui.h"
 #include "view3d.h"
 
-#define OBJ_INDEX(o)    (((o)->id & ID_INMAJOR) >> 0)
-#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
-#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
-#define OBJ_QUALITY(o)  ((o)->qn.f.quality)
-#define OBJ_OWNER(o)    ((o)->ol.f.owner)
-#define OBJ_LINK(o)     ((o)->ol.f.link)
-
 struct VoidTile { unsigned char x, y; };
 
 extern unsigned long far *Time;
@@ -44,18 +37,14 @@ void far Killorn_just_crashed(int how);
 void far show_cutscene(int n);
 void far grfx_clear(void);
 void far display_screen(int a, int b);
-void far Obj_FindInMap(int major, int minor, int type, int *x, int *y);
 void far set_new_music(int n);
 struct Object far * far CreateObj(int id, int b);
 char far put_at(int x, int y, int z, struct Object far *obj, int a, int b);
 struct Object far * far obj_deal(struct Object far *obj, int x, int y, int a);
 int far near_mob_put_at(struct Object far *at, struct Object far *obj, int a, int b);
 void far do_teleport(struct Object far *who, int x, int y, int level);
-struct Object far * far Obj_IntTMem(int index);
 void far load_new_music(int n, int m);
 void far scroll_clear(int n);
-struct Object far * far Obj_InList(unsigned far **head, int a, int major, int minor, int idx);
-struct Object far * far Obj_PtrTMem(unsigned far *link);
 void far get_name(char far *buf, struct Object far *obj, int a, int b);
 void far UseTrigger(struct Object far *user, struct Object far *obj, struct Object far *trigger, int a);
 
@@ -713,8 +702,8 @@ void far go_void(void)
 
     player->sleepbits = rand() % 4 + 2;
     player->in_void = 1;
-    player->dream_x = (ThePlayer->home & HOME_X) >> 10;
-    player->dream_y = (ThePlayer->home & HOME_Y) >> 4;
+    player->dream_x = OBJ_HOMEX(ThePlayer);
+    player->dream_y = OBJ_HOMEY(ThePlayer);
     player->dream_pos = ((PlayerHeading >> 8) & 0xFF) + (PlayerLevel << 8);
     n = rand() & 7;
     if (n >= 4)
@@ -741,7 +730,7 @@ void far player_is_dead(void)
         if ((killer->whoami >= 0x81 && killer->whoami <= 0x8F)
             || killer->whoami == 0xA8 || killer->whoami == 0x95)
         {
-            if (!((killer->b0A & 0x80) >> 7))
+            if (!OBJ_LONER(killer))
             {
                 put_player_in_jail();
                 return;
@@ -802,13 +791,13 @@ void far player_is_dead(void)
 
 int far DetectedTrap(struct Object far *obj, int skill)
 {
-    unsigned far *head;
+    union Link far *head;
     struct Object far *trig;
 
     if (OBJ_ISQUANT(obj) || OBJ_LINK(obj) == 0)
         return 0;
-    for (head = &obj->ol.word; trig = Obj_InList(&head, 0, MAJOR_TRAP, -1, -1), trig;
-         head = &trig->qn.word)
+    for (head = &obj->ol.link; trig = Obj_InList(&head, 0, MAJOR_TRAP, -1, -1), trig;
+         head = &trig->qn.link)
     {
         if (OBJ_MINOR(trig) == 3)
             return skill_check(skill, ((PlayerLevel - 1) / 8 << 1) + 10);
@@ -819,7 +808,7 @@ int far DetectedTrap(struct Object far *obj, int skill)
 int far RemoveTrap(struct Object far *obj, int skill)
 {
     int quality;
-    unsigned far *head;
+    union Link far *head;
     struct Object far *trap;
     struct Object far *trig;
     char name[20];
@@ -828,8 +817,8 @@ int far RemoveTrap(struct Object far *obj, int skill)
 
     if (OBJ_ISQUANT(obj) || OBJ_LINK(obj) == 0)
         return 0;
-    for (head = &obj->ol.word; trig = Obj_InList(&head, 0, MAJOR_TRAP, -1, -1), trig;
-         head = &trig->qn.word)
+    for (head = &obj->ol.link; trig = Obj_InList(&head, 0, MAJOR_TRAP, -1, -1), trig;
+         head = &trig->qn.link)
     {
         if (OBJ_MINOR(trig) == 3)
             break;
@@ -837,7 +826,7 @@ int far RemoveTrap(struct Object far *obj, int skill)
     if (trig)
     {
         if (OBJ_MINOR(trig) >= 2)
-            trap = Obj_PtrTMem(&trig->ol.word);
+            trap = Obj_PtrTMem(&trig->ol.link);
         else
         {
             trap = trig;
@@ -846,9 +835,9 @@ int far RemoveTrap(struct Object far *obj, int skill)
         result = skill_check(skill, (PlayerLevel - 1) / 8 + 8);
         if (result > 0)
         {
-            if (OBJ_INDEX(trap) == 15)
+            if (OBJ_INMAJOR(trap) == 15)
                 strcpy(name, "trap");
-            else if (OBJ_INDEX(trap) == 0 && OBJ_OWNER(trap))
+            else if (OBJ_INMAJOR(trap) == 0 && OBJ_OWNER(trap))
                 strcpy(name, "poison trap");
             else
                 get_name(name, trap, 0, 0);
@@ -862,15 +851,15 @@ int far RemoveTrap(struct Object far *obj, int skill)
             {
                 quality = OBJ_QUALITY(trig);
                 owner = OBJ_OWNER(trig);
-                delete_trap(&Map_GetAddr(quality, owner)->objects.word, trap);
+                delete_trap(&Map_GetAddr(quality, owner)->objects, trap);
             }
         }
         else if (result < 0)
         {
             game_sprint(0x166);
-            if (OBJ_INDEX(trap) == 15)
+            if (OBJ_INMAJOR(trap) == 15)
                 strcpy(name, "trap");
-            else if (OBJ_INDEX(trap) == 0 && OBJ_OWNER(trap))
+            else if (OBJ_INMAJOR(trap) == 0 && OBJ_OWNER(trap))
                 strcpy(name, "poison trap");
             else
                 get_name(name, trap, 0, 0);

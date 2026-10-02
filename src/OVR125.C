@@ -14,14 +14,6 @@
 #include "ui.h"
 #include "uw2.h"
 
-#define OBJ_ID(o)       ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
-#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
-#define OBJ_TYPE(o)     (((o)->id & ID_INMAJOR) >> 0)
-#define OBJ_INVIS(o)    (((o)->id & ID_INVIS) >> 14)
-#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
-
 /* One container type, 3 bytes. */
 struct Container {
     unsigned char capacity;             /* 0x00, 0 for no limit */
@@ -50,13 +42,9 @@ extern struct Inplist near *inplist;
 /* Every call here passes an InvRect's h before its w. */
 int far input_addmouse(int a, int b, int c, int d, int buttons, int mode, void far (*handler)(void));
 void far rectangle(int x0, int y0, int x1, int y1);
-struct Object far * far Obj_PtrTMem(unsigned far *link);
-struct Object far * far Obj_Alloc(char mobile);
 int far wdialog(char *prompt, char *initial, char *result, char anychar, int maxlen);
 void far scroll_print(char far *s);
 void far get_name(char far *buf, struct Object far *obj, int article, char plural);
-void far Obj_Punt(unsigned far *head, struct Object far *obj, int how);
-void far Obj_Add(unsigned far *head, struct Object far *obj);
 void far mouse_release(int how);
 char far mouse_dragged(int how);
 
@@ -200,21 +188,21 @@ void far DoInventoryMouse(int how)
         if (CursorObjPtr == 0 && slot != -1 && slot != 19)
             pick = 1;
         if (inplist->cmd != 1 && pick && mouse_dragged(1)) {
-            obj = Obj_PtrTMem(&Inventory[slot].word);
+            obj = Obj_PtrTMem(&Inventory[slot]);
             if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL)) {
                 if (obj->ol.f.link != 1) {
                     if ((split = AskHowMany(obj)) == 0)
                         return;
                     if (split != obj)
-                        Obj_Add(&obj->qn.word, split);
+                        Obj_Add(&obj->qn.link, split);
                 }
             } else if (OBJ_MAJOR(obj) == MAJOR_MISC && OBJ_MINOR(obj) == 0) {
-                if (inplist->mode == 4 && (obj->id & ID_INCLASS) != 0xF) {
+                if (inplist->mode == 4 && OBJ_INCLASS(obj) != 0xF) {
                     game_sprint(0xC9);
                     return;
                 }
                 for (bag2 = OpenBagList; bag2 != 0; bag2 = bag2->next)
-                    if (Obj_PtrTMem(&bag2->obj.word) == obj)
+                    if (Obj_PtrTMem(&bag2->obj) == obj)
                         return;
             }
             held = 1;
@@ -275,7 +263,7 @@ void far DoInventoryDrag(struct Object far *obj)
     register int hit;
 
     CursorObjPtr = obj;
-    force_mouse_cursor(OBJ_ID(CursorObjPtr));
+    force_mouse_cursor(OBJ_ITEM(CursorObjPtr));
     mouse_getbut(&buttons);
     if (buttons != 0) {
         mouse_release(1);
@@ -335,8 +323,8 @@ void far DisplayInvSpecial(void)
         for (i = 0; i < 5; i++) {
             slot = ArmorSlots[i];
             if (Inventory[DisplayToSlot[slot]].f.index != 0) {
-                obj = Obj_PtrTMem(&Inventory[DisplayToSlot[slot]].word);
-                type = OBJ_TYPE(obj) & 0x1F;
+                obj = Obj_PtrTMem(&Inventory[DisplayToSlot[slot]]);
+                type = OBJ_INMAJOR(obj) & 0x1F;
                 if (type > 14)
                     q = 3;
                 else
@@ -404,7 +392,7 @@ void far SetCursorObj(int slot, char keep)
 
     had = CursorObjPtr != 0;
     if (keep)
-        link = Obj_MemTPtr(Obj_PtrTMem(&AskInventory(slot)->qn.word));
+        link = Obj_MemTPtr(Obj_PtrTMem(&AskInventory(slot)->qn.link));
     CursorObjPtr = takeFromSlot(-1, -1, -1, slot, 0);
     if (CursorObjPtr != 0) {
         if (keep) {
@@ -414,7 +402,7 @@ void far SetCursorObj(int slot, char keep)
         mouse_hide();
         if (had)
             unforce_mouse_cursor(0);
-        force_mouse_cursor(OBJ_ID(CursorObjPtr));
+        force_mouse_cursor(OBJ_ITEM(CursorObjPtr));
         mouse_show();
         FixPlayerEquips();
     }
@@ -481,7 +469,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
     register int i;
 
     cont = 0;
-    id = OBJ_ID(obj);
+    id = OBJ_ITEM(obj);
     ActiveObj = obj;
     com = &ComObjData[id];
     major = OBJ_MAJOR(ActiveObj);
@@ -500,17 +488,17 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
                 game_sprint(0x112);
             return j <= 18;
         }
-        cont = Obj_PtrTMem(&OpenBag->prev->obj.word);
+        cont = Obj_PtrTMem(&OpenBag->prev->obj);
     } else if (slot > 19) {
         struct Object far *o;
 
-        o = Obj_PtrTMem(&Inventory[slot].word);
+        o = Obj_PtrTMem(&Inventory[slot]);
         if (o != 0 && OBJ_CLASS(o) == CLASS_CONTAINER)
             cont = o;
         else
-            cont = Obj_PtrTMem(&Inventory[19].word);
+            cont = Obj_PtrTMem(&Inventory[19]);
     } else
-        cont = Obj_PtrTMem(&Inventory[slot].word);
+        cont = Obj_PtrTMem(&Inventory[slot]);
     if (slot < 5) {
         if (major != MAJOR_HACK) {
             if (slot == 0 && UseFood(ThePlayer, obj, 0) > 0)
@@ -541,7 +529,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
         return cls[3] == 9;
     }
     if (8 - player->lefty == slot && major == MAJOR_HACK && minor == 0) {
-        if (cont != 0 && OBJ_ID(cont) == id
+        if (cont != 0 && OBJ_ITEM(cont) == id
             || OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL) && obj->ol.f.link > 1)
             return 0;
     } else if (major == MAJOR_MISC && minor == 1 && sub >= 4 && sub < 8) {
@@ -566,11 +554,11 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
 
             if (slot > 19) {
                 for (bag = OpenBag; bag != 0; bag = bag->prev) {
-                    cap = Containers[Obj_PtrTMem(&bag->obj.word)->id & ID_INCLASS].capacity;
+                    cap = Containers[Obj_PtrTMem(&bag->obj)->id & ID_INCLASS].capacity;
                     ok &= cap == 0 || bag->weight + weight <= cap;
                 }
             }
-            BagWeight(&cont->ol.word, &weight);
+            BagWeight(&cont->ol.link, &weight);
             cap = Containers[cont->id & ID_INCLASS].capacity;
             ok &= cap == 0 || weight <= cap;
             if (!ok) {
@@ -658,19 +646,19 @@ char far AddTogether(struct Object far *obj, struct Object far *onto)
 
     /* Every return 0 here is one jump to the final return 0: the compiler shares them
        only when that last statement is itself reachable. */
-    if (OBJ_ID(obj) != OBJ_ID(onto))
+    if (OBJ_ITEM(obj) != OBJ_ITEM(onto))
         return 0;
     if (!OBJ_ISQUANT(obj) && obj->ol.f.link > 0
         || !OBJ_ISQUANT(onto) && onto->ol.f.link > 0
         || obj->ol.f.link & LINK_SPECIAL || onto->ol.f.link & LINK_SPECIAL
-        || ComObjData[OBJ_ID(obj)].stack == 1 || ComObjData[OBJ_ID(obj)].stack == 3)
+        || ComObjData[OBJ_ITEM(obj)].stack == 1 || ComObjData[OBJ_ITEM(obj)].stack == 3)
         return 0;
     if (OBJ_CLASS(obj) == CLASS_KEY && obj->ol.f.owner != onto->ol.f.owner)
         return 0;
     if (obj->ol.f.link + onto->ol.f.link < 999) {
-        if (OBJ_ID(obj) >= ITEM_SLING_STONE && OBJ_ID(obj) <= ITEM_ARROW_12)
+        if (OBJ_ITEM(obj) >= ITEM_SLING_STONE && OBJ_ITEM(obj) <= ITEM_ARROW_12)
             return 1;
-        if (OBJ_ID(obj) == ITEM_STORAGE_CRYSTAL)
+        if (OBJ_ITEM(obj) == ITEM_STORAGE_CRYSTAL)
             return 0;
         q1 = obj->qn.f.quality;
         q2 = onto->qn.f.quality;
@@ -688,7 +676,7 @@ char far AddToOccupiedSlot(struct Object far *obj, register int slot)
     register int weight;
 
     ok = 0;
-    target = Obj_PtrTMem(&Inventory[slot].word);
+    target = Obj_PtrTMem(&Inventory[slot]);
     if (OBJ_MAJOR(target) == MAJOR_MISC && OBJ_MINOR(target) == 0) {
         char r;
 
@@ -709,7 +697,7 @@ char far AddToOccupiedSlot(struct Object far *obj, register int slot)
             target->id = target->id & 0x7FFF | ID_ISQUANT;
             target->ol.f.link = 1;
         }
-        weight = ComObjData[OBJ_ID(obj)].mass * qty;
+        weight = ComObjData[OBJ_ITEM(obj)].mass * qty;
         if (slot > 19)
             for (bag = OpenBag; bag != 0; bag = bag->prev)
                 bag->weight += weight;
@@ -730,7 +718,7 @@ char far AddToOccupiedSlot(struct Object far *obj, register int slot)
             CursorObjPtr = made;
             GameInputMode = 1;
             unforce_mouse_cursor(3);
-            force_mouse_cursor(OBJ_ID(CursorObjPtr));
+            force_mouse_cursor(OBJ_ITEM(CursorObjPtr));
         }
         if (RemoveAfterCombine(target, combo)) {
             if (!used)
@@ -749,7 +737,7 @@ char far AddToOccupiedSlot(struct Object far *obj, register int slot)
             CursorObjPtr = old;
         if (CursorObjPtr != 0) {
             unforce_mouse_cursor(0);
-            force_mouse_cursor(OBJ_ID(CursorObjPtr));
+            force_mouse_cursor(OBJ_ITEM(CursorObjPtr));
         }
     } else
         SwapItemsInBag(obj, slot);
@@ -791,8 +779,8 @@ void far displayInventoryArray(int from, int to)
         if (i <= 20) {
             slot = DisplayToSlot[i];
             if (Inventory[slot].f.index != 0) {
-                obj = Obj_PtrTMem(&Inventory[slot].word);
-                id = OBJ_ID(obj);
+                obj = Obj_PtrTMem(&Inventory[slot]);
+                id = OBJ_ITEM(obj);
                 pic_to_screen(id, InvDisplay[i].x, InvDisplay[i].y, InvDisplay[i].h, InvDisplay[i].w);
                 if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL)) {
                     n = obj->ol.f.link;

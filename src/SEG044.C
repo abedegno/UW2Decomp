@@ -16,43 +16,6 @@
 #include "ui.h"
 #include "uw2.h"
 
-#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_CLASS(o)    ((o)->id & ID_CLASS)
-#define OBJ_MINOR4(o)   ((o)->id & ID_INCLASS)
-#define OBJ_FLAGS(o)    (((o)->id & ID_FLAGS) >> 9)
-#define OBJ_Z(o)        ((o)->pos & POS_Z)
-#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
-
-#define SET_ITEM(o, v)    ((o)->id = (o)->id & 0xFE00 | (v) & 0x1FF)
-#define SET_MAJOR(o, v)   ((o)->id = (o)->id & 0xFE3F | ((v) & 7) << 6)
-#define SET_MINOR(o, v)   ((o)->id = (o)->id & 0xFFCF | ((v) & 3) << 4)
-#define SET_MINOR4(o, v)  ((o)->id = (o)->id & 0xFFF0 | (v) & 0xF)
-#define SET_FLAGS(o, v)   ((o)->id = (o)->id & 0xE1FF | ((v) & 0xF) << 9)
-#define SET_Z(o, v)       ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
-#define SET_FINEY(o, v)   ((o)->pos = (o)->pos & 0xE3FF | ((v) & 7) << 10)
-#define SET_FINEX(o, v)   ((o)->pos = (o)->pos & 0x1FFF | ((v) & 7) << 13)
-
-/* One running animation: the animated object, the frames it has left (-1 for ever),
-   and its tile. */
-struct Anim {
-    union Link link;
-    int len;
-    unsigned char x, y;
-};
-
-/* Per animation class (an object of class 7, by its low 4 bits): what to do each frame,
-   and the run of frames it cycles through. */
-struct AnimClass {
-    unsigned flags;                     /* 1 cycle, 2 random, 4 door, 0x20 remove at end,
-                                           0x80 finish the motion first */
-    char start;
-    unsigned char count;
-};
-
 unsigned char lengset = 0;              /* DS:98E, check_door set the length itself */
 unsigned char DoAnimO = 1;              /* DS:98F */
 static int timer_tick = 0;              /* DS:990, FM Towns keeps it in _spec_col */
@@ -65,12 +28,6 @@ struct Anim animlist[0x40];             /* DS:3578 */
 
 extern unsigned char AnimObjInPipe;
 
-struct Object far * far Obj_PtrTMem(union Link far *link);
-struct Object far * far Obj_IntTMem(int index);
-struct Object far * far Obj_Alloc(char mobile);
-void far Obj_Add(union Link far *head, struct Object far *obj);
-void far Obj_AddEnd(union Link far *head, struct Object far *obj);
-unsigned char far Obj_Rem(union Link far *head, struct Object far *obj);
 struct Object far * far CreateObj(int item, char mobile);
 unsigned char far can_place(int item, int index, int x, int y, int z, int b, char dist);
 void far play_effect(char type, int x, int y, int a);
@@ -111,7 +68,7 @@ void far toast_animobj(int n, int frames)
     unsigned state;
 
     obj = Obj_PtrTMem(&animlist[n].link);
-    cls = OBJ_MINOR4(obj);
+    cls = OBJ_INCLASS(obj);
     type = animclassd[cls].flags;
     if ((type & 0x80) && animlist[n].len != 0)
         do_animobj(n, animlist[n].len);
@@ -146,7 +103,7 @@ void far toast_animobj(int n, int frames)
         SET_Z(obj, z);
         SET_MAJOR(obj, major);
         SET_MINOR(obj, minor);
-        SET_MINOR4(obj, state);
+        SET_INCLASS(obj, state);
         obj->ol.f.owner = 0;
         if (OBJ_FLAGS(obj) & 8)
             SET_FLAGS(obj, OBJ_FLAGS(obj) & 7);
@@ -197,11 +154,11 @@ int far add_animobj(int index, int len, unsigned char a, unsigned char x, unsign
     animlist[animcount].x = x;
     animlist[animcount].y = y;
     obj = Obj_PtrTMem(&animlist[animcount].link);
-    frame = animclassd[OBJ_MINOR4(obj)].start;
+    frame = animclassd[OBJ_INCLASS(obj)].start;
     if (frame >= 0)
-        obj->ol.f.owner = animclassd[OBJ_MINOR4(obj)].count
-            ? animclassd[OBJ_MINOR4(obj)].start + a % animclassd[OBJ_MINOR4(obj)].count
-            : animclassd[OBJ_MINOR4(obj)].start;
+        obj->ol.f.owner = animclassd[OBJ_INCLASS(obj)].count
+            ? animclassd[OBJ_INCLASS(obj)].start + a % animclassd[OBJ_INCLASS(obj)].count
+            : animclassd[OBJ_INCLASS(obj)].start;
     AnimObjInPipe = 1;
     return ++animcount;
 }
@@ -215,9 +172,9 @@ void far do_animobj(int n, register int frames)
     register int cls;
 
     obj = Obj_PtrTMem(&animlist[n].link);
-    if (OBJ_CLASS(obj) != FIRST_ANIMOBJ)
+    if (OBJ_CLASSID(obj) != FIRST_ANIMOBJ)
         return;
-    cls = OBJ_MINOR4(obj);
+    cls = OBJ_INCLASS(obj);
     type = animclassd[cls].flags;
     for (mask = 1; type > 0; type &= ~mask, mask = mask << 1) {
         switch (type & mask) {
@@ -253,7 +210,7 @@ void far update_animobj(int frames)
     if (AnimObjInPipe)
         editchng(2);
     for (i = 0; i < animcount; i++) {
-        if (TimeStop && OBJ_MINOR4(Obj_PtrTMem(&animlist[i].link)) != 0xF)
+        if (TimeStop && OBJ_INCLASS(Obj_PtrTMem(&animlist[i].link)) != 0xF)
             continue;
         if (animlist[i].len == -1)
             do_animobj(i, frames);

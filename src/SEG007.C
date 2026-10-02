@@ -22,68 +22,6 @@
 #include "ui.h"
 #include "view3d.h"
 
-#define OBJ_ITEM(o)      ((o)->id & ID_ITEM)
-#define OBJ_MAJOR(o)     (((o)->id & ID_MAJOR) >> 6)
-#define OBJ_MINOR(o)     (((o)->id & ID_MINOR) >> 4)
-#define OBJ_INDEX(o)     (((o)->id & ID_INMAJOR) >> 0)
-#define CRIT_INDEX(o)    ((o)->id & ID_INMAJOR)
-#define FINEHEAD(o)      ((o)->b18 & 0x1F)
-#define SPEED(o)         ((o)->b13 & 0x7F)
-#define BIN(o)           ((o)->b0A & 0xF)
-#define RATE(o)          ((o)->b14 & 7)
-#define PITCH(o)         (((o)->b14 & 0xF8) >> 3)
-#define CAST(o)          (((o)->b19 & 0xC) >> 2)
-#define B19_4(o)         (((o)->b19 & 0x10) >> 4)
-#define B19_6(o)         (((o)->b19 & 0x40) >> 6)
-#define B0A_7(o)         (((o)->b0A & 0x80) >> 7)
-#define DAMAGE(o)        (((o)->b11 & 0xFF) >> 0)
-#define ID_B13(o)        (((o)->id & ID_DOORDIR) >> 13)
-#define OBJ_Z(o)         ((o)->pos & POS_Z)
-#define OBJ_HEADING(o)   (((o)->pos & POS_HEADING) >> 7)
-#define OBJ_FINEY(o)     (((o)->pos & POS_YFINE) >> 10)
-#define OBJ_FINEX(o)     (((o)->pos & POS_XFINE) >> 13)
-#define OBJ_HOMEX(o)     (((o)->home & HOME_X) >> 10)
-#define OBJ_HOMEY(o)     (((o)->home & HOME_Y) >> 4)
-#define OBJ_PATH(o)      ((o)->home & 0xF)
-#define GOAL(o)          (((o)->goal_word & 0xF) >> 0)
-#define GTARG(o)         (((o)->goal_word & 0xFF0) >> 4)
-#define FRAME(o)         (((o)->goal_word & 0xF000) >> 12)
-#define OLDGOAL(o)       (((o)->attitude_word & 0xF) >> 0)
-#define ATTITUDE(o)      (((o)->attitude_word & 0xC000) >> 14)
-#define ATKFRAME(o)      (((o)->b0F & 0xF000) >> 12)
-#define SEQ(o)           ((o)->b15 & 0x3F)
-#define B15_6(o)         (((o)->b15 & 0x40) >> 6)
-#define B15_7(o)         (((o)->b15 & 0x80) >> 7)
-#define B19_0(o)         (((o)->b19 & 1) >> 0)
-#define B19_1(o)         (((o)->b19 & 2) >> 1)
-#define B19_5(o)         (((o)->b19 & 0x20) >> 5)
-#define B18_6(o)         (((o)->b18 & 0x40) >> 6)
-#define DESTX(o)         (((o)->b0F & 0x3F) >> 0)
-#define DESTY(o)         (((o)->b0F & 0xFC0) >> 6)
-
-#define SET_HEADING(o, v)  ((o)->pos = (o)->pos & 0xFC7F | ((v) & 7) << 7)
-#define SET_BIN(o, v)      ((o)->b0A = (o)->b0A & 0xF0 | ((v) & 0xF) << 0)
-#define SET_DAMAGE(o, v)   ((o)->b11 = (o)->b11 & 0 | ((v) & 0xFF) << 0)
-#define SET_GOAL(o, v)     ((o)->goal_word = (o)->goal_word & 0xFFF0 | ((v) & 0xF) << 0)
-#define SET_GTARG(o, v)    ((o)->goal_word = (o)->goal_word & 0xF00F | ((v) & 0xFF) << 4)
-#define SET_FRAME(o, v)    ((o)->goal_word = (o)->goal_word & 0xFFF | ((v) & 0xF) << 12)
-#define SET_OLDGOAL(o, v)  ((o)->attitude_word = (o)->attitude_word & 0xFFF0 | ((v) & 0xF) << 0)
-#define SET_ATTITUDE(o, v) ((o)->attitude_word = (o)->attitude_word & 0x3FFF | ((v) & 3) << 14)
-#define SET_ATKFRAME(o, v) ((o)->b0F = (o)->b0F & 0xFFF | ((v) & 0xF) << 12)
-#define SET_SPEED(o, v)    ((o)->b13 = (o)->b13 & 0x80 | ((v) & 0x7F) << 0)
-#define SET_RATE(o, v)     ((o)->b14 = (o)->b14 & 0xF8 | (v))
-#define SET_PITCH(o, v)    ((o)->b14 = (o)->b14 & 7 | ((v) & 0x1F) << 3)
-#define SET_SEQ(o, v)      ((o)->b15 = (o)->b15 & 0xC0 | ((v) & 0x3F) << 0)
-#define SET_B15_6(o, v)    ((o)->b15 = (o)->b15 & 0xBF | (v) << 6)
-#define SET_B15_7(o, v)    ((o)->b15 = (o)->b15 & 0x7F | (v) << 7)
-#define SET_FINEHEAD(o, v) ((o)->b18 = (o)->b18 & 0xE0 | ((v) & 0x1F) << 0)
-#define SET_B19_0(o, v)    ((o)->b19 = (o)->b19 & 0xFE | (v) << 0)
-#define SET_B19_1(o, v)    ((o)->b19 = (o)->b19 & 0xFD | ((v) & 1) << 1)
-#define SET_B19_4(o, v)    ((o)->b19 = (o)->b19 & 0xEF | (v) << 4)
-#define SET_B19_5(o, v)    ((o)->b19 = (o)->b19 & 0xDF | (v) << 5)
-#define SET_B18_5(o, v)    ((o)->b18 = (o)->b18 & 0xDF | (v) << 5)
-#define SET_CAST(o, v)     ((o)->b19 = (o)->b19 & 0xF3 | ((v) & 3) << 2)
-
 extern struct Object far *objdata;
 extern unsigned char far *ActiveMob;
 extern unsigned char far *LastActiveMob;
@@ -137,12 +75,10 @@ struct Seq {
 };
 struct Seq far *seqptr;
 
-struct Object far * far Obj_IntTMem(int index);
 void far set_loc(unsigned char x, unsigned char y, char z);
 unsigned char far anti_magic_p(int x, int y);
 void far do_crit_phys(struct Phys *pn, struct Handler *tp);
 char far death_check(struct Object far *obj, char how);
-unsigned char far Obj_Rem(unsigned far *head, struct Object far *obj);
 void far player_killed_a(struct Object far *npc);
 void far play_effect(char type, int x, int y, char vol);
 void far set_new_music(int n);
@@ -158,11 +94,11 @@ unsigned char typehit = 0xFF;
 
 void far change_or_inc_seq(int seq, char force)
 {
-    if (SEQ(meptr) != seq) {
+    if (OBJ_SEQ(meptr) != seq) {
         SET_SEQ(meptr, seq);
         SET_FRAME(meptr, 0);
     } else if (force || rand() % 2 == 0)
-        SET_FRAME(meptr, (FRAME(meptr) + 1) % seq_len);
+        SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % seq_len);
 }
 
 void far set_htx(int heading)
@@ -182,7 +118,7 @@ void far crit_drunkwalk(void)
     int range;
 
     seq = 1;
-    if (B15_7(meptr)) {
+    if (OBJ_B15_7(meptr)) {
         freepaths |= 1 << OBJ_PATH(meptr);
         SET_B15_7(meptr, 0);
     }
@@ -191,7 +127,7 @@ void far crit_drunkwalk(void)
         SET_RATE(meptr, 1);
         return;
     }
-    if (ATTITUDE(meptr) == 0 && rand() % 2) {
+    if (OBJ_ATTITUDE(meptr) == 0 && rand() % 2) {
         crit_guard();
         return;
     }
@@ -206,22 +142,22 @@ void far crit_drunkwalk(void)
         }
         SET_PITCH(meptr, pitch + rand() % range);
     }
-    if (SEQ(meptr) == 0) {
+    if (OBJ_SEQ(meptr) == 0) {
         r = rand() % 16;
-        if (mycst->lazy <= r || FRAME(meptr) != seq_lframe)
+        if (mycst->lazy <= r || OBJ_FRAME(meptr) != seq_lframe)
             seq = 0xFF;
     } else {
         r = rand() % 16;
-        if (mycst->lazy < r && FRAME(meptr) == seq_lframe)
+        if (mycst->lazy < r && OBJ_FRAME(meptr) == seq_lframe)
             seq = 0;
     }
-    if (SEQ(meptr) != seq && seq != 0xFF) {
+    if (OBJ_SEQ(meptr) != seq && seq != 0xFF) {
         SET_SEQ(meptr, seq);
         set_cur_seq_len();
-        if (FRAME(meptr) > seq_lframe)
+        if (OBJ_FRAME(meptr) > seq_lframe)
             SET_FRAME(meptr, seq_lframe);
     }
-    if (SEQ(meptr) == 1) {
+    if (OBJ_SEQ(meptr) == 1) {
         if (failed && !aligned) {
             head = (meptr->heading + (rand() % 2 * 2 - 1) * 0x40 + 0x100) % 0x100;
             meptr->heading = head;
@@ -245,17 +181,17 @@ void far crit_drunkwalk(void)
     meptr->heading = head;
     SET_HEADING(meptr, head >> 5);
     SET_FINEHEAD(meptr, head);
-    if (SEQ(meptr) == 0) {
+    if (OBJ_SEQ(meptr) == 0) {
         SET_B15_6(meptr, 1);
         SET_SPEED(meptr, 0);
         SET_RATE(meptr, 6);
         if (rand() % 2)
-            SET_FRAME(meptr, (FRAME(meptr) + 1) % seq_len);
+            SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % seq_len);
     } else {
         SET_B15_6(meptr, 0);
         SET_SPEED(meptr, mycst->speed);
         SET_RATE(meptr, 4);
-        SET_FRAME(meptr, (FRAME(meptr) + 1) % seq_len);
+        SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % seq_len);
     }
     check_out_player();
 }
@@ -267,7 +203,7 @@ void far crit_mill(void)
 
     if (!control)
         return;
-    if (ATTITUDE(meptr) == 0 && GOAL(meptr) != 4) {
+    if (OBJ_ATTITUDE(meptr) == 0 && OBJ_GOAL(meptr) != 4) {
         critter_set_goal(4, 1);
         return;
     }
@@ -287,15 +223,15 @@ void far crit_guard(void)
 
     if (!control)
         return;
-    switch (ATTITUDE(meptr)) {
+    switch (OBJ_ATTITUDE(meptr)) {
     case 0:
         SET_GTARG(meptr, 1);
         set_up_target();
-        if (B19_0(meptr)) {
+        if (OBJ_B19_0(meptr)) {
             critter_set_goal(5, 1);
             return;
         }
-        if (B19_1(meptr)) {
+        if (OBJ_B19_1(meptr)) {
             if (rand() % 16 > mycst->alert)
                 SET_B19_1(meptr, 0);
             else
@@ -319,7 +255,7 @@ void far crit_guard(void)
             }
         }
     }
-    switch (GOAL(meptr)) {
+    switch (OBJ_GOAL(meptr)) {
     case 2:
         crit_drunkwalk();
         break;
@@ -349,7 +285,7 @@ void far crit_offense(void)
     dx = myxhome - myxpos;
     dy = myyhome - myypos;
     homedist = dx * dx + dy * dy;
-    if (GTARG(meptr) == 1)
+    if (OBJ_GTARG(meptr) == 1)
         SET_ATTITUDE(meptr, 0);
     if ((dist < 0x64 || myxpos == txpos && myypos == typos)
         && (abs((signed char)myzpos - tzpos) < 4 || mycst->flier)) {
@@ -362,14 +298,14 @@ void far crit_offense(void)
     } else if (mycst->arms[0].item >> 4 == CLASS_MISSILE)
         attacked = crit_missile_attack();
     if (attacked) {
-        if (SEQ(meptr) == 6 || SEQ(meptr) == 6 || SEQ(meptr) == 3)
+        if (OBJ_SEQ(meptr) == 6 || OBJ_SEQ(meptr) == 6 || OBJ_SEQ(meptr) == 3)
             return;
         change_or_inc_seq(2, 1);
         SET_RATE(meptr, 4);
         SET_SPEED(meptr, 0);
         return;
     }
-    if (dist > 0x100 && OLDGOAL(meptr) == 4 && !B19_5(meptr)
+    if (dist > 0x100 && OBJ_OLDGOAL(meptr) == 4 && !OBJ_B19_5(meptr)
         && mycst->range * mycst->range * 4 < homedist) {
         SET_B19_0(meptr, 0);
         SET_B19_1(meptr, 0);
@@ -415,11 +351,11 @@ unsigned char far crit_attack(unsigned dist)
     }
     meptr->heading = head << 5;
     SET_SPEED(meptr, speed);
-    if (SEQ(meptr) != seq) {
+    if (OBJ_SEQ(meptr) != seq) {
         SET_SEQ(meptr, seq);
         SET_FRAME(meptr, 0);
     } else
-        SET_FRAME(meptr, (FRAME(meptr) + 1) % seq_len);
+        SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % seq_len);
     if (mycst->flier) {
         dz = OBJ_Z(mytarget) + 0xE - OBJ_Z(meptr);
         if (dz > 1)
@@ -436,8 +372,8 @@ unsigned char far crit_attack(unsigned dist)
                 r -= mycst->attacks[i].prob;
             SET_SEQ(meptr, i + 3);
             SET_FRAME(meptr, 0);
-        } else if (ATKFRAME(meptr) < 0xF)
-            SET_ATKFRAME(meptr, ATKFRAME(meptr) + 1);
+        } else if (OBJ_ATKFRAME(meptr) < 0xF)
+            SET_ATKFRAME(meptr, OBJ_ATKFRAME(meptr) + 1);
     }
     SET_RATE(meptr, 4);
     return 1;
@@ -447,7 +383,7 @@ void far crit_offense_find_target(unsigned char x, unsigned char y, unsigned cha
 {
     unsigned char found;
 
-    if ((DESTX(meptr) != x || DESTY(meptr) != y) && rand() % 8 == 0) {
+    if ((OBJ_DESTX(meptr) != x || OBJ_DESTY(meptr) != y) && rand() % 8 == 0) {
         found = target_found(&x, &y);
         if (found == 0 || found == 2 && rand() % 2 == 0)
             set_loc(x, y, tzpos);
@@ -462,7 +398,7 @@ void far crit_offense_find_target(unsigned char x, unsigned char y, unsigned cha
     if (how > 1 && how * how < tdistsqr || how * how * 8 * 8 < tdisttsqr
         || how <= 1 && abs((signed char)myzpos - tzpos) >= 4) {
         crit_head_for_loc(x, y, tzpos);
-        if (B18_6(meptr)) {
+        if (OBJ_B18_6(meptr)) {
             critter_discard_goal();
             SET_B19_1(meptr, 0);
         }
@@ -569,7 +505,7 @@ void far crit_flee(void)
     if (tdistsqr <= 3 && abs(dz) < 0x10) {
         if (rand() % 0x100 < mycst->b1C_0 >> 3 || failed && !aligned) {
             SET_B19_4(meptr, 1);
-            critter_set_goal(9, GTARG(meptr));
+            critter_set_goal(9, OBJ_GTARG(meptr));
             return;
         }
         meptr->heading = (head + 4) % 8 << 5;
@@ -581,7 +517,7 @@ void far crit_flee(void)
     }
     if (failed && !aligned) {
         if (tdistsqr < 9) {
-            if (GOAL(meptr) == 9) {
+            if (OBJ_GOAL(meptr) == 9) {
                 SET_SPEED(meptr, 0);
                 set_htx(head);
                 SET_RATE(meptr, 4);
@@ -589,7 +525,7 @@ void far crit_flee(void)
                 return;
             }
             SET_B19_4(meptr, 1);
-            critter_set_goal(9, GTARG(meptr));
+            critter_set_goal(9, OBJ_GTARG(meptr));
             return;
         }
         newh = (((meptr->heading >> 5) + (rand() % 2 * 2 - 1) * 2 + 8) % 8 << 5) + rand() % 0x20;
@@ -665,7 +601,7 @@ void far crit_talk(void)
 
     if (!control)
         return;
-    if (ATTITUDE(meptr) == 0 && GOAL(meptr) != 4) {
+    if (OBJ_ATTITUDE(meptr) == 0 && OBJ_GOAL(meptr) != 4) {
         critter_set_goal(4, 1);
         return;
     }
@@ -699,7 +635,7 @@ void far check_out_player(void)
     unsigned char head;
     unsigned dist;
 
-    if ((meptr->b13 & 0x7F) <= 0 || player->drawn) {
+    if (OBJ_SPEED(meptr) <= 0 || player->drawn) {
         SET_GTARG(meptr, 1);
         set_up_target();
         dist = tdx * tdx + tdy * tdy;
@@ -723,7 +659,7 @@ void far crit_hover(void)
         return;
     dx = myxhome - myxpos;
     dy = myyhome - myypos;
-    if (ATTITUDE(meptr) == 0 && GOAL(meptr) != 4)
+    if (OBJ_ATTITUDE(meptr) == 0 && OBJ_GOAL(meptr) != 4)
         critter_set_goal(4, 1);
     else if (dx != 0 || dy != 0)
         crit_head_for_loc(myxhome, myyhome, Map_GetAddr(myxhome, myyhome)->height);
@@ -750,12 +686,12 @@ unsigned char far target_found(unsigned char *x, unsigned char *y)
     dx = txpos - myxpos;
     dy = typos - myypos;
     dist = dx * dx + dy * dy;
-    heard = mycst->hearing * Creature[CRIT_INDEX(mytarget)].noise / 16
-          * (mycst->hearing * Creature[CRIT_INDEX(mytarget)].noise / 16);
+    heard = mycst->hearing * Creature[OBJ_INMAJOR_NOSHIFT(mytarget)].noise / 16
+          * (mycst->hearing * Creature[OBJ_INMAJOR_NOSHIFT(mytarget)].noise / 16);
     if (heard / 4 > dist)
         return 0;
-    seen = mycst->sight * Creature[CRIT_INDEX(mytarget)].visibility / 16
-         * (mycst->sight * Creature[CRIT_INDEX(mytarget)].visibility / 16);
+    seen = mycst->sight * Creature[OBJ_INMAJOR_NOSHIFT(mytarget)].visibility / 16
+         * (mycst->sight * Creature[OBJ_INMAJOR_NOSHIFT(mytarget)].visibility / 16);
     if (dist <= seen) {
         th = deltatotheta(dx, dy);
         myh = OBJ_HEADING(meptr);
@@ -807,7 +743,7 @@ void far constrain_movement(void)
     register unsigned char diff;
 
     oldh = meptr->heading;
-    newf = (OBJ_HEADING(meptr) << 5) + FINEHEAD(meptr);
+    newf = (OBJ_HEADING(meptr) << 5) + OBJ_FINEHEAD(meptr);
     diff = (newf + 0x100 - myoldfacing) % 0x100;
     if (diff >= 0x20 && diff <= 0xE0) {
         if (diff < 0x80)
@@ -819,7 +755,7 @@ void far constrain_movement(void)
     SET_FINEHEAD(meptr, newf);
     if (aligned)
         meptr->heading = myoldheading;
-    else if (myoldspeed > 1 && SPEED(meptr) > 1) {
+    else if (myoldspeed > 1 && OBJ_SPEED(meptr) > 1) {
         diff = (oldh + 0x100 - myoldheading) % 0x100;
         if (diff < 0x20 || diff > 0xE0)
             meptr->heading = oldh;
@@ -852,7 +788,7 @@ unsigned char far turn_real_fine(signed char dx, signed char dy)
     register unsigned dist;
     register int sx;
 
-    cur = (OBJ_HEADING(meptr) << 5) + FINEHEAD(meptr);
+    cur = (OBJ_HEADING(meptr) << 5) + OBJ_FINEHEAD(meptr);
     d2 = tdx * tdx + tdy * tdy;
     dist = cSqRt(d2);
     ly = dx;
@@ -912,7 +848,7 @@ void far set_critter_vars(struct Object far *obj)
 {
     meptr = obj;
     myid = Obj_MemTPtr(meptr);
-    mycst = &Creature[OBJ_INDEX(meptr)];
+    mycst = &Creature[OBJ_INMAJOR(meptr)];
     myxpos = OBJ_HOMEX(meptr);
     myypos = OBJ_HOMEY(meptr);
     myzpos = OBJ_Z(meptr) >> 3;
@@ -921,7 +857,7 @@ void far set_critter_vars(struct Object far *obj)
     myxhome = meptr->qn.f.quality;
     myyhome = meptr->ol.f.owner;
     myoldheading = meptr->heading;
-    myoldfacing = (OBJ_HEADING(meptr) << 5) + FINEHEAD(meptr);
+    myoldfacing = (OBJ_HEADING(meptr) << 5) + OBJ_FINEHEAD(meptr);
     myoldspeed = meptr->b13 & 0x7F;
     myheight = ComObjData[OBJ_ITEM(meptr)].height;
     if (mycst->flier) {
@@ -940,8 +876,8 @@ void far set_cur_seq_len(void)
 {
     register int page;
 
-    page = grs_3dinf[CRIT_INDEX(meptr)].page;
-    seq_len = seqptr[(page << 3) + SEQ(meptr)].len;
+    page = grs_3dinf[OBJ_INMAJOR_NOSHIFT(meptr)].page;
+    seq_len = seqptr[(page << 3) + OBJ_SEQ(meptr)].len;
     seq_lframe = seq_len - 1;
 }
 
@@ -956,7 +892,7 @@ unsigned char far critter_ai(void)
     register int pdist;
 
     myid = Obj_MemTPtr(meptr);
-    mycst = &Creature[OBJ_INDEX(meptr)];
+    mycst = &Creature[OBJ_INMAJOR(meptr)];
     myxpos = OBJ_HOMEX(meptr);
     myypos = OBJ_HOMEY(meptr);
     plyr = Obj_IntTMem(1);
@@ -966,8 +902,8 @@ unsigned char far critter_ai(void)
             + ((signed char)myypos - lastYeye) * ((signed char)myypos - lastYeye);
     pdist = ((signed char)myxpos - px) * ((signed char)myxpos - px)
           + ((signed char)myypos - py) * ((signed char)myypos - py);
-    if (eyedist > 0x64 && pdist > 0x64 && GOAL(meptr) != 3) {
-        SET_BIN(meptr, (BIN(meptr) + 8) % 16);
+    if (eyedist > 0x64 && pdist > 0x64 && OBJ_GOAL(meptr) != 3) {
+        SET_BIN(meptr, (OBJ_BIN(meptr) + 8) % 16);
         return 1;
     }
     if (mycst->flier) {
@@ -992,11 +928,11 @@ unsigned char far critter_ai(void)
     didhitobj = 0;
     hitadoor = 0;
     dontchangedz = 0;
-    if (SEQ(meptr) != 1 && SEQ(meptr) != 0 && B15_7(meptr)) {
+    if (OBJ_SEQ(meptr) != 1 && OBJ_SEQ(meptr) != 0 && OBJ_B15_7(meptr)) {
         freepaths |= 1 << OBJ_PATH(meptr);
         SET_B15_7(meptr, 0);
     }
-    if (!B15_6(meptr) || SPEED(meptr) != 0 || PITCH(meptr) != 0x10) {
+    if (!OBJ_B15_6(meptr) || OBJ_SPEED(meptr) != 0 || OBJ_PITCH(meptr) != 0x10) {
         get_phys_data(meptr, pn_act);
         oldh = meptr->heading;
         crit_terr = get_terrain(meptr);
@@ -1020,18 +956,18 @@ unsigned char far critter_ai(void)
     myxhome = meptr->qn.f.quality;
     myyhome = meptr->ol.f.owner;
     myoldheading = meptr->heading;
-    myoldfacing = (OBJ_HEADING(meptr) << 5) + FINEHEAD(meptr);
+    myoldfacing = (OBJ_HEADING(meptr) << 5) + OBJ_FINEHEAD(meptr);
     myoldspeed = meptr->b13 & 0x7F;
     myheight = ComObjData[OBJ_ITEM(meptr)].height;
     set_cur_seq_len();
-    if (GOAL(meptr) == 0xB || GOAL(meptr) == 3)
+    if (OBJ_GOAL(meptr) == 0xB || OBJ_GOAL(meptr) == 3)
         critter_mv();
-    else if (SEQ(meptr) == 7) {
-        if (FRAME(meptr) == seq_lframe) {
+    else if (OBJ_SEQ(meptr) == 7) {
+        if (OBJ_FRAME(meptr) == seq_lframe) {
             death_check(meptr, 1);
             XP = OBJ_HOMEX(meptr);
             YP = OBJ_HOMEY(meptr);
-            if (Obj_Rem(&Map_GetAddr(XP, YP)->objects.word, meptr)) {
+            if (Obj_Rem(&Map_GetAddr(XP, YP)->objects, meptr)) {
                 generate_inventory(meptr);
                 build_corpse(meptr, mycst->corpse, mycst->remains);
                 drop_some_objects(meptr);
@@ -1039,43 +975,43 @@ unsigned char far critter_ai(void)
                 return 0;
             }
         } else
-            SET_FRAME(meptr, FRAME(meptr) + 1);
-    } else if (SEQ(meptr) >= 3 && SEQ(meptr) <= 5) {
-        if (FRAME(meptr) == 0 && GTARG(meptr) == 1) {
+            SET_FRAME(meptr, OBJ_FRAME(meptr) + 1);
+    } else if (OBJ_SEQ(meptr) >= 3 && OBJ_SEQ(meptr) <= 5) {
+        if (OBJ_FRAME(meptr) == 0 && OBJ_GTARG(meptr) == 1) {
             if (get_current_music() < 2 || get_current_music() > 4)
                 set_new_music(3);
             lastcombattime = *Time;
         }
-        if (FRAME(meptr) == 3)
-            critter_attack(meptr, rand() % 9, atk_charge[ATKFRAME(meptr)].charge, SEQ(meptr) - 3,
+        if (OBJ_FRAME(meptr) == 3)
+            critter_attack(meptr, rand() % 9, atk_charge[OBJ_ATKFRAME(meptr)].charge, OBJ_SEQ(meptr) - 3,
                            mycst->b0F);
-        if (FRAME(meptr) == seq_lframe) {
+        if (OBJ_FRAME(meptr) == seq_lframe) {
             SET_SEQ(meptr, 2);
             SET_FRAME(meptr, 0);
             SET_ATKFRAME(meptr, 0);
         } else
-            SET_FRAME(meptr, FRAME(meptr) + 1);
-    } else if (SEQ(meptr) == 6) {
-        if (FRAME(meptr) == 3) {
-            if (CAST(meptr)) {
+            SET_FRAME(meptr, OBJ_FRAME(meptr) + 1);
+    } else if (OBJ_SEQ(meptr) == 6) {
+        if (OBJ_FRAME(meptr) == 3) {
+            if (OBJ_CAST(meptr)) {
                 missile_try = compute_trz_or_try_rather(0x1E, 0);
-                cast(mycst->spells[CAST(meptr) - 1], meptr, 0L);
+                cast(mycst->spells[OBJ_CAST(meptr) - 1], meptr, 0L);
             } else {
                 type = mycst->arms[0].item & ID_INCLASS;
                 missile_try = compute_trz_or_try_rather(Missile[type].type, 1);
                 critter_fire(meptr, type, Missile[type].type);
             }
         }
-        if (FRAME(meptr) == seq_lframe) {
+        if (OBJ_FRAME(meptr) == seq_lframe) {
             SET_SEQ(meptr, 2);
             SET_FRAME(meptr, 0);
             SET_CAST(meptr, 0);
             SET_ATKFRAME(meptr, 0);
         } else
-            SET_FRAME(meptr, FRAME(meptr) + 1);
+            SET_FRAME(meptr, OBJ_FRAME(meptr) + 1);
     } else
         critter_mv();
-    SET_BIN(meptr, (BIN(meptr) + RATE(meptr)) % 16);
+    SET_BIN(meptr, (OBJ_BIN(meptr) + OBJ_RATE(meptr)) % 16);
     return 1;
 }
 
@@ -1087,27 +1023,27 @@ void far critter_mv(void)
     didmove = 0;
     SET_B18_5(meptr, 0);
     SET_B15_6(meptr, 0);
-    if (GOAL(meptr) == 0xB || GOAL(meptr) == 0xF)
+    if (OBJ_GOAL(meptr) == 0xB || OBJ_GOAL(meptr) == 0xF)
         goto do_goal;
-    if (SEQ(meptr) == 1 && (FRAME(meptr) & 1) == 1) {
+    if (OBJ_SEQ(meptr) == 1 && (OBJ_FRAME(meptr) & 1) == 1) {
         snd = 0xFF;
         switch (mycst->sound) {
             case 1:
-                if (FRAME(meptr) == 1)
+                if (OBJ_FRAME(meptr) == 1)
                     snd = 0x5A;
-                else if (FRAME(meptr) == 3)
+                else if (OBJ_FRAME(meptr) == 3)
                     snd = 0x5B;
                 break;
             case 6:
-                if (FRAME(meptr) == 1)
+                if (OBJ_FRAME(meptr) == 1)
                     snd = 0x2F;
-                else if (FRAME(meptr) == 3)
+                else if (OBJ_FRAME(meptr) == 3)
                     snd = 0x30;
                 break;
             case 7:
-                if (FRAME(meptr) == 1)
+                if (OBJ_FRAME(meptr) == 1)
                     snd = 0x1D;
-                else if (FRAME(meptr) == 3)
+                else if (OBJ_FRAME(meptr) == 3)
                     snd = 0x1D;
                 break;
             case 3:
@@ -1130,20 +1066,20 @@ void far critter_mv(void)
         }
     if (mycst->bA_1)
         goto do_goal;
-    if ((!B19_6(meptr) && crithit != myid && mycst->race == typehit && !B0A_7(meptr) || B19_6(meptr))
+    if ((!OBJ_ALLY(meptr) && crithit != myid && mycst->race == typehit && !OBJ_LONER(meptr) || OBJ_ALLY(meptr))
         && crithittime + 0x200 > player->game_clock
         && abs(myxpos - hitx) + abs(myypos - hity) < mycst->hearing) {
         SET_ATTITUDE(meptr, 0);
         SET_B19_0(meptr, 1);
-        if (GOAL(meptr) != 9 && GOAL(meptr) != 6) {
-            critter_set_goal(5, B19_6(meptr) ? crithit : 1);
+        if (OBJ_GOAL(meptr) != 9 && OBJ_GOAL(meptr) != 6) {
+            critter_set_goal(5, OBJ_ALLY(meptr) ? crithit : 1);
             set_loc(hitx, hity, hitpz);
         }
     }
     if (meptr->last_hit > 0
-        && (meptr->last_hit == 1 && !B19_6(meptr) || B19_6(meptr)
-            || B19_6(Obj_IntTMem(meptr->last_hit)))) {
-        if (meptr->last_hit != GTARG(meptr))
+        && (meptr->last_hit == 1 && !OBJ_ALLY(meptr) || OBJ_ALLY(meptr)
+            || OBJ_ALLY(Obj_IntTMem(meptr->last_hit)))) {
+        if (meptr->last_hit != OBJ_GTARG(meptr))
             SET_GTARG(meptr, meptr->last_hit);
         if (!set_up_target())
             goto do_goal;
@@ -1156,11 +1092,11 @@ void far critter_mv(void)
         if (tdistsqr > 2 && (!mycst->b2D_0 || anti_magic_p(myxpos, myypos))) {
             SET_B19_5(meptr, 1);
             critter_set_goal(5, meptr->last_hit);
-        } else if (B19_5(meptr))
+        } else if (OBJ_B19_5(meptr))
             critter_set_goal(5, meptr->last_hit);
-        else if (!B19_4(meptr) && should_i_flee(mycst->avghit, meptr->hp, mycst->b1C_0, DAMAGE(meptr)))
+        else if (!OBJ_B19_4(meptr) && should_i_flee(mycst->avghit, meptr->hp, mycst->b1C_0, OBJ_DAMAGE(meptr)))
             critter_set_goal(6, meptr->last_hit);
-        else if (B19_4(meptr)) {
+        else if (OBJ_B19_4(meptr)) {
             SET_B19_4(meptr, 1);
             critter_set_goal(9, meptr->last_hit);
         } else
@@ -1169,7 +1105,7 @@ void far critter_mv(void)
         meptr->b11 = 0;
     }
 do_goal:
-    switch (GOAL(meptr)) {
+    switch (OBJ_GOAL(meptr)) {
     case 0:
     case 7:
         crit_guard();
@@ -1212,7 +1148,7 @@ do_goal:
         SET_SPEED(meptr, rand() % 2);
         meptr->heading = rand() % 0x100;
         SET_PITCH(meptr, rand() % 3 + 0xF);
-        SET_FRAME(meptr, (FRAME(meptr) + 1) % seq_len);
+        SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % seq_len);
         SET_B15_6(meptr, 1);
         break;
     case 15:
@@ -1221,8 +1157,8 @@ do_goal:
             SET_PITCH(meptr, 0x10);
         }
         SET_RATE(meptr, 7);
-        if (GTARG(meptr) > 0)
-            SET_GTARG(meptr, GTARG(meptr) - 1);
+        if (OBJ_GTARG(meptr) > 0)
+            SET_GTARG(meptr, OBJ_GTARG(meptr) - 1);
         else
             critter_discard_goal();
         break;
@@ -1239,7 +1175,7 @@ do_goal:
 
 unsigned char far set_up_target(void)
 {
-    mytarget = Obj_IntTMem(GTARG(meptr));
+    mytarget = Obj_IntTMem(OBJ_GTARG(meptr));
     if (mytarget->hp <= 0)
         return 0;
     txpos = OBJ_HOMEX(mytarget);
@@ -1284,7 +1220,7 @@ unsigned char far acceptable_danger(void)
 {
     register unsigned char d;
 
-    if (ATTITUDE(meptr) != 0 || mycst->avghit == 0 || ID_B13(meptr))
+    if (OBJ_ATTITUDE(meptr) != 0 || mycst->avghit == 0 || OBJ_DOORDIR(meptr))
         return 0;
     d = (meptr->hp << 2) / mycst->avghit + mycst->b1C_0 / 4;
     return d;
@@ -1292,16 +1228,16 @@ unsigned char far acceptable_danger(void)
 
 void far critter_set_goal(unsigned char goal, int target)
 {
-    if (GOAL(meptr) == 4)
-        SET_OLDGOAL(meptr, GOAL(meptr));
+    if (OBJ_GOAL(meptr) == 4)
+        SET_OLDGOAL(meptr, OBJ_GOAL(meptr));
     SET_GOAL(meptr, goal);
     SET_GTARG(meptr, target);
 }
 
 void far critter_discard_goal(void)
 {
-    if (OLDGOAL(meptr)) {
-        SET_GOAL(meptr, OLDGOAL(meptr));
+    if (OBJ_OLDGOAL(meptr)) {
+        SET_GOAL(meptr, OBJ_OLDGOAL(meptr));
         SET_GTARG(meptr, 1);
         SET_OLDGOAL(meptr, 0);
     } else {
@@ -1326,7 +1262,7 @@ unsigned char far crit_die(struct Object far *obj)
 {
     unsigned char snd;
 
-    if (!(SEQ(obj) == 7 || !go_into_dying_sequence(obj))) {
+    if (!(OBJ_SEQ(obj) == 7 || !go_into_dying_sequence(obj))) {
         switch (victim->death) {
         case 0:
             return 1;
@@ -1366,7 +1302,7 @@ unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
     index = obj->id & ID_INCLASS;
     cr = &Creature[(minor << 4) + index];
     victim = cr;
-    SET_DAMAGE(obj, DAMAGE(obj) + damage);
+    SET_DAMAGE(obj, OBJ_DAMAGE(obj) + damage);
     if (from == 0 || from >= objdata)
         who = 0;
     else if (OBJ_MAJOR(from) != MAJOR_CREATURE)
@@ -1377,7 +1313,7 @@ unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
     }
     if (who)
         obj->last_hit = who;
-    if (who == 1 && !B0A_7(obj)) {
+    if (who == 1 && !OBJ_LONER(obj)) {
         typehit = cr->race;
         crithit = Obj_MemTPtr(obj);
         hitx = OBJ_HOMEX(obj);
@@ -1437,7 +1373,7 @@ void far move_mobile(char delta)
     seqptr = MK_FP(EmsBuff + 0xC00, 0);
     for (p = ActiveMob; p < LastActiveMob; p++) {
         meptr = &critdata[*p];
-        while (timetodo(BIN(meptr), RATE(meptr))) {
+        while (timetodo(OBJ_BIN(meptr), OBJ_RATE(meptr))) {
             if (OBJ_MAJOR(meptr) == MAJOR_CREATURE)
                 ok = critter_ai();
             else
