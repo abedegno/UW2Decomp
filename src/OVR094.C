@@ -20,13 +20,13 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_ID(o)       ((o)->id & 0x1FF)
-#define OBJ_TYPE(o)     ((o)->id & 0xF)
-#define OBJ_CLASS(o)    (((o)->id & 0x1F0) >> 4)
-#define DOOR_STATE(o)   (((o)->id & 0x1E00) >> 9)
+#define OBJ_ID(o)       ((o)->id & ID_ITEM)
+#define OBJ_TYPE(o)     ((o)->id & ID_INCLASS)
+#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
+#define DOOR_STATE(o)   (((o)->id & ID_FLAGS) >> 9)
 #define OBJ_OWNER(o)    ((o)->ol.f.owner)
-#define TILE_X(o)       (((o)->home & 0xFC00) >> 10)
-#define TILE_Y(o)       (((o)->home & 0x3F0) >> 4)
+#define TILE_X(o)       (((o)->home & HOME_X) >> 10)
+#define TILE_Y(o)       (((o)->home & HOME_Y) >> 4)
 
 /* One map note: its text and where it sits on the map, 0x36 bytes. */
 struct ATM {
@@ -80,7 +80,7 @@ static signed char door_dx[4] = { 0, -1, -1, -1 };
 static signed char door_dir;
 static unsigned char notes_dirty;
 static int level;
-unsigned char PlayersMap[64][64];
+unsigned char PlayersMap[MAP_SIZE][MAP_SIZE];
 static int old_strings;
 static int num_words;
 static int map_mouse;
@@ -149,11 +149,11 @@ void far automap_area(int x0, int y0, int x1, int y1, int *arg,
                 break;
             tile = Map_GetAddr(x, y);
             terr = tile->type;
-            terr |= TxmTerr[tile->floor] & 0xC0;
+            terr |= TxmTerr[tile->floor] & TERR_CLASS;
             for (link = &tile->objects.word; (obj = Obj_PtrTMem(link)) != 0; link = &obj->qn.word) {
-                if (OBJ_ID(obj) == 0x164 && DOOR_STATE(obj) < 2)
+                if (OBJ_ID(obj) == ITEM_BRIDGE && DOOR_STATE(obj) < 2)
                     terr = terr;
-                if (OBJ_CLASS(obj) == 0x14)
+                if (OBJ_CLASS(obj) == CLASS_DOOR)
                     terr = terr;
                 if (OBJ_TYPE(obj) == 0xE || OBJ_TYPE(obj) == 0xF) {
                     t = TxmTerr[OBJ_OWNER(obj)] & 7;
@@ -225,7 +225,7 @@ void far ExitAutoMap(void)
         change_music_maybe();
     }
     grfx_clear();
-    grfx_quikpal(0);
+    grfx_quikpal(PAL_GAME);
     mouse_freereign();
     mouse_show();
 }
@@ -531,7 +531,7 @@ void far ManageDungeonMap(void)
         ch[1] = 0;
         if (num_words != 100) {
             note = &ATM_Strings[num_words];
-            grfx_quikfont(0);
+            grfx_quikfont(FONT_4X5P);
             force_mouse_cursor(0x107A);
             note->x = mx + 2;
             note->y = my + 2;
@@ -569,7 +569,7 @@ void far ManageDungeonMap(void)
                 mouse_putxy(curx + 9, my + 0xF);
                 string_to_screen(text, note->x, note->y);
             }
-            grfx_quikfont(1);
+            grfx_quikfont(FONT_5X6P);
             if (text[0]) {
                 notes_dirty = 1;
                 str_copy(note->text, text);
@@ -633,7 +633,7 @@ void far RedisplayStrings(void)
     char buf[50];
     register int i;
 
-    grfx_quikfont(0);
+    grfx_quikfont(FONT_4X5P);
     *foreground_color = 0x4E;
     *background_color = 0x4E;
     for (i = 0; i < num_words; i++) {
@@ -643,7 +643,7 @@ void far RedisplayStrings(void)
             string_to_screen(buf, ATM_Strings[i].x, ATM_Strings[i].y);
         }
     }
-    grfx_quikfont(1);
+    grfx_quikfont(FONT_5X6P);
 }
 
 void far SaveTheWords(int lev)
@@ -704,7 +704,7 @@ void far show_gem_parts(int lev)
     old = Transparency;
     Transparency = 1;
     for (i = 0; i < 8; i++)
-        if (player->quest_bytes[13] & (1 << i))
+        if (player->quest_bytes[QB_WORLDS_VISITED] & (1 << i))
             show_a_part(i, 1);
     k = (lev - 1) / 8;
     if (k == 0)
@@ -745,18 +745,18 @@ void far ShowAutoMapLevel(int lev)
         }
         level = lev;
         grPageFlip();
-        grfx_quikpal(1);
+        grfx_quikpal(PAL_MAP);
         grSoftPageFlip();
         copy_hidden_to_visible();
         if (GetTheWords(lev))
             RedisplayStrings();
         *foreground_color = 0x4E;
         *background_color = 0x4E;
-        grfx_quikfont(3);
+        grfx_quikfont(FONT_BIG);
         num[0] = (lev - 1 & 7) + '1';
         num[1] = 0;
         string_to_screen(num, 0x115, 0xBF);
-        grfx_quikfont(1);
+        grfx_quikfont(FONT_5X6P);
     } else {
         grSoftPageFlip();
         mouse_show();
@@ -770,7 +770,7 @@ void far ChangeAutoMapLevel(register int lev)
 {
     SaveTheWords(level);
     ClearAutoMap();
-    if (lev < 0x50 && lev != 0x47)
+    if (lev < NUM_LEVELS && lev != 0x47)
         GetAutoMapLevel(0, lev);
     ShowAutoMapLevel(lev);
 }

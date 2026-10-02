@@ -20,28 +20,28 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_Z(o)        ((o)->pos & 0x7F)
-#define OBJ_HEADING(o)  (((o)->pos & 0x380) >> 7)
-#define OBJ_XFINE(o)    (((o)->pos & 0xE000) >> 13)
-#define OBJ_YFINE(o)    (((o)->pos & 0x1C00) >> 10)
+#define OBJ_Z(o)        ((o)->pos & POS_Z)
+#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
+#define OBJ_XFINE(o)    (((o)->pos & POS_XFINE) >> 13)
+#define OBJ_YFINE(o)    (((o)->pos & POS_YFINE) >> 10)
 #define SET_Z(o, v)     ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
 #define SET_XFINE(o, v) ((o)->pos = (o)->pos & 0x1FFF | ((unsigned)(v) & 7) << 13)
 #define SET_YFINE(o, v) ((o)->pos = (o)->pos & 0xE3FF | ((unsigned)(v) & 7) << 10)
 #define SET_HOMEX(o, v) ((o)->home = (o)->home & 0x3FF | ((v) & 0x3F) << 10)
 #define SET_HOMEY(o, v) ((o)->home = (o)->home & 0xFC0F | ((v) & 0x3F) << 4)
-#define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
-#define OBJ_ISQUANT(o)  (((o)->id & 0x8000) >> 15)
-#define OBJ_KIND(o)     (((o)->id & 0x30) >> 4)
+#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
+#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
+#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
+#define OBJ_KIND(o)     (((o)->id & ID_MINOR) >> 4)
 /* An enchantment: link 0x200 plus the effect in the low bits. */
-#define SET_ENCHANT(o, v) ((o)->ol.f.link = (o)->ol.f.link & 0x1F0 | (v) & 0xF | 0x200)
+#define SET_ENCHANT(o, v) ((o)->ol.f.link = (o)->ol.f.link & 0x1F0 | (v) & 0xF | LINK_SPECIAL)
 
-#define OBJ_ITEM(o)     ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
+#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
 /* Two spellings of the critter index: sp_study_monster's bytes have no shift, mdetect's
    have a `shr ax,0`, so the original used both. */
-#define OBJ_INDEX(o)    ((o)->id & 0x3F)
-#define OBJ_TYPE(o)     (((o)->id & 0x3F) >> 0)
+#define OBJ_INDEX(o)    ((o)->id & ID_INMAJOR)
+#define OBJ_TYPE(o)     (((o)->id & ID_INMAJOR) >> 0)
 #define OBJ_UNDEAD(o)   (((o)->attitude_word & 0x400) >> 10)
 
 #define SPELL_CLASS(s)  (((s).cls & 0xF8) >> 3)
@@ -54,7 +54,7 @@ extern unsigned char far *ActiveMob;
 extern unsigned char far *LastActiveMob;
 
 char dtypes[6] = { 3, 4, 8, 0x10, 0x20, 0x40 };
-int demons[5] = { 0x4B, 0x4B, 0x5E, 0x64, 0x68 };
+int demons[5] = { ITEM_IMP, ITEM_IMP, ITEM_HORDLING, ITEM_DESPOILER, ITEM_DESTROYER };
 
 void far scroll_print(char far *s);
 int far add_animobj(int index, int len, int a, char x, char y);
@@ -139,7 +139,7 @@ char far study_monster_spells(struct Object far *obj, struct Creature *crit, cha
                     minor += (major + 0xC) << 4;
                 else
                     minor += 0x100;
-                str_cat(str, get_string(minor | 0xC00));
+                str_cat(str, get_string(minor | STR_SPELLS));
                 if (count - i > 2)
                     strcat(str, ", ");
                 if (count - i == 2)
@@ -161,14 +161,14 @@ char far sp_study_monster(struct Object far *caster, struct Object far *target)
     int i;
     struct Creature *crit;
 
-    isnpc = OBJ_MAJOR(target) == 1;
+    isnpc = OBJ_MAJOR(target) == MAJOR_CREATURE;
     hasres = 0;
     flags = 0;
     crit = &Creature[OBJ_INDEX(target)];
     if (!isnpc) {
-        if (OBJ_ITEM(target) == 0x13)
+        if (OBJ_ITEM(target) == ITEM_SKULL_13)
             flags |= 2;
-        else if (OBJ_ITEM(target) != 0x1CD)
+        else if (OBJ_ITEM(target) != ITEM_WISP)
             return 0;
     } else {
         if (OBJ_UNDEAD(target))
@@ -219,7 +219,7 @@ char far sp_study_monster(struct Object far *caster, struct Object far *target)
             if (check_res(target, 1, dtypes[i]) == 0 && (dtypes[i] != 8 || crit->race != 0x17)) {
                 if (hasres)
                     strcat(str, ", ");
-                str_cat(str, get_string((i + 0x146) | 0x200));
+                str_cat(str, get_string((i + 0x146) | STR_GAME));
                 hasres = 1;
             }
         }
@@ -244,17 +244,17 @@ char far chargeable(struct Object far *obj, int major, int effect)
 {
     int cls;
 
-    cls = (obj->id & 0x1F0) >> 4;
+    cls = (obj->id & ID_CLASS) >> 4;
     if (major == 7 && effect == 0xE)
         return 0;
     if (major == 0xD && effect >= 0xC && effect <= 0xF)
         return 0;
     switch (cls) {
-    case 0xB:
+    case CLASS_FOOD:
         return 0;
-    case 0xE:
+    case CLASS_REAG:
         return 0;
-    case 0x13:
+    case CLASS_BOOK:
         return 0;
     default:
         return 1;
@@ -268,7 +268,7 @@ void far sp_enchant_faildestroymess(struct Object far *obj, int x, int y)
     char str[0x80];
 
     tile = Map_GetAddr(x, y);
-    boom = build_new_obj(0x1C2, tile);
+    boom = build_new_obj(ITEM_EXPLOSION_1C2, tile);
     game_sprint(0x13E);
     GetObjDesc(obj, 0, str);
     scroll_print(str);
@@ -295,17 +295,17 @@ char far charge_object(struct Object far *obj, int effect, int x, int y)
     diff = (player->level + 1) / 2 - base + 8;
     spell = 0;
     head = &obj->ol.word;
-    spell = Obj_InList(&head, 0, 4, 2, 0);
+    spell = Obj_InList(&head, 0, MAJOR_SPEC, 2, 0);
     q = spell->qn.f.quality / diff;
     chance = ((0x10 - diff + q) << 10) / (q + 0x18);
     if ((rand() & 0x3FF) < chance) {
         sp_enchant_faildestroymess(obj, x, y);
         if (Obj_Rem(head, spell))
             Obj_Free(spell);
-        obj->id = obj->id & 0xFE00 | debris_type(OBJ_ITEM(obj), 0) & 0x1FF;
+        obj->id = obj->id & 0xFE00 | debris_type(OBJ_ITEM(obj), 0) & ID_ITEM;
         return 1;
     } else {
-        useNSpellCharges(obj, -1 - player->skills[9] / 15);
+        useNSpellCharges(obj, -1 - player->skills[SKILL_CASTING] / 15);
         return 0;
     }
 }
@@ -358,16 +358,16 @@ void far sp_enchant(struct Object far *obj, unsigned char inv, int x, int y)
             return;
         } else if (!flag && major == 0xC) {
             attempt = 0;
-            if (OBJ_MAJOR(obj) != 0)
+            if (OBJ_MAJOR(obj) != MAJOR_HACK)
                 goto report;
             if (OBJ_KIND(obj) <= 1 && effect < 8 && (effect & ~4) < 3) {
                 attempt = 1;
                 diff = effect & ~4;
-                skill = (player->level - 8) / 4 + player->skills[9] / 11;
+                skill = (player->level - 8) / 4 + player->skills[SKILL_CASTING] / 11;
             } else if (OBJ_KIND(obj) >= 2 && (effect & ~8) < 7) {
                 attempt = 1;
                 diff = effect & ~8;
-                skill = player->level + player->skills[9] / 11 - 10;
+                skill = player->level + player->skills[SKILL_CASTING] / 11 - 10;
             }
             if (attempt == 0)
                 goto report;
@@ -380,12 +380,12 @@ void far sp_enchant(struct Object far *obj, unsigned char inv, int x, int y)
             goto report;
         }
     }
-    if (!already && OBJ_MAJOR(obj) == 0
+    if (!already && OBJ_MAJOR(obj) == MAJOR_HACK
         && (OBJ_ISQUANT(obj) || Obj_PtrTMem(&obj->ol.word) == 0)) {
         obj->ol.f.link = 0x201;
-        obj->id = obj->id & 0xEFFF | 0x1000;
+        obj->id = obj->id & 0xEFFF | ID_ENCHANT;
         obj->id = obj->id & 0xF7FF;
-        obj->id = obj->id & 0x7FFF | 0x8000;
+        obj->id = obj->id & 0x7FFF | ID_ISQUANT;
         switch (OBJ_KIND(obj)) {
         case 0:
         case 1:
@@ -421,18 +421,18 @@ report:
 char far mendable(struct Object far *obj)
 {
     switch (OBJ_MAJOR(obj)) {
-    case 0:
+    case MAJOR_HACK:
         return 1;
-    case 2:
+    case MAJOR_MISC:
         switch (OBJ_KIND(obj)) {
         case 1:
-            return (obj->id & 0x1F0) >> 4 != 0x90 && (obj->id & 0x1F0) >> 4 != 0x94;
+            return (obj->id & ID_CLASS) >> 4 != 0x90 && (obj->id & ID_CLASS) >> 4 != 0x94;
         case 3:
             return 1;
         default:
             return 0;
         }
-    case 5:
+    case MAJOR_RECT:
         switch (OBJ_KIND(obj)) {
         case 0:
             return 1;
@@ -454,15 +454,15 @@ char far sp_true_sight(struct Object far *caster, struct Object far *target)
         return 0;
     if (OBJ_ISQUANT(target) || target->ol.f.link == 0)
         return 0;
-    if (OBJ_MAJOR(target) == 6)
+    if (OBJ_MAJOR(target) == MAJOR_TRAP)
         return 0;
     head = &target->ol.word;
-    trig = Obj_InList(&head, 0, 6, 2, 3);
+    trig = Obj_InList(&head, 0, MAJOR_TRAP, 2, 3);
     if (trig) {
-        search = player->skills[11];
-        player->skills[11] = 0x2D;
+        search = player->skills[SKILL_SEARCH];
+        player->skills[SKILL_SEARCH] = 0x2D;
         UseTrigger(ThePlayer, target, trig, 5);
-        player->skills[11] = search;
+        player->skills[SKILL_SEARCH] = search;
         return 1;
     }
     return 0;
@@ -495,30 +495,30 @@ void far creat_spell(struct Object far *caster, char which)
     z = tile->height << 3;
     switch (which) {
     case 2:
-        item = 0x19E;
+        item = ITEM_FLAM_RUNE;
         z = OBJ_Z(caster) + 0xC;
         break;
     case 3:
         z = OBJ_Z(caster) + 0xC;
-        item = 0x19F;
+        item = ITEM_TYM_RUNE;
         break;
     case 1:
-        item = rand() % 7 + 0xB0;
+        item = rand() % 7 + FIRST_FOOD;
         break;
     case 5:
-        item = demons[(player->skills[9] + rand() % 0x1E) / 12];
+        item = demons[(player->skills[SKILL_CASTING] + rand() % 0x1E) / 12];
         break;
     case 4:
-        lvl = caster == ThePlayer ? player->skills[9] : PlayerLevel << 2;
+        lvl = caster == ThePlayer ? player->skills[SKILL_CASTING] : PlayerLevel << 2;
         if (lvl < 2)
             lvl = 2;
         do
-            item = lvl + rand() % lvl + 0x40;
+            item = lvl + rand() % lvl + FIRST_CREATURE;
         while (Creature[item & ~0x1C0].avghit == 0 || Creature[item & ~0x1C0].bA_1
                || item == 0x7B || item == 0x7C || Creature[item & ~0x1C0].swims);
         break;
     case 6:
-        item = 0x1E;
+        item = ITEM_SATELLITE;
         break;
     }
     if (can_place(item, 0, x, y, z, 1, 8)) {
@@ -548,8 +548,8 @@ void far creat_spell(struct Object far *caster, char which)
             owner = 0;
             mob_init(obj, homex, homey);
             obj->heading = heading + (rand() & 1) * 0x7F + 0x40;
-            if (OBJ_MAJOR(caster) == 1) {
-                if ((owner = Obj_MemTPtr(caster)) >= 0x100)
+            if (OBJ_MAJOR(caster) == MAJOR_CREATURE) {
+                if ((owner = Obj_MemTPtr(caster)) >= NUM_MOBILE)
                     owner = 0;
             }
             obj->last_hit = owner;
@@ -573,7 +573,7 @@ void far creat_spell(struct Object far *caster, char which)
 
 void far print_monster(unsigned char dir, unsigned char n)
 {
-    print_path_to(get_string((n > 1) + (n > 4) + 0x3F | 0x200), 0, 0, 0, 0, 0, 0, -(dir + 1));
+    print_path_to(get_string((n > 1) + (n > 4) + 0x3F | STR_GAME), 0, 0, 0, 0, 0, 0, -(dir + 1));
 }
 
 void far mdetect(int dist, int skill)
@@ -599,7 +599,7 @@ void far mdetect(int dist, int skill)
     py = OBJ_HOMEY(ThePlayer);
     for (p = ActiveMob; p < LastActiveMob; p++) {
         obj = &critdata[*p];
-        if (OBJ_MAJOR(obj) != 1)
+        if (OBJ_MAJOR(obj) != MAJOR_CREATURE)
             continue;
         xv = OBJ_HOMEX(obj) - px;
         yv = OBJ_HOMEY(obj) - py;
@@ -626,7 +626,7 @@ void far mdetect(int dist, int skill)
             print_monster(i, counts[i]);
             if (cands[i & 7]) {
                 game_sprint(0x145);
-                str = get_string(cands[i & 7] + 0x40 | 0x800);
+                str = get_string(cands[i & 7] + FIRST_CREATURE | STR_OBJNAMES);
                 str = fix_name_string(str, 1, 0);
                 scroll_print(str);
                 scroll_print(" ");
@@ -652,11 +652,11 @@ char far tremor_area(int x, int y, struct Object far *target, struct Tile far *t
 {
     struct Object far *boulder;
 
-    if ((PlayerLevel - 1) / 8 != 8)
-        boulder = CreateObj(rand() % 3 + 0x154, 0);
+    if ((PlayerLevel - 1) / LEVELS_PER_WORLD != 8)
+        boulder = CreateObj(rand() % 3 + ITEM_LARGE_BOULDER_154, 0);
     else {
         int floor = tile->floor;
-        int items[5] = { 0xC2, 0xB9, 0xB6, 0x129, 0xA0 };
+        int items[5] = { ITEM_SKULL_C2, ITEM_MUSHROOM, ITEM_FISH, ITEM_RESILIENT_SPHERE_129, ITEM_COIN };
 
         if (floor < 5)
             boulder = CreateObj(items[floor], 0);
@@ -720,7 +720,7 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
             game_sprint(0x133);
             break;
         case 3:                         /* locate */
-            if (player->automap || (PlayerLevel - 1) / 8 == 8)
+            if (player->automap || (PlayerLevel - 1) / LEVELS_PER_WORLD == 8)
                 game_sprint(0x142);
             else {
                 game_sprint(0x12A);
@@ -731,7 +731,7 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
             player->poison = 0;
             break;
         case 7:                         /* roaming sight */
-            if ((PlayerLevel - 1) / 8 == 8)
+            if ((PlayerLevel - 1) / LEVELS_PER_WORLD == 8)
                 game_sprint(0x142);
             else {
                 set_curmagic(0xB, 1, stab);
@@ -797,11 +797,11 @@ char far check_Guardian_magic_marker(int x, int y, struct Object far *obj, struc
     int bit;
 
     cut = 0;
-    bit = 1 << ((PlayerLevel - 1) / 8 - 1);
-    if (OBJ_ITEM(obj) != 0x35 || !((obj->id & 0x2000) >> 13) || !((obj->id & 0x4000) >> 14))
+    bit = 1 << ((PlayerLevel - 1) / LEVELS_PER_WORLD - 1);
+    if (OBJ_ITEM(obj) != ITEM_GUARDIAN_SIGNET_RING || !((obj->id & ID_DOORDIR) >> 13) || !((obj->id & ID_INVIS) >> 14))
         return 0;
     obj->id = obj->id & 0xDFFF;
-    if (player->quest_bytes[0] & bit)
+    if (player->quest_bytes[QB_LINES_OF_POWER] & bit)
         cut = 1;
     if (!cut)
         put_effect(obj, 7, 4, 0, 7, x, y);
@@ -809,9 +809,9 @@ char far check_Guardian_magic_marker(int x, int y, struct Object far *obj, struc
         Obj_Free(obj);
     if (cut)
         return 1;
-    if ((player->quest_bytes[0] |= bit) == 0xFF)
+    if ((player->quest_bytes[QB_LINES_OF_POWER] |= bit) == 0xFF)
         player->quests[3] = (player->quests[3] & ~4L) + 4;
-    if ((PlayerLevel - 1) / 8 == 3)
+    if ((PlayerLevel - 1) / LEVELS_PER_WORLD == 3)
         player->quests[13] = (player->quests[13] & ~1L) + 1;
     area_spell_state = 1;
     do_sfx(4, 0xF);

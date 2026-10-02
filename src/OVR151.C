@@ -178,7 +178,7 @@ unsigned char far Sched_SetAllClocks(unsigned char mode)
     for (block = 0; block < 16 && error == 0; block++) {
         clock = player->xclock[block];
         if ((error = Sched_Load(block)) != 0) break;
-        if (block == 0) error = Sched_WrapTime(player->xclock[0], 72, mode);
+        if (block == 0) error = Sched_WrapTime(player->xclock[XC_TIME], 72, mode);
         else error = Sched_SetTime(clock, mode);
         if (error) break;
         error = Sched_Save(block);

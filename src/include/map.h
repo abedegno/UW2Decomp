@@ -52,6 +52,38 @@ struct Collision {
     int offset;                         /* 0x04, the tile's offset in the map */
 };
 
+/* Tile types, struct Tile's type (UW-Formats 4.2, "Underworld tile types"). The
+   diagonals are named by their open half and the slopes by the way they rise. */
+enum TileType {
+    TILE_SOLID,                         /* a wall */
+    TILE_OPEN,
+    TILE_DIAG_SE,                       /* diagonal, open to the south east */
+    TILE_DIAG_SW,
+    TILE_DIAG_NE,
+    TILE_DIAG_NW,
+    TILE_SLOPE_N,                       /* sloping up to the north */
+    TILE_SLOPE_S,
+    TILE_SLOPE_E,
+    TILE_SLOPE_W
+};
+
+#define MAP_SIZE        0x40            /* the map is 64 by 64 tiles (UW-Formats 4.2) */
+#define NUM_LEVELS      0x50            /* 80: LEV.ARK holds four blocks a level for 80
+                                           levels (UW-Formats 4.1) */
+#define LEVELS_PER_WORLD 8              /* each world has eight levels; (level - 1) / 8
+                                           is the world (Guide, "The Worlds and Level
+                                           Concept") */
+
+/* A texture's terrain type (TxmTerr, from DATA\TERRAIN.DAT): bits 6-7 are a class the
+   code tests with (TxmTerr[t] & 0xC0) >> 6. UW2's TERRAIN.DAT uses 0x40, 0x80 and 0xC0
+   (Underworld Adventures' format document, 4.7: water, lava, ice); fishing needs class 1
+   (ovr110), and a changed floor of class 2 turns solid at random (ovr110's change terrain
+   trap). */
+#define TERR_CLASS      0xC0
+#define TERRAIN_WATER   1
+#define TERRAIN_LAVA    2
+#define TERRAIN_ICE     3
+
 /* OVR128.C: loading and saving the level map */
 extern int hgt_val[17];
 char far Anim_Load(char far *source);

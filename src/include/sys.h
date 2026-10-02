@@ -65,6 +65,14 @@ void far map_crit_pages(void);
 int far set_workspace(void);
 void far release_workspace(void);
 
+/* Error codes for first_punt, pfatal_code and the init functions' returns: error_code
+   prints the top four bits as the kind (and as a letter, 'A' + kind) and the rest as
+   three octal digits. */
+#define ERR_LOWMEM      0x1000          /* "Out of Low Memory." */
+#define ERR_EMS         0x2000          /* "Out of EMS Memory." */
+#define ERR_READ        0x3000          /* "Could not read data." */
+#define ERR_WRITE       0x4000          /* "Could not write data." */
+
 /* OVR114.C: error reporting and fatal exit routines */
 void far first_punt(int code);
 void far pfatal_code(int code);

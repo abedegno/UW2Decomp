@@ -17,13 +17,13 @@
 #include "ui.h"
 #include "view3d.h"
 
-#define OBJ_ITEM(o)     ((o)->id & 0x1FF)
-#define OBJ_Z(o)        ((o)->pos & 0x7F)
-#define OBJ_HEADING(o)  (((o)->pos & 0x380) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & 0x1C00) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & 0xE000) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
+#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
+#define OBJ_Z(o)        ((o)->pos & POS_Z)
+#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
+#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
+#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
+#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
+#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
 
 /* This file's data, DS:073E to DS:079D. */
 unsigned char pmouseHandled = 0;
@@ -476,9 +476,9 @@ void far parse_effect(void)
         if (rand() % 5 == 0)
         {
             damage_item(ThePlayer, 0L, 0, 0, 1, 8);
-            if (player->xclock[3] == 3)
+            if (player->xclock[XC_DJINN] == 3)
             {
-                player->xclock[3] = 4;
+                player->xclock[XC_DJINN] = 4;
                 game_sprint(0x14E);
             }
         }

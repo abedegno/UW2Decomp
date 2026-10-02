@@ -10,9 +10,10 @@
 #include "critter.h"
 #include "object.h"
 #include "player.h"
+#include "ui.h"
 
-#define OBJ_ID(o)       ((o)->id & 0x1FF)
-#define OBJ_INDEX(o)    (((o)->id & 0x3F) >> 0)
+#define OBJ_ID(o)       ((o)->id & ID_ITEM)
+#define OBJ_INDEX(o)    (((o)->id & ID_INMAJOR) >> 0)
 #define OBJ_QUALITY(o)  ((o)->qn.f.quality)
 #define OBJ_OWNER(o)    ((o)->ol.f.owner)
 #define OBJ_GOAL(o)     (((o)->goal_word & 0xF) >> 0)
@@ -58,7 +59,7 @@ void far setup_converse_data(struct Object far *npc)
     val = OBJ_OWNER(npc);
     bab_var("npc_yhome", &val, 1);
     who = npc->whoami;
-    val = who ? (who + 0x10) | 0xE00 : OBJ_ID(npc) | 0x800;
+    val = who ? (who + 0x10) | STR_CONV : OBJ_ID(npc) | STR_OBJNAMES;
     bab_var("npc_name", &val, 1);
     if (OBJ_GOAL(npc) == 5 && OBJ_GTARG(npc) == 1)
         val = 0;
@@ -78,9 +79,9 @@ void far setup_converse_data(struct Object far *npc)
     bab_var("play_health", &val, 1);
     val = ThePlayer->hp;
     bab_var("play_hp", &val, 1);
-    val = player->skills[0] + player->strength;
+    val = player->skills[SKILL_ATTACK] + player->strength;
     bab_var("play_arms", &val, 1);
-    val = player->dexterity + player->play_mana + player->skills[6];
+    val = player->dexterity + player->play_mana + player->skills[SKILL_MISSILE];
     bab_var("play_power", &val, 1);
     val = player->play_mana;
     bab_var("play_mana", &val, 1);

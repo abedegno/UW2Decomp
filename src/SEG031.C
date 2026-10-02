@@ -12,8 +12,8 @@
 #include "player.h"
 #include "sys.h"
 
-#define OBJ_ITEM(o)     ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
+#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
 
 /* This file's _BSS, DS:25C4..26E9 (seg030's ends at 25C3, seg032's starts at 26EA), laid
    out by name (tools/bssorder.py): Ppd 144, bounce_flag 298, PN 336, CN1..CN4 371,
@@ -486,13 +486,13 @@ void far do_zbounce(void)
                 item = OBJ_ITEM(obj);
                 if (ComObjData[item].solid)
                     CP->terrain = 1;
-                else if (OBJ_MAJOR(Obj_IntTMem(CP->index)) != 1)
+                else if (OBJ_MAJOR(Obj_IntTMem(CP->index)) != MAJOR_CREATURE)
                     bounce_that_guy();
                 else
                     CP->terrain = 1;
             } else if (Ppd.floor + Ppd.radius >= MP.pos[2])
                 CP->terrain = 1 << (Ppd.hits0 & 3);
-            else if (OBJ_MAJOR(Obj_IntTMem(CP->index)) != 1)
+            else if (OBJ_MAJOR(Obj_IntTMem(CP->index)) != MAJOR_CREATURE)
                 bounce_that_guy();
             else if (Ppd.hits1 & 0x10)
                 CP->terrain = 2;
@@ -765,8 +765,8 @@ struct Object far * far IsaDoor(unsigned char *x, unsigned char *y)
         t = oCollisions[i + Ppd.first].offset & 0x3F;
         *x = (Ppd.x >> 3) + t & 0x3F;
         t = *x - (Ppd.x >> 3);
-        *y = (Ppd.y >> 3) + (oCollisions[i + Ppd.first].offset - t) / 0x40 & 0x3F;
-        if (item >> 4 == 0x14 && (item & 0xF) < 8)
+        *y = (Ppd.y >> 3) + (oCollisions[i + Ppd.first].offset - t) / MAP_SIZE & 0x3F;
+        if (item >> 4 == CLASS_DOOR && (item & ID_INCLASS) < 8)
             return Obj_PtrTMem(&oCollisions[i + Ppd.first].link.word);
     }
     return 0;

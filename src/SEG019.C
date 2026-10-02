@@ -33,7 +33,7 @@ typedef void (far *WalFn)(unsigned char *pts, unsigned char shade, unsigned char
 
 extern unsigned TxmTerr[];
 extern struct GLoc glocs[][33];
-extern unsigned char PlayersMap[64][64];
+extern unsigned char PlayersMap[MAP_SIZE][MAP_SIZE];
 extern signed char quad;
 
 /* This file's _BSS, DS:2C68..2F95 (seg032's xwid ends at 2C67; seg033's ActDoors
@@ -85,7 +85,7 @@ unsigned char SpecShadeMode = 1;
 FlrFn gftab[2] = { polyflr, txtflr };
 FlrFn gctab[2] = { polycie, polyflr };
 WalFn gwtab[2] = { polywal, txtwal };
-int quad_mod[4][2] = { { 1, 0x40 }, { -0x40, 1 }, { -1, -0x40 }, { 0x40, -1 } };
+int quad_mod[4][2] = { { 1, MAP_SIZE }, { -MAP_SIZE, 1 }, { -1, -MAP_SIZE }, { MAP_SIZE, -1 } };
 unsigned char qudecode[4][4] = {
     { 0, 1, 3, 2 }, { 2, 0, 1, 3 }, { 3, 2, 0, 1 }, { 1, 3, 2, 0 }
 };
@@ -454,7 +454,7 @@ void far grdb_elem(unsigned char *automap)
     sqmod = p_gloc->sq & 0xF;
     if (sqmod < 8) {
         code = tmptr->type;
-        code = code | TxmTerr[tmptr->floor] & 0xC0;
+        code = code | TxmTerr[tmptr->floor] & TERR_CLASS;
     } else if ((code = *automap) == 0)
         code = tile_mapcode[tmptr->type];
     if ((flags & 0x44) == 4)

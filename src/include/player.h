@@ -103,6 +103,43 @@ struct Player {
                                            arena record */
 };
 
+/* The player's skills, struct Player's skills[]: string block 2 names them from string
+   0x1F in this order (PLAYER.C and ovr158 print skill + 0x1F), and player.h's own
+   comments on struct Player agree (search 11, track 12, sneak 13, acrobat 17). */
+enum Skill {
+    SKILL_ATTACK, SKILL_DEFENSE, SKILL_BAREHAND, SKILL_SWORD, SKILL_AXE, SKILL_MACE,
+    SKILL_MISSILE, SKILL_MANA, SKILL_LORE, SKILL_CASTING, SKILL_TRAPS, SKILL_SEARCH,
+    SKILL_TRACK, SKILL_STEALTH, SKILL_REPAIR, SKILL_CHARISMA, SKILL_PICKLOCK,
+    SKILL_ACROBAT, SKILL_APPRAISE, SKILL_SWIMMING,
+    NUM_SKILLS
+};
+
+/* The player's class, struct Player's pclass: string block 2 names them from string
+   0x17 (ovr158 and PLAYER.C print pclass + 0x17). */
+enum PlayerClass {
+    PCLASS_FIGHTER, PCLASS_MAGE, PCLASS_BARD, PCLASS_TINKER, PCLASS_DRUID,
+    PCLASS_PALADIN, PCLASS_RANGER, PCLASS_SHEPHERD
+};
+
+/* Quest variables 128 and up, struct Player's quest_bytes[] (quest_bytes[n] is quest
+   128 + n). Only those whose meaning the Guide to the Ultima Underworlds ("UW2 Quests",
+   the PLAYER.DAT table) states and the code agrees with are named. */
+#define QB_LINES_OF_POWER 0             /* quest 128: the lines of power cut, a bit each */
+#define QB_PIT_RECORD   1               /* quest 129: the win-loss record in the pits */
+#define QB_GEMS_USED    2               /* quest 130: a bit per blackrock gem used up
+                                           (UseKeyGem sets them) */
+#define QB_WORLDS_VISITED 13            /* quest 141: a bit per world visited (the
+                                           automap's world list tests them) */
+
+/* The X clocks, struct Player's xclock[] (Guide, "The X Clock"). */
+#define XC_TIME         0               /* the time of day in 72 steps (ovr135 and ovr110
+                                           set it, the schedules read it) */
+#define XC_CASTLE       1               /* the castle plot's progress */
+#define XC_GEMS         2               /* Nystrul and the blackrock gems treated */
+#define XC_DJINN        3               /* the djinn capture's progress */
+#define XC_PIT_KILLS    14              /* most enemies killed in the pits */
+#define XC_CHANGED      15              /* counted up when an X clock event happens */
+
 /* PLAYER.C: skills, levelling, sleep, eating, death and traps (ovr154) */
 void far punt_void(void);
 void far go_void(void);

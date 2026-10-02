@@ -161,7 +161,7 @@ void far init_scrgr(void)
     draw_sprite(eyes, 0x207F);
     set_runes(player->shelf);
     if (!read_gr_far("panels", RightPanel, stdat))
-        pfatal_code(0x3004);
+        pfatal_code(ERR_READ | 0x4);
     show(0xEB, 0xC0, stdat, 0x70, 0x4F, 0, 0);
     panel_dispatch[RightPanel]();
     update_sprites();
@@ -662,8 +662,8 @@ void far set_runes(unsigned char *runes)
         Transparency = 0;
     }
     for (i = 0; i < 3; i++) {
-        if (runes[i] >= 0 && runes[i] < 0x18)
-            draw_sprite(spr[i], runes[i] + 0xE8);
+        if (runes[i] >= 0 && runes[i] < NUM_RUNES)
+            draw_sprite(spr[i], runes[i] + FIRST_RUNESTONE);
         else
             erase_sprite(spr[i]);
     }
@@ -703,7 +703,7 @@ void far init_panelflip(int panel)
     buf = MK_FP(EmsBuff + 0x800, 0);
     obj_inpage1 = 0xFF;
     if (!read_gr_far("panels", panel, buf))
-        pfatal_code(0x300E);
+        pfatal_code(ERR_READ | 0xE);
     old = RightPanel;
     RightPanel = panel;
     inv_refresh = 0;

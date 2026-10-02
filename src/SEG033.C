@@ -106,7 +106,7 @@ void far do_obj(struct Object far *o)
 
     if (o == ThePlayer)
         return;
-    if (((o->id & 0x4000) >> 14) == 1)
+    if (((o->id & ID_INVIS) >> 14) == 1)
         return;
     if (PickUp) {
         color_to_map[PickUp - 1] = (int)(tmptr - mlowptr) + mptrmod;
@@ -116,7 +116,7 @@ void far do_obj(struct Object far *o)
         if (++PickUp >= 0xAC)
             PickUp = 1;
     }
-    if (IsMobElem(o) && ((o->id & 0x1C0) >> 6) != 1) {
+    if (IsMobElem(o) && ((o->id & ID_MAJOR) >> 6) != MAJOR_CREATURE) {
         fx = o->goal_word & 0xFF;
         fy = o->attitude_word & 0xFF;
         switch (quad) {
@@ -140,19 +140,19 @@ void far do_obj(struct Object far *o)
         objxloc = (objxloc & 0xFF00) + x;
         objzloc = (objzloc & 0xFF00) + y;
     }
-    type = ComObjData[o->id & 0x1FF].render;
-    if (((o->id & 0x1C0) >> 6) == 7) {
+    type = ComObjData[o->id & ID_ITEM].render;
+    if (((o->id & ID_MAJOR) >> 6) == MAJOR_ANIMOBJ) {
         AnimObjInPipe = 1;
         item = o->ol.f.owner;
         if (type == 0) {
             if (item > 0)
-                item += 0x1C0;
+                item += FIRST_ANIMOBJ;
             else
-                item = o->id & 0x1FF;
+                item = o->id & ID_ITEM;
         }
     }
     else
-        item = o->id & 0x1FF;
+        item = o->id & ID_ITEM;
     switch (type) {
     case 2:
         item &= 0x3F;
@@ -174,7 +174,7 @@ void far do_obj(struct Object far *o)
         *dbptr++ = objyloc;
         *dbptr++ = 0x7F8;
         frame = o->b15 & 0x3F;
-        dir = dirtab[((((o->pos & 0x380) >> 7) << 2) + 0x20
+        dir = dirtab[((((o->pos & POS_HEADING) >> 7) << 2) + 0x20
                       - ((cPlayer->heading + headmod[quad]) >> 11)) % 0x20];
         crit = grs_3dinf[item & 0x3F].page;
         frame = ((((crit << 3) + (o->b15 & 0x3F) << 3) + dir) << 3) + ((o->goal_word & 0xF000) >> 12);
@@ -193,7 +193,7 @@ void far do_obj(struct Object far *o)
         break;
     case 0:
         if ((item & 0x1E0) == 0xE0 && (item & 0x18))
-            item = 0xE0;
+            item = ITEM_RUNESTONE;
         *dbptr++ = 0x7A;
         *dbptr++ = objxloc;
         *dbptr++ = objzloc;
@@ -205,7 +205,7 @@ void far do_obj(struct Object far *o)
         *dbptr++ = 0x7F8;
         break;
     case 3:
-        if (((o->id & 0x30) >> 4) == 3) {
+        if (((o->id & ID_MINOR) >> 4) == 3) {
             if ((tmapson | PickUp) == 0) {
                 *dbptr++ = 2;
                 *dbptr++ = Clk(8);
@@ -305,8 +305,8 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
         first = rect_cols[model][3];
         if (tex < 0) {
             if (model == 2) {
-                if (((o->id & 0x1E00) >> 9) >= ntex) {
-                    tex = ((o->id & 0x1E00) >> 9) - ntex;
+                if (((o->id & ID_FLAGS) >> 9) >= ntex) {
+                    tex = ((o->id & ID_FLAGS) >> 9) - ntex;
                     txtflr(0, sqmod, tex);
                     *dbptr++ = 2;
                     *dbptr++ = Clk(0xB);
@@ -321,19 +321,19 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
                 else {
                     curautocode = 2;
                     /* the cast keeps the compiler from moving the 0x10 to the end */
-                    tex = (int)(first_tmobj + first + 0x10) + ((o->id & 0x1E00) >> 9) % ntex;
+                    tex = (int)(first_tmobj + first + 0x10) + ((o->id & ID_FLAGS) >> 9) % ntex;
                     *dbptr++ = 2;
                     *dbptr++ = Clk(0xB);
-                    *dbptr++ = rect_flagcol[(o->id & 0x1E00) >> 9];
+                    *dbptr++ = rect_flagcol[(o->id & ID_FLAGS) >> 9];
                     *dbptr++ = 2;
                     *dbptr++ = Clk(0);
-                    *dbptr++ = rect_flagcol[(o->id & 0x1E00) >> 9];
+                    *dbptr++ = rect_flagcol[(o->id & ID_FLAGS) >> 9];
                     *dbptr++ = 0xB2;
                     *dbptr++ = 6;
                 }
             }
             else
-                tex = (int)(first_tmobj + first + 0x10) + ((o->id & 0x1E00) >> 9) % ntex;
+                tex = (int)(first_tmobj + first + 0x10) + ((o->id & ID_FLAGS) >> 9) % ntex;
         }
         if (tex >= 0) {
             *dbptr++ = 0xC0;
@@ -349,9 +349,9 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
 
         blink = (unsigned char)((*Time >> 7) & 1);
         for (j = 0, face = 0; j <= 0x10; j++, face++) {
-            if (player->quest_bytes[2] != 0xFF) {
+            if (player->quest_bytes[QB_GEMS_USED] != 0xFF) {
                 colour = 0x52;
-                if ((1 << face) & player->quest_bytes[2])
+                if ((1 << face) & player->quest_bytes[QB_GEMS_USED])
                     colour = 0x4D;
                 else if ((player->vars[6] & 7) == face)
                     colour = 0x4F;
@@ -364,7 +364,7 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
             *dbptr++ = Clk(j);
             *dbptr++ = colour;
         }
-        if (player->quest_bytes[2] != 0xFF) {
+        if (player->quest_bytes[QB_GEMS_USED] != 0xFF) {
             j = (*Time >> 6) & 7;
             if (j > 3)
                 j = 7 - j;
@@ -395,7 +395,7 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
     *dbptr++ = objzloc & 0xFFFF;
     *dbptr++ = objzloc >> 16;
     if (heading < 0)
-        head = ((((o->pos & 0x380) >> 7) + 8 - quad * 2) % 8) << 13;
+        head = ((((o->pos & POS_HEADING) >> 7) + 8 - quad * 2) % 8) << 13;
     else
         head = ((heading + 0x10 - quad * 4) & 0xF) << 12;
     if ((flags & 0x40) && !(flags & 0x10)) {
@@ -403,7 +403,7 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
             j = 0;
         else {
             j = (((o->b14 & 0xF8) >> 3) - 0x10) * 0x266;
-            head = (((((o->pos & 0x380) >> 7) << 5) + (o->b18 & 0x1F) + 0x100 - quad * 64) % 0x100) << 8;
+            head = (((((o->pos & POS_HEADING) >> 7) << 5) + (o->b18 & 0x1F) + 0x100 - quad * 64) % 0x100) << 8;
         }
         *dbptr++ = 2;
         *dbptr++ = Clk(5);
@@ -458,24 +458,24 @@ void far do_door(unsigned char item, struct Object far *o)
     if ((item & 7) == 6) {
         dir = 0;
         z = objyloc;
-        oldz = objyloc - (((o->id & 0x1E00) >> 9) & 7) * 0x30;
+        oldz = objyloc - (((o->id & ID_FLAGS) >> 9) & 7) * 0x30;
         vis = 1;
         h = 0x400 - oldz - 0xD0;
         first = 1;
         step = -1;
         *dbptr++ = 2;
         *dbptr++ = Clk(5);
-        *dbptr++ = ((o->id & 0x1E00) >> 9) & 7;
+        *dbptr++ = ((o->id & ID_FLAGS) >> 9) & 7;
         *dbptr++ = 0x4C;
         *dbptr++ = 0;
         *dbptr++ = 0;
-        *dbptr++ = 0xD0 - (((o->id & 0x1E00) >> 9) & 7) * 0x30;
+        *dbptr++ = 0xD0 - (((o->id & ID_FLAGS) >> 9) & 7) * 0x30;
         *dbptr++ = 0x400;
     }
     else {
-        if ((((o->id & 0x1E00) >> 9) & 7) || ((o->id & 0x1C0) >> 6) == 7)
+        if ((((o->id & ID_FLAGS) >> 9) & 7) || ((o->id & ID_MAJOR) >> 6) == MAJOR_ANIMOBJ)
             objyloc -= 0xC0;
-        dir = (((o->id & 0x1E00) >> 9) & 7) * (((o->id & 0x2000) >> 13) * 2 - 1);
+        dir = (((o->id & ID_FLAGS) >> 9) & 7) * (((o->id & ID_DOORDIR) >> 13) * 2 - 1);
         h = 0x400 - objyloc - 0xD0;
         *dbptr++ = 2;
         *dbptr++ = Clk(5);
@@ -489,19 +489,19 @@ void far do_door(unsigned char item, struct Object far *o)
     *dbptr++ = h;
     *dbptr++ = 0x800;
     if (vis == 0) {
-        vis = (((o->pos & 0x380) >> 7) - ((ThePlayer->pos & 0x380) >> 7) + 8) & 7;
+        vis = (((o->pos & POS_HEADING) >> 7) - ((ThePlayer->pos & POS_HEADING) >> 7) + 8) & 7;
         if (vis > 4)
             vis -= 8;
         vis = vis >= -1 && vis <= 2;
     }
-    if ((((o->id & 0x1E00) >> 9) & 7) && z == -1) {
+    if ((((o->id & ID_FLAGS) >> 9) & 7) && z == -1) {
         int q;
         int q3;
         int ddx;
         register int k;
         register int dy;
 
-        q = (((o->pos & 0x380) >> 7) - quad * 2) & 7;
+        q = (((o->pos & POS_HEADING) >> 7) - quad * 2) & 7;
         q3 = q & 3;
         ddx = objxloc - cPlayer->x;
         dy = objzloc - cPlayer->y;
@@ -519,7 +519,7 @@ void far do_door(unsigned char item, struct Object far *o)
             k = ddx < dy;
             break;
         }
-        k = q / 4 + ((o->id & 0x2000) >> 13) + k;
+        k = q / 4 + ((o->id & ID_DOORDIR) >> 13) + k;
         if (!(k & 1)) {
             first = 1;
             step = -1;
@@ -527,7 +527,7 @@ void far do_door(unsigned char item, struct Object far *o)
     }
     *dbptr++ = 2;
     *dbptr++ = Clk(3);
-    *dbptr++ = (((o->id & 0x1E00) >> 9) & 7) + (z >= 0);
+    *dbptr++ = (((o->id & ID_FLAGS) >> 9) & 7) + (z >= 0);
     for (pass = first; pass <= 1 && pass >= 0; pass += step) {
         if (pass == 0) {
             if (tCacheOK < 1)
@@ -547,7 +547,7 @@ void far do_door(unsigned char item, struct Object far *o)
             }
             *dbptr++ = 0xB2;
             *dbptr++ = cTmBm;
-            do_rect(1, o, ((o->pos & 0x380) >> 7) << 1, tmptr->objects.f.low);
+            do_rect(1, o, ((o->pos & POS_HEADING) >> 7) << 1, tmptr->objects.f.low);
         }
         else {
             if (PickUp) {
@@ -556,7 +556,7 @@ void far do_door(unsigned char item, struct Object far *o)
             }
             if (z >= 0) {
                 objyloc = z;
-                do_rect(0xC, o, ((o->pos & 0x380) >> 7) << 1, 0);
+                do_rect(0xC, o, ((o->pos & POS_HEADING) >> 7) << 1, 0);
                 objyloc = oldz;
             }
             else {
@@ -571,10 +571,10 @@ void far do_door(unsigned char item, struct Object far *o)
                     *dbptr++ = 2;
                     *dbptr++ = bmhgtoff + (cTmBm << 3);
                     *dbptr++ = cTmDm * cTmDm - 1;
-                    do_rect(0xF, o, ((o->pos & 0x380) >> 7) << 1, tmptr->objects.f.low);
+                    do_rect(0xF, o, ((o->pos & POS_HEADING) >> 7) << 1, tmptr->objects.f.low);
                 }
                 else
-                    do_rect(0xE, o, ((o->pos & 0x380) >> 7) << 1, first_tmobj + k + 0x40);
+                    do_rect(0xE, o, ((o->pos & POS_HEADING) >> 7) << 1, first_tmobj + k + 0x40);
             }
         }
     }

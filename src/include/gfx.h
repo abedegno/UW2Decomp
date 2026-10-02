@@ -123,6 +123,24 @@ void far * far grs_scaledown(unsigned char far *source, int width, int height, i
 void far rotate_bank(unsigned char first, unsigned char count, unsigned char up);
 void far cycle_colors(unsigned char t);
 
+/* Fonts for grfx_quikfont: the index into ovr118's font_suffixes, which names the file
+   DATA\FONTxxxx.SYS. */
+enum Font {
+    FONT_4X5P,                          /* font4x5p.sys */
+    FONT_5X6P,                          /* font5x6p.sys, the usual one */
+    FONT_CHAR,                          /* fontchar.sys */
+    FONT_BIG,                           /* fontbig.sys */
+    FONT_5X6I,                          /* font5x6i.sys */
+    FONT_BUTN                           /* fontbutn.sys */
+};
+
+/* Palettes of DATA\PALS.DAT (grfx_quikpal, read_quikpal), 0x300 bytes each. The uses
+   name them; UW-Formats' file list gives UW1 the same numbering (blnkmap.byt palette 1,
+   chargen.byt palette 3). */
+#define PAL_GAME        0               /* the game's palette (main, the automap's exit) */
+#define PAL_MAP         1               /* the automap (ovr094) */
+#define PAL_CHARGEN     3               /* character creation (ovr101) */
+
 /* OVR118.C: graphics start-up, fonts and palettes */
 /* IDA OpenFont, ovr118. FM Towns game_stats calls a set_font_size_ wrapper here, but every
    other FM Towns call site, and the map's call-graph pairing, give grfx_quikfont_. */

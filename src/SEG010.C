@@ -47,7 +47,7 @@ void far init_input(void)
     mous_dispatch = malloc(sizeof(struct MouseDispatch));
     key_dispatch = malloc(sizeof(struct KeyDispatch));
     if (mous_dispatch == 0 || key_dispatch == 0)
-        first_punt(0x1003);
+        first_punt(ERR_LOWMEM | 3);
     mdispcnt = 0;
     kdispcnt = 0;
     mcurhndl = 1;
@@ -71,7 +71,7 @@ int far input_addmouse(int ulx, int uly, int lrx, int lry, int arg, int mask,
 
     mdispcnt++;
     if ((p = realloc(mous_dispatch, mdispcnt * sizeof(struct MouseDispatch))) == 0)
-        pfatal_code(0x1005);
+        pfatal_code(ERR_LOWMEM | 5);
     mous_dispatch = p;
     p = mous_dispatch + mdispcnt - 1;
     p->hndl = mcurhndl;
@@ -92,7 +92,7 @@ int far _input_addkey(int key, int arg, int mask, void (far *func)(int))
 
     kdispcnt++;
     if ((p = realloc(key_dispatch, kdispcnt * sizeof(struct KeyDispatch))) == 0)
-        pfatal_code(0x1006);
+        pfatal_code(ERR_LOWMEM | 6);
     key_dispatch = p;
     p = key_dispatch + kdispcnt - 1;
     p->hndl = kcurhndl;
@@ -123,7 +123,7 @@ void far input_del(int hndl)
             mdispcnt--;
             if ((mous_dispatch = realloc(mous_dispatch,
                                          mdispcnt * sizeof(struct MouseDispatch))) == 0)
-                pfatal_code(0x1005);
+                pfatal_code(ERR_LOWMEM | 5);
         } else
             mdispcnt--;
     } else {
@@ -137,7 +137,7 @@ void far input_del(int hndl)
             kdispcnt--;
             if ((key_dispatch = realloc(key_dispatch,
                                         kdispcnt * sizeof(struct KeyDispatch))) == 0)
-                pfatal_code(0x1006);
+                pfatal_code(ERR_LOWMEM | 6);
         } else
             kdispcnt--;
     }

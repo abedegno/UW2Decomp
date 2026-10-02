@@ -90,6 +90,12 @@ void far new_IconUnselect(int index);
 void far new_IconSelect(int index);
 void far do_option_shortcut(int keycode);
 
+/* Input codes from do_keyboard_input (seg015): the key's code in the low byte, codes
+   from 0x80 being the special keys, with these added for the shift keys held. */
+#define KEY_CTRL        0x100
+#define KEY_ALT         0x200
+#define KEY_SHIFT       0x400           /* added to special keys only */
+
 /* SEG015.C: the mouse */
 extern int joymovecur;
 extern int fauxright;
@@ -237,6 +243,32 @@ char far ShadeSide(int side, int x, int y);
 void far ChangeAutoMapLevel(int lev);
 void far automap_scr(void);
 void far make_terrain_unseen(int x, int y, unsigned w, unsigned h);
+
+/* String blocks of DATA\STRINGS.PAK. A string id is the block shifted left 9 plus the
+   string's number in it (get_string splits it as id >> 9 and id & 0x1FF; make_string
+   builds it). The block contents are read from the file itself, decoded with its own
+   Huffman tree: block 1's first string is "Hey, its all the game strings", block 4 is the
+   item names (items.h), block 6 the spell names, block 9 the text string traps' messages
+   (ovr166 indexes it by the trap's quality and owner), block 10 the descriptions of
+   walls and floors (seg026 prints them when the player looks at one). */
+#define STR_GAME        0x200           /* block 1: the game's messages (game_sprint) */
+#define STR_CHARGEN     0x400           /* block 2: character creation: sexes, classes,
+                                           skills, attribute labels */
+#define STR_BOOKS       0x600           /* block 3: the text of books and scrolls */
+#define STR_OBJNAMES    0x800           /* block 4: item names */
+#define STR_OBJLOOK     0xA00           /* block 5: qualities, states and moods */
+#define STR_SPELLS      0xC00           /* block 6: spell and enchantment names */
+#define STR_CONV        0xE00           /* block 7: conversation and barter words, and
+                                           the names of NPCs from string 0x10 */
+#define STR_WRITING     0x1000          /* block 8: writings, plaques and gravestones */
+#define STR_TRAPTEXT    0x1200          /* block 9: the text string traps' messages */
+#define STR_TEXTURES    0x1400          /* block 10: wall and floor descriptions */
+/* Block numbers themselves (read_string, make_string, clear_dynamics): */
+#define STRBLK_DYNAMIC  0x7C            /* strings a conversation builds (ovr095, ovr103) */
+#define STRBLK_PLAYER   0x7D            /* the player's name (ovr143's make_string) */
+#define STRBLK_CUTSCENE 0xC00           /* + n: cutscene n's text (ovr108) */
+#define STRBLK_CONVERSATION 0xE00       /* + n: conversation n's strings (STRINGS.PAK's
+                                           blocks 0xE00 and up) */
 
 /* SEG039.C: strings */
 int far LoadFileStringsPak_seg039_547(void);

@@ -23,16 +23,16 @@
 #include "ui.h"
 #include "view3d.h"
 
-#define OBJ_ID(o)       ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-#define OBJ_BIT13(o)    (((o)->id & 0x2000) >> 13)
-#define OBJ_ISQUANT(o)  (((o)->id & 0x8000) >> 15)
-#define OBJ_Z(o)        ((o)->pos & 0x7F)
-#define OBJ_HEADING(o)  (((o)->pos & 0x380) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & 0x1C00) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & 0xE000) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
+#define OBJ_ID(o)       ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_BIT13(o)    (((o)->id & ID_DOORDIR) >> 13)
+#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
+#define OBJ_Z(o)        ((o)->pos & POS_Z)
+#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
+#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
+#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
+#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
+#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
 #define OBJ_LINK(o)     ((o)->ol.f.link)
 
 #define SET_HEADING(o, v) ((o)->pos = (o)->pos & 0xFC7F | ((v) & 7) << 7)
@@ -114,7 +114,7 @@ void far display_scr(void)
     ThePlayer->b11 = 0;
     v = player->play_mana;
     set_screen_frame(1, v);
-    if ((PlayerLevel - 1) / 8 != 8) {
+    if ((PlayerLevel - 1) / LEVELS_PER_WORLD != 8) {
         v = (OBJ_HEADING(ThePlayer) << 5) + (ThePlayer->b18 & 0x1F);
         v = (v + 8 & 0xFF) >> 4;
         set_screen_frame(2, v);
@@ -178,7 +178,7 @@ int far BridgeHeight(struct Tile far *tile)
     int h = -1;
 
     for (obj = Obj_PtrTMem(&tile->objects.word); obj; obj = Obj_PtrTMem(&obj->qn.word))
-        if (OBJ_ID(obj) == 0x164 && (int)OBJ_Z(obj) > h)
+        if (OBJ_ID(obj) == ITEM_BRIDGE && (int)OBJ_Z(obj) > h)
             h = OBJ_Z(obj);
     return h;
 }
@@ -317,7 +317,7 @@ void far look_nothing(unsigned char how, int txt)
         else
             t = 0x1FF;
         scroll_print("You see ");
-        scroll_print(get_string(t | 0x1400));
+        scroll_print(get_string(t | STR_TEXTURES));
         game_sprint(0x60);
     } else
         game_sprint(how + 0xA6);
@@ -343,7 +343,7 @@ void far player_3dget(void)
     inrange = InPickRange(PickDist, newPlObj, PickMap);
     clear = !BlockingTerrain(PickDist, newPlObj);
     if (releaseable && inrange && clear) {
-        if (OBJ_ISQUANT(newPlObj) && !(OBJ_LINK(newPlObj) & 0x200) && OBJ_LINK(newPlObj) != 1) {
+        if (OBJ_ISQUANT(newPlObj) && !(OBJ_LINK(newPlObj) & LINK_SPECIAL) && OBJ_LINK(newPlObj) != 1) {
             if ((split = AskHowMany(newPlObj)) == 0)
                 return;
             if (split != newPlObj)
@@ -357,11 +357,11 @@ void far player_3dget(void)
             }
             game_sprint(0x6C);
         } else {
-            if (OBJ_ID(newPlObj) == 0x138 && OBJ_BIT13(newPlObj)) {
+            if (OBJ_ID(newPlObj) == ITEM_BOOK_138 && OBJ_BIT13(newPlObj)) {
                 player->quests[26] = (player->quests[26] & 0xFFFFFFFBL) + 4;
                 player_did_bad(0x1C);
             }
-            if (HasOrIsObj(newPlObj, 0x126))
+            if (HasOrIsObj(newPlObj, ITEM_MOONSTONE))
                 for (i = 0; i < 2; i++)
                     if (player->moonstones[i] == PlayerLevel) {
                         player->moonstones[i] = 0;
@@ -377,12 +377,12 @@ void far player_3dget(void)
         game_sprint(inrange + 0x6A);
         mouse_release(1);
     } else if (def_mode) {
-        if (IsMobElem(newPlObj) && OBJ_MAJOR(newPlObj) == 1 || OBJ_ID(newPlObj) == 0x1CD)
+        if (IsMobElem(newPlObj) && OBJ_MAJOR(newPlObj) == MAJOR_CREATURE || OBJ_ID(newPlObj) == ITEM_WISP)
             player_3dtalk();
         else
             player_3duse();
     } else {
-        if (OBJ_ID(newPlObj) == 0x1CA) {
+        if (OBJ_ID(newPlObj) == ITEM_FROST) {
             if (inrange && clear)
                 UseObj(ThePlayer, newPlObj, 0);
         } else
@@ -407,14 +407,14 @@ void far player_3dlook(void)
     else
         LookAt(newPlObj, 0);
     if (RightButtonThing == 3) {
-        if (DetectedTrap(newPlObj, player->skills[11]) > 0) {
+        if (DetectedTrap(newPlObj, player->skills[SKILL_SEARCH]) > 0) {
             yes = 1;
             r = wyorn(0, 0x103, &yes);
             if (r != 0 && r < 4)
                 wd_bool(yes = r == 2);
             scroll_print("\n");
             if (yes)
-                RemoveTrap(newPlObj, player->skills[10]);
+                RemoveTrap(newPlObj, player->skills[SKILL_TRAPS]);
         }
     } else
         def_mode = 1;
@@ -432,7 +432,7 @@ void far player_3duse(void)
     mouse_release(1);
     if (InPickRange(PickDist, newPlObj, PickMap) && !BlockingTerrain(PickDist, newPlObj))
         UseObj(ThePlayer, newPlObj, 0);
-    else if ((newPlObj->id & 0x1FE) != 0x16E)
+    else if ((newPlObj->id & 0x1FE) != ITEM_TMAP_C)
         game_sprint(0xC8);
 }
 
@@ -511,14 +511,14 @@ void far inv_look(void)
     checkTrap(ThePlayer, newPlObj, 5, MapObj_X, MapObj_Y);
     if (newPlObj == 0)
         newPlObj = pick_inv(2);
-    ident = OBJ_MAJOR(newPlObj) != 5 && OBJ_MAJOR(newPlObj) != 6
+    ident = OBJ_MAJOR(newPlObj) != MAJOR_RECT && OBJ_MAJOR(newPlObj) != MAJOR_TRAP
         && ComObjData[OBJ_ID(newPlObj)].render != 2;
     if (ident == 1) {
         head = OBJ_HEADING(newPlObj);
         if (head & 4)
             lore = head & 3;
         else {
-            lore = skill_check(player->skills[8], 8) + 1;
+            lore = skill_check(player->skills[SKILL_LORE], 8) + 1;
             if (lore == 0)
                 lore = 1;
             if ((head & 3) > lore)

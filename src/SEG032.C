@@ -44,7 +44,7 @@ struct Gvec {
 
 /* Map steps for the four quadrants: along x, along y, and the diagonal. */
 int chgtable[4][3] = {
-    { 1, 0x40, -1 }, { -0x40, 1, 0x40 }, { -1, -0x40, 1 }, { 0x40, -1, -0x40 }
+    { 1, MAP_SIZE, -1 }, { -MAP_SIZE, 1, MAP_SIZE }, { -1, -MAP_SIZE, 1 }, { MAP_SIZE, -1, -MAP_SIZE }
 };
 unsigned headmod[4] = { 0, 0x4000, 0x8000, 0xC000 };
 /* Tile types as seen from each quadrant. */
@@ -340,7 +340,7 @@ void far init_grid(void)
 {
     struct Gloc *g = &glocs[0][16];
 
-    if (mapptr->type == 0)
+    if (mapptr->type == TILE_SOLID)
         gvechead = 15;
     else {
         gvechead = 0;

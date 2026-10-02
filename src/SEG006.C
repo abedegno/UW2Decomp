@@ -79,7 +79,7 @@ static int projxpos;                    /* 227E, homing dart's fine x; name chos
    defined, segment table entries 65 to 68, the first after those no C file defined. */
 struct PathSq far pathsq[63];
 struct PathRec far paths[16];
-extern struct StaticTile far stdat[64][64];
+extern struct StaticTile far stdat[MAP_SIZE][MAP_SIZE];
 /* The two flood fill frontiers (64 squares each); static in FM Towns, provisional names. */
 struct PathPt { unsigned char x, y; };
 static struct PathPt far flood_list0[64], far flood_list1[64];
@@ -116,24 +116,24 @@ unsigned char far do_crit_phys(struct Phys *pn, struct Handler *tp);
 
 void far build_corpse(struct Object far *obj, char fluids, char corpse) {
     struct Object far *remains;
-    struct Tile far *home = Map_GetAddr((obj->home & 0xFC00) >> 10,
-                                        (obj->home & 0x3F0) >> 4);
+    struct Tile far *home = Map_GetAddr((obj->home & HOME_X) >> 10,
+                                        (obj->home & HOME_Y) >> 4);
     if (fluids == 0) goto corpse_part;
     if ((remains = CreateObj(0xD9 + (unsigned char)fluids, 0)) == 0)
         goto corpse_part;
     remains->pos = (remains->pos & 0x1FFF)
-        | (((obj->pos & 0xE000) >> 13) & 7) << 13;
+        | (((obj->pos & POS_XFINE) >> 13) & 7) << 13;
     remains->pos = (remains->pos & 0xE3FF)
-        | (((obj->pos & 0x1C00) >> 10) & 7) << 10;
-    remains->pos = (remains->pos & 0xFF80) | (obj->pos & 0x7F);
+        | (((obj->pos & POS_YFINE) >> 10) & 7) << 10;
+    remains->pos = (remains->pos & 0xFF80) | (obj->pos & POS_Z);
     remains->qn.f.quality = 0x28;
     Obj_Add(&home->objects.word, remains);
     obj_deal(remains, XP, YP, 1);
 corpse_part:
     if (corpse) {
-        if (rand() % 16 >= 7 && (PlayerLevel - 1) / 8 != 7) return;
+        if (rand() % 16 >= 7 && (PlayerLevel - 1) / LEVELS_PER_WORLD != 7) return;
         if ((remains = CreateObj(0xC0 + (unsigned char)corpse, 0)) != 0) {
-            remains->ol.f.owner = (obj->id & 0x3F) >> 0;
+            remains->ol.f.owner = (obj->id & ID_INMAJOR) >> 0;
             near_mob_put_at(obj, remains, 4, 0);
         }
     }
@@ -143,38 +143,38 @@ unsigned char far move_me_joe(void) {
     unsigned char result;
     unsigned char unused;
     if (meptr->hp == 0
-        && ComObjData[meptr->id & 0x1FF].qualclass < 3) {
-        if (Obj_Punt(&Map_GetAddr((meptr->home & 0xFC00) >> 10,
-                                  (meptr->home & 0x3F0) >> 4)->objects.word,
+        && ComObjData[meptr->id & ID_ITEM].qualclass < 3) {
+        if (Obj_Punt(&Map_GetAddr((meptr->home & HOME_X) >> 10,
+                                  (meptr->home & HOME_Y) >> 4)->objects.word,
                      meptr, 0))
             meptr->hp = 1;
         else return 0;
     }
-    if (ComObjData[meptr->id & 0x1FF].no_hit)
+    if (ComObjData[meptr->id & ID_ITEM].no_hit)
         CT3.ignore = 0x1000;
     else CT3.ignore = 0;
     get_phys_data(meptr, &CN3);
     do_crit_phys(&CN3, &CT3);
-    XP = (meptr->home & 0xFC00) >> 10;
-    YP = (meptr->home & 0x3F0) >> 4;
+    XP = (meptr->home & HOME_X) >> 10;
+    YP = (meptr->home & HOME_Y) >> 4;
     result = set_phys_data(meptr, &CN3);
     if (result) {
         meptr->b0A = meptr->b0A & 0xF0
             | (((meptr->b0A & 0xF) + (meptr->b14 & 7)) & 0xF) << 0;
-        if ((meptr->id & 0x1FF) == 0x1B) check_homing();
-        else if ((meptr->id & 0x1FF) == 0x1E) check_sat();
+        if ((meptr->id & ID_ITEM) == ITEM_HOMING_DART) check_homing();
+        else if ((meptr->id & ID_ITEM) == ITEM_SATELLITE) check_sat();
     }
     (void)unused;
     return result;
 }
 unsigned char far store_targ(int unused1, int unused2,
                                                       struct Object far *target) {
-    int x = (((target->home & 0xFC00) >> 10) << 3)
-          + ((target->pos & 0xE000) >> 13);
+    int x = (((target->home & HOME_X) >> 10) << 3)
+          + ((target->pos & POS_XFINE) >> 13);
     int y;
     register int distance;
-    y = (((target->home & 0x3F0) >> 4) << 3)
-      + ((target->pos & 0x1C00) >> 10);
+    y = (((target->home & HOME_Y) >> 4) << 3)
+      + ((target->pos & POS_YFINE) >> 10);
     distance = abs(x - projxpos) + abs(y - proj_ycoord);
     if (distance < hdist) {
         htarget = Obj_MemTPtr(target);
@@ -201,10 +201,10 @@ void far check_homing(void) {
     int xhome, yhome, width, height;
     register int step, cardinal;
     width = height = 3;
-    xhome = ((meptr->home & 0xFC00) >> 10) - 1;
-    yhome = ((meptr->home & 0x3F0) >> 4) - 1;
+    xhome = ((meptr->home & HOME_X) >> 10) - 1;
+    yhome = ((meptr->home & HOME_Y) >> 4) - 1;
     cardinal = (((unsigned char)meptr->heading + 0x20) & 0xFF) >> 6;
-    cardinal = ((((meptr->pos & 0x380) >> 7) + 1) & 7) >> 1;
+    cardinal = ((((meptr->pos & POS_HEADING) >> 7) + 1) & 7) >> 1;
     if (cardinal > 1) {
         if (cardinal == 3) xhome--;
         else yhome--;
@@ -213,10 +213,10 @@ void far check_homing(void) {
     else height++;
     htarget = -1;
     hdist = 0x7FFF;
-    projxpos = (((meptr->home & 0xFC00) >> 10) << 3)
-        + ((meptr->pos & 0xE000) >> 13);
-    proj_ycoord = (((meptr->home & 0x3F0) >> 4) << 3)
-        + ((meptr->pos & 0x1C00) >> 10);
+    projxpos = (((meptr->home & HOME_X) >> 10) << 3)
+        + ((meptr->pos & POS_XFINE) >> 13);
+    proj_ycoord = (((meptr->home & HOME_Y) >> 4) << 3)
+        + ((meptr->pos & POS_YFINE) >> 10);
     process_area(1, meptr->last_hit,
         store_targ, 0,
         xhome, yhome, width, height);
@@ -226,10 +226,10 @@ void far check_homing(void) {
         int heading, pitch;
         unsigned heightdiff, desiredpitch, newpitch;
         target = Obj_IntTMem(htarget);
-        xhome = (((target->home & 0xFC00) >> 10) << 3)
-            + ((target->pos & 0xE000) >> 13);
-        yhome = (((target->home & 0x3F0) >> 4) << 3)
-            + ((target->pos & 0x1C00) >> 10);
+        xhome = (((target->home & HOME_X) >> 10) << 3)
+            + ((target->pos & POS_XFINE) >> 13);
+        yhome = (((target->home & HOME_Y) >> 4) << 3)
+            + ((target->pos & POS_YFINE) >> 10);
         vector = get_theta(
             projxpos, proj_ycoord, xhome, yhome);
         if (hdist < 12) step = 2;
@@ -238,7 +238,7 @@ void far check_homing(void) {
         heading = merge_angles(meptr->heading, vector >> 8, (step + 8) << 2);
         meptr->heading = heading;
         pitch = ((meptr->b14 & 0xF8) >> 3);
-        heightdiff = (target->pos & 0x7F) - (meptr->pos & 0x7F);
+        heightdiff = (target->pos & POS_Z) - (meptr->pos & POS_Z);
         desiredpitch = heightdiff / 24 + 16;
         newpitch = (pitch * (step + 4) + desiredpitch * (8 - step)) / 12;
         meptr->b14 = (meptr->b14 & 7) | ((newpitch & 0x1F) << 3);
@@ -254,9 +254,9 @@ void far check_homing(void) {
         meptr->b14 = (meptr->b14 & 7) | ((pitch & 0x1F) << 3);
     }
     if (!(rand() & 2))
-        put_effect(meptr, 14, 3, 0, -(meptr->pos & 0x7F),
-                   (meptr->home & 0xFC00) >> 10,
-                   (meptr->home & 0x3F0) >> 4);
+        put_effect(meptr, 14, 3, 0, -(meptr->pos & POS_Z),
+                   (meptr->home & HOME_X) >> 10,
+                   (meptr->home & HOME_Y) >> 4);
     if (((meptr->b0A & 0x80) >> 7) != 0) meptr->hp = 0;
     else if (!(rand() & 3) && meptr->hp) meptr->hp = meptr->hp - 1;
 }
@@ -270,10 +270,10 @@ void far check_sat(void) {
     register unsigned vector;
     register int diff;
     src = Obj_IntTMem(meptr->last_hit);
-    srcx = (((src->home & 0xFC00) >> 10) << 3) + ((src->pos & 0xE000) >> 13);
-    srcy = (((src->home & 0x3F0) >> 4) << 3) + ((src->pos & 0x1C00) >> 10);
-    satx = (((meptr->home & 0xFC00) >> 10) << 3) + ((meptr->pos & 0xE000) >> 13);
-    saty = (((meptr->home & 0x3F0) >> 4) << 3) + ((meptr->pos & 0x1C00) >> 10);
+    srcx = (((src->home & HOME_X) >> 10) << 3) + ((src->pos & POS_XFINE) >> 13);
+    srcy = (((src->home & HOME_Y) >> 4) << 3) + ((src->pos & POS_YFINE) >> 10);
+    satx = (((meptr->home & HOME_X) >> 10) << 3) + ((meptr->pos & POS_XFINE) >> 13);
+    saty = (((meptr->home & HOME_Y) >> 4) << 3) + ((meptr->pos & POS_YFINE) >> 10);
     vector = get_theta(satx, saty, srcx, srcy);
     theta = vector + 0x4000;
     diff = abs((theta >> 8) - meptr->heading);
@@ -288,7 +288,7 @@ void far check_sat(void) {
     heading = merge_angles(heading, vector >> 8, turn);
     meptr->heading = heading;
     pitch = ((meptr->b14 & 0xF8) >> 3);
-    zdiff = (src->pos & 0x7F) - (meptr->pos & 0x7F) + 0xF;
+    zdiff = (src->pos & POS_Z) - (meptr->pos & POS_Z) + 0xF;
     zpitch = zdiff / 8 + 0x10;
     newpitch = (pitch + zpitch) / 2;
     if (!(rand() & 3)) {
@@ -320,11 +320,11 @@ int far get_terrain(struct Object far *obj) {
     struct MotionCalc calc;
     curP = &calc;
     curP->index = Obj_MemTPtr(obj);
-    curP->radius = ComObjData[obj->id & 0x1FF].radius;
-    curP->height = ComObjData[obj->id & 0x1FF].height;
-    curP->x = (((obj->home & 0xFC00) >> 10) << 3) + ((obj->pos & 0xE000) >> 13);
-    curP->y = (((obj->home & 0x3F0) >> 4) << 3) + ((obj->pos & 0x1C00) >> 10);
-    curP->z = obj->pos & 0x7F;
+    curP->radius = ComObjData[obj->id & ID_ITEM].radius;
+    curP->height = ComObjData[obj->id & ID_ITEM].height;
+    curP->x = (((obj->home & HOME_X) >> 10) << 3) + ((obj->pos & POS_XFINE) >> 13);
+    curP->y = (((obj->home & HOME_Y) >> 4) << 3) + ((obj->pos & POS_YFINE) >> 10);
+    curP->z = obj->pos & POS_Z;
     TerrainCheck(8);
     return curP->hits0 | curP->hits1;
 }
@@ -465,7 +465,7 @@ unsigned char far hyp_move(unsigned char x1, unsigned char y1,
         if (y3 > y2 && (tile_walls[type2] & 0x10)) return 0;
         if (y3 < y2 && (tile_walls[type2] & 8)) return 0;
         if (!(0x1000 & flags)) return 1;
-        if (type3 >= 6 && type3 <= 9
+        if (type3 >= TILE_SLOPE_N && type3 <= TILE_SLOPE_W
             && slope_for_dir[path_turns[x3 - x2 + 1][y3 - y2 + 1]] != type3)
             h23++;
         if (h23 > height + 1) return 0;
@@ -477,9 +477,9 @@ unsigned char far hyp_move(unsigned char x1, unsigned char y1,
         for (link = (union Link far *)&tile2->objects.word; link->f.index && objh == 0;
              link = (union Link far *)&obj->qn) {
             obj = Obj_PtrTMem(link);
-            com = &ComObjData[obj->id & 0x1FF];
+            com = &ComObjData[obj->id & ID_ITEM];
             if (com->solid)
-                objh = ((obj->pos & 0x7F) + com->height) >> 3;
+                objh = ((obj->pos & POS_Z) + com->height) >> 3;
         }
         h23 = tile2->height;
         if (objh > h23) {
@@ -514,13 +514,13 @@ unsigned char far hyp_move(unsigned char x1, unsigned char y1,
     for (link = (union Link far *)&tile2->objects.word; link->f.index && objh == 0;
          link = (union Link far *)&obj->qn) {
         obj = Obj_PtrTMem(link);
-        com = &ComObjData[obj->id & 0x1FF];
-        if (((obj->id & 0x1C0) >> 6) == 5 && ((obj->id & 0x30) >> 4) == 0
-            && (obj->id & 0xF) < 8) {
+        com = &ComObjData[obj->id & ID_ITEM];
+        if (((obj->id & ID_MAJOR) >> 6) == MAJOR_RECT && ((obj->id & ID_MINOR) >> 4) == 0
+            && (obj->id & ID_INCLASS) < 8) {
             if (checkLock(meptr, obj, 0) == 0) {
-                dhead = ((obj->pos & 0x380) >> 7) & 3;
-                dxp = (obj->pos & 0xE000) >> 13;
-                dyp = (obj->pos & 0x1C00) >> 10;
+                dhead = ((obj->pos & POS_HEADING) >> 7) & 3;
+                dxp = (obj->pos & POS_XFINE) >> 13;
+                dyp = (obj->pos & POS_YFINE) >> 10;
                 if (!tested) {
                     if (x1 < x2) {
                         if (y2 < y3) dir = 0;
@@ -579,7 +579,7 @@ unsigned char far hyp_move(unsigned char x1, unsigned char y1,
                 }
             }
         } else if (com->solid)
-            objh = ((obj->pos & 0x7F) + com->height) >> 3;
+            objh = ((obj->pos & POS_Z) + com->height) >> 3;
     }
     if (!(0x1000 & flags)) {
         *out = 0x10 - ((myheight + 3) >> 2);
@@ -691,16 +691,16 @@ unsigned char far flood_path(char x, char y, unsigned char height0,
     cur = flood_list0;
     next = flood_list1;
     mem_set(stdat, 0, 0x5000);
-    if ((PlayerLevel - 1) / 8 == 0 && (PlayerLevel - 1) % 8 + 1 == 0) reach = 10;
+    if ((PlayerLevel - 1) / LEVELS_PER_WORLD == 0 && (PlayerLevel - 1) % LEVELS_PER_WORLD + 1 == 0) reach = 10;
     else reach = 5;
     minx = x < destx ? (x - reach > 1 ? x - reach : 1)
                      : (destx - reach > 1 ? destx - reach : 1);
     miny = y < desty ? (y - reach > 1 ? y - reach : 1)
                      : (desty - reach > 1 ? desty - reach : 1);
-    maxx = x > destx ? (x + reach < 0x40 ? x + reach : 0x40)
-                     : (destx + reach < 0x40 ? destx + reach : 0x40);
-    maxy = y > desty ? (y + reach < 0x40 ? y + reach : 0x40)
-                     : (desty + reach < 0x40 ? desty + reach : 0x40);
+    maxx = x > destx ? (x + reach < MAP_SIZE ? x + reach : MAP_SIZE)
+                     : (destx + reach < MAP_SIZE ? destx + reach : MAP_SIZE);
+    maxy = y > desty ? (y + reach < MAP_SIZE ? y + reach : MAP_SIZE)
+                     : (desty + reach < MAP_SIZE ? desty + reach : MAP_SIZE);
     stdat[x][y].pathx = x;
     stdat[x][y].height = height0;
     stdat[x][y].step = 0;
@@ -1088,8 +1088,8 @@ void far do_that_jump_kinda_thing(struct PathRec far *path) {
                     >> ((path->flag.bits.count % 4) << 1)) & 3;
         x = path->x + PathingOffset[direction].x;
         y = path->y + PathingOffset[direction].y;
-        heading = deltatotheta((char)x - (char)((meptr->home & 0xFC00) >> 10),
-                               (char)y - (char)((meptr->home & 0x3F0) >> 4));
+        heading = deltatotheta((char)x - (char)((meptr->home & HOME_X) >> 10),
+                               (char)y - (char)((meptr->home & HOME_Y) >> 4));
         didmove = 1;
         meptr->b14 = meptr->b14 & 0xF8 | 1;
         meptr->b14 = meptr->b14 & 7 | 0xB0;
@@ -1154,8 +1154,8 @@ void far crit_head_for_loc(unsigned char x, unsigned char y, char z) {
     if (!control) {
         meptr->b14 = meptr->b14 & 0xF8 | 1;
         if ((meptr->b15 & 0x80) >> 7
-            && paths[meptr->home & 0xF].x == (meptr->home & 0xFC00) >> 10
-            && paths[meptr->home & 0xF].y == (meptr->home & 0x3F0) >> 4)
+            && paths[meptr->home & 0xF].x == (meptr->home & HOME_X) >> 10
+            && paths[meptr->home & 0xF].y == (meptr->home & HOME_Y) >> 4)
             set_next_square_on_path(&paths[meptr->home & 0xF]);
         return;
     }
@@ -1168,11 +1168,11 @@ void far crit_head_for_loc(unsigned char x, unsigned char y, char z) {
                     meptr->b18 = meptr->b18 & 0xBF | 0x40;
                 else
                     try_to_open_door(collobject);
-            } else if ((((item = collobject->id & 0x1FF) & 0x1C0) >> 6) == 1
-                && item != 0x7F
+            } else if ((((item = collobject->id & ID_ITEM) & ID_MAJOR) >> 6) == MAJOR_CREATURE
+                && item != ITEM_ADVENTURER
                 && ((meptr->goal_word & 0xF) >> 0) == 5
                 && ((collobject->goal_word & 0xF) >> 0) == 5) {
-            } else if ((item >> 4) == 0x14 && (item & 0xF) >= 8
+            } else if ((item >> 4) == CLASS_DOOR && (item & ID_INCLASS) >= 8
                 && mycst->flier) {
                 meptr->b14 = meptr->b14 & 7 | 0x70;
                 failed = 0;
@@ -1213,7 +1213,7 @@ void far crit_head_for_loc(unsigned char x, unsigned char y, char z) {
             meptr->b15 = meptr->b15 & 0x7F;
         }
     } else if (find_free_path(&slot)
-        && flood_path(myxpos, myypos, (meptr->pos & 0x7F) >> 3, x, y, z,
+        && flood_path(myxpos, myypos, (meptr->pos & POS_Z) >> 3, x, y, z,
                       acceptable_danger())) {
         freepaths &= ~(1 << slot);
         store_path(&paths[slot]);
@@ -1251,7 +1251,7 @@ void far adjust_height(unsigned char x, unsigned char y) {
     if (dontchangedz) return;
     destinationTile = Map_GetAddr(x, y);
     originTile = Map_GetAddr(myxpos, myypos);
-    z = meptr->pos & 0x7F;
+    z = meptr->pos & POS_Z;
     destinationHeight = (destinationTile->height << 3) + 0x14;
     originHeight = (originTile->height << 3) + 0x14;
     if (destinationHeight > 0x78) destinationHeight = 0x78;
@@ -1275,7 +1275,7 @@ void far try_to_open_door(struct Object far *door) {
         MapObj_Y = doory;
         UseObj(meptr, door, 0);
     }
-    if (((door->id & 0x1F0) >> 4) != 0x14 || (door->id & 0xF) >= 8) return;
+    if (((door->id & ID_CLASS) >> 4) != CLASS_DOOR || (door->id & ID_INCLASS) >= 8) return;
     if (mycst->locks && rand() % 2) {
         checkLock(meptr, door, -mycst->locks);
         return;

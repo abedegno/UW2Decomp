@@ -14,17 +14,17 @@
 #include "player.h"
 #include "ui.h"
 
-#define OBJ_ITEM(o)     ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-#define OBJ_CLASS(o)    (((o)->id & 0x1F0) >> 4)
-#define OBJ_MINOR4(o)   ((o)->id & 0xF)
-#define OBJ_Z(o)        ((o)->pos & 0x7F)
-#define OBJ_HEADING(o)  (((o)->pos & 0x380) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & 0x1C00) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & 0xE000) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
-#define ITEM_CLASS(i)   (((i) & 0x1F0) >> 4)
+#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
+#define OBJ_MINOR4(o)   ((o)->id & ID_INCLASS)
+#define OBJ_Z(o)        ((o)->pos & POS_Z)
+#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
+#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
+#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
+#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
+#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
+#define ITEM_CLASS(i)   (((i) & ID_CLASS) >> 4)
 #define OBJ_TERRAIN(o)  (((o)->b0A & 0x70) >> 4)
 
 #define SET_Z(o, v)       ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
@@ -111,14 +111,14 @@ void far missile_newhit(struct Object far *proj, struct Object far *hit)
     struct MissileInfo *mi;
     int scale;
 
-    if (OBJ_ITEM(proj) == 0x1E && Obj_MemTPtr(hit) == proj->last_hit)
+    if (OBJ_ITEM(proj) == ITEM_SATELLITE && Obj_MemTPtr(hit) == proj->last_hit)
         proj->b15 = proj->b15 & 0x7F;
     else {
-        mi = &Missile[proj->id & 0xF];
+        mi = &Missile[proj->id & ID_INCLASS];
         damage = mi->damage;
         if (proj->last_hit == 1 && mi->ammo == -64) {
-            scale = (player->skills[6] << 3) + 0xC0;
-            switch (skill_check(player->skills[6], 10)) {
+            scale = (player->skills[SKILL_MISSILE] << 3) + 0xC0;
+            switch (skill_check(player->skills[SKILL_MISSILE], 10)) {
             case -1:
                 scale -= 0x80;
                 break;
@@ -136,7 +136,7 @@ void far missile_newhit(struct Object far *proj, struct Object far *hit)
             y = objhit_myy;
         }
         missile_thwack(proj->last_hit, proj, hit, x, y, damage, -mi->ammo);
-        if (OBJ_MAJOR(hit) == 1)
+        if (OBJ_MAJOR(hit) == MAJOR_CREATURE)
             proj->b0A = proj->b0A & 0x7F | 0x80;
     }
 }
@@ -170,11 +170,11 @@ int far do_objhit(int ci, int index)
         objhit_tiley = objhit_myy + (oCollisions[ci].offset - item) / 0x40 & 0x3F;
         item = OBJ_ITEM(other);
         touch = ComObjData[item].touch;
-        if (oCollisions[ci].link.f.index < 0x100 && index < 0x100) {
-            if (my_item >> 6 != 1 && (unsigned char)((obj->b15 & 0x80) >> 7)
-                && my_item != 0x1D && my_item != 0x13F)
+        if (oCollisions[ci].link.f.index < NUM_MOBILE && index < NUM_MOBILE) {
+            if (my_item >> 6 != MAJOR_CREATURE && (unsigned char)((obj->b15 & 0x80) >> 7)
+                && my_item != ITEM_FIREBALL_1D && my_item != ITEM_RESILIENT_SPHERE_13F)
                 return 2;
-            if (my_item >> 6 != 1)
+            if (my_item >> 6 != MAJOR_CREATURE)
                 obj->b15 = obj->b15 & 0x7F | 0x80;
         }
     }
@@ -184,7 +184,7 @@ int far do_objhit(int ci, int index)
             MapObj_Y = objhit_tiley;
             objhit_used = 0;
             UseObj(obj, other, 0);
-        } else if ((ITEM_CLASS(item) & 0x1E) == 0x1A)
+        } else if ((ITEM_CLASS(item) & 0x1E) == CLASS_TRIGGER)
             return UseTrigger(obj, 0L, other, 0);
     }
     if (touch) {
@@ -228,21 +228,21 @@ void far get_phys_data(struct Object far *obj, struct Phys *pp)
         pp->vel[2] = (((obj->b14 & 0xF8) >> 3) - 0x10) << 6;
         pp->acc[2] = ((obj->b13 & 0x80) >> 7) * -4;
         pp->hp = obj->hp;
-        if (OBJ_MAJOR(obj) != 1) {
+        if (OBJ_MAJOR(obj) != MAJOR_CREATURE) {
             jitter = 0;
             pp->x = obj->goal_word;
             pp->y = obj->attitude_word;
             pp->z = obj->b0F;
         }
         pp->speed = obj->b13 & 0x7F;
-        if (OBJ_MAJOR(obj) != 1 && (pp->acc[2] | pp->vel[2]) == 0 && !co->no_hit) {
+        if (OBJ_MAJOR(obj) != MAJOR_CREATURE && (pp->acc[2] | pp->vel[2]) == 0 && !co->no_hit) {
             if (pp->light * 2 + 2 >= pp->speed)
                 pp->speed = 0;
             else
                 pp->speed = (obj->b13 & 0x7F) * ((pp->light << 2) + 0x29);
         } else {
             pp->speed *= 0x2F;
-            if (OBJ_MAJOR(obj) == 1)
+            if (OBJ_MAJOR(obj) == MAJOR_CREATURE)
                 pp->b24 = 8;
         }
     } else {
@@ -296,18 +296,18 @@ unsigned char far set_phys_data(struct Object far *obj, struct Phys *pp)
         int damage;
 
         damage = pp->impact >> 8;
-        if (OBJ_MAJOR(obj) == 1)
+        if (OBJ_MAJOR(obj) == MAJOR_CREATURE)
             damage >>= 2;
         else if (obj->hp < 0x20)
             damage <<= 2;
         mass = ComObjData[OBJ_ITEM(obj)].mass;
-        if (OBJ_MAJOR(obj) != 1)
+        if (OBJ_MAJOR(obj) != MAJOR_CREATURE)
             play_effect_on_mobile(0xF, obj, (mass - 600) / 50);
         damage_item(obj, 0L, XP, YP, damage, 0);
     }
     if (pp->terrain & 4 && rand() % 5 == 0)
         damage_item(obj, 0L, XP, YP, 1, 8);
-    if (OBJ_MAJOR(obj) != 1) {
+    if (OBJ_MAJOR(obj) != MAJOR_CREATURE) {
         if (obj > objdata) {
             if (pp->speed | pp->vel[2] | pp->acc[2])
                 obj = static_to_mob(obj);
@@ -336,14 +336,14 @@ unsigned char far set_phys_data(struct Object far *obj, struct Phys *pp)
         SET_PITCH(obj, v);
         SET_SPEED(obj, pp->speed / 0x2F);
         SET_TERRAIN(obj, res_to_terr[pp->terrain]);
-        if (OBJ_MAJOR(obj) != 1) {
+        if (OBJ_MAJOR(obj) != MAJOR_CREATURE) {
             obj->goal_word = pp->x;
             obj->attitude_word = pp->y;
             obj->b0F = pp->z;
         }
         return 1;
     }
-    if (OBJ_MAJOR(obj) == 5)
+    if (OBJ_MAJOR(obj) == MAJOR_RECT)
         SET_HEADING(obj, pp->heading >> 13);
     return 0;
 }
@@ -360,9 +360,9 @@ struct Object far * far static_to_mob(struct Object far *obj)
         *(struct StaticObj far *)mob = *(struct StaticObj far *)obj;
         mob_init(mob, XP, YP);
         mob->hp = obj->qn.f.quality;
-        if (OBJ_MAJOR(obj) != 5 && ComObjData[OBJ_ITEM(obj)].render != 2)
+        if (OBJ_MAJOR(obj) != MAJOR_RECT && ComObjData[OBJ_ITEM(obj)].render != 2)
             mob->whoami = OBJ_HEADING(obj);
-        if (OBJ_MAJOR(mob) == 7)
+        if (OBJ_MAJOR(mob) == MAJOR_ANIMOBJ)
             Change_AnimPtr(mob, obj);
         Obj_Rem(head, obj);
         Obj_Free(obj);
@@ -385,7 +385,7 @@ void far mob_init(struct Object far *obj, int x, int y)
     obj->id = obj->id & 0xBFFF;
     obj->hp = 0x3F;
     obj->b0A = obj->b0A & 0x8F;
-    if (OBJ_MAJOR(obj) != 1) {
+    if (OBJ_MAJOR(obj) != MAJOR_CREATURE) {
         obj->goal_word = (x << 8) + (OBJ_FINEX(obj) << 5) + 0xF;
         obj->attitude_word = (y << 8) + (OBJ_FINEY(obj) << 5) + 0xF;
         obj->b0F = OBJ_Z(obj) << 3;
@@ -405,8 +405,8 @@ void far do_filanium(struct Object far *obj, int x, int y)
         || !flag || major != 0xD || minor != 3)
         return;
     game_sprint(0x14C);
-    if (player->xclock[3] < 2)
-        player->xclock[3] = 2;
+    if (player->xclock[XC_DJINN] < 2)
+        player->xclock[XC_DJINN] = 2;
 }
 
 struct Object far * far mob_to_static(struct Object far *obj)
@@ -431,17 +431,17 @@ struct Object far * far mob_to_static(struct Object far *obj)
     if (keep && (st = Obj_Alloc(0)) != 0) {
         *(struct StaticObj far *)st = *(struct StaticObj far *)obj;
         obj->ol.f.link = 0;
-        if (OBJ_MAJOR(st) == 7)
+        if (OBJ_MAJOR(st) == MAJOR_ANIMOBJ)
             Change_AnimPtr(st, obj);
-        else if (OBJ_CLASS(st) == 9 && OBJ_MINOR4(st) >= 4 && OBJ_MINOR4(st) <= 6)
+        else if (OBJ_CLASS(st) == CLASS_LIGHT && OBJ_MINOR4(st) >= 4 && OBJ_MINOR4(st) <= 6)
             st->id = st->id & 0xFFF0 | OBJ_MINOR4(st) - 4 & 0xF;
         st->qn.f.quality = obj->hp;
-        if (OBJ_MAJOR(st) != 5 && OBJ_MAJOR(st) != 6 && ComObjData[OBJ_ITEM(st)].render != 2)
+        if (OBJ_MAJOR(st) != MAJOR_RECT && OBJ_MAJOR(st) != MAJOR_TRAP && ComObjData[OBJ_ITEM(st)].render != 2)
             SET_HEADING(st, obj->whoami);
     } else
         st = 0;
     if (fate == 9) {
-        if (OBJ_MAJOR(obj) == 1)
+        if (OBJ_MAJOR(obj) == MAJOR_CREATURE)
             who = 0;
         else
             who = obj->last_hit;

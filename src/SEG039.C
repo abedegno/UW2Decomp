@@ -123,17 +123,17 @@ void far clear_dynamics(int block)
 
 int far get_name(char far *dst, struct Object far *obj, char article, char plural)
 {
-    int item = obj->id & 0x1ff;
+    int item = obj->id & ID_ITEM;
     char far *name;
     unsigned char who;
-    if (((obj->id & 0x1c0) >> 6) == 1) {
+    if (((obj->id & ID_MAJOR) >> 6) == MAJOR_CREATURE) {
         who = obj->whoami;
         if (who > 0 && (unsigned char)who < 0xf0) {
-            name = get_string(((unsigned char)who + 0x10) | 0xe00);
+            name = get_string(((unsigned char)who + 0x10) | STR_CONV);
             if (name && *name) { str_copy(dst, name); return 1; }
         }
     }
-    name = get_string(item | 0x800);
+    name = get_string(item | STR_OBJNAMES);
     if (name == 0 || name[0] == 0) { str_copy(dst, SPACE); return 0; }
     str_copy(dst, fix_name_string(name, article, plural));
     return 1;
@@ -157,32 +157,32 @@ char far * far fix_name_string(char far *s, unsigned char article, char plural)
 
 void far game_sprint(int id)
 {
-    char far *s = get_string(id | 0x200);
+    char far *s = get_string(id | STR_GAME);
     scroll_print(s);
 }
 
 void far game_strings_3(int first, int second, int third)
 {
     char text[256];
-    str_copy(text, get_string(first | 0x200));
-    if (second >= 0) str_cat(text, get_string(second | 0x200));
-    if (third >= 0) str_cat(text, get_string(third | 0x200));
+    str_copy(text, get_string(first | STR_GAME));
+    if (second >= 0) str_cat(text, get_string(second | STR_GAME));
+    if (third >= 0) str_cat(text, get_string(third | STR_GAME));
     scroll_print(text);
 }
 
 int far LoadFileStringsPak_seg039_547(void)
 {
     int file;
-    if ((file = our_open(aStrings_pak, 1, 0)) == -1) return 0x3002;
+    if ((file = our_open(aStrings_pak, 1, 0)) == -1) return ERR_READ | 2;
     read(file, &StringsPak_NoOfNodes, 2);
     StringsPak_Address_Indices = farmalloc((unsigned)(StringsPak_NoOfNodes << 2));
     if (!StringsPak_Address_Indices) {
         close(file);
-        return 0x1001;
+        return ERR_LOWMEM | 1;
     }
     intoFarBuffer_ovr167_5DA(file, StringsPak_Address_Indices, StringsPak_NoOfNodes << 2);
     close(file);
-    if ((StringsPak_FileHandle = data_fopen(aStrings_pak, aRb_4)) == 0) return 0x3002;
+    if ((StringsPak_FileHandle = data_fopen(aStrings_pak, aRb_4)) == 0) return ERR_READ | 2;
     return 0;
 }
 

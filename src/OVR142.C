@@ -113,8 +113,8 @@ void far read_player_data(int fd)
 void far init_spells(void)
 {
     ComObjData[127].resist = 0;         /* item 127 is the player's own object type */
-    plyNotice[0] = 13 - player->skills[13] / 3;
-    plyNotice[1] = 15 - player->skills[13] / 5;
+    plyNotice[0] = 13 - player->skills[SKILL_STEALTH] / 3;
+    plyNotice[1] = 15 - player->skills[SKILL_STEALTH] / 5;
     motionbits = 0;
     memset(cmbModTH, 0, 4);
     PoisonWeap = Hasted = WizEye = Blessed = TimeStop = 0;
@@ -144,7 +144,7 @@ void far set_drugged(char on)
     } else if (ShroomsEnabled >= 0) {
         switch (ShroomsEnabled) {
         case 0: set_cyb(0); break;
-        case 1: grfx_quikpal(0); break;
+        case 1: grfx_quikpal(PAL_GAME); break;
         case 2: random_light(0); break;
         }
         ShroomsEnabled = -1;
@@ -276,9 +276,9 @@ int far armor_val(struct Object far *obj)
 {
     register int armour;
     register int protection;
-    if (((obj->id & 0x1C0) >> 6) == 0 && ((obj->id & 0x30) >> 4) < 2)
+    if (((obj->id & ID_MAJOR) >> 6) == MAJOR_HACK && ((obj->id & ID_MINOR) >> 4) < 2)
         return 0;
-    armour = Armor[((obj->id & 0x1FF) - 0x20) * 4];
+    armour = Armor[((obj->id & ID_ITEM) - FIRST_ARMOR) * 4];
     protection = ((unsigned)(obj->qn.f.quality * armour)) >> 6;
     protection++;
     return protection;
@@ -306,24 +306,24 @@ void far FixPlayerEquips(void)
             playerdat->armour[defence_slot_index[slot]] += armor_val(item);
     }
     item = AskInventory((((struct HandBits *)((char *)player + 0x65))->hand) + 7);
-    if (item && ((item->id & 0x1C0) >> 6) == 0 &&
-        ((item->id & 0x30) >> 4) == 3 &&
-        (item->id & 0xF) >= 11 && (item->id & 0xF) <= 15) {
+    if (item && ((item->id & ID_MAJOR) >> 6) == MAJOR_HACK &&
+        ((item->id & ID_MINOR) >> 4) == 3 &&
+        (item->id & ID_INCLASS) >= 11 && (item->id & ID_INCLASS) <= 15) {
         armour = armor_val(item);
         playerdat->armour[0] += armour;
         playerdat->armour[1] += armour;
     }
-    playerdat->defence = player->skills[1];
+    playerdat->defence = player->skills[SKILL_DEFENSE];
     ActiveObj = AskInventory(8 - (((struct HandBits *)((char *)player + 0x65))->hand));
     armour = 2;
-    if (ActiveObj && ((ActiveObj->id & 0x1C0) >> 6) == 0 &&
-        ((ActiveObj->id & 0x30) >> 4) < 2) {
-        if (((ActiveObj->id & 0x30) >> 4) == 0) {
-            armour = Weapons[(ActiveObj->id & 0xF) * 8 + 6];
+    if (ActiveObj && ((ActiveObj->id & ID_MAJOR) >> 6) == MAJOR_HACK &&
+        ((ActiveObj->id & ID_MINOR) >> 4) < 2) {
+        if (((ActiveObj->id & ID_MINOR) >> 4) == 0) {
+            armour = Weapons[(ActiveObj->id & ID_INCLASS) * 8 + 6];
             if (armour < 3) armour = 3;
             else if (armour > 5) armour = 5;
             load_weapon((unsigned char)armour + 0xFD);
-        } else if ((ActiveObj->id & 0xF) <= 7)
+        } else if ((ActiveObj->id & ID_INCLASS) <= 7)
             load_weapon(3);
         else
             load_weapon(-1);
@@ -335,8 +335,8 @@ void far FixPlayerEquips(void)
     for (slot = 0; slot <= 4; slot++) {
         if (slot == 4) ActiveObj = CursorObjPtr;
         else ActiveObj = AskInventory(ValidLightSlots[slot]);
-        if (ActiveObj && ((ActiveObj->id & 0x1F0) >> 4) == 9 &&
-            (ActiveObj->id & 0xF) >= 4 && (ActiveObj->id & 0xF) < 8) {
+        if (ActiveObj && ((ActiveObj->id & ID_CLASS) >> 4) == CLASS_LIGHT &&
+            (ActiveObj->id & ID_INCLASS) >= 4 && (ActiveObj->id & ID_INCLASS) < 8) {
             data = get_class_data();
             if (data[1] > brightness) {
                 brightness = data[1];
@@ -350,7 +350,7 @@ void far FixPlayerEquips(void)
                            (player->spells[slot] & 0xF0) >> 4, &bonuses, -1);
     for (slot = 0; slot <= 10; slot++) {
         ActiveObj = AskInventory(slot);
-        if (ActiveObj && ObjWorn(ActiveObj->id & 0x1FF, slot) &&
+        if (ActiveObj && ObjWorn(ActiveObj->id & ID_ITEM, slot) &&
             decode_obj_spell(ActiveObj, &major, &effect, &flag) && !flag &&
             player_affected_by(major, effect, &bonuses, slot))
             remove_spell(ActiveObj);

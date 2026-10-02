@@ -20,9 +20,9 @@
 #include "ui.h"
 #include "view3d.h"
 
-#define OBJ_INDEX(o)    (((o)->id & 0x3F) >> 0)
-#define OBJ_MINOR(o)    (((o)->id & 0x30) >> 4)
-#define OBJ_ISQUANT(o)  (((o)->id & 0x8000) >> 15)
+#define OBJ_INDEX(o)    (((o)->id & ID_INMAJOR) >> 0)
+#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
+#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
 #define OBJ_QUALITY(o)  ((o)->qn.f.quality)
 #define OBJ_OWNER(o)    ((o)->ol.f.owner)
 #define OBJ_LINK(o)     ((o)->ol.f.link)
@@ -72,7 +72,7 @@ char far use_skill(struct Object far *who, unsigned char skill, unsigned char va
         mdetect(8, value);
         break;
     default:
-        scroll_print(get_string((skill + 0x1F) | 0x400));
+        scroll_print(get_string((skill + 0x1F) | STR_CHARGEN));
         game_sprint(0x16F);
         return 1;
     case 10:
@@ -84,7 +84,7 @@ char far use_skill(struct Object far *who, unsigned char skill, unsigned char va
 
 char far player_use_skill(int skill)
 {
-    return use_skill(ThePlayer, skill + 10, player->skills[skill + 10]);
+    return use_skill(ThePlayer, skill + SKILL_TRAPS, player->skills[skill + SKILL_TRAPS]);
 }
 
 void far player_compute(char restore)
@@ -92,7 +92,7 @@ void far player_compute(char restore)
     int mana;
 
     playerdat->avghit = 30 + player->level * playerdat->attr[0] / 5;
-    mana = (player->skills[7] + 1) * playerdat->attr[2] >> 3;
+    mana = (player->skills[SKILL_MANA] + 1) * playerdat->attr[2] >> 3;
     player->max_mana = mana;
     player->max_weight = playerdat->attr[0] * 13 + 300;
     if (restore)
@@ -184,7 +184,7 @@ char far get_skill(char skill)
     if (skill == 8)
     {
         clear_all_loretries();
-        player->lore[PlayerLevel] = player->skills[8];
+        player->lore[PlayerLevel] = player->skills[SKILL_LORE];
     }
     return result;
 }
@@ -201,17 +201,17 @@ char far grant_skill_advance(int which)
 
     switch (which)
     {
-    case -1: start = 0; count = 7; tries = 3; break;
-    case -2: start = 7; count = 3; tries = 2; break;
-    case -3: start = 10; count = 10; tries = 4; break;
+    case -1: start = SKILL_ATTACK; count = 7; tries = 3; break;
+    case -2: start = SKILL_MANA; count = 3; tries = 2; break;
+    case -3: start = SKILL_TRAPS; count = 10; tries = 4; break;
     default: start = which; count = 1; tries = 1; break;
     }
     memset(tried, 0xFF, 4);
     left = count;
     for (left = count; tries > 0 && left > 0; tries--, left--)
     {
-        if (start == 7 && player->skills[7] < 8 && (rand() & 2))
-            skill = 7;
+        if (start == SKILL_MANA && player->skills[SKILL_MANA] < 8 && (rand() & 2))
+            skill = SKILL_MANA;
         else
             skill = start + (int)(((long)rand() * count) / 0x8000L);
         if (get_skill(skill))
@@ -233,7 +233,7 @@ void far game_stats(void)
     register int i;
     register int x;
 
-    grfx_quikfont(2);
+    grfx_quikfont(FONT_CHAR);
     *foreground_color = *background_color = 0x52;
     str = get_string(player_name_handle);
     y = 0xAB;
@@ -247,7 +247,7 @@ void far game_stats(void)
     text[i++] = player->level % 10 + '0';
     text[i++] = ' ';
     text[i++] = 0;
-    str_cat(text, get_string((player->pclass + 0x17) | 0x400));
+    str_cat(text, get_string((player->pclass + 0x17) | STR_CHARGEN));
     y -= cur_font->height;
     str = get_string(0x2CB);
     x = 0xA0 - (string_width(text) + string_width(str)) / 2;
@@ -269,7 +269,7 @@ void far game_stats(void)
     {
         x = i / 3 ? 0xBE : 0x50;
         value = i % 3 * cur_font->height;
-        str = get_string((i + 0x11) | 0x400);
+        str = get_string((i + 0x11) | STR_CHARGEN);
         switch (i)
         {
         case 0:
@@ -295,7 +295,7 @@ void far game_stats(void)
     for (i = 0; i < 20; i++)
     {
         value = player->skills[i];
-        str = get_string((i + 0x1F) | 0x400);
+        str = get_string((i + 0x1F) | STR_CHARGEN);
         text[0] = value > 9 ? value / 10 + '0' : value + '0';
         text[1] = value > 9 ? value % 10 + '0' : 0;
         text[2] = 0;
@@ -336,7 +336,7 @@ unsigned char far dream(int sleepfactor)
     dreamflags = player->dreamflags;
     for (counter = 0; counter < 4; counter++)
     {
-        if (player->xclock[1] >= xclocks[counter])
+        if (player->xclock[XC_CASTLE] >= xclocks[counter])
         {
             if ((dreamflags & (1 << counter)) != (1 << counter))
                 found = counter;
@@ -608,7 +608,7 @@ char far moveto(int level, int item)
     npp_func = 0;
     if (level == PlayerLevel)
     {
-        Obj_FindInMap(item >> 6, (item & 0x30) >> 4, item & 0xF, &x, &y);
+        Obj_FindInMap(item >> 6, (item & ID_MINOR) >> 4, item & ID_INCLASS, &x, &y);
         NewPlayerX = x;
         NewPlayerY = y;
         return 1;
@@ -647,9 +647,9 @@ void far do_gem(void)
     FixPlayerEquips();
     set_new_music(10);
     tile = Map_GetAddr(x, y);
-    if (tile->type == 1)
+    if (tile->type == TILE_OPEN)
     {
-        stain = CreateObj(0xDF, 0);
+        stain = CreateObj(ITEM_BLOOD_STAIN_DF, 0);
         z = tile->height << 3;
         if (put_at((x << 3) + xoff, (y << 3) + yoff, z, stain, 0, 0))
         {
@@ -713,8 +713,8 @@ void far go_void(void)
 
     player->sleepbits = rand() % 4 + 2;
     player->in_void = 1;
-    player->dream_x = (ThePlayer->home & 0xFC00) >> 10;
-    player->dream_y = (ThePlayer->home & 0x3F0) >> 4;
+    player->dream_x = (ThePlayer->home & HOME_X) >> 10;
+    player->dream_y = (ThePlayer->home & HOME_Y) >> 4;
     player->dream_pos = ((PlayerHeading >> 8) & 0xFF) + (PlayerLevel << 8);
     n = rand() & 7;
     if (n >= 4)
@@ -768,7 +768,7 @@ void far player_is_dead(void)
             }
             player->pit_fighters[i] = 0;
         }
-        player->quest_bytes[1] = 0;
+        player->quest_bytes[QB_PIT_RECORD] = 0;
         player->quest_bytes[5] = 0;
     }
     kill_all_effects();
@@ -807,7 +807,7 @@ int far DetectedTrap(struct Object far *obj, int skill)
 
     if (OBJ_ISQUANT(obj) || OBJ_LINK(obj) == 0)
         return 0;
-    for (head = &obj->ol.word; trig = Obj_InList(&head, 0, 6, -1, -1), trig;
+    for (head = &obj->ol.word; trig = Obj_InList(&head, 0, MAJOR_TRAP, -1, -1), trig;
          head = &trig->qn.word)
     {
         if (OBJ_MINOR(trig) == 3)
@@ -828,7 +828,7 @@ int far RemoveTrap(struct Object far *obj, int skill)
 
     if (OBJ_ISQUANT(obj) || OBJ_LINK(obj) == 0)
         return 0;
-    for (head = &obj->ol.word; trig = Obj_InList(&head, 0, 6, -1, -1), trig;
+    for (head = &obj->ol.word; trig = Obj_InList(&head, 0, MAJOR_TRAP, -1, -1), trig;
          head = &trig->qn.word)
     {
         if (OBJ_MINOR(trig) == 3)

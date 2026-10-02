@@ -26,17 +26,17 @@ struct SObject {
     unsigned ol;
 };
 
-#define OBJ_ITEM(o)     ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-#define OBJ_CLASS(o)    (((o)->id & 0x1F0) >> 4)
-#define OBJ_MINOR(o)    (((o)->id & 0x30) >> 4)
-#define OBJ_INDEX(o)    (((o)->id & 0x3F) >> 0)
-#define OBJ_Z(o)        ((o)->pos & 0x7F)
-#define OBJ_HEADING(o)  (((o)->pos & 0x380) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & 0x1C00) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & 0xE000) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
+#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
+#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
+#define OBJ_INDEX(o)    (((o)->id & ID_INMAJOR) >> 0)
+#define OBJ_Z(o)        ((o)->pos & POS_Z)
+#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
+#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
+#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
+#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
+#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
 #define OBJ_POWERFUL(o) (((o)->attitude_word & 0x400) >> 10)
 #define OBJ_SIDE(o)     (((o)->b19 & 0x40) >> 6)
 
@@ -169,7 +169,7 @@ int far set_hitobj(struct MotionCalc *c)
     for (; i < last; i++) {
         idx = oCollisions[i].link.f.index;
         obj = Obj_IntTMem(idx);
-        if (OBJ_MAJOR(obj) == 6)
+        if (OBJ_MAJOR(obj) == MAJOR_TRAP)
             continue;
         if (idx == fromwho)
             continue;
@@ -178,7 +178,7 @@ int far set_hitobj(struct MotionCalc *c)
         t = oCollisions[i].offset & 0x3F;
         targx = ((c->x >> 3) + t) & 0x3F;
         t = targx - (c->x >> 3);
-        targy = ((c->y >> 3) + (oCollisions[i].offset - t) / 0x40) & 0x3F;
+        targy = ((c->y >> 3) + (oCollisions[i].offset - t) / MAP_SIZE) & 0x3F;
         dx = ax - ((targx << 3) + OBJ_FINEX(obj));
         dy = ay - ((targy << 3) + OBJ_FINEY(obj));
         dist = dx * dx + dy * dy;
@@ -191,7 +191,7 @@ int far set_hitobj(struct MotionCalc *c)
         t = oCollisions[found].offset & 0x3F;
         targx = ((c->x >> 3) + t) & 0x3F;
         t = targx - (c->x >> 3);
-        targy = ((c->y >> 3) + (oCollisions[found].offset - t) / 0x40) & 0x3F;
+        targy = ((c->y >> 3) + (oCollisions[found].offset - t) / MAP_SIZE) & 0x3F;
     }
     return found;
 }
@@ -213,7 +213,7 @@ void far find_wall_coll(int heading, int dist, struct MotionCalc *c)
     do {
         TerrainCheck(0);
         if ((curP->hits0 | curP->hits1) & 0x300) {
-            if ((obj = CreateObj(0x1CB, 0)) == 0)
+            if ((obj = CreateObj(ITEM_FLASH, 0)) == 0)
                 return;
             SET_FINEX(obj, curP->x & 7);
             SET_FINEY(obj, curP->y & 7);
@@ -286,13 +286,13 @@ char far is_sharp(struct Object far *weap)
     int item;
 
     item = OBJ_ITEM(weap);
-    if (OBJ_MAJOR(weap) != 0)
+    if (OBJ_MAJOR(weap) != MAJOR_HACK)
         return 0;
     if (OBJ_MINOR(weap) != 0 && OBJ_MINOR(weap) != 1)
         return 0;
-    if (item >= 7 && item < 10)
+    if (item >= ITEM_CUDGEL && item < 10)
         return 0;
-    if (item >= 0x18 && item < 0x19)
+    if (item >= ITEM_SLING && item < ITEM_BOW)
         return 0;
     return 1;
 }
@@ -306,8 +306,8 @@ int far frp_check(int attacker, int defender)
     int slot;
 
     def = Obj_IntTMem(defender);
-    if (OBJ_MAJOR(def) != 1) {
-        if (attacker == 1 && OBJ_CLASS(def) == 0x14
+    if (OBJ_MAJOR(def) != MAJOR_CREATURE) {
+        if (attacker == 1 && OBJ_CLASS(def) == CLASS_DOOR
             && (int)(rand() * 12L / 0x8000L) < (def->id & 7) << 1) {
             slot = 8 - player->lefty;
             DamageInventory(slot, rollem(2, 4), 4, 0, 1);
@@ -339,7 +339,7 @@ int far frp_check(int attacker, int defender)
         return 0;
     }
     if (result == -1 && attacker == 1
-        && !Creature[Obj_IntTMem(hitobj)->id & 0x3F].passive) {
+        && !Creature[Obj_IntTMem(hitobj)->id & ID_INMAJOR].passive) {
         slot = 8 - player->lefty;
         DamageInventory(slot, rollem(2, 3), 4, 0, 1);
     }
@@ -386,12 +386,12 @@ void far do_damage(int type)
         if (missile_hit == 0)
             play_effect(fx, (targx << 3) + OBJ_FINEX(def), (targy << 3) + OBJ_FINEY(def), ddone << 2);
     }
-    if (item >> 6 == 1) {
+    if (item >> 6 == MAJOR_CREATURE) {
         int armour;
 
-        if ((armour = Creature[item & 0x3F].armour[hitloc % 4]) == 0xFF) {
+        if ((armour = Creature[item & ID_INMAJOR].armour[hitloc % 4]) == 0xFF) {
             hitloc = hitloc & 4;
-            armour = Creature[item & 0x3F].armour[0];
+            armour = Creature[item & ID_INMAJOR].armour[0];
         }
         if (hitobj != 1 && OBJ_POWERFUL(def))
             armour = armour * 5 / 3;
@@ -417,17 +417,17 @@ void far do_damage(int type)
         set_effect(0x20, level * 5);
         return;
     }
-    if (item >> 6 == 1) {
+    if (item >> 6 == MAJOR_CREATURE) {
         if (fromwho == 1) {
-            if (Creature[item & 0x3F].avghit != 0)
-                fx = def->hp * 3 / Creature[item & 0x3F].avghit;
+            if (Creature[item & ID_INMAJOR].avghit != 0)
+                fx = def->hp * 3 / Creature[item & ID_INMAJOR].avghit;
             else
                 fx = 0;
             if (fx >= 3)
                 fx = 2;
             set_screen_frame(7, 3 - fx);
         }
-        if (Creature[item & 0x3F].blood) {
+        if (Creature[item & ID_INMAJOR].blood) {
             put_effect(def, 0, 1, level, hitz_tab[hitloc], targx, targy);
             if (criti && fromwho == 1)
                 put_effect(def, 0, 1, level, hitz_tab[hitloc] + (rand() & 1) * 5 - 2, targx, targy);
@@ -437,7 +437,7 @@ void far do_damage(int type)
     }
     if (result)
         def = 0;
-    if (((item & 0x1F0) >> 4) == 0x14 || item == 0x1CF) {
+    if (((item & ID_CLASS) >> 4) == CLASS_DOOR || item == ITEM_MOVING_DOOR) {
         if (OBJ_Z(def) > hitz) {
             hitz = OBJ_Z(def) + 2;
             put_effect(def, 0xB, 1, level, -hitz, targx, targy);
@@ -466,8 +466,8 @@ char far do_miss(int hit)
         attitem = OBJ_ITEM(Obj_IntTMem(fromwho));
         if (fromwho == 1)
             weapon = player_weapon;
-        else if (fromwho < 0x100)
-            weapon = Creature[attitem & 0x3F].weapon_kind;
+        else if (fromwho < NUM_MOBILE)
+            weapon = Creature[attitem & ID_INMAJOR].weapon_kind;
         else
             weapon = 1;
         if (hitobj == 1) {
@@ -475,12 +475,14 @@ char far do_miss(int hit)
             item = OBJ_ITEM(armour);
             if (armour == 0)
                 victim = 0;
-            else if (item == 0x20 || item == 0x23 || item == 0x26 || item == 0x29 || item == 0x2C)
+            else if (item == ITEM_LEATHER_VEST || item == ITEM_LEATHER_LEGGINGS
+                     || item == ITEM_LEATHER_GLOVES || item == ITEM_LEATHER_BOOTS
+                     || item == ITEM_LEATHER_CAP)
                 victim = 0;
             else
                 victim = 1;
-        } else if (hitobj < 0x100)
-            victim = Creature[attitem & 0x3F].armour_kind;
+        } else if (hitobj < NUM_MOBILE)
+            victim = Creature[attitem & ID_INMAJOR].armour_kind;
         else
             victim = 0;
         if (weapon == 1 || weapon == 2 && victim == 1)
@@ -526,9 +528,9 @@ int far check_ammo(int weapon)
     int ammo;
 
     ammo = Missile[weapon].ammo;
-    if (FindObj(0, 1, ammo, 4, &found) == 0) {
+    if (FindObj(MAJOR_HACK, 1, ammo, 4, &found) == 0) {
         p = &fake;
-        p->id = p->id & 0xFE00 | ammo + 0x10 & 0x1FF;
+        p->id = p->id & 0xFE00 | ammo + FIRST_MISSILE & ID_ITEM;
         game_sprint(0xCF);
         get_name(buf, (struct Object far *)p, 0, 1);
         scroll_print(buf);
@@ -545,10 +547,10 @@ int far GetPlayerWeapon(unsigned char **wd, struct Object far **weap)
     *wd = 0;
     *weap = AskInventory(8 - player->lefty);
     if (*weap != 0) {
-        if (((item = OBJ_ITEM(*weap)) >> 4) == 1) {
-            if (Missile[item & 0xF].ammo >= 0 && Missile[item & 0xF].ammo < 0x10) {
-                if (check_ammo(item & 0xF) >= 0) {
-                    *wd = (unsigned char *)&Missile[item & 0xF];
+        if (((item = OBJ_ITEM(*weap)) >> 4) == CLASS_MISSILE) {
+            if (Missile[item & ID_INCLASS].ammo >= 0 && Missile[item & ID_INCLASS].ammo < 0x10) {
+                if (check_ammo(item & ID_INCLASS) >= 0) {
+                    *wd = (unsigned char *)&Missile[item & ID_INCLASS];
                     player_weapon = 3;
                     return 0;
                 }
@@ -556,8 +558,8 @@ int far GetPlayerWeapon(unsigned char **wd, struct Object far **weap)
                 player_weapon = 4;
                 return -1;
             }
-        } else if ((item >> 4) == 0) {
-            *wd = (unsigned char *)&Weapons[item & 0xF];
+        } else if ((item >> 4) == CLASS_WEAPON) {
+            *wd = (unsigned char *)&Weapons[item & ID_INCLASS];
             wsize = ComObjData[item].radius;
             if (is_sharp(*weap))
                 player_weapon = 2;
@@ -580,17 +582,17 @@ void far DoPlayerWeapon(register unsigned char *wd, struct Object far *weap, int
     unsigned char flag;
     register int skill;
 
-    using_altaras_dagger = OBJ_ITEM(weap) == 10;
-    if ((skill = wd[6]) >= 6 || skill < 2)
-        skill = 2;
-    askill = (player->skills[0] >> 1) + player->skills[skill] + Valor;
+    using_altaras_dagger = OBJ_ITEM(weap) == ITEM_JEWELLED_DAGGER;
+    if ((skill = wd[6]) >= SKILL_MISSILE || skill < SKILL_BAREHAND)
+        skill = SKILL_BAREHAND;
+    askill = (player->skills[SKILL_ATTACK] >> 1) + player->skills[skill] + Valor;
     askill += player->dexterity / 7;
     if (player->easy)
         askill += 7;
-    if (skill == 2)
-        damage = player->skills[2] * 2 / 5 + Creature[ThePlayer->id & 0x3F].attr[0] / 6 + 4;
+    if (skill == SKILL_BAREHAND)
+        damage = player->skills[SKILL_BAREHAND] * 2 / 5 + Creature[ThePlayer->id & ID_INMAJOR].attr[0] / 6 + 4;
     else
-        damage = wd[swing_kind[swing - 1]] + Creature[ThePlayer->id & 0x3F].attr[0] / 9;
+        damage = wd[swing_kind[swing - 1]] + Creature[ThePlayer->id & ID_INMAJOR].attr[0] / 9;
     fromwho = 1;
     towhere = swing;
     if (weap != 0) {
@@ -692,7 +694,7 @@ void far player_attack(int swing)
                 }
                 if (!held) {
                     if (mous_in_3d_p())
-                        player_fire(curr_weapon->id & 0xF);
+                        player_fire(curr_weapon->id & ID_INCLASS);
                     missile_finish();
                 }
                 return;
@@ -768,7 +770,7 @@ void far player_attack(int swing)
                 break;
             case 5:
             case 6:
-                if (OBJ_CLASS(target) == 0x14) {
+                if (OBJ_CLASS(target) == CLASS_DOOR) {
                     ObjectActorArg = 0xC;
                     obj_spells(target, 0, 0);
                     OpenDoor(ThePlayer, target);
@@ -833,9 +835,9 @@ char far critter_attack(struct Object far *npc, int swing, unsigned char charge,
     fromwho = Obj_MemTPtr(npc);
     towhere = swing;
     power = charge;
-    cr = &Creature[npc->id & 0x3F];
+    cr = &Creature[npc->id & ID_INMAJOR];
     damage = cr->attacks[type].damage;
-    damage += Creature[npc->id & 0x3F].attr[0] / 5;
+    damage += Creature[npc->id & ID_INMAJOR].attr[0] / 5;
     askill = cr->attacks[type].chance + (cr->equip >> 1);
     if (OBJ_POWERFUL(npc)) {
         askill += rand() % 6 + 7;
@@ -866,9 +868,9 @@ void far player_killed_a(struct Object far *npc)
 {
     int exp;
 
-    if (OBJ_MAJOR(npc) == 1) {
+    if (OBJ_MAJOR(npc) == MAJOR_CREATURE) {
         set_new_music(6);
-        exp = Creature[npc->id & 0x3F].exp;
+        exp = Creature[npc->id & ID_INMAJOR].exp;
         exp = exp * 4 + rollem(2, exp);
         if (OBJ_POWERFUL(npc))
             exp = (long)exp * (rand() % 24 + 24) / 16;

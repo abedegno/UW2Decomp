@@ -28,16 +28,16 @@
 /* Jospur's debt to the player for fights won in the pits: quest 133. */
 #define JOSPUR_DEBT     quest_bytes[0x85 - 0x80]
 
-#define OBJ_ITEM(o)     ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-#define OBJ_TYPE(o)     (((o)->id & 0x3F) >> 0)
-#define OBJ_FLAGS(o)    (((o)->id & 0x1E00) >> 9)
-#define OBJ_Z(o)        ((o)->pos & 0x7F)
-#define OBJ_HEADING(o)  (((o)->pos & 0x380) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & 0x1C00) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & 0xE000) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
+#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_TYPE(o)     (((o)->id & ID_INMAJOR) >> 0)
+#define OBJ_FLAGS(o)    (((o)->id & ID_FLAGS) >> 9)
+#define OBJ_Z(o)        ((o)->pos & POS_Z)
+#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
+#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
+#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
+#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
+#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
 #define OBJ_B0A_7(o)    (((o)->b0A & 0x80) >> 7)
 
 #define SET_FLAGS(o, v)   ((o)->id = (o)->id & 0xE1FF | ((v) & 0xF) << 9)
@@ -115,14 +115,14 @@ int far babl_hack(int far *args)
     mode = getmem(args[-1]);
     switch (mode) {
     case 10: {                          /* is the player wearing the Guardian's signet
-                                           ring (item 0x35) on either hand? */
+                                           ring on either hand? */
         struct Object far *ring;
 
         ring = Obj_PtrTMem(&Inventory[9]);
-        if (ring && OBJ_ITEM(ring) == 0x35)
+        if (ring && OBJ_ITEM(ring) == ITEM_GUARDIAN_SIGNET_RING)
             return 1;
         ring = Obj_PtrTMem(&Inventory[10]);
-        if (ring && OBJ_ITEM(ring) == 0x35)
+        if (ring && OBJ_ITEM(ring) == ITEM_GUARDIAN_SIGNET_RING)
             return 1;
         return 0;
     }
@@ -218,13 +218,13 @@ struct Object far * far place_pitfighter(int power, int x, int y)
     int item;
 
     if (rand() % 16)
-        item = rand() % 2 + 0x78;
+        item = rand() % 2 + ITEM_HUMAN_78;
     else
-        item = rand() % 3 + 0x75;
+        item = rand() % 3 + ITEM_HUMAN_75;
     if (rand() % 3 < power) {
         strong = 1;
         if ((roll = rand() % 5) < 2) {
-            item = roll ? 0x7B : 0x5C;
+            item = roll ? ITEM_HUMAN_7B : ITEM_GREAT_TROLL;
             strong = 0;
         }
     }
@@ -360,10 +360,10 @@ void far set_race_attitude(int far *args)
     if (y0 < 1)
         y0 = 1;
     x1 = OBJ_HOMEX(talking_to) + range;
-    if (x1 >= 0x40)
+    if (x1 >= MAP_SIZE)
         x1 = 0x3F;
     y1 = OBJ_HOMEY(talking_to) + range;
-    if (y1 >= 0x40)
+    if (y1 >= MAP_SIZE)
         y1 = 0x3F;
     for (y = y0; y <= y1; y++)
         for (x = x0; x <= x1; x++) {
@@ -431,7 +431,7 @@ int far place_object(int far *args)
         stay_centered = 0;
         return 1;
     }
-    if (x < 1 || x >= 0x40 || y < 1 || y >= 0x40)
+    if (x < 1 || x >= MAP_SIZE || y < 1 || y >= MAP_SIZE)
         return 0;
     tile = Map_GetAddr(x, y);
     SET_Z(obj, tile->height << 3);
@@ -538,8 +538,8 @@ int far gronk_door(int far *args)
     int ox, oy;
 
     head = &Map_GetAddr(getmem(args[-3]), getmem(args[-2]))->objects;
-    if ((door = Obj_InList(&head, 0, 5, 0, -1)) == 0
-        && (door = Obj_InList(&head, 0, 7, 0, 0xF)) == 0)
+    if ((door = Obj_InList(&head, 0, MAJOR_RECT, 0, -1)) == 0
+        && (door = Obj_InList(&head, 0, MAJOR_ANIMOBJ, 0, 0xF)) == 0)
         return 0;
     ox = MapObj_X;
     oy = MapObj_Y;
@@ -583,7 +583,7 @@ void far x_obj_stuff(int far *args)
     quality = getmem_addr(args[-1]);
     obj = Obj_IntTMem(getmem(args[-9]));
     if (getmem(args[-8])) {
-        if (*heading != -1 && OBJ_MAJOR(obj) != 5 && ComObjData[OBJ_ITEM(obj)].render != 2)
+        if (*heading != -1 && OBJ_MAJOR(obj) != MAJOR_RECT && ComObjData[OBJ_ITEM(obj)].render != 2)
             SET_HEADING(obj, *heading);
         if (*owner != -1)
             obj->ol.f.owner = *owner;
@@ -598,7 +598,7 @@ void far x_obj_stuff(int far *args)
         if (*quality != -1)
             obj->qn.f.quality = *quality;
     } else {
-        if (*heading != -1 && OBJ_MAJOR(obj) != 5 && ComObjData[OBJ_ITEM(obj)].render != 2)
+        if (*heading != -1 && OBJ_MAJOR(obj) != MAJOR_RECT && ComObjData[OBJ_ITEM(obj)].render != 2)
             *heading = OBJ_HEADING(obj);
         if (*owner != -1)
             *owner = obj->ol.f.owner;

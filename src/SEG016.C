@@ -95,11 +95,11 @@ extern unsigned long lastcombattime;
 unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
 unsigned char far OkEnoughMem_ovr167_463(void);
 
-#define OBJ_HEADING(o)  (((o)->pos & 0x380) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & 0x1C00) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & 0xE000) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
+#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
+#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
+#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
+#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
+#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
 
 /* The workspace may have taken EMS page 2: put back whichever mapping it should have. */
 #define RESTORE_EMS() \
@@ -1365,9 +1365,9 @@ void far play_instrument(register int which)
                         n = 10;
                     n--;
                     n = notes[n];
-                    if (key & 0x200)
+                    if (key & KEY_ALT)
                         n += 12;
-                    if (key & 0x100)
+                    if (key & KEY_CTRL)
                         n -= 12;
                     if (t > 0 && last != 0xFF && ok)
                         AIL_send_channel_voice_message(music_driver, ch + 0x7F, last, 0);

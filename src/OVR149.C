@@ -431,7 +431,7 @@ void far do_level_hacks(int level, int mode)
         }
         break;
     case 2:
-        if ((int)((player->quests[12] & 4) >> 2) && mode == 1 && (level - 1) % 8 + 1 == 1)
+        if ((int)((player->quests[12] & 4) >> 2) && mode == 1 && (level - 1) % LEVELS_PER_WORLD + 1 == 1)
             Killorn_just_crashed(1);
     case 5:
         if ((level - 1) % 8 + 1 == 3 && mode == 1)

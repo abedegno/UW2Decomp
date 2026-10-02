@@ -24,9 +24,9 @@
 #include "ui.h"
 #include "uw2.h"
 
-#define OBJ_ISQUANT(o)  (((o)->id & 0x8000) >> 15)
-#define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
+#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
+#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
+#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
 
 extern union Link Inventory[];
 

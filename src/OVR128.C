@@ -41,7 +41,7 @@ char far Map_Init(void)
 {
     if (mapdata == 0) {
         if ((mapdata = farmalloc(0x7E08L)) == 0)
-            first_punt(0x1002);
+            first_punt(ERR_LOWMEM | 2);
     }
     Map_ObjFix();
     return 1;

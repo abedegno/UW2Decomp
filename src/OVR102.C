@@ -26,18 +26,18 @@ int far ObjsBeCombinable(struct Object far *a, struct Object far *b)
     register int i;
     unsigned first, second;
 
-    if (((a->id & 0x8000) >> 15) && a->ol.f.link > 1 ||
-        !((a->id & 0x8000) >> 15) && a->ol.f.link > 0)
+    if (((a->id & ID_ISQUANT) >> 15) && a->ol.f.link > 1 ||
+        !((a->id & ID_ISQUANT) >> 15) && a->ol.f.link > 0)
         return -1;
-    if (((b->id & 0x8000) >> 15) && b->ol.f.link > 1 ||
-        !((b->id & 0x8000) >> 15) && b->ol.f.link > 0)
+    if (((b->id & ID_ISQUANT) >> 15) && b->ol.f.link > 1 ||
+        !((b->id & ID_ISQUANT) >> 15) && b->ol.f.link > 0)
         return -1;
-    ids[1] = a->id & 0x1FF;
-    ids[0] = b->id & 0x1FF;
+    ids[1] = a->id & ID_ITEM;
+    ids[0] = b->id & ID_ITEM;
     entry = ObjectCombinations;
     for (i = 0; i < 10; entry++, i++) {
-        first = entry->first & 0x1FF;
-        second = entry->second & 0x1FF;
+        first = entry->first & ID_ITEM;
+        second = entry->second & ID_ITEM;
         if ((first == ids[1] && second == ids[0]) ||
             (first == ids[0] && second == ids[1]))
             break;
@@ -55,9 +55,9 @@ char far RemoveAfterCombine(struct Object far *obj, int combo)
     register int id;
     register unsigned *entry;
 
-    id = obj->id & 0x1FF;
+    id = obj->id & ID_ITEM;
     entry = (unsigned *)&ObjectCombinations[combo];
-    if ((*entry & 0x1FF) == id)
+    if ((*entry & ID_ITEM) == id)
         ;
     else
         entry++;

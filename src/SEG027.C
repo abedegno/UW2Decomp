@@ -15,19 +15,19 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_ITEM(o)     ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-#define OBJ_CLASS(o)    (((o)->id & 0x1F0) >> 4)
-#define OBJ_MINOR4(o)   ((o)->id & 0xF)
-#define OBJ_FLAGS(o)    (((o)->id & 0x1E00) >> 9)
-#define OBJ_BIT13(o)    (((o)->id & 0x2000) >> 13)
-#define OBJ_ISQUANT(o)  (((o)->id & 0x8000) >> 15)
-#define OBJ_Z(o)        ((o)->pos & 0x7F)
-#define OBJ_HEADING(o)  (((o)->pos & 0x380) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & 0x1C00) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & 0xE000) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
+#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
+#define OBJ_MINOR4(o)   ((o)->id & ID_INCLASS)
+#define OBJ_FLAGS(o)    (((o)->id & ID_FLAGS) >> 9)
+#define OBJ_BIT13(o)    (((o)->id & ID_DOORDIR) >> 13)
+#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
+#define OBJ_Z(o)        ((o)->pos & POS_Z)
+#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
+#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
+#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
+#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
+#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
 
 #define SET_ISQUANT(o, v) ((o)->id = (o)->id & 0x7FFF | ((v) & 1) << 15)
 #define SET_FLAGS(o, v)   ((o)->id = (o)->id & 0xE1FF | ((v) & 0xF) << 9)
@@ -104,7 +104,7 @@ void far player_fire(int weapon)
     if ((slot = check_ammo(weapon)) >= 0) {
         ammo = Missile[weapon].ammo;
         missile_class = Missile[ammo].type;
-        missile_item = ammo + 0x10;
+        missile_item = ammo + FIRST_MISSILE;
         missile_x = OBJ_HOMEX(ThePlayer);
         missile_y = OBJ_HOMEY(ThePlayer);
         missile_arc = 1;
@@ -123,7 +123,7 @@ void far player_fire(int weapon)
             proj->hp = ammo_obj->qn.f.quality;
             proj->ol.f.owner = ammo_obj->ol.f.owner;
             SET_BIT13(proj, OBJ_BIT13(ammo_obj));
-            if (OBJ_MAJOR(ammo_obj) != 5 && ComObjData[OBJ_ITEM(ammo_obj)].render != 2)
+            if (OBJ_MAJOR(ammo_obj) != MAJOR_RECT && ComObjData[OBJ_ITEM(ammo_obj)].render != 2)
                 proj->whoami = OBJ_HEADING(ammo_obj);
             Obj_Free(ammo_obj);
         } else {
@@ -140,7 +140,7 @@ void far critter_fire(struct Object far *who, int item, int type)
 {
     struct Object far *proj;
 
-    missile_item = item + 0x10;
+    missile_item = item + FIRST_MISSILE;
     missile_class = type;
     missile_x = OBJ_HOMEX(who);
     missile_y = OBJ_HOMEY(who);
@@ -158,7 +158,7 @@ char far spell_fire(struct Object far *who, int spell)
 {
     struct Object far *proj;
 
-    missile_item = spell + 0x10;
+    missile_item = spell + FIRST_MISSILE;
     missile_class = Missile[spell].type;
     missile_x = OBJ_HOMEX(who);
     missile_y = OBJ_HOMEY(who);
@@ -217,7 +217,7 @@ char far ReturnObject(struct Object far *obj, char message)
             thrown->hp = obj->qn.f.quality;
             thrown->ol.f.owner = obj->ol.f.owner;
             SET_BIT13(thrown, OBJ_BIT13(obj));
-            if (OBJ_MAJOR(obj) != 5 && ComObjData[OBJ_ITEM(obj)].render != 2)
+            if (OBJ_MAJOR(obj) != MAJOR_RECT && ComObjData[OBJ_ITEM(obj)].render != 2)
                 thrown->whoami = OBJ_HEADING(obj);
             Obj_Free(obj);
             obj = 0;
@@ -242,7 +242,7 @@ char far ReturnObject(struct Object far *obj, char message)
             SET_FINEX(obj, x & 7);
             SET_FINEY(obj, y & 7);
             Obj_AddEnd(&tile->objects.word, obj);
-            if (OBJ_CLASS(obj) == 9 && OBJ_MINOR4(obj) >= 4 && OBJ_MINOR4(obj) <= 6)
+            if (OBJ_CLASS(obj) == CLASS_LIGHT && OBJ_MINOR4(obj) >= 4 && OBJ_MINOR4(obj) <= 6)
                 obj->id = obj->id & 0xFFF0 | OBJ_MINOR4(obj) - 4 & 0xF;
             if ((hit = obj_deal(obj, tx, ty, 1)) != 0 && hit > objdata)
                 check_pplate(hit, tile, OBJ_Z(hit), 7);
@@ -307,13 +307,13 @@ struct Object far * far missile_fire(void)
                 goto failed;
         } else if (!push_missile(proj, missile_src, 1))
             goto failed;
-        if (OBJ_MAJOR(proj) != 1) {
+        if (OBJ_MAJOR(proj) != MAJOR_CREATURE) {
             launcher = 0;
             proj->goal_word = (OBJ_HOMEX(proj) << 8) + (OBJ_FINEX(proj) << 5) + 0xF;
             proj->attitude_word = (OBJ_HOMEY(proj) << 8) + (OBJ_FINEY(proj) << 5) + 0xF;
             proj->b0F = OBJ_Z(proj) << 3;
-            if (OBJ_MAJOR(missile_src) == 1) {
-                if ((launcher = Obj_MemTPtr(missile_src)) >= 0x100)
+            if (OBJ_MAJOR(missile_src) == MAJOR_CREATURE) {
+                if ((launcher = Obj_MemTPtr(missile_src)) >= NUM_MOBILE)
                     launcher = 0;
             }
             proj->last_hit = launcher;

@@ -42,7 +42,7 @@ void far grfx_init(void)
     set_the_window(0, 0xC7, 0x13F, 0);
     grSoftPageFlip();
     init_colors();
-    grfx_quikfont(1);
+    grfx_quikfont(FONT_5X6P);
 }
 
 unsigned char far grfx_load_font(char *name)

@@ -22,11 +22,11 @@
 #include "ui.h"
 #include "view3d.h"
 
-#define OBJ_ITEM(o)      ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)     (((o)->id & 0x1C0) >> 6)
-#define OBJ_MINOR(o)     (((o)->id & 0x30) >> 4)
-#define OBJ_INDEX(o)     (((o)->id & 0x3F) >> 0)
-#define CRIT_INDEX(o)    ((o)->id & 0x3F)
+#define OBJ_ITEM(o)      ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)     (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_MINOR(o)     (((o)->id & ID_MINOR) >> 4)
+#define OBJ_INDEX(o)     (((o)->id & ID_INMAJOR) >> 0)
+#define CRIT_INDEX(o)    ((o)->id & ID_INMAJOR)
 #define FINEHEAD(o)      ((o)->b18 & 0x1F)
 #define SPEED(o)         ((o)->b13 & 0x7F)
 #define BIN(o)           ((o)->b0A & 0xF)
@@ -37,13 +37,13 @@
 #define B19_6(o)         (((o)->b19 & 0x40) >> 6)
 #define B0A_7(o)         (((o)->b0A & 0x80) >> 7)
 #define DAMAGE(o)        (((o)->b11 & 0xFF) >> 0)
-#define ID_B13(o)        (((o)->id & 0x2000) >> 13)
-#define OBJ_Z(o)         ((o)->pos & 0x7F)
-#define OBJ_HEADING(o)   (((o)->pos & 0x380) >> 7)
-#define OBJ_FINEY(o)     (((o)->pos & 0x1C00) >> 10)
-#define OBJ_FINEX(o)     (((o)->pos & 0xE000) >> 13)
-#define OBJ_HOMEX(o)     (((o)->home & 0xFC00) >> 10)
-#define OBJ_HOMEY(o)     (((o)->home & 0x3F0) >> 4)
+#define ID_B13(o)        (((o)->id & ID_DOORDIR) >> 13)
+#define OBJ_Z(o)         ((o)->pos & POS_Z)
+#define OBJ_HEADING(o)   (((o)->pos & POS_HEADING) >> 7)
+#define OBJ_FINEY(o)     (((o)->pos & POS_YFINE) >> 10)
+#define OBJ_FINEX(o)     (((o)->pos & POS_XFINE) >> 13)
+#define OBJ_HOMEX(o)     (((o)->home & HOME_X) >> 10)
+#define OBJ_HOMEY(o)     (((o)->home & HOME_Y) >> 4)
 #define OBJ_PATH(o)      ((o)->home & 0xF)
 #define GOAL(o)          (((o)->goal_word & 0xF) >> 0)
 #define GTARG(o)         (((o)->goal_word & 0xFF0) >> 4)
@@ -359,7 +359,7 @@ void far crit_offense(void)
     if (mycst->caster > 0) {
         if (!maybe_cast_defensive_spell() && mycst->b2D_0)
             attacked = crit_magik_attack();
-    } else if (mycst->arms[0].item >> 4 == 1)
+    } else if (mycst->arms[0].item >> 4 == CLASS_MISSILE)
         attacked = crit_missile_attack();
     if (attacked) {
         if (SEQ(meptr) == 6 || SEQ(meptr) == 6 || SEQ(meptr) == 3)
@@ -535,7 +535,7 @@ void far crit_defense(void)
             return;
         if (mycst->caster > 0)
             crit_magik_attack();
-        else if (mycst->arms[0].item >> 4 == 1)
+        else if (mycst->arms[0].item >> 4 == CLASS_MISSILE)
             crit_missile_attack();
         else
             crit_flee();
@@ -1061,7 +1061,7 @@ unsigned char far critter_ai(void)
                 missile_try = compute_trz_or_try_rather(0x1E, 0);
                 cast(mycst->spells[CAST(meptr) - 1], meptr, 0L);
             } else {
-                type = mycst->arms[0].item & 0xF;
+                type = mycst->arms[0].item & ID_INCLASS;
                 missile_try = compute_trz_or_try_rather(Missile[type].type, 1);
                 critter_fire(meptr, type, Missile[type].type);
             }
@@ -1363,17 +1363,17 @@ unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
     register int ratio;
 
     minor = OBJ_MINOR(obj);
-    index = obj->id & 0xF;
+    index = obj->id & ID_INCLASS;
     cr = &Creature[(minor << 4) + index];
     victim = cr;
     SET_DAMAGE(obj, DAMAGE(obj) + damage);
     if (from == 0 || from >= objdata)
         who = 0;
-    else if (OBJ_MAJOR(from) != 1)
+    else if (OBJ_MAJOR(from) != MAJOR_CREATURE)
         who = from->last_hit;
     else {
         m = Obj_MemTPtr(from);
-        who = m >= 0x100 ? 0 : m;
+        who = m >= NUM_MOBILE ? 0 : m;
     }
     if (who)
         obj->last_hit = who;
@@ -1438,7 +1438,7 @@ void far move_mobile(char delta)
     for (p = ActiveMob; p < LastActiveMob; p++) {
         meptr = &critdata[*p];
         while (timetodo(BIN(meptr), RATE(meptr))) {
-            if (OBJ_MAJOR(meptr) == 1)
+            if (OBJ_MAJOR(meptr) == MAJOR_CREATURE)
                 ok = critter_ai();
             else
                 ok = move_me_joe();

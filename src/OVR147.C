@@ -157,7 +157,7 @@ void far real_start(int intro)
             mouse_show();
             set_workspace();
             if (opbuf == 0 || !gronk_gr("opbtn", 0, -1, adr_opbtn, move_opbtn))
-                pfatal_code(0x300D);
+                pfatal_code(ERR_READ | 0x00D);
             if (choice != 3) {
                 draw_start_buttons(n, buttons, 0, sel);
                 read_quikpal(2, pal);
@@ -179,14 +179,14 @@ void far real_start(int intro)
 
                 msg = get_string(0x2B8);
                 disk_to_vid(5, 0);
-                grfx_quikfont(3);
+                grfx_quikfont(FONT_BIG);
                 *foreground_color = 7;
                 *background_color = 7;
                 string_to_screen(msg, 0xA0 - string_width(msg) / 2, 0x5A);
                 mouse_show();
                 while (mouse_get_input() < 0)
                     ;
-                grfx_quikfont(1);
+                grfx_quikfont(FONT_5X6P);
             } else if (done)
                 punt_fightmode();
             break;
@@ -259,7 +259,7 @@ int far parse_start_mouse(int n, struct Button far *b, unsigned char text)
         }
     } else {
         s = (char **)b;
-        grfx_quikfont(3);
+        grfx_quikfont(FONT_BIG);
         while (mouse_get_input() > 0) {
             mouse_getxy(&x, &y);
             for (i = 0; i < n; i++) {
@@ -279,7 +279,7 @@ int far parse_start_mouse(int n, struct Button far *b, unsigned char text)
             if (i == n)
                 none = last == -1;
         }
-        grfx_quikfont(1);
+        grfx_quikfont(FONT_5X6P);
     }
     return last + (none ? 0 : n);
 }
@@ -293,9 +293,9 @@ int far parse_start_input(register int n, struct Button far *b, int text, int se
     register int cur = sel;
 
     while (result < -1) {
-        grfx_quikfont(3);
+        grfx_quikfont(FONT_BIG);
         draw_start_buttons(n, b, text, cur);
-        grfx_quikfont(1);
+        grfx_quikfont(FONT_5X6P);
         while ((key = mouse_get_input()) < 0)
             loop_music_maybe();
         switch (key) {
@@ -375,11 +375,11 @@ int far do_journey(void)
         mouse_hide();
         display_screen(-1, 5);
         msg = get_string(0x311);
-        grfx_quikfont(3);
+        grfx_quikfont(FONT_BIG);
         *foreground_color = 7;
         *background_color = 7;
         string_to_screen(msg, (0x140 - string_width(msg)) / 2 + 10, 0x5A);
-        grfx_quikfont(1);
+        grfx_quikfont(FONT_5X6P);
         if (RestoreGame(i + 1)) {
             load_weapcm();
             return 1;

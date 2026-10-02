@@ -163,10 +163,10 @@ void far init_world(int argc, char *argv[])
     if (!OkEnoughMem_ovr167_463()) {
         punt_sound_stuff(1);
         if (!OkEnoughMem_ovr167_463())
-            first_punt(0x1004);
+            first_punt(ERR_LOWMEM | 4);
     }
     if (!grfx_init())
-        pfatal_code(0x3003);
+        pfatal_code(ERR_READ | 3);
     display_screen(5, 6);
     load_new_music(1, 1);
     seg001_023B_C();
@@ -190,7 +190,7 @@ void far init_world(int argc, char *argv[])
     if ((err = init_babl()) != 0)
         pfatal_code(err);
     grfx_clear();
-    grfx_quikpal(0);
+    grfx_quikpal(PAL_GAME);
 }
 
 void far free_world(char flag)
@@ -298,14 +298,14 @@ void far strt_demscr(void)
              FP_OFF((unsigned char far *)pal), 0x300);
     fadeout(pal, 2, 0);
     if (!display_screen(-1, 4))
-        pfatal_code(0x300B);
+        pfatal_code(ERR_READ | 0xB);
     init_gamedisp();
     editchng(0x7DFE);
     FixPlayerEquips();
     render_FB();
     send_FB();
     mouse_show();
-    read_quikpal(0, pal);
+    read_quikpal(PAL_GAME, pal);
     fadein(pal, 2, 0);
 }
 
@@ -419,7 +419,7 @@ unsigned char far new_player_pos(void)
         }
         if (PlayerLevel != NewPlayerLevel)
             if (!ChangeLevel(PlayerLevel, NewPlayerLevel))
-                pfatal_code(0x300C);
+                pfatal_code(ERR_READ | 0xC);
         if (npp_func)
             npp_func();
         if (!find_good_x_and_y(ThePlayer, NewPlayerX, NewPlayerY, &x, &y, 0)

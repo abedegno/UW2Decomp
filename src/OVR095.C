@@ -255,7 +255,7 @@ int far init_babl(void)
     register int dest;
     good = 1;
     if ((source = our_open("babglobs.dat", 1, 0)) < 0)
-        return 0x3007;
+        return ERR_READ | 7;
     if ((dest = our_open("bglobals.dat", 0, 1)) >= 0) {
         mem_set(stdat, 0, 0x1000);
         while (good && read(source, &block, 4) == 4) {
@@ -268,7 +268,7 @@ int far init_babl(void)
         close(dest);
         if (good) return 0;
     }
-    return 0x4001;
+    return ERR_WRITE | 1;
 }
 
 void far bab_get_globals(int far *memory, int count)
@@ -338,7 +338,7 @@ int far load_script(char *name, char far *work)
             return 1;
         }
     } else
-        pfatal_code(0x300a);
+        pfatal_code(ERR_READ | 0xa);
     if (DoReadHeader_ovr095_12C3() < 0) return -1;
     DoCopyCode_ovr095_14B1();
     bab_free(buffer);
@@ -348,7 +348,7 @@ int far load_script(char *name, char far *work)
     stack = mem + stack_base;
     empty = bab_malloc(1L);
     *empty = 0;
-    empty_string = make_string(empty, 0x7c);
+    empty_string = make_string(empty, STRBLK_DYNAMIC);
     bab_var_clear();
     bab_fun("compare", (void (far *)())bab_compare_ovr095_A8B);
     bab_fun("random", (void (far *)())BabRand_ovr095_A5B);
@@ -444,7 +444,7 @@ int far babl_str_append_ovr095_D0A(int far *args)
     out = bab_malloc((unsigned long)(unsigned)length);
     str_copy(out, s2);
     str_copy(out + len2, s1);
-    id = make_string(out, 0x7c);
+    id = make_string(out, STRBLK_DYNAMIC);
     return id;
 }
 
@@ -457,7 +457,7 @@ int far STRING_COPY_ovr095_DC7(int far *args)
     length = str_len(source) + 1;
     out = bab_malloc((unsigned long)(unsigned)length);
     str_copy(out, source);
-    id = make_string(out, 0x7c);
+    id = make_string(out, STRBLK_DYNAMIC);
     return id;
 }
 
@@ -672,7 +672,7 @@ void far DoCopyCode_ovr095_14B1(void)
 
 static void far ExitConversation_ovr095_14D4(void)
 {
-    clear_dynamics(0x7c);
+    clear_dynamics(STRBLK_DYNAMIC);
     bab_put_globals(mem, babl_nvars);
 }
 

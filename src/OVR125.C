@@ -14,13 +14,13 @@
 #include "ui.h"
 #include "uw2.h"
 
-#define OBJ_ID(o)       ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-#define OBJ_MINOR(o)    (((o)->id & 0x30) >> 4)
-#define OBJ_CLASS(o)    (((o)->id & 0x1F0) >> 4)
-#define OBJ_TYPE(o)     (((o)->id & 0x3F) >> 0)
-#define OBJ_INVIS(o)    (((o)->id & 0x4000) >> 14)
-#define OBJ_ISQUANT(o)  (((o)->id & 0x8000) >> 15)
+#define OBJ_ID(o)       ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
+#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
+#define OBJ_TYPE(o)     (((o)->id & ID_INMAJOR) >> 0)
+#define OBJ_INVIS(o)    (((o)->id & ID_INVIS) >> 14)
+#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
 
 /* One container type, 3 bytes. */
 struct Container {
@@ -201,15 +201,15 @@ void far DoInventoryMouse(int how)
             pick = 1;
         if (inplist->cmd != 1 && pick && mouse_dragged(1)) {
             obj = Obj_PtrTMem(&Inventory[slot].word);
-            if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & 0x200)) {
+            if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL)) {
                 if (obj->ol.f.link != 1) {
                     if ((split = AskHowMany(obj)) == 0)
                         return;
                     if (split != obj)
                         Obj_Add(&obj->qn.word, split);
                 }
-            } else if (OBJ_MAJOR(obj) == 2 && OBJ_MINOR(obj) == 0) {
-                if (inplist->mode == 4 && (obj->id & 0xF) != 0xF) {
+            } else if (OBJ_MAJOR(obj) == MAJOR_MISC && OBJ_MINOR(obj) == 0) {
+                if (inplist->mode == 4 && (obj->id & ID_INCLASS) != 0xF) {
                     game_sprint(0xC9);
                     return;
                 }
@@ -365,7 +365,7 @@ void far DisplayInvSpecial(void)
             rectangle(0xF0, 0xBE, 0x13B, 0x51);
         }
         if (displayEnc(1))
-            grfx_quikfont(1);
+            grfx_quikfont(FONT_5X6P);
         mouse_show();
     }
 }
@@ -486,7 +486,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
     com = &ComObjData[id];
     major = OBJ_MAJOR(ActiveObj);
     minor = OBJ_MINOR(ActiveObj);
-    sub = ActiveObj->id & 0xF;
+    sub = ActiveObj->id & ID_INCLASS;
     if (slot == 19) {
         int j;
 
@@ -505,14 +505,14 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
         struct Object far *o;
 
         o = Obj_PtrTMem(&Inventory[slot].word);
-        if (o != 0 && OBJ_CLASS(o) == 8)
+        if (o != 0 && OBJ_CLASS(o) == CLASS_CONTAINER)
             cont = o;
         else
             cont = Obj_PtrTMem(&Inventory[19].word);
     } else
         cont = Obj_PtrTMem(&Inventory[slot].word);
     if (slot < 5) {
-        if (major != 0) {
+        if (major != MAJOR_HACK) {
             if (slot == 0 && UseFood(ThePlayer, obj, 0) > 0)
                 return -1;
             return 0;
@@ -535,16 +535,16 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
         return 0;
     }
     if (slot == 9 || slot == 10) {
-        if (major != 0 || OBJ_MINOR(obj) < 2)
+        if (major != MAJOR_HACK || OBJ_MINOR(obj) < 2)
             return 0;
         cls = get_class_data();
         return cls[3] == 9;
     }
-    if (8 - player->lefty == slot && major == 0 && minor == 0) {
+    if (8 - player->lefty == slot && major == MAJOR_HACK && minor == 0) {
         if (cont != 0 && OBJ_ID(cont) == id
-            || OBJ_ISQUANT(obj) && !(obj->ol.f.link & 0x200) && obj->ol.f.link > 1)
+            || OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL) && obj->ol.f.link > 1)
             return 0;
-    } else if (major == 2 && minor == 1 && sub >= 4 && sub < 8) {
+    } else if (major == MAJOR_MISC && minor == 1 && sub >= 4 && sub < 8) {
         obj->id = obj->id & 0xFFF0 | (sub - 4) & 0xF;
         if (!ItemFitsSlot(obj, slot)) {
             obj->id = obj->id & 0xFFF0 | sub & 0xF;
@@ -555,7 +555,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
                 obj->id = obj->id & 0xFFF0 | sub & 0xF;
         return 1;
     }
-    if (cont != 0 && OBJ_CLASS(cont) == 8) {
+    if (cont != 0 && OBJ_CLASS(cont) == CLASS_CONTAINER) {
         int ok;
 
         ok = 1;
@@ -566,12 +566,12 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
 
             if (slot > 19) {
                 for (bag = OpenBag; bag != 0; bag = bag->prev) {
-                    cap = Containers[Obj_PtrTMem(&bag->obj.word)->id & 0xF].capacity;
+                    cap = Containers[Obj_PtrTMem(&bag->obj.word)->id & ID_INCLASS].capacity;
                     ok &= cap == 0 || bag->weight + weight <= cap;
                 }
             }
             BagWeight(&cont->ol.word, &weight);
-            cap = Containers[cont->id & 0xF].capacity;
+            cap = Containers[cont->id & ID_INCLASS].capacity;
             ok &= cap == 0 || weight <= cap;
             if (!ok) {
                 get_name(name, cont, 0, 0);
@@ -581,7 +581,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
                 return 0;
             }
         }
-        cap = Containers[cont->id & 0xF].mask;
+        cap = Containers[cont->id & ID_INCLASS].mask;
         if (cap >= 0) {
             unsigned char res;
 
@@ -592,25 +592,26 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
             }
             switch (cap) {
             case 0x200:
-                if (!(res = major == 3 && (minor == 3 || minor == 2 && sub > 7))) {
+                if (!(res = major == MAJOR_STUFF && (minor == 3 || minor == 2 && sub > 7))) {
                     game_sprint(0x106);
                     return 0;
                 }
                 break;
             case 0x204:
-                if (!(res = major == 4 && minor == 0 && sub != 0))
-                    res = OBJ_CLASS(obj) == 8 && Containers[obj->id & 0xF].mask == 0x204;
+                if (!(res = major == MAJOR_SPEC && minor == 0 && sub != 0))
+                    res = OBJ_CLASS(obj) == CLASS_CONTAINER && Containers[obj->id & ID_INCLASS].mask == 0x204;
                 break;
             case 0x201:
-                res = major == 0 && minor == 1 && sub < 3 || major == 2 && minor == 1 && sub >= 8;
+                res = major == MAJOR_HACK && minor == 1 && sub < 3 || major == MAJOR_MISC && minor == 1 && sub >= 8;
                 break;
             case 0x202:
-                res = major == 4 && minor == 3 && (sub >= 4 && sub < 8 || sub == 9 || sub == 10);
+                res = major == MAJOR_SPEC && minor == 3 && (sub >= 4 && sub < 8 || sub == 9 || sub == 10);
                 break;
             case 0x203:
-                res = major == 2 && minor == 3 && id != 0xBB && id != 0xBC && id != 0xBD
-                    || id == 0xCE || id == 0xCF || id == 0x114 || id == 0xD2 || id == 0x13E
-                    || id == 0xC5;
+                res = major == MAJOR_MISC && minor == 3 && id != ITEM_BOTTLE_OF_ALE
+                    && id != ITEM_BOTTLE_OF_WATER && id != ITEM_BOTTLE_OF_WINE
+                    || id == ITEM_PLANT_CE || id == ITEM_PLANT_CF || id == ITEM_PLANT_114
+                    || id == ITEM_LUMP_OF_WAX || id == ITEM_STICK || id == ITEM_BONE_C5;
                 break;
             default:
                 res = 0;
@@ -661,15 +662,15 @@ char far AddTogether(struct Object far *obj, struct Object far *onto)
         return 0;
     if (!OBJ_ISQUANT(obj) && obj->ol.f.link > 0
         || !OBJ_ISQUANT(onto) && onto->ol.f.link > 0
-        || obj->ol.f.link & 0x200 || onto->ol.f.link & 0x200
+        || obj->ol.f.link & LINK_SPECIAL || onto->ol.f.link & LINK_SPECIAL
         || ComObjData[OBJ_ID(obj)].stack == 1 || ComObjData[OBJ_ID(obj)].stack == 3)
         return 0;
-    if (OBJ_CLASS(obj) == 0x10 && obj->ol.f.owner != onto->ol.f.owner)
+    if (OBJ_CLASS(obj) == CLASS_KEY && obj->ol.f.owner != onto->ol.f.owner)
         return 0;
     if (obj->ol.f.link + onto->ol.f.link < 999) {
-        if (OBJ_ID(obj) >= 0x10 && OBJ_ID(obj) <= 0x12)
+        if (OBJ_ID(obj) >= ITEM_SLING_STONE && OBJ_ID(obj) <= ITEM_ARROW_12)
             return 1;
-        if (OBJ_ID(obj) == 0xA1)
+        if (OBJ_ID(obj) == ITEM_STORAGE_CRYSTAL)
             return 0;
         q1 = obj->qn.f.quality;
         q2 = onto->qn.f.quality;
@@ -688,7 +689,7 @@ char far AddToOccupiedSlot(struct Object far *obj, register int slot)
 
     ok = 0;
     target = Obj_PtrTMem(&Inventory[slot].word);
-    if (OBJ_MAJOR(target) == 2 && OBJ_MINOR(target) == 0) {
+    if (OBJ_MAJOR(target) == MAJOR_MISC && OBJ_MINOR(target) == 0) {
         char r;
 
         r = PutObjectInBag(obj, slot);
@@ -705,7 +706,7 @@ char far AddToOccupiedSlot(struct Object far *obj, register int slot)
         else
             qty = 1;
         if (!OBJ_ISQUANT(target)) {
-            target->id = target->id & 0x7FFF | 0x8000;
+            target->id = target->id & 0x7FFF | ID_ISQUANT;
             target->ol.f.link = 1;
         }
         weight = ComObjData[OBJ_ID(obj)].mass * qty;
@@ -793,7 +794,7 @@ void far displayInventoryArray(int from, int to)
                 obj = Obj_PtrTMem(&Inventory[slot].word);
                 id = OBJ_ID(obj);
                 pic_to_screen(id, InvDisplay[i].x, InvDisplay[i].y, InvDisplay[i].h, InvDisplay[i].w);
-                if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & 0x200)) {
+                if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL)) {
                     n = obj->ol.f.link;
                     if (n > 1) {
                         qty[i] = n;
@@ -806,7 +807,7 @@ void far displayInventoryArray(int from, int to)
     }
     Transparency = 0;
     if (any_qty) {
-        grfx_quikfont(0);
+        grfx_quikfont(FONT_4X5P);
         *foreground_color = 2;
         font_set = 1;
         for (i = from; i <= to; i++)
@@ -814,7 +815,7 @@ void far displayInventoryArray(int from, int to)
                 string_to_screen(itoa(n, buf, 10), InvDisplay[i].x + 3, InvDisplay[i].y - 1);
     }
     if (font_set)
-        grfx_quikfont(1);
+        grfx_quikfont(FONT_5X6P);
     displayEnc(0);
     mouse_show();
 }

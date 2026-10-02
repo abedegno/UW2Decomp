@@ -17,12 +17,12 @@
 #include "ui.h"
 #include "uw2.h"
 
-#define OBJ_ID(o)       ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-#define OBJ_MINOR(o)    (((o)->id & 0x30) >> 4)
-#define OBJ_CLASS(o)    (((o)->id & 0x1F0) >> 4)
-#define OBJ_INVIS(o)    (((o)->id & 0x4000) >> 14)
-#define OBJ_ISQUANT(o)  (((o)->id & 0x8000) >> 15)
+#define OBJ_ID(o)       ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
+#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
+#define OBJ_INVIS(o)    (((o)->id & ID_INVIS) >> 14)
+#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
 
 extern struct Player PlayerDat;
 extern union Link Inventory[];
@@ -63,7 +63,7 @@ void far DoSpecialActions(int slot)
         break;
     case 0x17:
         if (CursorObjPtr != 0 && ReturnObject(CursorObjPtr, 1)) {
-            if (HasOrIsObj(CursorObjPtr, 0x126)) {
+            if (HasOrIsObj(CursorObjPtr, ITEM_MOONSTONE)) {
                 for (i = 0; i < 2; i++) {
                     if (player->moonstones[i] == 0) {
                         player->moonstones[i] = PlayerLevel;
@@ -84,7 +84,7 @@ void far DoSpecialActions(int slot)
             obj = Obj_PtrTMem(&Inventory[DisplayToSlot[slot]].word);
             id = OBJ_ID(obj);
             cls = OBJ_CLASS(obj);
-            if (cls == 0 || id == 0x18 || id == 0x19 || id == 0x1A || id == 0x1F) {
+            if (cls == CLASS_WEAPON || id == ITEM_SLING || id == ITEM_BOW || id == ITEM_CROSSBOW || id == ITEM_JEWELED_BOW) {
                 toggle_fightmode();
                 break;
             }
@@ -105,7 +105,7 @@ void far MakeBagClose(struct Bag far *bag)
     int cls;
 
     obj = Obj_IntTMem(bag->obj.f.index);
-    cls = obj->id & 0xF;
+    cls = obj->id & ID_INCLASS;
     if (cls < 12 && (cls & 1))
         obj->id = obj->id & 0xFFF0 | (cls - 1) & 0xF;
 }
@@ -260,9 +260,9 @@ void far OpenTheBag(int slot)
     int j;
 
     obj = Obj_PtrTMem(&Inventory[slot].word);
-    if (OBJ_MAJOR(obj) != 2 || OBJ_MINOR(obj) != 0)
+    if (OBJ_MAJOR(obj) != MAJOR_MISC || OBJ_MINOR(obj) != 0)
         return;
-    if ((obj->id & 0xF) == 0xF) {
+    if ((obj->id & ID_INCLASS) == 0xF) {
         if (inplist->mode == 1)
             set_screen_frame(6, 1);
         return;
@@ -321,7 +321,7 @@ void far OpenTheBag(int slot)
         }
     }
     cont = Obj_PtrTMem(&Inventory[19].word);
-    cls = cont->id & 0xF;
+    cls = cont->id & ID_INCLASS;
     if (cls < 12 && !(cls & 1))
         cont->id = cont->id & 0xFFF0 | (cls + 1) & 0xF;
     DisplayOpenBag();
@@ -400,7 +400,7 @@ char far PutObjectInBag(struct Object far *obj, int slot)
         else
             bag = 0;
     }
-    if (OBJ_ID(cont) == 0x8F) {
+    if (OBJ_ID(cont) == ITEM_RUNE_BAG) {
         if (add_rune(obj))
             return 1;
         game_sprint(0x106);
@@ -416,7 +416,7 @@ char far PutObjectInBag(struct Object far *obj, int slot)
         do {
             if (AddTogether(obj, next)) {
                 if (!OBJ_ISQUANT(next)) {
-                    next->id = next->id & 0x7FFF | 0x8000;
+                    next->id = next->id & 0x7FFF | ID_ISQUANT;
                     next->ol.f.link = 1;
                 }
                 if (OBJ_ISQUANT(obj))
@@ -439,9 +439,9 @@ char far PutObjectInBag(struct Object far *obj, int slot)
         FixOpenBag();
         displayInventoryArray(0xC, 0x13);
     } else if (displayEnc(1))
-        grfx_quikfont(1);
-    if (OBJ_ID(obj) >= 0x94 && OBJ_ID(obj) < 0x98)
-        obj->id = obj->id & 0xFFF0 | ((obj->id & 0xF) - 4) & 0xF;
+        grfx_quikfont(FONT_5X6P);
+    if (OBJ_ID(obj) >= FIRST_LIT_LIGHT && OBJ_ID(obj) < FIRST_WAND)
+        obj->id = obj->id & 0xFFF0 | ((obj->id & ID_INCLASS) - 4) & 0xF;
     return 1;
 }
 
@@ -489,7 +489,7 @@ void far BagWeight(unsigned far *head, int far *total)
 
     obj = Obj_PtrTMem(head);
     if (obj != 0) {
-        if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & 0x200))
+        if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL))
             qty = obj->ol.f.link;
         else
             qty = 1;

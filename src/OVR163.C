@@ -12,10 +12,10 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_ID(o)       ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-#define OBJ_MINOR(o)    (((o)->id & 0x30) >> 4)
-#define OBJ_INDEX(o)    (((o)->id & 0x3F) >> 0)
+#define OBJ_ID(o)       ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
+#define OBJ_INDEX(o)    (((o)->id & ID_INMAJOR) >> 0)
 
 extern struct MissileInfo Missile[];
 /* This file's _BSS, DS:863A: only this file uses it; no FM Towns name, so static. */
@@ -40,23 +40,23 @@ char far drop_link_chain(struct Object far *cont, int owner)
         obj = Obj_PtrTMem(&cont->ol.word);
         cont->ol.f.link = 0;
         if (IsMobElem(cont)) {
-            x = (cont->home & 0xFC00) >> 10;
-            y = (cont->home & 0x3F0) >> 4;
+            x = (cont->home & HOME_X) >> 10;
+            y = (cont->home & HOME_Y) >> 4;
         } else {
             x = MapObj_X;
             y = MapObj_Y;
         }
-        z = cont->pos & 0x7F;
-        x = (x << 3) + ((cont->pos & 0xE000) >> 13);
-        y = (y << 3) + ((cont->pos & 0x1C00) >> 10);
+        z = cont->pos & POS_Z;
+        x = (x << 3) + ((cont->pos & POS_XFINE) >> 13);
+        y = (y << 3) + ((cont->pos & POS_YFINE) >> 10);
         while (obj != 0) {
             next = Obj_PtrTMem(&obj->qn.word);
             if (owner && ComObjData[OBJ_ID(obj)].can_own)
                 obj->ol.f.owner = owner;
-            if (OBJ_ID(obj) >= 0x94 && OBJ_ID(obj) <= 0x97)
-                obj->id = obj->id & 0xFE00 | (OBJ_ID(obj) - 4) & 0x1FF;
+            if (OBJ_ID(obj) >= FIRST_LIT_LIGHT && OBJ_ID(obj) <= ITEM_LIT_LIGHT_SPHERE)
+                obj->id = obj->id & 0xFE00 | (OBJ_ID(obj) - 4) & ID_ITEM;
             put_at(x, y, z, obj, 6, 0);
-            if (OBJ_MAJOR(obj) == 6 && OBJ_MINOR(obj) >= 2) {
+            if (OBJ_MAJOR(obj) == MAJOR_TRAP && OBJ_MINOR(obj) >= 2) {
                 cont->ol.f.link = Obj_MemTPtr(next);
                 UseTrigger(ThePlayer, 0, 0, obj, 4);
                 next = Obj_PtrTMem(&cont->ol.word);
@@ -111,7 +111,7 @@ void far generate_treasure(struct Object far *npc)
     }
     if (qty < 1)
         return;
-    obj = CreateObj(type + 0xA0, 0);
+    obj = CreateObj(type + FIRST_TREASURE, 0);
     obj->ol.f.link = qty;
     Obj_Add(&npc->ol.word, obj);
 }
@@ -125,7 +125,7 @@ void far generate_food(struct Object far *npc)
     prob = LootCreature->food_prob;
     item = LootCreature->food_item;
     if (rand() % 16 < prob) {
-        obj = CreateObj(item + 0xB0, 0);
+        obj = CreateObj(item + FIRST_FOOD, 0);
         Obj_Add(&npc->ol.word, obj);
     }
 }
@@ -148,7 +148,7 @@ void far generate_weapons(struct Object far *npc)
         else
             quality = rand() % 64;
         obj->qn.f.quality = quality;
-        if (OBJ_MINOR(obj) == 1 && (unsigned char)Missile[obj->id & 0xF].ammo == 0xC0)
+        if (OBJ_MINOR(obj) == 1 && (unsigned char)Missile[obj->id & ID_INCLASS].ammo == 0xC0)
             obj->ol.f.link = rand() % 8 + 4;
         Obj_Add(&npc->ol.word, obj);
     }
@@ -183,7 +183,7 @@ void far generate_inventory(struct Object far *npc)
     if ((npc->attitude_word & 0x1000) >> 12)
         return;
     minor = OBJ_MINOR(npc);
-    index = npc->id & 0xF;
+    index = npc->id & ID_INCLASS;
     LootCreature = &Creature[(minor << 4) + index];
     generate_treasure(npc);
     generate_food(npc);

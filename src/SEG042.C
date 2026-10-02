@@ -29,13 +29,13 @@ void far init_mem(void)
             seg013_1D3C_B2();
             dseg_67d6_920 = seg013_1D3C_A(0x29, page);
             if (dseg_67d6_920 < 0x29)
-                first_punt(0x2002);
+                first_punt(ERR_EMS | 2);
         }
         mem_setup(dseg_67d6_920);
         PrintStringToConsole_seg017_DE("EMS allocated\r\n$");
         _OvrInitEms(0, 0, 0);
     } else {
-        first_punt(0x2001);
+        first_punt(ERR_EMS | 1);
     }
 }
 
@@ -77,9 +77,9 @@ int far get_workspace(void)
         ws_active = 1;
         if (seg013_1D3C_E4(0, 0, 4))
             return ems_frame;
-        pfatal_code(0x2003);
+        pfatal_code(ERR_EMS | 3);
     } else {
-        pfatal_code(0x2004);
+        pfatal_code(ERR_EMS | 4);
     }
     ws_active = 0;
     return 0;

@@ -109,7 +109,7 @@ void far do_partition(char reverse, int *point, int skip, int count,
     for (i = 0; i < count;) {
         if (i != skip) {
             if (from_data == 0)
-                value = ((struct Object far *)Obj_IntTMem(objptrs[i]))->pos & 0x7f;
+                value = ((struct Object far *)Obj_IntTMem(objptrs[i]))->pos & POS_Z;
             else
                 value = sortdata[i][from_data];
             side = value > height;
@@ -132,9 +132,9 @@ void far z_part(int index, int *point, int count)
     struct Object far *object;
     int z;
     object = Obj_IntTMem(objptrs[index]);
-    z = object->pos & 0x7f;
-    if ((object->id & 0x1ff) == 0x158)
-        z = z + ComObjData[object->id & 0x1ff].height;
+    z = object->pos & POS_Z;
+    if ((object->id & ID_ITEM) == ITEM_TABLE)
+        z = z + ComObjData[object->id & ID_ITEM].height;
     do_partition(z * 8 > cPlayer->z, point, index, count, z, 0);
 }
 
@@ -142,7 +142,7 @@ void far door_part(int index, int *point, int count)
 {
     char reverse;
     int pos, axis;
-    if (!(((((struct Object far *)Obj_IntTMem(objptrs[index]))->pos & 0x380) >> 7) + quad * 2 & 3)) {
+    if (!(((((struct Object far *)Obj_IntTMem(objptrs[index]))->pos & POS_HEADING) >> 7) + quad * 2 & 3)) {
         axis = 2;
         pos = sortdata[index][2];
         reverse = 1;
@@ -158,11 +158,11 @@ void far door_part(int index, int *point, int count)
 
 void far set_sds(signed char *data, struct Object far *object)
 {
-    data[1] = trans_pos_x[quad * 16 + ((object->pos & 0xe000) >> 13) * 2]
-            + trans_pos_x[((quad + 1) & 3) * 16 + ((object->pos & 0x1c00) >> 10) * 2];
-    data[2] = trans_pos_x[quad * 16 + ((object->pos & 0xe000) >> 13) * 2 + 1]
-            + trans_pos_x[((quad + 1) & 3) * 16 + ((object->pos & 0x1c00) >> 10) * 2 + 1];
-    data[3] = object->pos & 0x7f;
+    data[1] = trans_pos_x[quad * 16 + ((object->pos & POS_XFINE) >> 13) * 2]
+            + trans_pos_x[((quad + 1) & 3) * 16 + ((object->pos & POS_YFINE) >> 10) * 2];
+    data[2] = trans_pos_x[quad * 16 + ((object->pos & POS_XFINE) >> 13) * 2 + 1]
+            + trans_pos_x[((quad + 1) & 3) * 16 + ((object->pos & POS_YFINE) >> 10) * 2 + 1];
+    data[3] = object->pos & POS_Z;
 }
 
 void far set_osum(signed char *data)
@@ -207,7 +207,7 @@ void far do_objsort(struct Object far *object)
         if (word & 0x4000) data[2] += 8;
         set_osum(data);
         if (word & 0x8000) data[0]--;
-        word = next->id & 0x1ff;
+        word = next->id & ID_ITEM;
         n++;
     }
     if (holdtmp[0])
@@ -220,8 +220,8 @@ void far do_objsort(struct Object far *object)
     while (next && visited < 60) {
         register signed char *data;
         candidate = held = 0;
-        item = next->id & 0x1ff;
-        if (item == 0x164 || (item >> 4) == 0x14 || item == 0x1cf) {
+        item = next->id & ID_ITEM;
+        if (item == ITEM_BRIDGE || (item >> 4) == CLASS_DOOR || item == ITEM_MOVING_DOOR) {
             partition = n + (item << 6);
         } else if (ComObjData[item].animated) {
             word = 0;
@@ -238,7 +238,7 @@ void far do_objsort(struct Object far *object)
             if (word) {
                 candidate = 1;
                 word |= (object->id >> 6) & 0x3ff;
-                if ((item & 0x1c0) == 0x1c0) word |= 0x8000;
+                if ((item & ID_MAJOR) == FIRST_ANIMOBJ) word |= 0x8000;
                 if ((word & 0x5000) == 0x5000) dest = holdtmp;
                 else if (word & 0x4000) dest = refugees[loopx];
                 else if (word & 0x2000) dest = refugees[loopx] + 9;
@@ -256,9 +256,9 @@ void far do_objsort(struct Object far *object)
                 set_sds(data, next);
             }
             set_osum(data);
-            if (held && item != 0x158) data[0] -= radius * 2;
-            if ((item & 0x1c0) == 0x1c0) data[0]--;
-            else if ((item & 0x1fe) == 0x16e) data[0] += 0x20;
+            if (held && item != ITEM_TABLE) data[0] -= radius * 2;
+            if ((item & ID_MAJOR) == FIRST_ANIMOBJ) data[0]--;
+            else if ((item & 0x1fe) == ITEM_TMAP_C) data[0] += 0x20;
             objptrs[n] = ((struct ObjectIndex far *)object)->index;
             if (n < 60) n++;
         }
@@ -267,7 +267,7 @@ void far do_objsort(struct Object far *object)
         visited++;
     }
     if (partition && n > 1) {
-        if ((partition >> 6) == 0x164)
+        if ((partition >> 6) == ITEM_BRIDGE)
             z_part(partition & 0x3f, &pivot, n);
         else
             door_part(partition & 0x3f, &pivot, n);
@@ -282,8 +282,8 @@ void far do_objsort(struct Object far *object)
         next = Obj_IntTMem(objptrs[word]);
         objxloc = ((loopx - 16) << 8) + ((int)sortdata[word][1] << 5) + 16;
         objzloc = (loopy << 8) + ((int)sortdata[word][2] << 5) + 16;
-        if (((next->id & 0x1c0) >> 6) == 1 || !IsMobElem(next))
-            objyloc = (next->pos & 0x7f) << 3;
+        if (((next->id & ID_MAJOR) >> 6) == MAJOR_CREATURE || !IsMobElem(next))
+            objyloc = (next->pos & POS_Z) << 3;
         else
             objyloc = *(int far *)((char far *)next + 15);
         if (PickUp) {

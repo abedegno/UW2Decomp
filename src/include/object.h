@@ -4,6 +4,7 @@
 #define OBJECT_H
 
 #include "uw2.h"
+#include "items.h"
 
 struct ComObj;
 struct Object;
@@ -103,6 +104,50 @@ struct StaticObj {
         union Link link;
     } ol;
 };
+
+/* The fields of an object's first four words (UW-Formats 4.2, "general object info").
+   The id word: */
+#define ID_ITEM         0x1FF           /* bits 0-8, the item id (items.h) */
+#define ID_CLASS        0x1F0           /* bits 4-8, the major and minor class */
+#define ID_MAJOR        0x1C0           /* bits 6-8, the major class (enum ObjMajor) */
+#define ID_MINOR        0x30            /* bits 4-5, the minor class */
+#define ID_INMAJOR      0x3F            /* bits 0-5, the item within its major class */
+#define ID_INCLASS      0xF             /* bits 0-3, the item within its class */
+#define ID_FLAGS        0x1E00          /* bits 9-12; for a door, its state */
+#define ID_FLAG9        0x200           /* bit 9: a lock is locked (UW-Formats, 010f;
+                                           UseKey, checkLock); a trigger may be set off
+                                           by creatures (ovr166) */
+#define ID_FLAG10       0x400           /* bit 10: a book plays a cutscene (UseBook);
+                                           a trigger keeps its trap after use (ovr166) */
+#define ID_FLAG11       0x800           /* bit 11: a spell object's charges are shown
+                                           (ovr126); a trigger may be set off by the
+                                           player (ovr166) */
+#define ID_ENCHANT      0x1000          /* bit 12, the object is enchanted */
+#define ID_DOORDIR      0x2000          /* bit 13: doordir in UW-Formats; chkTenacious
+                                           keeps an object with it set from culling */
+#define ID_INVIS        0x4000          /* bit 14, not drawn */
+#define ID_ISQUANT      0x8000          /* bit 15: the link word is a quantity or a
+                                           special property, not an object */
+/* The position word: */
+#define POS_Z           0x7F            /* bits 0-6, height in the tile */
+#define POS_HEADING     0x380           /* bits 7-9, in eighths of a turn */
+#define POS_YFINE       0x1C00          /* bits 10-12, y within the tile, 0-7 */
+#define POS_XFINE       0xE000          /* bits 13-15, x within the tile, 0-7 */
+/* An is_quant object's link field: below this a quantity, from it a special property
+   (the link less 0x200: an enchantment, a string, ...). */
+#define LINK_SPECIAL    0x200
+/* A mobile object's home word: */
+#define HOME_Y          0x3F0           /* bits 4-9 */
+#define HOME_X          0xFC00          /* bits 10-15 */
+
+/* The master object list (UW-Formats 4.2): 1024 objects, the first 256 mobile (27 bytes,
+   struct Object) and the rest static (8 bytes, struct StaticObj); an index below
+   NUM_MOBILE is a mobile object. */
+#define NUM_OBJECTS     0x400
+#define NUM_MOBILE      0x100
+#define NUM_STATIC      0x300
+#define MOBILE_SIZE     0x1B
+#define STATIC_SIZE     8
 
 /* SEG029.C: the object lists */
 extern struct Object far *critdata;

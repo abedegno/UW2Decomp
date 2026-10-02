@@ -19,17 +19,17 @@
 #include "ui.h"
 #include "uw2.h"
 
-#define OBJ_ITEM(o)     ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-#define OBJ_CLASS(o)    (((o)->id & 0x1F0) >> 4)
-#define OBJ_MINOR(o)    (((o)->id & 0x30) >> 4)
-#define OBJ_MINOR4(o)   ((o)->id & 0xF)
-#define OBJ_TYPE(o)     (((o)->id & 0x3F) >> 0)
-#define OBJ_Z(o)        ((o)->pos & 0x7F)
-#define OBJ_FINEY(o)    (((o)->pos & 0x1C00) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & 0xE000) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
+#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
+#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
+#define OBJ_MINOR4(o)   ((o)->id & ID_INCLASS)
+#define OBJ_TYPE(o)     (((o)->id & ID_INMAJOR) >> 0)
+#define OBJ_Z(o)        ((o)->pos & POS_Z)
+#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
+#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
+#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
+#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
 #define OBJ_GOAL(o)     (((o)->goal_word & 0xF) >> 0)
 #define OBJ_ATTITUDE(o) (((o)->attitude_word & 0xC000) >> 14)
 #define OBJ_TEMP(o)     (((o)->attitude_word & 0x100) >> 8)
@@ -70,7 +70,7 @@ extern char typehit;
 extern long crithittime;
 extern int freepaths;
 extern struct PathSq far pathsq[];
-extern struct StDat far stdat[64][64];
+extern struct StDat far stdat[MAP_SIZE][MAP_SIZE];
 
 void far critter_set_goal(char goal, int gtarg);
 void far Obj_FreeLinkChain(union Link far *head, struct Object far *obj);
@@ -222,7 +222,7 @@ unsigned char far up_mob(struct Object far *obj)
     int x;
     int y;
 
-    if (OBJ_ITEM(obj) == 0x1D || OBJ_ITEM(obj) == 0x13F)
+    if (OBJ_ITEM(obj) == ITEM_FIREBALL_1D || OBJ_ITEM(obj) == ITEM_RESILIENT_SPHERE_13F)
         return 0;
     XP = OBJ_HOMEX(obj);
     x = (XP << 3) + OBJ_FINEX(obj);
@@ -255,7 +255,7 @@ void far update_all_critters_whilst_player_snoozes(void)
     memset(counts, 0, 0x40);
     for (p = ActiveMob; p < LastActiveMob; p++) {
         npc = &critdata[*p];
-        if (OBJ_MAJOR(npc) == 1)
+        if (OBJ_MAJOR(npc) == MAJOR_CREATURE)
             up_crit(npc, counts);
         else if (up_mob(npc))
             p--;
@@ -340,9 +340,9 @@ char far wander_that_monster(int x, int y, struct Object far *target, struct Til
             tile = Map_GetAddr(pathsq[i].x, pathsq[i].y);
             for (link = &tile->objects; link->f.index != 0; link = &next->qn.link) {
                 next = Obj_PtrTMem(link);
-                if (OBJ_CLASS(next) == 0x1A && next->ol.f.link > 0) {
+                if (OBJ_CLASS(next) == CLASS_TRIGGER && next->ol.f.link > 0) {
                     trap = Obj_PtrTMem(&next->ol.link);
-                    if (OBJ_MAJOR(trap) == 6 && OBJ_MINOR(trap) == 0 && OBJ_MINOR4(trap) == 9)
+                    if (OBJ_MAJOR(trap) == MAJOR_TRAP && OBJ_MINOR(trap) == 0 && OBJ_MINOR4(trap) == 9)
                         UseTrap(trap, pathsq[i].x, pathsq[i].y);
                 }
             }
@@ -443,7 +443,7 @@ void far clear_paths(void)
     struct Object far *obj;
     int i = 0x25;                       /* a dead store, but the DOS bytes have it */
 
-    for (i = 2; i < 0x100; i++) {
+    for (i = 2; i < NUM_MOBILE; i++) {
         obj = Obj_IntTMem(i);
         obj->b15 = obj->b15 & 0x7F;
     }
@@ -498,7 +498,7 @@ char far critter_get_told(int x, int y, struct Object far *target, struct Tile f
             att = 0;
         SET_ATTITUDE(npc, att);
         get_name(text, npc, 1, 0);
-        str_cat(text, get_string(att + 0xF0 | 0x200));
+        str_cat(text, get_string(att + 0xF0 | STR_GAME));
         if (text[0] >= 'a' && text[0] <= 'z')
             text[0] = text[0] - 0x20;
         scroll_print(text);
@@ -527,7 +527,7 @@ void far player_grabbed(struct Object far *obj, unsigned char owner)
         process_area(0x14, 0, critter_get_told, 0, MapObj_X - 7, MapObj_Y - 7, 0xF, 0xF);
         if (owner >= 0 && (obj->ol.f.owner & 0x1F) <= 0x1D)
             obj->ol.f.owner = 0;
-        if (OBJ_CLASS(obj) == 8)
+        if (OBJ_CLASS(obj) == CLASS_CONTAINER)
             Obj_Check(obj, clear_owner);
     }
 }
@@ -553,7 +553,7 @@ void far maybe_rescue_guy_from_fire(struct Object far *obj)
         return;
     x = (OBJ_HOMEX(obj) << 3) + OBJ_FINEX(obj);
     y = (OBJ_HOMEY(obj) << 3) + OBJ_FINEY(obj);
-    if (((TxmTerr[Map_GetAddr(x, y)->floor] & 0xC0) >> 6) != 2)
+    if (((TxmTerr[Map_GetAddr(x, y)->floor] & TERR_CLASS) >> 6) != TERRAIN_LAVA)
         return;
     if (player_looking(x, y) != 0)
         return;
@@ -574,9 +574,9 @@ void far maybe_rescue_guy_from_fire(struct Object far *obj)
    and call to remove_opponent. */
 void far arena_opponent_runs(struct Object far *obj)
 {
-    player->quest_bytes[1]++;
-    if (player->quest_bytes[1] > player->xclock[14])
-        player->xclock[14] = player->quest_bytes[1];
+    player->quest_bytes[QB_PIT_RECORD]++;
+    if (player->quest_bytes[QB_PIT_RECORD] > player->xclock[XC_PIT_KILLS])
+        player->xclock[XC_PIT_KILLS] = player->quest_bytes[QB_PIT_RECORD];
     SET_GOAL(obj, 6);
     remove_opponent(obj);
 }
@@ -624,11 +624,11 @@ void far where_shall_we_hang_out(struct Object far *npc, int *x, int *y)
             loc = 1;
             break;
         }
-    if (npc->whoami == 0x88 || player->xclock[1] == 0)
+    if (npc->whoami == 0x88 || player->xclock[XC_CASTLE] == 0)
         loc = 0;
     else if (npc->whoami == 0x8E && (int)((player->quests[28] & 8) >> 3))
         loc = 0;
-    else if (npc->whoami == 0x82 && player->xclock[1] >= 0xC)
+    else if (npc->whoami == 0x82 && player->xclock[XC_CASTLE] >= 0xC)
         loc = 0;
     if (loc == 5) {
         *x = npc->qn.f.quality;

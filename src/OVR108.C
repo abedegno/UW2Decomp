@@ -1375,20 +1375,20 @@ void far show_cutscene(register unsigned n)
         h = 0x7F;
     }
     if (n == 2) load_new_music(1, 1);
-    grfx_quikfont(3);
-    CutsceneOrConversationStringBlock = n + 0xC00;
+    grfx_quikfont(FONT_BIG);
+    CutsceneOrConversationStringBlock = n + STRBLK_CUTSCENE;
     mouse_hide();
     if (n == 0x103) {
         y += 4;
         h += 5;
     }
     show_anm(n, x, y, w, h);
-    grfx_quikfont(1);
+    grfx_quikfont(FONT_5X6P);
     if (in_game) load_txtmaps();
     if (n < 0x100) {
         if (inplist->mode == 1) newscr(1);
         else if (inplist->mode != 0) {
-            grfx_quikpal(0);
+            grfx_quikpal(PAL_GAME);
             editchng(0x7FFE);
         }
     } else editchng(2);

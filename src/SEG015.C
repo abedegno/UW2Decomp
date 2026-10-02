@@ -338,13 +338,13 @@ int far do_keyboard_input(char array)
     key_time = *Time;
     if (c & 0x80) {
         if (*Shift)
-            c |= 0x400;
+            c |= KEY_SHIFT;
     } else if (*CapsLock && isalpha(c))
         c = !*Shift ? c - 0x20 : c + 0x20;
     if (*Alt)
-        c |= 0x200;
+        c |= KEY_ALT;
     if (*Ctrl)
-        c |= 0x100;
+        c |= KEY_CTRL;
     return c;
 }
 

@@ -27,10 +27,10 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_ITEM(o)     ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-#define OBJ_TYPE(o)     (((o)->id & 0x3F) >> 0)
-#define OBJ_ISQUANT(o)  (((o)->id & 0x8000) >> 15)
+#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_TYPE(o)     (((o)->id & ID_INMAJOR) >> 0)
+#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
 #define OBJ_GOAL(o)     (((o)->goal_word & 0xF) >> 0)
 #define OBJ_GTARG(o)    (((o)->goal_word & 0xFF0) >> 4)
 #define OBJ_ATTITUDE(o) (((o)->attitude_word & 0xC000) >> 14)
@@ -116,11 +116,11 @@ int far set_inv_quality(int far *);
 void far TalkTo(struct Object far *thing)
 {
     unsigned char who, subclass;
-    if (OBJ_ITEM(thing) == 0x1cd) {
+    if (OBJ_ITEM(thing) == ITEM_WISP) {
         talk_to_disembodied(0x30);
         return;
     }
-    if (OBJ_MAJOR(thing) != 1) {
+    if (OBJ_MAJOR(thing) != MAJOR_CREATURE) {
         scroll_print(get_string(0xe00));
         return;
     }
@@ -202,10 +202,10 @@ void far strt_converse(void)
     scroll_clear(0);
     do_npc_scroll();
     scroll_clear(0);
-    grfx_quikfont(1);
+    grfx_quikfont(FONT_5X6P);
     convo_facedata = convoScreen;
     if (!gronk_gr("heads", player->female * 5 + player->body, 1, adr_convpic, move_convpic))
-        pfatal_code(0x3015);
+        pfatal_code(ERR_READ | 0x15);
     show(0xa8, 0xc4, convoPics[0], 0x46, 0x40, 0, 0);
     convo_facedata = convoScreen;
     who = talking_to->whoami;
@@ -215,7 +215,7 @@ void far strt_converse(void)
         loaded = gronk_gr("ghed", OBJ_TYPE(talking_to), 1, adr_convpic, move_convpic);
     if (!loaded)
         loaded = gronk_gr("ghed", 0, 1, adr_convpic, move_convpic);
-    if (!loaded) pfatal_code(0x3015);
+    if (!loaded) pfatal_code(ERR_READ | 0x15);
     show(2, 0xc4, convoPics[0], 0x46, 0x40, 0, 0);
     str_copy(name, get_string(player_name_handle));
     *background_color = *foreground_color = 0xc7;
@@ -561,7 +561,7 @@ int far getInputText_ovr103_1117(void)
     set_workspace();
     str_copy(convo_askstr, response);
     if (babl_ask_handle == 0)
-        babl_ask_handle = make_string(convo_askstr, 0x7c);
+        babl_ask_handle = make_string(convo_askstr, STRBLK_DYNAMIC);
     else if (get_string(babl_ask_handle) == 0)
         replace_string(convo_askstr, babl_ask_handle);
     set_workspace();
@@ -624,7 +624,7 @@ int far find_barter_total(int far *stack)
             if (wanted < 1000 ? ids[i] == wanted : (ids[i] >> 4) == wanted - 1000) {
                 obj = Obj_IntTMem(indices[i]);
                 matching[matches] = indices[i];
-                if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & 0x200))
+                if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL))
                     total += obj->ol.f.link;
                 else total++;
                 matches++;
@@ -675,7 +675,7 @@ int far give_ptr_npc(int far *stack)
     for (i = 0; i < 6; i++) {
         if (ids[i] == 0) continue;
         if (indices[i] != index) continue;
-        if ((obj->ol.f.link & 0x200) || !OBJ_ISQUANT(obj) || obj->ol.f.link <= qty)
+        if ((obj->ol.f.link & LINK_SPECIAL) || !OBJ_ISQUANT(obj) || obj->ol.f.link <= qty)
             player_barter_give(index);
         else {
             copy = Obj_Alloc(0);
@@ -689,7 +689,7 @@ int far give_ptr_npc(int far *stack)
         }
         return 1;
     }
-    if (qty < 0 || !OBJ_ISQUANT(obj) || (obj->ol.f.link & 0x200)) qty = -1;
+    if (qty < 0 || !OBJ_ISQUANT(obj) || (obj->ol.f.link & LINK_SPECIAL)) qty = -1;
     if (!invRemoveObject(obj, qty)) return 0;
     npc_inv_add(obj);
     return 1;
@@ -724,7 +724,7 @@ int far conv_inv_name(int far *stack)
     ident = getmem(stack[-1]);
     value = assess_value(1, index, npc_assess);
     obj = Obj_IntTMem(index);
-    if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & 0x200))
+    if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL))
         qty = obj->ol.f.link;
     else qty = 1;
     p = name;
@@ -755,7 +755,7 @@ int far conv_inv_name(int far *stack)
     do_of(obj, ident, p);
     copy = bab_malloc(strlen(p) + 1);
     str_copy(copy, p);
-    handle = make_string(copy, 0x7c);
+    handle = make_string(copy, STRBLK_DYNAMIC);
     babl_setmem(stack[-2], handle);
     return value;
 }
@@ -767,7 +767,7 @@ int far count_inv(int far *stack)
     register int qty, index;
     index = getmem(stack[-1]);
     obj = Obj_IntTMem(index);
-    if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & 0x200)) qty = obj->ol.f.link;
+    if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL)) qty = obj->ol.f.link;
     else qty = 1;
     return qty;
 }
@@ -817,7 +817,7 @@ int far switch_pic(int far *stack)
     }
     if (loaded) {
         who.b0F = 2;
-        who.id = who.id & 0xFE3F | (1 & 7) << 6;
+        who.id = who.id & 0xFE3F | (MAJOR_CREATURE & 7) << 6;
         if (which < 0x100) who.whoami = which;
         else who.id = who.id & 0xFFC0 | ((which - 0x100) & 0x3F) << 0;
         mouse_hide();

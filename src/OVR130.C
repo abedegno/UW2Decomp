@@ -22,8 +22,8 @@ char * far misc_class_data(void)
 {
     register int subclass;
     register int minor;
-    minor = (ActiveObj->id & 0x30) >> 4;
-    subclass = ActiveObj->id & 0x0F;
+    minor = (ActiveObj->id & ID_MINOR) >> 4;
+    subclass = ActiveObj->id & ID_INCLASS;
     switch (minor) {
     case 0: return Containers + subclass * 3;
     case 1: return Lights + subclass * 2;

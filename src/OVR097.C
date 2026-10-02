@@ -85,10 +85,10 @@ void far setup_to_barter(void)
         next = Obj_PtrTMem(&obj->qn.link);
         /* Skip the first weapon, anything worthless and, once every slot has been
            filled, a random five in eight of the rest. */
-        if ((((obj->id & 0x1F0) >> 4) == 0 && !skipped_weapon) ||
-            ComObjData[obj->id & 0x1FF].value == 0 ||
+        if ((((obj->id & ID_CLASS) >> 4) == CLASS_WEAPON && !skipped_weapon) ||
+            ComObjData[obj->id & ID_ITEM].value == 0 ||
             (all_filled && (rand() & 7) < 5)) {
-            if (((obj->id & 0x1F0) >> 4) == 0) skipped_weapon = 1;
+            if (((obj->id & ID_CLASS) >> 4) == CLASS_WEAPON) skipped_weapon = 1;
             obj = next;
         } else {
             /* the same object is tried again if it can't be unlinked */
@@ -115,7 +115,7 @@ void far barter_init(void)
     register int side;
     register int slot;
 
-    crit = &Creature[(talking_to->id & 0x3F) >> 0];
+    crit = &Creature[(talking_to->id & ID_INMAJOR) >> 0];
     Transparency = 1;
     for (slot = 0; slot < 6; slot++)
         for (side = 0; side < 2; side++)
@@ -139,7 +139,7 @@ void far barter_init(void)
     npc_assess = range((15 - crit->shrewd) * 6, -25, 50);
     npc_wit = range(crit->level, -20, 20);
     last_offer = 0;
-    charm = player->skills[15];
+    charm = player->skills[SKILL_CHARISMA];
     greed = greed - charm * 2;
     patience += charm >> 1;
     npc_wit -= charm / 6;
@@ -291,7 +291,7 @@ void far UseTradeSlot_ovr097_6E8(int side, int slot, int *content,
     if (CursorObjPtr == 0 && mouse_dragged(1)) {
         if (side == 0 && barter_result == 0) return;
         found = Obj_IntTMem(content[slot]);
-        if (((found->id & 0x8000) >> 15) && !(found->ol.f.link & 0x200) && found->ol.f.link != 1) {
+        if (((found->id & ID_ISQUANT) >> 15) && !(found->ol.f.link & LINK_SPECIAL) && found->ol.f.link != 1) {
             if ((moved = AskHowMany(found)) == 0) return;
         }
         if (moved && moved != found) Obj_Add(&found->qn.link, moved);
@@ -340,8 +340,8 @@ void far UseTradeSlot_ovr097_6E8(int side, int slot, int *content,
         lore = 1;
         obj = Obj_IntTMem(content[slot]);
         if (side == 0) {
-            if (skill_check(player->skills[8], 20) > 0) lore++;
-        } else lore += skill_check(player->skills[8], 15);
+            if (skill_check(player->skills[SKILL_LORE], 20) > 0) lore++;
+        } else lore += skill_check(player->skills[SKILL_LORE], 15);
         LookAt(obj, lore);
     }
     if (had_cursor && CursorObjPtr == 0) {
@@ -370,24 +370,24 @@ void far drawTradeSlot_ovr097_A91(int side, register int slot)
     index = barter_items[side][slot];
     if (index) {
         obj = Obj_IntTMem(index);
-        item = obj->id & 0x1FF;
+        item = obj->id & ID_ITEM;
     }
     restore_rect(barter_saves[side][slot]);
     if (side) {
         if (index) pic_to_screen(item, (slot & 1) * 0x13 + 0x7C, 0xBA - slot / 2 * 0x12, 16, 16);
     } else if (index) pic_to_screen(item, (slot & 1) * 0x13 + 0x4B, 0xBA - slot / 2 * 0x12, 16, 16);
     if (index) {
-        if (((obj->id & 0x8000) >> 15) && !(obj->ol.f.link & 0x200)) qty = obj->ol.f.link;
+        if (((obj->id & ID_ISQUANT) >> 15) && !(obj->ol.f.link & LINK_SPECIAL)) qty = obj->ol.f.link;
         else qty = 0;
         Transparency = 0;
         if (qty > 1) {
-            grfx_quikfont(0);
+            grfx_quikfont(FONT_4X5P);
             *foreground_color = 2;
             if (side)
                 string_to_screen(itoa(qty, num, 10), (slot & 1) * 0x13 + 0x7F, 0xBA - slot / 2 * 0x12 - 1);
             else
                 string_to_screen(itoa(qty, num, 10), (slot & 1) * 0x13 + 0x4E, 0xBA - slot / 2 * 0x12 - 1);
-            grfx_quikfont(1);
+            grfx_quikfont(FONT_5X6P);
         }
     }
     mouse_show();
@@ -406,7 +406,7 @@ void far PickUpFromSlot_ovr097_C39(register int slot, register int *content, uns
         if (split) content[slot] = Obj_MemTPtr(Obj_PtrTMem(&CursorObjPtr->qn.link));
         mouse_hide();
         if (had_cursor) unforce_mouse_cursor(0);
-        force_mouse_cursor(CursorObjPtr->id & 0x1FF);
+        force_mouse_cursor(CursorObjPtr->id & ID_ITEM);
         mouse_show();
         set_workspace();
     }
@@ -433,11 +433,11 @@ unsigned char far CombineToSlot_ovr097_D30(struct Object far *obj, int side,
 
     merged = 0;
     found = Obj_IntTMem(content[slot]);
-    if (((found->id & 0x1C0) >> 6) == 2 && ((found->id & 0x30) >> 4) == 0)
+    if (((found->id & ID_MAJOR) >> 6) == MAJOR_MISC && ((found->id & ID_MINOR) >> 4) == 0)
         return 0;
-    if (((obj->id & 0x8000) >> 15) && ((found->id & 0x8000) >> 15) &&
-        !(obj->ol.f.link & 0x200) && !(found->ol.f.link & 0x200) &&
-        (obj->id & 0x1FF) == (found->id & 0x1FF) &&
+    if (((obj->id & ID_ISQUANT) >> 15) && ((found->id & ID_ISQUANT) >> 15) &&
+        !(obj->ol.f.link & LINK_SPECIAL) && !(found->ol.f.link & LINK_SPECIAL) &&
+        (obj->id & ID_ITEM) == (found->id & ID_ITEM) &&
         obj->ol.f.link + found->ol.f.link < 0x3E7) {
         found->ol.f.link += obj->ol.f.link;
         Obj_Free(obj);
@@ -516,11 +516,11 @@ static void far probablyTradeObjects_ovr097_100A(void)
             does_npc_like(barter_items[1][slot]) != -1) {
             obj = Obj_IntTMem(barter_items[1][slot]);
             other = Obj_PtrTMem(&talking_to->ol.link);
-            if ((obj->id & 0x1FF) == 0xA0)
+            if ((obj->id & ID_ITEM) == ITEM_COIN)
                 for (; other; other = Obj_PtrTMem(&other->qn.link)) {
-                    if (((obj->id & 0x8000) >> 15) && ((other->id & 0x8000) >> 15) &&
-                        !(obj->ol.f.link & 0x200) && !(other->ol.f.link & 0x200) &&
-                        (obj->id & 0x1FF) == (other->id & 0x1FF) &&
+                    if (((obj->id & ID_ISQUANT) >> 15) && ((other->id & ID_ISQUANT) >> 15) &&
+                        !(obj->ol.f.link & LINK_SPECIAL) && !(other->ol.f.link & LINK_SPECIAL) &&
+                        (obj->id & ID_ITEM) == (other->id & ID_ITEM) &&
                         obj->ol.f.link + other->ol.f.link < 0x3E7) {
                         other->ol.f.link += obj->ol.f.link;
                         Obj_Free(obj);
@@ -633,17 +633,17 @@ int far do_demand(int far *args)
         barter_result = 0;
         return 0;
     }
-    crit = &Creature[(talking_to->id & 0x3F) >> 0];
+    crit = &Creature[(talking_to->id & ID_INMAJOR) >> 0];
     if (playerdat->avghit > 0)
         health = 2 - (player->maxhealth - ThePlayer->hp) * 2 / playerdat->avghit;
     else health = 1;
     armed = player->drawn;
-    player_score = player->level + armed + health + player->skills[15] / 6;
+    player_score = player->level + armed + health + player->skills[SKILL_CHARISMA] / 6;
     demanded = total_offering_ovr097_17CB(0, barter_items[0], barter_selected[0],
                                                    barter_vals[0][1], npc_assess);
-    if (Creature[(talking_to->id & 0x3F) >> 0].avghit > 0)
-        health = 2 - (Creature[(talking_to->id & 0x3F) >> 0].avghit - talking_to->hp) * 2 /
-                     Creature[(talking_to->id & 0x3F) >> 0].avghit;
+    if (Creature[(talking_to->id & ID_INMAJOR) >> 0].avghit > 0)
+        health = 2 - (Creature[(talking_to->id & ID_INMAJOR) >> 0].avghit - talking_to->hp) * 2 /
+                     Creature[(talking_to->id & ID_INMAJOR) >> 0].avghit;
     else health = 1;
     bab_var_out("npc_attitude", &attitude, 1);
     if ((talking_to->b19 & 0x40) >> 6) mood = -1;
@@ -681,7 +681,7 @@ void far do_judgement(void)
     register int evaluation;
     register int result;
 
-    skill = player->skills[18];
+    skill = player->skills[SKILL_APPRAISE];
     accuracy = 50 - skill * 45 / 30;
     player_value = total_offering_ovr097_17CB(0, barter_items[1],
                     barter_selected[1], barter_vals[1][0], accuracy);
@@ -704,9 +704,9 @@ void far do_judgement(void)
     else if (evaluation > -35) result = 6;
     else if (evaluation > -50) result = 7;
     else result = 8;
-    str_copy(appraisal, get_string((certainty + 3) | 0xE00));
+    str_copy(appraisal, get_string((certainty + 3) | STR_CONV));
     str_cat(appraisal, get_string(0xE02));
-    str_cat(appraisal, get_string((result + 8) | 0xE00));
+    str_cat(appraisal, get_string((result + 8) | STR_CONV));
     play_say(appraisal);
 }
 
@@ -743,15 +743,15 @@ int far assess_value(int use_likes, int item, int accuracy)
     if (use_likes) {
         disposition = does_npc_like(item);
         if (disposition == -1) return 0;
-        value = ComObjData[obj->id & 0x1FF].value;
+        value = ComObjData[obj->id & ID_ITEM].value;
         if (disposition) value = value * 3 >> 1;
-    } else value = ComObjData[obj->id & 0x1FF].value;
-    if (((obj->id & 0x8000) >> 15) && !(obj->ol.f.link & 0x200))
+    } else value = ComObjData[obj->id & ID_ITEM].value;
+    if (((obj->id & ID_ISQUANT) >> 15) && !(obj->ol.f.link & LINK_SPECIAL))
         quantity = obj->ol.f.link;
     else quantity = 1;
     value *= quantity;
     quality = obj->qn.f.quality;
-    if ((obj->id & 0x1FF) == 0xA0) quality = 0x3F;
+    if ((obj->id & ID_ITEM) == ITEM_COIN) quality = 0x3F;
     if (value > 0) {
         if (quality > 0) {
             value = (int)(((long)value * quality) >> 6);
@@ -782,7 +782,7 @@ int far player_barter_items(int *items, int *indices)
         if (barter_selected[1][slot]) {
             obj = Obj_IntTMem(barter_items[1][slot]);
             indices[count] = barter_items[1][slot];
-            items[count] = obj->id & 0x1FF;
+            items[count] = obj->id & ID_ITEM;
             count++;
         }
     }
@@ -793,14 +793,14 @@ int far player_barter_items(int *items, int *indices)
 void far npc_inv_add(struct Object far *obj)
 {
     struct Object far *other;
-    if ((obj->id & 0x1FF) == 0xA0) {
+    if ((obj->id & ID_ITEM) == ITEM_COIN) {
         for (other = Obj_PtrTMem(&talking_to->ol.link); other;
              other = Obj_PtrTMem(&other->qn.link)) {
-            if (((obj->id & 0x8000) >> 15) &&
-                ((other->id & 0x8000) >> 15) &&
-                !(obj->ol.f.link & 0x200) &&
-                !(other->ol.f.link & 0x200) &&
-                (obj->id & 0x1FF) == (other->id & 0x1FF) &&
+            if (((obj->id & ID_ISQUANT) >> 15) &&
+                ((other->id & ID_ISQUANT) >> 15) &&
+                !(obj->ol.f.link & LINK_SPECIAL) &&
+                !(other->ol.f.link & LINK_SPECIAL) &&
+                (obj->id & ID_ITEM) == (other->id & ID_ITEM) &&
                 obj->ol.f.link + other->ol.f.link < 0x3E7) {
                 other->ol.f.link += obj->ol.f.link;
                 Obj_Free(obj);
@@ -877,13 +877,13 @@ int far npc_barter_give(register int item)
     head = &talking_to->ol.link;
     for (obj = Obj_PtrTMem(&talking_to->ol.link); obj; obj = Obj_PtrTMem(&obj->qn.link)) {
         if (item > 0x3E7) {
-            if (((obj->id & 0x1F0) >> 4) != item - 1000) continue;
-        } else if ((obj->id & 0x1FF) != item) continue;
+            if (((obj->id & ID_CLASS) >> 4) != item - 1000) continue;
+        } else if ((obj->id & ID_ITEM) != item) continue;
         Obj_Rem(head, obj);
         if (EncumCheck(obj)) {
             CursorObjPtr = obj;
             mouse_hide();
-            force_mouse_cursor(obj->id & 0x1FF);
+            force_mouse_cursor(obj->id & ID_ITEM);
             GameInputMode = 1;
             mouse_show();
             set_workspace();
@@ -919,7 +919,7 @@ int far npc_barter_give_id(register int index)
         if (EncumCheck(obj)) {
             CursorObjPtr = obj;
             mouse_hide();
-            force_mouse_cursor(obj->id & 0x1FF);
+            force_mouse_cursor(obj->id & ID_ITEM);
             GameInputMode = 1;
             mouse_show();
             set_workspace();
@@ -959,7 +959,7 @@ int far npc_inv_delete(int item)
     id = item;
     head = &talking_to->ol.link;
     for (obj = Obj_PtrTMem(&talking_to->ol.link); obj; obj = Obj_PtrTMem(&obj->qn.link)) {
-        if ((obj->id & 0x1FF) == id) {
+        if ((obj->id & ID_ITEM) == id) {
             Obj_FreeLinkChain(head, obj);
             return 1;
         }
@@ -986,8 +986,8 @@ int far does_npc_like(int index)
     register int i;
 
     obj = Obj_IntTMem(index);
-    if (ComObjData[obj->id & 0x1FF].value == 0) return -1;
-    id = obj->id & 0x1FF;
+    if (ComObjData[obj->id & ID_ITEM].value == 0) return -1;
+    id = obj->id & ID_ITEM;
     cls = (id >> 4) + 0x3E8;
     liked = 0;
     if (npc_likes)

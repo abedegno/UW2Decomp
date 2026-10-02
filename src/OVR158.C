@@ -37,7 +37,7 @@ void far sp_hdr(void)
     buf[0xF] = 0;
     strupr(buf);
     string_to_screen(buf, (0x48 - string_width(buf)) / 2 + 0xF0, 0xBD);
-    string_to_screen(seg039_3452_814(get_string((player->pclass + 0x17) | 0x400)), 0xF0, 0xB6);
+    string_to_screen(seg039_3452_814(get_string((player->pclass + 0x17) | STR_CHARGEN)), 0xF0, 0xB6);
     itoa(player->level, buf, 10);
     n = player->level < 4 ? player->level - 1 : 3;
     strcat(buf, ordinals[n]);
@@ -101,7 +101,7 @@ void far sp_skill(unsigned char i)
         itoa(player->skill_points, buf, 10);
     }
     seg003_0272_5025(spsave[0], 0xF0, 0x84 - i * 7 + 1, 0x4C, (i + 1) * 7, 0, i * 7);
-    string_to_screen(seg039_3452_814(get_string((sk + 0x1F) | 0x400)), 0xF0, 0x84 - i * 7);
+    string_to_screen(seg039_3452_814(get_string((sk + 0x1F) | STR_CHARGEN)), 0xF0, 0x84 - i * 7);
     string_to_screen(buf, 0x135 - string_width(buf), 0x84 - i * 7);
 }
 
@@ -119,7 +119,7 @@ void far RedispStat(void)
     }
     *foreground_color = *background_color = 0xC4;
     mouse_hide();
-    grfx_quikfont(4);
+    grfx_quikfont(FONT_5X6I);
     sp_hdr();
     for (i = 0; i < 3; i++)
         sp_att(i);
@@ -129,7 +129,7 @@ void far RedispStat(void)
     *foreground_color = *background_color = 0xC9;
     for (i = 0; i < 6; i++)
         sp_skill(i);
-    grfx_quikfont(1);
+    grfx_quikfont(FONT_5X6P);
     mouse_show();
 }
 
@@ -140,7 +140,7 @@ void far mous_in_stat(void)
     int key;
     int dir;
 
-    grfx_quikfont(4);
+    grfx_quikfont(FONT_5X6I);
     *foreground_color = *background_color = 0xC9;
     dir = (inplist->cmd & 1) ? -1 : 1;
     if (inplist->y < 10) {
@@ -154,7 +154,7 @@ void far mous_in_stat(void)
             mouse_show();
         }
     }
-    grfx_quikfont(1);
+    grfx_quikfont(FONT_5X6P);
     start = *Time;
     do
         key = mouse_get_input_sp();

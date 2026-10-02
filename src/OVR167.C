@@ -147,7 +147,7 @@ void far check_dirs(void)
     ok &= dir_exist("data");
     ok &= dir_exist("crit");
     ok &= dir_exist("cuts");
-    if (!ok) first_punt(0x3001);
+    if (!ok) first_punt(ERR_READ | 1);
 }
 
 unsigned far coreleft(void);

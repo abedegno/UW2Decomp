@@ -11,6 +11,7 @@
 #include <ctype.h>
 #include <io.h>
 #include <fcntl.h>
+#include "combat.h"
 #include "critter.h"
 #include "file.h"
 #include "gfx.h"
@@ -71,7 +72,7 @@ void far init_char(char blank)
     player->map_scrap = 1;
     player->game_clock = 0x465000L;
     lastDurCheck = player->game_clock >> 8;
-    player->xclock[0] = 0xF;
+    player->xclock[XC_TIME] = 0xF;
     player->moonstones[0] = 3;
     player->moonstones[1] = 0x2D;
     player->automap = 1;
@@ -97,7 +98,7 @@ void far init_char(char blank)
     player->dreamflags = 0;
     memset(player->quests, 0, 0x10);
     memset(player->quest_bytes, 0, 0x10);
-    memset(player->shelf, 0x18, 3);
+    memset(player->shelf, RUNE_NONE, 3);
     memset(player->runebag, 0, 3);
     memset(player->vars, 0, 0x100);
     memset(player->lore, 0, 0x50);
@@ -105,7 +106,7 @@ void far init_char(char blank)
     player->hunger = 0xC0;
     player->body = rand() % 5;
     player->female = rand() & 1;
-    for (i = 0; i < 20; i++)
+    for (i = 0; i < NUM_SKILLS; i++)
         player->skills[i] = blank ? 0 : rollem(3, 4);
     for (i = 0; i < 3; i++)
         playerdat->attr[i] = blank ? 0 : rollem(2, 10) + 10;
@@ -129,7 +130,7 @@ unsigned char far set_sklmnu(unsigned char *idx, unsigned char *skills, struct C
         pos += dat[pos] + 1;
     for (; *idx < 5; (*idx)++) {
         if (dat[pos] == 0)
-            skills[*idx] = 20;
+            skills[*idx] = NUM_SKILLS;
         else if (dat[pos] == 1) {
             skills[*idx] = dat[pos + 1];
             pos += dat[pos] + 1;
@@ -176,7 +177,7 @@ void far show_skills(void)
     row = 0;
     for (i = 0; i < 20 && row <= 5; i++) {
         if (player->skills[i] != 0) {
-            name = get_string((i + 0x1F) | 0x400);
+            name = get_string((i + 0x1F) | STR_CHARGEN);
             itoa(player->skills[i], buf, 10);
             string_to_screen(name, 0x1E, 0x43 - row * 11);
             string_to_screen(buf, 0x7D - string_width(buf), 0x43 - row * 11);
@@ -190,7 +191,7 @@ int far set_skills(register int start, unsigned char *skills)
     register int i;
 
     for (i = start; i < 6; i++)
-        if (skills[i] < 20) {
+        if (skills[i] < NUM_SKILLS) {
             add_to_skill(skills[i]);
             start++;
         }
@@ -205,7 +206,7 @@ void far roll_stats(void)
 
     for (i = 0; i < 3; i++)
         playerdat->attr[i] = stdat[player->pclass][i];
-    for (i = 0; i < 20; i++)
+    for (i = 0; i < NUM_SKILLS; i++)
         player->skills[i] = 0;
     i = stdat[player->pclass][3];
     while (i > 0) {
@@ -246,7 +247,7 @@ void far drawopt(struct ChrOpt far *opt)
     if (opt->question != 0) {
         char far *s;
 
-        s = get_string(opt->question | 0x400);
+        s = get_string(opt->question | STR_CHARGEN);
         x = 0xA4;
         if (opt->name != 0) {
             show(x, y, chrbuf + chroff[6], 0x10, 0x91, 0, 0);
@@ -269,7 +270,7 @@ void far drawopt(struct ChrOpt far *opt)
             case 0: {
                 char far *s;
 
-                s = get_string(opt->strings[i] | 0x400);
+                s = get_string(opt->strings[i] | STR_CHARGEN);
                 string_to_screen(s, x + (w - string_width(s)) / 2, y - 3);
                 break;
             }
@@ -323,7 +324,7 @@ void far selopt(struct ChrOpt far *opt, unsigned char new, unsigned char old)
             case 0: {
                 char far *s;
 
-                s = get_string(opt->strings[j ? new : old] | 0x400);
+                s = get_string(opt->strings[j ? new : old] | STR_CHARGEN);
                 string_to_screen(s, x + (w - string_width(s)) / 2, y - 3);
                 break;
             }
@@ -401,7 +402,7 @@ int far pickopt(struct ChrOpt far *opt)
         register int x;
 
         len = 0;
-        s = get_string(opt->question | 0x400);
+        s = get_string(opt->question | STR_CHARGEN);
         x = string_width(s) + 0xA8;
         y = 0x6B;
         buf[1] = 0;
@@ -543,7 +544,7 @@ char far gen_char(unsigned char far *buf, unsigned char far *dat, struct ChrOpt 
         }
         switch (stage) {
         case 0:
-            s = get_string(strs[choice] | 0x400);
+            s = get_string(strs[choice] | STR_CHARGEN);
             opts[4].strings[0] = choice ? 12 : 7;
             player->female = choice;
             mouse_hide();
@@ -556,7 +557,7 @@ char far gen_char(unsigned char far *buf, unsigned char far *dat, struct ChrOpt 
             stage++;
             break;
         case 2:
-            s = get_string(strs[choice] | 0x400);
+            s = get_string(strs[choice] | STR_CHARGEN);
             player->pclass = choice;
             roll_stats();
             if (!set_sklmnu(&idx, skills, &opts[3], dat32))
@@ -676,7 +677,7 @@ char far strt_chargen(void)
     pal = pic + 0xFA00;
     mouse_hide();
     ok = disk_to_vid(1, pic);
-    ok &= read_quikpal(3, pal);
+    ok &= read_quikpal(PAL_CHARGEN, pal);
     set_cuts_ems(0);
     chroff = offs;
     if (!gronk_gr("chrbtns", 0, -1, adr_chrpic, move_chrpic))
@@ -699,7 +700,7 @@ char far strt_chargen(void)
         while (*strs++ != 0)
             ;
     }
-    grfx_quikfont(2);
+    grfx_quikfont(FONT_CHAR);
     *foreground_color = *background_color = 0xC4;
     set_cuts_ems(0);
     drawopt(opts);
@@ -710,13 +711,13 @@ char far strt_chargen(void)
         goto fail;
     fadein(pal, 2, 0);
     result = gen_char(chrbuf, buf, opts);
-    grfx_quikfont(1);
+    grfx_quikfont(FONT_5X6P);
     free_cuts_ems();
     if (in_game)
         load_txtmaps();
     if (!result) {
         set_cuts_ems(1);
-        ok &= read_quikpal(3, pal);
+        ok &= read_quikpal(PAL_CHARGEN, pal);
         fadeout(pal, 2, 0);
     }
     return result;

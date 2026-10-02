@@ -13,13 +13,13 @@
 #include "object.h"
 #include "uw2.h"
 
-#define OBJ_ITEM(o)     ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-#define OBJ_Z(o)        ((o)->pos & 0x7F)
-#define OBJ_FINEY(o)    (((o)->pos & 0x1C00) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & 0xE000) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
+#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_Z(o)        ((o)->pos & POS_Z)
+#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
+#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
+#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
+#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
 #define OBJ_B15_7(o)    (((o)->b15 & 0x80) >> 7)
 
 #define SET_Z(o, v)       ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
@@ -30,7 +30,7 @@
 
 /* A tile's terrain word: type 0-3, height 4-7, the floor texture's terrain bits 6-7
    in 8-9. */
-#define TILE_TERR(t)    (t)->type + ((t)->height << 4) + ((TxmTerr[(t)->floor] & 0xC0) << 2)
+#define TILE_TERR(t)    (t)->type + ((t)->height << 4) + ((TxmTerr[(t)->floor] & TERR_CLASS) << 2)
 
 /* A corner of the footprint, or (the fifth) its centre: which of the nine tiles around
    the centre tile it is in, and where in that tile. */
@@ -386,7 +386,7 @@ void far obj_coll_check(struct Object far *obj, int link, char x, char y, char i
         x0 = (x << 3) + OBJ_FINEX(obj);
         y0 = (y << 3) + OBJ_FINEY(obj);
         r = com.radius;
-        if (OBJ_MAJOR(obj) == 1 && r > 0 && isnpc)
+        if (OBJ_MAJOR(obj) == MAJOR_CREATURE && r > 0 && isnpc)
             r--;
         x1 = x0 + r;
         y1 = y0 + r;
@@ -433,7 +433,7 @@ void far ObjectCheck(unsigned char flat, unsigned char useflag)
     isnpc = 0;
     tile = Map_GetAddr(curP->x >> 3, curP->y >> 3);
     if (curP->index != 0)
-        isnpc = OBJ_MAJOR(Obj_IntTMem(curP->index)) == 1;
+        isnpc = OBJ_MAJOR(Obj_IntTMem(curP->index)) == MAJOR_CREATURE;
     curP->found = 0;
     pos_x = curP->x & 7;
     ypos = curP->y & 7;
@@ -466,7 +466,7 @@ void far ObjectCheck(unsigned char flat, unsigned char useflag)
                     continue;
                 if (com->height == 0 && obj >= (struct Object far *)objdata)
                     continue;
-                if (obj < (struct Object far *)objdata && OBJ_MAJOR(obj) != 1 && OBJ_B15_7(obj) != 0)
+                if (obj < (struct Object far *)objdata && OBJ_MAJOR(obj) != MAJOR_CREATURE && OBJ_B15_7(obj) != 0)
                     continue;
                 if (!useflag || com->touch)
                     obj_coll_check(obj, link->f.index, i, j, isnpc);
@@ -547,7 +547,7 @@ unsigned char far can_place(int item, int index, int x, int y, int z, unsigned c
         nvokTerr = 1 << (curP->hits0 & 3);
     else
         nvokTerr = 0x10;
-    ObjectCheck(nvokTerr != 0x10 && index >= 0x100, 1);
+    ObjectCheck(nvokTerr != 0x10 && index >= NUM_MOBILE, 1);
     if (curP->found != 0) {
         int i;
         int best;

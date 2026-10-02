@@ -87,13 +87,13 @@ void far panel_check_hpmp(void)
     {
         *foreground_color = *background_color = 0xC4;
         mouse_hide();
-        grfx_quikfont(4);
+        grfx_quikfont(FONT_5X6I);
         if (spsave[1])
             restore_rect(spsave[1]);
         sp_hp();
         sp_mp();
         sp_xp();
-        grfx_quikfont(1);
+        grfx_quikfont(FONT_5X6P);
         mouse_show();
     }
 }

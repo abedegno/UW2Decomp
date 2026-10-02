@@ -9,8 +9,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "object.h"
+#include "sys.h"
 
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
 
 /* This file's _BSS, DS:6B70..8173, by name: ActiveObj 145, ComObjData 355. This file loads
    ComObjData (0x1600 bytes, from comobj.dat) and finds the active object's class data. */
@@ -43,7 +44,7 @@ int far init_objects(void)
 
     strcpy(name, "DATA\\objects.dat");
     if ((fp = fopen(name, "rb")) == NULL)
-        return 0x3005;
+        return ERR_READ | 0x5;
     fread(&hdr, 2, 1, fp);
     for (i = 0; i < 8; i++)
         if (init[i])
@@ -52,7 +53,7 @@ int far init_objects(void)
     strcpy(name, "DATA\\");
     strcat(name, "comobj.dat");
     if ((fp = fopen(name, "rb")) == NULL)
-        return 0x3006;
+        return ERR_READ | 0x6;
     fread(&hdr, 2, 1, fp);
     fread(ComObjData, 0x1600, 1, fp);
     fclose(fp);

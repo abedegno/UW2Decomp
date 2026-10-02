@@ -85,7 +85,7 @@ void far flask_info(void)
     } else {
         if (inplist->y > 0x1E)
             return;
-        str_copy(msg, get_string(((inplist->x > 0x1E) + 0x66) | 0x200));
+        str_copy(msg, get_string(((inplist->x > 0x1E) + 0x66) | STR_GAME));
         if (inplist->x < 0x28) {
             itoa(ThePlayer->hp, cur, 10);
             itoa(playerdat->avghit, max, 10);

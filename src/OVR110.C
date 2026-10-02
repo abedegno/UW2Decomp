@@ -144,11 +144,11 @@ unsigned char far find_good_x_and_y(struct Object far *obj, int x, int y,
                 for (link = &tile->objects.word; ((struct ObjHeadBits far *)link)->index;
                      link = &o->qn.word) {
                     o = Obj_PtrTMem(link);
-                    if (ComObjData[o->id & 0x1FF].height || IsMobElem(o))
+                    if (ComObjData[o->id & ID_ITEM].height || IsMobElem(o))
                         Obj_Punt(&tile->objects.word, o, 0);
                 }
             }
-            if (can_place(obj->id & 0x1FF, Obj_MemTPtr(obj), tx * 8 + 3, ty * 8 + 3,
+            if (can_place(obj->id & ID_ITEM, Obj_MemTPtr(obj), tx * 8 + 3, ty * 8 + 3,
                           (tile->height << 3) + ((tile_walls[tile->type] & 0x20) ? 4 : 0),
                           0, 8)) {
                 *nx = tx;
@@ -156,25 +156,25 @@ unsigned char far find_good_x_and_y(struct Object far *obj, int x, int y,
                 return 1;
             }
             switch (tile->type) {
-            case 0:
+            case TILE_SOLID:
                 break;
-            case 2:
+            case TILE_DIAG_SE:
                 VISIT(tx + 1, ty);
                 VISIT(tx, ty - 1);
                 break;
-            case 3:
+            case TILE_DIAG_SW:
                 VISIT(tx - 1, ty);
                 VISIT(tx, ty - 1);
                 break;
-            case 4:
+            case TILE_DIAG_NE:
                 VISIT(tx + 1, ty);
                 VISIT(tx, ty + 1);
                 break;
-            case 5:
+            case TILE_DIAG_NW:
                 VISIT(tx - 1, ty);
                 VISIT(tx, ty + 1);
                 break;
-            case 1:
+            case TILE_OPEN:
             default:
                 VISIT(tx - 1, ty);
                 VISIT(tx, ty - 1);
@@ -200,7 +200,7 @@ void far pass_time(long seconds)
 {
     long elapsed = seconds << 8;
     player->game_clock += elapsed;
-    player->xclock[0] = (player->game_clock / 0x4B000L) % 0x48L;
+    player->xclock[XC_TIME] = (player->game_clock / 0x4B000L) % 0x48L;
     Sched_SetAllClocks(1);
     lastDurCheck = player->game_clock >> 8;
 }
@@ -235,8 +235,8 @@ int far do_teleport(struct Object far *who, int x, int y, int level)
         }
     }
     if (ok) {
-        old_x = (ThePlayer->home & 0xFC00) >> 10;
-        old_y = (ThePlayer->home & 0x3F0) >> 4;
+        old_x = (ThePlayer->home & HOME_X) >> 10;
+        old_y = (ThePlayer->home & HOME_Y) >> 4;
         if (who == ThePlayer) {
             if (player->in_pits) {
                 if (player->in_pits) {
@@ -268,11 +268,11 @@ unsigned far * far raise_up(struct Tile far *tile, unsigned far *head,
     register int height = new_height;
     removed = 0;
     obj = Obj_PtrTMem(head);
-    if ((unsigned)(height * 8 + ComObjData[obj->id & 0x1FF].height) > 0x7F)
+    if ((unsigned)(height * 8 + ComObjData[obj->id & ID_ITEM].height) > 0x7F)
         damage_item(obj, 0L, tile_x, tile_y, 0xFF, 0);
-    if ((obj->pos & 0x7F) < (height << 3)) {
+    if ((obj->pos & POS_Z) < (height << 3)) {
         obj->pos = obj->pos & 0xFF80 | ((height << 3) & 0x7F);
-        if (IsMobElem(obj) && ((obj->id & 0x1C0) >> 6) != 1)
+        if (IsMobElem(obj) && ((obj->id & ID_MAJOR) >> 6) != MAJOR_CREATURE)
             obj->b0F = height << 6;
         else if (obj == ThePlayer)
             PN.z = height << 6;
@@ -294,7 +294,7 @@ unsigned far * far put_down(struct Tile far *tile, unsigned far *head,
     register int height = new_height;
     removed = 0;
     obj = Obj_PtrTMem(head);
-    if ((obj->pos & 0x7F) == (old_height << 3)) {
+    if ((obj->pos & POS_Z) == (old_height << 3)) {
         obj->pos = obj->pos & 0xFF80 | ((height << 3) & 0x7F);
         if (obj == ThePlayer) {
             if (adjust == 1 || adjust == 3)
@@ -302,7 +302,7 @@ unsigned far * far put_down(struct Tile far *tile, unsigned far *head,
             else
                 parse_player_terr(0x10, 1);
         } else if (IsMobElem(obj)) {
-            if (((obj->id & 0x1C0) >> 6) != 1)
+            if (((obj->id & ID_MAJOR) >> 6) != MAJOR_CREATURE)
                 obj->b0F = height << 6;
             else
                 obj->b13 = obj->b13 & 0x7F | 0x80;
@@ -324,11 +324,11 @@ unsigned char far filter(int tile_x, int tile_y, int cur_x, int cur_y,
     register int ypos;
     register int radius;
     obj = Obj_PtrTMem(link);
-    if (((obj->id & 0x1C0) >> 6) == 6 || ((obj->id & 0x1C0) >> 6) == 5)
+    if (((obj->id & ID_MAJOR) >> 6) == MAJOR_TRAP || ((obj->id & ID_MAJOR) >> 6) == MAJOR_RECT)
         return 0;
     if (tile_x == cur_x && tile_y == cur_y)
         return 1;
-    zpos = obj->pos & 0x7F;
+    zpos = obj->pos & POS_Z;
     old_height <<= 3;
     new_height <<= 3;
     if (old_height > new_height) {
@@ -336,9 +336,9 @@ unsigned char far filter(int tile_x, int tile_y, int cur_x, int cur_y,
             return 0;
     } else if (zpos < old_height || zpos >= new_height)
         return 0;
-    xpos = ((tile_x - cur_x) << 3) + ((obj->pos & 0xE000) >> 13);
-    ypos = ((tile_y - cur_y) << 3) + ((obj->pos & 0x1C00) >> 10);
-    radius = ComObjData[obj->id & 0x1FF].radius;
+    xpos = ((tile_x - cur_x) << 3) + ((obj->pos & POS_XFINE) >> 13);
+    ypos = ((tile_y - cur_y) << 3) + ((obj->pos & POS_YFINE) >> 10);
+    radius = ComObjData[obj->id & ID_ITEM].radius;
     if (xpos < 0 && xpos + radius >= 0 || xpos > 7 && xpos - radius <= 7
         || tile_x == cur_x) {
         if (ypos < 0 && ypos + radius >= 0 || ypos > 7 && ypos - radius <= 7
@@ -374,18 +374,18 @@ int far change_terrain(int x, int y, int wall, int floor, int height,
             if (height == 0xF && adjust == 4)
                 tile->height = 0xF;
             if (floor < 0xF) {
-                terrain = (TxmTerr[floor] & 0xC0) >> 6;
+                terrain = (TxmTerr[floor] & TERR_CLASS) >> 6;
                 tile->floor_texture = floor;
-                if (terrain == 2)
+                if (terrain == TERRAIN_LAVA)
                     solid = rand() & 1;
-                else if (terrain == 1)
+                else if (terrain == TERRAIN_WATER)
                     solid = 1;
             }
             if (wall < 0x3F)
                 tile->wall_texture = wall;
             if (type < 10) {
                 tile->type = type;
-                if (type == 0)
+                if (type == TILE_SOLID)
                     solid = 1;
             }
             xmin = xmax = cx;
@@ -440,14 +440,14 @@ void far do_change_grokking(struct Object far *trap, struct Object far *link,
     struct TileTextureView far *tile;
     unsigned char ok;
     register int i, y_;
-    xend = (trap->pos & 0xE000) >> 13;
-    yend = (trap->pos & 0x1C00) >> 10;
+    xend = (trap->pos & POS_XFINE) >> 13;
+    yend = (trap->pos & POS_YFINE) >> 10;
     trapv[0] = trap->qn.f.quality;
-    trapv[1] = ((trap->pos & 0x380) >> 7) + ((trap->pos & 0x10) >> 1);
+    trapv[1] = ((trap->pos & POS_HEADING) >> 7) + ((trap->pos & 0x10) >> 1);
     trapv[2] = trap->ol.f.owner;
     trapv[3] = trap->pos & 0xF;
     linkv[0] = link->qn.f.quality;
-    linkv[1] = ((link->pos & 0x380) >> 7) + ((link->pos & 0x10) >> 1);
+    linkv[1] = ((link->pos & POS_HEADING) >> 7) + ((link->pos & 0x10) >> 1);
     linkv[2] = link->ol.f.owner;
     linkv[3] = link->pos & 0xF;
     if (xend == 0) {
@@ -499,8 +499,8 @@ int far whack_thing(int index, int damage, int how, int extra)
     }
     if (damage > 0) {
         if (damage_item(target, 0L,
-                        (target->home & 0xFC00) >> 10,
-                        (target->home & 0x3F0) >> 4,
+                        (target->home & HOME_X) >> 10,
+                        (target->home & HOME_Y) >> 4,
                         (unsigned char)damage, 4))
             return 0x10;
     }
@@ -530,16 +530,16 @@ unsigned char far go_fish(void)
     y = PN.y >> 5;
     move_along(PlayerFacing >> 8, 0xB, &x, &y);
     tile = Map_GetAddr(x >> 3, y >> 3);
-    if (tile->type != 0) {
-        if (((TxmTerr[tile->floor] & 0xC0) >> 6) != 1)
+    if (tile->type != TILE_SOLID) {
+        if (((TxmTerr[tile->floor] & TERR_CLASS) >> 6) != TERRAIN_WATER)
             goto bad_place;
-        if (((ThePlayer->pos & 0x7F) >> 3) <= tile->height - 1)
+        if (((ThePlayer->pos & POS_Z) >> 3) <= tile->height - 1)
             goto bad_place;
     } else
         goto bad_place;
-    if (rand() % 5 > (player->skills[12] + 7) / 8)
+    if (rand() % 5 > (player->skills[SKILL_TRACK] + 7) / 8)
         goto no_luck;
-    if (player->weight + ComObjData[0xB6].mass
+    if (player->weight + ComObjData[ITEM_FISH].mass
         >= player->max_weight)
         goto no_room;
     game_sprint(0x70);
@@ -560,12 +560,12 @@ void far talk_to_disembodied(char whoami)
 {
     struct Object far *worm;
     struct Tile far *tile;
-    worm = CreateObj(0x40, 1);
+    worm = CreateObj(ITEM_ROTWORM, 1);
     worm->whoami = whoami;
     worm->attitude_word = worm->attitude_word & 0x3FFF | 0xC000;
     worm->goal_word = worm->goal_word & 0xFFF0 | 0xA;
-    tile = Map_GetAddr((ThePlayer->home & 0xFC00) >> 10,
-                       (ThePlayer->home & 0x3F0) >> 4);
+    tile = Map_GetAddr((ThePlayer->home & HOME_X) >> 10,
+                       (ThePlayer->home & HOME_Y) >> 4);
     Obj_Add(&tile->objects.word, worm);
     TalkTo(worm);
     Obj_Rem(&tile->objects.word, worm);
@@ -579,8 +579,8 @@ void far player_did_bad(int owner)
     if (owner != 0) {
         oldx = MapObj_X;
         oldy = MapObj_Y;
-        MapObj_X = (ThePlayer->home & 0xFC00) >> 10;
-        MapObj_Y = (ThePlayer->home & 0x3F0) >> 4;
+        MapObj_X = (ThePlayer->home & HOME_X) >> 10;
+        MapObj_Y = (ThePlayer->home & HOME_Y) >> 4;
         player_grabbed(ThePlayer, (unsigned char)owner);
         MapObj_X = oldx;
         MapObj_Y = oldy;
@@ -592,7 +592,7 @@ void far eight_pos_switch(int flags, struct Object far *trap, int x, int y)
 {
     struct Object far *obj;
     register int height;
-    height = (trap->pos & 0x7F) + (flags << 3);
+    height = (trap->pos & POS_Z) + (flags << 3);
     if (trap->qn.f.quality == 3) {
         if (height < 0x68)
             change_terrain(x, y, 0xFF, 0xFF, height >> 3, 0xFF, 0, 0, 0);
@@ -613,8 +613,8 @@ void far toggle_object_height(struct Object far *trap, char multiple)
         link = (trap->ol.word >> 6) & 0x3FF;
         link = (link / 5) * 5 + (link + i) % 5;
         obj = Obj_IntTMem(link);
-        z = trap->pos & 0x7F;
-        if ((obj->pos & 0x7F) <= z)
+        z = trap->pos & POS_Z;
+        if ((obj->pos & POS_Z) <= z)
             z = z + trap->ol.f.owner;
         obj->pos = obj->pos & 0xFF80 | z & 0x7F;
     }
@@ -640,7 +640,7 @@ void far do_sfx(int type, int arg)
 unsigned char far remove_whoami(struct Object far *obj)
 {
     unsigned far *head;
-    head = &Map_GetAddr((obj->home & 0xFC00) >> 10, (obj->home & 0x3F0) >> 4)->objects.word;
+    head = &Map_GetAddr((obj->home & HOME_X) >> 10, (obj->home & HOME_Y) >> 4)->objects.word;
     Obj_FreeLinkChain(head, obj);
     return 1;
 }
@@ -673,13 +673,13 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
     pit = 0;
     if (mode && is_my_race(obj, 0xB))
         gronk_race(0xB, 1, 0, gronkify_attitude);
-    if (mode && (obj->id & 0x1FF) == 0x4E && PlayerLevel == 4
+    if (mode && (obj->id & ID_ITEM) == ITEM_BLOODWORM && PlayerLevel == 4
         && player->quest_bytes[7] < 0xC8)
         player->quest_bytes[7]++;
     if (player->in_pits && mode)
         pit = remove_opponent(obj);
     if (pit) {
-        player->quest_bytes[1]++;
+        player->quest_bytes[QB_PIT_RECORD]++;
         if (obj->whoami != 0x64)
             SET_QUEST(24, 1);
     }
@@ -687,11 +687,11 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
                   || obj->whoami == 0xA8 || obj->whoami == 0x95)
         && !((obj->b0A & 0x80) >> 7)) {
         int hp;
-        if (obj->whoami == 0x8D && player->xclock[1] >= 8)
+        if (obj->whoami == 0x8D && player->xclock[XC_CASTLE] >= 8)
             return 1;
-        hp = Creature[obj->id & 0x3F].avghit / 3 - 1;
+        hp = Creature[obj->id & ID_INMAJOR].avghit / 3 - 1;
         obj->hp = hp;
-        call_out_the_guards((obj->home & 0xFC00) >> 10, (obj->home & 0x3F0) >> 4);
+        call_out_the_guards((obj->home & HOME_X) >> 10, (obj->home & HOME_Y) >> 4);
         return 0;
     }
     switch (obj->whoami) {
@@ -701,13 +701,13 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
     case 0x48:
         if (mode) {
             SET_QUEST(53, 1);
-            player->xclock[15]++;
+            player->xclock[XC_CHANGED]++;
         }
         break;
     case 0x2C:
         if (mode) {
             SET_QUEST(66, 1);
-            player->xclock[15]++;
+            player->xclock[XC_CHANGED]++;
         }
         break;
     case 0x98:
@@ -718,8 +718,8 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
         }
         break;
     case 0x4B:
-        if (!mode && (obj->id & 0x1FF) != 0x5E) {
-            obj->id = obj->id & 0xFE00 | 0x5E;
+        if (!mode && (obj->id & ID_ITEM) != ITEM_HORDLING) {
+            obj->id = obj->id & 0xFE00 | ITEM_HORDLING;
             obj->hp = 0x5C;
             obj->goal_word = obj->goal_word & 0xFFF0 | 5;
             return 0;
@@ -731,24 +731,24 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
     case 0x62:
         SET_QUEST(25, 1);
         if (pit)
-            player->quest_bytes[1] = player->quest_bytes[1] + 3;
+            player->quest_bytes[QB_PIT_RECORD] = player->quest_bytes[QB_PIT_RECORD] + 3;
         break;
     case 0x63:
         if (mode) {
             SET_QUEST(121, 1);
             if (!GET_QUEST(23))
-                player->quest_bytes[1] = player->quest_bytes[1] + 6;
+                player->quest_bytes[QB_PIT_RECORD] = player->quest_bytes[QB_PIT_RECORD] + 6;
         }
         break;
     case 0x65:
         if (mode) {
             SET_QUEST(65, 1);
-            player->xclock[15]++;
+            player->xclock[XC_CHANGED]++;
             if (GET_QUEST(22)
                 && !GET_QUEST(23))
                 SET_QUEST(22, 0);
             if (GET_QUEST(23))
-                player->quest_bytes[1] = player->quest_bytes[1] + 6;
+                player->quest_bytes[QB_PIT_RECORD] = player->quest_bytes[QB_PIT_RECORD] + 6;
         }
         break;
     case 6:
@@ -776,7 +776,7 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
         if (!mode) {
             if ((PlayerLevel - 1) / 8 == 2) {
                 struct Tile far *tile;
-                tile = Map_GetAddr((obj->home & 0xFC00) >> 10, (obj->home & 0x3F0) >> 4);
+                tile = Map_GetAddr((obj->home & HOME_X) >> 10, (obj->home & HOME_Y) >> 4);
                 if (!GET_QUEST(54))
                     stop_and_talk(obj);
                 else
@@ -784,7 +784,7 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
             } else {
                 stop_and_talk(obj);
                 SET_QUEST(64, 1);
-                player->xclock[15]++;
+                player->xclock[XC_CHANGED]++;
                 return 1;
             }
             return 0;
@@ -800,15 +800,15 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
             }
             dagger = AskInventory(8 - player->lefty);
             InvRemoveOneObject(dagger);
-            dagger->id = dagger->id & 0xFE00 | 0xC7;
+            dagger->id = dagger->id & 0xFE00 | ITEM_BROKEN_DAGGER;
             near_mob_put_at(ThePlayer, dagger, 6, 0);
-            player->xclock[1]++;
+            player->xclock[XC_CASTLE]++;
             SET_QUEST(11, 1);
         }
         break;
     case 0x64:
         if (pit)
-            player->quest_bytes[1]--;
+            player->quest_bytes[QB_PIT_RECORD]--;
         if (GET_QUEST(28))
             return 1;
     case 0x80:
@@ -827,24 +827,24 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
     case 0x8C:
         if (mode) {
             int old;
-            old = player->xclock[1];
+            old = player->xclock[XC_CASTLE];
             stop_and_talk(obj);
-            player->xclock[1] = 0xD;
-            if (player->xclock[3] >= 6)
-                player->xclock[1] = 0xE;
-            if (player->xclock[1] < old) {
-                player->xclock[1] = old;
+            player->xclock[XC_CASTLE] = 0xD;
+            if (player->xclock[XC_DJINN] >= 6)
+                player->xclock[XC_CASTLE] = 0xE;
+            if (player->xclock[XC_CASTLE] < old) {
+                player->xclock[XC_CASTLE] = old;
                 return 1;
             }
         }
         return 1;
     case 0x8B:
         if (mode) {
-            if (player->xclock[1] >= 0xB
-                && (obj->home & 0xFC00) >> 10 >= 0x14
-                && (obj->home & 0x3F0) >> 4 >= 0x25
-                && (obj->home & 0xFC00) >> 10 <= 0x16
-                && (obj->home & 0x3F0) >> 4 <= 0x27) {
+            if (player->xclock[XC_CASTLE] >= 0xB
+                && (obj->home & HOME_X) >> 10 >= 0x14
+                && (obj->home & HOME_Y) >> 4 >= 0x25
+                && (obj->home & HOME_X) >> 10 <= 0x16
+                && (obj->home & HOME_Y) >> 4 <= 0x27) {
                 call_out_the_guards(0x12, 0x28);
                 return 1;
             }
@@ -852,7 +852,7 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
         }
         break;
     case 0x8D:
-        if (mode && player->xclock[1] < 8)
+        if (mode && player->xclock[XC_CASTLE] < 8)
             return 0;
         return 1;
     case 0x3A:
@@ -869,8 +869,8 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
     case 3:
         return 1;
     }
-    if (player->quest_bytes[1] > player->xclock[14])
-        player->xclock[14] = player->quest_bytes[1];
+    if (player->quest_bytes[QB_PIT_RECORD] > player->xclock[XC_PIT_KILLS])
+        player->xclock[XC_PIT_KILLS] = player->quest_bytes[QB_PIT_RECORD];
     return 1;
 }
 
@@ -898,7 +898,7 @@ void far call_out_the_guards(int home_x, int home_y)
     int dy;
     register int x;
     register int y;
-    scheduled = Obj_FindInMapSquare(6, 2, 0xC, 0xF, 0x1D);
+    scheduled = Obj_FindInMapSquare(MAJOR_TRAP, 2, 0xC, 0xF, 0x1D);
     while (scheduled) {
         x = (scheduled->qn.f.quality << 3) + 3;
         y = (scheduled->ol.f.owner << 3) + 3;
@@ -940,14 +940,14 @@ unsigned char far in_arena(int x, int y)
 int far get_rep_diff(struct Object far *obj)
 {
     register int item;
-    switch ((obj->id & 0x1C0) >> 6) {
-    case 0:
-        item = obj->id & 0xF;
-        switch ((obj->id & 0x30) >> 4) {
+    switch ((obj->id & ID_MAJOR) >> 6) {
+    case MAJOR_HACK:
+        item = obj->id & ID_INCLASS;
+        switch ((obj->id & ID_MINOR) >> 4) {
         case 0: return Weapons[item * 8 + 7];
         case 1: return -1;
         case 2: ;
-        case 3: return Armor[(((obj->id & 0x3F) >> 0) - 0x20) * 4 + 1];
+        case 3: return Armor[(((obj->id & ID_INMAJOR) >> 0) - FIRST_ARMOR) * 4 + 1];
         }
     }
     return -1;
@@ -1054,9 +1054,9 @@ void far repair_item(struct Object far *obj, int skill, char who)
 unsigned char far clear_loretry(struct Object far *obj)
 {
     if (IsMobElem(obj)) return 0;
-    if (((obj->id & 0x1C0) >> 6) == 5 || ((obj->id & 0x1C0) >> 6) == 6
-        || ComObjData[obj->id & 0x1FF].render == 2) return 0;
-    obj->pos = obj->pos & 0xFC7F | (((obj->pos & 0x380) >> 7) & 3) << 7;
+    if (((obj->id & ID_MAJOR) >> 6) == MAJOR_RECT || ((obj->id & ID_MAJOR) >> 6) == MAJOR_TRAP
+        || ComObjData[obj->id & ID_ITEM].render == 2) return 0;
+    obj->pos = obj->pos & 0xFC7F | (((obj->pos & POS_HEADING) >> 7) & 3) << 7;
     return 0;
 }
 
@@ -1067,8 +1067,8 @@ void far clear_all_loretries(void)
     unsigned far *head;
     register int x, y;
     tile = mapdata;
-    for (y = 0; y < 64; y++) {
-        for (x = 0; x < 64; x++, tile++) {
+    for (y = 0; y < MAP_SIZE; y++) {
+        for (x = 0; x < MAP_SIZE; x++, tile++) {
             head = &tile->objects.word;
             if (((struct ObjHeadBits far *)head)->index > 0)
                 Obj_Check(Obj_PtrTMem(head), clear_loretry);
@@ -1099,7 +1099,7 @@ void far toggle_pillars_hack(int x, int y, int lower, int upper, int mask)
 void far move_folks_around(void)
 {
     register int who, hour;
-    hour = player->xclock[1];
+    hour = player->xclock[XC_CASTLE];
     if (GET_QUEST(109) && hour < 16) {
         for (who = 0x81; who <= 0x8F; who++) {
             if (who == 0x8E && GET_QUEST(112)) continue;
@@ -1120,29 +1120,29 @@ unsigned char far kill_plants(struct Object far *obj)
     register int y;
     register int item = -1;
     if ((int)(((long)rand() * 3) / 0x8000L) == 0) {
-        switch (obj->id & 0x1FF) {
-        case 0xD9:
-            item = 0xDA;
+        switch (obj->id & ID_ITEM) {
+        case ITEM_PLANT_D9:
+            item = ITEM_PLANT_DA;
             break;
-        case 0xDA:
-            item = 0xD6;
+        case ITEM_PLANT_DA:
+            item = ITEM_PILE_OF_DEBRIS_D6;
             if ((int)(((long)rand() * 2) / 0x8000L))
-                item = 0xC1;
+                item = ITEM_GRASS;
             if ((int)(((long)rand() * 2) / 0x8000L))
-                item = 0xB9;
+                item = ITEM_MUSHROOM;
             break;
-        case 0xC1:
+        case ITEM_GRASS:
             switch ((int)(((long)rand() * 0xF) / 0x8000L)) {
-            case 0: item = 0xB9; return 0;     /* the new item is never used */
-            case 1: item = 0xD6; return 0;
+            case 0: item = ITEM_MUSHROOM; return 0;     /* the new item is never used */
+            case 1: item = ITEM_PILE_OF_DEBRIS_D6; return 0;
             }
         default:
             return 0;
         }
         if (item >= 0)
-            obj->id = obj->id & 0xFE00 | item & 0x1FF;
-        x = (obj->pos & 0xE000) >> 13;
-        y = (obj->pos & 0x1C00) >> 10;
+            obj->id = obj->id & 0xFE00 | item & ID_ITEM;
+        x = (obj->pos & POS_XFINE) >> 13;
+        y = (obj->pos & POS_YFINE) >> 10;
         if (x != 0 && x != 7)
             obj->pos = obj->pos & 0x1FFF
                 | ((x + (int)(((long)rand() * 2) / 0x8000L)
@@ -1167,12 +1167,12 @@ void far courtyard_hacking(int x, int y, struct Object far *trap)
     unsigned far *head;
     int nx, ny;
     register int i, j;
-    hour = player->xclock[1];
+    hour = player->xclock[XC_CASTLE];
     if (dried & (1 << hour))
         return;
     dried |= 1 << hour;
-    xmax = x + ((trap->pos & 0xE000) >> 13);
-    ymax = y + ((trap->pos & 0x1C00) >> 10);
+    xmax = x + ((trap->pos & POS_XFINE) >> 13);
+    ymax = y + ((trap->pos & POS_YFINE) >> 10);
     for (i = x; i <= xmax; i++) {
         for (j = y; j <= ymax; j++) {
             tile = Map_GetAddr(i, j);
@@ -1183,9 +1183,9 @@ void far courtyard_hacking(int x, int y, struct Object far *trap)
                 if ((int)(((long)rand() * 100) / 0x8000L) < 0x2B) {
                     nx = (int)(((long)rand() * 6) / 0x8000L) + 1;
                     ny = (int)(((long)rand() * 6) / 0x8000L) + 1;
-                    if (can_place(0xB9, 0, (i << 3) + nx, (j << 3) + ny,
+                    if (can_place(ITEM_MUSHROOM, 0, (i << 3) + nx, (j << 3) + ny,
                                   tile->height << 3, 0, 0)) {
-                        obj = CreateObj(0xB9, 0);
+                        obj = CreateObj(ITEM_MUSHROOM, 0);
                         obj->pos = obj->pos & 0x1FFF | (nx & 7) << 13;
                         obj->pos = obj->pos & 0xE3FF | (ny & 7) << 10;
                         obj->pos = obj->pos & 0xFF80 | (tile->height << 3) & 0x7F;
@@ -1193,12 +1193,12 @@ void far courtyard_hacking(int x, int y, struct Object far *trap)
                     }
                 }
             } else if (hour >= 3) {
-                obj = Obj_FindInMapSquare(7, 0, 9, i, j);
+                obj = Obj_FindInMapSquare(MAJOR_ANIMOBJ, 0, 9, i, j);
                 if (obj) {
                     Obj_Punt(head, obj, 1);
                     tile->floor = trap->ol.f.owner;
                 }
-                obj = Obj_FindInMapSquare(4, 2, 0xE, i, j);
+                obj = Obj_FindInMapSquare(MAJOR_SPEC, 2, 0xE, i, j);
                 if (obj)
                     obj->qn.f.quality = 0;
             }
@@ -1214,16 +1214,16 @@ void far skup_ductosnore(void)
     unsigned far *head;
     if (!GET_QUEST(122))
         return;
-    obj = Obj_FindInMapSquare(2, 2, 0xE, 0x3A, 4);
+    obj = Obj_FindInMapSquare(MAJOR_MISC, 2, 0xE, 0x3A, 4);
     if (obj == 0)
         return;
-    obj = Obj_FindInMapSquare(2, 2, 1, 0x39, 4);
+    obj = Obj_FindInMapSquare(MAJOR_MISC, 2, 1, 0x39, 4);
     if (obj == 0)
         return;
     if (obj->qn.f.quality != 2 && obj->qn.f.quality != 6)
         return;
     crystal = obj;
-    obj = Obj_FindInMapSquare(2, 2, 1, 0x3B, 4);
+    obj = Obj_FindInMapSquare(MAJOR_MISC, 2, 1, 0x3B, 4);
     if (obj == 0)
         return;
     if (obj->qn.f.quality != 2 && obj->qn.f.quality != 6)
@@ -1311,12 +1311,12 @@ void far do_graffiti(int x, register int y, int owner)
     starty = y;
     for (x = startx; x <= xmax; x++) {
         for (y = starty; y <= ymax; y++) {
-            for (obj = Obj_FindInMapSquare(5, 2, 0xE, x, y); obj; ) {
+            for (obj = Obj_FindInMapSquare(MAJOR_RECT, 2, 0xE, x, y); obj; ) {
                 if (obj->ol.f.owner == from && rand() % 16 < prob)
                     obj->ol.f.owner = to;
                 next = &obj->qn.word;
                 if (Obj_PtrTMem(next))
-                    obj = Obj_InList(&next, 0, 5, 2, 0xE);
+                    obj = Obj_InList(&next, 0, MAJOR_RECT, 2, 0xE);
                 else
                     obj = 0;
             }
@@ -1337,19 +1337,19 @@ void far reset_arrow_pillars(int x, int y, char owner)
     for (i = x; i < 0x3F; i++) {
         for (j = y; j < 0x3F; j++) {
             tile = Map_GetAddr(i, j);
-            if (tile->type == 0) {
+            if (tile->type == TILE_SOLID) {
                 if (j == y)
                     i = 0x3F;
                 j = 0x3F;
                 continue;
             }
             head = &tile->objects.word;
-            trig = Obj_InList(&head, 0, 6, 2, 4);
+            trig = Obj_InList(&head, 0, MAJOR_TRAP, 2, 4);
             if (trig == 0)
-                trig = Obj_InList(&head, 0, 6, 3, 4);
+                trig = Obj_InList(&head, 0, MAJOR_TRAP, 3, 4);
             if (trig == 0)
                 continue;
-            height = (trig->pos & 0x7F) >> 3;
+            height = (trig->pos & POS_Z) >> 3;
             if (tile->height == height)
                 continue;
             dx = trig->qn.f.quality - i;
@@ -1377,50 +1377,50 @@ void far change_weapon_playerbest(int x, int y, int owner)
     quality = -1;
     qty = 0;
     combat = -1;
-    for (i = 2; i <= 6; i++) {
+    for (i = SKILL_BAREHAND; i <= SKILL_MISSILE; i++) {
         if (player->skills[i] > combat) {
             combat = player->skills[i];
             type = i;
         }
     }
-    if (player->skills[9] > player->skills[7])
-        magic = player->skills[9];
+    if (player->skills[SKILL_CASTING] > player->skills[SKILL_MANA])
+        magic = player->skills[SKILL_CASTING];
     else
-        magic = player->skills[7];
+        magic = player->skills[SKILL_MANA];
     if (magic >= combat) {
         if (magic > 0)
-            item = 0xF4;
+            item = ITEM_MANI_STONE;
         else
-            item = 0x3C;
+            item = ITEM_WOODEN_SHIELD;
         quality = 0x3F;
     } else {
         switch (type) {
-        case 2:
-            item = 0x26;
+        case SKILL_BAREHAND:
+            item = ITEM_LEATHER_GLOVES;
             quality = 0x3F;
             break;
-        case 6:
-            item = 0x10;
+        case SKILL_MISSILE:
+            item = ITEM_SLING_STONE;
             qty = (int)(((long)rand() << 3) / 0x8000L) + (int)(((long)rand() << 2) / 0x8000L) + 0x1E;
             break;
-        case 3:
-            item = 4;
+        case SKILL_SWORD:
+            item = ITEM_SHORTSWORD;
             break;
-        case 4:
-            item = 0;
+        case SKILL_AXE:
+            item = ITEM_HAND_AXE;
             break;
-        case 5:
-            item = 7;
+        case SKILL_MACE:
+            item = ITEM_CUDGEL;
             break;
         }
     }
-    obj = Obj_FindInMapSquare(0, 0, owner, x, y);
+    obj = Obj_FindInMapSquare(MAJOR_HACK, 0, owner, x, y);
     if (obj) {
-        obj->id = obj->id & 0xFE00 | item & 0x1FF;
+        obj->id = obj->id & 0xFE00 | item & ID_ITEM;
         if (quality != -1)
             obj->qn.f.quality = quality;
         if (qty > 0) {
-            obj->id = obj->id & 0x7FFF | 0x8000;
+            obj->id = obj->id & 0x7FFF | ID_ISQUANT;
             obj->ol.f.link = qty;
         }
     }
@@ -1436,13 +1436,13 @@ void far check_fraznium(int x, int y, unsigned char owner)
     gloves = 0;
     if (!owner) {
         obj = Obj_PtrTMem(&Inventory[2]);
-        if (!(gloves = obj != 0 && (obj->id & 0x1FF) == 0x33)) {
+        if (!(gloves = obj != 0 && (obj->id & ID_ITEM) == ITEM_FRAZNIUM_GAUNTLETS)) {
             obj = Obj_PtrTMem(&Inventory[0]);
-            gloves = obj != 0 && (obj->id & 0x1FF) == 0x34;
+            gloves = obj != 0 && (obj->id & ID_ITEM) == ITEM_FRAZNIUM_CIRCLET;
         }
     }
     head = &Map_GetAddr(x, y)->objects.word;
-    field = Obj_InList(&head, 0, 5, 2, 0xD);
+    field = Obj_InList(&head, 0, MAJOR_RECT, 2, 0xD);
     if (field)
         field->pos = field->pos & 0xFF80 | (gloves ? 0x7F : 0) & 0x7F;
 }
@@ -1451,7 +1451,7 @@ void far check_fraznium(int x, int y, unsigned char owner)
 void far switch_flip_hack(int x, int y, int owner)
 {
     struct Object far *obj;
-    obj = Obj_FindInMapSquare(5, 3, -1, x, y);
+    obj = Obj_FindInMapSquare(MAJOR_RECT, 3, -1, x, y);
     if (obj && flip_switch(obj, owner))
         checkTrap(0L, obj, 4, x, y);
 }
@@ -1460,8 +1460,8 @@ void far switch_flip_hack(int x, int y, int owner)
    among its neighbours, and the code corresponds. */
 unsigned char far maybe_flip_a_switch(struct Object far *obj)
 {
-    switch ((obj->id & 0x1F0) >> 4) {
-    case 0x17:
+    switch ((obj->id & ID_CLASS) >> 4) {
+    case CLASS_SWITCH:
         if ((int)(((long)rand() * 2) / 0x8000L))
             flip_switch(obj, 3);
     }
@@ -1487,8 +1487,8 @@ void far play_with_switches(int x, int y)
    among its neighbours, and the code corresponds. */
 unsigned char far recharge_a_lightbulb(struct Object far *obj)
 {
-    switch (obj->id & 0x1FF) {
-    case 0x93:
+    switch (obj->id & ID_ITEM) {
+    case ITEM_LIGHT_SPHERE:
         obj->qn.f.quality = 0x3F;
     }
     return 0;
@@ -1517,9 +1517,9 @@ void far recharge_lightbulbs(int x, int y)
    among its neighbours, and the code corresponds. */
 unsigned char far redeem_a_bottle(struct Object far *obj)
 {
-    switch (obj->id & 0x1FF) {
-    case 0x13D:
-        obj->id = obj->id & 0xFE00 | 0xA0;
+    switch (obj->id & ID_ITEM) {
+    case ITEM_BOTTLE_13D:
+        obj->id = obj->id & 0xFE00 | ITEM_COIN;
     }
     return 0;
 }
@@ -1537,9 +1537,9 @@ void far redeem_all_bottles(int x, int y)
    among its neighbours, and the code corresponds. */
 unsigned char far toggle_force_field(struct Object far *obj)
 {
-    if ((obj->id & 0x1FF) != 0x16D)
+    if ((obj->id & ID_ITEM) != ITEM_FORCE_FIELD_16D)
         return 0;
-    obj->pos = (obj->pos & 0xFF80) | (((obj->pos & 0x7F) < 0x7F ? 0x7F : 0) & 0x7F);
+    obj->pos = (obj->pos & 0xFF80) | (((obj->pos & POS_Z) < 0x7F ? 0x7F : 0) & 0x7F);
     return 1;
 }
 
@@ -1552,13 +1552,13 @@ void far find_and_gronk_force_field(int x, int y)
 /* 48: SmiteUndead_ovr110_38AD, target size 0xB0. */
 unsigned char far destroy_floatskull(struct Object far *obj)
 {
-    obj->id = obj->id & 0xFE00 | 0xC3;
-    if (!can_place(0xC3, Obj_MemTPtr(obj),
-                   ((obj->home & 0xFC00) >> 10 << 3) + ((obj->pos & 0xE000) >> 13),
-                   ((obj->home & 0x3F0) >> 4 << 3) + ((obj->pos & 0x1C00) >> 10),
-                   obj->pos & 0x7F, 1, 0))
+    obj->id = obj->id & 0xFE00 | ITEM_SKULL_C3;
+    if (!can_place(ITEM_SKULL_C3, Obj_MemTPtr(obj),
+                   ((obj->home & HOME_X) >> 10 << 3) + ((obj->pos & POS_XFINE) >> 13),
+                   ((obj->home & HOME_Y) >> 4 << 3) + ((obj->pos & POS_YFINE) >> 10),
+                   obj->pos & POS_Z, 1, 0))
         obj->qn.f.quality = 0;
-    if (!((obj->id & 0x8000) >> 15) && obj->ol.f.link > 0)
+    if (!((obj->id & ID_ISQUANT) >> 15) && obj->ol.f.link > 0)
         Obj_FreeChain(&obj->ol.word);
     return 1;
 }
@@ -1572,12 +1572,12 @@ void far prison_alarm_check(void)
         return;
     for (p = ActiveMob; p < LastActiveMob; p++) {
         npc = Obj_IntTMem(*p);
-        if (((npc->id & 0x1C0) >> 6) != 1)
+        if (((npc->id & ID_MAJOR) >> 6) != MAJOR_CREATURE)
             continue;
         if (((npc->attitude_word & 0xC000) >> 14) == 0 && is_my_race(npc, 6)
             && !((npc->b0A & 0x80) >> 7)) {
             SET_QUEST(60, 1);
-            player->xclock[15]++;
+            player->xclock[XC_CHANGED]++;
         }
     }
 }
@@ -1589,8 +1589,8 @@ void far genocide(int race)
     struct Object far *obj;
     for (p = ActiveMob; p < LastActiveMob; p++) {
         obj = Obj_IntTMem(*p);
-        if (((obj->id & 0x1C0) >> 6) != 1) {
-            if (race == 0xFF && (obj->id & 0x1FF) == 0x13)
+        if (((obj->id & ID_MAJOR) >> 6) != MAJOR_CREATURE) {
+            if (race == 0xFF && (obj->id & ID_ITEM) == ITEM_SKULL_13)
                 destroy_floatskull(obj);
         } else if (is_my_race(obj, race) && instant_kill(obj))
             p--;
@@ -1604,13 +1604,13 @@ unsigned char far instant_kill(struct Object far *obj)
     unsigned far *head;
     register struct Creature *cr;
     register int oldy;
-    cr = &Creature[(obj->id & 0x3F) >> 0];
+    cr = &Creature[(obj->id & ID_INMAJOR) >> 0];
     death_check(obj, 0);
     death_check(obj, 1);
     oldx = XP;
     oldy = YP;
-    XP = (obj->home & 0xFC00) >> 10;
-    YP = (obj->home & 0x3F0) >> 4;
+    XP = (obj->home & HOME_X) >> 10;
+    YP = (obj->home & HOME_Y) >> 4;
     head = &Map_GetAddr(XP, YP)->objects.word;
     if (Obj_Rem(head, obj)) {
         generate_inventory(obj);
@@ -1629,14 +1629,14 @@ unsigned char far instant_kill(struct Object far *obj)
 /* 52: CheckIfMatchingRace_ovr110_3BBC, target size 0x7E. */
 unsigned char far is_my_race(struct Object far *obj, int race)
 {
-    if (((obj->id & 0x1C0) >> 6) != 1) {
-        if (race == 0xFF && (obj->id & 0x1FF) == 0x13)
+    if (((obj->id & ID_MAJOR) >> 6) != MAJOR_CREATURE) {
+        if (race == 0xFF && (obj->id & ID_ITEM) == ITEM_SKULL_13)
             return 1;
         return 0;
     } else if (race == 0xFF)
         return check_res(obj, 1, 0x80) == 0;
     else
-        return Creature[(obj->id & 0x3F) >> 0].race == race;
+        return Creature[(obj->id & ID_INMAJOR) >> 0].race == race;
 }
 
 /* 53: PuntBishop_ovr110_3C3A, target size 0x19. FM Towns has no function between is_my_race_
@@ -1654,9 +1654,9 @@ void far fire_trigger_at(int x, int y)
     struct Object far *trap;
     unsigned far *head;
     head = &Map_GetAddr(x, y)->objects.word;
-    trap = Obj_InList(&head, 0, 6, -1, -1);
+    trap = Obj_InList(&head, 0, MAJOR_TRAP, -1, -1);
     if (trap) {
-        if (((trap->id & 0x30) >> 4) & 2)
+        if (((trap->id & ID_MINOR) >> 4) & 2)
             UseTrigger(0L, 0L, trap, -1);
         else
             SetOffTrap(0L, 0L, trap, x, y);
@@ -1670,15 +1670,15 @@ unsigned char far transform_creature(struct Object far *obj, int item, int whoam
     int x, y, height;
     register int new_item;
     register struct Creature *crit;
-    x = (obj->home & 0xFC00) >> 10;
-    y = (obj->home & 0x3F0) >> 4;
+    x = (obj->home & HOME_X) >> 10;
+    y = (obj->home & HOME_Y) >> 4;
     height = Map_GetAddr(x, y)->height;
     if (item == -1)
-        new_item = obj->id & 0x1FF;
+        new_item = obj->id & ID_ITEM;
     else
-        new_item = (((item & 0x30) >> 4) << 4) + (item & 0xF) + 0x40;
-    crit = &Creature[new_item & 0x3F];
-    obj->id = obj->id & 0xFE00 | new_item & 0x1FF;
+        new_item = (((item & ID_MINOR) >> 4) << 4) + (item & ID_INCLASS) + FIRST_CREATURE;
+    crit = &Creature[new_item & ID_INMAJOR];
+    obj->id = obj->id & 0xFE00 | new_item & ID_ITEM;
     if (whoami != -1)
         obj->whoami = whoami;
     if (powerful != -1)
@@ -1703,9 +1703,9 @@ int far black_gem_trip(void)
     int facet_no, rel_x;
     register int world = -1;
     register int facet;
-    rel_x = (((ThePlayer->home & 0xFC00) >> 10) << 3) + ((ThePlayer->pos & 0xE000) >> 13) - 0xE3;
+    rel_x = (((ThePlayer->home & HOME_X) >> 10) << 3) + ((ThePlayer->pos & POS_XFINE) >> 13) - 0xE3;
     {
-        register int rel_y = (((ThePlayer->home & 0x3F0) >> 4) << 3) + ((ThePlayer->pos & 0x1C00) >> 10) - 0x143;
+        register int rel_y = (((ThePlayer->home & HOME_Y) >> 4) << 3) + ((ThePlayer->pos & POS_YFINE) >> 10) - 0x143;
         facet = abs(rel_x) < abs(rel_y);
         if (rel_y > 0)
             facet = 1 - facet;
@@ -1715,7 +1715,7 @@ int far black_gem_trip(void)
     if (rel_x < 0)
         facet = 7 - facet;
     facet_no = facet;
-    if ((1 << facet_no) & player->quest_bytes[2] || (player->vars[6] & 7) == facet_no)
+    if ((1 << facet_no) & player->quest_bytes[QB_GEMS_USED] || (player->vars[6] & 7) == facet_no)
         world = facet_no;
     if (world != -1 && worlds[world].map != 0) {
         rel_x = world;
@@ -1723,7 +1723,7 @@ int far black_gem_trip(void)
             rel_x = 6;
         else if (world == 6)
             rel_x = 5;
-        player->quest_bytes[13] |= 1 << rel_x;
+        player->quest_bytes[QB_WORLDS_VISITED] |= 1 << rel_x;
         trap_teleport_data = worlds[world].flags;
         return do_teleport(ThePlayer, worlds[world].x, worlds[world].y, worlds[world].map);
     }
@@ -1741,14 +1741,14 @@ void far black_gem_rotate(void)
     old_gem = player->vars[6];
     range = 8;
     tries = 0;
-    if (player->xclock[1] < 4)
+    if (player->xclock[XC_CASTLE] < 4)
         range = 1;
-    else if (player->xclock[1] < 8)
+    else if (player->xclock[XC_CASTLE] < 8)
         range = 3;
-    else if (player->xclock[1] < 0xD)
+    else if (player->xclock[XC_CASTLE] < 0xD)
         range = 6;
     gem = rand() % range;
-    while ((gem == old_gem || (1 << gem) & player->quest_bytes[2]) && tries++ < 8)
+    while ((gem == old_gem || (1 << gem) & player->quest_bytes[QB_GEMS_USED]) && tries++ < 8)
         gem = (gem + 1) % range;
     if (tries >= 8)
         gem = 8;
@@ -1783,7 +1783,7 @@ void far do_qbert(int owner)
         struct Object far *obj;
         if (TriggerChainTileData_dseg_67d6_1BB9 - mapdata == 0xCF1) {
             for (i = 0x1D; i <= 0x23; i++) {
-                obj = Obj_FindInMapSquare(5, 2, 0xE, i, 4);
+                obj = Obj_FindInMapSquare(MAJOR_RECT, 2, 0xE, i, 4);
                 if (obj)
                     for (j = 0; j < 7 && seq[j] != -1; j++)
                         if (seq[j] == obj->ol.f.owner)
@@ -1832,11 +1832,11 @@ void far do_qbert(int owner)
                     if (seq[4] == colour) {
                         obj = Obj_IntTMem(0x29A);
                         obj->id = obj->id & 0xBFFF;
-                        Obj_IntTMem(0x279)->pos = Obj_IntTMem(0x279)->pos & 0xFF80 | obj->pos & 0x7F;
+                        Obj_IntTMem(0x279)->pos = Obj_IntTMem(0x279)->pos & 0xFF80 | obj->pos & POS_Z;
                     }
                 }
                 obj = Obj_IntTMem(0x3CE);
-                obj->ol.f.link = 0x200 | gate_links[colour];
+                obj->ol.f.link = LINK_SPECIAL | gate_links[colour];
                 obj->id = obj->id & 0xBFFF;
             }
             if (!(unsigned char)*done && !complete) {
@@ -1844,7 +1844,7 @@ void far do_qbert(int owner)
                 obj = Obj_IntTMem(0x3CC);
                 obj->pos = obj->pos & 0xFF80;
                 obj = Obj_IntTMem(0x3CE);
-                obj->id = obj->id & 0xBFFF | 0x4000;
+                obj->id = obj->id & 0xBFFF | ID_INVIS;
             }
         } else if (seq[0] > 0)
             trig->floor = seq[0];
@@ -1874,8 +1874,8 @@ void far do_qbert(int owner)
             x = ((struct TileTextureView far *)from)->wall_texture;
             y = ((struct TileTextureView far *)to)->wall_texture;
         } while (++tries < 4
-                 && abs(x - ((ThePlayer->home & 0xFC00) >> 10)) < 3
-                 && abs(y - ((ThePlayer->home & 0x3F0) >> 4)) < 3);
+                 && abs(x - ((ThePlayer->home & HOME_X) >> 10)) < 3
+                 && abs(y - ((ThePlayer->home & HOME_Y) >> 4)) < 3);
         trap_teleport_data = (to->floor + 8) << 2;
         trap_teleport_data = trap_teleport_data + ((from->floor & 8) >> 3);
         if (from->floor & 7)
@@ -1889,9 +1889,9 @@ void far do_qbert(int owner)
         for (i = 0; i < 7; i++)
             if (seq[i] == owner) {
                 level = 0x1D - (6 - i) * (7 - i) / 2;
-                tile = Map_GetAddr((ThePlayer->home & 0xFC00) >> 10,
-                                   (ThePlayer->home & 0x3F0) >> 4);
-                obj = CreateObj(0x183, 0);
+                tile = Map_GetAddr((ThePlayer->home & HOME_X) >> 10,
+                                   (ThePlayer->home & HOME_Y) >> 4);
+                obj = CreateObj(ITEM_HACK_TRAP, 0);
                 Obj_Add(&tile->objects.word, obj);
                 obj->pos = obj->pos & 0x1FFF | 0x6000;
                 obj->pos = obj->pos & 0xE3FF | 0xC00;
@@ -1928,7 +1928,7 @@ void far arena_player_runs(void)
             player->pit_fighters[first] = 0;
         }
         player->in_pits = 0;
-        player->quest_bytes[1] = 0;
+        player->quest_bytes[QB_PIT_RECORD] = 0;
         player->quest_bytes[5] = 0;
     }
 }
@@ -1942,25 +1942,25 @@ unsigned char far morpheus_ruin_potion(struct Object far *potion)
         if (GameInputMode == 1) {
             Obj_Check(CursorObjPtr, morpheus_ruin_potion);
             unforce_mouse_cursor(3);
-            force_mouse_cursor(CursorObjPtr->id & 0x1FF);
+            force_mouse_cursor(CursorObjPtr->id & ID_ITEM);
         } else
             ;   /* an empty else: probably a debug message compiled out. Without it -O
                    cross-jumps the force_mouse_cursor cleanup into RedisplayInvSlot's */
         return 0;
     } else {
-        if ((potion->id & 0x1FF) != 0xE5)
+        if ((potion->id & ID_ITEM) != ITEM_RED_POTION)
             return 0;
-        if (((potion->id & 0x8000) >> 15) && (potion->id & 0x800) && potion->ol.f.link > 0) {
+        if (((potion->id & ID_ISQUANT) >> 15) && (potion->id & ID_FLAG11) && potion->ol.f.link > 0) {
             potion->ol.f.link = 0;
-            trap = CreateObj(0x180, 0);
+            trap = CreateObj(ITEM_DAMAGE_TRAP, 0);
             if (trap) {
                 trap->qn.f.quality = rand() % 8 + 1;
                 trap->ol.f.owner = 1;
                 potion->id = potion->id & 0x7FFF;
                 Obj_Add(&potion->ol.word, trap);
-                potion->id = potion->id & 0xFE00 | 0xE4;
+                potion->id = potion->id & 0xFE00 | ITEM_GREEN_POTION;
             } else
-                potion->id = potion->id & 0xFE00 | 0xBC;
+                potion->id = potion->id & 0xFE00 | ITEM_BOTTLE_OF_WATER;
             slot = FindSlot(potion);
             if (slot > 0)
                 RedisplayInvSlot(slot);
@@ -1984,7 +1984,7 @@ unsigned char far find_TK_wand_check(struct Object far *obj)
 {
     int major, effect;
     unsigned char flag;
-    if (!((obj->id & 0x2000) >> 13) || (obj->id & 0x1FF) != 0x9B)
+    if (!((obj->id & ID_DOORDIR) >> 13) || (obj->id & ID_ITEM) != ITEM_WAND_9B)
         return 0;
     if (!decode_obj_spell(obj, &major, &effect, &flag))
         return 0;
@@ -2026,8 +2026,8 @@ void far remove_TK_wand(void)
             put_at(0xFB, 0xEB, 0x50, wand, 3, 1);
         return;
     }
-    for (x = 0; x < 64; x++)
-        for (y = 0; y < 64; y++) {
+    for (x = 0; x < MAP_SIZE; x++)
+        for (y = 0; y < MAP_SIZE; y++) {
             head = &Map_GetAddr(x, y)->objects.word;
             if (Obj_Check(Obj_PtrTMem(head), find_TK_wand_check)) {
                 wand = Obj_IntTMem(TK_wand);
@@ -2041,7 +2041,10 @@ void far remove_TK_wand(void)
 /* 64: HackTrapVendingMachine_ovr110_4B3C, target size 0x1ED. */
 void far go_vend(int which, int machine, int x, int y, int choice)
 {
-    static int vend_items[8] = {0xB6, 0xB0, 0xBB, 0x125, 0xBC, 3, 0x101, 0x91};
+    static int vend_items[8] = {
+        ITEM_FISH, ITEM_PIECE_OF_MEAT_B0, ITEM_BOTTLE_OF_ALE, ITEM_LEECHES,
+        ITEM_BOTTLE_OF_WATER, ITEM_DAGGER, ITEM_LOCKPICK, ITEM_TORCH
+    };
     struct Object far *item;
     unsigned char price;
     struct StaticObj sample;
@@ -2067,8 +2070,8 @@ void far go_vend(int which, int machine, int x, int y, int choice)
         break;
     case 0x2A:
         sample.ol.f.link = 0;
-        sample.id = sample.id & 0xFE00 | vend_items[player->vars[machine]] & 0x1FF;
-        price = (((int)ComObjData[sample.id & 0x1FF].value + 1) >> 1) + 1;
+        sample.id = sample.id & 0xFE00 | vend_items[player->vars[machine]] & ID_ITEM;
+        price = (((int)ComObjData[sample.id & ID_ITEM].value + 1) >> 1) + 1;
         sample.ol.f.owner = 0;
         get_name(text, (struct Object far *)&sample, 1, 0);
         if (text[0] >= 'a' && text[0] <= 'z')
@@ -2104,8 +2107,8 @@ unsigned char far vend_check_gold(char x, char y, unsigned char money, unsigned 
     head = &tile->objects.word;
     for (coins = Obj_PtrTMem(head); coins && money > 0; coins = next) {
         next = Obj_PtrTMem(&coins->qn.word);
-        if ((coins->id & 0x1FF) == 0xA0) {
-            if (((coins->id & 0x8000) >> 15) && !(coins->ol.f.link & 0x200))
+        if ((coins->id & ID_ITEM) == ITEM_COIN) {
+            if (((coins->id & ID_ISQUANT) >> 15) && !(coins->ol.f.link & LINK_SPECIAL))
                 count = coins->ol.f.link;
             else
                 count = 1;
@@ -2176,7 +2179,7 @@ void far Killorn_just_crashed(unsigned char entering)
     do_sfx(4, 0);
     fadeout3d(5);
     SET_QUEST(54, 1);
-    player->xclock[15]++;
+    player->xclock[XC_CHANGED]++;
     if (!entering)
         Sched_SetAllClocks(1);
 }

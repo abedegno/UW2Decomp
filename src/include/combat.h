@@ -21,6 +21,22 @@ struct MissileInfo {
 };
 
 /* One spell's runes, 4 bytes. */
+/* Spell classes, struct Spell's cls >> 3: do_spell's switch (ovr156) sends each class to
+   the function FM Towns names. Classes 0 to 3 start an active spell (set_curmagic). */
+#define SPELLC_HEAL     4               /* healing */
+#define SPELLC_MISSILE  5               /* release_missile, or aim one for the player */
+#define SPELLC_AREA     6               /* nail_area */
+#define SPELLC_1AREA    7               /* nail_1area */
+#define SPELLC_CREATE   8               /* creat_spell */
+#define SPELLC_BACKFIRE 9               /* backfire */
+#define SPELLC_MANA     10              /* restore_mana */
+#define SPELLC_XT       11              /* xt_spells */
+#define SPELLC_SPECIAL  13              /* special_spells */
+#define SPELLC_CUTSCENE 14              /* show_cutscene */
+
+#define NUM_RUNES       0x18            /* An to Ylem, items FIRST_RUNESTONE on */
+#define RUNE_NONE       0x18            /* an empty place on the rune shelf */
+
 struct Spell {
     unsigned char cls;                  /* class in bits 3-7 */
     int runes;                          /* the three runes, 5 bits each */

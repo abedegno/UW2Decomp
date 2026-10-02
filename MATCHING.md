@@ -76,6 +76,15 @@ What the move to `src/include` showed about Turbo C (each was found by the gate)
 - **Fields at the same offset compile alike whatever the name:** a scalar field and the matching element of an array field (`player->fatigue` against `fatigue[0]`, `PN.pitch` against `PN.vel[2]`), a bitfield and the same bits in another partition of its word, and `(&player->fatigue)[i]` against an array indexed by `i`, all give the same bytes. Only the bits a field covers, its unit (a `char` or an `int` bitfield) and its type matter.
 - **Turbo C 1.01 has no anonymous unions in C,** so a word read both whole and as bitfields is a named union (`union Link`, `struct Object`'s `qn` and `ol`), and every access names the view.
 
+## Named constants
+
+What replacing literals with names showed (the gate passed each):
+
+- **A `#define` whose value is the literal compiles the same,** so keep the define's spelling: hex values from 0x8000 are `unsigned` and decimal ones `long`, so `ID_ISQUANT` is `0x8000`, and a name never replaces a decimal `32768`.
+- **Enum constants compile like the int literal** (Turbo C 1.01 makes them `int`), in `case` labels, comparisons with `char` and bitfield values, array indices and arguments: `enum ObjMajor`, `TileType`, `Font`, `Skill`, `TrapType` all left every byte alone. Only values below 0x8000 suit an enum.
+- **Constant expressions fold before code generation** where the operands are all constants: `first_punt(ERR_LOWMEM | 2)` and `return ERR_READ | 5;` give the same `push`/`mov` of the single value. This does not extend to rewriting an inverse mask as `~NAME` or splitting a literal that is combined with variables, which can change the code (see `~` constants above), so those literals are left as they are.
+- **Adding an `#include` changes nothing but the object's comment records,** provided the header declares no name the file defines.
+
 ## Data
 
 - A file's `_DATA` holds its initialised data in definition order, including the initialisers of local arrays (emitted where the function is), and then the string-literal pool in order of first use. `verify.py` compares it with the EXE, so data the code reads by a fixed DS address may belong to the file itself: look at the bytes around it.

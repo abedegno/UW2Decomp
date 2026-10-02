@@ -27,8 +27,8 @@ void far gronk_race(int race, unsigned char loop, int param,
     list = (unsigned char far *)MK_FP(FP_SEG(ActiveMob), FP_OFF(ActiveMob));
     while ((unsigned)list < LastActiveMob) {
         npc = Obj_IntTMem(*list);
-        if (((npc->id & 0x1C0) >> 6) == 1 &&
-            Creature[npc->id & 0x3F].race == race &&
+        if (((npc->id & ID_MAJOR) >> 6) == MAJOR_CREATURE &&
+            Creature[npc->id & ID_INMAJOR].race == race &&
             !((npc->b0A & 0x80) >> 7)) {
             if (code(npc, param))
                 list--;
@@ -48,7 +48,7 @@ void far gronk_all_critters(unsigned char loop, int param,
     list = (unsigned char far *)MK_FP(FP_SEG(ActiveMob), FP_OFF(ActiveMob));
     while ((unsigned)list < LastActiveMob) {
         npc = Obj_IntTMem(*list);
-        if (((npc->id & 0x1C0) >> 6) == 1) {
+        if (((npc->id & ID_MAJOR) >> 6) == MAJOR_CREATURE) {
             if (code(npc, param))
                 list--;
             if (!loop)
@@ -95,10 +95,10 @@ char far check_alert(int mode, int x, int y);
 
 unsigned char far player_looking(int x, int y)
 {
-    int px = ((ThePlayer->home & 0xFC00) >> 10) * 8 +
-             ((ThePlayer->pos & 0xE000) >> 13);
-    int py = ((ThePlayer->home & 0x3F0) >> 4) * 8 +
-             ((ThePlayer->pos & 0x1C00) >> 10);
+    int px = ((ThePlayer->home & HOME_X) >> 10) * 8 +
+             ((ThePlayer->pos & POS_XFINE) >> 13);
+    int py = ((ThePlayer->home & HOME_Y) >> 4) * 8 +
+             ((ThePlayer->pos & POS_YFINE) >> 10);
     int heading, facing;
     if (check_alert(1, x >> 3, y >> 3))
         return 0;
@@ -117,10 +117,10 @@ char far gronkify_teleport(struct Object far *npc, unsigned char *row)
 {
     struct EventRow copy;
     if (row[10] || (player_looking((unsigned)row[5] << 3, (unsigned)row[6] << 3) == 0 &&
-                    player_looking(((npc->home & 0xFC00) >> 10) * 8 +
-                                    ((npc->pos & 0xE000) >> 13),
-                                    ((npc->home & 0x3F0) >> 4) * 8 +
-                                    ((npc->pos & 0x1C00) >> 10)) == 0)) {
+                    player_looking(((npc->home & HOME_X) >> 10) * 8 +
+                                    ((npc->pos & POS_XFINE) >> 13),
+                                    ((npc->home & HOME_Y) >> 4) * 8 +
+                                    ((npc->pos & POS_YFINE) >> 10)) == 0)) {
         if (teleport_critter(npc, row[5], row[6], row[9])) {
             if (row[11]) {
                 npc->qn.f.quality = row[5];
@@ -131,7 +131,7 @@ char far gronkify_teleport(struct Object far *npc, unsigned char *row)
     }
     if (row[12] > 0) {
         copy = *(struct EventRow *)row;
-        *(unsigned *)copy.b = (unsigned)(player->xclock[0] + row[12]) % 0x48;
+        *(unsigned *)copy.b = (unsigned)(player->xclock[XC_TIME] + row[12]) % 0x48;
         copy.b[3] = 1;
         Sched_Migrate(&copy);
     }
@@ -151,8 +151,8 @@ struct Object far * far Obj_Punt(unsigned far *head, struct Object far *obj, int
 
 int far gronkify_remove(struct Object far *obj)
 {
-    struct Tile far *tile = Map_GetAddr((obj->home & 0xFC00) >> 10,
-                                        (obj->home & 0x3F0) >> 4);
+    struct Tile far *tile = Map_GetAddr((obj->home & HOME_X) >> 10,
+                                        (obj->home & HOME_Y) >> 4);
     return Obj_Punt(&tile->objects.word, obj, 1) == 0;
 }
 
@@ -163,7 +163,7 @@ char far gronkify_slay(struct Object far *npc, unsigned char *row)
 {
     if (!row[7] && npc == talking_to) {
         if (row[8] > 0 && SCD_dseg_67d6_8634[6] == 15 && !row[3])
-            player->xclock[15]++;
+            player->xclock[XC_CHANGED]++;
         return 0;
     }
     instant_kill(npc);
@@ -211,8 +211,8 @@ char far ev_trigger(unsigned char far *row)
     if (params == row) ;
     obj = Obj_PtrTMem(head);
     while (obj) {
-        if (((obj->id & 0x1F0) >> 4 & 0x1E) == 0x1A &&
-            (obj->id & 0xF) == 0xC) {
+        if (((obj->id & ID_CLASS) >> 4 & 0x1E) == CLASS_TRIGGER &&
+            (obj->id & ID_INCLASS) == 0xC) {
             next = Obj_PtrTMem((unsigned far *)((char far *)obj + 4));
             UseTrigger(0L, 0L, obj, 0xC);
         } else {
@@ -282,8 +282,8 @@ char far gronkify_garg(struct Object far *npc, unsigned char *row)
     register unsigned char *p;
     register unsigned char *r = row;
     p = r + 6;
-    if (((npc->home & 0xFC00) >> 10) == p[2] &&
-        ((npc->home & 0x3F0) >> 4) == p[3])
+    if (((npc->home & HOME_X) >> 10) == p[2] &&
+        ((npc->home & HOME_Y) >> 4) == p[3])
         set_numbered_variable(
             *(unsigned *)(p + 4), p[6], *(unsigned *)(p + 7));
     return 0;
@@ -307,8 +307,8 @@ char far gronkify_soldier(struct Object far *npc, unsigned char *row)
     register unsigned char *p = eventRow + 6;
     register int retry;
     if (p[0] || p[1]) {
-        if (((npc->home & 0xFC00) >> 10) == p[0]) {
-            if (((npc->home & 0x3F0) >> 4) == p[1])
+        if (((npc->home & HOME_X) >> 10) == p[0]) {
+            if (((npc->home & HOME_Y) >> 4) == p[1])
                 goto move;
         }
         goto end;
@@ -348,8 +348,8 @@ char far ev_freeze_hack(unsigned char far *row)
     unsigned long values = *(unsigned long far *)(params + 6);
     struct Tile far *tile;
     int x, y;
-    for (x = 0; x < 64; x++) {
-        for (y = 0; y < 64; y++) {
+    for (x = 0; x < MAP_SIZE; x++) {
+        for (y = 0; y < MAP_SIZE; y++) {
             tile = Map_GetAddr(x, y);
             if (((struct TileFlags far *)tile)->floor == ((unsigned char *)&values)[0] &&
                 rand() % 2 == 1) {
@@ -440,7 +440,7 @@ char far Sched_DoEvent(unsigned char far *row)
     unsigned char matching;
     unsigned char result;
     matching = row[2] == PlayerLevel || row[2] == 0xFF ||
-               (PlayerLevel - 1) / 8 == row[2] - 0xF6;
+               (PlayerLevel - 1) / LEVELS_PER_WORLD == row[2] - 0xF6;
     result = 5;
     if (!matching || (signed char)row[4] < 0)
         return result;

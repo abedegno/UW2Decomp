@@ -121,7 +121,7 @@ void far duration_check(void)
             dmg = player->poison--;
             damage_item(ThePlayer, 0L, 0, 0, dmg, 0x10);
         }
-        if ((dmg = skill_check(player->skills[7], 10)) > 0)
+        if ((dmg = skill_check(player->skills[SKILL_MANA], 10)) > 0)
             restore_mana(ThePlayer, -dmg);
     }
     if (plyregen[1] % 30 == 0)
@@ -140,13 +140,13 @@ void far duration_check(void)
     }
     if (plyregen[1] % 60 == 0)
     {
-        player->xclock[0]++;
-        player->xclock[0] = player->xclock[0] % 72;
+        player->xclock[XC_TIME]++;
+        player->xclock[XC_TIME] = player->xclock[XC_TIME] % 72;
         if (get_workspace())
         {
             Sched_SetBuf(0, set_workspace());
             Sched_Load(0);
-            Sched_WrapTime(player->xclock[0], 72, 1);
+            Sched_WrapTime(player->xclock[XC_TIME], 72, 1);
             Sched_Save(0);
             release_workspace();
         }
@@ -169,8 +169,8 @@ char far DegradeLights(int amount, unsigned char counter)
         {
             if ((obj = AskInventory(ValidLightSlots[i])) == 0)
                 continue;
-            light = obj->id & 0x0F;
-            if ((obj->id & 0x1F0) >> 4 != 9 || light < 4 || light >= 8)
+            light = obj->id & ID_INCLASS;
+            if ((obj->id & ID_CLASS) >> 4 != CLASS_LIGHT || light < 4 || light >= 8)
                 continue;
             if ((light = Lights[light].duration) == 0)
                 continue;
@@ -186,7 +186,7 @@ char far DegradeLights(int amount, unsigned char counter)
             else
             {
                 OBJ_QUALITY(obj) = 1;
-                obj->id = obj->id & 0xFFF0 | ((obj->id & 0x0F) - 4) & 0x0F;
+                obj->id = obj->id & 0xFFF0 | ((obj->id & ID_INCLASS) - 4) & 0x0F;
                 RedisplayInvSlot(ValidLightSlots[i]);
                 changed = 1;
             }
@@ -204,11 +204,11 @@ void far sink_sink_sink(void)
     load = 0;
     if (player->max_weight != 0)
         load += (player->weight << 5) / player->max_weight;
-    if ((skill = skill_check(player->skills[19], load)) < 1 && player->swim_count < 0x8C)
+    if ((skill = skill_check(player->skills[SKILL_SWIMMING], load)) < 1 && player->swim_count < 0x8C)
         player->swim_count += rollem(3 - skill, 4);
     if (player->swim_count > 0x78)
     {
-        hurt = 2 - skill_check(player->skills[19], load);
+        hurt = 2 - skill_check(player->skills[SKILL_SWIMMING], load);
         if (hurt)
         {
             fill_FB(0x50);

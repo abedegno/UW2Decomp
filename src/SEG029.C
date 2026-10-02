@@ -20,19 +20,19 @@
 #include "uw2.h"
 #include "view3d.h"
 
-#define OBJ_ITEM(o)     ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-#define OBJ_MINOR(o)    (((o)->id & 0x30) >> 4)
-#define OBJ_INDEX(o)    ((o)->id & 0xF)
-#define OBJ_TENACIOUS(o) (((o)->id & 0x2000) >> 13)
-#define OBJ_ISQUANT(o)  (((o)->id & 0x8000) >> 15)
-#define OBJ_Z(o)        ((o)->pos & 0x7F)
-#define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
+#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
+#define OBJ_INDEX(o)    ((o)->id & ID_INCLASS)
+#define OBJ_TENACIOUS(o) (((o)->id & ID_DOORDIR) >> 13)
+#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
+#define OBJ_Z(o)        ((o)->pos & POS_Z)
+#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
+#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
 
 /* An object pointer's index in the object store. */
 #define MEMTPTR(o)      ((o) < (struct Object far *)objdata ? (o) - critdata \
-                         : (struct StaticObj far *)(o) - objdata + 0x100)
+                         : (struct StaticObj far *)(o) - objdata + NUM_MOBILE)
 
 /* The object store, laid out in the map block by Map_ObjFix. This is the file's _BSS,
    DS:2588..25BB. Turbo C lays out uninitialised data by a hash of the names, not in
@@ -79,7 +79,7 @@ void far Map_ObjFix(void)
     for (t = mapdata, i = 0; i < 0x1000; i++, t++)
         t->objects.f.index = 0;
     critdata = (struct Object far *)(mapdata + 0x1000);
-    objdata = (struct StaticObj far *)(critdata + 0x100);
+    objdata = (struct StaticObj far *)(critdata + NUM_MOBILE);
     critbot = (unsigned far *)(mapdata + 0x1CC0);
     critptr = crittop = critbot + 0xFD;
     objbot = crittop + 1;
@@ -126,7 +126,7 @@ unsigned char far chkTenacious(struct Object far *obj)
 
     if (OBJ_TENACIOUS(obj))
         return 1;
-    if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & 0x200))
+    if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL))
         extra = obj->ol.f.link - 1;
     else
         extra = 0;
@@ -177,9 +177,9 @@ void far Obj_GarbageCollect(int range, int count)
     px = OBJ_HOMEX(ThePlayer);
     py = OBJ_HOMEY(ThePlayer);
     t = mapdata;
-    for (freed = y = 0; y < 0x40; y++) {
+    for (freed = y = 0; y < MAP_SIZE; y++) {
         dy = abs(py - y);
-        for (x = 0; x < 0x40; t++, x++) {
+        for (x = 0; x < MAP_SIZE; t++, x++) {
             if (dy + abs(px - x) > 10 - range) {
                 tilehead = &t->objects;
                 link = *tilehead;
@@ -214,7 +214,7 @@ struct Object far * far Obj_Alloc(char mobile)
             if (objptr < objbot)
                 return 0;
         }
-        return (struct Object far *)(objdata + (*objptr-- - 0x100));
+        return (struct Object far *)(objdata + (*objptr-- - NUM_MOBILE));
     }
 }
 
@@ -228,7 +228,7 @@ void far Obj_Free(struct Object far *obj)
         free_critter(*critptr);
     } else {
         objptr++;
-        *objptr = (struct StaticObj far *)obj - objdata + 0x100;
+        *objptr = (struct StaticObj far *)obj - objdata + NUM_MOBILE;
     }
 }
 
@@ -272,7 +272,7 @@ struct Object far * far Obj_Punt(union Link far *head, struct Object far *obj, c
 
     if (force || Obj_Elem_Fate(10, obj)) {
         link.f.index = Obj_MemTPtr(obj);
-        if (OBJ_MAJOR(obj) == 7)
+        if (OBJ_MAJOR(obj) == MAJOR_ANIMOBJ)
             rem_anim_from_list(link.f.index);
         if (head)
             Obj_FreeLinkChain(head, obj);
@@ -292,7 +292,7 @@ void far Obj_FreeChain(union Link far *head)
         return;
     if (obj->qn.f.next > 0)
         Obj_FreeChain(&obj->qn.link);
-    if (OBJ_MAJOR(obj) == 6) {
+    if (OBJ_MAJOR(obj) == MAJOR_TRAP) {
         trap_obj_del(head, obj);
     } else {
         if (!OBJ_ISQUANT(obj) && obj->ol.f.link > 0)
@@ -317,9 +317,9 @@ struct Object far * far Obj_PtrTMem(union Link far *link)
 {
     if (link == 0 || link->f.index == 0)
         return 0;
-    if (link->f.index < 0x100)
+    if (link->f.index < NUM_MOBILE)
         return critdata + link->f.index;
-    return (struct Object far *)(objdata + (link->f.index - 0x100));
+    return (struct Object far *)(objdata + (link->f.index - NUM_MOBILE));
 }
 
 int far Obj_MemTPtr(struct Object far *obj)
@@ -333,9 +333,9 @@ struct Object far * far Obj_IntTMem(int index)
 {
     if (index == 0)
         return 0;
-    if (index < 0x100)
+    if (index < NUM_MOBILE)
         return critdata + index;
-    return (struct Object far *)(objdata + index - 0x100);
+    return (struct Object far *)(objdata + index - NUM_MOBILE);
 }
 
 struct Object far * far Obj_Find(union Link far *head, char recurse, int index)
@@ -440,7 +440,7 @@ unsigned char far HasOrIsObj(struct Object far *obj, int id)
         return 1;
     if (!OBJ_ISQUANT(obj)) {
         list = &obj->ol.link;
-        if (Obj_InList(&list, 1, id >> 6, (id & 0x30) >> 4, id & 0xF))
+        if (Obj_InList(&list, 1, id >> 6, (id & ID_MINOR) >> 4, id & ID_INCLASS))
             return 1;
     }
     return 0;
@@ -452,13 +452,13 @@ struct Object far * far Obj_FindInMap(int major, int minor, int index, int *x, i
     union Link far *head;
     struct Object far *found = 0;
 
-    if (*x >= 0x40) {
+    if (*x >= MAP_SIZE) {
         *x = 0;
         (*y)++;
     }
     t = mapdata + (*y << 6) + *x;
-    for (; *y < 0x40; (*y)++) {
-        for (; *x < 0x40; (*x)++, t++) {
+    for (; *y < MAP_SIZE; (*y)++) {
+        for (; *x < MAP_SIZE; (*x)++, t++) {
             head = &t->objects;
             if (head->f.index > 0) {
                 if ((found = Obj_InList(&head, 1, major, minor, index)) != 0)
@@ -487,7 +487,7 @@ int far check_weight(union Link far *head, int min, int z, int adjust)
         total_weight = 0;
     for (obj = Obj_PtrTMem(head); obj; obj = Obj_PtrTMem(&obj->qn.link)) {
         if (z < 0 || OBJ_Z(obj) == z) {
-            if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & 0x200))
+            if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL))
                 quantity = obj->ol.f.link;
             else
                 quantity = 1;
@@ -582,8 +582,8 @@ unsigned char far Obj_ListOkay(char how)
     }
     objcount = mobcount = 0;
     t = mapdata;
-    for (y = 0; y < 0x40; y++) {
-        for (x = 0; x < 0x40; x++, t++) {
+    for (y = 0; y < MAP_SIZE; y++) {
+        for (x = 0; x < MAP_SIZE; x++, t++) {
             head = &t->objects;
             if (head->f.index > 0)
                 bad = flog_list(x, y, counts, head) || bad;
@@ -595,7 +595,7 @@ unsigned char far Obj_ListOkay(char how)
         bad = count_list(CursorObjPtr, counts) || bad;
     if (nmobile + mobcount != 0xFF)
         bad = 1;
-    if (nstatic + objcount != 0x300)
+    if (nstatic + objcount != NUM_STATIC)
         bad = 1;
     free(counts);
     return !bad;
@@ -610,7 +610,7 @@ unsigned char far ObjCrunch(char how)
         return 0;
     }
     for (p = critptr; p >= critbot; p--)
-        mem_set(Obj_IntTMem(*p), 0, 0x1B);
+        mem_set(Obj_IntTMem(*p), 0, MOBILE_SIZE);
     for (p = objptr; p >= objbot; p--)
         mem_set(Obj_IntTMem(*p), 0, 8);
     return 1;

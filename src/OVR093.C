@@ -236,14 +236,14 @@ unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len)
                 if (t != (unsigned)size) {
                     close(memfd);
                     unlink(memname);
-                    pfatal_code(0x4002);
+                    pfatal_code(ERR_WRITE | 2);
                 }
             } else {
                 t = FarWrite_ovr167_627(fd, buf, (unsigned)size);
                 if (t != (unsigned)size) {
                     close(memfd);
                     unlink(memname);
-                    pfatal_code(0x4002);
+                    pfatal_code(ERR_WRITE | 2);
                 }
             }
         } else if (off == 0) {
@@ -278,7 +278,7 @@ unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len)
                     unlink(tmpname);
                     close(memfd);
                     unlink(memname);
-                    pfatal_code(0x4002);
+                    pfatal_code(ERR_WRITE | 2);
                 }
                 done += w;
             }
@@ -289,7 +289,7 @@ unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len)
                     unlink(tmpname);
                     close(memfd);
                     unlink(memname);
-                    pfatal_code(0x4002);
+                    pfatal_code(ERR_WRITE | 2);
                 }
                 done += m;
             }
@@ -301,7 +301,7 @@ unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len)
                 unlink(tmpname);
                 close(memfd);
                 unlink(memname);
-                pfatal_code(0x4002);
+                pfatal_code(ERR_WRITE | 2);
             }
             if (extra) {
                 m = 15 * size / 100;
@@ -311,7 +311,7 @@ unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len)
                     unlink(tmpname);
                     close(memfd);
                     unlink(memname);
-                    pfatal_code(0x4002);
+                    pfatal_code(ERR_WRITE | 2);
                 }
                 allocsize = size + (unsigned)m;
             } else
@@ -325,7 +325,7 @@ unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len)
                 unlink(tmpname);
                 close(memfd);
                 unlink(memname);
-                pfatal_code(0x4002);
+                pfatal_code(ERR_WRITE | 2);
             }
             put_ulong(t, blk * 4 + 6, writepos);
             put_ulong(t, arcfile.count * 4 * 3 + blk * 4 + 6, allocsize);

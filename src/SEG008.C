@@ -225,7 +225,7 @@ char far simple_fizix(int turn)
         x = PN.x;
         y = PN.y;
         move_along(heading, dist, &x, &y);
-        if (can_place(0x7F, 1, x / 32, y / 32, ThePlayer->pos & 0x7F, backwards | flying, 8))
+        if (can_place(ITEM_ADVENTURER, 1, x / 32, y / 32, ThePlayer->pos & POS_Z, backwards | flying, 8))
         {
             if (!backwards && nvokTerr != 1 && nvokTerr != lastTerr
                 && (nvokTerr != 0x10 || !flying))
@@ -257,13 +257,13 @@ char far simple_fizix(int turn)
                 curP->height = ComObjData[0x7F].height;
                 curP->x = x / 32;
                 curP->y = y / 32;
-                curP->z = ThePlayer->pos & 0x7F;
+                curP->z = ThePlayer->pos & POS_Z;
                 ObjectCheck(0, 0);
                 process_objlist();
                 for (i = curP->first; i < curP->first + curP->count; i++)
                 {
                     obj = Obj_PtrTMem(&oCollisions[i].link.word);
-                    if ((obj->id & 0x1FF) == 0x1A0)
+                    if ((obj->id & ID_ITEM) == ITEM_MOVE_TRIGGER_1A0)
                         UseTrigger(ThePlayer, 0L, obj, 0);
                 }
                 curP = oldP;
@@ -381,7 +381,7 @@ void far set_player_phys_params(int rate)
         {
             frictionless = 1;
             t = mapdata[GrSq].type;
-            if (t >= 6 && t <= 9)
+            if (t >= TILE_SLOPE_N && t <= TILE_SLOPE_W)
             {
                 slide = t - 6;
                 angle = 0x2F;
@@ -521,7 +521,7 @@ void far phys_affect_player(void)
     register int h;
     register int z;
 
-    z = ThePlayer->pos & 0x7F;
+    z = ThePlayer->pos & POS_Z;
     if (lasts != -1)
     {
         PlayerHeading = lasth;
@@ -567,8 +567,8 @@ void far phys_affect_player(void)
                 dmg = 0;
             if (PN.vel[2] != 0)
                 dmg <<= 1;
-            if (skill_check(player->skills[0x11], dmg << 1) > 0)
-                dmg = dmg * (30 - player->skills[0x11]) / 30;
+            if (skill_check(player->skills[SKILL_ACROBAT], dmg << 1) > 0)
+                dmg = dmg * (30 - player->skills[SKILL_ACROBAT]) / 30;
             if (dmg > 3)
                 damage_item(ThePlayer, 0L, 0, 0, dmg, 0);
             if (dmg > 1 || (PN.terrain & 0x10))
@@ -706,7 +706,7 @@ void far newFPS(char state)
         player->fps = state;
     }
     if (state == 1)
-        r = player->skills[0x13] / 2 + 4;
+        r = player->skills[SKILL_SWIMMING] / 2 + 4;
     else
         r = ratios[state];
     pFPS[0] = Run_FPS * r / 20;
@@ -756,7 +756,7 @@ void far change_GrSq(int sq, register int z)
 void far hgt_change(struct Object far *obj, struct Tile far *tile, int z)
 {
     char r = 1;
-    register int oldz = obj->pos & 0x7F;
+    register int oldz = obj->pos & POS_Z;
 
     SET_Z(obj, z);
     r = check_pplate(obj, tile, oldz, 0xF);

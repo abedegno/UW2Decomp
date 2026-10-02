@@ -33,8 +33,8 @@ void far creature_save_ovr104_17(int fd)
 
 struct Creature * far creature_class_data(void)
 {
-    cr_class = (ActiveObj->id & 0x30) >> 4;
-    cr_type = ActiveObj->id & 0xF;
+    cr_class = (ActiveObj->id & ID_MINOR) >> 4;
+    cr_type = ActiveObj->id & ID_INCLASS;
     return (struct Creature *)((char *)Creature + (cr_class * 16 + cr_type) * 0x30);
 }
 
@@ -56,9 +56,9 @@ char far init_this_critter(struct Object far *obj)
     *(unsigned far *)((unsigned char far *)obj+0x16) = (*(unsigned far *)((unsigned char far *)obj+0x16) & 0xfc0f) | ((y & 0x3f) << 4);
     obj->qn.f.quality = x;
     obj->ol.f.owner = y;
-    cst = (struct Creature *)((char *)Creature + (obj->id & 0x3f) * 0x30);
+    cst = (struct Creature *)((char *)Creature + (obj->id & ID_INMAJOR) * 0x30);
     ((unsigned char far *)obj)[8] = (cst->avghit * (rand() % 0x18 + 0x10)) / 0x20;
-    ((unsigned char far *)obj)[9] = ((obj->pos & 0x380) >> 7) << 5;
+    ((unsigned char far *)obj)[9] = ((obj->pos & POS_HEADING) >> 7) << 5;
     *(unsigned far *)((unsigned char far *)obj+0xb) = (*(unsigned far *)((unsigned char far *)obj+0xb) & 0xfff0) | 8;
     *(unsigned far *)((unsigned char far *)obj+0xb) = *(unsigned far *)((unsigned char far *)obj+0xb) & 0xf00f;
     *(unsigned far *)((unsigned char far *)obj+0xd) = *(unsigned far *)((unsigned char far *)obj+0xd) & 0xfff0;

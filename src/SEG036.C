@@ -26,7 +26,7 @@ struct Object far * far CreateObj(int item, char mobile)
     if (obj == 0L)
         return 0L;
     obj->qn.f.quality = 40;
-    obj->id = obj->id & 0xFE00 | item & 0x1FF;
+    obj->id = obj->id & 0xFE00 | item & ID_ITEM;
     obj->pos = obj->pos & 0xFF80;
     obj->id = obj->id & 0xDFFF;
     obj->id = obj->id & 0xBFFF;
@@ -40,12 +40,12 @@ struct Object far * far CreateObj(int item, char mobile)
     obj->ol.f.owner = 0;
     if (com->stack == 0 || com->stack == 2) {
         obj->ol.f.link = 1;
-        obj->id = obj->id & 0x7FFF | 0x8000;
+        obj->id = obj->id & 0x7FFF | ID_ISQUANT;
     } else {
         obj->id = obj->id & 0x7FFF;
         obj->ol.f.link = 0;
     }
-    if (((obj->id & 0x1C0) >> 6) == 1)
+    if (((obj->id & ID_MAJOR) >> 6) == MAJOR_CREATURE)
         init_this_critter(obj);
     return obj;
 }

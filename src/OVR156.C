@@ -17,17 +17,17 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_ITEM(o)     ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-#define OBJ_INDEX(o)    (((o)->id & 0x3F) >> 0)
+#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_INDEX(o)    (((o)->id & ID_INMAJOR) >> 0)
 #define OBJ_QUALITY(o)  ((o)->qn.f.quality)
-#define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
+#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
+#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
 #define OBJ_GOAL(o)     (((o)->goal_word & 0xF) >> 0)
-#define OBJ_HEADING(o)  (((o)->pos & 0x380) >> 7)
+#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
 #define SET_HEADING(o, v) ((o)->pos = (o)->pos & 0xFC7F | ((v) & 7) << 7)
-#define OBJ_Z(o)        ((o)->pos & 0x7F)
-#define SET_Z(o, v)     ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
+#define OBJ_Z(o)        ((o)->pos & POS_Z)
+#define SET_Z(o, v)     ((o)->pos = (o)->pos & 0xFF80 | (v) & POS_Z)
 #define SET_ATTITUDE(o, v) ((o)->attitude_word = (o)->attitude_word & 0x3FFF | ((v) & 3) << 14)
 
 #define SPELL_CLASS(s)  (((s).cls & 0xF8) >> 3)
@@ -107,9 +107,9 @@ char far do_spell(unsigned char cls, unsigned char sub, struct Object far *who,
             phys_bounce_up(who);
     case 0:
     case 2:
-        if (who == ThePlayer && (sub & ~0xC0) == 5 && cls == 2 && player->xclock[3] == 4) {
+        if (who == ThePlayer && (sub & ~0xC0) == 5 && cls == 2 && player->xclock[XC_DJINN] == 4) {
             game_sprint(0x14F);
-            player->xclock[3] = 5;
+            player->xclock[XC_DJINN] = 5;
         }
     case 3:
         if (who == ThePlayer && set_curmagic(cls, sub & 0x3F, sub & 0xC0))
@@ -166,8 +166,8 @@ void far restore_mana(struct Object far *who, char amount)
     register int gain;
 
     if (who == ThePlayer) {
-        if ((PlayerLevel - 1) / 8 != 5 || (PlayerLevel - 1) % 8 + 1 <= 1
-            || (PlayerLevel - 1) % 8 + 1 >= 8 && OBJ_HOMEX(ThePlayer) >= 25) {
+        if ((PlayerLevel - 1) / LEVELS_PER_WORLD != 5 || (PlayerLevel - 1) % LEVELS_PER_WORLD + 1 <= 1
+            || (PlayerLevel - 1) % LEVELS_PER_WORLD + 1 >= 8 && OBJ_HOMEX(ThePlayer) >= 25) {
             if (amount > 0) {
                 gain = player->max_mana * (amount + (rand() & 3));
                 player->play_mana += (gain >> 4) + 1;
@@ -211,7 +211,7 @@ void far healing(struct Object far *who, char sub)
 {
     unsigned char amount;
 
-    if (OBJ_MAJOR(who) == 1) {
+    if (OBJ_MAJOR(who) == MAJOR_CREATURE) {
         if (sub == 15)
             amount = 0xFF;
         else
@@ -224,7 +224,7 @@ void far backfire(struct Object far *who, char sub)
 {
     char damage;
 
-    if (OBJ_MAJOR(who) != 1)
+    if (OBJ_MAJOR(who) != MAJOR_CREATURE)
         return;
     damage = rollem(sub, 8);
     if (who->hp <= 3)
@@ -274,7 +274,7 @@ char far sp_sheet_light(int x, int y, struct Object far *target, struct Tile far
 {
     struct Object far *obj;
 
-    obj = build_new_obj(0x1C5, tile);
+    obj = build_new_obj(ITEM_LIGHTNING_1C5, tile);
     damage_square(x, y, 2, src);
     if (add_animobj(Obj_MemTPtr(obj), 4, rand() % 4, x, y) == -1)
         Obj_Free(obj);
@@ -296,13 +296,13 @@ char far sp_meteor(int x, int y, struct Object far *target, struct Tile far *til
     last = area_spell_state >> 4;
     count = area_spell_state & 0xF;
     npc = 0;
-    if (target && OBJ_MAJOR(target) == 1)
+    if (target && OBJ_MAJOR(target) == MAJOR_CREATURE)
         npc = 1;
     if (last == square || count >= 5)
         return 0;
     if (!npc && rand() % 3)
         return 0;
-    obj = build_new_obj(0x1C2, tile);
+    obj = build_new_obj(ITEM_EXPLOSION_1C2, tile);
     damage_square(x, y, 1, src);
     if (add_animobj(Obj_MemTPtr(obj), 4, 0, x, y) == -1)
         Obj_Free(obj);
@@ -321,11 +321,11 @@ char far sp_ward_undead(int x, int y, struct Object far *target, struct Tile far
 {
     int damage = 0xFF;
 
-    if (OBJ_ITEM(target) == 0x13)
+    if (OBJ_ITEM(target) == ITEM_SKULL_13)
         return destroy_floatskull(target);
     switch (OBJ_MAJOR(target)) {
-    case 1:
-        if (Creature[target->id & 0x3F].race == 0x17)
+    case MAJOR_CREATURE:
+        if (Creature[target->id & ID_INMAJOR].race == 0x17)
             damage = target->hp / 2;
         if (check_res(target, 1, 0x80) == 0) {
             damage_item(target, Obj_IntTMem(src), x, y, damage, 3);
@@ -338,7 +338,7 @@ char far sp_ward_undead(int x, int y, struct Object far *target, struct Tile far
 char far sp_poison(int x, int y, struct Object far *target, struct Tile far *tile,
                    unsigned char src)
 {
-    if (OBJ_MAJOR(target) != 1)
+    if (OBJ_MAJOR(target) != MAJOR_CREATURE)
         return 0;
     put_effect(target, 7, 4, 0, 7, x, y);
     damage_item(target, Obj_IntTMem(src), x, y, rollem(5, 4), 0x13);
@@ -363,7 +363,7 @@ char far sp_charm(int x, int y, struct Object far *target)
     int whoami;
     int which;
 
-    if (OBJ_MAJOR(target) != 1)
+    if (OBJ_MAJOR(target) != MAJOR_CREATURE)
         return 0;
     if (check_res(target, 1, 3)) {
         which = 0;
@@ -373,7 +373,7 @@ char far sp_charm(int x, int y, struct Object far *target)
             whoami -= 0x8C;
             which = 1;
         }
-        str = get_string((which + 0x15E) | 0x200);
+        str = get_string((which + 0x15E) | STR_GAME);
         if (str[whoami] == '+') {
             change_critter_goal(target, 8, 0);
             SET_ATTITUDE(target, 3);
@@ -397,7 +397,7 @@ char far sp_confusion(int x, int y, struct Object far *target, struct Tile far *
             put_effect(0L, 7, 4, 0, -(OBJ_Z(caster) + 20), tx, ty);
         return 0;
     }
-    if (OBJ_MAJOR(target) != 1)
+    if (OBJ_MAJOR(target) != MAJOR_CREATURE)
         return 0;
     put_effect(target, 7, 4, 0, 7, tx, ty);
     return hit_critter_goal(2, 1, 1, target, tx, ty);
@@ -411,13 +411,13 @@ char far wound_foe(int x, int y, struct Object far *target, struct Tile far *til
 
     if ((splats = damage / 4) >= 4)
         splats = 3;
-    if (OBJ_MAJOR(target) != 1)
+    if (OBJ_MAJOR(target) != MAJOR_CREATURE)
         return 0;
     put_effect(target, effect, 1, splats, 2, x, y);
     damage_item(target, Obj_IntTMem(src), x, y, damage, type);
     if (show) {
-        if (Creature[target->id & 0x3F].avghit)
-            level = target->hp * 3 / Creature[target->id & 0x3F].avghit;
+        if (Creature[target->id & ID_INMAJOR].avghit)
+            level = target->hp * 3 / Creature[target->id & ID_INMAJOR].avghit;
         else
             level = 0;
         if (level >= 3)
@@ -433,7 +433,7 @@ char far sp_shockwave(int x, int y, struct Object far *target, struct Tile far *
     struct Object far *caster;
     int power;
 
-    power = player->skills[9] / 2 + 15;
+    power = player->skills[SKILL_CASTING] / 2 + 15;
     caster = Obj_IntTMem(src);
     if (target == 0) {
         put_effect(0L, 11, 1, 0, -(OBJ_Z(caster) + 20), x, y);
@@ -449,10 +449,10 @@ char far sp_bleed(int x, int y, struct Object far *target, struct Tile far *tile
 {
     int power;
 
-    power = player->skills[9] / 2 + 10;
-    if (OBJ_MAJOR(target) != 1)
+    power = player->skills[SKILL_CASTING] / 2 + 10;
+    if (OBJ_MAJOR(target) != MAJOR_CREATURE)
         return 0;
-    if (!Creature[target->id & 0x3F].blood) {
+    if (!Creature[target->id & ID_INMAJOR].blood) {
         game_sprint(0x12B);
         return 0;
     }
@@ -464,10 +464,10 @@ char far sp_smite(int x, int y, struct Object far *target, struct Tile far *tile
 {
     int power;
 
-    power = player->skills[9] * 3 + 110;
-    if (OBJ_MAJOR(target) != 1)
+    power = player->skills[SKILL_CASTING] * 3 + 110;
+    if (OBJ_MAJOR(target) != MAJOR_CREATURE)
         return 0;
-    if (!Creature[target->id & 0x3F].blood) {
+    if (!Creature[target->id & ID_INMAJOR].blood) {
         game_sprint(0x12B);
         return 0;
     }
@@ -482,14 +482,14 @@ char far sp_frost(int x, int y, struct Object far *target, struct Tile far *tile
     struct Object far *obj;
 
     if (target == 0) {
-        obj = build_new_obj(0x1CA, tile);
+        obj = build_new_obj(ITEM_FROST, tile);
         r = rand() % 3;
         if (add_animobj(Obj_MemTPtr(obj), 4 - r, r, x, y) == -1)
             Obj_Free(obj);
         else
             Obj_Add(&tile->objects.word, obj);
         return 0;
-    } else if (OBJ_MAJOR(target) == 1)
+    } else if (OBJ_MAJOR(target) == MAJOR_CREATURE)
         return wound_foe(x, y, target, tile, src, damage, 0x23, 11, 0);
     else
         damage_item(target, Obj_IntTMem(src), x, y, damage, 0x23);
@@ -502,7 +502,7 @@ char far sp_frost(int x, int y, struct Object far *target, struct Tile far *tile
 char far sp_fear(int x, int y, struct Object far *target, struct Tile far *tile,
                  unsigned char src)
 {
-    if (OBJ_MAJOR(target) != 1)
+    if (OBJ_MAJOR(target) != MAJOR_CREATURE)
         return 0;
     SET_ATTITUDE(target, 1);
     return hit_critter_goal(6, -1, 1, target, x, y);
@@ -523,13 +523,13 @@ char far sp_repel_undead(int x, int y, struct Object far *target, struct Tile fa
         if (rand() % 3 == 0)
             put_effect(0L, 7, 4, 0, -(OBJ_Z(caster) + 20), tx, ty);
         return 0;
-    } else if (OBJ_ITEM(target) == 0x13) {
+    } else if (OBJ_ITEM(target) == ITEM_SKULL_13) {
         area_spell_state += OBJ_QUALITY(target);
         return destroy_floatskull(target);
-    } else if (OBJ_MAJOR(target) == 1 && check_res(target, 1, 0x80) == 0
-               && player->skills[9] * 10 >= area_spell_state) {
+    } else if (OBJ_MAJOR(target) == MAJOR_CREATURE && check_res(target, 1, 0x80) == 0
+               && player->skills[SKILL_CASTING] * 10 >= area_spell_state) {
         if (OBJ_GOAL(target) == 6)
-            ret = wound_foe(tx, ty, target, tile, src, player->skills[9], 3, 11, 0);
+            ret = wound_foe(tx, ty, target, tile, src, player->skills[SKILL_CASTING], 3, 11, 0);
         else
             ret = hit_critter_goal(6, -1, 1, target, tx, ty);
         area_spell_state += target->hp;
@@ -548,9 +548,9 @@ char far sp_hold(int x, int y, struct Object far *target, struct Tile far *tile,
     if (src != 1)
         power = 8;
     else
-        power = player->skills[9] / 3;
+        power = player->skills[SKILL_CASTING] / 3;
     time = (rand() & 0xF) * power + 0x10;
-    if (OBJ_MAJOR(target) == 1 && check_res(target, 1, 0x80) == 1)
+    if (OBJ_MAJOR(target) == MAJOR_CREATURE && check_res(target, 1, 0x80) == 1)
         return hit_critter_goal(15, 1, time, target, x, y);
     return 0;
 }
@@ -570,24 +570,24 @@ void far process_area(char count, unsigned char src, SpellFn fn, unsigned char t
     int x;
     int y;
 
-    if (x0 >= 64)
+    if (x0 >= MAP_SIZE)
         return;
     if (x0 + w < 0)
         return;
-    if (y0 >= 64)
+    if (y0 >= MAP_SIZE)
         return;
     if (y0 + h < 0)
         return;
     if (x0 < 0) {
         w -= -x0;
         x0 = 0;
-    } else if (x0 + w >= 64)
-        w -= x0 + w - 64;
+    } else if (x0 + w >= MAP_SIZE)
+        w -= x0 + w - MAP_SIZE;
     if (y0 < 0) {
         h -= -y0;
         y0 = 0;
-    } else if (y0 + h > 64)
-        h -= y0 + h - 64;
+    } else if (y0 + h > MAP_SIZE)
+        h -= y0 + h - MAP_SIZE;
     if (w <= 0)
         return;
     if (h <= 0)
@@ -598,16 +598,16 @@ void far process_area(char count, unsigned char src, SpellFn fn, unsigned char t
             for (y = y0; y <= y0 + h; y++) {
                 if (x < 0)
                     continue;
-                if (x >= 64)
+                if (x >= MAP_SIZE)
                     continue;
                 if (y < 0)
                     continue;
-                if (y >= 64)
+                if (y >= MAP_SIZE)
                     continue;
                 tile = start + (x - x0) + ((y - y0) << 6);
                 if (type == 0x40 || type == 0x80) {
                     obj = 0;
-                    if (tile->type > 0 && (rand() % (w * h + 3) < count || type == 0x80))
+                    if (tile->type > TILE_SOLID && (rand() % (w * h + 3) < count || type == 0x80))
                         if (fn(x, y, obj, tile, src) && --count == 0)
                             return;
                 }
@@ -617,7 +617,7 @@ void far process_area(char count, unsigned char src, SpellFn fn, unsigned char t
                 while ((obj = Obj_PtrTMem(link)) != 0) {
                     next = *link >> 6 & 0x3FF;
                     if (type == 0x80
-                        || type == 0 && OBJ_MAJOR(obj) == 1 && Obj_MemTPtr(obj) != src
+                        || type == 0 && OBJ_MAJOR(obj) == MAJOR_CREATURE && Obj_MemTPtr(obj) != src
                         || type == 0xC0)
                         if (fn(x, y, obj, tile, src) && --count <= 0)
                             return;
@@ -638,7 +638,7 @@ void far gronk_area(struct Object far *who, char count, SpellFn fn, unsigned cha
     int heading;
 
     index = Obj_MemTPtr(who);
-    if (index < 0x100) {
+    if (index < NUM_MOBILE) {
         src = index;
         heading = (OBJ_HEADING(who) << 5) + (who->b18 & 0x1F);
         x = OBJ_HOMEX(who);
@@ -716,7 +716,7 @@ void far target_spells(struct Object far *target)
     fn = area1_spells[ObjectActorArg];
     caster = ObjectActing;
     index = Obj_MemTPtr(caster);
-    if (index < 0x100)
+    if (index < NUM_MOBILE)
         src = index;
     else
         src = 0;
@@ -757,7 +757,7 @@ void far obj_spells(struct Object far *target, int how, unsigned char b)
 
     switch (ObjectActorArg) {
     case 8:
-        if (OBJ_ITEM(target) != 0x19E && OBJ_ITEM(target) != 0x19F) {
+        if (OBJ_ITEM(target) != ITEM_FLAM_RUNE && OBJ_ITEM(target) != ITEM_TYM_RUNE) {
             game_sprint(0x12E);
             mspell_mused = 0;
         } else {
@@ -787,7 +787,7 @@ void far obj_spells(struct Object far *target, int how, unsigned char b)
         break;
     case 11:
         LookAt(target, 3);
-        if (OBJ_MAJOR(target) != 5 && OBJ_MAJOR(target) != 1
+        if (OBJ_MAJOR(target) != MAJOR_RECT && OBJ_MAJOR(target) != MAJOR_CREATURE
             && ComObjData[OBJ_ITEM(target)].render != 2)
             SET_HEADING(target, 7);
         break;
@@ -809,7 +809,7 @@ void far obj_spells(struct Object far *target, int how, unsigned char b)
     case 15:
         count = 0;
         ok = 1;
-        if (OBJ_ITEM(target) != 0x126) {
+        if (OBJ_ITEM(target) != ITEM_MOONSTONE) {
             game_sprint(0x143);
             mspell_mused = 0;
             break;
@@ -828,10 +828,10 @@ void far obj_spells(struct Object far *target, int how, unsigned char b)
             break;
         }
         if (ok) {
-            item = 0x126;
+            item = ITEM_MOONSTONE;
             x = 0;
             y = 0;
-            while ((found = Obj_FindInMap(item >> 6, (item & 0x30) >> 4, item & 0xF, &x, &y))
+            while ((found = Obj_FindInMap(item >> 6, (item & ID_MINOR) >> 4, item & ID_INCLASS, &x, &y))
                    == target)
                 x++;
             if (found == 0) {
@@ -919,11 +919,11 @@ void far special_spells(struct Object far *who, struct Object far *target, char 
         FixPlayerEquips();
         break;
     case 7:
-        if ((PlayerLevel - 1) / 8 == 8) {
+        if ((PlayerLevel - 1) / LEVELS_PER_WORLD == 8) {
             game_sprint(0x142);
             break;
         }
-        r = player->skills[9];
+        r = player->skills[SKILL_CASTING];
         r += r > 15 ? r - 13 : 0;
         r = r / 5 + 2;
         circle[0] = px;

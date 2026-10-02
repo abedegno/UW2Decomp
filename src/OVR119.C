@@ -378,7 +378,7 @@ int far load_all_gr(void)
     unsigned char ok = 1;
     register FILE *fp;
     if ((fp = fopen("data/allpals.dat", "rb")) == 0)
-        return 0x3008;
+        return ERR_READ | 0x008;
     fread(Palettes, 0x200, 1, fp);
     fclose(fp);
     ok &= load_gr_ems("question");
@@ -407,11 +407,11 @@ int far load_all_gr(void)
     ok &= load_gr_video("scrledge");
     ok &= load_gr_video("optb");
     if (!ok)
-        return 0x3004;
+        return ERR_READ | 0x004;
     ems_page++;
     if (preload_cr(1))
         return 0;
-    return 0x3009;
+    return ERR_READ | 0x009;
 }
 
 /* The level's six door textures into the slots after the 64 textures. */

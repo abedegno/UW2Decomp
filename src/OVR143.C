@@ -19,13 +19,13 @@
 #include "ui.h"
 #include "view3d.h"
 
-#define OBJ_INDEX(o)    (((o)->id & 0x3F) >> 0)
-#define OBJ_Z(o)        ((o)->pos & 0x7F)
-#define OBJ_HEADING(o)  (((o)->pos & 0x380) >> 7)
-#define OBJ_FINEY(o)    (((o)->pos & 0x1C00) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & 0xE000) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
+#define OBJ_INDEX(o)    (((o)->id & ID_INMAJOR) >> 0)
+#define OBJ_Z(o)        ((o)->pos & POS_Z)
+#define OBJ_HEADING(o)  (((o)->pos & POS_HEADING) >> 7)
+#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
+#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
+#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
+#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
 
 /* The file's _DATA starts with these, DS:19DC to DS:19E6, where ovr142's data ends: the
    string after them is at the odd DS:19E7, so this file's word-aligned _DATA starts earlier,
@@ -85,14 +85,14 @@ void far InitPlayerRec(void)
     ThePlayer->ol.f.link = 0;
     ThePlayer->whoami = 0xFD;
     ThePlayer->id = ThePlayer->id & 0x7FFF;
-    ThePlayer->id = ThePlayer->id & 0xDFFF | 0x2000;
+    ThePlayer->id = ThePlayer->id & 0xDFFF | ID_DOORDIR;
     ThePlayer->id = ThePlayer->id & 0xBFFF;
     ThePlayer->pos = ThePlayer->pos & 0xFC7F;
     ThePlayer->b18 = ThePlayer->b18 & 0xE0;
     ThePlayer->qn.f.next = ThePlayer->qn.f.quality = 0;
     ThePlayer->ol.f.link = ThePlayer->ol.f.owner = 0;
     ThePlayer->b11 = 0;
-    ThePlayer->id = ThePlayer->id & 0xFE00 | 0x7F;
+    ThePlayer->id = ThePlayer->id & 0xFE00 | ITEM_ADVENTURER;
 }
 
 void far init_player(void)
@@ -120,7 +120,7 @@ void far init_player(void)
     playerdat = &Creature[OBJ_INDEX(ThePlayer)];
     ThePlayer->hp = playerdat->avghit;
     if (player_name_handle == 0)
-        player_name_handle = make_string((char far *)player, 0x7D);
+        player_name_handle = make_string((char far *)player, STRBLK_PLAYER);
 
     _input_addkey('w', 0x0E, 1, parse_playin);
     _input_addkey('s', 5, 1, parse_playin);
@@ -264,7 +264,7 @@ void far home_cam(int index)
             campos[2] = 0x458;
             camang[1] = -0x400;
         }
-    } else if (index < 0x100) {
+    } else if (index < NUM_MOBILE) {
         obj = Obj_IntTMem(index);
         campos[0] = (OBJ_HOMEX(obj) << 8) + (OBJ_FINEX(obj) << 5);
         campos[1] = (OBJ_HOMEY(obj) << 8) + (OBJ_FINEY(obj) << 5);
@@ -348,7 +348,7 @@ void far attach_eye(int mode)
         }
         break;
     case 0:
-        if (curelem == 0 || (i = Obj_MemTPtr(curelem)) == 0 || i >= 0x100 || i <= 1)
+        if (curelem == 0 || (i = Obj_MemTPtr(curelem)) == 0 || i >= NUM_MOBILE || i <= 1)
             break;
         UsPtr = critdata + i;
         editchng(2);
@@ -371,7 +371,7 @@ void far crystal_ball(struct Object far *obj, int x, int y)
 {
     char automap;
 
-    if (player->skills[0x0B] == 0x2D)
+    if (player->skills[SKILL_SEARCH] == 0x2D)
         return;
     campos[0] = (x << 8) + (OBJ_FINEX(obj) << 5);
     campos[1] = (y << 8) + (OBJ_FINEY(obj) << 5);

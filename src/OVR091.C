@@ -15,5 +15,5 @@ void far animobj_load(int fd)
 /* FM Towns: animobj_class_data. */
 char * far animobj_class_data(void)
 {
-    return animclassd + (ActiveObj->id & 15) * 4;
+    return animclassd + (ActiveObj->id & ID_INCLASS) * 4;
 }

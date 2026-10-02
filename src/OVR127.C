@@ -211,7 +211,7 @@ unsigned far DecompressLZW_disk(unsigned char far *dst, int fd, unsigned char fa
    it. */
 #define GETC() (n ? (n--, tmp = *src, src++, tmp) : -1)
 #define FLUSH() (FarWrite_ovr167_627(fd, work, out - work) != (int)(out - work) ? \
-                 pfatal_code(0x4002) : (void)0, out = work)
+                 pfatal_code(ERR_WRITE | 2) : (void)0, out = work)
 #define PUTC(c) (out < end ? (*out = (c), ++out) : (FLUSH(), *out = (c), ++out))
 
 /* Compresses n bytes from src to file fd, using work (worksize bytes) as the write

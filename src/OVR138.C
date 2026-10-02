@@ -19,15 +19,15 @@
 #include "sys.h"
 #include "ui.h"
 
-#define OBJ_ID(o)       ((o)->id & 0x1FF)
-#define OBJ_INDEX(o)    (((o)->id & 0x3F) >> 0)
-#define OBJ_TYPE(o)     ((o)->id & 0xF)
-#define DOOR_STATE(o)   (((o)->id & 0x1E00) >> 9)
+#define OBJ_ID(o)       ((o)->id & ID_ITEM)
+#define OBJ_INDEX(o)    (((o)->id & ID_INMAJOR) >> 0)
+#define OBJ_TYPE(o)     ((o)->id & ID_INCLASS)
+#define DOOR_STATE(o)   (((o)->id & ID_FLAGS) >> 9)
 #define SET_DOOR_STATE(o, v)    ((o)->id = (o)->id & 0xE1FF | ((v) & 0xF) << 9)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-#define OBJ_CLASS(o)    (((o)->id & 0x1F0) >> 4)
-#define OBJ_MINOR(o)    (((o)->id & 0x30) >> 4)
-#define OBJ_ISQUANT(o)  (((o)->id & 0x8000) >> 15)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
+#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
+#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
 #define OBJ_LINK(o)     ((o)->ol.f.link)
 #define OBJ_QUALITY(o)  ((o)->qn.f.quality)
 #define OBJ_OWNER(o)    ((o)->ol.f.owner)
@@ -74,7 +74,7 @@ void far UseBonesOn(struct Object far *obj, char how)
     CursorObjPtr = 0;
     GameInputMode = 0;
     used = 0;
-    if (OBJ_ID(obj) == 0x165)
+    if (OBJ_ID(obj) == ITEM_GRAVESTONE)
     {
         used = 1;
         game_sprint(0x94);
@@ -131,25 +131,25 @@ void far UseKeyGem(struct Object far *obj, char how, unsigned char other)
 {
     int gem;
 
-    gem = (ObjectActing->id & 0xF) - 7;
+    gem = (ObjectActing->id & ID_INCLASS) - 7;
     unforce_mouse_cursor(3);
     CursorObjPtr = 0;
     GameInputMode = 0;
-    if (how != 0 && !other && OBJ_ID(obj) == 0x168 && OBJ_OWNER(ObjectActing))
+    if (how != 0 && !other && OBJ_ID(obj) == ITEM_LARGE_BLACKROCK_GEM && OBJ_OWNER(ObjectActing))
     {
         if (gem == 4)
-            player->xclock[1]++;
-        do_sfx(4, player->xclock[2] << 2);
+            player->xclock[XC_CASTLE]++;
+        do_sfx(4, player->xclock[XC_GEMS] << 2);
         game_sprint(0x152);
-        player->xclock[2]++;
-        game_sprint(player->xclock[2] + 0x152);
+        player->xclock[XC_GEMS]++;
+        game_sprint(player->xclock[XC_GEMS] + 0x152);
         if ((gem & 6) == 6)
             gem = 13 - gem;
-        player->quest_bytes[2] |= 1 << (gem - 1);
+        player->quest_bytes[QB_GEMS_USED] |= 1 << (gem - 1);
         player->vars[6] = gem - 1;
         using_punt(ObjectActing, how, 1);
         play_effect_here(0x12, 0x40, 0x28);
-        if (player->quest_bytes[2] != 0xFF)
+        if (player->quest_bytes[QB_GEMS_USED] != 0xFF)
             play_effect_here(0x2A, 0x40, 0x14);
         else
             play_effect_here(0x2C, 0x40, 0x14);
@@ -162,7 +162,7 @@ void far UsePoleOn(struct Object far *obj)
 {
     UsingPole = 0;
     FixPlayerEquips();
-    if (OBJ_CLASS(obj) == 0x17)
+    if (OBJ_CLASS(obj) == CLASS_SWITCH)
     {
         game_sprint(0xAB);
         UseObj(ThePlayer, obj, 0);
@@ -178,7 +178,7 @@ void far UseAnvilOn(struct Object far *obj, unsigned char how, unsigned char oth
     unforce_mouse_cursor(3);
     CursorObjPtr = 0;
     GameInputMode = 0;
-    repair_item(obj, player->skills[14], 1);
+    repair_item(obj, player->skills[SKILL_REPAIR], 1);
 }
 
 int far UseFood(struct Object far *who, struct Object far *food, unsigned char how)
@@ -196,7 +196,7 @@ int far UseFood(struct Object far *who, struct Object far *food, unsigned char h
     taste = 0;
     nutrition = 0xFF;
     is_potion = 0;
-    if (OBJ_ISQUANT(food) && !(OBJ_LINK(food) & 0x200))
+    if (OBJ_ISQUANT(food) && !(OBJ_LINK(food) & LINK_SPECIAL))
         qty = OBJ_LINK(food);
     else
         qty = 1;
@@ -212,47 +212,47 @@ int far UseFood(struct Object far *who, struct Object far *food, unsigned char h
     }
     else if (!how)
         return -2;
-    if (OBJ_CLASS(food) == 0xB)
-        nutrition = Food[food->id & 0xF];
+    if (OBJ_CLASS(food) == CLASS_FOOD)
+        nutrition = Food[food->id & ID_INCLASS];
     switch (OBJ_ID(food))
     {
-    case 0xB9:
+    case ITEM_MUSHROOM:
         if (skill_check(playerdat->attr[2], 20))
             restore_mana(ThePlayer, -(rand() * 3L / 0x8000L));
         if (player->shrooms < 3)
             player->shrooms = player->shrooms + 1;
         FixPlayerEquips();
         taste++;
-    case 0x110:
+    case ITEM_EYEBALL:
         taste++;
-    case 0x92:
+    case ITEM_CANDLE:
         taste++;
-    case 0x125:
+    case ITEM_LEECHES:
         taste += 0xF4;
         break;
-    case 0xCE:
+    case ITEM_PLANT_CE:
         taste = 0xFB;
         nutrition = 4;
         break;
-    case 0xCF:
-    case 0x114:
+    case ITEM_PLANT_CF:
+    case ITEM_PLANT_114:
         taste = 0xF8;
         nutrition = 0x17;
         break;
-    case 0xE1:
-    case 0xE2:
-    case 0xE3:
-    case 0xE4:
-    case 0xE5:
-    case 0xE6:
-    case 0xE7:
+    case ITEM_BLACK_POTION:
+    case ITEM_PURPLE_POTION:
+    case ITEM_YELLOW_POTION:
+    case ITEM_GREEN_POTION:
+    case ITEM_RED_POTION:
+    case ITEM_COLORLESS_POTION:
+    case ITEM_BROWN_POTION:
         is_potion = 1;
         taste++;
-    case 0xBB:
+    case ITEM_BOTTLE_OF_ALE:
         taste++;
-    case 0xBD:
+    case ITEM_BOTTLE_OF_WINE:
         taste++;
-    case 0xBC:
+    case ITEM_BOTTLE_OF_WATER:
         taste += 0xFC;
         break;
     default:
@@ -289,7 +289,7 @@ int far UseFood(struct Object far *who, struct Object far *food, unsigned char h
             taste += 0xBB;
         }
         game_sprint(taste);
-        if (OBJ_ID(food) == 0x114 && !player->in_void)
+        if (OBJ_ID(food) == ITEM_PLANT_114 && !player->in_void)
             player->sleepbits = rand() % 4 + 2;
     }
     else if (nutrition < 0)
@@ -327,19 +327,19 @@ int far UseFood(struct Object far *who, struct Object far *food, unsigned char h
         game_sprint(taste);
     switch (OBJ_ID(food))
     {
-    case 0xBE:
-        leftover = 0x13E;
+    case ITEM_MEAT_ON_A_STICK:
+        leftover = ITEM_STICK;
         break;
-    case 0xB0:
-        leftover = 0xC5;
+    case ITEM_PIECE_OF_MEAT_B0:
+        leftover = ITEM_BONE_C5;
         break;
-    case 0xBA:
-        leftover = 0xD2;
+    case ITEM_HONEYCOMB:
+        leftover = ITEM_LUMP_OF_WAX;
         break;
-    case 0xBB:
-    case 0xBC:
-    case 0xBD:
-        leftover = 0x13D;
+    case ITEM_BOTTLE_OF_ALE:
+    case ITEM_BOTTLE_OF_WATER:
+    case ITEM_BOTTLE_OF_WINE:
+        leftover = ITEM_BOTTLE_13D;
         break;
     default:
         leftover = 0;
@@ -352,7 +352,7 @@ int far UseFood(struct Object far *who, struct Object far *food, unsigned char h
     {
         slot = FindSlot(food);
         PlayerDat.weight -= ComObjData[OBJ_ID(food)].mass;
-        food->id = food->id & 0xFE00 | leftover & 0x1FF;
+        food->id = food->id & 0xFE00 | leftover & ID_ITEM;
         PlayerDat.weight += ComObjData[OBJ_ID(food)].mass;
         displayEnc(0);
         leftover = 0;
@@ -379,15 +379,15 @@ void far UseOilOn(struct Object far *obj, unsigned char how, unsigned char other
     int id;
 
     id = OBJ_ID(obj);
-    off = (id == 0x90 || id == 0x94) ? 0 : 4;
+    off = (id == ITEM_LANTERN || id == ITEM_LIT_LANTERN) ? 0 : 4;
     unforce_mouse_cursor(3);
     CursorObjPtr = 0;
     GameInputMode = 0;
     if (!how || !other)
         return;
-    if (id >= 0xCC && id <= 0xCD)
+    if (id >= ITEM_PIECE_OF_WOOD_CC && id <= ITEM_PIECE_OF_WOOD_CD)
     {
-        if (OBJ_ISQUANT(obj) && !(OBJ_LINK(obj) & 0x200) && OBJ_LINK(obj) > 1)
+        if (OBJ_ISQUANT(obj) && !(OBJ_LINK(obj) & LINK_SPECIAL) && OBJ_LINK(obj) > 1)
         {
             InvRemoveOneObject(obj);
             CursorObjPtr = obj;
@@ -399,22 +399,22 @@ void far UseOilOn(struct Object far *obj, unsigned char how, unsigned char other
         if (CursorObjPtr == obj)
         {
             PlayerDat.weight -= ComObjData[OBJ_ID(obj)].mass;
-            obj->id = obj->id & 0xFE00 | 0x91;
+            obj->id = obj->id & 0xFE00 | ITEM_TORCH;
             PlayerDat.weight += ComObjData[OBJ_ID(obj)].mass;
         }
         else
-            obj->id = obj->id & 0xFE00 | 0x91;
+            obj->id = obj->id & 0xFE00 | ITEM_TORCH;
         obj->qn.f.quality = 0x28;
         displayEnc(0);
         RedisplayInvSlot(FindSlot(obj));
     }
-    else if (id == 0x90 || id == 0x91)
+    else if (id == ITEM_LANTERN || id == ITEM_TORCH)
     {
         if (OBJ_QUALITY(obj) == 0x3F)
             game_sprint(off + 0xC3);
         else
         {
-            if (OBJ_ISQUANT(obj) && !(OBJ_LINK(obj) & 0x200) && OBJ_LINK(obj) > 1)
+            if (OBJ_ISQUANT(obj) && !(OBJ_LINK(obj) & LINK_SPECIAL) && OBJ_LINK(obj) > 1)
             {
                 InvRemoveOneObject(obj);
                 CursorObjPtr = obj;
@@ -429,7 +429,7 @@ void far UseOilOn(struct Object far *obj, unsigned char how, unsigned char other
             using_punt(ObjectActing, how, 1);
         }
     }
-    else if (id == 0x94 || id == 0x95)
+    else if (id == ITEM_LIT_LANTERN || id == ITEM_LIT_TORCH)
         game_sprint(off + 0xC1);
     else
         game_sprint(0xC0);
@@ -446,17 +446,17 @@ void far UseBook(struct Object far *obj, unsigned char how)
 
     if (!how)
         return;
-    if ((obj->id & 0xF) > 0xA)
+    if ((obj->id & ID_INCLASS) > 0xA)
         return;
-    if (OBJ_ID(obj) == 0x13A)
+    if (OBJ_ID(obj) == ITEM_MAP)
     {
         game_sprint(0x8E);
         if (inplist->mode == 1)
             newscr(2);
     }
-    else if (OBJ_ID(obj) == 0x139)
+    else if (OBJ_ID(obj) == ITEM_BIT_OF_A_MAP)
     {
-        if (FindObj(4, 3, 0xA, 4, &where))
+        if (FindObj(MAJOR_SPEC, 3, 0xA, 4, &where))
         {
             scrap = OBJ_QUALITY(obj) + 0x47;
             owner = OBJ_OWNER(obj);
@@ -471,7 +471,7 @@ void far UseBook(struct Object far *obj, unsigned char how)
             }
             else
             {
-                obj->ol.f.link = 0x200;
+                obj->ol.f.link = LINK_SPECIAL;
                 game_sprint(9);
                 update_map_scraps(scrap, owner, link);
             }
@@ -479,9 +479,9 @@ void far UseBook(struct Object far *obj, unsigned char how)
         else
             game_sprint(0xA);
     }
-    else if (!(obj->id & 0x1000) || OBJ_MAJOR(obj) == 5)
+    else if (!(obj->id & ID_ENCHANT) || OBJ_MAJOR(obj) == MAJOR_RECT)
     {
-        if (obj->id & 0x400)
+        if (obj->id & ID_FLAG10)
             show_cutscene((OBJ_LINK(obj) & 0x1FF) + 0x100);
         else if ((OBJ_LINK(obj) & 0x1FF) < 0x100)
         {
@@ -491,7 +491,7 @@ void far UseBook(struct Object far *obj, unsigned char how)
             scroll_print(text);
             if ((OBJ_LINK(obj) & 0x1FF) == 6)
                 player->quests[26] = (player->quests[26] & 0xFFFFFFFBL) + 4;
-            str = get_string((OBJ_LINK(obj) & 0x1FF) | 0x600);
+            str = get_string((OBJ_LINK(obj) & 0x1FF) | STR_BOOKS);
             scroll_print(str);
             scroll_print("\n");
         }
@@ -516,7 +516,7 @@ void far UseLockpickOn(struct Object far *obj, unsigned char how)
     unforce_mouse_cursor(3);
     CursorObjPtr = 0;
     GameInputMode = 0;
-    skill = -(player->skills[16] + 1);
+    skill = -(player->skills[SKILL_PICKLOCK] + 1);
     result = checkLock(ThePlayer, obj, skill);
     if (result == 5 && skill_check(player->dexterity, 20) > 0 || result == 4 && skill == -1)
         result = 0;
@@ -582,7 +582,7 @@ void far UseLight(struct Object far *obj, unsigned char how)
     int i;
     int j;
 
-    if (OBJ_ISQUANT(obj) && !(OBJ_LINK(obj) & 0x200))
+    if (OBJ_ISQUANT(obj) && !(OBJ_LINK(obj) & LINK_SPECIAL))
         qty = OBJ_LINK(obj);
     else
         qty = 1;
@@ -606,7 +606,7 @@ void far UseLight(struct Object far *obj, unsigned char how)
     {
         newslot = 0;
         id = OBJ_ID(obj);
-        if (id == 0x91 || id == 0x92 || id == 0x90 || id == 0x93)
+        if (id == ITEM_TORCH || id == ITEM_CANDLE || id == ITEM_LANTERN || id == ITEM_LIGHT_SPHERE)
         {
             for (i = 5; i <= 8; i++)
             {
@@ -630,11 +630,11 @@ void far UseLight(struct Object far *obj, unsigned char how)
             slot = newslot;
         }
     }
-    if ((obj->id & 0xF) >= 4)
-        obj->id = obj->id & 0xFFF0 | ((obj->id & 0xF) - 4) & 0xF;
+    if ((obj->id & ID_INCLASS) >= 4)
+        obj->id = obj->id & 0xFFF0 | ((obj->id & ID_INCLASS) - 4) & 0xF;
     else
     {
-        obj->id = obj->id & 0xFFF0 | ((obj->id & 0xF) + 4) & 0xF;
+        obj->id = obj->id & 0xFFF0 | ((obj->id & ID_INCLASS) + 4) & 0xF;
         play_effect_here(0x20, 0x40, 0);
     }
     FixPlayerEquips();
@@ -647,21 +647,21 @@ void far UseUnique(struct Object far *who, struct Object far *obj, unsigned char
 
     switch (OBJ_ID(obj))
     {
-    case 0x116:
+    case ITEM_BOTTLE_116:
         game_sprint(0x8D);
         break;
-    case 0x111:
-        if (player->xclock[3] >= 6)
+    case ITEM_HORN:
+        if (player->xclock[XC_DJINN] >= 6)
             n++;
         if (n)
             play_instrument(2);
         game_sprint(n + 0x161);
         break;
-    case 0x114:
+    case ITEM_PLANT_114:
         UseFood(ThePlayer, obj, how);
         break;
     default:
-        if (OBJ_ID(obj) >= 0x118 && how)
+        if (OBJ_ID(obj) >= FIRST_BLACKROCK_GEM && how)
             UseThing(obj, UseKeyGem);
         break;
     }
@@ -674,7 +674,7 @@ void far moveDoor(struct Object far *door)
     if ((OBJ_TYPE(door) & 7) == 6)
         len = 4;
     door->ol.f.owner = OBJ_INDEX(door);
-    door->id = door->id & 0xFE00 | 0x1CF;
+    door->id = door->id & 0xFE00 | ITEM_MOVING_DOOR;
     add_animobj(Obj_MemTPtr(door), len, 0, MapObj_X, MapObj_Y);
 }
 
@@ -683,8 +683,8 @@ void far changeDoor(struct Object far *door)
     int cur;
     int len = 5;
 
-    if (OBJ_MAJOR(door) == 5 && (OBJ_TYPE(door) & 7) == 6
-        || OBJ_MAJOR(door) == 7 && (OBJ_OWNER(door) & 7) == 6)
+    if (OBJ_MAJOR(door) == MAJOR_RECT && (OBJ_TYPE(door) & 7) == 6
+        || OBJ_MAJOR(door) == MAJOR_ANIMOBJ && (OBJ_OWNER(door) & 7) == 6)
         len = 4;
     if (DOOR_STATE(door) & 8)
         SET_DOOR_STATE(door, DOOR_STATE(door) & 7);
@@ -702,7 +702,7 @@ void far OpenDoor(struct Object far *who, struct Object far *door)
     int state;
 
     type = OBJ_TYPE(door) & 7;
-    if (OBJ_ID(door) == 0x1CF)
+    if (OBJ_ID(door) == ITEM_MOVING_DOOR)
     {
         state = (OBJ_OWNER(door) >> 0) & 0xF;
         if (state < 8)
@@ -714,7 +714,7 @@ void far OpenDoor(struct Object far *who, struct Object far *door)
     {
         door->ol.f.owner = OBJ_OWNER(door) & 0xFFFE;
         if (OBJ_TYPE(door) != 6)
-            door->pos = door->pos & 0xFF80 | ((door->pos & 0x7F) + 0x18) & 0x7F;
+            door->pos = door->pos & 0xFF80 | ((door->pos & POS_Z) + 0x18) & 0x7F;
         checkTrap(who, door, 8, MapObj_X, MapObj_Y);
         moveDoor(door);
     }
@@ -724,8 +724,8 @@ void far OpenDoor(struct Object far *who, struct Object far *door)
         type = 0x14;
     else
         type = 0xB;
-    play_effect(type, (MapObj_X << 3) + ((door->pos & 0xE000) >> 13),
-                (MapObj_Y << 3) + ((door->pos & 0x1C00) >> 10), 0);
+    play_effect(type, (MapObj_X << 3) + ((door->pos & POS_XFINE) >> 13),
+                (MapObj_Y << 3) + ((door->pos & POS_YFINE) >> 10), 0);
 }
 
 void far CloseDoor(struct Object far *who, struct Object far *door)
@@ -734,7 +734,7 @@ void far CloseDoor(struct Object far *who, struct Object far *door)
     int state;
 
     door_type = OBJ_TYPE(door) & 7;
-    if (OBJ_ID(door) == 0x1CF)
+    if (OBJ_ID(door) == ITEM_MOVING_DOOR)
     {
         state = (OBJ_OWNER(door) >> 0) & 0xF;
         if (state >= 8)
@@ -756,8 +756,8 @@ void far CloseDoor(struct Object far *who, struct Object far *door)
             type = 0x14;
         else
             type = 0xB;
-        play_effect(type, (MapObj_X << 3) + ((door->pos & 0xE000) >> 13),
-                    (MapObj_Y << 3) + ((door->pos & 0x1C00) >> 10), 0);
+        play_effect(type, (MapObj_X << 3) + ((door->pos & POS_XFINE) >> 13),
+                    (MapObj_Y << 3) + ((door->pos & POS_YFINE) >> 10), 0);
     }
 }
 
@@ -797,10 +797,10 @@ void far DumpTheBag(struct Object far *bag, char to_player)
 
 void far UseRune(struct Object far *who, struct Object far *rune)
 {
-    if (OBJ_ID(rune) == 0x19E)
+    if (OBJ_ID(rune) == ITEM_FLAM_RUNE)
     {
         damage_item(who, rune, MapObj_X, MapObj_Y, rollem(3, 4) + 4, 8);
-        rune->id = rune->id & 0xFE00 | 0x1C2;
+        rune->id = rune->id & 0xFE00 | ITEM_EXPLOSION_1C2;
         if (add_animobj(Obj_MemTPtr(rune), 4, 0, MapObj_X, MapObj_Y) == -1)
             return;
         fireball_effect(rune, MapObj_X, MapObj_Y);
@@ -831,14 +831,14 @@ void far UseRect(struct Object far *who, struct Object far *obj)
         {
             if (checkLock(who, obj, 0) == 0)
             {
-                if (OBJ_ID(who) == 0x7F)
+                if (OBJ_ID(who) == ITEM_ADVENTURER)
                 {
                     get_name(name, obj, 0, 0);
                     scroll_print("The ");
                     scroll_print(name);
                     game_sprint(0x170);
-                    play_effect(0x2D, (MapObj_X << 3) + ((obj->pos & 0xE000) >> 13),
-                                (MapObj_Y << 3) + ((obj->pos & 0x1C00) >> 10), 0);
+                    play_effect(0x2D, (MapObj_X << 3) + ((obj->pos & POS_XFINE) >> 13),
+                                (MapObj_Y << 3) + ((obj->pos & POS_YFINE) >> 10), 0);
                 }
             }
             else if (who == ThePlayer || !(OBJ_OWNER(obj) & 1))
@@ -883,33 +883,33 @@ void far UseMagic(struct Object far *who, struct Object far *obj, char how)
     {
         switch (OBJ_ID(obj))
         {
-        case 0x121:
+        case ITEM_BEDROLL:
             if (inplist->mode == 1)
                 player_sleep(1);
             break;
-        case 0x123:
-        case 0x124:
-            play_instrument(OBJ_ID(obj) - 0x123);
+        case ITEM_MANDOLIN:
+        case ITEM_FLUTE:
+            play_instrument(OBJ_ID(obj) - ITEM_MANDOLIN);
             break;
-        case 0x125:
+        case ITEM_LEECHES:
             if (player->poison > 0)
                 game_sprint(0xEF);
             player->poison = 0;
             backfire(ThePlayer, 2);
             using_punt(obj, how, 1);
             break;
-        case 0x128:
+        case ITEM_ROCK_HAMMER:
             UseThing(obj, UseRockHammerOn);
             break;
-        case 0x12B:
+        case ITEM_FISHING_POLE:
             if (go_fish())
             {
-                fish = place_new(0L, 0xB6);
+                fish = place_new(0L, ITEM_FISH);
                 fish->qn.f.quality = 0x3F;
             }
             mouse_release(1);
             break;
-        case 0x12D:
+        case ITEM_OIL_FLASK:
             UseThing(obj, UseOilOn);
             break;
         }
@@ -918,7 +918,7 @@ void far UseMagic(struct Object far *who, struct Object far *obj, char how)
     {
         switch (OBJ_ID(obj))
         {
-        case 0x12E:
+        case ITEM_FOUNTAIN_12E:
             if (OBJ_QUALITY(obj) == 0)
                 game_sprint(0x93);
             else if (decode_obj_spell(obj, &spell, &power, &flag))
@@ -955,26 +955,26 @@ void far UseRockHammerOn(struct Object far *obj, unsigned char how, char other)
     if (Obj_Find(&ThePlayer->ol.word, 1, Obj_MemTPtr(obj)) != 0)
         return;
     id = OBJ_ID(obj);
-    if (id >= 0x153 && id <= 0x156)
+    if (id >= ITEM_LARGE_BOULDER_153 && id <= ITEM_SMALL_BOULDER)
     {
         game_sprint(0x95);
         tile = Map_GetAddr(MapObj_X, MapObj_Y);
-        xoff = (obj->pos & 0xE000) >> 13;
-        yoff = (obj->pos & 0x1C00) >> 10;
-        z = obj->pos & 0x7F;
+        xoff = (obj->pos & POS_XFINE) >> 13;
+        yoff = (obj->pos & POS_YFINE) >> 10;
+        z = obj->pos & POS_Z;
         Obj_Punt(&tile->objects.word, obj, 1);
-        for (count = (int)(rand() * 2L / 0x8000L) + (0x155 - id) + 1; count > 0; count--)
+        for (count = (int)(rand() * 2L / 0x8000L) + (ITEM_BOULDER - id) + 1; count > 0; count--)
         {
             rock = CreateObj(1, 0);
             if (rock == 0)
                 break;
             n = id + (int)(rand() * 2L / 0x8000L) + 1;
-            if (n > 0x156)
-                n = 0x10;
-            rock->id = rock->id & 0xFE00 | n & 0x1FF;
-            if (n == 0x10)
+            if (n > ITEM_SMALL_BOULDER)
+                n = ITEM_SLING_STONE;
+            rock->id = rock->id & 0xFE00 | n & ID_ITEM;
+            if (n == ITEM_SLING_STONE)
             {
-                rock->id = rock->id & 0x7FFF | 0x8000;
+                rock->id = rock->id & 0x7FFF | ID_ISQUANT;
                 rock->ol.f.link = rand() % 6 + 3;
             }
             if (!put_at((MapObj_X << 3) + xoff, (MapObj_Y << 3) + yoff, z, rock, 6, 0))
@@ -988,19 +988,19 @@ void far UseRockHammerOn(struct Object far *obj, unsigned char how, char other)
 
 void far UseUtil(struct Object far *obj, char how)
 {
-    if (OBJ_ID(obj) >= 0xC2 && OBJ_ID(obj) <= 0xC6)
+    if (OBJ_ID(obj) >= ITEM_SKULL_C2 && OBJ_ID(obj) <= ITEM_PILE_OF_BONES_C6)
     {
         if (how)
             UseThing(obj, UseBonesOn);
     }
-    else if (OBJ_ID(obj) == 0xD7)
+    else if (OBJ_ID(obj) == ITEM_ANVIL)
         UseThing(obj, UseAnvilOn);
-    else if (OBJ_ID(obj) == 0xD8)
+    else if (OBJ_ID(obj) == ITEM_POLE)
     {
         UsingPole = 1;
         FixPlayerEquips();
         UseThing(obj, UsePoleOn);
     }
-    else if (how && (OBJ_ID(obj) == 0xCE || OBJ_ID(obj) == 0xCF))
+    else if (how && (OBJ_ID(obj) == ITEM_PLANT_CE || OBJ_ID(obj) == ITEM_PLANT_CF))
         UseFood(ThePlayer, obj, how);
 }

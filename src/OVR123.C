@@ -16,7 +16,7 @@
 #include "player.h"
 #include "ui.h"
 
-#define OBJ_ID(o)       ((o)->id & 0x1FF)
+#define OBJ_ID(o)       ((o)->id & ID_ITEM)
 
 extern struct Inplist near *inplist;
 extern char far Transparency;
@@ -36,7 +36,7 @@ char far add_rune(struct Object far *obj)
 {
     int rune;
 
-    rune = OBJ_ID(obj) - 0xE8;
+    rune = OBJ_ID(obj) - FIRST_RUNESTONE;
     if (rune < 0 || rune > 0x18)
         return 0;
     Obj_Free(obj);
@@ -54,7 +54,7 @@ void far clear_runes(void)
 
 void far ShowRune(int rune)
 {
-    pic_to_screen(rune + 0xE8, (rune & 3) * 0x12 + 0xF1, 0xBC - (rune >> 2) * 0xF,
+    pic_to_screen(rune + FIRST_RUNESTONE, (rune & 3) * 0x12 + 0xF1, 0xBC - (rune >> 2) * 0xF,
                   ((rune & 3) + 1) * 0x12 + 0xEC, 0xBC - ((rune >> 2) + 1) * 0xF + 2);
 }
 
@@ -63,7 +63,7 @@ void far RedispRune(void)
     int i;
 
     mouse_hide();
-    for (i = 0; i < 0x18; i++)
+    for (i = 0; i < NUM_RUNES; i++)
         if (player->runebag[i >> 3] >> 7 - (i & 7) & 1) {
             Transparency = 1;
             ShowRune(i);
@@ -74,7 +74,7 @@ void far RedispRune(void)
 
 void far clear_shelf(void)
 {
-    memset(player->shelf, 0x18, 3);
+    memset(player->shelf, RUNE_NONE, 3);
     player->nrunes = 0;
     set_runes(player->shelf);
 }
@@ -93,7 +93,7 @@ void far mous_in_rune(void)
         if (player->runebag[rune >> 3] >> 7 - (rune & 7) & 1) {
             if (inplist->cmd & 2) {
                 obj.ol.f.link = 0;
-                obj.id = obj.id & 0xFE00 | (rune + 0xE8) & 0x1FF;
+                obj.id = obj.id & 0xFE00 | (rune + FIRST_RUNESTONE) & ID_ITEM;
                 obj.ol.f.owner = 0;
                 LookAt((struct Object far *)&obj, 0);
             } else {
@@ -130,7 +130,7 @@ void far try_clear(void)
     if (player->active_spells > idx) {
         if (inplist->cmd & 2) {
             parse_aspells(active);
-            scroll_print(get_string(active[idx] + 0x180 | 0xC00));
+            scroll_print(get_string(active[idx] + 0x180 | STR_SPELLS));
             stab = player->spells[idx] >> 8;
             if (stab <= 2)
                 stab = 0;
@@ -203,18 +203,18 @@ char far player_cast(unsigned char idx)
         return fail_spell(0);
     if (level * 3 > player->play_mana)
         return fail_spell(1);
-    if ((sub = skill_check(player->skills[9], level * 3)) == 0)
+    if ((sub = skill_check(player->skills[SKILL_CASTING], level * 3)) == 0)
         return fail_spell(2);
     if (sub == -1) {
         game_sprint(0xE5);
-        cls = 9;
+        cls = SPELLC_BACKFIRE;
         sub = level / 2;
     } else
         sub = spells[idx].sub;
     spell_delay = (level * 2 - player->level) * 4 + 0x80;
     lstime = player->game_clock;
     mspell_mused = level * 3;
-    if (cls != 5 && cls != 7) {
+    if (cls != SPELLC_MISSILE && cls != SPELLC_1AREA) {
         player->play_mana -= mspell_mused;
         mspell_mused = 0;
     }
@@ -228,16 +228,16 @@ char far player_cast(unsigned char idx)
         case 2:
             sfx = 0x2C;
             break;
-        case 5:
+        case SPELLC_MISSILE:
             sfx = 0xFF;
             break;
-        case 6:
+        case SPELLC_AREA:
             if (minor != 0x81)
                 sfx = 0x2B;
             else
                 sfx = 0x2A;
             break;
-        case 7:
+        case SPELLC_1AREA:
             switch (minor) {
             case 0:
             case 2:
@@ -250,16 +250,16 @@ char far player_cast(unsigned char idx)
                 break;
             }
             break;
-        case 8:
+        case SPELLC_CREATE:
             if (minor == 5) {
                 sfx = 0x29;
                 break;
             }
         case 1:
-        case 4:
-        case 9:
-        case 10:
-        case 11:
+        case SPELLC_HEAL:
+        case SPELLC_BACKFIRE:
+        case SPELLC_MANA:
+        case SPELLC_XT:
             if (minor == 0xC) {
                 sfx = 0x29;
                 break;

@@ -23,12 +23,12 @@
 #include "ui.h"
 #include "uw2.h"
 
-#define OBJ_ID(o)       ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-#define OBJ_MINOR(o)    (((o)->id & 0x30) >> 4)
-#define OBJ_INDEX(o)    ((o)->id & 0xF)
-#define OBJ_CLASS(o)    (((o)->id & 0x1F0) >> 4)
-#define OBJ_ISQUANT(o)  (((o)->id & 0x8000) >> 15)
+#define OBJ_ID(o)       ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_MINOR(o)    (((o)->id & ID_MINOR) >> 4)
+#define OBJ_INDEX(o)    ((o)->id & ID_INCLASS)
+#define OBJ_CLASS(o)    (((o)->id & ID_CLASS) >> 4)
+#define OBJ_ISQUANT(o)  (((o)->id & ID_ISQUANT) >> 15)
 
 extern struct Player PlayerDat;
 extern union Link Inventory[];
@@ -255,7 +255,7 @@ char far invRemoveObject(struct Object far *obj, int qty)
         obj = Obj_Find(&ThePlayer->ol.word, 1, index);
         if (obj == 0)
             return 0;
-        if (qty > 0 && OBJ_ISQUANT(obj) && !(obj->ol.f.link & 0x200)
+        if (qty > 0 && OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL)
             && (have = obj->ol.f.link) > 1 && qty < have) {
             copy = Obj_Alloc(0);
             *(struct StaticObj far *)copy = *(struct StaticObj far *)obj;
@@ -278,7 +278,7 @@ struct Object far * far RemoveAllFromSlot(int major, int minor, int cls, registe
     struct Object far *inslot;
 
     taken = removeFromSlot(major, minor, cls, slot, 0);
-    if ((inslot = Obj_PtrTMem(&Inventory[slot].word)) != 0 && OBJ_MAJOR(inslot) == 2
+    if ((inslot = Obj_PtrTMem(&Inventory[slot].word)) != 0 && OBJ_MAJOR(inslot) == MAJOR_MISC
         && OBJ_MINOR(inslot) == 0 && OpenBag != 0) {
         FixOpenBag();
         DisplayOpenBag();
@@ -293,7 +293,7 @@ struct Object far * far RemoveOneFromSlot(int major, int minor, int cls, registe
     struct Object far *inslot;
 
     taken = removeFromSlot(major, minor, cls, slot, 1);
-    if ((inslot = Obj_PtrTMem(&Inventory[slot].word)) != 0 && OBJ_MAJOR(inslot) == 2
+    if ((inslot = Obj_PtrTMem(&Inventory[slot].word)) != 0 && OBJ_MAJOR(inslot) == MAJOR_MISC
         && OBJ_MINOR(inslot) == 0 && OpenBag != 0) {
         FixOpenBag();
         DisplayOpenBag();
@@ -337,7 +337,7 @@ struct Object far * far takeFromSlot(int major, int minor, int cls, int slot, in
                 return 0;
         }
     }
-    if (qty != 0 && OBJ_ISQUANT(obj) && !(obj->ol.f.link & 0x200)
+    if (qty != 0 && OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL)
         && (have = obj->ol.f.link) > 1 && qty < have) {
         copy = Obj_Alloc(0);
         *(struct StaticObj far *)copy = *(struct StaticObj far *)obj;
@@ -378,7 +378,7 @@ unsigned char far ObjWorn(register int id, register int slot)
         return 1;
     if (player->lefty + 7 != slot)
         return 0;
-    if ((id >> 6) == 0 && (id & 0x30) >> 4 >= 2 && (id & 0xF) >= 0xB && (id & 0xF) <= 0xF)
+    if ((id >> 6) == MAJOR_HACK && (id & ID_MINOR) >> 4 >= 2 && (id & ID_INCLASS) >= 0xB && (id & ID_INCLASS) <= 0xF)
         return 1;
     return 0;
 }
@@ -398,7 +398,7 @@ int far DamageInventory(int slot, unsigned char damage, unsigned char type, int 
         return -2;
     if (how != 2) {
         if (how == 0) {
-            if (OBJ_CLASS(obj) != 0)
+            if (OBJ_CLASS(obj) != CLASS_WEAPON)
                 return -2;
         } else if (!ObjWorn(OBJ_ID(obj), slot))
             return -2;
@@ -421,7 +421,7 @@ int far DamageInventory(int slot, unsigned char damage, unsigned char type, int 
         return -1;
     strcpy(text, "Your ");
     if (obj == ThePlayer)
-        obj->id = obj->id & 0xFE00 | 0xF;
+        obj->id = obj->id & 0xFE00 | ITEM_FIST;
     get_name(text + strlen(text), obj, 0, 0);
     if (text[strlen(text) - 1] == 's')
         strcat(text, " were");
@@ -439,7 +439,7 @@ int far ItemWeight(struct Object far *obj)
     register struct ComObj *com;
 
     com = &ComObjData[OBJ_ID(obj)];
-    if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & 0x200))
+    if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL))
         mass = obj->ol.f.link * com->mass;
     else {
         mass = com->mass;

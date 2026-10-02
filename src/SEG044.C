@@ -16,16 +16,16 @@
 #include "ui.h"
 #include "uw2.h"
 
-#define OBJ_ITEM(o)     ((o)->id & 0x1FF)
-#define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-#define OBJ_CLASS(o)    ((o)->id & 0x1F0)
-#define OBJ_MINOR4(o)   ((o)->id & 0xF)
-#define OBJ_FLAGS(o)    (((o)->id & 0x1E00) >> 9)
-#define OBJ_Z(o)        ((o)->pos & 0x7F)
-#define OBJ_FINEY(o)    (((o)->pos & 0x1C00) >> 10)
-#define OBJ_FINEX(o)    (((o)->pos & 0xE000) >> 13)
-#define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
-#define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
+#define OBJ_ITEM(o)     ((o)->id & ID_ITEM)
+#define OBJ_MAJOR(o)    (((o)->id & ID_MAJOR) >> 6)
+#define OBJ_CLASS(o)    ((o)->id & ID_CLASS)
+#define OBJ_MINOR4(o)   ((o)->id & ID_INCLASS)
+#define OBJ_FLAGS(o)    (((o)->id & ID_FLAGS) >> 9)
+#define OBJ_Z(o)        ((o)->pos & POS_Z)
+#define OBJ_FINEY(o)    (((o)->pos & POS_YFINE) >> 10)
+#define OBJ_FINEX(o)    (((o)->pos & POS_XFINE) >> 13)
+#define OBJ_HOMEX(o)    (((o)->home & HOME_X) >> 10)
+#define OBJ_HOMEY(o)    (((o)->home & HOME_Y) >> 4)
 
 #define SET_ITEM(o, v)    ((o)->id = (o)->id & 0xFE00 | (v) & 0x1FF)
 #define SET_MAJOR(o, v)   ((o)->id = (o)->id & 0xFE3F | ((v) & 7) << 6)
@@ -117,7 +117,7 @@ void far toast_animobj(int n, int frames)
         do_animobj(n, animlist[n].len);
     switch (cls) {
     case 0xF:
-        major = 5;
+        major = MAJOR_RECT;
         minor = obj->ol.f.owner >> 4;
         state = (obj->ol.f.owner >> 0) & 0xF;
         z = OBJ_Z(obj);
@@ -215,7 +215,7 @@ void far do_animobj(int n, register int frames)
     register int cls;
 
     obj = Obj_PtrTMem(&animlist[n].link);
-    if (OBJ_CLASS(obj) != 0x1C0)
+    if (OBJ_CLASS(obj) != FIRST_ANIMOBJ)
         return;
     cls = OBJ_MINOR4(obj);
     type = animclassd[cls].flags;
@@ -323,8 +323,8 @@ void far fireball_effect(struct Object far *src, int x, int y)
 
 unsigned char far mts_doanim(struct Object far *obj, int x, int y, char who)
 {
-    int from[3] = { 0x14, 0x15, 0x1D };
-    int to[3] = { 0x1C2, 0x1C5, 0x1C2 };
+    int from[3] = { ITEM_FIREBALL_14, ITEM_LIGHTNING_BOLT, ITEM_FIREBALL_1D };
+    int to[3] = { ITEM_EXPLOSION_1C2, ITEM_LIGHTNING_1C5, ITEM_EXPLOSION_1C2 };
     int i;
 
     for (i = 0; i < 3; i++)
@@ -347,7 +347,7 @@ unsigned char far put_effect(struct Object far *who, int cls, int len, unsigned 
     struct Object far *p;
     unsigned char h;
 
-    if ((p = CreateObj(cls + 0x1C0, 0)) == 0)
+    if ((p = CreateObj(cls + FIRST_ANIMOBJ, 0)) == 0)
         return 0;
     if (who) {
         SET_FINEX(p, OBJ_FINEX(who));
@@ -378,7 +378,7 @@ unsigned char far CreateAnimoForSrcObject_seg044_368F_CE3(struct Object far *src
     struct Object far *p;
     unsigned char h;
 
-    if ((p = CreateObj(cls + 0x1C0, 0)) == 0)
+    if ((p = CreateObj(cls + FIRST_ANIMOBJ, 0)) == 0)
         return 0;
     SET_FINEX(p, finex);
     SET_FINEY(p, finey);
@@ -444,7 +444,7 @@ unsigned char far check_door(int n, int frames)
     limit = 5;
     obj = Obj_PtrTMem(&animlist[n].link);
     minor = (obj->ol.f.owner >> 0) & 0xF;
-    item = (obj->ol.f.owner >> 4 << 4) + minor + 0x140;
+    item = (obj->ol.f.owner >> 4 << 4) + minor + FIRST_RECT;
     z = OBJ_Z(obj);
     if ((minor & 7) != 6)
         z -= 0x18;
@@ -452,8 +452,8 @@ unsigned char far check_door(int n, int frames)
     YP = animlist[n].y;
     if (!can_place(item, Obj_MemTPtr(obj), (XP << 3) + OBJ_FINEX(obj),
                    (YP << 3) + OBJ_FINEY(obj), z, 1, 8)) {
-        if (OBJ_MAJOR(obj) == 5 && (obj->id & 7) == 6
-            || OBJ_MAJOR(obj) == 7 && (obj->ol.f.owner & 7) == 6)
+        if (OBJ_MAJOR(obj) == MAJOR_RECT && (obj->id & 7) == 6
+            || OBJ_MAJOR(obj) == MAJOR_ANIMOBJ && (obj->ol.f.owner & 7) == 6)
             limit = 4;
         SET_FLAGS(obj, OBJ_FLAGS(obj) & 7);
         checkTrap(0L, obj, 8, XP, YP);
