@@ -10,7 +10,41 @@ This is a fan research project, not affiliated with or endorsed by the rights ho
 
 **All of UW2's C code is matched: 337,327 of 337,327 bytes, in 99 source files under `src/`.** Every file compiles with Turbo C++ 1.01 to the same machine code as the shipped `UW2.EXE`, and `tools/verify.py` confirms its fixups (every call and global reference), its initialised data and its uninitialised data layout. Function and global names are the originals from the FM Towns build wherever it has them.
 
-**All of the assembly is matched too: ten modules, 71,920 bytes, assembled with Turbo Assembler 2.0** and verified the same way. They are seg001 (screen memory and rectangle save/restore), seg002 (a run/skip/dump decoder), seg003 (graphics), seg004 (the 3D renderer, 386 code), seg017, seg020, seg021 (startup and input), seg022 (the Miles AIL 2.0 sound API), seg045 (now `SEG045.C`) and seg046 (Borland's overlay manager from OVERLAY.LIB). seg013 is C with inline assembly. Every code segment in `UW2.EXE` outside the C runtime library now rebuilds byte for byte.
+**All of the assembly is matched too: ten modules, 71,920 bytes, assembled with Turbo Assembler 2.0** and verified the same way. They are seg001 (screen memory and rectangle save/restore), seg002 (a run/skip/dump decoder), seg003 (graphics), seg004 (the 3D renderer, 386 code), seg017, seg020, seg021 (startup and input), seg022 (the Miles AIL 2.0 sound API), seg045 (now `src/conv/GRDB.C`) and seg046 (Borland's overlay manager from OVERLAY.LIB). seg013 is C with inline assembly. Every code segment in `UW2.EXE` outside the C runtime library now rebuilds byte for byte.
+
+## Where the sources are
+
+Each DOS code segment is one original source file, and the sources are grouped by subsystem under `src/`, with the shared headers in `src/include/`:
+
+```
+src/
+  game/     main and start-up (UWEDIT.C), the main loop, the player, skills, saving and restoring
+  obj/      the object lists, object classes, using and looking at objects, animated objects
+  critter/  critter AI and path finding, critter classes and art pages
+  motion/   physics, collision and movement of the player and objects
+  combat/   combat, damage, missiles, runes and spells
+  map/      the level map, texture maps, lighting
+  3d/       the 3D view: the render database and object sorting in C, seg004's 14 renderer modules
+  gfx/      seg003's 14 graphics library modules, sprites, art loading, cutscenes, palettes
+  ui/       input, the mouse, panels, the message scroll, menus, options, strings, the automap
+  inv/      the inventory
+  conv/     the conversation interpreter, its built-ins, bartering
+  event/    SCD schedules and events, triggers and traps, world events
+  sound/    sound and music, and the Miles AIL 2.0 API (AIL.ASM)
+  sys/      seg021's 17 system modules, memory and EMS, archives and compression, errors, helpers
+  lib/      Borland's overlay manager (OVERLAY.ASM, from OVERLAY.LIB)
+  include/  the shared headers
+```
+
+**The names.** No UW2 build, string or document names a UW2 source file, so the names come from three kinds of evidence, recorded per file in `map/filenames.tsv` (segment, old file, new file, kind, evidence):
+
+- **original** (9 files): the name is in a related code base with the same functions doing the same job. Eight come from System Shock's source release (Looking Glass, 1994, built on the Underworld engine, its RCS headers giving each file's original path): `gfx/VALLOC.ASM` (valloc, vfree), `3d/INTERP.ASM` (17 of the model interpreter's opcode handlers, System Shock's `interp.asm`), `ui/INPUT.C` (init_input), `combat/DAMAGE.C` (damage_object), `ui/GAMESTRN.C` (init_strings, get_string), `ui/WRAPPER.C` (draw_button), `game/GAMEWRAP.C` (copy_file) and `game/PLAYER.C` (init_player; this is ovr143, which sets up the player, and ovr154, until now `PLAYER.C`, is `game/SKILLS.C`). `sound/AIL.ASM` is the module of Miles' public-domain AIL 2.14 source that has the same procedures.
+- **inferred** (34): consistent with the FM Towns names or with a System Shock file's job but not proven: a module prefix (`obj/OBJECTS.C` for Obj_, `event/SCHEDULE.C` for Sched_, `sys/ARC.C` for arc_, `gfx/GRFX.C`, `gfx/CUTS.C`, `conv/BABL.C`, the object class files `obj/ANIMOBJ.C`, `HACK.C`, `MISC.C` ... after their `*_class_data`), a file named after its first function (`game/MAINLOOP.C`, `ui/AUTOMAP.C`), or a System Shock file with the same job (`critter/AI.C`, `critter/PATHFIND.C`, `motion/PHYSICS.C`, `ui/MOUSE.C`, `3d/GAMESORT.C`, `obj/EFFECT.C`, `event/TRIGGER.C` ...). `game/UWEDIT.C`, the file with main, is named after the program: TLINK stored `uwedit.exe` in UW2.EXE, and the file has init_edit and editexit.
+- **descriptive** (111): our name for what the file does, such as `conv/BARTER.C` or `combat/SPELLS.C`. Modules of seg003 and seg021 whose job is not yet known keep a family prefix and their module letter (`gfx/GRLIBF.ASM`, `sys/SYSLIBL.ASM`).
+
+**Finding a source.** A source is known to the tools by its stem (the file name without extension, unique across the tree; its object is `build/STEM/STEM.OBJ`) and by its DOS segment, its `/* target: */` line. `tools/sources.py` finds sources in every directory under `src/` and looks one up by segment, and the link order in `tools/extract.py` is written by segment, so renaming or moving a file needs no tool change. `grep -rl 'target: ovr154' src` finds a segment's file.
+
+**What a file name changes in the object, and why the EXE does not change.** Turbo C names a file's code segment `FILE_TEXT` and each `far` variable's segment `FILE<n>_FAR`, and TASM does the same for an assembly module written with `.model` and `.code` (`VALLOC_TEXT`, `AIL_TEXT`); other assembly modules name their segments themselves and keep the names they had (`SEG003_TEXT`, shared by seg003's 14 modules). The EXE stores no segment names, and TLINK places segments in the order it first meets them, so names only have to agree where two modules share a segment: `3d/SETPNT.ASM` declares `GRIDDB_TEXT`, the code segment of the C file it shares seg019 with. `tools/extract.py` takes the names it declares early (seg000 to seg004, seg020 to seg022) from the objects.
 
 ## Linking
 
@@ -20,12 +54,12 @@ This is a fan research project, not affiliated with or endorsed by the rights ho
 - **The link order comes from the EXE.** TLINK writes relocations module by module and lists every segment in the overlay manager's segment table, so both record the original order. seg000 to seg004 precede C0's `_TEXT`, and seg003, seg004 and seg045 come from a second library linked after `CM.LIB`.
 - **TLINK stores some of its environment in the EXE.** The output name must be `uwedit.exe` (written into `__EXENAME__`) and the DOS date 12 May 1993 (`__EXEDATE__`). UW2's start-up code is `C0.ASM` with three small changes, which `link.py` applies to a copy.
 - **Objects link exactly as compiled.** An overlay whose publics come out in the wrong order (Turbo C lists them by a hash of the name, and TLINK numbers stub entries from that order), an unknown name, a public UW2 had `static` or a missing relocation stops the link with the source to correct.
-- **Original module structure:** seg003, seg004 and seg021 were libraries of 14, 14 and 17 assembly modules (`src/SEG003A..N.ASM`, `SEG004A..N`, `SEG021A..Q`), recovered from the relocation order and TLINK's zero padding between modules; seg045 is one Turbo C module.
+- **Original module structure:** seg003, seg004 and seg021 were libraries of 14, 14 and 17 assembly modules (`src/gfx/GRMISC.ASM` .. `GRLIBN.ASM`, `src/3d/EXPAND.ASM` .. `PGCACHE.ASM`, `src/sys/STARTUP.ASM` .. `C3DENTRY.ASM`; `map/filenames.tsv` lists them in module order), recovered from the relocation order and TLINK's zero padding between modules; seg045 is one Turbo C module.
 - **Remaining difference: two bytes.** The linked EXE matches `UW2.EXE` byte for byte, relocation table order included, except the overlay segment table's code flag for seg003 and seg004 (1 where UW2 has 0). TLINK 3.01 sets that flag only for a class spelled exactly `CODE`; a class `Code` gives 0 but moves the segments, so the original's combination is still unexplained (possibly a different TLINK 3.0x).
 - **Same-length source changes are safe.** The extracted modules keep literal DGROUP offsets, so a change that alters data sizes shifts data under them.
 - `--obj STEM=PATH` links a changed object in place of the matched one.
 
-Every byte of code now has source, including seg000 (the sprite module), seg018 (the divide-by-zero trap) and `SetPnt`. DGROUP's data is in the sources too, apart from eight small unreferenced gaps no evidence can attribute and the second library's data, which would need seg003, seg004 and seg021 split into their original modules. Of the 22 far data segments that hold bytes, 12 are `far` variables in the C files that defined them (Turbo C gives each its own segment, and their link order shows the owner; `verify.py` checks them like any other data) and 7, whose owner is unknown, come from `src/FARDATA.ASM`; the three left, about 83 KB, are the graphics and 3D modules' data, including the 3D object models, and the bytes before each module's first relocated pointer are still taken from your EXE.
+Every byte of code now has source, including seg000 (the sprite module), seg018 (the divide-by-zero trap) and `SetPnt`. DGROUP's data is in the sources too, apart from eight small unreferenced gaps no evidence can attribute and the second library's data, which would need seg003, seg004 and seg021 split into their original modules. Of the 22 far data segments that hold bytes, 12 are `far` variables in the C files that defined them (Turbo C gives each its own segment, and their link order shows the owner; `verify.py` checks them like any other data) and 7, whose owner is unknown, come from `src/sys/FARDATA.ASM`; the three left, about 83 KB, are the graphics and 3D modules' data, including the 3D object models, and the bytes before each module's first relocated pointer are still taken from your EXE.
 
 `matched.txt` lists the matched segments; `map/files.tsv` has per-file status.
 
@@ -36,7 +70,7 @@ Every byte of code now has source, including seg000 (the sprite module), seg018 
 - **Run the exact link once first.** `python3 tools/link.py`, with every source matching, keeps in `build/LINK/base` a copy of each matched object, the SHA-1 of its source and where verify.py found its data (extract.py writes it only when every object verifies). The modding build works out the layout from those, so the extracted modules keep their places next to their neighbours whatever the changed objects do.
 - **Then edit and link.** Each source whose text differs from that run's is compiled with its own `/* opts: */` into `build/MODLINK/src`; the matched objects in `build/` are left alone, so the exact link still works once you revert. The EXE goes to `build/MODLINK/out/UW2.EXE` and is not compared with yours. With no source changed it is the exact link's EXE.
 - **What moves safely:** everything the linker places. Calls, globals, strings and pointer initialisers in the C are fixups; the extracted modules hold no relocated word and no DGROUP pointer; and the four DGROUP addresses the sources wrote as numbers are names now. In this build the model interpreter's opcode table in the extracted data is written as names too. `tools/addrscan.py` lists numbers that could be addresses, and docs/LAYOUT.md is the audit.
-- **What is still fixed:** the internal layout of the far data segments seg_370D, seg052_519C and dseg062_62a6 (partly taken from your EXE, partly from the assembly) and of the code in seg003, seg004 and seg021, which the assembly addresses by number. Change those modules and `src/FARDATA.ASM` only at the same length. DGROUP has about 22 KB to spare. A new source file needs a place in extract.py's link order first.
+- **What is still fixed:** the internal layout of the far data segments seg_370D, seg052_519C and dseg062_62a6 (partly taken from your EXE, partly from the assembly) and of the code in seg003, seg004 and seg021, which the assembly addresses by number. Change those modules and `src/sys/FARDATA.ASM` only at the same length. DGROUP has about 22 KB to spare. A new source file needs a place in extract.py's link order first.
 - `--obj STEM=PATH` works here too, in place of the compiled object.
 
 ## The map
@@ -48,7 +82,7 @@ Every byte of code now has source, including seg000 (the sprite module), seg018 
 - 884 of the 1886 non-library functions have a confirmed original name. Tested by holding out known pairs, confirmed names were right 80 times out of 82, and both misses disagree with a hand-made anchor rather than a proven one.
 - The rest are mostly DOS-only code with no FM Towns counterpart: the assembly, a few DOS-specific C files (ovr095 and the small resident segments seg011 to seg019), and a stretch at the very end (ovr158 onwards) past the last anchor.
 
-`map/filenames.tsv` proposes original file names from the System Shock source release (Looking Glass, 1994, built on the Underworld engine): six strong candidates where a function name and the file's job both agree, eleven plausible ones. They are lineage names, not recovered ones, so the sources keep their segment names for now.
+`map/filenames.tsv` gives every source's name, the segment it is and the name it had before, and how good the name is (see [Where the sources are](#where-the-sources-are)).
 
 Rebuild it with `tools/doslist.py`, `tools/callpairs.py`, `tools/anchors.py`, `tools/callgraphs.py`, `tools/align.py` and `tools/files.py`, in that order; each describes itself.
 
@@ -83,7 +117,7 @@ The declarations the sources share live in `src/include/`, one header per subsys
 
 ### Working on one file
 
-`.venv/bin/python tools/match.py src/PLAYER.C` compiles the file and reports every function as MATCH or where it differs. `--dis NAME` shows an instruction diff. `.venv/bin/python tools/verify.py src/PLAYER.C --update` then checks fixups and data, and merges the file's externs into `symbols.tsv`, refusing any conflict. See [MATCHING.md](MATCHING.md) for the compiler switches and what the compiler's output reveals about the original source.
+`.venv/bin/python tools/match.py src/game/SKILLS.C` compiles the file and reports every function as MATCH or where it differs. `--dis NAME` shows an instruction diff. `.venv/bin/python tools/verify.py src/game/SKILLS.C --update` then checks fixups and data, and merges the file's externs into `symbols.tsv`, refusing any conflict. See [MATCHING.md](MATCHING.md) for the compiler switches and what the compiler's output reveals about the original source.
 
 ## Contributing
 

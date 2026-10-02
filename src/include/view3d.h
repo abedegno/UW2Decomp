@@ -41,7 +41,7 @@ struct Gloc {
                                            faces (seg019) */
 };
 
-/* SEG019.C: building the 3D view's render database from the map */
+/* GRIDDB.C: building the 3D view's render database from the map */
 extern int loopx;
 extern int loopy;
 extern struct Object far *UsPtr;
@@ -72,7 +72,7 @@ void far set_graphics_level(void);
 void far process_grid(void);
 void far do_3d_pickup(void);
 
-/* SEG032.C: setting up the 3D view */
+/* VIEW3D.C: setting up the 3D view */
 extern int chgtable[4][3];
 extern unsigned headmod[4];
 extern unsigned char trans_grid[4][16];
@@ -91,13 +91,13 @@ void far do_3d_grab(void);
 void far render_FB(void);
 void far establish_view(void);
 
-/* SEG033.C: drawing one object into the 3D view's render database */
+/* DRAWOBJ.C: drawing one object into the 3D view's render database */
 extern unsigned char ActDoors[6];  /* the level's door textures */
 void far do_rect(unsigned char model, struct Object far *o, char heading, int tex);
 void far do_door(unsigned char item, struct Object far *o);
 void far do_obj(struct Object far *o);
 
-/* SEG034.C: sorting the 3D view */
+/* GAMESORT.C: sorting the 3D view */
 extern unsigned char locsqmod;
 extern int mptrmod;
 extern int sd_xmod;  /* _sd_xmod and _sd_ymod in FM Towns */
@@ -109,7 +109,7 @@ void far sort_setup(char mode);
 void far do_objsort(union Link far *link);
 void far clear_objsort(void);
 
-/* SEG004F.ASM */
+/* TMAPOPS.ASM */
 extern unsigned char far CmapCache[];  /* 4FAF:E3C9 */
 extern unsigned char far CmapFrm[];  /* 4FAF:E2C9 */
 extern unsigned char far CmaptoPg[];  /* 4FAF:E0C9 */
@@ -129,7 +129,7 @@ extern unsigned far seg052_519C_E4D4;  /* 4FAF:E4D4 */
 extern unsigned char far tmap_fpage;
 extern unsigned char far tmap_inpage;
 
-/* SEG004N.ASM */
+/* PGCACHE.ASM */
 extern unsigned far *grs_off;  /* EMS page and paragraph, or video address, per slot */
 extern unsigned far *obj_tab;  /* two words per object; only the first is set by ovr119 */
 

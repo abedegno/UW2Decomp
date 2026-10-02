@@ -2,7 +2,7 @@
 
     .venv/bin/python tools/addrscan.py [--all] [--ida] [--jumps] [--entries] [STEM ...]
 
-The objects are the matched builds (build/STEM/STEM.OBJ; SEG046 is skipped, the link takes the
+The objects are the matched builds (build/STEM/STEM.OBJ; seg046's, lib/OVERLAY.ASM, is skipped, the link takes the
 overlay manager from OVERLAY.LIB). Every operand with no fixup on it that could be an address
 is listed, with the segment it goes through; lines marked * may reach DGROUP (or a segment
 the scan cannot name) and need reading. docs/LAYOUT.md has the review of the last run.
@@ -86,10 +86,11 @@ def ida_text():
     return out
 
 def objects():
-    for src in sorted(glob.glob(os.path.join(root, 'src', '*.C')) + glob.glob(os.path.join(root, 'src', '*.ASM'))):
+    from sources import all_sources, stem as stem_of
+    for src in all_sources():
         m = re.search(r'/\*\s*target:\s*(\w+)\s*\*/', open(src, encoding='latin1').read(3000))
         if not m: continue
-        stem = os.path.splitext(os.path.basename(src))[0].upper()
+        stem = stem_of(src)
         obj = os.path.join(root, 'build', stem, stem + '.OBJ')
         if os.path.exists(obj): yield stem, src, m.group(1), obj
 
@@ -159,7 +160,7 @@ def scan(stem, src, seg, obj, ida, a, dsnames, segname):
         st0 = PUBSTATE.get(n)
         if n in CREFS: st0 = entry if st0 is None else st0.merge(entry)
         if st0 is not None: starts[off] = st0 if off not in starts else starts[off].merge(st0)
-    # seg003's dispatcher (_seg003_0272_5311 in SEG003K) is entered with the routine's offset
+    # seg003's dispatcher (_seg003_0272_5311 in GRDISP) is entered with the routine's offset
     # in BP (`mov bp,offset X`) and calls it with DS = ES = SS = seg_370D, the segment the
     # graphics data (FD51) is in: `mov ax,seg seg_370D; mov ds,ax; mov es,ax; ... mov
     # ss,ds:[558Ch]` (558C holds that paragraph: see the summary). So a label loaded into BP
@@ -454,7 +455,7 @@ def main():
         if src.upper().endswith('.C'):
             o = fixups(open(obj, 'rb').read()); CREFS.update(n for n in o['ext'] if n)
     risky = 0; total = 0
-    objs = [x for x in objects() if x[0] != 'SEG046']     # the overlay manager links from OVERLAY.LIB
+    objs = [x for x in objects() if not x[2].startswith('seg046')]     # the overlay manager links from OVERLAY.LIB
     # the assembly modules call each other: an entry's state is what its callers hold, so
     # scan them all until that stops changing
     for rnd in range(20):

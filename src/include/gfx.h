@@ -42,7 +42,7 @@ struct CutsState {
     } flags;                            /* 0x5B */
 };
 
-/* SEG000.ASM */
+/* SPRITE.ASM */
 void far change_sprite(int spr, int x, int y, int w, int h);
 /* The sprite library, seg000. create_sprite is called with one argument and with three,
    so its callers had no prototype for it, and it is declared without one. */
@@ -54,21 +54,21 @@ void far move_sprite(int spr, int x, int y);
 void far set_yoff(int spr, int yoff);
 void far update_sprites(void);
 
-/* SEG001.ASM */
+/* VALLOC.ASM */
 void far restore_rect(int handle);
 void far save_rect(int handle, int x, int y, int w, int h);
 void far seg001_023B_C(void);  /* assembly, DOS only */
 int far valloc(int w, int h);
 void far vfree(int);
 
-/* SEG003D.ASM */
+/* SCALEBM.ASM */
 extern unsigned char far ShowClip;  /* 370D:0DC4, FM Towns _ShowClip */
 extern unsigned char far cXfer[];
 
-/* SEG003J.ASM */
+/* GRCORE.ASM */
 extern int far *Color_data_ptr;  /* DS:21B8 */
 extern unsigned far *Ytab;
-extern unsigned char far *background_color;  /* DS:21C8, reused from SEG038.C */
+extern unsigned char far *background_color;  /* DS:21C8, reused from SKILLCHK.C */
 void far box(int a, int b, int c, int d);
 extern unsigned char far *bytefont;
 void far clear_window(void);
@@ -129,7 +129,7 @@ struct Bitmap {
 #define BM_4BIT_RLE     8               /* 4-bit, run-length */
 #define BM_4BIT         0xA             /* 4-bit, uncompressed */
 
-/* SEG009.C: graphic resource lookup, decoding, cursor drawing and image scaling */
+/* GRSPIC.C: graphic resource lookup, decoding, cursor drawing and image scaling */
 void far * far seg009_7(int icon);
 void far seg009_73(int icon, int x, int y, int height, int width);
 void far * far grs_unpack(void far *data);
@@ -147,7 +147,7 @@ void far mask_to_screen(int icon, int x, int y, int width, int height, int clip)
 unsigned far seg009_392(int index);
 void far * far grs_scaledown(unsigned char far *source, int width, int height, int scale);
 
-/* SEG023.C: palette colour cycling */
+/* COLCYCLE.C: palette colour cycling */
 void far rotate_bank(unsigned char first, unsigned char count, unsigned char up);
 void far cycle_colors(unsigned char t);
 
@@ -169,7 +169,7 @@ enum Font {
 #define PAL_MAP         1               /* the automap (ovr094) */
 #define PAL_CHARGEN     3               /* character creation (ovr101) */
 
-/* OVR118.C: graphics start-up, fonts and palettes */
+/* GRFX.C: graphics start-up, fonts and palettes */
 /* IDA OpenFont, ovr118. FM Towns game_stats calls a set_font_size_ wrapper here, but every
    other FM Towns call site, and the map's call-graph pairing, give grfx_quikfont_. */
 void far grfx_quikfont(int n);
@@ -181,7 +181,7 @@ void far fadein3d(int n);
 void far fill_FB(int colour);
 void far cameras_fade(void);
 
-/* OVR119.C: art loading */
+/* LOADGR.C: art loading */
 extern unsigned first_button;
 extern unsigned first_tmobj;
 extern unsigned first_vram;
@@ -193,7 +193,7 @@ unsigned char far read_gr_far(char *art, int image, void far *dst);
 int far load_all_gr(void);
 void far load_doors(void);
 
-/* OVR108.C: the cutscene player */
+/* CUTS.C: the cutscene player */
 int far cutsop_txt(unsigned far *code, struct CutsState *st);
 int far cutsop_erase(unsigned far *code, struct CutsState *st);
 int far cutsop_func(unsigned far *code, struct CutsState *st);
@@ -244,7 +244,7 @@ void far free_cuts_ems(void);
 void far anm_sound_callback(void);
 void far init_cutscene(void);
 
-/* SEG037.C: the screen furniture around the 3D view */
+/* PANELS.C: the screen furniture around the 3D view */
 extern unsigned char wframe[0x1F];
 void far adjust_flasks(int which);
 void far adjust_compass(void);
@@ -273,13 +273,13 @@ void far restore_sliding_panel(int redraw);
 void far send_FB(void);
 void far player_look_shaft(void);
 
-/* OVR131.C: the credits */
+/* CREDITS.C: the credits */
 void far show_credits(void);
 
 /* FARDATA.ASM */
 extern unsigned char far cmpbuf1_start[];
 extern unsigned char far cmpbuf2_start[];
-/* the digital effects' buffer (SEG016.C) */
+/* the digital effects' buffer (SOUND.C) */
 /* the digital buffers; name provisional */
 extern char far dfx_buffer[];
 extern unsigned long far gr_offs[];

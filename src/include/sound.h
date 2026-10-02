@@ -27,7 +27,7 @@ struct DrvrDesc {
     int io, irq, dma, drq;              /* 0x0C */
 };
 
-/* SEG016.C: sound and music */
+/* SOUND.C: sound and music */
 extern struct SoundBuff dsbuf[2];
 extern unsigned char speechok;
 extern int sphdriver;
@@ -69,7 +69,7 @@ void far change_music_maybe(void);
 unsigned char far speech_available(void);
 void far free_speech_stuff(void);
 
-/* SEG022.ASM */
+/* AIL.ASM */
 unsigned far AIL_default_timbre_cache_size(int drv);
 void far AIL_define_timbre_cache(int drv, void far *cache, unsigned size);
 struct DrvrDesc far * far AIL_describe_driver(int drv);

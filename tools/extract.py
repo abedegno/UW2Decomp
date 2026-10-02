@@ -20,16 +20,16 @@ What is extracted, and the evidence for each piece:
 - Code with no source: none. Found by
   subtracting what the objects cover from the segment extents in the overlay manager's
   segment table (__SEGTABLE__: 0xAE entries of {paragraph, end, flags, start} that TLINK
-  writes for every segment, in order). seg000 (SEG000.ASM), seg018 (SEG018.ASM), SetPnt at
+  writes for every segment, in order). seg000 (SPRITE.ASM), seg018 (INT0TRAP.ASM), SetPnt at
   the start of seg019's segment (SETPNT.ASM) and the function ending seg043's segment
-  (SEG043B.C) used to be extracted here too; they now have sources. Zero bytes between the
+  (now the end of ui/SCROLL.C) used to be extracted here too; they now have sources. Zero bytes between the
   modules of seg003 (one, to a word), seg004 and seg021 (to a paragraph), and the 15 ending
   seg021's segment, are TLINK's alignment padding, not extracted.
 - The 29 far data segments between C0's _FARDATA and the overlay manager's data (segment table
   entries 50 to 78), each with the alignment its start implies: para when it starts on a fresh
   paragraph after a gap, byte when it starts exactly where the previous one ended, word when
   it skips one byte to an even address. Empty entries are kept: the original link had them.
-  Entries that a /* fardata */ source defines (src/FARDATA.ASM: the zero-filled buffers
+  Entries that a /* fardata */ source defines (src/sys/FARDATA.ASM: the zero-filled buffers
   and small tables) are only declared here, empty, to keep the order; the source, linked
   right after XFAR, fills them, and each of its segments is compared with the EXE first.
   Entries a C file defines (its own far segments, FILE<n>_FAR, placed and compared by
@@ -71,6 +71,7 @@ import sys, os, re, struct, json, glob, io, contextlib
 here = os.path.dirname(os.path.abspath(__file__)); root = os.path.dirname(here)
 sys.path.insert(0, here)
 from fixups import fixups
+from sources import all_sources, stem as stem_of, target as target_of, by_segment, family
 
 EXE = os.environ.get('UW2_EXE', os.path.expanduser('~/UWGOG/UW2/UW2.EXE'))
 # --mod: the modding build (see the README's "Modding build"). The layout is worked out from
@@ -110,11 +111,12 @@ STUB = {SEGS[i][1]: i for i in range(91, 168)}
 
 # ---- objects --------------------------------------------------------------------------
 OBJS = {}
-for src in sorted(glob.glob(os.path.join(root, 'src', '*.C')) + glob.glob(os.path.join(root, 'src', '*.ASM'))):
+TARGETS = {stem_of(p): target_of(p) for p in all_sources()}
+for src in all_sources():
     m = re.search(r'/\*\s*target:\s*(\w+)\s*\*/', open(src, encoding='latin1').read(3000))
     if not m: continue
-    stem = os.path.splitext(os.path.basename(src))[0].upper()
-    if stem == 'SEG046': continue      # the overlay manager: linked from OVERLAY.LIB itself
+    stem = stem_of(src)
+    if stem == by_segment('seg046', TARGETS): continue      # the overlay manager: linked from OVERLAY.LIB itself
     obj = os.path.join(root, 'build', stem, stem + '.OBJ')
     if MOD:
         obj = os.path.join(BASE, stem + '.OBJ')
@@ -261,16 +263,18 @@ for name, off in (('__exitclean', 0x113), ('__exit', 0x133), ('__restorezero', 0
     define(('FAR', TEXT_PARA, off), name)
 
 # ---- far data with a source -------------------------------------------------------------
-# A source marked /* fardata */ (src/FARDATA.ASM) defines whole far data segments, each
+# A source marked /* fardata */ (src/sys/FARDATA.ASM) defines whole far data segments, each
 # named FDnn after its segment table entry; link.py assembles it into build/STEM before
 # this runs. Each segment must equal the EXE's bytes, and holds no relocations. XFAR then
 # declares that entry empty (keeping the EXE's segment order) and the source fills it.
 FARSRC = {}      # segment table entry -> stem
 FAROBJS = {}     # stem -> object path
 _tsvnames = {l.split('\t')[0] for l in open(os.path.join(root, 'symbols.tsv')) if not l.startswith('#')}
-for src in sorted(glob.glob(os.path.join(root, 'src', '*.ASM'))):
+FARPATHS = {}    # stem -> source path
+for src in all_sources():
+    if not src.upper().endswith('.ASM'): continue
     if not re.search(r'/\*\s*fardata\s*\*/', open(src, encoding='latin1').read(3000)): continue
-    stem = os.path.splitext(os.path.basename(src))[0].upper()
+    stem = stem_of(src); FARPATHS[stem] = src
     obj = os.path.join(root, 'build', stem, stem + '.OBJ')
     if MOD: obj = os.path.join(BASE, stem + '.OBJ')
     elif not os.path.exists(obj) or os.path.getmtime(obj) < os.path.getmtime(src):
@@ -347,8 +351,8 @@ for ob in OBJS.values():
 for n, a in list(REFS.items()):
     if a[0] == 'FAR' and a[1] == DS_PARA: REFS[n] = ('DS', a[2])
 # One name, two variables: verify.py keeps one address per name, so an extern whose segment
-# words in one file point somewhere else than everyone else's goes unnoticed (OVR108's
-# sound_fpage is the one-byte far variable at 6388:0000; SEG016's and SEG042's is DS:34AA).
+# words in one file point somewhere else than everyone else's goes unnoticed (CUTS's
+# sound_fpage is the one-byte far variable at 6388:0000; SOUND's and TMPALLOC's is DS:34AA).
 # Such a file gets its own alias for the name, at the address its own bytes give.
 PRE = {}; RETARGET = {}
 for stem, ob in OBJS.items():
@@ -387,25 +391,29 @@ for stem, ob in OBJS.items():
 # seg045 interleaved (a second library: their _DATA follows the C library's and seg045's
 # _BSS is the last in DGROUP), then the overlay manager. seg001 and seg002 carry no data and
 # seg002 and seg020 no relocations, so their places are free; they go next to their code.
-# SEG018 (one relocation, its far call) and SETPNT (none, but it must declare seg019's segment
+# seg018 (one relocation, its far call) and SetPnt (none, but it must declare seg019's segment
 # before XSEG020 declares seg020's) sit where XSEG018, the extracted module that held both, was;
-# SEG000 where its relocations put it; SEG043B, the end of seg043's segment, right after SEG043.
-RES = ['SEG%03d' % n for n in range(6, 17)] + ['XEMPTY18', 'SEG017', 'SEG018', 'SETPNT', 'XSEG020', 'SEG020', 'SEG000', 'SEG021A',
-       'SEG001', 'SEG002', 'SEG022'] + ['SEG%03d' % n for n in range(23, 33)] + ['SEG019'] + \
-      ['SEG%03d' % n for n in range(33, 44)] + ['SEG043B', 'SEG044', 'XFAR']
-# SEG043B.C is the function ending seg043's segment, and its relocations show it was the last
-# function of seg043's own source (they fall inside the run of SEG043's, in the same record):
-# once it is moved into SEG043.C and SEG043B.C removed, it simply drops out of the list.
-if 'SEG043B' not in OBJS: RES.remove('SEG043B')
+# seg000 where its relocations put it.
+#
+# The sources are named here by their DOS segment (their /* target: */ line, tools/sources.py),
+# not by file name: S('seg039') is the stem of the file whose target is seg039_3452, and
+# M('seg003', 'B') the second module of seg003's library (the modules in segment order, A
+# first). The object of each is build/STEM/STEM.OBJ.
+def S(seg): return by_segment(seg, TARGETS)
+def M(seg, letters): return [family(seg, TARGETS)[ord(c) - ord('A')] for c in letters]
+RES = [S('seg%03d' % n) for n in range(6, 17)] + ['XEMPTY18', S('seg017'), S('seg018')] + M('seg019', 'A') + \
+      ['XSEG020', S('seg020'), S('seg000')] + M('seg021', 'A') + [S('seg001'), S('seg002'), S('seg022')] + \
+      [S('seg%03d' % n) for n in range(23, 33)] + [S('seg019')] + \
+      [S('seg%03d' % n) for n in range(33, 45)] + ['XFAR']
 OVLNUMS = list(range(91, 168))
 # The second library, after the C library, in the order of its modules' relocations (TLINK
 # takes a library's modules in library order): seg003, seg004 and seg021 are each several
-# modules (src/SEG003A.ASM .. SEG003N, SEG004A .. SEG004N, SEG021B .. SEG021Q; SEG021A, the
-# first module of seg021's segment, is in the resident list above). Modules with no
-# relocations sit next to their neighbours in the same segment.
-LATE = ['SEG021' + c for c in 'BCDEFGHIJKLM'] + ['SEG004' + c for c in 'ABCDE'] + ['SEG003A'] + \
-       ['SEG021' + c for c in 'NOPQ'] + ['SEG045'] + ['SEG004' + c for c in 'FGHIJKLM'] + \
-       ['SEG003' + c for c in 'BCD'] + ['SEG004N'] + ['SEG003' + c for c in 'EFGHIJKLMN']
+# modules (seg003's A..N, seg004's A..N, seg021's B..Q; seg021's A, the first module of its
+# segment, is in the resident list above). Modules with no relocations sit next to their
+# neighbours in the same segment.
+LATE = M('seg021', 'BCDEFGHIJKLM') + M('seg004', 'ABCDE') + M('seg003', 'A') + \
+       M('seg021', 'NOPQ') + [S('seg045')] + M('seg004', 'FGHIJKLM') + \
+       M('seg003', 'BCD') + M('seg004', 'N') + M('seg003', 'EFGHIJKLMN')
 def ovl_module(n):
     for k, o in OBJS.items():
         if o['target'] == 'ovr%03d' % n: return k
@@ -475,14 +483,20 @@ assert data_end <= LIBDATA_START
 if LIBBSS_START > bss_end: BPIECES.append((bss_end, LIBBSS_START, ('after', bss_last)))
 # objects whose _DATA or _BSS starts at an odd address: their copies are made byte-aligned
 ODD = sorted({k for k, o in OBJS.items() if (o['datalen'] and o['data'] % 2) or (o['bsslen'] and o['bss'] % 2)})
-def sfx(k): return '154' if k == 'PLAYER' else 'C0' if k == 'C0UW2' else k[-3:]
+def sfx(k):
+    """A generated module's suffix for the object k: its segment's number, and for a module
+    of a split segment its letter ('019A' for SetPnt, the first module of seg019's segment)."""
+    if k == 'C0UW2': return 'C0'
+    t = OBJS[k]['target']; m = re.match(r'(?:seg|ovr)(\d{3})', t)
+    fam = family(t[:6], TARGETS)
+    return m.group(1) + (chr(ord('A') + fam.index(k)) if k in fam else '')
 def dname(slot): return ('XA' if slot[0] == 'after' else 'XB') + sfx(slot[1])
 
 # every extracted range: (file lo, file hi, frame para or DS_PARA, module)
 RANGES = []
 for i, pieces in GAPS.items():
     for a, b in pieces: RANGES.append((a, b, SEGS[i][1], CODE_GAPS[i][0]))
-for k, (i, a, b) in TAILS.items(): RANGES.append((a, b, SEGS[i][1], 'XT' + k[-3:]))
+for k, (i, a, b) in TAILS.items(): RANGES.append((a, b, SEGS[i][1], 'XT' + sfx(k)))
 for i, para, lo, hi, fl in FAR:
     if hi is not None and hi > lo and i not in FARSRC and i not in FAROWN and FARCUT.get(i, hi) > lo:
         RANGES.append((lo, FARCUT.get(i, hi), para, 'XFAR'))
@@ -576,7 +590,7 @@ for stem, ob in OBJS.items():
     STUBORDER[stem] = [ODEF[n][o] for o in offs]
 
 # relocations the EXE has inside an object's code where the object has no fixup: a constant in
-# the source where the original had a segment (SEG032 stores 0x5DFD three times, which
+# the source where the original had a segment (VIEW3D stores 0x5DFD three times, which
 # the original wrote as a segment, as its relocations show). link.py adds the fixups.
 ADDFIX = {}
 for stem, ob in OBJS.items():
@@ -727,8 +741,14 @@ m = module('XORDER')
 m.lines += ['; The code segments that sit before C0\'s _TEXT, in EXE order and with their EXE',
             '; alignment, so TLINK places them first. No bytes. seg003 and seg004 are referred to by',
             '; segment alone from other modules, so their names are defined at their starts.']
-for name, align, idx in (('SEG000_TEXT', 'byte', 0), ('SEG001_TEXT', 'word', 1), ('SEG002_TEXT', 'word', 2),
-                         ('SEG003_TEXT', 'para', 3), ('SEG004_TEXT', 'para', 4)):
+# A segment's name is whatever its object calls it (TLINK joins segments by name, and the EXE
+# keeps no names): FILE_TEXT for a C file or an assembly module written with .model and
+# .code, which TASM names after the file the same way, and the name in its SEGMENT directive
+# for the others.
+def codeseg(k): return OBJS[k]['codeseg']
+for name, align, idx in ((codeseg(S('seg000')), 'byte', 0), (codeseg(S('seg001')), 'word', 1),
+                         (codeseg(S('seg002')), 'word', 2), (codeseg(M('seg003', 'A')[0]), 'para', 3),
+                         (codeseg(M('seg004', 'A')[0]), 'para', 4)):
     m.lines.append(f'{name} segment {align} public \'CODE\'')
     if idx in (3, 4): m.lines += seg_start_labels(m, SEGS[idx][1], idx)
     m.lines.append(f'{name} ends')
@@ -745,19 +765,18 @@ for i, (mname, segname) in CODE_GAPS.items():
 m = module('XSEG020')
 m.lines += ['; seg020 starts at an odd address and seg021 and seg022 on paragraphs: declare them',
             '; here, after SetPnt (seg019\'s segment) and before their objects. (seg020\'s object',
-            '; is word-aligned; link.py patches it.)',
-            'SEG020_TEXT segment byte public \'CODE\'', 'SEG020_TEXT ends',
-            'SEG021_TEXT segment para public \'CODE\'', 'SEG021_TEXT ends',
-            'SEG022_TEXT segment para public \'CODE\'', 'SEG022_TEXT ends']
+            '; is word-aligned; link.py patches it.)']
+for name, align in ((codeseg(S('seg020')), 'byte'), (codeseg(M('seg021', 'A')[0]), 'para'), (codeseg(S('seg022')), 'para')):
+    m.lines += [f'{name} segment {align} public \'CODE\'', f'{name} ends']
 m = module('XEMPTY18')
 m.lines += ['; segment table entry 18: an empty byte-aligned code segment between seg016 and seg017',
             'XEMPTY18 segment byte public \'CODE\'', 'XEMPTY18 ends']
 for k, (i, a, b) in TAILS.items():
-    m = module('XT' + k[-3:])
+    m = module('XT' + sfx(k))
     m.lines.append(f'{OBJS[k]["codeseg"]} segment byte public \'CODE\'')
     m.lines += body(m, a, b, SEGS[i][1], True)
     m.lines.append(f'{OBJS[k]["codeseg"]} ends')
-    RES.insert(RES.index(k) + 1, 'XT' + k[-3:])
+    RES.insert(RES.index(k) + 1, 'XT' + sfx(k))
 
 # far data
 ALIGN = {}
@@ -877,7 +896,7 @@ if not MOD and ALL_VERIFIED:
         lay['sources'][stem] = [os.path.relpath(ob['src'], root), source_hash(ob['src'])]
     for stem, p in FAROBJS.items():
         shutil.copyfile(p, os.path.join(BASE, stem + '.OBJ'))
-        src = os.path.join(root, 'src', stem + '.ASM')
+        src = FARPATHS[stem]
         lay['sources'][stem] = [os.path.relpath(src, root), source_hash(src)]
     json.dump(lay, open(os.path.join(BASE, 'layout.json'), 'w'), indent=1, sort_keys=True)
 json.dump(RENAMES, open(os.path.join(OUT, 'renames.json'), 'w'), indent=1, sort_keys=True)

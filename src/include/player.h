@@ -107,7 +107,7 @@ struct Player {
 };
 
 /* The player's skills, struct Player's skills[]: string block 2 names them from string
-   0x1F in this order (PLAYER.C and ovr158 print skill + 0x1F), and player.h's own
+   0x1F in this order (SKILLS.C and ovr158 print skill + 0x1F), and player.h's own
    comments on struct Player agree (search 11, track 12, sneak 13, acrobat 17). */
 enum Skill {
     SKILL_ATTACK, SKILL_DEFENSE, SKILL_BAREHAND, SKILL_SWORD, SKILL_AXE, SKILL_MACE,
@@ -118,7 +118,7 @@ enum Skill {
 };
 
 /* The player's class, struct Player's pclass: string block 2 names them from string
-   0x17 (ovr158 and PLAYER.C print pclass + 0x17). */
+   0x17 (ovr158 and SKILLS.C print pclass + 0x17). */
 enum PlayerClass {
     PCLASS_FIGHTER, PCLASS_MAGE, PCLASS_BARD, PCLASS_TINKER, PCLASS_DRUID,
     PCLASS_PALADIN, PCLASS_RANGER, PCLASS_SHEPHERD
@@ -143,7 +143,7 @@ enum PlayerClass {
 #define XC_PIT_KILLS    14              /* most enemies killed in the pits */
 #define XC_CHANGED      15              /* counted up when an X clock event happens */
 
-/* PLAYER.C: skills, levelling, sleep, eating, death and traps (ovr154) */
+/* SKILLS.C: skills, levelling, sleep, eating, death and traps (ovr154) */
 void far punt_void(void);
 void far go_void(void);
 void far do_gem(void);
@@ -159,18 +159,18 @@ void far do_mstone(void);
 void far player_is_dead(void);
 int far DetectedTrap(struct Object far *obj, int skill);
 
-/* SEG038.C: skill checks, experience and levelling */
+/* SKILLCHK.C: skill checks, experience and levelling */
 void far panel_check_hpmp(void);
 int far skill_check(int value, int target);
 void far player_get_exp(int n);
 
-/* OVR135.C: the player's timed updates */
+/* PLAYTIME.C: the player's timed updates */
 char far DegradeLights(int amount, unsigned char counter);
 void far sink_sink_sink(void);
 char far dispel_spell(int *i);
 void far duration_check(void);
 
-/* OVR143.C: setting up the player */
+/* PLAYER.C: setting up the player */
 extern unsigned char MoveCrits;
 extern unsigned long nextstep;
 extern unsigned long watertime;
@@ -191,10 +191,10 @@ void far attach_eye(int mode);
 void far release_camera(int index);
 void far crystal_ball(struct Object far *obj, int x, int y);
 
-/* OVR101.C: character creation */
+/* CHARGEN.C: character creation */
 char far create_player(void);
 
-/* OVR142.C: the player record's load and save, and spell effects */
+/* PLAYDATA.C: the player record's load and save, and spell effects */
 extern int player_name_handle;
 extern struct Player *player;
 extern struct Creature *playerdat;
@@ -210,7 +210,7 @@ void far parse_aspells(unsigned char *out);
 void far FixPlayerEquips(void);
 void far load_dl(void);
 
-/* SEG008.C: the player's physics */
+/* PHYSICS.C: the player's physics */
 extern unsigned char frictionless;
 extern int GrSq;
 void far change_GrSq(int sq, int z);

@@ -66,7 +66,7 @@ struct SCDRow {
     union SCDParams p;                  /* 0x05 */
 };
 
-/* OVR110.C: world events */
+/* WORLDEV.C: world events */
 unsigned char far in_arena(int x, int y);
 void far stop_and_talk(struct Object far *obj);
 void far call_out_the_guards(int home_x, int home_y);
@@ -113,14 +113,14 @@ void far remove_TK_wand(void);
 void far go_vend(int which, int machine, int x, int y, int choice);
 void far put_player_in_jail(void);
 
-/* OVR113.C: SCD event handling */
+/* SCDEVENT.C: SCD event handling */
 void far gronk_race(int race, unsigned char loop, int param,
                     char (far *code)(struct Object far *, int));
 unsigned char far player_looking(int x, int y);
 char far gronkify_attitude(struct Object far *npc, int attitude);
 char far Sched_DoEvent(unsigned char far *row);
 
-/* OVR166.C: triggers and traps */
+/* TRIGGER.C: triggers and traps */
 extern unsigned char Triggers[16];
 void far update_pplate(struct Object far *trig);
 void far delete_trap(union Link far *head, struct Object far *trap);
@@ -142,7 +142,7 @@ void far DoWanderingMonsters(unsigned char is_player);
 void far DoClosingDoors(unsigned char is_player);
 int far Ply_Weight(void);
 
-/* OVR151.C: SCD schedules */
+/* SCHEDULE.C: SCD schedules */
 unsigned char far Sched_Insert(struct SCDRow far *row, unsigned char run);
 unsigned char far Sched_Load(unsigned char block);
 unsigned char far Sched_Save(unsigned char block);

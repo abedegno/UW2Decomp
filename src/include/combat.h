@@ -63,13 +63,13 @@ struct Armour {
                                            4 gloves, 5 boots, 8 hat, 9 ring */
 };
 
-/* SEG024.C: combat */
+/* COMBAT.C: combat */
 int far check_ammo(int weapon);
 void far clear_fight_state(void);
 char far critter_attack(struct Object far *npc, int swing, unsigned char charge, int type,
                         int poison);
 
-/* SEG027.C: missiles */
+/* MISSILE.C: missiles */
 struct Object far * far missile_fire(void);
 unsigned char far push_missile(struct Object far *proj, struct Object far *src, char launch);
 void far player_fire(int weapon);
@@ -78,7 +78,7 @@ char far spell_fire(struct Object far *who, int spell);
 char far ReturnObject(struct Object far *obj, char message);
 void far trap_fire(struct Object far *trap, int x, int y);
 
-/* OVR156.C: casting spells */
+/* SPELLS.C: casting spells */
 extern unsigned char inanmMapX;
 extern unsigned char inanmMapY;
 extern int area_spell_state;
@@ -104,7 +104,7 @@ char far hit_critter_goal(char goal, char attitude, int gtarg, struct Object far
 char far sp_hold(int x, int y, struct Object far *target, struct Tile far *tile, unsigned char src);
 void far obj_spells(struct Object far *target, int how, unsigned char b);
 
-/* OVR157.C: spells */
+/* SPELLS2.C: spells */
 void far sp_enchant(struct Object far *obj, unsigned char inv, int x, int y);
 char far mendable(struct Object far *obj);
 char far sp_true_sight(struct Object far *caster, struct Object far *target);
@@ -117,7 +117,7 @@ char far check_Guardian_magic_marker(int x, int y, struct Object far *obj, struc
                                      unsigned char src);
 void far thump_your_magic_twanger_froggie(void);
 
-/* OVR123.C: the rune bag and casting from runes */
+/* RUNES.C: the rune bag and casting from runes */
 extern unsigned long lstime;
 char far add_rune(struct Object far *obj);
 void far clear_runes(void);

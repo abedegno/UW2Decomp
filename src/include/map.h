@@ -86,23 +86,23 @@ enum TileType {
 #define TERRAIN_LAVA    2
 #define TERRAIN_ICE     3
 
-/* OVR128.C: loading and saving the level map */
+/* MAP.C: loading and saving the level map */
 extern int hgt_val[17];
 char far Anim_Load(char far *source);
 char far Anim_Save(char far *destination);
 unsigned char far Map_Load(int arc, int level, int folderType);
 char far Map_Save(int arc, int level, int folderType);
 
-/* OVR140.C: a level's texture map */
+/* TEXTMAPS.C: a level's texture map */
 extern int TxmID[0x40];
 void far load_txtmaps(void);
 void far Load_Terrains(int *ids);
 
-/* OVR152.C: lighting */
+/* LIGHTING.C: lighting */
 void far init_lighting(void);
 void far random_light(char enabled);
 
-/* SEG028.C: terrain and object collision for anything that moves or is placed */
+/* COLLIDE.C: terrain and object collision for anything that moves or is placed */
 extern struct Collision oCollisions[8];
 extern struct MotionCalc near *curP;
 extern int nvokHgt;

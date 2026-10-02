@@ -9,7 +9,7 @@ struct Object;
 
 #include "object.h"
 
-/* OVR095.C: the conversation interpreter ("babl") */
+/* BABL.C: the conversation interpreter ("babl") */
 int far DoReadHeader_ovr095_12C3(void);
 void far DoCopyCode_ovr095_14B1(void);
 char far * far convert_string(char far *text);
@@ -58,11 +58,11 @@ void far babl_setmem(int addr, int value);
 void far bab_var(char *name, int *values, int count);
 void far bab_var_out(char *name, int *values, int count);
 
-/* OVR096.C: conversation built-ins that reach into the game */
+/* BABLHACK.C: conversation built-ins that reach into the game */
 struct Object far * far place_pitfighter(int power, int x, int y);
 void far do_babl_teleport(void);
 
-/* OVR097.C: bartering in conversations */
+/* BARTER.C: bartering in conversations */
 /* A trade adjustment set by a conversation, read when bartering. Defined in ovr097: it is
    the byte at DS:BFE, and ovr097's word-aligned _DATA starts there. */
 extern char fudge;
@@ -93,7 +93,7 @@ int far npc_barter_give_id(int index);
 int far npc_inv_create(int item);
 int far npc_inv_delete(int item);
 
-/* OVR103.C: conversations */
+/* CONVERSE.C: conversations */
 extern struct Object far *talking_to;
 extern unsigned cnv_id;
 char far * far adr_convpic(int n);
@@ -127,10 +127,10 @@ int far switch_pic(int far *stack);
 void far TalkTo(struct Object far *thing);
 void far free_converse(void);
 
-/* OVR106.C: handing variables to a conversation and taking them back */
+/* CONVVARS.C: handing variables to a conversation and taking them back */
 void far setup_converse_data(struct Object far *npc);
 
-/* SEG045.C: the label table of the conversation (babl) bytecode assembler */
+/* GRDB.C: the label table of the conversation (babl) bytecode assembler */
 extern int far *dbptr;
 void far grdb_blank(void);
 int far Clk(int n);

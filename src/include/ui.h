@@ -67,13 +67,13 @@ struct Button {
 
 struct StringNode { unsigned char value, pad, left, right; };
 
-/* SEG010.C: the input dispatcher */
+/* INPUT.C: the input dispatcher */
 void far dispatch_key(struct Inplist *in, int code);
 void far init_input(void);
 void far free_input(void);
 void far input_del(int hndl);
 
-/* SEG014.C: the icon bar */
+/* ICONS.C: the icon bar */
 extern int gameopts_done;
 extern char dseg_67d6_120;
 extern char current_hilit_button;
@@ -96,7 +96,7 @@ void far do_option_shortcut(int keycode);
 #define KEY_ALT         0x200
 #define KEY_SHIFT       0x400           /* added to special keys only */
 
-/* SEG015.C: the mouse */
+/* MOUSE.C: the mouse */
 extern int joymovecur;
 extern int fauxright;
 extern char mouse_hand;
@@ -132,7 +132,7 @@ void far force_mouse_cursor(int id);
 void far unforce_mouse_cursor(int how);
 void far MousQUp(char from3d);
 
-/* OVR136.C: the options panel */
+/* WRAPPER.C: the options panel */
 int far get_buttonreg_button(void);
 void far new_hilit_button(int b);
 void far install_buttongroup(struct buttongroup *g);
@@ -160,19 +160,19 @@ void far quit_group_fun(void);
 void far file_group_fun(void);
 void far musicsound_group_fun(void);
 
-/* OVR137.C: the main game screen's set-up and teardown and its status clicks */
+/* GAMESCR.C: the main game screen's set-up and teardown and its status clicks */
 void far pull_chain(int how);
 void far init_gamedisp(void);
 void far clear_gamedisp(void);
 char far check_save(void);
 char far check_rest(void);
 
-/* OVR139.C: the message scroll's interactive side */
+/* SCROLLIO.C: the message scroll's interactive side */
 void far init_scroll(void);
 void far scroll_more(void);
 void far wd_replace(int n);
 
-/* SEG043.C: the message scroll */
+/* SCROLL.C: the message scroll */
 extern struct Scroll near *scroll;  /* DS:34B0 */
 extern unsigned char mouse_in_scroll;  /* DS:34B2 */
 extern struct Scroll main_scroll;  /* DS:938 */
@@ -195,13 +195,13 @@ void far draw_edges(void);
 void far draw_conv_edges(void);
 void far draw_scroll(int x, int y, int w, int h, char flag);
 
-/* OVR147.C: the main menu */
+/* MAINMENU.C: the main menu */
 int far parse_start_input(int n, struct Button far *b, int text, int sel);
 int far do_journey(void);
 char far Region_ovr147_A73(int x, int y);
 void far real_start(int intro);
 
-/* SEG026.C: the player's interaction with the 3D view and the panels */
+/* INTERACT.C: the player's interaction with the 3D view and the panels */
 extern unsigned char PoisonWeap;
 extern unsigned char TimeStop;
 extern unsigned char Hasted;
@@ -216,7 +216,7 @@ extern int RightButtonThing;
 extern struct Tile far *PickMap;
 extern int MapObj_X;
 extern int MapObj_Y;
-extern int GameInputMode;  /* DS:2506, declared in PLAYER.C */
+extern int GameInputMode;  /* DS:2506, declared in SKILLS.C */
 void far player_3dtalk(void);
 void far player_3duse(void);
 void far display_scr(void);
@@ -227,7 +227,7 @@ void far mous_in_panel(void);
 void far deal_with_icons(int mode);
 void far toggle_fightmode(void);
 
-/* OVR094.C: the automap */
+/* AUTOMAP.C: the automap */
 void far ManageDungeonMap(void);
 void far ShowDungeonMap(void);
 void far DoTile(int type, int x, int y);
@@ -270,7 +270,7 @@ void far make_terrain_unseen(int x, int y, unsigned w, unsigned h);
 #define STRBLK_CONVERSATION 0xE00       /* + n: conversation n's strings (STRINGS.PAK's
                                            blocks 0xE00 and up) */
 
-/* SEG039.C: strings */
+/* GAMESTRN.C: strings */
 int far LoadFileStringsPak_seg039_547(void);
 void far seg039_3452_5E1(void);
 void far free_strings(void);

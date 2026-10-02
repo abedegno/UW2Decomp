@@ -1,15 +1,15 @@
 """Build queue for agents whose sandbox cannot start the emulator (Codex's cannot).
 Run outside the sandbox:  .venv/bin/python tools/buildd.py
-An agent writes build/queue/<id>.req holding one line, "match src/FILE.C [--dis NAME]"
-or "verify src/FILE.C", and waits for build/queue/<id>.out (tools/remote.sh does both).
-Only those two commands, src/NAME.C paths and the --dis/--no-build options are accepted.
+An agent writes build/queue/<id>.req holding one line, "match src/DIR/FILE.C [--dis NAME]"
+or "verify src/DIR/FILE.C", and waits for build/queue/<id>.out (tools/remote.sh does both).
+Only those two commands, src/DIR/NAME.C (or .ASM) paths and the --dis/--no-build options are accepted.
 A per-file budget caps match builds: build/queue/budget/<NAME>.C holds the number left
 (default 30 when the file is first seen); at zero further builds are refused."""
 import os, re, subprocess, time, glob
 from concurrent.futures import ThreadPoolExecutor
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); q = os.path.join(root, 'build', 'queue')
 py = os.path.join(root, '.venv', 'bin', 'python')
-OK = re.compile(r'^(match|verify) (src/[A-Za-z0-9_]+\.C)((?: --dis [A-Za-z_][A-Za-z0-9_]*| --no-build)*)$')
+OK = re.compile(r'^(match|verify) (src/(?:[A-Za-z0-9_]+/)?[A-Za-z0-9_]+\.(?:C|ASM))((?: --dis [A-Za-z_][A-Za-z0-9_]*| --no-build)*)$')
 
 def run(req):
     out = req[:-4] + '.out'

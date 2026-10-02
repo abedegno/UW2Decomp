@@ -105,7 +105,7 @@ struct StaticObj {
     } ol;
 };
 
-/* One running animation (SEG044.C's animlist): the animated object, the frames it has
+/* One running animation (EFFECT.C's animlist): the animated object, the frames it has
    left (-1 for ever), and its tile. */
 struct Anim {
     union Link link;
@@ -314,7 +314,7 @@ struct AnimClass {
 #define MOBILE_SIZE     0x1B
 #define STATIC_SIZE     8
 
-/* SEG029.C: the object lists */
+/* OBJECTS.C: the object lists */
 extern struct Object far *critdata;
 extern union Link far *Obj_Find_Head;
 int far Obj_MemTPtr(struct Object far *obj);
@@ -343,43 +343,43 @@ struct Object far * far Obj_FindInMap(int major, int minor, int index, int *x, i
 int far check_weight(union Link far *head, int min, int z, int adjust);
 unsigned char far ObjCrunch(char how);
 
-/* SEG036.C: Map_GetAddr and CreateObj */
+/* MAPADDR.C: Map_GetAddr and CreateObj */
 struct Tile far * far Map_GetAddr(int x, int y);
 
-/* OVR134.C: object class data */
+/* OBJCLASS.C: object class data */
 extern struct Object far *ActiveObj;
 extern struct ComObj ComObjData[512];
 int far init_objects(void);
 char * far get_class_data(void);
 
-/* OVR091.C: animated object class data */
+/* ANIMOBJ.C: animated object class data */
 char * far animobj_class_data(void);
 
-/* OVR102.C: combining objects */
+/* COMBINE.C: combining objects */
 void far init_combinables(void);
 int far ObjsBeCombinable(struct Object far *a, struct Object far *b);
 struct Object far * far CombineObjs(int combo);
 char far RemoveAfterCombine(struct Object far *obj, int combo);
 char far make_stew(void);
 
-/* OVR120.C: hack class data */
+/* HACK.C: hack class data */
 char * far hack_class_data(void);
 
-/* OVR130.C: misc class data */
+/* MISC.C: misc class data */
 char * far misc_class_data(void);
 
-/* SEG025.C: damage to objects */
+/* DAMAGE.C: damage to objects */
 int far debris_type(int item, char type);
 char far damage_object(struct Object far *obj, struct Object far *who, int damage, int x, int y);
 char far remove_lock(struct Object far *obj, char all);
 unsigned char far check_res(struct Object far *obj, unsigned char damage, unsigned char type);
 
-/* OVR163.C: spilling a container's contents, and critter loot */
+/* TREASURE.C: spilling a container's contents, and critter loot */
 char far drop_link_chain(struct Object far *cont, int owner);
 void far drop_some_objects(struct Object far *critter);
 void far generate_inventory(struct Object far *npc);
 
-/* SEG040.C: using objects */
+/* OBJUSE.C: using objects */
 void far UseKey(struct Object far *obj, unsigned char how);
 void far UseWand(struct Object far *wand, unsigned char how);
 char far UseReag(struct Object far *who, struct Object far *obj, char how);
@@ -391,7 +391,7 @@ int far checkLock(struct Object far *who, struct Object far *door, int key);
 void far BlastFunction(void);
 void far remove_spell(struct Object far *obj);
 
-/* OVR138.C: using objects */
+/* USEITEMS.C: using objects */
 extern char door_type;
 void far DumpTheBag(struct Object far *bag, char to_player);
 void far UseRockHammerOn(struct Object far *obj, unsigned char how, char other);
@@ -415,7 +415,7 @@ void far UseRect(struct Object far *who, struct Object far *obj);
 void far UseMagic(struct Object far *who, struct Object far *obj, char how);
 void far UseUtil(struct Object far *obj, char how);
 
-/* OVR126.C: looking at things */
+/* LOOK.C: looking at things */
 char far do_mods(struct Object far *obj, int lore, char *s);
 char far do_of(struct Object far *obj, int lore, char *s);
 void far RectLook(struct Object far *obj, int look);
@@ -424,7 +424,7 @@ void far SpecialLook(struct Object far *obj, int print);
 void far LookAt(struct Object far *obj, int lore);
 int far GetObjDesc(struct Object far *obj, int lore, char *s);
 
-/* SEG044.C: animated objects and timers */
+/* EFFECT.C: animated objects and timers */
 extern unsigned char DoAnimO;
 void far do_animobj(int n, int frames);
 unsigned char far check_door(int n, int frames);

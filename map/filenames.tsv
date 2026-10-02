@@ -1,111 +1,161 @@
-# segment	source now	candidate name	tier	evidence
-# Candidate original file names. strong: a shared function name and the same job in the System Shock source
-# (Looking Glass, 1994, built on the Underworld engine); plausible: same job and shared vocabulary; blank: no candidate.
-# These are lineage names from a later game, not recovered UW2 names. Nothing is renamed on their strength yet.
-seg001_023B		valloc.c	strong	valloc and vfree are in the 2D library VALLOC.C
-seg003_0272				
-seg004_0849		interp (asm)	plausible	the 3D model interpreter: System Shock 3D library INTERP.C has the same do_* opcode handlers (do_defres, do_jnorm, do_setshade...); UW1 has its shade handler in seg004, so UW2 seg004 is the likely home, unverified
-seg006_1413	SEG006.C	pathfind.c	plausible	path finding; vocabulary matches System Shock PATHFIND.C
-seg007_17A2	SEG007.C	ai.c	plausible	critter movement and AI; vocabulary matches System Shock AI.C
-seg008_1B09	SEG008.C	physics.c	plausible	player physics; vocabulary matches System Shock PHYSICS.C
-seg009	SEG009.C			
-seg010_1CA1	SEG010.C	input.c	strong	init_input is in System Shock INPUT.C
-seg011	SEG011.C			
-seg012_1D31	SEG012.C			
-seg013_1D3C	SEG013.C			
-seg014	SEG014.C			
-seg015_1D7C	SEG015.C	mouse.c	plausible	the mouse; System Shock keeps it in the INPUT library
-seg016_1E73	SEG016.C			
-seg017_2179	SEG017.ASM			
-seg019_21BA	SEG019.C			
-seg020				
-seg021_22FD				
-seg022_2405				
-seg023	SEG023.C			
-seg024_24E9	SEG024.C			
-seg025_26A1	SEG025.C	damage.c	strong	damage_object is in System Shock DAMAGE.C
-seg026_2716	SEG026.C			
-seg027_2856	SEG027.C			
-seg028_2941	SEG028.C			
-seg029_2A8E	SEG029.C			
-seg030_2BB7	SEG030.C			
-seg031_2CFA	SEG031.C			
-seg032_2E9B	SEG032.C			
-seg033_2FBE	SEG033.C			
-seg034_310D	SEG034.C	gamesort.c	plausible	object sorting; vocabulary matches System Shock GAMESORT.C
-seg035_31AB	SEG035.C			
-seg036_32A9	SEG036.C			
-seg037_32C0	SEG037.C			
-seg038_342C	SEG038.C			
-seg039_3452	SEG039.C	gamestrn.c	strong	get_string and init_strings are in System Shock GAMESTRN.C
-seg040_34E7	SEG040.C			
-seg041_35D7	SEG041.C			
-seg042_35ED	SEG042.C	tmpalloc.c	plausible	workspace memory; vocabulary matches System Shock TMPALLOC.C
-seg043_3619	SEG043.C			
-seg044_368F	SEG044.C	effect.c	plausible	animated objects and effects; vocabulary matches System Shock EFFECT.C
-seg045_379C				
-seg046_37CD				
-ovr091	OVR091.C			
-ovr092	OVR092.C			
-ovr093	OVR093.C			
-ovr094	OVR094.C	automap.c	plausible	automap code; vocabulary matches System Shock AUTOMAP.C
-ovr095	OVR095.C			
-ovr096	OVR096.C			
-ovr097	OVR097.C			
-ovr099	OVR099.C			
-ovr101	OVR101.C			
-ovr102	OVR102.C			
-ovr103	OVR103.C			
-ovr104	OVR104.C			
-ovr106	OVR106.C			
-ovr107	OVR107.C			
-ovr108	OVR108.C			
-ovr109	OVR109.C			
-ovr110	OVR110.C			
-ovr112	OVR112.C			
-ovr113	OVR113.C			
-ovr114	OVR114.C			
-ovr116	OVR116.C			
-ovr117	OVR117.C			
-ovr118	OVR118.C			
-ovr119	OVR119.C			
-ovr120	OVR120.C			
-ovr121	OVR121.C			
-ovr122	OVR122.C			
-ovr123	OVR123.C			
-ovr124	OVR124.C			
-ovr125	OVR125.C			
-ovr126	OVR126.C			
-ovr127	OVR127.C			
-ovr128	OVR128.C			
-ovr130	OVR130.C			
-ovr131	OVR131.C			
-ovr132	OVR132.C			
-ovr134	OVR134.C			
-ovr135	OVR135.C			
-ovr136	OVR136.C	wrapper.c	strong	draw_button is in System Shock WRAPPER.C, its options screens
-ovr137	OVR137.C			
-ovr138	OVR138.C			
-ovr139	OVR139.C			
-ovr140	OVR140.C			
-ovr142	OVR142.C			
-ovr143	OVR143.C			
-ovr146	OVR146.C			
-ovr147	OVR147.C			
-ovr148	OVR148.C			
-ovr149	OVR149.C	gamewrap.c	strong	copy_file is in System Shock GAMEWRAP.C, its save and load file
-ovr150	OVR150.C			
-ovr151	OVR151.C	gamesys.c	plausible	event scheduler; vocabulary matches System Shock GAMESYS.C
-ovr152	OVR152.C			
-ovr153	OVR153.C			
-ovr154	PLAYER.C			
-ovr155	OVR155.C			
-ovr156	OVR156.C			
-ovr157	OVR157.C			
-ovr158	OVR158.C			
-ovr159	OVR159.C			
-ovr162	OVR162.C			
-ovr163	OVR163.C			
-ovr165	OVR165.C			
-ovr166	OVR166.C	trigger.c	plausible	triggers and traps; vocabulary matches System Shock TRIGGER.C
-ovr167	OVR167.C			
+# segment	old file	new file	kind	evidence
+# The source files' names. kind: original = direct evidence for the name (a System Shock file, from the same
+# Looking Glass code base, defining the same functions for the same job, or a library's own module name);
+# inferred = consistent with the FM Towns names (a module prefix such as Obj_ or Sched_, a function named like
+# the file) or with the job of a System Shock file, but not proven; descriptive = our name for what the file does.
+# Even the original ones are lineage names: no UW2 build, string or document names a UW2 source file.
+# segment is the source's /* target: */ line; old file is the name it had under src/ before 2 October 2026.
+seg000	src/SEG000.ASM	src/gfx/SPRITE.ASM	descriptive	the sprite routines (FM Towns create_sprite_ .. update_sprites_)
+seg001_023B	src/SEG001.ASM	src/gfx/VALLOC.ASM	original	valloc and vfree are in System Shock's 2D library VALLOC.C (RCS n:/project/lib/src/2d/valloc.c, "video memory management"), the same job
+seg002	src/SEG002.ASM	src/gfx/LPFDELTA.ASM	descriptive	the Deluxe Paint LPF run/skip/dump decoder
+seg003_0272_0	src/SEG003A.ASM	src/gfx/GRMISC.ASM	descriptive	graphics library module 1: dispatcher thunks, retrace wait, debug break
+seg003_0272_EC	src/SEG003B.ASM	src/gfx/POLYFILL.ASM	descriptive	graphics library module 2: polygon span filling
+seg003_0272_6E2	src/SEG003C.ASM	src/gfx/GRENTRY.ASM	descriptive	graphics library module 3: the entry points seg021's cRender calls
+seg003_0272_D1E	src/SEG003D.ASM	src/gfx/SCALEBM.ASM	descriptive	graphics library module 4: XFER tables and scaled-bitmap spans
+seg003_0272_21D4	src/SEG003E.ASM	src/gfx/VIDMODE.ASM	descriptive	graphics library module 5: video mode, palette and screen routines
+seg003_0272_3206	src/SEG003F.ASM	src/gfx/GRLIBF.ASM	descriptive	graphics library module 6, job not yet known: family prefix and module letter
+seg003_0272_3686	src/SEG003G.ASM	src/gfx/GRLIBG.ASM	descriptive	graphics library module 7, job not yet known: family prefix and module letter
+seg003_0272_375C	src/SEG003H.ASM	src/gfx/GRLIBH.ASM	descriptive	graphics library module 8, job not yet known: family prefix and module letter
+seg003_0272_38B4	src/SEG003I.ASM	src/gfx/GRLIBI.ASM	descriptive	graphics library module 9, job not yet known (VGA register output): family prefix and module letter
+seg003_0272_43F0	src/SEG003J.ASM	src/gfx/GRCORE.ASM	descriptive	graphics library module 10: the C entry points (setup_font, init_graphics, plot_pixel, box ...)
+seg003_0272_52EE	src/SEG003K.ASM	src/gfx/GRDISP.ASM	descriptive	graphics library module 11: the dispatcher the thunks jump to
+seg003_0272_5370	src/SEG003L.ASM	src/gfx/GRLIBL.ASM	descriptive	graphics library module 12, job not yet known: family prefix and module letter
+seg003_0272_5934	src/SEG003M.ASM	src/gfx/GRLIBM.ASM	descriptive	graphics library module 13, job not yet known: family prefix and module letter
+seg003_0272_5B50	src/SEG003N.ASM	src/gfx/GRLIBN.ASM	descriptive	graphics library module 14, job not yet known: family prefix and module letter
+seg004_0849_0	src/SEG004A.ASM	src/3d/EXPAND.ASM	descriptive	3D library module 1: the image decoders exp_8str, exp_4run ...
+seg004_0849_260	src/SEG004B.ASM	src/3d/SPHERE.ASM	descriptive	3D library module 2: sphere_check, get_dist, do_obj
+seg004_0849_600	src/SEG004C.ASM	src/3d/SMOOTH.ASM	descriptive	3D library module 3: smooth_closure, smooth_over
+seg004_0849_DB0	src/SEG004D.ASM	src/3d/INTERP.ASM	original	the model interpreter: 17 of its opcode handlers (do_eof, do_lnres, do_defres, do_sortnorm, do_setshade, do_x_rel ...) are named alike in System Shock's 3D library interp.asm (RCS r:/prj/lib/src/3d/interp.asm, "3d object interpreter")
+seg004_0849_3000	src/SEG004E.ASM	src/3d/INSTANCE.ASM	inferred	render_3d and the instance_head/pitch/bank transforms; System Shock's 3D library instance.asm has the instance_x/y/z transforms
+seg004_0849_3CF0	src/SEG004F.ASM	src/3d/TMAPOPS.ASM	descriptive	3D library module 6: the texture-mapping opcode handlers
+seg004_0849_40B0	src/SEG004G.ASM	src/3d/CLIP.ASM	inferred	polygon clipping (_asm_clip_polygon and its edges); System Shock's 3D library clip.c holds g3_clip_polygon and its edge intersections
+seg004_0849_46F0	src/SEG004H.ASM	src/3d/PERTLP.ASM	descriptive	3D library module 8: _asm_texture_map_scanline_per_tlp
+seg004_0849_4B30	src/SEG004I.ASM	src/3d/PERTP.ASM	descriptive	3D library module 9: _asm_texture_map_scanline_per_tp
+seg004_0849_4E10	src/SEG004J.ASM	src/3d/PROJPOLY.ASM	descriptive	3D library module 10: _asm_project_polygon, lighting value, square root
+seg004_0849_51B0	src/SEG004K.ASM	src/3d/SCANLINE.ASM	descriptive	3D library module 11: a texture-mapping scanline routine
+seg004_0849_54C0	src/SEG004L.ASM	src/3d/TEXMAP.ASM	descriptive	3D library module 12: compute_min_max_y and _asm_texture_map
+seg004_0849_6240	src/SEG004M.ASM	src/3d/TEXMAPV.ASM	descriptive	3D library module 13: _asm_texture_map_v
+seg004_0849_6D20	src/SEG004N.ASM	src/3d/PGCACHE.ASM	descriptive	3D library module 14: the image and page cache (load_cpg, update_cache ...)
+seg006_1413	src/SEG006.C	src/critter/PATHFIND.C	inferred	critter motion and path finding (flood_path, find_free_path, move_along_path); the job of System Shock's PATHFIND.C
+seg007_17A2	src/SEG007.C	src/critter/AI.C	inferred	critter goals and AI (critter_ai, crit_attack ...); the job of System Shock's AI.C
+seg008_1B09	src/SEG008.C	src/motion/PHYSICS.C	inferred	the player's physics (simple_fizix, fizix_update); the job of System Shock's PHYSICS.C
+seg009	src/SEG009.C	src/gfx/GRSPIC.C	descriptive	graphic resource decoding and drawing (grs_unpack, pic_to_screen)
+seg010_1CA1	src/SEG010.C	src/ui/INPUT.C	original	init_input is in System Shock's INPUT.C (RCS r:/prj/cit/src/input.c), the input dispatcher in both
+seg011	src/SEG011.C	src/ui/JOYSTICK.C	descriptive	joystick motion and calibration (DOS only)
+seg012_1D31	src/SEG012.C	src/game/MAINLOOP.C	inferred	mainloop is its first function, and System Shock's main loop file is MAINLOOP.C
+seg013_1D3C	src/SEG013.C	src/sys/EMS.C	descriptive	the EMS driver calls (DOS only)
+seg014	src/SEG014.C	src/ui/ICONS.C	descriptive	the icon bar (setup_icon_buttons, new_IconSelect)
+seg015_1D7C	src/SEG015.C	src/ui/MOUSE.C	inferred	the mouse (init_mouse, mouse_getxy, mouse_putxy, mouse_constrain); System Shock's input library MOUSE.C has the same calls (mouse_init, mouse_get_xy, mouse_put_xy, mouse_constrain_xy)
+seg016_1E73	src/SEG016.C	src/sound/SOUND.C	descriptive	digitised effects and music (init_digi_fx, play_music)
+seg017_2179	src/SEG017.ASM	src/gfx/MODEX.ASM	descriptive	VGA mode X screen access and far string helpers
+seg018_21B4	src/SEG018.ASM	src/sys/INT0TRAP.ASM	descriptive	the divide-by-zero trap int0_trap
+seg019_21BA	src/SEG019.C	src/3d/GRIDDB.C	descriptive	the render database from the map grid (process_grid, grdb_elem)
+seg019_21BA_C	src/SETPNT.ASM	src/3d/SETPNT.ASM	descriptive	its one routine, SetPnt (the name it had)
+seg020	src/SEG020.ASM	src/gfx/PLANECPY.ASM	descriptive	copies a block to the planar VGA screen
+seg021_22FD_0	src/SEG021A.ASM	src/sys/STARTUP.ASM	descriptive	system module 1: entry glue, EGA palette save, clock from the RTC
+seg021_22FD_150	src/SEG021B.ASM	src/sys/CRITERR.ASM	inferred	the DOS critical-error handler (setvect24, diskerr); System Shock's critical-error handler is CRITERR.C (critical_error)
+seg021_22FD_1D0	src/SEG021C.ASM	src/sys/CPUTYPE.ASM	descriptive	system module 3: CPU detection
+seg021_22FD_220	src/SEG021D.ASM	src/sys/BIOSKEY.ASM	descriptive	system module 4: the BIOS keyboard
+seg021_22FD_240	src/SEG021E.ASM	src/sys/SYSINIT.ASM	descriptive	system module 5: init and errorexit (FM Towns names)
+seg021_22FD_2E0	src/SEG021F.ASM	src/sys/JOYPORT.ASM	descriptive	system module 6: the joystick port
+seg021_22FD_450	src/SEG021G.ASM	src/sys/KEYQUEUE.ASM	descriptive	system module 7: the keyboard input queue
+seg021_22FD_590	src/SEG021H.ASM	src/sys/KBDINT.ASM	descriptive	system module 8: the int 9 keyboard handler
+seg021_22FD_680	src/SEG021I.ASM	src/sys/VIDSAVE.ASM	descriptive	system module 9: saving and restoring the video mode
+seg021_22FD_6C0	src/SEG021J.ASM	src/sys/MOUSEDRV.ASM	descriptive	system module 10: the int 33h mouse driver interface
+seg021_22FD_710	src/SEG021K.ASM	src/sys/TICKS.ASM	descriptive	system module 11: the tick counter
+seg021_22FD_730	src/SEG021L.ASM	src/sys/SYSLIBL.ASM	descriptive	system module 12, job not yet known: family prefix and module letter
+seg021_22FD_750	src/SEG021M.ASM	src/sys/SYSENTRY.ASM	descriptive	system module 13: far C entry points (key, mouse, mbuttons)
+seg021_22FD_A30	src/SEG021N.ASM	src/sys/IMATH.ASM	descriptive	system module 14: integer square roots, sines, arctangents
+seg021_22FD_C00	src/SEG021O.ASM	src/sys/TICKREAD.ASM	descriptive	system module 15: reads the tick counter
+seg021_22FD_C10	src/SEG021P.ASM	src/sys/SYSLIBP.ASM	descriptive	system module 16, a far routine that only returns: family prefix and module letter
+seg021_22FD_C20	src/SEG021Q.ASM	src/sys/C3DENTRY.ASM	descriptive	system module 17: far C entry points into the 3D code (cRender, cInit3d ...)
+seg022_2405	src/SEG022.ASM	src/sound/AIL.ASM	original	the Miles AIL 2.0 application interface: API_timer, find_proc, call_driver, init_DDA_arrays, AIL_startup ... are the procedures of AIL.ASM ("Application Program Interface module") in John Miles' public-domain AIL 2.14 source
+seg023	src/SEG023.C	src/gfx/COLCYCLE.C	descriptive	palette colour cycling (rotate_bank, cycle_colors)
+seg024_24E9	src/SEG024.C	src/combat/COMBAT.C	descriptive	melee and missile combat (resolve_attack, player_attack)
+seg025_26A1	src/SEG025.C	src/combat/DAMAGE.C	original	damage_object is in System Shock's DAMAGE.C, the damage to objects in both
+seg026_2716	src/SEG026.C	src/ui/INTERACT.C	descriptive	the player's interaction with the 3D view and panels (pick_3d, player_3duse)
+seg027_2856	src/SEG027.C	src/combat/MISSILE.C	descriptive	missiles (player_fire, missile_fire)
+seg028_2941	src/SEG028.C	src/motion/COLLIDE.C	descriptive	terrain and object collision, placing objects
+seg029_2A8E	src/SEG029.C	src/obj/OBJECTS.C	inferred	the object lists (Obj_Alloc, Obj_Free, Obj_Add, Obj_Rem ...): the Obj_ prefix, and System Shock's object lists are OBJECTS.C (ObjGrab, ObjFree, ObjPlace)
+seg030_2BB7	src/SEG030.C	src/motion/OBJPHYS.C	descriptive	object physics (bounce_obj, static_to_mob)
+seg031_2CFA	src/SEG031.C	src/motion/MOTION.C	descriptive	stepping a physics record through the grid (do_physics)
+seg032_2E9B	src/SEG032.C	src/3d/VIEW3D.C	descriptive	setting up the 3D view and the vision grid (place_3d_view, build_grid)
+seg033_2FBE	src/SEG033.C	src/3d/DRAWOBJ.C	descriptive	drawing an object into the render database (do_obj, do_rect, do_door)
+seg034_310D	src/SEG034.C	src/3d/GAMESORT.C	inferred	sorting objects for drawing (sort_obj, do_objsort, do_partition); the job of System Shock's GAMESORT.C (partition_sort)
+seg035_31AB	src/SEG035.C	src/motion/PLAYMOVE.C	descriptive	player input and motion (player_mous_move, move_player)
+seg036_32A9	src/SEG036.C	src/map/MAPADDR.C	descriptive	Map_GetAddr and CreateObj
+seg037_32C0	src/SEG037.C	src/ui/PANELS.C	descriptive	the screen furniture around the 3D view (flasks, compass, weapon, panels)
+seg038_342C	src/SEG038.C	src/game/SKILLCHK.C	descriptive	skill checks and experience (skill_check, player_get_exp)
+seg039_3452	src/SEG039.C	src/ui/GAMESTRN.C	original	init_strings and get_string are in System Shock's GAMESTRN.C, the game's strings in both
+seg040_34E7	src/SEG040.C	src/obj/OBJUSE.C	inferred	using objects (UseObj, UseKey, checkLock); the job of System Shock's OBJUSE.C (object_use, door_locked)
+seg041_35D7	src/SEG041.C	src/sys/UTIL.C	descriptive	small helpers (mvcheck, move_along, rollem)
+seg042_35ED	src/SEG042.C	src/sys/TMPALLOC.C	inferred	the shared workspace memory (get_workspace, release_workspace); the job of System Shock's TMPALLOC.C (temp_malloc, temp_free)
+seg043_3619	src/SEG043.C	src/ui/SCROLL.C	descriptive	the message scroll (scroll_print, draw_scroll)
+seg044_368F	src/SEG044.C	src/obj/EFFECT.C	inferred	animated objects and effects (add_animobj, update_animobj, put_effect); the job of System Shock's EFFECT.C (add_obj_to_animlist, do_special_effect)
+seg045_379C	src/SEG045.C	src/conv/GRDB.C	inferred	the conversation bytecode assembler's label table: grdb_blank and grdb_size open it, the grdb_ prefix
+seg046_37CD	src/SEG046.ASM	src/lib/OVERLAY.ASM	inferred	Borland's overlay manager, the code of five OVERLAY.LIB modules (OVRMAN, OVRSWAP, OVRDATA, OVRUSER, OVRDETEC) in one file: named after the library
+ovr091	src/OVR091.C	src/obj/ANIMOBJ.C	inferred	animobj_load and animobj_class_data: the class prefix
+ovr092	src/OVR092.C	src/sys/STUBS.C	descriptive	seven empty functions and a newscr(16) call (DOS only)
+ovr093	src/OVR093.C	src/sys/ARC.C	inferred	the .ark archives: the arc_ prefix (open_arc, close_arc, get_arc, put_arc ...)
+ovr094	src/OVR094.C	src/ui/AUTOMAP.C	inferred	AutoMap is its first function, and System Shock's map display is AUTOMAP.C
+ovr095	src/OVR095.C	src/conv/BABL.C	inferred	the conversation interpreter: init_babl, babl_run and the bab_ prefix
+ovr096	src/OVR096.C	src/conv/BABLHACK.C	descriptive	conversation built-ins reaching into the game, after babl_hack
+ovr097	src/OVR097.C	src/conv/BARTER.C	descriptive	bartering (setup_to_barter, npc_barter)
+ovr099	src/OVR099.C	src/ui/BROWSE.C	inferred	all seven functions are *_browse (init_browse ... browse_chain)
+ovr101	src/OVR101.C	src/game/CHARGEN.C	descriptive	character creation (strt_chargen, create_player)
+ovr102	src/OVR102.C	src/obj/COMBINE.C	descriptive	combining objects (init_combinables, CombineObjs)
+ovr103	src/OVR103.C	src/conv/CONVERSE.C	descriptive	conversations (TalkTo, strt_converse, Converse)
+ovr104	src/OVR104.C	src/critter/CREATURE.C	inferred	creature_init and creature_class_data: the class prefix
+ovr106	src/OVR106.C	src/conv/CONVVARS.C	descriptive	conversation variables in and out (setup_converse_data)
+ovr107	src/OVR107.C	src/critter/CRITTIME.C	descriptive	critters between moments (yearly_checkup, change_critter_goal)
+ovr108	src/OVR108.C	src/gfx/CUTS.C	inferred	the cutscene player: the cuts_ and cutsop_ prefixes
+ovr109	src/OVR109.C	src/sys/DEBUG.C	descriptive	init_debug (System Shock defines init_debug in INIT.C, the whole start-up, which here is UWEDIT.C)
+ovr110	src/OVR110.C	src/event/WORLDEV.C	descriptive	world events and quest hacks (do_teleport, change_terrain, death_check)
+ovr112	src/OVR112.C	src/game/UWEDIT.C	inferred	main, init_world, init_edit, editexit: TLINK stored the program's name, uwedit.exe, in UW2.EXE, and this file has main and the editor's start-up and exit
+ovr113	src/OVR113.C	src/event/SCDEVENT.C	descriptive	the SCD event handlers (ev_*, gronkify_*, Sched_DoEvent)
+ovr114	src/OVR114.C	src/sys/ERROR.C	descriptive	error reporting (error_code, pfatal)
+ovr116	src/OVR116.C	src/gfx/SCRSHOT.C	descriptive	saving a screenshot as GIF (save_screenshot)
+ovr117	src/OVR117.C	src/critter/CRPAGES.C	descriptive	preloading critter art pages (preload_cr, PreLoadCritPages)
+ovr118	src/OVR118.C	src/gfx/GRFX.C	inferred	the grfx_ prefix (grfx_init, grfx_load_font, grfx_setpal ...)
+ovr119	src/OVR119.C	src/gfx/LOADGR.C	descriptive	loading .GR and .TR art (load_gr_ems, load_all_gr)
+ovr120	src/OVR120.C	src/obj/HACK.C	inferred	hack_init and hack_class_data: the class prefix (MAJOR_HACK)
+ovr121	src/OVR121.C	src/inv/BAGS.C	descriptive	open bags in the inventory panel
+ovr122	src/OVR122.C	src/inv/INVSAVE.C	descriptive	saving and restoring the player's inventory
+ovr123	src/OVR123.C	src/combat/RUNES.C	descriptive	the rune bag and casting from runes
+ovr124	src/OVR124.C	src/inv/INVDATA.C	descriptive	the inventory as data (AddToInventory, FindSlot)
+ovr125	src/OVR125.C	src/inv/INVPANEL.C	descriptive	the inventory panel (DoInventoryMouse, DisplayInventory)
+ovr126	src/OVR126.C	src/obj/LOOK.C	descriptive	looking at things (LookAt, GetObjDesc)
+ovr127	src/OVR127.C	src/sys/LZSS.C	inferred	Haruhiko Okumura's LZSS.C (InsertNode and DeleteNode keep his names)
+ovr128	src/OVR128.C	src/map/MAP.C	inferred	Map_Init, Map_Load, Map_Save; System Shock's MAP.C has map_init
+ovr130	src/OVR130.C	src/obj/MISC.C	inferred	misc_init and misc_class_data: the class prefix
+ovr131	src/OVR131.C	src/game/CREDITS.C	descriptive	show_credits
+ovr132	src/OVR132.C	src/sys/COM1INT.C	descriptive	a COM1 interrupt call (DOS only)
+ovr134	src/OVR134.C	src/obj/OBJCLASS.C	descriptive	object class data (init_objects, get_class_data)
+ovr135	src/OVR135.C	src/game/PLAYTIME.C	descriptive	the player's timed updates (duration_check, DegradeLights)
+ovr136	src/OVR136.C	src/ui/WRAPPER.C	original	draw_button is in System Shock's WRAPPER.C, the options screens in both
+ovr137	src/OVR137.C	src/ui/GAMESCR.C	descriptive	the game screen's set-up and status clicks (init_gamedisp, flask_info)
+ovr138	src/OVR138.C	src/obj/USEITEMS.C	descriptive	using particular objects (UseFood, UseKeyOn, OpenDoor ...)
+ovr139	src/OVR139.C	src/ui/SCROLLIO.C	descriptive	the message scroll's input side (scroll_more, wyorn)
+ovr140	src/OVR140.C	src/map/TEXTMAPS.C	inferred	a level's texture maps (init_txtlib, load_txtmaps, Txm_Load); the job of System Shock's TEXTMAPS.C (load_textures)
+ovr142	src/OVR142.C	src/game/PLAYDATA.C	descriptive	reading and writing player data and its spells (save_player_data)
+ovr143	src/OVR143.C	src/game/PLAYER.C	original	init_player is in System Shock's PLAYER.C, setting up the player in both
+ovr146	src/OVR146.C	src/sys/EMPTY.C	descriptive	one empty function
+ovr147	src/OVR147.C	src/ui/MAINMENU.C	descriptive	the main menu (draw_start_buttons, real_start)
+ovr148	src/OVR148.C	src/obj/RECT.C	inferred	rect_class_data: the class prefix
+ovr149	src/OVR149.C	src/game/GAMEWRAP.C	original	copy_file is in System Shock's GAMEWRAP.C, saving and loading games in both
+ovr150	src/OVR150.C	src/gfx/SHOWPIC.C	descriptive	a full-screen picture from BYT.ARK (display_screen)
+ovr151	src/OVR151.C	src/event/SCHEDULE.C	inferred	the event scheduler: the Sched_ prefix, and System Shock's scheduler is SCHEDULE.C
+ovr152	src/OVR152.C	src/map/LIGHTING.C	descriptive	lighting (init_lighting, set_light)
+ovr153	src/OVR153.C	src/sys/ACLZW.C	descriptive	LZW-compressed save blocks (ac_shrink_disk, ac_unshrink_disk)
+ovr154	src/PLAYER.C	src/game/SKILLS.C	descriptive	skills, sleep, dreams, eating, the void and death (use_skill, player_sleep)
+ovr155	src/OVR155.C	src/obj/SPEC.C	inferred	spec_class_data: the class prefix
+ovr156	src/OVR156.C	src/combat/SPELLS.C	descriptive	casting spells (cast, do_spell)
+ovr157	src/OVR157.C	src/combat/SPELLS2.C	descriptive	more spells (sp_enchant, sp_true_sight)
+ovr158	src/OVR158.C	src/ui/STATS.C	descriptive	the character panel's statistics page
+ovr159	src/OVR159.C	src/obj/STUFF.C	inferred	stuff_class_data: the class prefix
+ovr162	src/OVR162.C	src/event/TRIGSAVE.C	descriptive	writes the trigger table
+ovr163	src/OVR163.C	src/obj/TREASURE.C	descriptive	spilling containers and generating loot (generate_treasure)
+ovr165	src/OVR165.C	src/sys/STUBS2.C	descriptive	a newscr(16) call and an empty function
+ovr166	src/OVR166.C	src/event/TRIGGER.C	inferred	triggers and traps (UseTrigger, SetOffTrap, UseTrap); the job of System Shock's TRIGGER.C
+ovr167	src/OVR167.C	src/sys/MISCUTIL.C	descriptive	compass solving, directories and xor-coded file I/O helpers
+-	src/FARDATA.ASM	src/sys/FARDATA.ASM	descriptive	the far data no C file defines (the name it had)

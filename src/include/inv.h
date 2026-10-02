@@ -27,7 +27,7 @@ struct Bag {
     int weight;                         /* 0x0A */
 };
 
-/* OVR121.C: open bags in the inventory panel */
+/* BAGS.C: open bags in the inventory panel */
 extern unsigned char display_inventory_no_show;
 void far CloseTheBag(void);
 void far FixOpenBag(void);
@@ -41,7 +41,7 @@ void far OpenTheBag(int slot);
 char far PutObjectInBag(struct Object far *obj, int slot);
 char far SwapItemsInBag(struct Object far *obj, int slot);
 
-/* OVR124.C: the player's inventory as data */
+/* INVDATA.C: the player's inventory as data */
 int far ItemWeight(struct Object far *obj);
 struct Object far * far find_obj(int major, int minor, int cls, struct Object far **list);
 struct Object far * far WhatsInSlot(int slot);
@@ -61,7 +61,7 @@ unsigned char far ObjWorn(int id, int slot);
 int far DamageInventory(int slot, unsigned char damage, unsigned char type, int how, char debris);
 unsigned char far EncumCheck(struct Object far *obj);
 
-/* OVR125.C: the inventory panel */
+/* INVPANEL.C: the inventory panel */
 extern int SaveHandles[23];
 extern struct Object far *CursorObjPtr;
 extern struct Bag far *OpenBagList;

@@ -9,7 +9,7 @@ struct Camera;
 
 #include "view3d.h"
 
-/* OVR112.C: the program's main and its startup and shutdown */
+/* UWEDIT.C: the program's main and its startup and shutdown */
 extern char HomeDir[0x42];
 /* DS:5D60, FM Towns _scrmode (IDA's label "InGameMode" here is wrong: a different global,
    DS:2506, exists under that name already). */
@@ -39,13 +39,13 @@ extern char NewPlyFade;
 void far newscr(int mode);
 void far real_death(int how);
 
-/* SEG012.C: the main loop and the per-screen change dispatcher */
+/* MAINLOOP.C: the main loop and the per-screen change dispatcher */
 extern unsigned char dsfx_playing;
 void far do_changes(void);
 void far mainloop(void);
 void far editchng(int bits);
 
-/* SEG013.C: EMS (LIM expanded memory) driver calls */
+/* EMS.C: EMS (LIM expanded memory) driver calls */
 /* No FM Towns counterpart (FM Towns has no EMS): the segment of the EMS page frame, set
    by seg013 from INT 67h function 41h. Provisional name. */
 extern unsigned ems_frame;
@@ -53,7 +53,7 @@ void far seg013_1D3C_138(unsigned handle, char far *name);
 int far seg013_1D3C_A(unsigned min_pages, unsigned max_pages);
 void far seg013_1D3C_B2(void);
 
-/* SEG042.C: memory and the workspace */
+/* TMPALLOC.C: memory and the workspace */
 /* DOS A5 is FM Towns mem_setup: both initialise the page counts and invalidate mappings.
    The IDA name is kept as the public symbol until its target-table entry is renamed. */
 void far mem_setup(int page);
@@ -73,20 +73,20 @@ void far release_workspace(void);
 #define ERR_READ        0x3000          /* "Could not read data." */
 #define ERR_WRITE       0x4000          /* "Could not write data." */
 
-/* OVR114.C: error reporting and fatal exit routines */
+/* ERROR.C: error reporting and fatal exit routines */
 void far first_punt(int code);
 void far pfatal_code(int code);
 void far pfatal(char *message);
 
-/* SEG041.C: small helpers */
+/* UTIL.C: small helpers */
 int far mvcheck(int *val, int limit, int step, int dir);
 void far move_along(int heading, int dist, int *x, int *y);
 int far rollem(int dice, int sides);
 
-/* OVR109.C: debugging hooks */
+/* DEBUG.C: debugging hooks */
 void far init_debug(void);
 
-/* SEG017.ASM */
+/* MODEX.ASM */
 void far DRAW_RELATED_seg017_2179_2A2();
 void far DRAW_RELATED_seg017_2179_320(unsigned offset, int far *width, int far *height);
 void far DRAW_RELATED_seg017_2179_361();
@@ -103,14 +103,14 @@ int far str_len(char far *s);
 void far str_ncopy(char far *dst, char far *src, int n);
 char far * far str_str(char far *s, char far *find);
 
-/* SEG018.ASM */
+/* INT0TRAP.ASM */
 extern unsigned far int0_sp;
 extern unsigned far int0_ss;
 /* The divide-by-zero trap in seg018 (assembly), and the two words in its code segment
    where it finds the stack to return to. DOS only; the names are ours. */
 void interrupt far int0_trap();
 
-/* SEG021M.ASM */
+/* SYSENTRY.ASM */
 extern unsigned char far *Alt;  /* DS:2130 */
 extern unsigned char far *Asc;  /* DS:2148, FM Towns _Asc */
 /* DS:212C, a far pointer to the keyboard handler's caps lock state (it sets the LEDs from
@@ -137,7 +137,7 @@ void far seg021_22FD_791(void);
 void far seg021_22FD_7CD(void);
 void far seg021_22FD_809(void);
 
-/* SEG021Q.ASM */
+/* C3DENTRY.ASM */
 void far Callback_seg021_22FD_CEA(int);
 int far cAtan2(int x, int y);
 extern int far *cDbase;  /* DS:216C, start of the bytecode buffer */
@@ -157,7 +157,7 @@ void far cSinCos(int angle, int *x, int *y);
 int far cSqRt(long v);
 void far cZoom(unsigned zoom);
 
-/* OVR165.C: screen changes */
+/* STUBS2.C: screen changes */
 /* Declared before the rest of its file because TLINK numbers the overlay's stub entries in
    the order Turbo C lists the publics, which for names with the same hash key is the order
    they were first seen: the EXE's stub has ovr165_E before ovr165_0. */
@@ -166,7 +166,7 @@ void far ovr165_E(void);
 /* SETPNT.ASM */
 int far SetPnt(char x, char y, char z);
 
-/* OVR158.C: the character panel's statistics page */
+/* STATS.C: the character panel's statistics page */
 extern int spsave[3];  /* DS:1B9F; FM Towns reads _spsave+4 */
 void far sp_hp(void);
 void far sp_mp(void);

@@ -103,7 +103,7 @@ struct StaticTile {
     unsigned char step;                 /* 0x04 */
 };
 
-/* SEG006.C: critter motion, homing projectiles, path traversal and doors */
+/* PATHFIND.C: critter motion, homing projectiles, path traversal and doors */
 extern int crit_terr;
 extern int tdx;
 extern int tdy;
@@ -158,7 +158,7 @@ void far init_ai(void);
 int far get_terrain(struct Object far *obj);
 void far crit_head_for_loc(unsigned char x, unsigned char y, char z);
 
-/* SEG007.C: critter movement and AI */
+/* AI.C: critter movement and AI */
 extern int lastXeye;
 extern int lastYeye;
 extern unsigned char hitx;
@@ -195,7 +195,7 @@ unsigned char far acceptable_danger(void);
 unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
                                  struct Object far *from);
 
-/* OVR107.C: critters between moments */
+/* CRITTIME.C: critters between moments */
 void far change_critter_goal(struct Object far *npc, char goal, int gtarg);
 void far yearly_checkup(void);
 void far update_all_critters_whilst_player_snoozes(void);
@@ -211,12 +211,12 @@ void far arena_opponent_runs(struct Object far *obj);
 void far where_shall_we_hang_out(struct Object far *npc, int *x, int *y);
 char far maybe_go_hang_out(struct Object far *npc);
 
-/* OVR104.C: creature class data */
+/* CREATURE.C: creature class data */
 extern struct Creature Creature[64];
 char far init_this_critter(struct Object far *obj);
 void far creature_obj_init(void);
 
-/* OVR117.C: critter art pages */
+/* CRPAGES.C: critter art pages */
 void far NightCleanCritPages(void);
 void far PreLoadCritPages(void);
 

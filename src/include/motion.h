@@ -73,7 +73,7 @@ struct MotionParams {
     unsigned headings[8];               /* 0x27 */
 };
 
-/* SEG030.C: object physics */
+/* OBJPHYS.C: object physics */
 void far get_phys_data(struct Object far *obj, struct Phys *pp);
 unsigned char far set_phys_data(struct Object far *obj, struct Phys *pp);
 struct Object far * far static_to_mob(struct Object far *obj);
@@ -83,7 +83,7 @@ void far update_hack_vecs(struct Phys *pp);
 void far missile_newhit(struct Object far *proj, struct Object far *hit);
 int far do_objhit(int ci, int index);
 
-/* SEG031.C: motion */
+/* MOTION.C: motion */
 extern struct MotionCalc Ppd;
 extern struct Phys PN;
 extern struct Phys CN1;
@@ -109,7 +109,7 @@ void far set_jmp(int force, char stop, int min);
 struct Object far * far IsaDoor(unsigned char *x, unsigned char *y);
 struct Object far * far CollObject(void);
 
-/* SEG035.C: player input and motion */
+/* PLAYMOVE.C: player input and motion */
 extern unsigned char pmouseHandled;
 extern unsigned char combEfflen;
 extern unsigned char tremEfflen;

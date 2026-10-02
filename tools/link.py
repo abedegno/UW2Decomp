@@ -15,7 +15,7 @@ its stub entries differently, which nothing depends on).
 
 1. tools/extract.py writes the data-only modules, manifest.json and renames.json under
    build/LINK (skip with --no-extract when they are current). Before it, a far data source
-   (an .ASM marked /* fardata */, src/FARDATA.ASM) is assembled into build/STEM when its
+   (an .ASM marked /* fardata */, src/sys/FARDATA.ASM) is assembled into build/STEM when its
    object is missing or older, since extract.py compares its segments with the EXE.
 2. C0UW2.ASM is Turbo C++'s own TC/C0.ASM with the changes UW2's startup code shows (see
    c0_source), assembled as BUILD-C0.BAT does for the medium model.
@@ -25,7 +25,7 @@ its stub entries differently, which nothing depends on).
    stub_order_wrong), stops the link until it is corrected.
 4. In DOS: the date is set to 12 May 1993 (TLINK records it), TASM assembles the generated
    modules, TLIB puts the second library's modules (seg003's, seg004's, seg021's but its
-   first, and seg045) into UWLIB.LIB in the manifest's order,
+   first, and seg045's) into UWLIB.LIB in the manifest's order,
    and TLINK links from LINK.RSP:
 
      TLINK /c /m /s XORDER C0UW2 <resident objects> /o <overlay objects> /o-,
@@ -86,7 +86,7 @@ def stub_order_wrong(d, order):
 
     Turbo C lists a file's publics in descending order of the key tools/bssorder.py computes
     from each name, names with equal keys in the reverse of the order they were first seen
-    (a prototype counts; see OVR108.C); so the EXE's stub order is a constraint on the names.
+    (a prototype counts; see CUTS.C); so the EXE's stub order is a constraint on the names.
     A file that breaks it has a name whose key sorts differently from the original's."""
     want = set(order); listed = []
     for t, b in _records(d):
@@ -107,11 +107,12 @@ SOURCE_DEFECTS = {'bytealigned': 'its _DATA or _BSS starts at an odd address: a 
 
 def build_fardata():
     """Assemble each far data source (marked /* fardata */) whose object is missing or older."""
-    import glob
-    for src in sorted(glob.glob(os.path.join(root, 'src', '*.ASM'))):
+    from sources import all_sources, stem as stem_of
+    for src in all_sources():
+        if not src.upper().endswith('.ASM'): continue
         text = open(src, encoding='latin1').read(3000)
         if not re.search(r'/\*\s*fardata\s*\*/', text): continue
-        stem = os.path.splitext(os.path.basename(src))[0].upper()
+        stem = stem_of(src)
         outdir = os.path.join(root, 'build', stem); obj = os.path.join(outdir, stem + '.OBJ')
         if os.path.exists(obj) and os.path.getmtime(obj) >= os.path.getmtime(src): continue
         opts = re.search(r'/\*\s*opts:\s*([^*]+?)\s*\*/', text)
@@ -125,19 +126,20 @@ def changed_sources():
     includes) is not what the last exact run built, compiled (unless the object there was built
     from this same text) into build/MODLINK/src/STEM
     with the source's own /* opts: */ (match.py's defaults otherwise)."""
-    import glob
     from srcdeps import source_hash
+    from sources import all_sources, stem as stem_of, by_segment
+    overlay_manager = by_segment('seg046')     # linked from OVERLAY.LIB, not from its source
     lay = os.path.join(LINKDIR_EXACT, 'base', 'layout.json')
     if not os.path.exists(lay):
         sys.exit('no build/LINK/base: run the exact link (python3 tools/link.py) once while every source matches')
     known = json.load(open(lay))['sources']
     out = {}
-    for src in sorted(glob.glob(os.path.join(root, 'src', '*.C')) + glob.glob(os.path.join(root, 'src', '*.ASM'))):
+    for src in all_sources():
         text = open(src, 'rb').read()
         head = text[:3000].decode('latin1')
         if not re.search(r'/\*\s*(target:\s*\w+|fardata)\s*\*/', head): continue
-        stem = os.path.splitext(os.path.basename(src))[0].upper()
-        if stem == 'SEG046': continue
+        stem = stem_of(src)
+        if stem == overlay_manager: continue
         if stem not in known: sys.exit(f'{stem}: a source the exact run did not have; --mod links the existing files only')
         sha = source_hash(src)          # the text and the src/include headers it includes
         if sha == known[stem][1]: continue

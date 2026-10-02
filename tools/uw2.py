@@ -13,16 +13,16 @@ The gate, `check`:
    A source that fails from a batch is built again on its own by match.py before it counts.
 2. match.py (--no-build) must say WHOLE SEGMENT MATCHES and verify.py "fixups and data
    verified" for each.
-3. symbols.tsv rebuilt from scratch (verify.py --update over every source, into an empty file
-   in a scratch directory) must hold the same names at the same addresses as the committed
+3. symbols.tsv rebuilt from scratch (verify.py --update over every source in segment order,
+   retrying any that fail until a round adds nothing, into an empty file in a scratch directory) must hold the same names at the same addresses as the committed
    file, in any order. A name the committed file marks 'library' by hand may come out
    'provisional', since the mark is not in any object.
 4. The exact link must equal UW2.EXE except the two known bytes (0x6676C, 0x66774), and the
    modding build with no source changed must be byte-identical to it.
 Exit status 0 only when everything passes.
 
-FARDATA.ASM has no target line (link.py assembles it); src/CYCLE.C and src/THEME.C have none
-either and are skipped.
+Sources are found in every directory under src/ but src/include (tools/sources.py).
+src/sys/FARDATA.ASM has no target line (link.py assembles it) and is skipped.
 """
 import sys, os, re, json, glob, time, shutil, hashlib, subprocess, tempfile, io, contextlib
 from concurrent.futures import ThreadPoolExecutor
@@ -47,16 +47,17 @@ def rel(p): return os.path.relpath(p, root)
 
 sys.path.insert(0, here)
 from srcdeps import source_hash     # a source's text plus the src/include headers it includes
+from sources import all_sources, stem as stem_of, target as target_of     # every source under src/, by stem
 
 
 def sources():
     """[(stem, path, opts)] for every source with a target line."""
     out = []
-    for src in sorted(glob.glob(os.path.join(root, 'src', '*.C')) + glob.glob(os.path.join(root, 'src', '*.ASM'))):
+    for src in all_sources():
         head = open(src, encoding='latin1').read(3000)
         if not re.search(r'/\*\s*target:\s*\w+\s*\*/', head): continue
         opts = re.search(r'/\*\s*opts:\s*([^*]+?)\s*\*/', head)
-        out.append((os.path.splitext(os.path.basename(src))[0].upper(), src, opts.group(1) if opts else DEFAULT_OPTS))
+        out.append((stem_of(src), src, opts.group(1) if opts else DEFAULT_OPTS))
     return out
 
 
@@ -147,11 +148,19 @@ def symbols_from_scratch(srcs):
         for x in ('build', 'targets', 'fmtowns'):
             if os.path.exists(os.path.join(root, x)): os.symlink(os.path.join(root, x), os.path.join(d, x))
         verify.root = d
+        # A file can need names another file merges first (a far address it refers to by its
+        # offset half alone, data placed by its publics), so the sources go in segment order
+        # and any that fail are tried again after the rest, until a round adds nothing.
+        todo = sorted((s for _, s, _ in srcs), key=lambda s: (not target_of(s).startswith('ovr'), target_of(s)))
         failed = []
-        for _, src, _ in srcs:
-            with contextlib.redirect_stdout(io.StringIO()):
-                if verify.main([src, '--update']): failed.append(rel(src))
-        if failed: return False, 'verify --update failed from scratch for ' + ' '.join(failed)
+        while todo:
+            failed = []
+            for src in todo:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    if verify.main([src, '--update']): failed.append(src)
+            if len(failed) == len(todo): break
+            todo = failed
+        if failed: return False, 'verify --update failed from scratch for ' + ' '.join(rel(s) for s in failed)
         new, old = rows(os.path.join(d, 'symbols.tsv')), rows(os.path.join(root, 'symbols.tsv'))
     finally:
         verify.root = saved
