@@ -2,31 +2,45 @@
 ; /* opts: /ml */
 ;
 ; Sprites: DOS segment seg000 (0000:0000-04EA), the first code in UW2.EXE, before seg001's
-; screen-rectangle routines. tools/align.py had it as library code; it is the game's own
-; sprite module. FM Towns has the same routines in the same order, between SetPnt_ and
-; save_rect_: create_sprite_, destroy_sprite_, change_sprite_, draw_sprite_, draw_mask_,
-; erase_sprite_, move_sprite_, resize_sprite_, set_yoff_, an unnamed helper that they all
-; call (FM set_yoff_+0x22, here sp_changed), and update_sprites_. Each does the same work
-; on the same tables, so those are their names (the C entry points are in symbols.tsv).
+; screen-rectangle routines.
 ;
-; Hand-written assembly with .186 (push imm, shl reg,imm): the C entries save ds, es, si
-; and di, point DS and ES at the sprite data and end `mov sp,bp; pop bp` with no locals,
-; which neither Turbo C nor TASM's ARG frames produce; the helper is a near procedure
-; with repne scasw list searches; and the "something changed" flag is a word in the code
-; segment (sp_dirty, at offset 0, written through cs:). Forward jumps carry no padding,
-; so they were written `short` (or are out of short range).
+; A sprite is a picture the game redraws in place on the screen, over whatever is under
+; it: PANELS.C uses them for the screen furniture around the 3D view (the vitality and
+; mana flasks with their draining and bubbling, the compass, the eyes). Up to 64 sprites,
+; each on one of four layers. The calls that change a sprite only record the change and
+; queue it for redrawing (sp_changed); update_sprites then puts back what the queued
+; sprites covered, top layer first, and draws them again, bottom layer first, saving
+; what each will cover in its block of video memory (save_rect and restore_rect,
+; VALLOC.ASM). A sprite overlapping a changed one on a higher layer is queued too, so the
+; layers stay in order.
+;
+; name: descriptive (the sprite routines, FM Towns create_sprite_ .. update_sprites_).
+; tools/align.py had it as library code; it is the game's own sprite module. FM Towns has
+; the same routines in the same order, between SetPnt_ and save_rect_: create_sprite_,
+; destroy_sprite_, change_sprite_, draw_sprite_, draw_mask_, erase_sprite_, move_sprite_,
+; resize_sprite_, set_yoff_, an unnamed helper that they all call (FM set_yoff_+0x22,
+; here sp_changed), and update_sprites_. Each does the same work on the same tables, so
+; those are their names (the C entry points are in symbols.tsv).
+;
+; match: hand-written assembly with .186 (push imm, shl reg,imm): the C entries save ds,
+; es, si and di, point DS and ES at the sprite data and end `mov sp,bp; pop bp` with no
+; locals, which neither Turbo C nor TASM's ARG frames produce; the helper is a near
+; procedure with repne scasw list searches; and the "something changed" flag is a word in
+; the code segment (sp_dirty, at offset 0, written through cs:). Forward jumps carry no
+; padding, so they were written `short` (or are out of short range).
 ;
 ; The data: a far segment of its own (paragraph 5EFD, segment table entry 62, 604h bytes,
 ; all zero in the EXE). Its layout is FM Towns': sp_inf_tab, 40h records of 10h bytes;
 ; sp_inf_end (FM also calls it sp_chg_tab), four 40h-byte lists of sprites to redraw,
 ; one per layer, each a count of bytes then sprite numbers; sp_map_tab (FM sp_chg_end),
 ; four lists of the sprites on screen; then two words the redraw loop keeps (FM keeps them
-; elsewhere, unnamed). The bytes show labels there, not numbers: [bx+0] is assembled with
-; a 16-bit zero displacement, which TASM only gives a relocatable label. The segment
-; itself is still taken from your EXE by tools/extract.py (it holds no bytes of its own
-; and sits among the far data segments, which the link declares together in XFAR), so
-; this module names it through sp_inf_tab, defined there at the segment's start, and the
-; other names are equates from it.
+; elsewhere, unnamed).
+; match: the bytes show labels there, not numbers: [bx+0] is assembled with a 16-bit zero
+; displacement, which TASM only gives a relocatable label. The segment itself is still
+; taken from your EXE by tools/extract.py (it holds no bytes of its own and sits among the
+; far data segments, which the link declares together in XFAR), so this module names it
+; through sp_inf_tab, defined there at the segment's start, and the other names are
+; equates from it.
 ;
 ; A record in sp_inf_tab, as the code uses it: +0 flags (1 in use, 2 visible, 4 nothing
 ; saved to restore, 8 destroyed, 10h drawn transparent), +2 x (word), +4 y (byte), +5 width

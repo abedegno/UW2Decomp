@@ -1,9 +1,14 @@
 /* target: ovr092 */
 /* opts: -mm -1 -G -O -Y -d */
+/* DOS overlay ovr092: seven tiny far functions, six empty and one (ovr092_5) that switches to
+   screen mode 16 through newscr (UWEDIT.C). Nothing in the sources or the extracted
+   modules calls any of them by name; they are probably the remains of debugging or editor
+   features compiled out of the shipped game (UW2.EXE was linked as uwedit.exe). DOS only.
+   name: descriptive (seven stubs). */
 
 #include "sys.h"
 
-/* No FM Towns counterparts. DoNothing_ovr092_22, ReturnFar_ovr092_0 and Nop_ovr092_18 (IDA's
+/* name: no FM Towns counterparts. DoNothing_ovr092_22, ReturnFar_ovr092_0 and Nop_ovr092_18 (IDA's
    ovr092_22, ovr092_0, ovr092_18) are provisional names chosen so that their tools/bssorder.py
    keys put them in the EXE's overlay stub order. */
 

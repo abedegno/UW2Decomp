@@ -1,12 +1,48 @@
 /* target: seg007_17A2 */
 /* opts: -mm -1 -G -O -Y -d */
-/* Critter movement and AI: the animation sequences, the goals a critter pursues (wander,
-   mill about, guard, attack, flee, defend, talk, hover), choosing and finding targets,
-   turning, the per-tick setup of the critter globals, critter_ai and critter_mv, death
-   and damage, and the loop over the active mobile objects. The whole of DOS resident
-   segment seg007_17A2, in original order. Function and global names are the originals
-   from the FM Towns symbol table where it has them; the source file's own name is not
-   known. */
+/* Critter movement and AI: the whole of DOS resident segment seg007_17A2, in original
+   order.
+
+   What it does in the game: every moving thing in the level is stepped from here.
+   move_mobile (called by PLAYMOVE.C's per-frame update while MoveCrits is set and time
+   is not stopped) walks the active mobile list, and each object whose time bin has come
+   round gets critter_ai (critters) or PATHFIND.C's move_me_joe (missiles and other
+   mobile objects). critter_ai moves the critter through the physics engine, plays out
+   attack, casting and dying sequences, and otherwise calls critter_mv, which notices
+   being hit, chooses a goal and runs it.
+
+   Goals (the goal word's low nibble, the switch in critter_mv): 0 and 7 stand still,
+   1 go home, 2 wander (crit_drunkwalk), 3 nothing here (the critter is moved by other
+   code; critter_ai never skips it for distance), 4 guard (crit_guard, also the goal
+   critter_set_goal remembers in the old goal), 5 attack (crit_offense), 6 flee
+   (crit_flee), 8 mill about near home (crit_mill), 9 fight back when cornered
+   (crit_defense), 10 talk to the player (crit_talk), 11 flutter at random, 12 hover at
+   home (crit_hover), 15 stand frozen while the goal target counts down. Other values
+   only set a slow rate.
+
+   Animation sequences (the 6-bit seq in byte 0x15, the 8 actions of CRIT\CR.AN): 0
+   standing, 1 walking, 2 combat stance, 3 to 5 the three melee attacks, 6 casting or
+   firing a missile (the fourth attack slot), 7 dying.
+
+   A critter's "home" word (OBJ_HOMEX, OBJ_HOMEY) is the tile it stands on now; its home
+   in the AI's sense, myxhome and myyhome, is kept in the quality and owner fields
+   (set_critter_vars, critter_ai).
+
+   Data owned: atk_charge (the strength of a blow by attack frame), the record of the
+   last critter the player hit (crithit, typehit, crithittime, hitx, hity, hitpz, which
+   CRITTIME.C saves into the player record), the time bins (curBin, lastbin), seqptr and
+   seq_len for the current critter's animation, and lastcombattime. The per-critter
+   scratch globals (meptr, mycst, myxpos ... tdistsqr) are PATHFIND.C's.
+
+   Neighbours: PATHFIND.C supplies movement towards a square (crit_head_for_loc), line of
+   sight and the physics handlers; COMBAT.C's critter_attack resolves a blow;
+   MISSILE.C's critter_fire and SPELLS.C's cast fire missiles and spells; CRITTIME.C
+   changes goals from outside; the conversation code is entered through TalkTo.
+
+   Function and global names are the originals from the FM Towns symbol table where it
+   has them.
+   Name: inferred (the job of System Shock's AI.C: critter goals and AI, critter_ai,
+   crit_attack). */
 
 #include <dos.h>
 #include <stdlib.h>
@@ -32,9 +68,12 @@ extern int missile_try;
 long lastcombattime;                    /* DS:2280, this file's _BSS (see below) */
 
 extern struct MissileInfo Missile[];
-/* The charge of a critter's blow, by attack frame. Static in FM Towns: provisional name.
-   A far variable, so its own segment (SEG0075_FAR, 609E:0000, segment table entry 69,
-   right after PATHFIND's four): only this file uses it. */
+/* The charge of a critter's blow, by attack frame (the 4-bit attack frame in the word at
+   0x0F, which crit_attack counts up while the critter stands in reach and critter_ai
+   passes to critter_attack): 50 for an unwound blow up to 255 after 15 frames. */
+/* name: static in FM Towns, so the name is provisional. */
+/* match: a far variable, so its own segment (SEG0075_FAR, 609E:0000, segment table entry
+   69, right after PATHFIND's four): only this file uses it. */
 struct AtkCharge {
     unsigned char charge;
     char b1;
@@ -43,22 +82,24 @@ static struct AtkCharge far atk_charge[16] = {
     { 50, 0 }, { 60, 0 }, { 70, 0 }, { 80, 0 }, { 90, 0 }, { 100, 0 }, { 110, 0 }, { 120, 0 },
     { 130, 0 }, { 140, 0 }, { 155, 0 }, { 170, 0 }, { 185, 0 }, { 205, 0 }, { 230, 0 }, { 255, 0 } };
 
-/* Uninitialised data, DS:222C..2299. This block is one module's _BSS (Turbo C lays a
-   module's _BSS out by name), and variables only seg006 uses (DS:222E, 2236, 2238, 2240,
-   2244, 225A, 2272, 227E) sit between the ones below, so it belongs to seg006 or to this
-   file and cannot be split. Until seg006 is matched it is declared here as extern; the
-   names are the FM Towns ones. */
+/* match: uninitialised data, DS:222C..2299. This block is one module's _BSS (Turbo C lays
+   a module's _BSS out by name), and variables only seg006 uses (DS:222E, 2236, 2238,
+   2240, 2244, 225A, 2272, 227E) sit between the ones below, so it belongs to seg006 or to
+   this file and cannot be split. Until seg006 is matched it is declared here as extern;
+   the names are the FM Towns ones. */
 
 /* The current critter, set up by set_critter_vars and critter_ai. */
 extern unsigned myxpost, myypost;
-/* This file's _BSS, DS:2280..2299, laid out by name (tools/bssorder.py): lastcombattime 84,
-   crithittime 139, hitx and hity 520, hitpz 552, curBin 555, victim 574, seq_len 603,
-   seqptr 659, lastXeye and lastYeye 820, seq_lframe 859 (Turbo C puts anything wider than
-   a byte on an even offset, so DS:228F and DS:2299 are padding).
-   The critter type last damaged, and where and when the player last hit a critter.
-   hitpz (DS:228A) is static in FM Towns (_seq_lframe+1 there, read by critter_mv_ for
-   set_loc beside _hitx and _hity), so it has no original name: provisional, chosen for its
-   key. FM Towns' _hitz is another variable, seg024's combat height (DS:24CE). */
+/* match: this file's _BSS, DS:2280..2299, laid out by name (tools/bssorder.py):
+   lastcombattime 84, crithittime 139, hitx and hity 520, hitpz 552, curBin 555, victim
+   574, seq_len 603, seqptr 659, lastXeye and lastYeye 820, seq_lframe 859 (Turbo C puts
+   anything wider than a byte on an even offset, so DS:228F and DS:2299 are padding). */
+/* The critter type last damaged (victim), and where (hitx, hity, hitpz) and when
+   (crithittime, in game_clock units) the player last hit a critter. lastXeye and
+   lastYeye are the tile the 3D view was last drawn from (VIEW3D.C). */
+/* name: hitpz (DS:228A) is static in FM Towns (_seq_lframe+1 there, read by critter_mv_
+   for set_loc beside _hitx and _hity), so it has no original name: provisional, chosen
+   for its key. FM Towns' _hitz is another variable, seg024's combat height (DS:24CE). */
 unsigned long crithittime;
 unsigned char hitx, hity;
 static unsigned char hitpz;
@@ -87,11 +128,14 @@ unsigned char far line_of_sight(int x1, int y1, int z1, int x2, int y2, int z2);
 void far critter_set_goal(unsigned char goal, int target);
 
 /* Initialised data, DS:C4: the time bin of the last pass over the mobile objects, and the
-   critter the player last hit and its type. */
+   critter the player last hit (its mobile index) and its race (struct Creature's race;
+   0xFF for none). */
 signed char lastbin = 0;
 unsigned char crithit = 0;
 unsigned char typehit = 0xFF;
 
+/* Switch the current critter to animation sequence seq from its first frame, or if it is
+   already in that sequence step to the next frame (always if force, else half the time). */
 void far change_or_inc_seq(int seq, char force)
 {
     if (OBJ_SEQ(meptr) != seq) {
@@ -101,6 +145,8 @@ void far change_or_inc_seq(int seq, char force)
         SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % seq_len);
 }
 
+/* Face the current critter in one of the 8 directions: the 0-255 heading byte, the
+   3-bit coarse heading and a zero fine heading. */
 void far set_htx(int heading)
 {
     meptr->heading = heading << 5;
@@ -108,6 +154,13 @@ void far set_htx(int heading)
     SET_FINEHEAD(meptr, 0);
 }
 
+/* Goal 2, wandering, and the fallback when no path is found. A hostile critter turns to
+   guarding half the time. Otherwise it switches between standing (seq 0) and walking
+   (seq 1) at random, the creature's lazy value making it more likely to stand; a walker
+   that bumped into something turns a quarter turn left or right, otherwise drifts up to
+   45 degrees off its heading and steers round the player (crit_avoid_player). Fliers
+   also pick a new pitch. Ends with check_out_player, which turns it to face a nearby
+   player. */
 void far crit_drunkwalk(void)
 {
     unsigned char head;
@@ -196,6 +249,9 @@ void far crit_drunkwalk(void)
     check_out_player();
 }
 
+/* Goal 8, milling about: a hostile critter switches to guarding the player (goal 4);
+   otherwise it wanders while within its creature's range of home (myxhome, myyhome) and
+   heads back home when further. */
 void far crit_mill(void)
 {
     signed char dx;
@@ -215,6 +271,12 @@ void far crit_mill(void)
         crit_drunkwalk();
 }
 
+/* Goals 0, 4 and 7, and the hostile branch of wandering. A hostile critter (attitude 0)
+   watches the player: if it already knows where the player is (b19 bit 0) it attacks
+   (goal 5); with probability alert/16 it looks (target_found), attacking if it sees or
+   closely hears the player and, half the time, walking towards a sound further off. Then
+   it does what its goal says: wander for goal 2, stand for goals 0 and 7, mill about for
+   the rest. */
 void far crit_guard(void)
 {
     unsigned char found;
@@ -270,6 +332,14 @@ void far crit_guard(void)
     }
 }
 
+/* Goal 5, attacking the target set up by set_up_target. In melee reach (within 10 fine
+   units, squared distance under 0x64, or on the target's tile, and within 4 height steps
+   unless a flier) it fights hand to hand (crit_attack). Otherwise a caster tries a
+   defensive spell or a spell attack and a critter whose first weapon is a missile weapon
+   shoots; a successful ranged attack holds it in the combat stance. A critter that was
+   guarding (old goal 4), has wandered more than twice its range from home and is not
+   bound to fight (b19 bit 5) gives up and goes back to guarding. Otherwise it closes in
+   (crit_offense_find_target). */
 void far crit_offense(void)
 {
     signed char dx;
@@ -315,6 +385,13 @@ void far crit_offense(void)
     crit_offense_find_target(txpos, typos, mycst->b2D_0 ? how : 1);
 }
 
+/* Melee manoeuvring: face the target, then by the squared fine distance back off
+   (under 0x31: three times in four walk directly away, else sidestep), close in (over
+   0x51), dodge in a random direction (chance dexterity/64) or stand. In reach (dist up to
+   0x64) one time in four starts an attack, choosing sequence 3, 4 or 5 by the creature's
+   attack probabilities (attacks[i].prob, percentages); otherwise the attack frame counts
+   up, winding up a stronger blow (atk_charge). Fliers pitch towards the target's
+   height. Always returns 1. */
 unsigned char far crit_attack(unsigned dist)
 {
     signed char dz;
@@ -379,6 +456,11 @@ unsigned char far crit_attack(unsigned dist)
     return 1;
 }
 
+/* Move towards the target's square (x, y). One time in eight, if the destination is out
+   of date, the critter checks whether it still perceives the target (target_found) and
+   either updates its destination or drops the goal. how is the stand-off distance in
+   tiles: crit_offense passes 4 for critters with b2D_0 set, else 1, and the critter only
+   heads in while further away than that. */
 void far crit_offense_find_target(unsigned char x, unsigned char y, unsigned char how)
 {
     unsigned char found;
@@ -405,6 +487,9 @@ void far crit_offense_find_target(unsigned char x, unsigned char y, unsigned cha
     }
 }
 
+/* Cast the creature's third spell (spells[2], 0xFF for none) with chance caster/256,
+   unless an anti-magic area covers the critter: start the cast sequence (6) with cast
+   slot 3. critter_ai casts it on frame 3. */
 unsigned char far maybe_cast_defensive_spell(void)
 {
     if (mycst->spells[2] != 0xFF && rand() % 0x100 < mycst->caster
@@ -418,6 +503,11 @@ unsigned char far maybe_cast_defensive_spell(void)
     return 0;
 }
 
+/* A spell attack: possible when no anti-magic covers the critter, the target is within
+   8 tiles (squared tile distance under 0x40), in line of sight, and the critter has
+   turned to face it (look_for_target(1)). Then with chance caster/128 it starts casting
+   its first spell (11 times in 16) or its second. Returns 1 if a ranged attack was
+   possible, so the caller holds the combat stance. */
 unsigned char far crit_magik_attack(void)
 {
     int r;
@@ -438,6 +528,9 @@ unsigned char far crit_magik_attack(void)
     return 0;
 }
 
+/* A missile attack: the target within 4 tiles (squared distance under 0x10), in line of
+   sight and faced; then with chance (dexterity+1)/192 the critter starts the firing
+   sequence (6), and critter_ai fires on frame 3. Returns 1 if an attack was possible. */
 unsigned char far crit_missile_attack(void)
 {
     if (tdistsqr < 0x10
@@ -454,6 +547,9 @@ unsigned char far crit_missile_attack(void)
     return 0;
 }
 
+/* Goal 9, cornered: fight in melee when close (squared fine distance under 0x90),
+   use spells or missiles from further away, or flee if the critter has neither; within
+   2 tiles it just faces the target in its combat stance. */
 void far crit_defense(void)
 {
     unsigned char head;
@@ -484,6 +580,14 @@ void far crit_defense(void)
     }
 }
 
+/* Goal 6, fleeing. Within about 1.7 tiles of the target (squared tile distance 3 or
+   less) and near its height, the critter turns to fight (goal 9, setting b19 bit 4 so it
+   keeps fighting) with chance 1 in 256 if its nerve (b1C_0, 4 bits) is 8 or more, or
+   at once if it is stuck;
+   otherwise it backs away at half speed. A stuck critter further away either fights
+   back (within 3 tiles) or turns 90 degrees. Otherwise it tries a defensive spell, then
+   runs, drifting at random and steering round the player, at its run speed within 8
+   tiles and its walking speed beyond. */
 void far crit_flee(void)
 {
     unsigned char head;
@@ -539,7 +643,7 @@ void far crit_flee(void)
             newh = meptr->heading;
         if (!aligned)
             newh = crit_avoid_player(newh, 0x18);
-        /* The comparison survives, but its if has no body. */
+        /* match: the comparison survives, but its if has no body. */
         if (meptr->heading != newh)
             ;
     }
@@ -554,6 +658,9 @@ void far crit_flee(void)
     SET_RATE(meptr, 4);
 }
 
+/* Steer a heading (0-255) away from the player when the player is within how fine
+   units (8 to a tile): a heading already more than 90 degrees from the player is kept,
+   others are bent by 45 degrees away. Returns the new heading. */
 unsigned char far crit_avoid_player(unsigned char heading, int how)
 {
     struct Object far *plyr;
@@ -590,6 +697,11 @@ unsigned char far crit_avoid_player(unsigned char heading, int how)
     return heading;
 }
 
+/* Goal 10, wanting to talk. A hostile critter turns to guarding instead. Otherwise it
+   stands; if it perceives the player within 2.5 tiles it turns to face them, and within
+   1.5 tiles, if the player faces it (the player's heading within 45 degrees of facing
+   the critter), it starts the conversation (TalkTo). The conversation maps other EMS
+   pages, so the critter pages are mapped back afterwards. */
 void far crit_talk(void)
 {
     unsigned char head;
@@ -630,6 +742,8 @@ void far crit_talk(void)
     }
 }
 
+/* A standing critter, or any critter while the player has a weapon drawn, turns to face
+   the player and stands when the player is within 1.5 tiles. */
 void far check_out_player(void)
 {
     unsigned char head;
@@ -650,6 +764,7 @@ void far check_out_player(void)
     }
 }
 
+/* Goal 12: go home and stand there. Hostile critters turn to guarding. */
 void far crit_hover(void)
 {
     signed char dx;
@@ -670,6 +785,13 @@ void far crit_hover(void)
     }
 }
 
+/* Does the current critter perceive its target? Sets *x and *y to the target's tile.
+   Hearing range is the critter's hearing times the target creature's noise over 16,
+   sight range its sight times the target's visibility over 16 (in tiles). Returns 0
+   when the target is within half the hearing range, or within sight range, within 45
+   degrees of the way the critter faces and in line of sight (setting b19 bit 0, "knows
+   where the target is"); 2 when it is within twice the hearing range (heard faintly);
+   1 when not perceived (clearing bit 0). */
 unsigned char far target_found(unsigned char *x, unsigned char *y)
 {
     signed char dx;
@@ -709,6 +831,9 @@ unsigned char far target_found(unsigned char *x, unsigned char *y)
     return 1;
 }
 
+/* Turn towards the target. With how set, turn smoothly (turn_real_fine) and return 1
+   once facing it; otherwise step the 3-bit heading one eighth towards it and return 1
+   only if it already faced it. */
 unsigned char far look_for_target(char how)
 {
     signed char dx;
@@ -733,9 +858,13 @@ unsigned char far look_for_target(char how)
     return 0;
 }
 
-/* IDA's NPC_Move. Named from FM Towns: constrain_movement_ follows look_for_target_ there
-   and makes the same limits of the new facing and heading to 0x20 either side of
-   myoldfacing and myoldheading; critter_mv calls it last, as here. */
+/* Limit how far a critter turns in one AI step: its facing to 45 degrees (0x20) either
+   side of where it faced before the step, and, when it was and is moving at speed above
+   1, its heading of travel likewise; a turn of more than 90 degrees stops it. A critter
+   whose physics step changed its heading (aligned) keeps the old heading. */
+/* name: IDA's NPC_Move. Named from FM Towns: constrain_movement_ follows
+   look_for_target_ there and makes the same limits of the new facing and heading to 0x20
+   either side of myoldfacing and myoldheading; critter_mv calls it last, as here. */
 void far constrain_movement(void)
 {
     unsigned char oldh;
@@ -770,9 +899,11 @@ void far constrain_movement(void)
     }
 }
 
-/* IDA's TurnTowardsVector. Named from FM Towns: turn_real_fine_ comes next there, is
-   called by look_for_target_, and makes the same cSqRt of tdx and tdy, cAtan2 and turn of
-   0x20 at most. */
+/* Turn the critter's facing towards the vector (dx, dy) by at most 45 degrees (0x20 of
+   256); returns 1 once it faces that way. */
+/* name: IDA's TurnTowardsVector. Named from FM Towns: turn_real_fine_ comes next there,
+   is called by look_for_target_, and makes the same cSqRt of tdx and tdy, cAtan2 and
+   turn of 0x20 at most. */
 unsigned char far turn_real_fine(signed char dx, signed char dy)
 {
     long d2;
@@ -822,6 +953,11 @@ unsigned char far turn_real_fine(signed char dx, signed char dy)
     return done;
 }
 
+/* The vertical aim for a critter's spell or missile, put in missile_try before the
+   shot: the height difference to the target over the distance, times 4, clamped to
+   -15..15. With flag set and a speed, it adds dist * 3 / speed (lobbing a slow missile
+   higher at range). critter_ai passes speed 0x1E and no flag for spells, the missile
+   type and flag 1 for missiles. */
 signed char far compute_trz_or_try_rather(unsigned speed, unsigned char flag)
 {
     int trz;
@@ -844,6 +980,10 @@ signed char far compute_trz_or_try_rather(unsigned speed, unsigned char flag)
     return trz;
 }
 
+/* Load the per-critter globals (meptr, myid, mycst, positions, home, old heading and
+   speed, height) for obj, and choose its physics record and handler by how it moves:
+   CN2/CT2 fliers, CN4/CT4 swimmers, CN1/CT1 walkers. Used by code outside the AI loop
+   (CRITTIME.C) before it works on a critter. */
 void far set_critter_vars(struct Object far *obj)
 {
     meptr = obj;
@@ -872,6 +1012,9 @@ void far set_critter_vars(struct Object far *obj)
     }
 }
 
+/* seq_len and seq_lframe: the frame count of the current critter's sequence, read from
+   CR.AN in the EMS page (seqptr; 8 sequences of 64 bytes per animation page, the page
+   from grs_3dinf). */
 void far set_cur_seq_len(void)
 {
     register int page;
@@ -881,6 +1024,17 @@ void far set_cur_seq_len(void)
     seq_lframe = seq_len - 1;
 }
 
+/* One AI step for meptr. A critter more than 10 tiles from both the view and the player
+   is skipped for half a cycle (its bin moves on 8), unless its goal is 3. Otherwise its
+   motion is run through the physics engine (do_crit_phys), with lava (collision bit
+   0x20, a footprint corner on lava) ignored by creatures whose ComObjData resist has bit
+   8 (probably fire resistance). Then by
+   sequence: a dying critter at its last frame is removed, its inventory generated and
+   dropped and its corpse built (returns 0, so move_mobile revisits the slot); an attack
+   sequence strikes on frame 3 (critter_attack with a random swing kind 0-8, the charge
+   from atk_charge and the creature's b0F as poison) and starts combat music if the
+   player is the target; the casting sequence casts or fires on frame 3; any other
+   sequence goes to critter_mv. Finally the bin advances by the rate. */
 unsigned char far critter_ai(void)
 {
     struct Object far *plyr;
@@ -1015,6 +1169,14 @@ unsigned char far critter_ai(void)
     return 1;
 }
 
+/* Decide and run the current critter's goal. Walking critters play a footstep sound on
+   odd frames (by the creature's sound kind). Unless the creature ignores fights
+   (bA_1), it joins a fight when, within 0x200 game_clock units of the player hitting a
+   critter of its own race (or, for the player's allies, any critter) and within its
+   hearing of that place, it turns hostile and attacks. When it has been hit itself
+   (last_hit: 1 the player, or another critter if allies are involved) it attacks the
+   attacker, or flees if should_i_flee says so, or fights on if it was cornered before.
+   Then the goal switch (see the file header) and constrain_movement. */
 void far critter_mv(void)
 {
     unsigned char targeted = 0;
@@ -1173,6 +1335,9 @@ do_goal:
     constrain_movement();
 }
 
+/* Load the target globals (mytarget, its tile and fine position, tdx, tdy and the
+   squared tile and fine distances) from the critter's goal target, a mobile index
+   (1 is the player). Returns 0 if the target is dead. */
 unsigned char far set_up_target(void)
 {
     mytarget = Obj_IntTMem(OBJ_GTARG(meptr));
@@ -1190,10 +1355,15 @@ unsigned char far set_up_target(void)
     return 1;
 }
 
-/* IDA's MaybeShouldNPCWithdraw. Named from FM Towns: should_i_flee_ is at the same place
-   between set_up_target_ and acceptable_danger_, and makes the same tests of the hit
-   points against three quarters, an eighth and half of the maximum, then the rand() % 4
-   roll against 15 less the third argument. */
+/* Whether a hurt critter flees. Never above three quarters of its average hit points
+   (maxhp), and never below an eighth (a nearly dead critter fights on). It flees if the
+   damage taken since it last decided (OBJ_DAMAGE) exceeds half maxhp. Otherwise it flees
+   when hp * 16 / maxhp + rand() % 4 is at most 15 - nerve, nerve being the creature's
+   b1C_0. */
+/* name: IDA's MaybeShouldNPCWithdraw. Named from FM Towns: should_i_flee_ is at the same
+   place between set_up_target_ and acceptable_danger_, and makes the same tests of the
+   hit points against three quarters, an eighth and half of the maximum, then the
+   rand() % 4 roll against 15 less the third argument. */
 unsigned char far should_i_flee(unsigned char maxhp, unsigned char hp, unsigned char nerve,
                                 unsigned char damage)
 {
@@ -1213,9 +1383,13 @@ unsigned char far should_i_flee(unsigned char maxhp, unsigned char hp, unsigned 
     return 1;
 }
 
-/* IDA's GetCritterRange. Named from FM Towns: acceptable_danger_ is next there and has
-   the same body (attitude, the critter type's hit points, bit 13 of the item id, then
-   hp * 4 / max hp plus a quarter of the low nibble at +0x1C). Nothing calls it. */
+/* How much danger a path may cross for this critter (flood_path's range, compared with
+   the cost hyp_move adds for drops and bad terrain): 0 for a critter that is not
+   hostile, else hp * 4 / avghit plus nerve / 4. */
+/* name: IDA's GetCritterRange. Named from FM Towns: acceptable_danger_ is next there and
+   has the same body (attitude, the critter type's hit points, bit 13 of the item id, then
+   hp * 4 / max hp plus a quarter of the low nibble at +0x1C). PATHFIND.C's
+   crit_head_for_loc passes it to flood_path. */
 unsigned char far acceptable_danger(void)
 {
     register unsigned char d;
@@ -1226,6 +1400,8 @@ unsigned char far acceptable_danger(void)
     return d;
 }
 
+/* Give the current critter a goal and goal target. A guarding critter (goal 4) remembers
+   that in its old goal, so critter_discard_goal can return it to guarding. */
 void far critter_set_goal(unsigned char goal, int target)
 {
     if (OBJ_GOAL(meptr) == 4)
@@ -1234,6 +1410,8 @@ void far critter_set_goal(unsigned char goal, int target)
     SET_GTARG(meptr, target);
 }
 
+/* Drop the current goal: back to the remembered one (with the player as target), or
+   wander. */
 void far critter_discard_goal(void)
 {
     if (OBJ_OLDGOAL(meptr)) {
@@ -1246,6 +1424,8 @@ void far critter_discard_goal(void)
     }
 }
 
+/* Start obj's dying sequence (7) unless it has a conversation and death_check (a
+   scripted death) refuses. Returns 1 if it is dying. */
 unsigned char far go_into_dying_sequence(struct Object far *obj)
 {
     if (obj->whoami == 0 || death_check(obj, 0)) {
@@ -1258,6 +1438,9 @@ unsigned char far go_into_dying_sequence(struct Object far *obj)
     return 0;
 }
 
+/* Kill obj and play its death cry by victim's death kind (1 and others sound 6, 2 0x22,
+   3 0x23, 4 0x24, 0 silent). Returns 1 if it started dying here, 0 if it was already
+   dying or death_check kept it alive. */
 unsigned char far crit_die(struct Object far *obj)
 {
     unsigned char snd;
@@ -1288,6 +1471,13 @@ unsigned char far crit_die(struct Object far *obj)
     return 0;
 }
 
+/* Damage a critter (or the player): adds to its damage tally and works out who did it
+   (a critter's mobile index; for a missile or other object, that object's last_hit, its
+   shooter). A hit by the player on a critter that is not a loner is recorded (race,
+   place, time) so the critter's kin join in (critter_mv). At zero hit points it dies
+   (crit_die), crediting the player (player_killed_a); returns 1 then. Also picks the
+   combat music: 2 when a critter the player hits is below a quarter of its hit points,
+   4 when the player is below a quarter of theirs, else 3. */
 unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
                                  struct Object far *from)
 {
@@ -1351,7 +1541,11 @@ unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
     return 0;
 }
 
-/* IDA's CheckIfUpdateNeeded. Named from FM Towns: timetodo_ is next there, before
+/* Time bins: the 16-step clock curBin runs round, and each mobile object has a bin
+   (b0A's low nibble) that its rate advances after each update. An object is due when
+   its bin is up to 4 behind curBin, or, when the clock wrapped past 15 since the last
+   pass, at or after lastbin. rate is unused. */
+/* name: IDA's CheckIfUpdateNeeded. Named from FM Towns: timetodo_ is next there, before
    move_mobile_, which calls it with the same two arguments, and makes the same tests of
    curBin and lastbin. */
 unsigned char far timetodo(int bin, int rate)
@@ -1362,6 +1556,10 @@ unsigned char far timetodo(int bin, int rate)
     return 0;
 }
 
+/* Advance the bin clock by delta frames and update every active mobile object until it
+   is no longer due: critters through critter_ai, everything else through move_me_joe.
+   An object that removed itself returns 0, and the loop steps back one so the entry
+   that took its place is not skipped. */
 void far move_mobile(char delta)
 {
     unsigned char far *p;

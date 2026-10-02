@@ -1,18 +1,43 @@
 /* target: ovr095 */
 /* opts: -mm -1 -G -O -Y -d */
-/* The conversation interpreter ("babl"): the script heap (bab_malloc, bab_free,
-   bab_realloc), the per-conversation globals file (init_babl, bab_get_globals,
-   bab_put_globals), loading a script (load_script), the string built-ins a script can
-   call, the @-variable substitution in conversation text (convert_string), the virtual
-   machine itself (babl_run) and its opcodes, and the import table through which the
-   game's built-in functions and variables are bound (bab_fun, bab_var, bab_var_out,
-   bab_var_clear). The whole of DOS overlay ovr095, in original order.
+/* The conversation interpreter ("babl"). A conversation is a compiled script in
+   DATA\CNV.ARK, one block per conversation slot (cnv_id: the NPC's whoami, or 0x100 plus
+   the creature class for whoami 0). This file loads it, runs it on a small stack machine,
+   and binds the script's imports, by name, to game variables and built-in functions.
 
-   Function names are the originals from the FM Towns symbol table where the FM Towns
-   build has the function at the same place. It keeps the string built-ins, the opcodes
-   and the header reader as statics, so their names are provisional ones, chosen for their keys: Turbo C lists a file's publics by the tools/bssorder.py key of
-   each name and TLINK numbers overlay stub entries from the last one listed, so these names
-   reproduce the EXE's stub order (the target table keeps IDA's names). */
+   Entry points: init_babl (a new game: copies DATA\BABGLOBS.DAT to bglobals.dat),
+   load_script (Converse, CONVERSE.C: reads the block, the header and import table, the
+   code, the conversation's saved globals, and binds the string built-ins here), bab_fun,
+   bab_var and bab_var_out (bind a built-in, write and read an imported variable; used by
+   CONVERSE.C, CONVVARS.C and BARTER.C), babl_run (runs the script to its end and saves
+   its globals back), convert_string (the @-variable substitution in conversation text),
+   getmem, getmem_addr and babl_setmem (the built-ins' access to script memory), and the
+   script heap bab_malloc, bab_free and bab_realloc.
+
+   Machine: code is an array of words; mem is babl_nvars words of variables (imports,
+   the conversation's private globals) followed by a stack of 0x800 words; stack points
+   at the stack's start, sp and bp index it, pc indexes code, reg is the result register.
+   Variable addresses are indexes into mem, and PUSHI_EFF turns a frame offset into one.
+   Opcodes are listed in opcode_text and decoded in babl_run; built-ins are called by
+   CALLI through funcs[], with a pointer to the top of the stack (see talk_calli). Strings
+   are string ids: below 0x200 they are the conversation's own block in STRINGS.PAK
+   (get_string reads block 0 as CutsceneOrConversationStringBlock, set here from the
+   header), and strings a script builds are made in block STRBLK_DYNAMIC (0x7C), cleared
+   when the script ends.
+
+   The heap: bab_malloc carves blocks out of the 0xFBFF-byte work area Converse passes
+   to load_script (the conversation screen buffer + 0x400), first fit, each block
+   8 bytes of header (size, next) and a 4-byte tag at the end pointing back at its data.
+
+   Name: inferred (map/filenames.tsv: the conversation interpreter, init_babl, babl_run
+   and the bab_ prefix). The whole of DOS overlay ovr095, in original order. */
+/* name: Function names are the originals from the FM Towns symbol table where the FM
+   Towns build has the function at the same place. It keeps the string built-ins, the
+   opcodes and the header reader as statics, so their names are provisional ones (the
+   target table keeps IDA's names). */
+/* match: The provisional names were chosen for their keys: Turbo C lists a file's
+   publics by the tools/bssorder.py key of each name and TLINK numbers overlay stub
+   entries from the last one listed, so these names reproduce the EXE's stub order. */
 
 #include <dos.h>
 #include <io.h>
@@ -41,9 +66,11 @@ struct BablImport {
     int kind;                           /* 0x1E, 0x111 for a function */
 };
 
-/* This file's _BSS. arc_buffer is public in the FM Towns build; the rest are statics
-   there, so they have no original names: these were chosen with tools/bssorder.py so
-   that Turbo C lays them out where the EXE has them (DS:4702..4737). */
+/* This file's _BSS: the interpreter's state (see the header). */
+/* name: arc_buffer is public in the FM Towns build; the rest are statics there, so they
+   have no original names. */
+/* match: The names were chosen with tools/bssorder.py so that Turbo C lays them out
+   where the EXE has them (DS:4702..4737). */
 char far *arc_buffer;
 static struct BabBlock far *free_list;
 static int sp;
@@ -64,7 +91,8 @@ static int current_func;
 static int empty_string;
 static int bp;
 
-/* The names of the opcodes, unused by the code; FM Towns calls the table opcode_text. */
+/* The names of the opcodes, indexed by opcode, unused by the code. */
+/* name: FM Towns calls the table opcode_text. */
 char *opcode_text[] = {
     "NOP", "OPADD", "OPMUL", "OPSUB", "OPDIV", "OPMOD", "OPOR", "OPAND", "OPNOT",
     "TSTGT", "TSTGE", "TSTLT", "TSTLE", "TSTEQ", "TSTNE", "JMP", "BEQ", "BNE", "BRA",
@@ -73,12 +101,13 @@ char *opcode_text[] = {
     "PUSH_REG", "STRCMP", "EXIT_OP", "SAY_OP", "RESPOND_OP", "OPNEG"
 };
 
-/* Other files' data. The byte in a segment of its own is a static in the FM Towns
-   build, written only by load_script; its name is provisional. */
+/* Other files' data: stdat is the shared work buffer, used by init_babl as a page of
+   zeros. */
 extern char far stdat[];
 /* 40h bytes, far, so its own segment (6384:0000, segment table entry 76); load_script
-   clears the first. FM Towns' load_script_ stores to it unnamed, so it was static;
-   provisional name. */
+   clears the first byte and nothing else here touches it. */
+/* name: The byte in a segment of its own is a static in the FM Towns build: FM Towns'
+   load_script_ stores to it unnamed, so the name is provisional. */
 static char far seg066_0[0x40];
 
 int far get_arc(int arc, int blk, char far *buf);
@@ -88,7 +117,8 @@ int far scroll_print(char far *s);
 /* This file's functions called before their definitions. */
 void far bab_fun(char *name, void (far *fn)());
 
-/* The whole work area starts as one free block. A static in the FM Towns build. */
+/* The whole work area starts as one free block of 0xFBFF bytes. */
+/* name: A static in the FM Towns build. */
 static void far ovr095_0(char far *work)
 {
     free_list = (struct BabBlock far *)work;
@@ -96,8 +126,9 @@ static void far ovr095_0(char far *work)
     free_list->next = 0;
 }
 
-/* Does the block holding p end with the tag bab_malloc put there? The FM Towns
-   tag_check takes only p; bab_free passes a second argument that is never read. */
+/* Does the block holding p end with the tag bab_malloc put there? 1 if so. */
+/* match: bab_free passes a second argument that is never read, so tag_check is declared
+   with two; the FM Towns tag_check takes only p. */
 unsigned char far tag_check(char far *p, int unused)
 {
     char far *base;
@@ -110,6 +141,9 @@ unsigned char far tag_check(char far *p, int unused)
     return 0;
 }
 
+/* First-fit allocation from the script heap: n is rounded up to 4 and 12 added for the
+   header and tag; a free block more than 16 bytes larger is split. Returns 0 when nothing
+   fits (callers mostly call pfatal_code(4) then). */
 char far * far bab_malloc(long n)
 {
     char far *result;
@@ -146,6 +180,8 @@ char far * far bab_malloc(long n)
     return result;
 }
 
+/* Release a block, keeping the free list in address order and merging neighbours. A
+   pointer without a valid tag is ignored. */
 void far bab_free(char far *data)
 {
     struct BabBlock far *block;
@@ -182,6 +218,8 @@ void far bab_free(char far *data)
     }
 }
 
+/* Shrink a block in place (splitting off the tail when more than 16 bytes are left
+   over), or grow it by allocating, copying and freeing. */
 char far * far bab_realloc(char far *p, long n)
 {
     struct BabBlock far *block;
@@ -246,7 +284,11 @@ char far * far bab_realloc(char far *p, long n)
     return result;
 }
 
-/* Copies babglobs.dat, the initial globals of every conversation, to bglobals.dat. */
+/* Copies babglobs.dat, which lists each conversation's slot and number of private
+   globals, to bglobals.dat with every global zeroed (a new game). Returns 0, or an error
+   code: ERR_READ | 7 when babglobs.dat cannot be opened, ERR_WRITE | 1 when bglobals.dat
+   cannot be written (UW-Formats: D007, E001). Each record is the 4 bytes read into block
+   and, by the stack layout, size. */
 int far init_babl(void)
 {
     char good;
@@ -271,6 +313,9 @@ int far init_babl(void)
     return ERR_WRITE | 1;
 }
 
+/* Read conversation cnv_id's private globals from bglobals.dat into the start of script
+   memory (at most count words). Records are in slot order, so the search stops at a
+   higher slot. */
 void far bab_get_globals(int far *memory, int count)
 {
     int size;
@@ -295,6 +340,7 @@ void far bab_get_globals(int far *memory, int count)
     }
 }
 
+/* Write them back over the same record when the script ends. */
 void far bab_put_globals(int far *memory, int count)
 {
     int size;
@@ -319,6 +365,12 @@ void far bab_put_globals(int far *memory, int count)
     }
 }
 
+/* Load conversation cnv_id: the heap starts afresh in work, the CNV.ARK block is read
+   into a 0x5000-byte buffer, the header and code are copied out, script memory is
+   allocated (babl_nvars + 0x800 words), the private globals read in, imported variables
+   cleared and the string built-ins bound. Returns 1, or -1 when the header is rejected
+   (never, as DoReadHeader always returns 1); an empty block prints 'You get no
+   response.' and also returns 1. name is stored but the archive is opened by number. */
 int far load_script(char *name, char far *work)
 {
     char far *empty;
@@ -334,7 +386,7 @@ int far load_script(char *name, char far *work)
         size = get_arc(2, cnv_id, arc_buffer);
         close_arc(2);
         if (size <= 0) {
-            scroll_print(get_string(0xe01));
+            scroll_print(get_string(0xe01));  /* "You get no response.\n" */
             return 1;
         }
     } else
@@ -362,15 +414,19 @@ int far load_script(char *name, char far *work)
     return 1;
 }
 
-/* What an import the game never bound calls. */
+/* What an import the game never bound calls: every funcs[] entry starts as this. */
 int far unbound(void) { return 0; }
 
+/* The script's "random": 1 .. arg1, from rand(). The string built-ins below read their
+   arguments as the built-ins in CONVERSE.C do: args[-1] holds the address of arg1. */
 int far BabRand_ovr095_A5B(int far *args)
 {
     return (int)(((long)rand() *
         getmem(args[-1])) / 0x8000L) + 1;
 }
 
+/* The script's "compare": 1 when two strings are equal after @-substitution, ignoring
+   case. */
 int far bab_compare_ovr095_A8B(int far *args)
 {
     char far *str1;
@@ -394,6 +450,8 @@ int far bab_compare_ovr095_A8B(int far *args)
     return result == 0;
 }
 
+/* The script's "plural": args[-2]'s string id when the count at args[-3] is 1 or less,
+   args[-1]'s when it is more. */
 int far babPluralize_ovr095_B95(int far *args)
 {
     int count;
@@ -406,7 +464,11 @@ int far babPluralize_ovr095_B95(int far *args)
     return singular;
 }
 
-/* Does the first string contain the second as a whole word? */
+/* The script's "contains": does arg1's string contain arg2's as a whole word (bounded
+   by the ends, white space or punctuation)? It lowercases the two source strings in
+   place, but searches the @-substituted copies, so case is only ignored when no
+   substitution happened; the copies are never freed (they live until the heap is reset
+   by the next load_script). */
 int far StringContains_ovr095_BDB(int far *args)
 {
     char far *str1;
@@ -430,6 +492,7 @@ int far StringContains_ovr095_BDB(int far *args)
     return 0;
 }
 
+/* The script's "append": a new dynamic string, arg2's string followed by arg1's. */
 int far babl_str_append_ovr095_D0A(int far *args)
 {
     int len1, length;
@@ -448,6 +511,7 @@ int far babl_str_append_ovr095_D0A(int far *args)
     return id;
 }
 
+/* The script's "copy": a new dynamic string holding a copy of arg1's. */
 int far STRING_COPY_ovr095_DC7(int far *args)
 {
     char far *source, far *out;
@@ -461,7 +525,8 @@ int far STRING_COPY_ovr095_DC7(int far *args)
     return id;
 }
 
-/* The script's "find": the 1-based position of a value in an array, or 0. */
+/* The script's "find": the 1-based position of value arg1 in the arg2 words of the
+   array at arg3 (passed by address, not read through), or 0. */
 int far conv_find_ovr095_E36(int far *args)
 {
     int value, count;
@@ -477,6 +542,8 @@ int far conv_find_ovr095_E36(int far *args)
     return 0;
 }
 
+/* The script's "length" and "val": a string's length, and its value as a decimal
+   number. */
 int far conv_length_ovr095_E8D(int far *args)
 {
     return str_len(get_string(getmem(args[-1])));
@@ -504,7 +571,13 @@ void far add_to(register char far **buffer, char far *dest, int *capacity, char 
 /* Replaces each @-variable in a conversation string with its value: @ then the kind
    (G a global, P a parameter, S a stack slot, C a constant), then for all but C the
    type (I an integer, otherwise a string id), then the address, optionally followed
-   by another variable giving an index. "@@" is a literal @. */
+   by another variable giving an index. "@@" is a literal @.
+
+   G reads mem[number + index - 1]; S reads stack[bp + number + index - 1], a local of
+   the current frame; P reads stack[bp + number], which holds an address (a parameter
+   passed by reference), and reads mem at that address + index - 1. A string value is
+   substituted recursively. Returns text itself when it has no @, else a new heap string
+   the caller frees. */
 char far * far convert_string(char far *text)
 {
     char far *s;
@@ -575,7 +648,8 @@ char far * far convert_string(char far *text)
     return buffer;
 }
 
-/* Reads the index part of an @-variable, which is itself a variable. */
+/* Reads the index part of an @-variable, which is itself a variable (only an integer
+   one, else 0), and advances *s past it. */
 int far AtIndex_ovr095_11C0(register char far **s)
 {
     char kind, type;
@@ -606,7 +680,12 @@ int far AtIndex_ovr095_11C0(register char far **s)
     return result;
 }
 
-/* Reads the script header and its import table from arc_buffer. */
+/* Reads the script header and its import table from arc_buffer: 4 bytes skipped, the
+   code size in words (a long), a word kept in hdr_word, the string block, babl_nvars,
+   the number of imports, then each import as a length-prefixed name followed by the
+   words index (variable address or function number), count, kind (0x111 a function,
+   else a variable; UW-Formats gives 0x10F) and type. Leaves arc_buffer at the code and
+   points every function slot at unbound. Always returns 1. */
 int far DoReadHeader_ovr095_12C3(void)
 {
     int nimports;
@@ -670,12 +749,18 @@ void far DoCopyCode_ovr095_14B1(void)
         (unsigned)code_size << 1);
 }
 
+/* At the end of a script: drop the dynamic strings, save the private globals. */
 static void far ExitConversation_ovr095_14D4(void)
 {
     clear_dynamics(STRBLK_DYNAMIC);
     bab_put_globals(mem, babl_nvars);
 }
 
+/* Run the loaded script from word 0, which must be START (0x22, else -1). It stops at
+   EXIT_OP, at a RET with nothing on the stack, or at an unknown opcode, then saves the
+   globals and returns 1. Branch operands (BEQ, BNE, BRA) are relative to the operand
+   word; JMP and CALL take absolute word addresses. Nothing checks the stack or pc
+   bounds. */
 int far babl_run(void)
 {
     register int running;
@@ -813,7 +898,7 @@ int far babl_run(void)
             sp = bp;
             pc++;
             break;
-        case 0x1E:      /* ADDSP */
+        case 0x1E:      /* ADDSP: pop n and reserve n words */
             sp += stack[sp] - 1;
             pc++;
             break;
@@ -826,7 +911,7 @@ int far babl_run(void)
             BABL_STORE_ovr095_1D11();
             pc++;
             break;
-        case 0x17:      /* PUSHI_EFF */
+        case 0x17:      /* PUSHI_EFF: the mem address of frame slot bp + n */
             sp++;
             stack[sp] = stack_base + code[pc + 1] + bp;
             pc += 2;
@@ -888,6 +973,7 @@ void far subOpcode_ovr095_1965(void)
     sp--;
     stack[sp] = result;
 }
+/* Division and remainder by zero give 0x7FFF. */
 void far BABL_DIV_ovr095_199E(void)
 {
     int result;
@@ -906,6 +992,7 @@ void far BablMod_ovr095_19EE(void)
     sp--;
     stack[sp] = result;
 }
+/* OPOR and OPAND are logical, giving 0 or 1. */
 void far babBitOr_ovr095_1A3E(void)
 {
     int result = stack[sp - 1] || stack[sp];
@@ -955,6 +1042,8 @@ void far opcode_tstne_ovr095_1C12(void)
     stack[sp] = result;
 }
 
+/* CALL pushes the address after its operand; RET pops it, or ends the script (0) when
+   the stack is empty. */
 void far babl_call_ovr095_1C54(void)
 {
     stack[++sp] = pc + 2;
@@ -973,6 +1062,7 @@ void far exec_fetchm_ovr095_1CAA(void)
 {
     stack[sp] = mem[stack[sp]];
 }
+/* OFFSET: address + index - 1, so script arrays count from 1. */
 void far vmOffset_ovr095_1CD7(void)
 {
     int result = stack[sp] + stack[sp - 1] - 1;
@@ -984,6 +1074,9 @@ void far BABL_STORE_ovr095_1D11(void)
     mem[stack[sp - 1]] = stack[sp];
     sp -= 2;
 }
+/* CALLI n: call built-in n with a pointer to the top of the stack, where the script has
+   pushed its argument count (args[0]) above the addresses of the arguments (args[-1]
+   the last pushed before the count). The result replaces the count and goes into reg. */
 void far talk_calli_ovr095_1D44(void)
 {
     int (far *fn)(int far *);
@@ -995,6 +1088,8 @@ void far talk_calli_ovr095_1D44(void)
     reg = stack[sp];
     pc += 2;
 }
+/* STRCMP: pop two string ids, push 1 when they are equal after substitution (case
+   counts, unlike "compare"). */
 void far vm_strcmp_ovr095_1DC1(void)
 {
     char far *s1;
@@ -1015,6 +1110,8 @@ void far vm_strcmp_ovr095_1DC1(void)
     else
         stack[sp] = 0;
 }
+/* SAY_OP and RESPOND_OP: pop a string id, substitute it, and pass it to whatever is
+   bound to the import "say" or "respond" (npc_say, play_respond in CONVERSE.C). */
 void far vmSay_ovr095_1EA2(void)
 {
     struct BablImport far *entry;
@@ -1067,6 +1164,8 @@ int far conv_local_ovr095_2030(int addr)
 {
     return stack[bp + addr];
 }
+/* Bind built-in fn to the import called name; a name the script does not import is
+   ignored. */
 void far bab_fun(char *name, void (far *fn)())
 {
     struct BablImport far *entry;
@@ -1080,6 +1179,8 @@ void far bab_fun(char *name, void (far *fn)())
         entry++;
     }
 }
+/* Copy count values into the imported variable called name (at most its declared
+   count). The lowercased copy of name it builds is never used. */
 void far bab_var(char *name, int *values, int count)
 {
     struct BablImport far *entry;
@@ -1114,6 +1215,10 @@ void far bab_var_out(char *name, int *values, int count)
         entry++;
     }
 }
+/* Clear every imported variable: type 0x126 sets one word and 0x12B every element to 0,
+   0x128 one word and 0x12A every element to the empty string, so probably int, int
+   array, string and string array (inferred; UW-Formats lists 0x129 int and 0x12B
+   string as return types). Other types are left alone. */
 void far bab_var_clear(void)
 {
     struct BablImport far *entry;
@@ -1145,4 +1250,5 @@ void far bab_var_clear(void)
         entry++;
     }
 }
+/* Empty; nothing in the tree calls it. */
 void far bab_nothing_ovr095_2296(void) { }

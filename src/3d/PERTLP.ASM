@@ -1,7 +1,36 @@
 ; /* target: seg004_0849_46F0 */
 ; /* opts: /ml */
 ;
-; The texture-mapping scanline routine _asm_texture_map_scanline_per_tlp.
+; Two of the four horizontal span drawers _asm_texture_map (TEXMAP.ASM) calls through DS:CF42:
+; the shaded ("tl", textured and lit) spans, perspective-correct (per) and linear (lin). The
+; unshaded pair is in PERTP.ASM, the vertical one in SCANLINE.ASM. The module defines them as
+; plain labels, not procs, hence "Procs: none" below.
+;
+; Inputs, set by _asm_texture_map for the current row (FD58, 16.16; FM Towns names):
+;   DS:CF5A _y (an integer row)
+;   DS:CF5C _xleft,  CF60 _uleft,  CF64 _vleft     DS:CF68 _xright, CF6C _uright, CF70 _vright
+;   DS:CF74 _wleft,  CF78 _wright                  DS:CF7C _lleft,  CF80 _lright
+;   DS:CCE8 width - 1, CCEA the row mask, CCEC log2 width (asm_texture_map_from_draw_poly)
+;   GS = the texture's segment, ES = the frame buffer's (both set by _asm_texture_map)
+; In the perspective case u and v are u * w and v * w, with w = 128 / z; the linear case has w =
+; 1.0 and plain u and v. l is the shade (0 .. 15.0).
+; Working variables: DS:CCA0 _du, CCA4 _dv, CCA8 _dw, CCAC _dl (steps); CCB0 _u, CCB4 _v, CCB8
+; _w, CCBC _l, CCC0 _l2; CCC4 _x, CCC6 _x0_my_floor, CCC8 _x1_my_floor; CCCC the pixel count
+; (FM mem_cx); CCCE the texel address.
+;
+; Common to both: the ends are rounded down after adding 41h (FM calls the results _x0_my_floor
+; and _x1_my_floor); the span starts at seg_370D:095C[y] (FM fbufytab, the frame buffer's row
+; offsets) + x; nothing is drawn when any of the four u and v ends is negative or the right end
+; is left of the left; the last pixel is computed exactly from the right end. A texel is GS:[(u
+; & (width - 1)) + ((v << log2 width) & row mask)], and the colour drawn is
+; lightabs[shade][texel], the shade being the integer part of l.
+;
+; Shading is dithered: _l and _l2 run half a shade apart (8000h before the << 8), alternate
+; pixel by pixel, and which one starts depends on the parity of x xor y, so neighbouring pixels
+; in both directions take neighbouring shades when the shade falls between two rows.
+;
+; name: descriptive (module 8 of seg004, after its first routine); both routines have FM Towns
+; names.
 ;
 ; SEG004 split into its original modules: this is module 8 of 14, +46F0..+4B30 of the segment
 ; (file D8B0h), a module of the second library (UWLIB.LIB).
@@ -25,6 +54,12 @@ SEG004_TEXT segment para public use16 'CODE'
         public  _asm_texture_map_scanline_lin_tlp
         public  _asm_texture_map_scanline_per_tlp
 
+; _asm_texture_map_scanline_per_tlp: a perspective-correct shaded span. No register inputs (see
+; the module header); changes EAX..EDX, ESI, EDI, EBP. It divides u * w and v * w by w once for
+; every two pixels and draws both with that texel, each with its own dithered shade, so its
+; texture resolution across the span is halved. The steps are doubled to match. The shade step
+; is written into the two `add ...,12345678h` instructions (L48AC+5, L48CF+5) and log2 width
+; into the `shl ax,2` at L488F+2: self-modifying code.
 _asm_texture_map_scanline_per_tlp:
         mov     eax,dword ptr ds:[0CF74h]
         mov     dword ptr ds:[0CCB8h],eax
@@ -183,6 +218,10 @@ _seg004_0849_48ED:
         mov     byte ptr es:[di],al
 _seg004_0849_4924:
         ret
+; _asm_texture_map_scanline_lin_tlp: a linear (affine) shaded span, two pixels per loop with an
+; odd last pixel (the carry from `shr cx,1`, kept by pushf/popf). v is kept multiplied by the
+; width (shifted left by log2 width) so a texel address needs no shift in the loop. A u or v
+; step is 0 when the integer parts of the two ends are the same.
 _asm_texture_map_scanline_lin_tlp:
         mov     eax,dword ptr ds:[0CF60h]
         mov     dword ptr ds:[0CCB0h],eax

@@ -4,7 +4,31 @@
    movement, the per-tick motion setup from the input and the floor, applying the result
    to the player object, and moving the player between tiles. The whole of DOS resident
    segment seg008_1B09, in original order. Function and global names are the originals
-   from the FM Towns symbol table where it has them. */
+   from the FM Towns symbol table where it has them.
+
+   The player's physics record is PN (motion.h, owned by MOTION.C) with the handler PT,
+   whose special function is player_sqhandler. Each tick PLAYMOVE.C's move_player calls
+   set_player_phys_params (input, ice and currents into PN), MOTION.C's do_physics, and
+   phys_affect_player (PN back into the player object, ThePlayer, and fall damage).
+   simple_fizix is the other way to move: a fixed step or a 45 degree turn, for the
+   step keys and the arrows over the view.
+
+   The movement state (newFPS's state, player->fps): 0 on foot, 1 swimming, 2 on lava,
+   3 on ice, and in the air 4 levitating, 5 flying, 6 slow falling. It sets
+   player->motion_state's low bits (1 swimming, 2 lava, 4 ice, 8 levitating or flying;
+   the high bits 0x20, 0x40 and 0x80 are PLAYMOVE.C's screen shakes) and the speeds
+   pFPS, scaled from Run_FPS, Side_FPS and Back_FPS. motionbits holds the motion spells,
+   bit minor - 1 for spell class 1 (game/PLAYDATA.C), which the Guide lists as 1 Leap,
+   2 Slow Fall, 3 Levitate, 4 Water Walk, 5 Fly, 6 Bouncing: so 1 leap (lower gravity
+   when jumping), 2 slow fall, 4 levitate, 8 water walk (no swimming), 0x10 fly, 0x20
+   bouncing (MOTION.C's do_zbounce).
+
+   GrSq is the player's tile as an index into mapdata; change_GrSq moves the player
+   object between tile lists, runs pressure plates and updates the light.
+
+   name: inferred (map/filenames.tsv: the player's physics, simple_fizix and fizix_update;
+   the job of System Shock's PHYSICS.C, though that file drives the EDMS physics library
+   and shares no code with this one). */
 
 #include <stdlib.h>
 #include "event.h"
@@ -24,11 +48,12 @@ extern char light_mod;
 extern char light_act;
 extern char loc_lght;
 
-/* Uninitialised data, DS:229A onwards. Turbo C lays _BSS out in an order set by the
-   names, not by declaration. The publics are FM Towns names; the statics have none there
-   (FM Towns keeps them as unnamed statics), so old_dz, lasth, lasts and saved_dz were chosen
-   from names compiled as probes because they land where the EXE has them. saved_dz is
-   the four bytes at DS:22B0, which nothing in the game references. */
+/* Uninitialised data, DS:229A onwards. saved_dz is the four bytes at DS:22B0, which
+   nothing in the game references. */
+/* match: Turbo C lays _BSS out in an order set by the names, not by declaration. */
+/* name: the publics are FM Towns names; the statics have none there (FM Towns keeps them
+   as unnamed statics), so old_dz, lasth, lasts and saved_dz were chosen from names
+   compiled as probes because they land where the EXE has them. */
 int oldh;                               /* the heading before this tick's ice or current */
 int olds;                               /* the speed before it */
 unsigned char frictionless;             /* standing on ice */
@@ -57,7 +82,9 @@ void far set_light(int level);
 
 void far newFPS(char state);
 
-/* Initialised data, DS:C8 onwards. */
+/* Initialised data, DS:C8 onwards. Speeds are in PN.speed's units, 0x2F to an object's
+   OBJ_SPEED step (OBJPHYS.C). MaxPlayerAccel is the most the speed may change in a tick;
+   newFPS lowers it when the player carries more than half the most they can. */
 int MaxPlayerAccel = 0x60;
 int Back_FPS = 0xBC;
 int Side_FPS = 0xEB;
@@ -68,6 +95,8 @@ unsigned char fiz_update = 1;
 /* The kind of slope or current carrying the player, -1 for none. No FM Towns name. */
 static int slide = -1;
 
+/* Starts swimming if terr has the water bit: swim_count (the head's dip below the
+   surface, PLAYMOVE.C's parse_effect) and leaving combat mode. Returns 1 if swimming. */
 unsigned char far water_set(int terr)
 {
     unsigned char swimming;
@@ -84,6 +113,11 @@ unsigned char far water_set(int terr)
     return swimming;
 }
 
+/* The terrain byte under the player (MOTION.C's set_resterr) to the movement state,
+   when it changes or with force: water (unless Water Walk), lava, ice, or in the air
+   levitating, flying or slow falling (see the top of the file). In the air every tick:
+   levitating or flying cancels gravity and damps vertical speed by 4/5; otherwise
+   gravity is -4, and slow fall holds the fall at -94 and halves the speed. */
 void far parse_player_terr(int terr, char force)
 {
     unsigned char swimming;
@@ -167,6 +201,14 @@ void far unreferenced_seg008_1B09_160(void)
     set_screen_frame(2, rand() & 0xF);
 }
 
+/* The step-and-turn movement (game/PLAYER.C binds it to A, D, S, W, X and the arrows
+   over the view): turn -1 or 1 turns 45 degrees; 0 steps half a tile forward but refuses
+   to step into a different terrain or off a ledge; 2 takes the same step without those
+   checks (the local is called backwards, but the step is forward); -2 steps a quarter
+   tile back. A step is tested with can_place and then made directly, without
+   do_physics: the player object moves tile, lands at nvokHgt (or starts falling) and
+   move triggers it now overlaps fire. Returns 1 if the player moved or turned. Only
+   while not falling and moving slower than MaxPlayerAccel. */
 char far simple_fizix(int turn)
 {
     int heading;
@@ -262,10 +304,13 @@ char far simple_fizix(int turn)
     return 0;
 }
 
-/* IDA's ApplyWaterCurrentIceSliding. Named from FM Towns: munge_vectors_ sits between
-   simple_fizix_ and set_player_phys_params_ there, takes the same eight arguments
+/* name: IDA's ApplyWaterCurrentIceSliding. Named from FM Towns: munge_vectors_ sits
+   between simple_fizix_ and set_player_phys_params_ there, takes the same eight arguments
    (kind 2 ice or 3 current, two heading/speed pairs, a strength, two results) and does
    the same sin/cos, blend, square root and atan2. */
+/* Combines two motions given as heading and speed into one: type 2 (ice) moves the
+   first towards the second by strength / 64 (strength at most 0x40), type 3 (a current
+   or a slope) adds them. The result is in *outh and *outs. */
 void far munge_vectors(int type, int heading, int speed, int heading2, int speed2,
                        int strength, int *outh, register int *outs)
 {
@@ -330,6 +375,16 @@ void far munge_vectors(int type, int heading, int speed, int heading2, int speed
         *outh = heading;
 }
 
+/* Sets PN up for a tick of rate time units. On the ground the input (do_player_input)
+   sets a wanted speed, approached by at most MaxPlayerAccel and capped at the run speed;
+   in the air the player can only turn. On ice the floor texture's terrain bits 3-5 give
+   the grip (7 none of ice's effects): the new motion is blended from the old by
+   munge_vectors, so the player slides, and an ice slope pushes downhill. Swimming, the
+   same bits give a current's direction (0: the last tile's current goes on), added with
+   speed 0x8D; lasth and lasts
+   keep the player's own heading and speed so phys_affect_player can restore them. Also
+   sets PN.flags 0x80 (slide along walls) on foot or flying, and PT.ignore 0x1000 (no
+   falling) when levitating or flying. */
 void far set_player_phys_params(int rate)
 {
     int speed;
@@ -451,6 +506,10 @@ void far set_player_phys_params(int rate)
     old_dz = PN.acc[2];
 }
 
+/* Puts the player in the middle of tile x, y at the floor's height (higher on a tile
+   with tile_walls bit 0x20), or, when how is not -1, near the ceiling and falling. Resets
+   PN and PT, links ThePlayer into the tile and works out the terrain and movement state.
+   Called from the main menu, start-up, game/SKILLS.C and the spells. */
 void far player_setup(int x, int y, int how)
 {
     int sq;
@@ -501,6 +560,12 @@ void far player_setup(int x, int y, int how)
     change_GrSq(sq, -1);
 }
 
+/* After do_physics: copies PN to the player object (fine position, tile, height,
+   animation frame), runs player_newsq on a new tile, restores the player's own heading
+   and speed after a current, stops the player after a wall hit, turns the facing towards
+   the heading by 0x600 a tick while sliding along a wall, and turns PN.impact into
+   damage: impact >> 8, doubled in a fall, none in the ninth world (levels 65 to 72), cut
+   by an Acrobat skill check, dealt above 3, with a thud above 1. */
 void far phys_affect_player(void)
 {
     int sq;
@@ -574,6 +639,8 @@ void far phys_affect_player(void)
         fiz_update = 0;
 }
 
+/* Entering tile sq: sets player->automap when the tile's PlayersMap low nibble is 1 to
+   9 (what that flag and nibble mean is not yet known). */
 void far player_newsq(int sq)
 {
     unsigned char m;
@@ -583,6 +650,9 @@ void far player_newsq(int sq)
         player->automap = 1;
 }
 
+/* PT's special function (called by MOTION.C's check_positions with the collision
+   state): a player walking slowly (under 3/10 of the run speed) off a ledge, not
+   swimming or on ice, is stopped at the edge instead (returns 1, so the step is undone). */
 char far player_sqhandler(unsigned *w)
 {
     if ((*w & 0x1000) && PN.vel[2] == 0 && PN.speed * 10 < pFPS[0] * 3 && !(lastTerr & 0xA))
@@ -593,6 +663,11 @@ char far player_sqhandler(unsigned *w)
     return 0;
 }
 
+/* PlayerInput to a heading and wanted speed: 0 stop, 1 forward with the mouse or key
+   rates (ForwInpRate, TurnInpRate), 8 back, 9 and 10 sideways, 6 a running jump
+   (starts at half the run speed, then as 7), 7 a jump (vertical speed 0x263, less above
+   z 0x280 and again above 0x2C0, with gravity -4, or -2 with Leap), 12 and 13 up and down while
+   levitating or flying. Paralysis stops everything. */
 void far do_player_input(int input, int rate, register int *speed)
 {
     register int h;
@@ -662,8 +737,8 @@ void far do_player_input(int input, int rate, register int *speed)
     PlayerHeading = h;
 }
 
-/* IDA's StopFalling. Named from FM Towns: phys_bounce_up_ is next there and does the
-   same (for the player, pitch 0x8D unless jumping, dz 0). */
+/* name: IDA's StopFalling. Named from FM Towns: phys_bounce_up_ is next there and does
+   the same (for the player, pitch 0x8D unless jumping, dz 0). */
 void far phys_bounce_up(struct Object far *obj)
 {
     if (obj == ThePlayer)
@@ -674,12 +749,17 @@ void far phys_bounce_up(struct Object far *obj)
     }
 }
 
+/* Recomputes the movement state from the current terrain, after the motion spells
+   change (game/PLAYDATA.C). */
 void far fizix_update(void)
 {
     parse_player_terr(PN.terrain, 1);
     fiz_update = 1;
 }
 
+/* Sets the movement state (-1 keeps player->fps) and from it the speeds, out of 20 of
+   the full ones: on foot 20, swimming Swimming / 2 + 4, lava 14, ice 20, levitating 1,
+   flying 14, slow falling 4; the turn rate likewise on the ground. */
 void far newFPS(char state)
 {
     unsigned char ratios[7] = { 20, 6, 14, 20, 1, 14, 4 };
@@ -710,6 +790,9 @@ void far newFPS(char state)
         MaxPlayerAccel = 0x60;
 }
 
+/* Moves the player object from tile GrSq to tile sq (-1: nowhere) at height z (-1: PN's),
+   leaving and entering pressure plates (check_pplate 0xE and 6), and when light_mod is
+   set redoes the light level if the tile's light bit differs from the last one. */
 void far change_GrSq(int sq, register int z)
 {
     int flag;
@@ -741,6 +824,8 @@ void far change_GrSq(int sq, register int z)
     }
 }
 
+/* Changes obj's height in its tile to z, running pressure plates for leaving the old
+   height and arriving at the new one. */
 void far hgt_change(struct Object far *obj, struct Tile far *tile, int z)
 {
     char r = 1;

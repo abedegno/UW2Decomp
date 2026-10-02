@@ -1,22 +1,45 @@
 /* target: seg045_379C */
 /* opts: -mm -1 -G -O -d -k- */
-/* The label table of the conversation (babl) bytecode assembler: grdb_blank clears it,
-   Ref emits a reference to a label, gr_putlab places one and patches the references
-   already emitted, gr_getpre, gr_getlab and gr_freelab hand out label numbers.
+/* The label table of the 3D view's render database. Despite this file's place under
+   conv/, it has nothing to do with conversations: the render database is the word
+   bytecode that VIEW3D.C, GRIDDB.C and DRAWOBJ.C write through dbptr into the buffer at
+   cDbase (sys.h, sys/C3DENTRY.ASM) and that cRender runs through the model interpreter
+   (3d/INTERP.ASM). This file lets that bytecode jump to places not yet written.
 
-   Names are the FM Towns ones (tools/fmt.py): every function, and the globals, matched
-   by what the FM code does with them (grdb_blank stores cDbase into dbptr, gr_entry
-   writes dbptr through cDbbase, gr_tostrt loads dbptr from cEntryStrt, and so on).
+   Entry points: grdb_blank resets the table and points dbptr at cDbase; gr_tostrt moves
+   dbptr to cEntryStrt and gr_entry stores dbptr's offset at *cDbbase (init_3d in
+   VIEW3D.C calls the three in that order); grdb_size is the number of bytes written; Ref
+   emits the word of a jump to a label; gr_putlab places a label at dbptr and patches the
+   references already emitted; gr_getpre, gr_getlab and gr_freelab hand out label numbers
+   and take them back; Clk gives the offset of a word in the table 0x24 bytes before
+   cDbase, which DRAWOBJ.C writes into the bytecode (`2, Clk(8), value`).
 
    Labels 0..31 are the free labels gr_getlab hands out, each with up to 16 references
    waiting for gr_putlab; 32..95 are the ones gr_getpre hands out in sequence; 96..159
-   are read back from the table just before the bytecode. Label 0xA0 is the one pending
-   relative reference (lstpos, lstrel). */
+   are read back from the table just before the bytecode (word label - 178 counted from
+   cDbase, a byte offset, halved to words, -1 for none): DRAWOBJ.C's Ref(model + 0x60, 1)
+   jumps to an object model this way. Label 0xA0 is the one pending relative reference
+   (lstpos, lstrel), which GRIDDB.C opens with Ref(0xA0, 1) and VIEW3D.C closes with
+   gr_putlab(0xA0). A reference is stored as a byte offset from the word after it,
+   (target - position - 1) * 2. Running out of labels or reference slots ends the program
+   with exit(-20).
+
+   Data: the label tables below; dbptr, the output pointer, is the one global other files
+   use.
+
+   Name: inferred (map/filenames.tsv: the grdb_ prefix of grdb_blank and grdb_size). The
+   tsv's evidence calls it the conversation bytecode assembler's label table, which is
+   wrong: every caller is 3D code, and in FM Towns grdb_blank_ .. gr_freelab_ sit between
+   draw_solid_tmap and cZoom_, cRender_, cInit3d_. */
+/* name: Names are the FM Towns ones (tools/fmt.py): every function, and the globals,
+   matched by what the FM code does with them (grdb_blank stores cDbase into dbptr,
+   gr_entry writes dbptr through cDbbase, gr_tostrt loads dbptr from cEntryStrt, and so
+   on). */
 
 #include <stdlib.h>
 #include "sys.h"
 
-/* This file's _BSS, DS:86F8..8C84, laid out by name (tools/bssorder.py). */
+/* match: This file's _BSS, DS:86F8..8C84, laid out by name (tools/bssorder.py). */
 int lstrel;                             /* DS:86F8 */
 unsigned char prelblnum;                /* DS:86FA */
 unsigned lstpos;                        /* DS:86FC */
@@ -55,9 +78,10 @@ int far grdb_size(void)
     return (dbptr - cDbase) * 2;
 }
 
-/* The offset of word n of the table 0x24 bytes before the bytecode buffer. Written as a
-   near pointer from the buffer's offset: an int subtraction is kept as `sub ax,24h`
-   where far pointer arithmetic would fold it into one `add` after the index. */
+/* The offset of word n of the table 0x24 bytes before the bytecode buffer. */
+/* match: Written as a near pointer from the buffer's offset: an int subtraction is kept
+   as `sub ax,24h` where far pointer arithmetic would fold it into one `add` after the
+   index. */
 int far Clk(int n)
 {
     return (int)((int *)((unsigned)cDbase - 0x24) + n);
@@ -73,6 +97,9 @@ void far gr_tostrt(void)
     dbptr = cEntryStrt;
 }
 
+/* Emit the jump word for label lab at dbptr. A placed label gets its byte offset now; an
+   unplaced free label (0..31) gets 0 and is remembered for gr_putlab to patch; 0xA0
+   remembers this position and rel, gr_putlab(0xA0) later storing the distance less rel. */
 void far Ref(unsigned char lab, int rel)
 {
     if (lab == 0xA0) {
@@ -105,6 +132,7 @@ unsigned char far gr_getlab(void)
     return freelbls[freelblptr--];
 }
 
+/* Place label lab at dbptr and patch every reference already emitted to it. */
 void far gr_putlab(unsigned char lab)
 {
     register int i;

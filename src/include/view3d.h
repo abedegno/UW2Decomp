@@ -1,5 +1,9 @@
 /* view3d.h: The 3D view: building the render database, drawing objects into it, sorting,
-   and the renderer. */
+   and the renderer's data that the C reads. VIEW3D.C sets up a frame and builds the
+   vision grid, GRIDDB.C turns the grid into model interpreter bytecode (the render
+   database), GAMESORT.C orders each tile's objects and DRAWOBJ.C emits them, and seg004
+   (src/3d/*.ASM), entered through seg021's cRender, runs the bytecode.
+   docs/subsystems/3d.md describes the whole. */
 #ifndef VIEW3D_H
 #define VIEW3D_H
 
@@ -13,7 +17,11 @@ struct Tile;
 #include "map.h"
 #include "object.h"
 
-/* The 3D view's camera, a copy of the player's position (cPlayer). */
+/* The 3D view's camera, a copy of the player's position that get_eye fills (cPlayer, a
+   far pointer in seg021's data). VIEW3D.C's setup_vars rewrites it each frame: x and y
+   keep only the position within the eye's tile, turned into the first quadrant, and
+   heading loses the quadrant's turn. Heading is a full turn in 0x10000. Only the fields
+   the C reads are named. */
 struct Camera {
     char pad0[0x0A];
     int x;                              /* 0x0A, in 1/256 tiles */
@@ -41,13 +49,15 @@ struct Gloc {
                                            faces (seg019) */
 };
 
-/* GRIDDB.C: building the 3D view's render database from the map */
+/* GRIDDB.C: building the 3D view's render database from the map. The face routines take
+   four point numbers from SetPnt, the distance shade and the texture. */
 extern int loopx;
 extern int loopy;
 extern struct Object far *UsPtr;
 extern unsigned char TxmCol[64];
 extern int color_to_map[172];
-/* No FM Towns names: the pick tables, indexed by the byte under the cursor. */
+/* The pick tables, indexed by the byte under the cursor (less 1).
+   name: no FM Towns names. */
 extern int color_to_obj[172];
 extern struct Tile far *mlowptr;
 extern unsigned char sqmod;
@@ -67,7 +77,7 @@ extern int distpoly;
 extern int tmapson;
 extern int lighton;
 extern unsigned char curautocode;
-extern unsigned char SpecShadeMode;  /* DOS only, no FM Towns name */
+extern unsigned char SpecShadeMode;  /* name: DOS only, no FM Towns name */
 void far set_graphics_level(void);
 void far process_grid(void);
 void far do_3d_pickup(void);
@@ -97,11 +107,12 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
 void far do_door(unsigned char item, struct Object far *o);
 void far do_obj(struct Object far *o);
 
-/* GAMESORT.C: sorting the 3D view */
+/* GAMESORT.C: sorting the 3D view's objects, tile by tile. objxloc, objyloc and objzloc
+   are the view position of the object being drawn, which DRAWOBJ.C reads. */
 extern unsigned char locsqmod;
 extern int mptrmod;
-extern int sd_xmod;  /* _sd_xmod and _sd_ymod in FM Towns */
-extern int sd_ymod;  /* _sd_xmod and _sd_ymod in FM Towns */
+extern int sd_xmod;  /* name: _sd_xmod and _sd_ymod in FM Towns */
+extern int sd_ymod;  /* name: _sd_xmod and _sd_ymod in FM Towns */
 extern int objxloc;
 extern int objyloc;
 extern int objzloc;
@@ -113,7 +124,9 @@ void far clear_objsort(void);
 extern unsigned char far CmapCache[];  /* 4FAF:E3C9 */
 extern unsigned char far CmapFrm[];  /* 4FAF:E2C9 */
 extern unsigned char far CmaptoPg[];  /* 4FAF:E0C9 */
-/* The segment of the EMS page frame, provisional name. */
+/* The segment of the EMS page frame (DRAWOBJ.C reads critter frame tables at
+   EmsBuff + 0xC00).
+   name: provisional. */
 extern unsigned far EmsBuff;  /* 4FAF:E4D2 */
 extern unsigned char far PgtoCmap[];  /* 4FAF:E1C9 */
 extern unsigned far crit_fpage;
@@ -122,8 +135,9 @@ extern unsigned far crit_nlpages;
 extern unsigned far first_anim;
 extern struct Grs3d far grs_3dinf[];
 extern unsigned char far obj_inpage1;  /* the EMS page mapped into frame page 2 */
-/* FM Towns names, at 4FAF:E4D0 and E4D1: the EMS page holding the screen graphics, and the
-   page last mapped for objects, which is spoiled by any other mapping. */
+/* The EMS page holding the screen graphics, and the page last mapped for objects, which
+   is spoiled by any other mapping.
+   name: FM Towns names, at 4FAF:E4D0 and E4D1. */
 extern unsigned char far scrgr_fpage;
 extern unsigned far seg052_519C_E4D4;  /* 4FAF:E4D4 */
 extern unsigned char far tmap_fpage;
@@ -133,7 +147,9 @@ extern unsigned char far tmap_inpage;
 extern unsigned far *grs_off;  /* EMS page and paragraph, or video address, per slot */
 extern unsigned far *obj_tab;  /* two words per object; only the first is set by ovr119 */
 
-/* Defined where no source has it yet: data the link takes from the EXE. */
+/* Defined where no source has it yet: data the link takes from the EXE. bmsegoff and
+   bmhgtoff are offsets of the renderer's bitmap table (8 bytes a slot); smooth_div and
+   smooth_lowpass scale the distance shade (VIEW3D.C's preset_grid, GAMESORT.C). */
 extern int far _dblen;
 extern unsigned far bmhgtoff;
 /* in the graphics data segment */

@@ -1,15 +1,34 @@
 /* target: ovr104 */
 /* opts: -mm -1 -G -O -Y -d */
+/* Creature class data: the critters table of DATA\OBJECTS.DAT and the starting state of
+   a new critter. The whole of DOS overlay ovr104.
+
+   What it does in the game: every critter type's fixed properties (struct Creature,
+   critter.h: hit points, attributes, speed, senses, attacks, spells, loot and so on)
+   live in Creature[64], indexed by the low 6 bits of the item id (the player's own
+   entry is Creature[63]). OBJCLASS.C's init_objects calls creature_init to read the
+   table and get_class_data calls creature_class_data to find the active object's entry.
+   init_this_critter gives a newly made critter its starting state; MAPADDR.C's
+   CreateObj calls it for new creatures, and creature_obj_init (from SPELLS2.C's
+   creature summoning and BABLHACK.C) calls it for ActiveObj.
+
+   Data owned: Creature[], and cst, cr_class and cr_type, the entry, class and type last
+   looked up.
+
+   Neighbours: AI.C, PATHFIND.C, CRITTIME.C and the combat code read Creature[] through
+   mycst and similar pointers.
+   Name: inferred (creature_init and creature_class_data: the class prefix). */
 
 #include "critter.h"
 #include "object.h"
 
-/* This file's _BSS, DS:492A..554D, laid out by name (tools/bssorder.py): cr_type 931, cst 955,
-   cr_unused 971, Creature 979, cr_class 1019. cr_class and cr_type are the FM Towns names
-   (its creature_class_data_ sets them as this one does), and their keys put them exactly
-   where UW2 has them, either side of Creature.
-   Nothing uses DS:492E..494B, but it lies between cst and Creature. (DS:4928..4929, also
-   never used, is left out: it may as well be ovr103's.) */
+/* match: this file's _BSS, DS:492A..554D, laid out by name (tools/bssorder.py): cr_type
+   931, cst 955, cr_unused 971, Creature 979, cr_class 1019. Nothing uses DS:492E..494B,
+   but it lies between cst and Creature. (DS:4928..4929, also never used, is left out: it
+   may as well be ovr103's.) */
+/* name: cr_class and cr_type are the FM Towns names (its creature_class_data_ sets them
+   as this one does), and their keys put them exactly where UW2 has them, either side of
+   Creature. */
 unsigned cr_type;                       /* DS:492A, the creature's type within its class */
 struct Creature *cst;                   /* DS:492C */
 static char cr_unused[0x1E];            /* DS:492E, never used */
@@ -19,18 +38,24 @@ void far fread(void *address, int size, int count, int fd);
 void far fwrite(void *address, int size, int count, int fd);
 int far rand(void);
 
+/* Read the 64 critter records, 48 bytes each, from the open OBJECTS.DAT. */
 void far creature_init(int fd)
 {
     fread(Creature, 0x30, 0x40, fd);
 }
 
-/* creature_init's counterpart, which FM Towns lacks; the name is provisional (IDA's ovr104_17), chosen so that its tools/bssorder.py key
-   puts it in the EXE's overlay stub order. */
+/* Write the critter table back to a file. Only its overlay stub refers to it in the IDA
+   listing, so nothing in UW2 seems to call it. */
+/* name: creature_init's counterpart, which FM Towns lacks; the name is provisional (IDA's
+   ovr104_17), chosen so that its tools/bssorder.py key puts it in the EXE's overlay stub
+   order. */
 void far creature_save_ovr104_17(int fd)
 {
     fwrite(Creature, 0x30, 0x40, fd);
 }
 
+/* The Creature entry of ActiveObj: minor class * 16 + type within the class, the same as
+   the low 6 bits of the item id. */
 struct Creature * far creature_class_data(void)
 {
     cr_class = OBJ_MINOR(ActiveObj);
@@ -43,8 +68,14 @@ void far creature_obj_init(void)
     init_this_critter(ActiveObj);
 }
 
-/* FM Towns identifies the target table's InitialiseCritterValues as init_this_critter:
-   creature_obj_init calls it and MAPADDR's CreateObj calls it for new creatures. */
+/* A new critter's starting state: current and home tile fields set to 32, 32 (the
+   middle of the map; presumably the caller places it), hit points between half and about
+   1.2 times its type's average (avghit * (16 + rand() % 24) / 32), the fine heading from
+   its coarse one, goal 8 (mill about near home), attitude 2 (mellow), walk rate 4, level pitch
+   (0x10), and every other AI field cleared. Always returns 1. */
+/* name: FM Towns identifies the target table's InitialiseCritterValues as
+   init_this_critter: creature_obj_init calls it and MAPADDR's CreateObj calls it for new
+   creatures. */
 char far init_this_critter(struct Object far *obj)
 {
     register int x;

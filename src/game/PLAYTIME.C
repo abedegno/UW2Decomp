@@ -3,7 +3,23 @@
 /* The player's timed updates: active spells running down, light sources burning out,
    poison, hunger, drunkenness, drowning, and the hourly schedule. The whole of DOS
    overlay ovr135, in original order. Function and global names are the originals from
-   the FM Towns symbol table; the source file's own name is not known. */
+   the FM Towns symbol table.
+
+   The clock: INTERACT.C calls duration_check once every 20 steps of game_clock >> 8.
+   plyregen[1] counts the calls, and the work is spread over that count:
+     every call     active spells lose a step, lights burn, mushrooms wear off,
+                    regeneration, drowning, Killorn's countdown, the sleep counter;
+     every 3rd      poison damage, and a mana regeneration roll on the mana skill;
+     every 30th     hunger, sobering up, a 1 in 4 chance of wandering monsters, the
+                    critters' yearly_checkup, fatigue and two neighbouring bytes counted
+                    up, and an HP regeneration roll on strength (inferred: attr[0]);
+     every 60th     the time of day, X clock 0, moves on one of its 72 steps and the
+                    schedules in SCD.ARK block 0 are run up to the new time.
+   Entry points: duration_check (INTERACT.C), set_curmagic (the spells, to start an active
+   spell), DegradeLights (also called with a larger amount when time passes quickly,
+   probably by sleeping), sink_sink_sink, dispel_spell.
+   Data: none of its own; plyregen and the light tables are elsewhere.
+   Name: descriptive (the player's timed updates: duration_check, DegradeLights). */
 
 #include <stdlib.h>
 #include "combat.h"
@@ -16,11 +32,14 @@
 #include "sys.h"
 #include "ui.h"
 
+/* One entry per light source type (item class, lit types 4 to 7). */
 struct Light {
     unsigned char duration;             /* burn rate, 0 for an unlit light */
     unsigned char pad;
 };
 
+/* An active spell word, struct Player's spells[]: the class in bits 0 to 3, the
+   subclass in bits 4 to 7, the duration left (in duration checks) in the high byte. */
 #define SPELL_CLASS(s)  ((s) & 0x0F)
 #define SPELL_SUB(s)    (((s) & 0xF0) >> 4)
 #define SPELL_STAB(s)   ((s) >> 8)
@@ -35,6 +54,12 @@ void far damage_item(struct Object far *who, void far *source, int a, int b,
 char far player_eat(int nutrition);
 int far get_workspace(void);
 
+/* Ends active spell *i. Levitate and fly (class 1, motion, subclasses 3 and 5, per the
+   Guide's table of motion spells) do not end at once: they become slow fall (subclass
+   2) for one more check, so the player is not dropped. Class 11 subclass 1 detaches the
+   camera, so ending it reattaches the eye and leaves that input mode. Any other motion
+   spell sets fiz_update so the physics picks up the change. The last spell is moved
+   into the freed slot and *i is stepped back so the caller's loop sees it. */
 char far dispel_spell(int *i)
 {
     if (SPELL_CLASS(player->spells[*i]) == 1
@@ -97,6 +122,9 @@ void far duration_check(void)
     }
     if (player->swim_count > 0x50)
         sink_sink_sink();
+    /* Quest 50 (the keep is going to crash) set and quest 54 not yet: Killorn's
+       countdown, quest_bytes[6], runs down. At zero Killorn crashes and the player takes
+       0xFF damage. do_sfx(4, 0x2C) is played every check meanwhile. */
     if ((int)((player->quests[12] & 4) >> 2) && !(int)((player->quests[13] & 4) >> 2))
     {
         do_sfx(4, 0x2C);
@@ -138,6 +166,8 @@ void far duration_check(void)
     }
     if (plyregen[1] % 60 == 0)
     {
+        /* The hour: X clock 0 steps on, and the schedules in SCD.ARK block 0 are
+           loaded into the workspace, run up to the new time and saved back. */
         player->xclock[XC_TIME]++;
         player->xclock[XC_TIME] = player->xclock[XC_TIME] % 72;
         if (get_workspace())
@@ -152,6 +182,11 @@ void far duration_check(void)
     }
 }
 
+/* Burns the lit light sources in the four light slots (ValidLightSlots). A lit light
+   (class CLASS_LIGHT, types 4 to 7) with burn rate r loses a point of quality when
+   counter is a multiple of r, plus amount / r more when amount > 1. At quality 1 it
+   goes out: its type drops by 4 to the unlit version. Nothing burns while time is
+   stopped. Returns 1 if a light went out. */
 char far DegradeLights(int amount, unsigned char counter)
 {
     int light;
@@ -193,6 +228,10 @@ char far DegradeLights(int amount, unsigned char counter)
     return changed;
 }
 
+/* Drowning, run while swim_count is above 0x50. The load is weight * 32 / max_weight.
+   A failed swimming check against the load adds rollem(3 - result, 4) to swim_count (up
+   to 0x8C). Above 0x78 the player also takes rollem(2, hurt + 2) damage, with hurt =
+   2 minus a second swimming check, and the screen flashes (fill_FB(0x50)). */
 void far sink_sink_sink(void)
 {
     unsigned char load;
@@ -216,6 +255,10 @@ void far sink_sink_sink(void)
     }
 }
 
+/* Starts an active spell of class cls and subclass sub on the player. At most three
+   are active; returns 0 if all three slots are taken. The duration, in duration checks,
+   comes from stability: 1 gives 1, 0 gives 2d3, 0x40 gives 2d8 + 6, 0x80 gives 3d20 + 24
+   (rollem(dice, sides)). */
 char far set_curmagic(unsigned char cls, unsigned char sub, unsigned char stability)
 {
     unsigned char stab;

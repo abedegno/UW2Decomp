@@ -11,6 +11,9 @@
 ; padding before a paragraph-aligned module (TASM 2.0 pads `align 16` with 87 DB/90, not
 ; zeros).
 ; It has no relocations.
+; Runs with DS on seg021's data segment (see STARTUP.ASM), though nothing here uses it: the
+; saved vector and the error code live in the code segment.
+; name: inferred, System Shock's critical-error handler is CRITERR.C (critical_error).
 
         .186
 
@@ -25,6 +28,8 @@ SEG021_TEXT segment para public 'CODE'
         public  _setvect24
 
 ; seg021_22FD_150  (+150)
+; Saves the int 24h vector in L0170:L0172 (segment, offset) and points it at INT24. Called
+; by init (SYSINIT.ASM).
 _setvect24 proc near
         push    bp
         push    ds
@@ -49,6 +54,7 @@ L0172:
 _setvect24 endp
 
 ; seg021_22FD_174  (+174)
+; Puts the saved int 24h vector back. Called at shutdown by _17 (STARTUP.ASM).
 _seg021_22FD_174 proc near
         push    bp
         push    ds
@@ -64,6 +70,8 @@ _seg021_22FD_174 proc near
 _seg021_22FD_174 endp
 
 ; seg021_22FD_189  (+189)
+; Returns in AX the code INT24 recorded (0 if none) and clears it. Reached from C only
+; through an unnamed far entry in SYSENTRY.ASM, which nothing in the sources calls.
 _diskerr proc near
         mov     al,byte ptr cs:L0195
         xor     ah,ah
@@ -72,7 +80,11 @@ _diskerr proc near
 L0195:
         db      0h                              ; the error code _diskerr hands back
 
-; The DOS critical-error handler (int 24h): fail the call and remember why.
+; The DOS critical-error handler (int 24h): remember why and tell DOS to ignore the error
+; (AL = 0), so no "Abort, Retry, Fail" prompt appears over the game. DOS passes the error
+; code in DI and, for a non-disk error (AH bit 7), the device header in BP:SI; if that
+; device is not a character device (attribute bit 15 clear: a bad FAT on a block device),
+; the code becomes 0Dh. The code plus 14h is kept in L0195, unless one is already there.
 INT24:
         cmp     byte ptr cs:L0195,0
         jne     short L01C0

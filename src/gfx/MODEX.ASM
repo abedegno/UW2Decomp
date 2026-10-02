@@ -1,10 +1,26 @@
 ; /* target: seg017_2179 */
 ; /* opts: /ml */
 ;
-; VGA (mode X) screen access and far string helpers.
+; VGA (mode X) screen access and far string helpers: DOS resident segment seg017.
 ;
-; This segment is an assembly module, not C. str_ncopy ends by jumping into the middle
-; of str_copy, which no C compiler emits, and every routine keeps its own register
+; The game runs the VGA unchained (mode X): four planes, each byte of the 80-byte rows
+; holding every fourth pixel, the plane chosen with the sequencer's map mask (3C4h index
+; 2) for writes and the graphics controller's read map (3CEh index 4) for reads. The
+; game's y counts up from the bottom, so line 199 - y is the screen row, offset from the
+; current page's start (the word _dseg_67d6_21F4 points at). grab reads a block of the
+; screen (the GIF writer, SCRSHOT.C), gr_pixel plots one pixel, and local_do_palette loads
+; DAC entries from the library's palette (every palette change in GRFX.C, COLCYCLE.C and
+; CUTS.C ends here). The three DRAW_RELATED routines keep pictures in spare video memory
+; for LOADGR.C and GRSPIC.C: 2A2 stores an 8-bit bitmap behind a one-byte header (4, w
+; and h in planes 0, 1 and 2), 320 reads that header back, and 361 allocates a block and
+; copies a picture into it as it is. The string routines are far-pointer versions of the
+; C library's (memset, strlen, strncpy, strcpy, strchr, strstr, strcmp) used across the
+; game.
+;
+; name: descriptive (VGA mode X screen access and far string helpers). Routine names are
+; those in symbols.tsv; grab and local_do_palette are the FM Towns names.
+; match: this segment is an assembly module, not C. str_ncopy ends by jumping into the
+; middle of str_copy, which no C compiler emits, and every routine keeps its own register
 ; conventions: DS, ES and BP are saved and reused freely, results come back in DX:AX
 ; straight from string instructions, and several frames end in `mov sp,bp; pop bp`
 ; with no locals, which neither Turbo C (`pop bp` or `leave`) nor TASM's own
@@ -12,8 +28,6 @@
 ; instructions (shr reg,imm, outsb) need .186; with .186 TASM's generated frames
 ; would be enter/leave, which the EXE never has, another sign the frames were
 ; written by hand. Forward jumps carry no padding, so they were written `short`.
-;
-; Names are those in symbols.tsv; grab and local_do_palette are the FM Towns names.
 
         .model  medium
         .186
@@ -43,6 +57,9 @@
 
 ; void far grab(void far *dst, int x, int y, int w, int h)
 ; Copies a w by h block of the planar screen, top row at screen line 199 - y, into dst.
+; dst is filled as a linear w-wide image: the routine reads one plane at a time (read map
+; select), storing every fourth byte; each of its two passes walks down the rows for one
+; plane and back up (std) for the next.
 _grab   proc    far
         push    bp
         mov     bp,sp
@@ -564,7 +581,8 @@ _DRAW_RELATED_seg017_2179_320 endp
 
 ; unsigned far DRAW_RELATED_seg017_2179_361(void far *src, int size)
 ; Allocates video memory for size bytes and copies src into it a plane at a time;
-; returns the video offset, or 0.
+; returns the video offset, or 0. The map mask is set only before planes 1 to 3, so the
+; first quarter goes to whichever planes the mask last enabled.
 _DRAW_RELATED_seg017_2179_361 proc far
         push    bp
         mov     bp,sp

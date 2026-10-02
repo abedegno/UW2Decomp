@@ -2,7 +2,26 @@
 /* opts: -mm -1 -G -O -Y -d */
 /* Skills, levelling, end-game statistics, sleep and dreams, eating, the void, death and
    traps: the whole of DOS overlay ovr154, in original order. Function and global names are
-   the originals from the FM Towns symbol table; the source file's own name is not known. */
+   the originals from the FM Towns symbol table.
+
+   Skills: struct Player's skills[], 0 to 30 each, each governed by an attribute (prime:
+   strength for the combat skills 0 to 6, intelligence for mana, lore and casting, 7 to
+   9, dexterity for the rest). add_to_skill is character creation's raise, get_skill a
+   trainer's or a skill point's raise, grant_skill_advance picks one at random from a
+   group. player_compute derives maximum HP, mana and carrying weight; advance gains
+   levels (SKILLCHK.C's player_get_exp calls it).
+   Sleep: player_sleep (the sleep key, beds and bedrolls in USEITEMS.C, a sleep trap in
+   TRIGGER.C, and passing out drunk) passes time, heals, feeds and sobers the player,
+   and may show a dream (dream) or send the player to the Ethereal Void (go_void,
+   punt_void).
+   Death: player_is_dead (INTERACT.C, when HP reaches 0) jails, wakes, or returns the
+   player to the blackrock gem, or ends the game (UWEDIT.C's real_death).
+   The end: cs_check (after a conversation) plays a pending cutscene, and cutscene 2
+   means the game is won (player_won_game, game_stats).
+   Traps on objects: DetectedTrap and RemoveTrap (INTERACT.C, and the spells).
+   Data: void_tiles, skill_rng.
+   Name: descriptive (skills, sleep, dreams, eating, the void and death: use_skill,
+   player_sleep); until the renaming this file was PLAYER.C, which is now ovr143. */
 
 #include <string.h>
 #include <stdlib.h>
@@ -51,6 +70,9 @@ void far UseTrigger(struct Object far *user, struct Object far *obj, struct Obje
 /* Later in this file. */
 char far player_eat(int nutrition);
 
+/* The use-skill key: only track (12) does anything, running mdetect(8, value) to
+   report nearby creatures. Traps (10) and search (11) do nothing here; any other skill
+   just prints its name. */
 char far use_skill(struct Object far *who, unsigned char skill, unsigned char value)
 {
     if (who != ThePlayer)
@@ -62,7 +84,7 @@ char far use_skill(struct Object far *who, unsigned char skill, unsigned char va
         break;
     default:
         scroll_print(get_string((skill + 0x1F) | STR_CHARGEN));
-        game_sprint(0x16F);
+        game_sprint(0x16F);             /* "\n" */
         return 1;
     case 10:
     case 11:
@@ -76,6 +98,8 @@ char far player_use_skill(int skill)
     return use_skill(ThePlayer, skill + SKILL_TRAPS, player->skills[skill + SKILL_TRAPS]);
 }
 
+/* The derived maxima: HP 30 + level * strength / 5, mana (mana skill + 1) *
+   intelligence / 8, carrying weight strength * 13 + 300. With restore, mana is filled. */
 void far player_compute(char restore)
 {
     int mana;
@@ -89,6 +113,8 @@ void far player_compute(char restore)
     restore_mana(ThePlayer, 0);
 }
 
+/* Gains levels: prints the new level, gives one skill point a level, recomputes the
+   maxima. */
 void far advance(char levels)
 {
     register char *s = " 0\n";
@@ -99,13 +125,14 @@ void far advance(char levels)
     else
         s[0] = ' ';
     s[1] = player->level % 10 + '0';
-    game_sprint(0xA1);
+    game_sprint(0xA1);                  /* "Congratulations! You've reached experience level " */
     scroll_print(s);
     player->skill_points = player->skill_points + levels;
     player_compute(0);
     panel_check();
 }
 
+/* The attribute that governs a skill: 0 strength, 1 dexterity, 2 intelligence. */
 int far prime(int skill)
 {
     if (skill < 7)
@@ -115,6 +142,9 @@ int far prime(int skill)
     return 1;
 }
 
+/* Character creation's raise. A new skill gets 3 + attribute / 9 + 0 to 2 at random,
+   plus three skill_checks of the attribute against 20 (each -1 to 2); a skill already
+   held gets 1 + attribute / 13 + 0 or 1, plus two checks. At most 30. */
 void far add_to_skill(int skill)
 {
     int rolls;
@@ -147,6 +177,12 @@ void far add_to_skill(int skill)
 /* The divisor for the random bonus when a skill rises, by governing attribute. */
 static unsigned char skill_rng[3] = { 25, 30, 15 };
 
+/* Raises a skill by spending a skill point (from a trainer, via BABLHACK.C's x_skills,
+   or grant_skill_advance). Fails (returns 0) if the skill is already above twice its
+   attribute or at 30. Otherwise +1; +1 more if the attribute is not strength and half
+   the attribute is still above the skill; and +1 more with chance (attribute - skill) /
+   skill_rng[attribute] while below the attribute. Raising lore also resets the lore
+   tries and records the lore skill for this level. */
 char far get_skill(char skill)
 {
     int stat_rng;
@@ -178,6 +214,10 @@ char far get_skill(char skill)
     return result;
 }
 
+/* Raises one skill of a group: -1 the seven combat skills (3 tries), -2 mana, lore and
+   casting (2 tries, mana favoured while below 8), -3 the ten others (4 tries), or which
+   itself. Each try raises a random skill of the group through get_skill; returns 1 if
+   any rose. */
 char far grant_skill_advance(int which)
 {
     char tried[4];
@@ -210,6 +250,11 @@ char far grant_skill_advance(int which)
     return result;
 }
 
+/* The end-of-game screen: the name, "A level N <class> freed Castle British after D
+   days imprisoned within the Jewel.", the attributes, HP, mana and experience
+   (exp / 10: exp is kept in tenths), and the twenty skills. If strength, dexterity and
+   intelligence add up to more than 64 it adds "AND CHEATED ON THEIR CHARACTER" in
+   another colour: chargen's rolls cannot get there. */
 void far game_stats(void)
 {
     char far *str;
@@ -229,7 +274,7 @@ void far game_stats(void)
     x = 0xA0 - string_width(str) / 2;
     string_to_screen(str, x, y);
 
-    str = str_copy(text, get_string(0x2CA));
+    str = str_copy(text, get_string(0x2CA));    /* "A level " */
     i = strlen(text);
     if (player->level > 9)
         text[i++] = player->level / 10 + '0';
@@ -238,7 +283,7 @@ void far game_stats(void)
     text[i++] = 0;
     str_cat(text, get_string((player->pclass + 0x17) | STR_CHARGEN));
     y -= cur_font->height;
-    str = get_string(0x2CB);
+    str = get_string(0x2CB);            /* "freed Castle British" */
     x = 0xA0 - (string_width(text) + string_width(str)) / 2;
     string_to_screen(text, x, y);
     x += string_width(text) + 4;
@@ -246,9 +291,9 @@ void far game_stats(void)
 
     hours = player->game_clock / 0x1C2000L;
     days = hours / 12;
-    str_copy(text, get_string(0x2CC));
+    str_copy(text, get_string(0x2CC));  /* "after " */
     str_cat(text, itoa(days, numbuf, 10));
-    str_cat(text, get_string(0x2CD));
+    str_cat(text, get_string(0x2CD));   /* " days imprisoned within the Jewel." */
     x = 0xA0 - string_width(text) / 2;
     y -= cur_font->height;
     string_to_screen(text, x, y);
@@ -301,12 +346,20 @@ void far game_stats(void)
     if (x > 0x40)
     {
         text[0] = 0;
-        str_cat(text, get_string(0x2CE));
+        str_cat(text, get_string(0x2CE));       /* "AND CHEATED ON THEIR CHARACTER" */
         *foreground_color = *background_color = 0x1F;
         string_to_screen(text, 0x32, 0x14);
     }
 }
 
+/* The dream after a night's sleep. If the player ate the dream plant (sleepbits set,
+   USEITEMS.C) the dream is the Ethereal Void: quest 48 is set and go_void moves the
+   player there. Otherwise the castle story dreams 0 to 3 come due as X clock 1 (the
+   castle plot) reaches 4, 6, 10 and 14; the latest due one not yet seen is shown. With
+   none due, there is a 1 in 4 + 4 * sleepfactor chance of one of dreams 4 to 6 not yet
+   seen. Dream n is cutscene 0x18 + n, and its dreamflags bit is flipped once shown.
+   sleepfactor is 1 for a comfortable night (fed, in a bed or bedroll), which makes the
+   random dreams rarer. Returns 1 if a cutscene played. */
 unsigned char far dream(int sleepfactor)
 {
     int found = -1;
@@ -317,7 +370,7 @@ unsigned char far dream(int sleepfactor)
 
     if (player->sleepbits != 0)
     {
-        game_sprint(0x18);
+        game_sprint(0x18);              /* "Your dreams are vivid, showing a shifting colored scene..." */
         player->quests[12] = (player->quests[12] & 0xFFFFFFFEL) + 1;
         go_void();
         return 0;
@@ -347,7 +400,7 @@ unsigned char far dream(int sleepfactor)
     {
         show_cutscene(found + 0x18);
         player->dreamflags ^= 1 << found;
-        game_sprint(0x13 - sleepfactor);
+        game_sprint(0x13 - sleepfactor);        /* "Your sleep is uneasy." or "You feel rested." */
         return 1;
     }
     timer = *Time;
@@ -357,6 +410,9 @@ unsigned char far dream(int sleepfactor)
     return 0;
 }
 
+/* Passing out drunk where the player stands: in motion states 1 and 2 (bits 0 and 1;
+   probably swimming or similar) the player dies. With state bit 3 (probably falling)
+   and no slow fall, levitate or fly (motionbits 0x16), the fall does 12 to 62 damage. */
 void far drop_drunk_player(void)
 {
     unsigned char damage;
@@ -374,6 +430,23 @@ void far drop_drunk_player(void)
         damage_item(ThePlayer, 0L, 0, 0, 0xFF, 0);
 }
 
+/* Sleeps. how: 0 camping on the ground, 1 a bedroll, 2 a bed, a negative value passing
+   out (drunk, -2). A chosen sleep is refused while moving or swimming, in a fight
+   (hostile creatures near) or in the pits; sleeping in the Ethereal Void wakes the
+   player instead. The night:
+   - 2 to 6 hours pass at once: active spells and mushrooms end, Killorn's crash comes
+     if due (quest 50 without 54) and kills, lights burn 180 steps an hour, and poison
+     strength n does n(n + 1) / 2 damage and is cured. Passing out also runs
+     drop_drunk_player, and in the pits kills.
+   - wandering_monster_check may interrupt: fatigue drops by 0x18, hunger by 12 to 27,
+     drunkenness by 16, and no healing.
+   - otherwise the rest of a 7 to 10 hour night passes (1 or 2 more below 10 HP).
+     regen = fatigue / 2 + 2, at most 5 (fatigue counts time awake); comfort is 1 when
+     hunger is above 0x40 and the player is in a bed or bedroll. HP and mana come back
+     by restore_hp and restore_mana amounts built from regen and comfort; a starving
+     player instead takes 2 damage. Hunger then drops by 24 to 55 and drunkenness by
+     32, and the player dreams (dream). A player who would die in the night is kept at
+     1 HP through the dream and then dies. */
 void far player_sleep(int how)
 {
     int comfort;
@@ -386,7 +459,7 @@ void far player_sleep(int how)
     {
         if ((player->motion_state & 0x1B) || PN.acc[2] != 0)
         {
-            game_sprint(0x14);
+            game_sprint(0x14);          /* "You can't go to sleep here!" */
             return;
         }
         if ((PlayerLevel - 1) / 8 == 8 && player->in_void)
@@ -396,13 +469,13 @@ void far player_sleep(int how)
         }
         if (hostile_creatures_near() || player->in_pits)
         {
-            game_sprint(0xE);
+            game_sprint(0xE);           /* "There are hostile creatures near!" */
             return;
         }
         if (how == 0 || how > 2)
-            game_sprint(0xF);
+            game_sprint(0xF);           /* "You make camp." */
         else
-            game_sprint(how + 0x15);
+            game_sprint(how + 0x15);    /* "You unroll your sleeping bag ...", "You climb into the bed." */
     }
     render_FB();
     set_random_walking_music(0);
@@ -413,7 +486,7 @@ void far player_sleep(int how)
     load_digi_fx(2);
     load_digi_fx(0xB);
     if (how >= 0)
-        game_sprint(0x10);
+        game_sprint(0x10);              /* "You go to sleep." */
     DoClosingDoors(0);
     Obj_GarbageCollect(1, 0x14);
     hours = rand() % 5 + 2;
@@ -449,7 +522,7 @@ void far player_sleep(int how)
             player->fatigue -= 0x18;
         else
             player->fatigue = 0;
-        game_sprint(0x15);
+        game_sprint(0x15);              /* "Your sleep is interrupted!" */
         player_eat(-12 - (rand() & 0xF));
         if (player->drunk < 0x10)
             player->drunk = 0;
@@ -478,7 +551,7 @@ void far player_sleep(int how)
         }
         else
         {
-            game_sprint(0x11);
+            game_sprint(0x11);          /* "You are starving." */
             damage_item(ThePlayer, 0L, 0, 0, 2, 0);
         }
         player_eat(-24 - (rand() & 0x1F));
@@ -494,7 +567,7 @@ void far player_sleep(int how)
         if (how >= 0)
             fade = !dream(comfort);
         else
-            game_sprint(0x13 - comfort);
+            game_sprint(0x13 - comfort);        /* "Your sleep is uneasy." or "You feel rested." */
         if (revived)
         {
             revived = 0;
@@ -515,6 +588,8 @@ void far player_sleep(int how)
         send_FB();
 }
 
+/* The sleep key: sleeps in a bedroll if the player carries one (FindObj(4, 2, 1, 4)),
+   else camps. */
 void far player_key_sleep(int bedroll)
 {
     int where;
@@ -526,6 +601,9 @@ void far player_key_sleep(int bedroll)
     player_sleep(bedroll);
 }
 
+/* Changes hunger by nutrition (higher is fuller). Returns 0, eating nothing, if it
+   would go past 255 (too full). Eating also heals food_heal / 6 HP (at most 8) and
+   resets food_heal. PLAYTIME.C and player_sleep call it with negative values. */
 char far player_eat(int nutrition)
 {
     int value;
@@ -549,6 +627,8 @@ char far player_eat(int nutrition)
     return 1;
 }
 
+/* The end: cutscene 2 (the ending), screen images 8 and 9 with game_stats, cutscene
+   10 (the credits), then back to the start menu. */
 void far player_won_game(void)
 {
     inplist->mode = 0;
@@ -570,6 +650,8 @@ void far player_won_game(void)
     real_death(0);
 }
 
+/* Plays the cutscene a conversation left pending in quest_bytes[15] (quest 143: the
+   cutscene number plus one, 0 for none). Cutscene 2 is the ending: the game is won. */
 void far cs_check(void)
 {
     unsigned char *cs = &player->quest_bytes[15];
@@ -589,6 +671,8 @@ void far cs_check(void)
     }
 }
 
+/* Sets the pending teleport to the square of the first item of the given id on the
+   current level; returns 0 if level is not the current one. */
 char far moveto(int level, int item)
 {
     int x = 0;
@@ -605,6 +689,10 @@ char far moveto(int level, int item)
     return 0;
 }
 
+/* npp_func after death outside Britannia: places the player near (28, 40) on level 5,
+   the blackrock gem's cavern, moved from it by move_along(rand(), 8), with HP 2 to 4 below the
+   maximum and mana down by an eighth plus 2, poison and spells gone, and a blood stain
+   left on the floor of an open square. */
 void far do_gem(void)
 {
     int x;
@@ -651,6 +739,8 @@ void far do_gem(void)
     player->automap = 1;
 }
 
+/* npp_func on waking from the Void: back to the square and heading stored by go_void
+   (trap_teleport_data carries the heading, see UWEDIT.C's new_player_pos). */
 void far do_dreamret(void)
 {
     set_new_music(10);
@@ -660,6 +750,8 @@ void far do_dreamret(void)
     npp_func = 0;
 }
 
+/* npp_func of the moonstone spells: arrive at the moonstone (ITEM_MOONSTONE) on the
+   destination level. */
 void far do_mstone(void)
 {
     moveto(area_spell_state, 0x126);
@@ -679,6 +771,8 @@ void far punt_mouse_obj(void)
     }
 }
 
+/* Wakes the player from the Ethereal Void: drops anything held on the cursor and
+   returns to the level, square and heading saved in dream_pos, dream_x and dream_y. */
 void far punt_void(void)
 {
     player->in_void = 0;
@@ -687,13 +781,18 @@ void far punt_void(void)
     npp_func = do_dreamret;
     do_teleport(ThePlayer, 0x3F, 0x3F, (player->dream_pos >> 8) & 0xFF);
     player_setup(0, 0, -1);
-    game_sprint(0x19);
+    game_sprint(0x19);                  /* "You awaken after a night of extremely lifelike dreams..." */
     editchng(0x7FFE);
 }
 
-/* Where the void dream can put the player. */
+/* Where the void dream can put the player on level 69 (0x45, the Ethereal Void's
+   fifth). */
 static struct VoidTile void_tiles[4] = { { 32, 28 }, { 25, 13 }, { 38, 32 }, { 14, 40 } };
 
+/* Sends the sleeping player to the Ethereal Void for 2 to 5 duration checks (sleepbits,
+   counted down by PLAYTIME.C, which calls punt_void at zero). The return point is
+   saved; the arrival square is void_tiles[0] five times in eight, or one of the other
+   three moved by up to one square. */
 void far go_void(void)
 {
     int n;
@@ -720,6 +819,15 @@ void far go_void(void)
     editchng(0x7FFE);
 }
 
+/* HP has reached 0:
+   - killed on level 1 by a castle guard (whoami 0x81 to 0x8F, 0x95 or 0xA8) that is not
+     a loner: put in jail instead (WORLDEV.C's put_player_in_jail);
+   - in the Ethereal Void: wake up (punt_void);
+   - in the pits: the fight is lost, the pit fighters are reset and the pits record
+     and Jospur's debt (quest_bytes 1 and 5) cleared, and death goes on.
+   Death costs a ninth of the experience. Outside Britannia (level above 8) the player
+   wakes at the blackrock gem on level 5 (do_gem); in Britannia it is the end
+   (real_death(1)). */
 void far player_is_dead(void)
 {
     int i;
@@ -780,7 +888,7 @@ void far player_is_dead(void)
         {
             cFillFB(1);
             scroll_clear(1);
-            game_sprint(0x169);
+            game_sprint(0x169);         /* "You regain awareness in the cavern containing the pulsating blackrock gem." */
         }
         else
             real_death(1);
@@ -789,6 +897,9 @@ void far player_is_dead(void)
         real_death(1);
 }
 
+/* Tests for a trap on obj: a trap object of minor class 3 linked from it. Returns the
+   skill_check of skill (search, or 45 for a spell) against 10 + twice the world
+   number, or 0 when there is no trap. */
 int far DetectedTrap(struct Object far *obj, int skill)
 {
     union Link far *head;
@@ -805,6 +916,9 @@ int far DetectedTrap(struct Object far *obj, int skill)
     return 0;
 }
 
+/* Tries to disarm the trap on obj: skill_check of skill (traps) against 8 + the world
+   number. Success removes the trap; failure (-1) sets it off; 0 is "Unable to defuse
+   trap." */
 int far RemoveTrap(struct Object far *obj, int skill)
 {
     int quality;
@@ -846,7 +960,7 @@ int far RemoveTrap(struct Object far *obj, int skill)
             scroll_print(" on the ");
             get_name(name, obj, 0, 0);
             scroll_print(name);
-            game_sprint(0x168);
+            game_sprint(0x168);         /* " was successfully disarmed." */
             if (trig)
             {
                 quality = OBJ_QUALITY(trig);
@@ -856,7 +970,7 @@ int far RemoveTrap(struct Object far *obj, int skill)
         }
         else if (result < 0)
         {
-            game_sprint(0x166);
+            game_sprint(0x166);         /* "Your bumbling attempts have set off the " */
             if (OBJ_INMAJOR(trap) == 15)
                 strcpy(name, "trap");
             else if (OBJ_INMAJOR(trap) == 0 && OBJ_OWNER(trap))
@@ -864,7 +978,7 @@ int far RemoveTrap(struct Object far *obj, int skill)
             else
                 get_name(name, trap, 0, 0);
             scroll_print(name);
-            game_sprint(0x60);
+            game_sprint(0x60);          /* ".\n" */
             if (trig)
                 UseTrigger(ThePlayer, obj, trig, -1);
             else
@@ -874,7 +988,7 @@ int far RemoveTrap(struct Object far *obj, int skill)
             }
         }
         else
-            game_sprint(0x167);
+            game_sprint(0x167);         /* "Unable to defuse trap." */
     }
     return result;
 }

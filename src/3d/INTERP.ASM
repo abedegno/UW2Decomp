@@ -4,6 +4,81 @@
 ; The model interpreter: the far routines at DB0, create_matrix, head_view, angles_2_matrix,
 ; and the opcode handlers do_int2 .. do_movres with their flat_ variants.
 ;
+; What it does in the game: the 3D view is drawn by running a program. GRIDDB.C, DRAWOBJ.C and
+; GAMESORT.C write the frame's render database, a buffer of 16-bit words, and VIEW3D.C calls
+; cRender (seg021), which calls render_3d (INSTANCE.ASM), which sets up the view and starts
+; this interpreter on that buffer. The 3D object models are bytecode in the same language
+; in the renderer's far data, which DRAWOBJ.C's do_rect calls with do_ihcall or do_sfcal
+; after a do_org, so walls, floors, objects and models all go through the handlers here.
+;
+; The language. A program is a stream of words read with SI (lodsw). Each opcode is an even
+; word, the byte offset of its handler in the opcode table at DS:24F4h (DS = seg052_519C
+; while interpreting), so opcode 0x7E is the 64th entry. Every handler ends with the
+; dispatch `lodsw; xchg bx,ax; jmp word ptr [bx+24F4h]` (threaded code: there is no central
+; loop), and do_eof's `ret` returns from the nearest `call word ptr [bx+24F4h]`, which is
+; how sub-programs (do_sfcal, the sort and call opcodes, render_3d itself) end. Operands
+; follow the opcode inline. The table has 111 entries, 0x00 to 0xDC, in the same order as FM
+; Towns' handlers (docs/LAYOUT.md; UWReverseEngineering's "UW2 FM Towns/model_opcodes.tsv"
+; lists them with operand lengths); unused slots point at do_int2. Point operands are byte
+; offsets into the point table (premultiplied by 8), except the mini forms, which take a
+; byte point number.
+;
+; Data (all in seg052_519C, named here by offset; the names are ours unless marked FM):
+;   14B2..14C2  the current 3x3 rotation matrix, 1.15 fixed point. mxmul computes
+;               x' = x*[14B2] + y*[14B8] + z*[14BE], y' = x*[14B4] + y*[14BA] + z*[14C0],
+;               z' = x*[14B6] + y*[14BC] + z*[14C2] (z' is depth).
+;   14D0 + 8n   the point table ("resources"): view-space x, y, z words, a clip-code byte
+;               (+6) and a shade byte (+7).
+;   1BA, 0B1A   two polygon vertex buffers of 8-byte entries (x, y, z, codes), [1B8] the
+;               start and [1B6] the end of the current one; the clippers copy between them.
+;   14CA, 14CB  the OR and the AND of the current polygon's clip codes.
+;   14A6, 14A8  the seg003 polygon routines the next polygon is drawn with (flat or
+;               Gouraud), set by the surface opcodes.
+;   2470, 2472  the y and x projection scales (half the window height and width), 2474 and
+;               2476 the screen centre x and y; render_3d also patches the centre into the
+;               code as immediates (modify_biasx, modify_biasy, modify_bx2, modify_by2: FM).
+;   247A..2484  the eye position, three 32-bit coordinates (x, y, z).
+;   25E6, 25E8, 25EA  the current object's origin as the negated eye-relative x, y, z;
+;               25E0 the coordinate shift (FM modify_mes's value); self_modify copies all
+;               four into the point loaders' immediates.
+;   25E2        -1 when the current object was rejected; 25E4 polygons drawn for it.
+; The polygon routine is called with the projected vertices at seg_370D:415Eh (x, y words)
+; and CX = the vertex count.
+;
+; Clip codes (code_pnt in INSTANCE.ASM): 1 x < -z, 2 x > z, 4 y > z, 8 y < -z (a 90-degree
+; frustum, the projection scales doing the rest), 80h z <= 0. A polygon whose codes AND to
+; nonzero is skipped, one whose codes OR to zero is projected and drawn at once, and
+; otherwise clip_top, clip_bot, clip_left and clip_right cut it in 3D against each plane
+; whose bit is set.
+;
+; Divide overflow: cRender points int 0 at dseg062_62a6:05A0h, a `jmp dword ptr cs:[5A5h]`
+; (the far pointer's segment word is seg004, see INSTANCE.ASM's FD71 piece). Before a
+; divide that may overflow, the code stores the offset of a recovery routine at ss:[5A5h]
+; (SS = dseg062_62a6 while rendering): overflow_handler_reg and the others saturate the
+; result and return past the idiv; clip_overflow and the line routine's entries instead
+; drop the interrupt frame (sti; add sp,6) and continue with a clipping path.
+;
+; Self-modifying code: render_3d, self_modify, check_flat and seg004_0849_35FF rewrite
+; immediates and whole routines in this segment, and check_flat swaps opcode table entries
+; between the do_ and flat_ handlers (flat_ when the view has no pitch or roll).
+;
+; Comparison with System Shock (shockmac's INTERP.C, a C port of r:/prj/lib/src/3d/
+; interp.asm, revision 1.19 of 1994): the same design, an opcode table of handler offsets
+; and inline operands, and the same handler names for do_eof, do_jnorm, do_lnres,
+; do_multires, do_polyres, do_setcolor, do_sortnorm, do_setshade, do_goursurf, do_x_rel ..
+; do_yz_rel, do_sfcal and do_defres; System Shock numbers its opcodes 0, 1, 2 (a 40-entry
+; table) where UW2's are byte offsets, and has none of the UW-specific handlers (do_uwsurf,
+; do_uwshade, do_cavesurf, the sort and parapiped tests). That the opcode numbers here are
+; byte offsets is shown by the code (`jmp word ptr [bx+24F4h]` with BX the opcode word).
+;
+; Neighbours: SPHERE.ASM (do_obj, the per-object header), SMOOTH.ASM (Gouraud polygons),
+; INSTANCE.ASM (render_3d, point transforms, sub-object rotation, clip codes), TMAPOPS.ASM
+; and PGCACHE.ASM (texture and bitmap opcodes), seg003 (the 2D polygon and line drawers),
+; seg021's IMATH (sincos).
+;
+; name: original (map/filenames.tsv): 17 of its opcode handlers have the names of System
+; Shock's interp.asm handlers; the routine names are FM Towns'.
+;
 ; SEG004 split into its original modules: this is module 4 of 14, +DB0..+3000 of the segment
 ; (file 9F70h), a module of the second library (UWLIB.LIB).
 ; Procs: seg004_0849_DB0, seg004_0849_DBE, seg004_0849_DD2, seg004_0849_E11, create_matrix,
@@ -19,9 +94,9 @@
 ; do_ipcall_ind, do_ipcall, do_pushc, do_popc, do_jnorm_x0, do_jnorm_y0, do_jnorm_z0,
 ; do_jnorm_yz0, do_jnorm_xz0, do_jnorm_xy0, do_jnorm, clip_overflow, do_3d_clip, clip_top,
 ; clip_bot, clip_right, clip_left, do_parapiped.
-; Evidence for the bounds: starts on a paragraph after 7 zero bytes following a iret: TLINK's
-; padding before a paragraph-aligned module (TASM 2.0 pads `align 16` with 87 DB/90, not
-; zeros).
+; match: evidence for the bounds: starts on a paragraph after 7 zero bytes following a iret:
+; TLINK's padding before a paragraph-aligned module (TASM 2.0 pads `align 16` with 87 DB/90,
+; not zeros).
 ; Its relocations are entries 2328-2350 of UW2.EXE's relocation table.
 
         .386
@@ -156,7 +231,9 @@ SEG004_TEXT segment para public use16 'CODE'
         public  modify_by2
         public  setcol_common
 
-; seg004_0849_DB0  (+DB0): three far routines nothing in the EXE calls
+; seg004_0849_DB0  (+DB0): three far routines nothing in the EXE calls. All three work on
+; seg052_519C words 158h (the current view description, which create_matrix requires to be
+; 130h), 15Ah and 1A6h. DB0 saves 158h in 1A6h; DBE restores it and clears 15Ah.
 _seg004_0849_DB0 proc far
         push    ds
         mov     cx,seg seg052_519C
@@ -180,6 +257,9 @@ _seg004_0849_DBE proc far
 _seg004_0849_DBE endp
 
 ; seg004_0849_DCC  (+DD2)
+; In: AX = a view description (stored at 158h), BX nonzero to clear 15Ah. Clears 190h and
+; sets ss:[580h] (dseg062_62a6) to -1, or to 0 when the description's words 0, 2 and 3 are
+; 0, 0A44h and 0. Nothing in the EXE calls it; what the record and the flag mean is not known.
 _seg004_0849_DD2 proc far
         push    ds
         mov     cx,seg seg052_519C
@@ -206,12 +286,18 @@ L0E0F:
 _seg004_0849_DD2 endp
 
 ; seg004_0849_E11  (+E11)
+; A bare `int 2` and a jump to create_matrix's return; nothing calls it.
 _seg004_0849_E11 proc near
         int     2
         jmp     short L0E51
 _seg004_0849_E11 endp
 
 ; seg004_0849_E15  (+E15)
+; Builds the frame's view matrix. Requires the view description pointer at 158h to be 130h
+; (int 2 otherwise), calls the camera routine its first word selects through the table at
+; 15Ch (head_view or lag_view), records 158h in 15Ah, and keeps a copy of the eye position
+; (247Ah, 12 bytes) and of the matrix's depth column and 24E6h at 192h. Called by render_3d.
+; Sets 168h to -1 first; head_view may set it to a model address.
 _create_matrix proc near
         mov     ax,0FFFFh
         mov     word ptr ds:[168h],ax
@@ -243,6 +329,15 @@ L0E51:
 _create_matrix endp
 
 ; seg004_0849_E52  (+E52)
+; The camera routine (FM head_view). In: SI = the view record after its selector word, ES =
+; DS = seg052_519C. Reads the zoom word (24E6h) and the address BP of the eye record (and
+; sets 168h when the third word is 0 and ss:[0A82h] is clear). On first use (the record's
+; word +6 zero, then set to 1) it builds a two-angle matrix in the record
+; (seg004_0849_1006) and, when its word +1Eh is nonzero, seg004_0849_EDD's offset. It builds
+; the eye's matrix with angles_2_matrix when the eye record's first word is set, rotates the
+; offset (mm3x9t) and adds the eye record's 32-bit coordinates to give the eye position at
+; 247Ah..2484h, and composes the final matrix at 14B2h (mm9x9). What each record field means
+; beyond that has not been traced.
 _head_view proc near
         lodsw
         mov     word ptr ds:[24E6h],ax
@@ -305,6 +400,10 @@ L0EA3:
 _head_view endp
 
 ; seg004_0849_EDD  (+EDD)
+; In: DI = a distance, SI = a matrix record. Writes -(DI * column) for the matrix column at
+; SI+10h, +16h, +1Ch into SI+0..+4, a vector DI units back along that axis; probably the
+; camera's offset behind the eye (inferred from head_view's use when the record's +1Eh word
+; is set; not checked in play).
 _seg004_0849_EDD proc near
         mov     ax,di
         imul    word ptr [si+10h]
@@ -325,17 +424,23 @@ _seg004_0849_EDD proc near
         neg     dx
         mov     word ptr [si+4],dx
         ret
-lag_view:                               ; FM lag_view, a bare return after head_view's helper
+lag_view:                               ; name: FM lag_view, a bare return after head_view's helper
         ret
 _seg004_0849_EDD endp
 
 ; seg004_0849_F08  (+F08)
+; Far wrapper for angles_2_matrix; nothing in the EXE calls it.
 _seg004_0849_F08 proc far
         call    _angles_2_matrix
         retf
 _seg004_0849_F08 endp
 
 ; seg004_0849_F0C  (+F0C)
+; In: BP (and DI) = a record whose words +12h, +14h and +16h are three angles, ES = the 3D
+; data segment. Calls seg021's sincos for each negated angle (with DS = SS, as sincos needs),
+; keeping the sines and cosines at es:182h..18Ch, and writes the 3x3 rotation matrix they make
+; to BP+0..+10h in 1.15 fixed point. Which angle is heading, pitch and bank has not been
+; checked.
 _angles_2_matrix proc near
         mov     ax,ss
         mov     ds,ax
@@ -433,6 +538,9 @@ _angles_2_matrix proc near
 _angles_2_matrix endp
 
 ; seg004_0849_1006  (+1006)
+; Two-angle version of angles_2_matrix: angles at es:[si] and es:[si+2], matrix written to
+; DI+0..+10h with element +6 zero (no roll term). Called by head_view for the eye's own
+; rotation.
 _seg004_0849_1006 proc near
         mov     ax,ss
         mov     ds,ax
@@ -484,6 +592,8 @@ _seg004_0849_1006 proc near
 _seg004_0849_1006 endp
 
 ; seg004_0849_1090  (+1090)
+; Opcode for every unused table slot: `int 2`, then carries on with the next opcode. A
+; program that reaches it is malformed; int 2 is NMI, so presumably a debugger catch.
 _do_int2 proc near
         int     2
         lodsw
@@ -492,11 +602,16 @@ _do_int2 proc near
 _do_int2 endp
 
 ; seg004_0849_1098  (+1098)
+; Opcode 00h: end of a program or sub-program. Returns from the `call [bx+24F4h]` that
+; started it (render_3d, do_sfcal, a sort or call opcode).
 _do_eof proc near
         ret
 _do_eof endp
 
 ; seg004_0849_1099  (+1099)
+; Opcode 08h, operand: point. Projects the point and plots one pixel through seg003
+; (_seg003_0272_0) when it is in front of the eye with no clip code (or always, when byte 25D3h
+; is set).
 _do_pntres proc near
         lodsw
         mov     di,ax
@@ -526,6 +641,13 @@ L10D2:
 _do_pntres endp
 
 ; seg004_0849_10D8  (+10D8)
+; Opcode 96h, operands: two points. Draws a line (seg003 _seg003_0272_8, or _10 after
+; clipping). Lines whose codes AND to nonzero are skipped; others are clipped in 3D here, one
+; plane at a time, inline (FM has these sections as lclip_top, lclip_bot, lclip_left and
+; lclip_right). The two entry points after the first dispatch (11ABh and 11ADh) are the
+; divide-overflow recovery addresses stored at ss:[5A5h] while projecting each endpoint (FM
+; line_overflow2): they drop the interrupt frame and clip that endpoint. The clipped endpoint
+; is written to a scratch point at 147Ah or 1482h.
 _do_lnres proc near
         lodsw
         mov     di,ax
@@ -855,6 +977,7 @@ L13BE:
 _do_lnres endp
 
 ; seg004_0849_13C4  (+13C4)
+; Opcode BEh, operands: a, b. Model variables: *[b] = [a] (b holds the address to store to).
 _do_movei proc near
         lodsw
         mov     di,ax
@@ -869,6 +992,8 @@ _do_movei proc near
 _do_movei endp
 
 ; seg004_0849_13D6  (+13D6)
+; Opcode 02h, operands: address, value. Stores the constant in the model variable at address
+; (GRIDDB.C's Clk(n) slots).
 _do_movec proc near
         lodsw
         mov     di,ax
@@ -879,6 +1004,7 @@ _do_movec proc near
 _do_movec endp
 
 ; seg004_0849_13E0  (+13E0)
+; Opcode 04h, operands: a, b. Model variables: [b] = [a].
 _do_movem proc near
         lodsw
         mov     bx,ax
@@ -892,6 +1018,8 @@ _do_movem proc near
 _do_movem endp
 
 ; seg004_0849_13EF  (+13EF)
+; Opcode 0Ah, operands: offset, address. [address] = ss:[BP + offset] (a [bp+di] operand,
+; so the stack segment), with BP as the caller left it.
 _do_move_odata proc near
         lodsw
         xchg    di,ax
@@ -905,6 +1033,9 @@ _do_move_odata proc near
 _do_move_odata endp
 
 ; seg004_0849_13FD  (+13FD)
+; Opcode 82h, operands: count, first point, then count (x, z, y) coordinate triples. Each
+; is offset by the object origin, shifted, rotated (load_xlate_rotate_pnt), clip-coded
+; (code_pnt) and stored in consecutive points.
 _do_multires proc near
         lodsw
         mov     word ptr ds:[24DCh],ax
@@ -929,6 +1060,8 @@ L140C:
 _do_multires endp
 
 ; seg004_0849_1432  (+1432)
+; Opcode B8h: do_multires with byte operands: a byte count, a byte point number, and byte
+; coordinates (mini_xlate_rotate_pnt scales each by 32).
 _do_minimulti proc near
         lodsb
         xor     ah,ah
@@ -956,6 +1089,8 @@ L1448:
 _do_minimulti endp
 
 ; seg004_0849_146E  (+146E)
+; Opcode CCh, operands: count, then count (point, shade byte) pairs, padded to a word. Sets
+; each point's shade (+7) for Gouraud polygons.
 _do_setshade proc near
         lodsw
         mov     cx,ax
@@ -974,6 +1109,10 @@ L1474:
 _do_setshade endp
 
 ; seg004_0849_1487  (+1487)
+; Opcode D4h (UW-specific), operands: count, the address of a model variable, then count
+; (point, shade byte) pairs, padded to a word. Writes the variable's low byte to seg004:6D20h
+; (PGCACHE's first byte, which seg003 reads) and sets each point's shade to its byte plus the
+; shade bias at 2694h, at most 0Eh.
 _do_uwshade proc near
         lodsw
         mov     cx,ax
@@ -1005,6 +1144,10 @@ L14A7:
 _do_uwshade endp
 
 ; seg004_0849_14BE  (+14BE)
+; Opcode 7Ah, operands: (x, z, y), point. Transforms one coordinate triple and stores it
+; with its clip code. The unlabelled entry just before it (14B6h) is FM's do_defresg: it
+; takes a shade word first and sets the point's shade from it, then falls in here; the DOS
+; opcode table has no entry for it.
 _do_defres proc near
         call    _load_xlate_rotate_pnt
         lodsw
@@ -1020,6 +1163,8 @@ _do_defres proc near
 _do_defres endp
 
 ; seg004_0849_14DD  (+14DD)
+; Opcode B6h: do_defres with byte coordinates and a byte point number (GRIDDB's SetPnt
+; records).
 _do_minires proc near
         call    _mini_xlate_rotate_pnt
         lodsb
@@ -1037,6 +1182,8 @@ _do_minires proc near
 _do_minires endp
 
 ; seg004_0849_1501  (+1501)
+; Opcode 7Ch, operand: point. Starts a polygon: copies the point to the vertex buffer at
+; 1BAh and sets the codes OR and AND from it.
 _do_strres proc near
         lodsw
         mov     dx,si
@@ -1058,6 +1205,8 @@ _do_strres proc near
 _do_strres endp
 
 ; seg004_0849_1524  (+1524)
+; Opcode 8Eh, operand: point. Appends a point to the polygon do_strres started (falls into
+; the dispatch; do_closure draws it).
 _do_cntres proc near
         lodsw
         mov     dx,si
@@ -1080,6 +1229,10 @@ L1544:
 _do_cntres endp
 
 ; seg004_0849_154A  (+154A)
+; Opcode 9Ch: a rod, a quadrilateral of fixed width between two points, facing the eye. For
+; each end: operand 0 then a point (that end is a single vertex), or a half-width then a
+; point (two vertices, offset sideways by the width rotated through 2490h/2492h, which
+; scale_matrix computes). Then draws it with do_closure.
 _do_rod proc near
         mov     byte ptr ds:[14CBh],0FFh
         mov     byte ptr ds:[14CAh],0
@@ -1216,6 +1369,8 @@ L1648:
 _do_rod endp
 
 ; seg004_0849_164F  (+164F)
+; do_rod for a level view (check_flat installs it in the opcode table): the sideways
+; offset is along x only, using 24ECh.
 _flat_rod proc near
         mov     byte ptr ds:[14CBh],0FFh
         mov     byte ptr ds:[14CAh],0
@@ -1336,6 +1491,9 @@ L172D:
 _flat_rod endp
 
 ; seg004_0849_1733  (+1733)
+; Opcodes 22h and 7Eh, operands: count, then count points. Builds a polygon in the vertex
+; buffer, with the codes OR in BH and AND in BL; if they AND to nonzero it is skipped,
+; otherwise it falls into do_closure to be drawn. (System Shock: do_polyres.)
 _do_polyres proc near
         lodsw
         mov     cx,ax
@@ -1368,6 +1526,14 @@ L1760:
 _do_polyres endp
 
 ; seg004_0849_176C  (+176C)
+; Opcode 80h: draws the polygon in the vertex buffer. Gouraud polygons (14A6h = the seg003
+; Gouraud routine) go to SMOOTH.ASM's smooth_closure. Otherwise: AND of codes nonzero, skip;
+; OR zero, project each vertex (x*[2472]/z + centre, y*[2470]/z + centre) to seg_370D:415Eh
+; and call seg003's polygon routine (_seg003_0272_5311) with BP = the fill routine and CX =
+; the vertex count; behind the eye (80h), clip in 3D first (must_clip_3d, FM); otherwise
+; (clip_needed, FM) project with overflow checks and fall back to do_3d_clip if a screen
+; coordinate overflows. The labels inside are FM names; the add immediates at modify_biasx,
+; modify_biasy, modify_bx2 and modify_by2 are the screen centre, patched by render_3d.
 _do_closure proc near
         mov     di,1BAh
         mov     word ptr ds:[1B8h],di
@@ -1533,6 +1699,7 @@ L18E7:
 _do_closure endp
 
 ; seg004_0849_18ED  (+18ED)
+; Opcode 1Ah, operand: address. Calls a near routine in this segment and continues.
 _do_asmcal proc near
         lodsw
         call    ax
@@ -1542,6 +1709,8 @@ _do_asmcal proc near
 _do_asmcal endp
 
 ; seg004_0849_18F6  (+18F6)
+; Opcode 12h, operand: offset. Runs the sub-program at SI + offset (it ends with do_eof),
+; then continues after the operand. (System Shock: do_sfcal.)
 _do_sfcal proc near
         lodsw
         push    si
@@ -1557,6 +1726,8 @@ L1901:
 _do_sfcal endp
 
 ; seg004_0849_1907  (+1907)
+; Opcode 16h, operands: skip, address, value. If [address] >= value, skips `skip` bytes of
+; program; otherwise continues (through do_sfcal's dispatch at L1901).
 _do_ifge proc near
         lodsw
         mov     cx,ax
@@ -1572,6 +1743,7 @@ _do_ifge proc near
 _do_ifge endp
 
 ; seg004_0849_191A  (+191A)
+; Opcode 14h: as do_ifge, skipping when [address] <= value.
 _do_ifle proc near
         lodsw
         mov     cx,ax
@@ -1587,6 +1759,9 @@ _do_ifle proc near
 _do_ifle endp
 
 ; seg004_0849_192D  (+192D)
+; Opcode 6Ch, operands: address, value, offset a, offset b. Runs two sub-programs in an
+; order chosen by a variable: a then b when [address] >= value, else b then a (the shared
+; tail L1950 runs the second-listed first). The model's own back-to-front order switch.
 _do_sortvar proc near
         lodsw
         xchg    bx,ax
@@ -1632,6 +1807,12 @@ L1950:
 _do_sortvar endp
 
 ; seg004_0849_196E  (+196E)
+; Opcode 06h, operands: three (n, p) word pairs for x, y and z, then two sub-program offsets
+; a and b. Computes the sign of the sum of n * (p + origin) over the axes (the origin at
+; 25E6h..25EAh is the negated eye-relative position, so this is the side of the plane the
+; eye is on) and runs both sub-programs, a then b when it is non-negative, b then a
+; otherwise: a BSP split, so that the half nearer the eye is drawn last (System Shock:
+; do_sortnorm).
 _do_sortnorm proc near
         lodsw
         mov     cx,ax
@@ -1675,6 +1856,7 @@ _do_sortnorm proc near
 _do_sortnorm endp
 
 ; seg004_0849_19B6  (+19B6)
+; Opcode 0Ch: do_sortnorm with no x term in the normal.
 _do_sortnorm_x0 proc near
         lodsw
         mov     di,ax
@@ -1713,6 +1895,7 @@ L19D7:
 _do_sortnorm_x0 endp
 
 ; seg004_0849_19F3  (+19F3)
+; Opcode 0Eh: do_sortnorm with no y term.
 _do_sortnorm_y0 proc near
         lodsw
         mov     di,ax
@@ -1751,6 +1934,7 @@ L1A14:
 _do_sortnorm_y0 endp
 
 ; seg004_0849_1A30  (+1A30)
+; Opcode 10h: do_sortnorm with no z term.
 _do_sortnorm_z0 proc near
         lodsw
         mov     di,ax
@@ -1789,6 +1973,10 @@ L1A51:
 _do_sortnorm_z0 endp
 
 ; seg004_0849_1A6D  (+1A6D)
+; Opcode 18h, operands: three 32-bit world coordinates. Sets the object origin (25E6h..
+; 25EAh) to the negated position relative to the eye. If a relative coordinate does not fit
+; 16 bits, sets 25E2h = -1 and stops, with the axes before it already updated. Calls
+; self_modify.
 _do_org proc near
         mov     word ptr ds:[25E2h],0
         lodsw
@@ -1836,6 +2024,9 @@ L1AC1:
 _do_org endp
 
 ; seg004_0849_1ACD  (+1ACD)
+; Opcode 84h, operands: count, then count points. A visibility test: if all the points share
+; a clip-code bit (entirely outside one plane) the program ends here (jumps to do_eof's ret);
+; if none has a code, calls set_accept (a no-op in UW2); otherwise continues.
 _do_hull proc near
         lodsw
         mov     cx,ax
@@ -1865,6 +2056,8 @@ L1AF2:
 _do_hull endp
 
 ; seg004_0849_1AF8  (+1AF8)
+; flat_ variant of do_y_rel (opcode 88h when the view is level): the y offset adds straight to
+; view y, halved; recomputes the clip code bits 4 and 8 only.
 _flat_y_rel proc near
         lodsw
         mov     bp,ax
@@ -1918,6 +2111,14 @@ L1B42:
 _flat_y_rel endp
 
 ; seg004_0849_1B4B  (+1B4B)
+; Opcode 88h (also 1Ch), operands: source point, dy, destination point. New point = source +
+; dy along the model's y axis (rotated through the matrix's y row), clip-coded. (System Shock:
+; do_y_rel.) The three unlabelled entries after it are FM's do_animate_p, do_animate_b and
+; do_animate_h (same order, seven bytes apart, there as here; the DOS opcode table has no
+; entry for them): each loads BP with instance_pitch, instance_bank or instance_head, moves
+; an animated angle variable ([di+2]) towards its target ([di]) by its rate ([di+4]) times
+; the frame time at ss:[0A80h], offsets the origin, and runs the sub-program [di+6] rotated by
+; that angle, restoring the matrix and origin afterwards.
 _do_y_rel proc near
         lodsw
         mov     di,ax
@@ -2044,6 +2245,8 @@ L1C6D:
 _do_y_rel endp
 
 ; seg004_0849_1C8C  (+1C8C)
+; Opcode 26h, operands: destination point, source point. Copies the point (7 bytes: x, y, z,
+; codes).
 _do_movres proc near
         lodsw
         mov     di,ax
@@ -2062,6 +2265,8 @@ _do_movres proc near
 _do_movres endp
 
 ; seg004_0849_1CA5  (+1CA5)
+; flat_ variant of do_x_rel: with the view level only the matrix's x and z terms are used and
+; the clip code is recomputed inline.
 _flat_x_rel proc near
         lodsw
         mov     di,ax
@@ -2110,6 +2315,8 @@ L1CF7:
 _flat_x_rel endp
 
 ; seg004_0849_1D01  (+1D01)
+; Opcodes 86h and 2Ah, operands: source point, dx, destination point. New point = source +
+; dx along the model's x axis, clip-coded. (System Shock: do_x_rel.)
 _do_x_rel proc near
         lodsw
         mov     di,ax
@@ -2141,6 +2348,7 @@ _do_x_rel proc near
 _do_x_rel endp
 
 ; seg004_0849_1D49  (+1D49)
+; flat_ variant of do_z_rel.
 _flat_z_rel proc near
         lodsw
         mov     di,ax
@@ -2189,6 +2397,7 @@ L1D9A:
 _flat_z_rel endp
 
 ; seg004_0849_1DA4  (+1DA4)
+; Opcodes 8Ah and 2Ch, operands: source point, dz, destination point. As do_x_rel along z.
 _do_z_rel proc near
         lodsw
         mov     di,ax
@@ -2220,6 +2429,7 @@ _do_z_rel proc near
 _do_z_rel endp
 
 ; seg004_0849_1DEC  (+1DEC)
+; Opcode 92h, operands: dx, dz, source point, destination point. Offset along two axes.
 _do_xz_rel proc near
         mov     cl,byte ptr ds:[25E0h]
         lodsw
@@ -2262,6 +2472,7 @@ _do_xz_rel proc near
 _do_xz_rel endp
 
 ; seg004_0849_1E4D  (+1E4D)
+; Opcode 90h, operands: dx, dy, source point, destination point.
 _do_xy_rel proc near
         mov     cl,byte ptr ds:[25E0h]
         lodsw
@@ -2304,6 +2515,8 @@ _do_xy_rel proc near
 _do_xy_rel endp
 
 ; seg004_0849_1EAE  (+1EAE)
+; Opcode 94h, operands: dy, dz, source point, destination point. (Note the operand order: the
+; first operand is multiplied by the z row and the second by the y row, as in the code.)
 _do_yz_rel proc near
         mov     cl,byte ptr ds:[25E0h]
         lodsw
@@ -2346,6 +2559,7 @@ _do_yz_rel proc near
 _do_yz_rel endp
 
 ; seg004_0849_1F0F  (+1F0F)
+; flat_ variant of do_xz_rel.
 _flat_xz_rel proc near
         mov     cl,byte ptr ds:[25E0h]
         lodsw
@@ -2382,6 +2596,7 @@ _flat_xz_rel proc near
 _flat_xz_rel endp
 
 ; seg004_0849_1F62  (+1F62)
+; flat_ variant of do_xy_rel.
 _flat_xy_rel proc near
         mov     cl,byte ptr ds:[25E0h]
         lodsw
@@ -2414,6 +2629,7 @@ _flat_xy_rel proc near
 _flat_xy_rel endp
 
 ; seg004_0849_1FAA  (+1FAA)
+; flat_ variant of do_yz_rel.
 _flat_yz_rel proc near
         mov     cl,byte ptr ds:[25E0h]
         lodsw
@@ -2446,6 +2662,9 @@ _flat_yz_rel proc near
 _flat_yz_rel endp
 
 ; seg004_0849_1FF2  (+1FF2)
+; Opcode 2Eh, operand: colour. Selects flat filling (14A6h = 3B0Dh, 14A8h = 38B4h, seg003
+; offsets) and sets the colour through seg003's _seg003_0272_536B (with DS = seg_370D). Its
+; second label, setcol_common (FM), is shared by do_setcolv, do_uwsurf and PGCACHE.
 _do_setcolor proc near
         lodsw
 setcol_common:
@@ -2464,6 +2683,7 @@ setcol_common:
 _do_setcolor endp
 
 ; seg004_0849_2016  (+2016)
+; Opcode 5Ch, operands: address, colour. Colour = [address] + colour, then setcol_common.
 _do_setcolv proc near
         lodsw
         mov     di,ax
@@ -2473,14 +2693,18 @@ _do_setcolv proc near
 _do_setcolv endp
 
 ; seg004_0849_201E  (+201E)
+; Opcode CAh, operand: address. do_goursurf with the colour taken from a model variable: the
+; `db 0A8h` turns do_goursurf's lodsw into the operand of a `test al,` so AX is kept.
 _do_goursurfv proc near
         lodsw
         mov     bx,ax
         mov     ax,word ptr [bx]
-        db      0A8h                    ; test al,: swallows do_goursurf's lodsw, keeping AX
+        db      0A8h                    ; test al,: swallows do_goursurf's lodsw, keeping AX (the original's trick)
 _do_goursurfv endp
 
 ; seg004_0849_2024  (+2024)
+; Opcode C8h, operand: colour. Selects Gouraud filling (14A6h = _seg003_0272_5946, 14A8h =
+; _5956) and stores the colour's shading-table byte (seg_370D:21Fh + 2 * colour) at 1B0h.
 _do_goursurf proc near
         lodsw
         mov     bx,ax
@@ -2499,6 +2723,9 @@ _do_goursurf proc near
 _do_goursurf endp
 
 ; seg004_0849_204A  (+204A)
+; Opcode D6h (UW-specific): the standard surface. When the low byte of 2692h is zero,
+; selects Gouraud filling and points seg003's handler pair at 0BC3h/0BC5h at 0BC7h/0C93h;
+; otherwise sets the flat colour from seg_370D:0DC1h through setcol_common.
 _do_uwsurf proc near
         test    word ptr ds:[2692h],0FFh
         jne     short L207B
@@ -2524,6 +2751,8 @@ L207B:
 _do_uwsurf endp
 
 ; seg004_0849_208D  (+208D)
+; Opcode D8h: a translucent surface. Gouraud filling with seg003's handler pair at
+; 0BC3h/0BC5h pointed at 0BF2h/0CD9h (the same pair smooth_over uses).
 _do_transsurf proc near
         mov     word ptr ds:[14A6h],offset _seg003_0272_5946
         mov     word ptr ds:[14A8h],offset _seg003_0272_5956
@@ -2539,6 +2768,7 @@ _do_transsurf proc near
 _do_transsurf endp
 
 ; seg004_0849_20B6  (+20B6)
+; Opcode 44h: selects flat filling (3B0Dh, 38B4h) without setting a colour.
 _do_vexsurf proc near
         mov     word ptr ds:[14A6h],3B0Dh
         mov     word ptr ds:[14A8h],38B4h
@@ -2548,6 +2778,12 @@ _do_vexsurf proc near
 _do_vexsurf endp
 
 ; seg004_0849_20C8  (+20C8)
+; Opcode 40h: selects the fill routine 249Ch for both slots (seg003; what it draws is not
+; known). The unlabelled code after its dispatch is FM's do_setpat (20DAh), do_putpat
+; (211Ah) and do_usepat (2212h), in FM's order; the DOS opcode table has no entry for any of
+; them. Roughly: do_setpat rotates a list of vectors into a table, and do_putpat and
+; do_usepat place points from such a table at a rotated offset (do_putpat then runs a
+; sub-program); not traced further.
 _do_cavesurf proc near
         mov     word ptr ds:[14A6h],249Ch
         mov     word ptr ds:[14A8h],249Ch
@@ -2782,6 +3018,7 @@ L2286:
 _do_cavesurf endp
 
 ; seg004_0849_22EB  (+22EB)
+; Opcode 48h, operand: offset. Jumps: SI += offset.
 _do_ijmp proc near
         lodsw
         add     si,ax
@@ -2791,6 +3028,7 @@ _do_ijmp proc near
 _do_ijmp endp
 
 ; seg004_0849_22F4  (+22F4)
+; Opcode 32h, operand: address. Jumps to the program address held in the model variable.
 _do_ijmp_i proc near
         lodsw
         mov     bx,ax
@@ -2801,6 +3039,8 @@ _do_ijmp_i proc near
 _do_ijmp_i endp
 
 ; seg004_0849_22FF  (+22FF)
+; Opcode 4Ah, operands: dx, dy, dz. Moves the object origin by a relative offset (subtracts
+; from 25E6h..25EAh) and calls self_modify.
 _do_rorg proc near
         lodsw
         sub     word ptr ds:[25E6h],ax
@@ -2815,6 +3055,9 @@ _do_rorg proc near
 _do_rorg endp
 
 ; seg004_0849_2317  (+2317)
+; Opcode 4Ch, operands: an (x, z, y) offset, point. Stores the rotated offset (no origin, no
+; clip
+; code) as a point, for do_addres and do_subres.
 _do_defdelta proc near
         mov     cl,byte ptr ds:[25E0h]
         lodsw
@@ -2838,6 +3081,7 @@ _do_defdelta proc near
 _do_defdelta endp
 
 ; seg004_0849_2342  (+2342)
+; Opcode 8Ch, operands: point a, point b, destination. Destination = a + b, clip-coded.
 _do_addres proc near
         lodsw
         mov     bp,ax
@@ -2862,6 +3106,7 @@ _do_addres proc near
 _do_addres endp
 
 ; seg004_0849_237F  (+237F)
+; Opcode C6h, operands: point a, point b, destination. Destination = a - b, clip-coded.
 _do_subres proc near
         lodsw
         mov     bp,ax
@@ -2886,6 +3131,7 @@ _do_subres proc near
 _do_subres endp
 
 ; seg004_0849_23BC  (+23BC)
+; Opcode BAh: do_ihcall with the angle taken from a model variable.
 _do_ihcall_ind proc near
         lodsw
         mov     bx,ax
@@ -2894,6 +3140,9 @@ _do_ihcall_ind proc near
 _do_ihcall_ind endp
 
 ; seg004_0849_23C3  (+23C3)
+; Opcode 50h, operands: angle, offset. Saves the matrix and origin, rotates the matrix by the
+; heading angle (instance_head, which also rotates the origin), runs the sub-program at
+; SI + offset, and restores both. The b and p variants below do the same for bank and pitch.
 _do_ihcall proc near
         lodsw
         mov     bx,ax
@@ -2941,6 +3190,7 @@ L23C6:
 _do_ihcall endp
 
 ; seg004_0849_2445  (+2445)
+; Opcode C4h: do_ibcall with the angle from a model variable.
 _do_ibcall_ind proc near
         lodsw
         mov     bx,ax
@@ -2949,6 +3199,7 @@ _do_ibcall_ind proc near
 _do_ibcall_ind endp
 
 ; seg004_0849_244C  (+244C)
+; Opcode 70h: a sub-program rotated by a bank angle (instance_bank).
 _do_ibcall proc near
         lodsw
         mov     bx,ax
@@ -2996,6 +3247,7 @@ L244F:
 _do_ibcall endp
 
 ; seg004_0849_24CE  (+24CE)
+; Opcode C2h: do_ipcall with the angle from a model variable.
 _do_ipcall_ind proc near
         lodsw
         mov     bx,ax
@@ -3004,6 +3256,7 @@ _do_ipcall_ind proc near
 _do_ipcall_ind endp
 
 ; seg004_0849_24D5  (+24D5)
+; Opcode 72h: a sub-program rotated by a pitch angle (instance_pitch).
 _do_ipcall proc near
         lodsw
         mov     bx,ax
@@ -3051,6 +3304,8 @@ L24D8:
 _do_ipcall endp
 
 ; seg004_0849_2557  (+2557)
+; Opcode 54h: pushes the object origin and the coordinate shift on the stack (the interpreter's
+; own stack, SS = dseg062_62a6).
 _do_pushc proc near
         push    word ptr ds:[25E6h]
         push    word ptr ds:[25E8h]
@@ -3062,6 +3317,7 @@ _do_pushc proc near
 _do_pushc endp
 
 ; seg004_0849_256D  (+256D)
+; Opcode 56h: pops what do_pushc pushed and calls self_modify.
 _do_popc proc near
         pop     word ptr ds:[25E0h]
         pop     word ptr ds:[25EAh]
@@ -3074,6 +3330,7 @@ _do_popc proc near
 _do_popc endp
 
 ; seg004_0849_2586  (+2586)
+; Opcode 5Eh: do_jnorm with no x term.
 _do_jnorm_x0 proc near
         lodsw
         mov     bx,ax
@@ -3100,6 +3357,7 @@ L25A9:
 _do_jnorm_x0 endp
 
 ; seg004_0849_25AF  (+25AF)
+; Opcode 60h: do_jnorm with no y term.
 _do_jnorm_y0 proc near
         lodsw
         mov     bx,ax
@@ -3126,6 +3384,7 @@ L25D2:
 _do_jnorm_y0 endp
 
 ; seg004_0849_25D8  (+25D8)
+; Opcode 62h: do_jnorm with no z term.
 _do_jnorm_z0 proc near
         lodsw
         mov     bx,ax
@@ -3152,6 +3411,8 @@ L25FB:
 _do_jnorm_z0 endp
 
 ; seg004_0849_2601  (+2601)
+; Opcode 64h, operands: skip, nx, px. do_jnorm for a normal along x alone: only the sign of
+; (px + origin x) against nx is tested.
 _do_jnorm_yz0 proc near
         lodsw
         mov     bx,ax
@@ -3169,6 +3430,7 @@ L2612:
 _do_jnorm_yz0 endp
 
 ; seg004_0849_2618  (+2618)
+; Opcode 66h: the same for a normal along y.
 _do_jnorm_xz0 proc near
         lodsw
         mov     bx,ax
@@ -3186,6 +3448,7 @@ L2629:
 _do_jnorm_xz0 endp
 
 ; seg004_0849_262F  (+262F)
+; Opcode 68h: the same for a normal along z.
 _do_jnorm_xy0 proc near
         lodsw
         mov     bx,ax
@@ -3203,6 +3466,10 @@ L2640:
 _do_jnorm_xy0 endp
 
 ; seg004_0849_2646  (+2646)
+; Opcode 58h, operands: skip, then (n, p) for x, y, z. Back-face test: the same sum as
+; do_sortnorm; when it is negative (the eye on the back of the plane) skips `skip` bytes,
+; normally the face that follows. (System Shock: do_jnorm.) The most used opcode in UW1's
+; models after polygons and x_rel (model_opcodes.tsv).
 _do_jnorm proc near
         lodsw
         mov     bx,ax
@@ -3236,12 +3503,18 @@ L2677:
 _do_jnorm endp
 
 ; seg004_0849_267D  (+267D)
+; Recovery for do_closure's projection (stored at ss:[5A5h] in clip_needed): drops the int 0
+; frame (sti; add sp,6) and falls into do_3d_clip.
 _clip_overflow proc near
         sti
         add     sp,6
 _clip_overflow endp
 
 ; seg004_0849_2681  (+2681)
+; Clips the polygon in the vertex buffer in 3D against each plane its codes OR shows it
+; crossing (right, left, top, bottom), stopping as soon as the codes AND to nonzero (nothing
+; left), and then projects and draws it (back to do_closure's L17F0). Restores DS and ES to
+; seg052_519C when it gives up.
 _do_3d_clip proc near
         mov     word ptr ss:[5A5h],offset _overflow_handler_reg
         mov     ax,ds
@@ -3282,6 +3555,11 @@ L26D3:
 _do_3d_clip endp
 
 ; seg004_0849_26E1  (+26E1)
+; Clips the vertex buffer against the y = z plane (code bit 4): copies the first vertices past
+; the end to close the loop, then walks the edges writing the surviving vertices and the
+; intersections into the other buffer (0B1Ah or 1BAh), recomputing the codes OR and AND.
+; The intersection uses fixed-point interpolation with rounding (sar ax,1; adc). The other
+; three are the same for the other planes.
 _clip_top proc near
         mov     byte ptr ds:[14CAh],0
         mov     byte ptr ds:[14CBh],0FFh
@@ -3403,6 +3681,7 @@ L27E5:
 _clip_top endp
 
 ; seg004_0849_27EA  (+27EA)
+; Clips against y = -z (code bit 8). See clip_top.
 _clip_bot proc near
         mov     byte ptr ds:[14CAh],0
         mov     byte ptr ds:[14CBh],0FFh
@@ -3528,6 +3807,7 @@ L28F5:
 _clip_bot endp
 
 ; seg004_0849_28FA  (+28FA)
+; Clips against x = z (code bit 2). See clip_top.
 _clip_right proc near
         mov     byte ptr ds:[14CAh],0
         mov     byte ptr ds:[14CBh],0FFh
@@ -3653,6 +3933,7 @@ L2A03:
 _clip_right endp
 
 ; seg004_0849_2A08  (+2A08)
+; Clips against x = -z (code bit 1). See clip_top.
 _clip_left proc near
         mov     byte ptr ds:[14CAh],0
         mov     byte ptr ds:[14CBh],0FFh
@@ -3780,6 +4061,12 @@ L2B15:
 _clip_left endp
 
 ; seg004_0849_2B1A  (+2B1A)
+; Opcode 78h (FM has two names at this address, do_parapiped and done_clipping_here),
+; operands: point, three half-extents (scaled by the coordinate shift), offset. A bounding-box
+; test: rotates the three extents into vectors (148Ah..149Ah) and tests the eight corners of
+; the box around the point. All eight inside the frustum: calls set_accept (a no-op in UW2).
+; All outside one plane (codes AND nonzero): skips `offset` bytes, or ends the program when
+; the offset is 0. Otherwise continues after the operand.
 _do_parapiped proc near
         lodsw
         mov     di,ax

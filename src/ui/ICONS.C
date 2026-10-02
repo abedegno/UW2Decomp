@@ -1,14 +1,31 @@
 /* target: seg014 */
 /* opts: -mm -1 -G -O -d */
-/* Icon bar setup/teardown, the icon hit-test, the icon select/unselect highlight boxes,
-   and the options-menu keyboard-shortcut dispatcher. DOS resident segment seg014, in
-   original order. Function and global names are the originals from the FM Towns symbol
-   table where it has them. */
+/* The icon bar: the six command icons at the bottom right of the game screen (x 0xF2 to
+   0x13E, y 0 to 0x1C; two rows of three, 26 by 15 pixels each), registering its click
+   area, finding which icon was clicked, drawing an icon selected or not, and the Ctrl-key
+   shortcuts to the options panel. DOS resident segment seg014, in original order.
+   Function and global names are the originals from the FM Towns symbol table where it
+   has them.
+
+   The icons select the interaction mode, INTERACT.C's RightButtonThing (deal_with_icons
+   is the click handler setup_icon_buttons registers). button_to_mode and mode_to_button
+   map between icon positions and modes: icon 0 attack, 1 use, 2 get, 3 talk, 4 look (as
+   RightButtonThing 2, 1, 4, 5, 3), and icon 5 opens the options panel.
+
+   Data owned: the option panel's five button groups (gameopts, detail, quit, file and
+   musicsound), whose handlers live in WRAPPER.C (the options overlay, which drives them in
+   busywaiting_new_options), current_buttongroup, the highlighted button, the two icon and
+   mode maps, and the icon bar's input handle. Pictures 0x20C1 and 0x20C2 are the icon bar
+   drawn plain and selected; new_IconSelect redraws it selected and frames one icon.
+
+   Name: descriptive (the icon bar: setup_icon_buttons, new_IconSelect). */
 
 #include "gfx.h"
 #include "ui.h"
 
-/* _BSS, by name (tools/bssorder.py): gameopts_done sorts before icon_button_handle */
+/* _BSS. */
+/* match: laid out by name (tools/bssorder.py): gameopts_done sorts before
+   icon_button_handle. */
 int gameopts_done;                     /* DS:67D6+22E2, also written by the options overlay */
 static int icon_button_handle;         /* DS:67D6+22E4, only ever used in this file */
 
@@ -54,7 +71,9 @@ struct buttongroup musicsound_buttongroup = {                /* DS:0227 */
     { 0, 0, 0, 0, &gameopts_buttongroup, 0, 0 } };
 struct buttongroup *current_buttongroup = &gameopts_buttongroup;   /* DS:0265 */
 
-/* Named from the FM Towns build: setup_icon_buttons_ comes just before term_icon_buttons_
+/* Registers the icon bar's click area (mode mask 1, the 3D view) with deal_with_icons(-1)
+   as its handler, and draws the bar. */
+/* name: from the FM Towns build: setup_icon_buttons_ comes just before term_icon_buttons_
    there, and its code corresponds call for call (register the icon bar's click area, hide
    the mouse, draw the icon bar, show the mouse). */
 void far setup_icon_buttons(void)
@@ -70,6 +89,8 @@ void far term_icon_buttons(void)
     input_del(icon_button_handle);
 }
 
+/* The icon under the pointer, 0 to 5, or -1: the upper row (y 15 and up) is 0 to 2, the
+   lower row 3 to 5. */
 int far get_iconreg_button(void)
 {
     int x, y;
@@ -85,6 +106,7 @@ int far get_iconreg_button(void)
     return -1;
 }
 
+/* Redraws the bar plain (picture 0x20C1) and frames icon index in colour 0x106. */
 void far new_IconUnselect(int index)
 {
     int top, left;
@@ -106,6 +128,8 @@ void far new_IconUnselect(int index)
     mouse_show();
 }
 
+/* Redraws the bar with the selected picture (0x20C2) and frames icon index. Both this
+   and new_IconUnselect redraw the whole bar, not one icon. */
 void far new_IconSelect(int index)
 {
     int top, left;
@@ -127,12 +151,17 @@ void far new_IconSelect(int index)
     mouse_show();
 }
 
+/* The Ctrl-key shortcuts to the options panel: Ctrl+S save, Ctrl+R restore, Ctrl+M music,
+   Ctrl+F sound effects, Ctrl+D detail, Ctrl+Q quit, Ctrl+O the main options group (codes
+   are KEY_CTRL plus the lower-case letter). Refused while an action is in progress
+   (GameInputMode, for example an object held on the cursor). Save and restore try their
+   handler first and only open the panel if it did not already finish. */
 void far do_option_shortcut(int keycode)
 {
     gameopts_done = 0;
     if (GameInputMode)
     {
-        game_sprint(0xAE);
+        game_sprint(0xAE);              /* "You cannot select options partway through ..." */
         mouse_release(1);
         return;
     }

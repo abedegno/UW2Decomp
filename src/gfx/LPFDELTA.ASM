@@ -11,11 +11,17 @@
 ;                 w - 8000h below 4000h dumps that many bytes, and w - 0C000h is a run
 ;                 of the next byte; long dumps and runs move words, aligning first.
 ;
-; Hand-written assembly using only 8086 instructions (every forward jump, none padded
-; with a nop, is written short). Nothing in the EXE calls it: there is no far call to
+; It decodes into a linear buffer, unclipped. The game's cutscene player decodes the same
+; stream with its own C routine, draw_rsd (CUTS.C), which writes to planar VGA memory and
+; clips; this one is unused. Nothing in the EXE calls it: there is no far call to
 ; 007B:0002 in the resident code or through the overlay segment table, and IDA has no
-; reference. The FM Towns build has no counterpart either (its draw_rsd_ is a clipped C
-; decoder, and draw_into_buffer_ is an empty stub), so it keeps the provisional name.
+; reference.
+;
+; name: descriptive (the Deluxe Paint LPF run/skip/dump decoder). The FM Towns build has
+; no counterpart (its draw_rsd_ is a clipped C decoder, and draw_into_buffer_ is an
+; empty stub), so the routine keeps the provisional name.
+; match: hand-written assembly using only 8086 instructions (every forward jump, none
+; padded with a nop, is written short).
 
         .model  medium
 

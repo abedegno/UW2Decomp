@@ -1,5 +1,21 @@
 /* target: ovr142 */
 /* opts: -mm -1 -G -O -Y -d */
+/* The player record's load and save, and everything that is worked out again from the
+   player's equipment and active spells.
+   save_player_data and read_player_data (called from INVSAVE.C, inside a save or a
+   restore) write and read struct Player as the PLAYER.DAT image: one key byte, name[0]
+   xor 0xAA, then the 0x37D-byte record xor-encoded with that key (xorwrite, xorread).
+   Before writing, the values that live elsewhere while playing (attributes, HP, the
+   player's position, heading and level, sound and music, terrain) are copied into the
+   record; after reading they are copied back out.
+   FixPlayerEquips is called whenever equipment, spells or light change (14 callers): it
+   recomputes armour by hit location, defence, the weapon's animation, the brightest
+   carried light, the effects of active spells and of enchanted worn items
+   (player_affected_by), stealth (plyNotice), the light level and the mushroom effect.
+   load_dl reads the level's entry in DATA\DL.DAT, the minimum light of each level.
+   Data owned: player, playerdat, ThePlayer, PlayerLevel, PlayerFacing, PlayerHeading,
+   player_name_handle, plyNotice, the light globals, and the tables below.
+   Name: descriptive (reading and writing player data and its spells, save_player_data). */
 
 #include "combat.h"
 #include "critter.h"
@@ -14,11 +30,13 @@
 #include "ui.h"
 #include "view3d.h"
 
-/* This file's _BSS, DS:8288..8297, laid out by name (tools/bssorder.py): player_name_handle
-   80, player 280, playerdat 440, ThePlayer 444, PlayerLevel 568, PlayerFacing 704,
-   PlayerHeading 768. It follows ovr140's TxmID (988) and ends where ovr143's IsJoy (1)
-   starts another run, and ovr143's run holds its own static region handles, so this run
-   is not ovr143's. */
+/* This file's _BSS, DS:8288..8297. player is the struct Player record (its storage is
+   PLAYER.C's PlayerDat), playerdat the adventurer's creature type record (attributes,
+   armour, defence, average HP), ThePlayer the player's object. */
+/* match: laid out by name (tools/bssorder.py): player_name_handle 80, player 280,
+   playerdat 440, ThePlayer 444, PlayerLevel 568, PlayerFacing 704, PlayerHeading 768. It
+   follows ovr140's TxmID (988) and ends where ovr143's IsJoy (1) starts another run, and
+   ovr143's run holds its own static region handles, so this run is not ovr143's. */
 int player_name_handle;
 struct Player *player;
 struct Creature *playerdat;
@@ -32,7 +50,9 @@ extern unsigned char plyregen;
 extern unsigned PickDist;
 
 /* This file's _DATA runs from DS:19AC to the end of "dl.dat" at DS:19DB. */
-/* Body slot to defence index; FM Towns keeps it as a static (_k_modes+0x10). */
+/* Body slot to defence index: inventory slots 0 to 4 (probably helm, chest, gloves,
+   leggings, boots) to playerdat->armour[] hit locations 3, 0, 1, 2, 2. */
+/* name: FM Towns keeps it as a static (_k_modes+0x10). */
 static signed char defence_slot_index[6] = {3, 0, 1, 2, 2, 0};
 /* [0] noise, [1] visibility; seg035 reads both as plyNotice[2]. */
 unsigned char plyNotice[2] = {0x0F, 0x0F};
@@ -42,11 +62,16 @@ signed char light_act = 0xFF;
 signed char loc_lght = 0xFF;
 unsigned char light_hi = 0;
 unsigned char last_light = 0x0C;
-/* Statics in FM Towns (_last_light+1, +2); the names are descriptive. */
+/* set_drugged's state: the mushroom effect in force (-1 none), and whether the first
+   effect has still to be shown. */
+/* name: statics in FM Towns (_last_light+1, +2); the names are descriptive. */
 static char ShroomsEnabled = -1;
 static char ShroomsRelated = 1;
-/* Damage-protection bits for class 3 minors 5..9; FM Towns indexes it from
-   _loc_lght as well, so the source subtracted 5 from the minor class. */
+/* Damage-protection bits for class 3 minors 5..9 (in the Guide's list missile
+   protection, flameproof, poison resistance, magic protection, greater magic
+   protection), or-ed into the player type's resist byte. */
+/* match: FM Towns indexes it from _loc_lght as well, so the source subtracted 5 from the
+   minor class. */
 static unsigned char damage_protection_flags[5] = {0x40, 0x08, 0x10, 0x01, 0x02};
 void far write(int fd, void *p, int n);
 void far read(int fd, void *p, int n);
@@ -59,7 +84,7 @@ void far grfx_quikpal(int n);
 long far lseek(int fd, long pos, int whence);
 void far close(int fd);
 
-/* IDA left this empty function unnamed; FM Towns correspondence is unconfirmed. */
+/* name: IDA left this empty function unnamed; FM Towns correspondence is unconfirmed. */
 void far MaybePlayerDayLoadrelated_ovr142_0(void) {}
 
 void far save_player_data(int fd)
@@ -106,6 +131,11 @@ void far read_player_data(int fd)
     newFPS(player->fps);
 }
 
+/* Clears every spell effect before FixPlayerEquips applies them again: resistances,
+   motion bits, the to-hit protection cmbModTH, poison weapon, haste, wizard eye, bless,
+   time stop, valor, regeneration. Sets the base stealth from the stealth skill: noise
+   13 - stealth / 3 and visibility 15 - stealth / 5 (lower is harder to notice), and the
+   pick-up distance 0x90 (0x190 while UsingPole). */
 void far init_spells(void)
 {
     ComObjData[127].resist = 0;         /* item 127 is the player's own object type */
@@ -122,6 +152,9 @@ void far init_spells(void)
 
 void far swap_tmap(void) {}
 
+/* Turns the mushroom effect on or off. The first time ever it is set_cyb (an effect of
+   the 3D view); after that one of three at random: set_cyb, a random palette of the
+   first eight, or random_light. Turning it off undoes whichever was chosen. */
 void far set_drugged(char on)
 {
     if (on) {
@@ -147,7 +180,26 @@ void far set_drugged(char on)
     }
 }
 
-/* FM Towns player_affected_by_ is between set_drugged_ and parse_aspells_ and
+/* Applies one spell effect (from an active spell, or from an enchanted worn item when
+   slot >= 0) to the player:
+     class 0   light: the brightest level wins (player->light high nibble);
+     class 1   motion: sets bit minor - 1 of motionbits (leap, slow fall, levitate, water
+               walk, fly, bounce in the Guide's order);
+     class 2   armour: the best level is kept in bits 4 to 7 of *bonuses, added to every
+               hit location by parse_spells;
+     class 3   minor 1 adds 3 to cmbModTH at every hit location (COMBAT.C takes it off
+               the attacker's skill); minors 2 to 4 set stealth bits in *bonuses
+               (parse_spells), 4 setting the bit of 2 too; minors 5 to 9 add resistances;
+               10 is valor (10 + casting / 5); 11 poisons the weapon;
+     class 9   backfire;
+     class 11  0 time stop, 1 wizard eye, 2 haste, 3 PickDist 0, 14 and 15 regenerate
+               health and mana (plyregen bits read by PLAYTIME.C);
+     class 12  an item's own protection (minor bits 0 to 2 plus one) or, with the 8 bit set,
+               toughness, for the item's hit location; slots above 4 count for
+               locations 0 and 1. The toughness is always added to armour[slots[0]],
+               not armour[slots[i]], so the second location gets the first's.
+   Always returns 0, so FixPlayerEquips never calls remove_spell. */
+/* name: FM Towns player_affected_by_ is between set_drugged_ and parse_aspells_ and
    applies the same spell classes; IDA left its DOS name descriptive. */
 unsigned char far player_affected_by(unsigned char major, unsigned char minor,
                                     register unsigned *bonuses, int slot)
@@ -225,13 +277,15 @@ unsigned char far player_affected_by(unsigned char major, unsigned char minor,
     return 0;
 }
 
-/* Spell icon base for each major class; a static in FM Towns (_last_light+8). */
+/* Spell icon base for each major class (the subclass is added; 0x1E is no icon). */
+/* name: a static in FM Towns (_last_light+8). */
 static unsigned char spell_class_values[16] = {
     0x14, 0xFF, 0x13, 0x05, 0x80, 0x80, 0x80, 0x80,
     0x80, 0x80, 0x80, 0x11, 0x80, 0x80, 0x80, 0x80
 };
 extern struct Armour Armor[];
 
+/* Fills out[3] with the icon of each active spell for the active spell display. */
 void far parse_aspells(unsigned char *out)
 {
     unsigned char i;
@@ -242,6 +296,9 @@ void far parse_aspells(unsigned char *out)
     }
 }
 
+/* Applies the bits player_affected_by gathered: bit 1 cuts noise by 16, bit 2
+   visibility by 5, bit 3 visibility by 16 (none below 0); the high nibble is added to
+   all four armour values. Then redraws the active spell icons. */
 void far parse_spells(unsigned bonuses)
 {
     unsigned char i;
@@ -267,7 +324,9 @@ void far parse_spells(unsigned bonuses)
     active_spells(spells);
 }
 
-/* FM Towns armor_val_ occupies this position and performs the same calculation. */
+/* An armour item's protection: its table protection scaled by quality / 64, plus one.
+   Weapons (hack major, minors 0 and 1) give none. */
+/* name: FM Towns armor_val_ occupies this position and performs the same calculation. */
 int far armor_val(struct Object far *obj)
 {
     register int armour;
@@ -286,6 +345,18 @@ char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsig
 void far set_light(signed char n);
 void far newFPS(int n);
 
+/* Works out the player's derived state from scratch:
+   - armour per hit location from slots 0 to 4, plus a shield (hack major, minor 3,
+     types 11 to 15) in the off hand (slot 7 + lefty) on locations 0 and 1;
+   - defence: the defence skill plus half the skill of the weapon in hand (slot 8 -
+     lefty): the weapon's own skill clamped to sword, axe or mace for a hand weapon,
+     barehand otherwise; load_weapon picks the weapon animation to match;
+   - the light: the brightest lit light in the light slots or on the cursor (bits 4 to
+     7 of player->light, the slot in the low bits);
+   - the effects of active spells, then of worn enchanted items (slots 0 to 10, ObjWorn);
+   - the light level: the larger of the carried light (6 under wizard eye) and the
+     level's minimum from DL.DAT;
+   - mushrooms, the void's sleep motion bit 0x10, the physics and the frame rate. */
 void far FixPlayerEquips(void)
 {
     int brightness, best_slot, armour;
@@ -363,6 +434,10 @@ void far FixPlayerEquips(void)
     newFPS(-1);
 }
 
+/* Reads DL.DAT's byte for the current level (one byte per level, 80 in all). The
+   value mod 10 is a light level; 10 or more means it is the level's minimum light
+   (loc_lght), otherwise the level has none (0xFF). For example level 1, Lord British's
+   castle, has 14: light 4 at least. */
 void far load_dl(void)
 {
     unsigned char value;

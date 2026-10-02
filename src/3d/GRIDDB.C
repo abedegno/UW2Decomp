@@ -1,11 +1,43 @@
 /* target: seg019_21BA */
 /* opts: -mm -1 -G -O -Y -d */
-/* Building the 3D view's render database from the map: process_grid and do_3d_pickup
-   set up a frame, subprocess walks the visible tiles row by row, grdb_elem emits one
-   tile's floor, ceiling and walls, and the poly and txt functions send one flat or
-   texture-mapped face. Function and global names are the originals from the FM Towns
-   symbol table, which has this code in the same order from set_pix_xfer to grdb_elem
-   (just before do_obj) and the same data from gftab to norm.
+/* GRIDDB.C: building the 3D view's render database from the map grid.
+
+   The render database is a buffer of model interpreter bytecode (dbptr writes into it;
+   conv/GRDB.C's grdb_blank, Ref and gr_putlab manage its labels) that seg004's
+   render_3d runs when VIEW3D.C calls cRender. Each word this file emits is an opcode
+   or an operand; the opcode numbers are those of seg004's opcode table, which follows
+   FM Towns' numbering (docs/LAYOUT.md; UWReverseEngineering's "UW2 FM Towns/
+   model_opcodes.tsv" names each handler). The ones used here: 0x02 do_movec (store a
+   constant in a model variable, Clk(n)), 0x2E do_setcolor, 0x7E do_polyres (a flat
+   polygon of n points), 0x3E do_fetchmap (load a texture into a bitmap slot), 0x36
+   do_tmap and 0xA0/0xA2 do_compact_tmap/do_compact_wtmap (texture-mapped faces, 0xA2
+   when the view is level), 0xB0 do_mouseq (end of a grid row), 0xB6 do_minires
+   (SetPnt's point records), 0x38 do_obj and 0xD0 do_set_gmap_ctxt (the frame header).
+
+   Entry points: process_grid (a normal frame, from VIEW3D.C's do_2dclip after the
+   vision grid is built), do_3d_pickup (a pick frame, from do_3d_grab: every face and
+   object is drawn flat in a colour that identifies it), set_graphics_level (the detail
+   setting chooses which faces are texture mapped). subprocess walks the visible tiles
+   of the vision grid (VIEW3D.C's glocs) from the farthest row to the eye, each row
+   from both edges inwards to the middle column, so nearer tiles are drawn later;
+   grdb_elem emits one tile's floor, ceiling, walls and diagonal face and hands its
+   object list to GAMESORT.C's do_objsort; the poly and txt functions emit one flat or
+   texture-mapped face.
+
+   Data owned: the pick tables color_to_map and color_to_obj, the walk state (loopx,
+   loopy, tmptr, p_gloc), the current texture-map context (cTmBm, cTmDm, cTmHg, cTmSz),
+   the draw function pointers and the tables of tile shapes. It also marks the automap:
+   every tile the walk passes is written into PlayersMap with its automap code, and
+   tiles that come into view for the first time count towards a small experience award
+   (pipeexp).
+
+   Neighbours: VIEW3D.C (the vision grid, quadrant and camera), GAMESORT.C and
+   DRAWOBJ.C (objects), SETPNT.ASM (points), seg004 (runs the bytecode).
+
+   name: descriptive (map/filenames.tsv: "the render database from the map grid").
+   Function and global names are the originals from the FM Towns symbol table, which
+   has this code in the same order from set_pix_xfer to grdb_elem (just before do_obj)
+   and the same data from gftab to norm.
 
    DOS segment seg019_21BA starts with SetPnt (1FCD:000C), which is assembly: FM Towns
    has it among the assembly graphics routines (stosw, register arguments), and every
@@ -30,7 +62,7 @@ extern struct Gloc glocs[][33];
 extern unsigned char PlayersMap[MAP_SIZE][MAP_SIZE];
 extern signed char quad;
 
-/* This file's _BSS, DS:2C68..2F95 (seg032's xwid ends at 2C67; seg033's ActDoors
+/* match: this file's _BSS, DS:2C68..2F95 (seg032's xwid ends at 2C67; seg033's ActDoors
    starts at 2F96), laid out by name (tools/bssorder.py): cWCol 27, loopx and loopy 44,
    UsPtr 53, cTmSz 59, p_gloc 104, qdec 153, AnimObjInPipe 257, TxmCol 332, color_to_map
    363, color_to_obj 371, PickUp 376, mlowptr 461, ptnuminq 480, pt_spare 512, mhighptr
@@ -41,7 +73,9 @@ extern signed char quad;
    each pickable thing in the view, by its colour in the pick buffer (do_obj sets them,
    pick_3d reads them), 172 entries each as in FM Towns, and every use, there as here, is
    at [colour - 1]: so they start at DS:2CBC and 2E14, after TxmCol's 64 bytes and a pad
-   byte. FM Towns has p_gloc as a static (_gr_wcall+4), so its name is provisional and
+   byte.
+
+   name: FM Towns has p_gloc as a static (_gr_wcall+4), so its name is provisional and
    chosen for its key; pt_spare (DS:2F74, two bytes nothing refers to) likewise. */
 int cWCol;                              /* DS:2C68 */
 int loopx, loopy;                       /* DS:2C6A, 2C6C */
@@ -68,6 +102,10 @@ WalFn gr_wcall;                         /* DS:2F8E */
 int cTmHg;                              /* DS:2F92 */
 char tCacheOK;                          /* DS:2F94 */
 
+/* Settings. distpoly is the distance shade from which txtflr and txtwal fall back to
+   flat polygons; tmapson (texture mapping at all) and gftab/gctab[1] are set by
+   set_graphics_level; lighton 0 turns distance shading off (process_grid does that on
+   the levels it treats as unlit); ciels 0 leaves out the ceiling. */
 int dist8 = 4;
 int distpoly = 7;                       /* shades from here on are drawn flat */
 int tmapson = 1;
@@ -79,10 +117,16 @@ unsigned char SpecShadeMode = 1;
 FlrFn gftab[2] = { polyflr, txtflr };
 FlrFn gctab[2] = { polycie, polyflr };
 WalFn gwtab[2] = { polywal, txtwal };
+/* The tile-index step of the pick frame's columns and rows in each quadrant (sd_xmod,
+   sd_ymod, which GAMESORT.C uses to find the tile an object stands in). */
 int quad_mod[4][2] = { { 1, MAP_SIZE }, { -MAP_SIZE, 1 }, { -1, -MAP_SIZE }, { MAP_SIZE, -1 } };
+/* Which corner of a floor texture each of the four points gets, by quadrant (qdec),
+   so the texture keeps its orientation on the map whichever way the camera faces. */
 unsigned char qudecode[4][4] = {
     { 0, 1, 3, 2 }, { 2, 0, 1, 3 }, { 3, 2, 0, 1 }, { 1, 3, 2, 0 }
 };
+/* The height step (0 or 1) at each corner of a tile for the four slope directions,
+   and none (row 4) for a flat tile. */
 unsigned char hgtmodtab[5][4] = {
     { 0, 0, 1, 1 }, { 1, 1, 0, 0 }, { 0, 1, 0, 1 }, { 1, 0, 1, 0 }, { 0, 0, 0, 0 }
 };
@@ -92,12 +136,17 @@ unsigned char thgt[6][5] = {
     { 0, 0, 1, 0, 0 }, { 1, 0, 0, 0, 0 }, { 0, 0, 0, 1, 0 },
     { 1, 1, 0, 1, 0 }, { 0, 1, 1, 1, 0 }, { 1, 1, 1, 0, 0 }
 };
+/* For each of the three walls grdb_elem can see (bits 0x20, 0x10, 0x08 of the grid
+   flags), the x and y offsets of its two ends and which corners' heights they take. */
 unsigned char wallmodtab[3][6] = {
     { 1, 1, 3, 1, 0, 1 }, { 0, 1, 2, 1, 1, 3 }, { 0, 0, 0, 0, 1, 2 }
 };
+/* For the four diagonal tile types: the diagonal face's end points and the normal
+   used to test whether it faces the eye. */
 signed char dxtab[4][6] = {
     { 0, 0, 1, 1, 1, -1 }, { 0, 1, 1, 0, -1, -1 }, { 1, 0, 0, 1, 1, 1 }, { 1, 1, 0, 0, -1, 1 }
 };
+/* The normals of the four slopes, for the floor's facing test. */
 signed char norm[4][3] = { { 0, 4, -1 }, { 0, 4, 1 }, { -1, 4, 0 }, { 1, 4, 0 } };
 /* The automap code for each tile type. Static: FM Towns has no name for it and keeps
    it as norm+0xC, so the name is ours. */
@@ -109,11 +158,16 @@ static unsigned char tile_mapcode[16] = {
    in FM Towns; the name is ours. */
 static unsigned char wall_nbr[3] = { 0, 1, 2 };
 
+/* Select pixel-transfer mode n of the renderer's table (cPixXferStuff[0] is the
+   current one): process_grid uses 1, do_3d_pickup 2 (probably the pick frame's
+   write-colours-only mode; the table is seg003's). */
 void far set_pix_xfer(int n)
 {
     *cPixXferStuff = cPixXferStuff[n];
 }
 
+/* The detail setting (player->detail, 0..3): 0 no texture mapping, 1 walls only,
+   2 walls and floors, 3 walls, floors and ceilings. */
 void far set_graphics_level(void)
 {
     register int level;
@@ -136,6 +190,13 @@ void far set_graphics_level(void)
     lighton = 1;
 }
 
+/* Emit the database for a normal frame: the header (an object call at label 0xA0 and
+   the model variables 9, 8 and 4), then every visible tile through subprocess. On
+   levels 65 to 72 other than 68 ((PlayerLevel - 1) / 8 == 8) lighting and the ceiling
+   are turned off for the frame and lighting restored afterwards (probably the world
+   whose levels have no ceiling; which world that is has not been checked). Afterwards
+   the newly mapped tiles (pipeexp) give experience, pipeexp * (PlayerLevel / 8 + 1) /
+   10, while the character's level (player->level) is 1 to 15. */
 void far process_grid(void)
 {
     unsigned char oldlight;
@@ -193,6 +254,11 @@ void far process_grid(void)
         lighton = oldlight;
 }
 
+/* Emit the database for a pick frame (VIEW3D.C's do_3d_grab). PickUp makes the face
+   and object routines draw in identifying colours instead of shades: floors 0xEC +
+   texture, walls 0xAC + texture, ceilings 0xFC, objects 1..0xAB (DRAWOBJ.C), and
+   UI/INTERACT.C's pick_3d reads the colour under the cursor back through color_to_obj
+   and color_to_map. */
 void far do_3d_pickup(void)
 {
     PickUp = 1;
@@ -230,6 +296,13 @@ void far do_3d_pickup(void)
     subprocess();
 }
 
+/* Walk the vision grid from row mxY (the farthest) down to the eye's row, emitting
+   each row's tiles from the left edge to the middle and from the right edge back to
+   the middle, then the middle column, so that nearer faces come later in the database.
+   tmptr follows each cell in the map (stepping by chgtable for the quadrant); cells
+   whose map index falls outside the 64x64 map (i & 0xF000) are skipped. sort_setup
+   tells GAMESORT.C which part of the row it is in. After the walk, the row of tiles
+   just past the last one gets automap codes too. */
 void far subprocess(void)
 {
     struct Gloc *gloc;
@@ -282,6 +355,10 @@ void far subprocess(void)
             *am = tile_mapcode[tmptr->type];
 }
 
+/* The flat face routines: emit a 4-point do_polyres in the texture's average colour
+   (TxmCol) shaded through cLightTabs by the distance shade less 4, or in the pick
+   colour. polyflr is used for floors and, from gctab, for ceilings drawn flat;
+   polycie is the ceiling in pick frames; polywal walls. */
 void far polyflr(unsigned char *pts, unsigned char shade, unsigned char tex)
 {
     unsigned char col;
@@ -354,6 +431,12 @@ void far polywal(unsigned char *pts, unsigned char shade, unsigned char height, 
     *dbptr++ = pts[3] << 3;
 }
 
+/* The texture-mapped face routines. Beyond distpoly they fall back to the flat ones.
+   They load texture tex into bitmap slot 5 (do_fetchmap), set the slot's height mask
+   in the bitmap table (bmhgtoff), and, given points, emit the face. With pts 0 they
+   only set up the texture, which DRAWOBJ.C uses for textured objects and doors.
+   txtwal emits the fetch only once per tile (tCacheOK counts the walls since grdb_elem
+   reset it) and scales the texture height to the wall's height. */
 void far txtflr(unsigned char *pts, unsigned char shade, unsigned char tex)
 {
     if (shade >= distpoly && pts) {
@@ -413,6 +496,17 @@ void far txtwal(unsigned char *pts, unsigned char shade, unsigned char height, u
     }
 }
 
+/* Emit one tile, the one at tmptr in grid cell p_gloc; automap is its byte in
+   PlayersMap. Not visible: give it an automap code if it has none, count it in
+   pipeexp, and flush any objects GAMESORT.C is holding for this column. Visible:
+   the floor (if the eye is above it, or for a slope on its facing side), the
+   ceiling (when the eye is below 0x3F4 and the level has ceilings), each of the
+   three walls the grid marks seen (up to the neighbour's height, or to the ceiling
+   when the neighbour is solid), the diagonal face, then the objects on the tile.
+   Heights are tile heights, 0 to 15, with 16 the ceiling; the distance shade
+   is the low nibble of the cell's shade. The automap code is the tile type with the
+   floor's terrain class, plus curautocode (doors, textured objects) in the high
+   nibble, and is written when player->automap is set. */
 void far grdb_elem(unsigned char *automap)
 {
     unsigned char ht;

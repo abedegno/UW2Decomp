@@ -4,7 +4,19 @@
    attributes, hit points, mana, experience, a scrolling list of six skills, and the click
    handler that scrolls it: the whole of DOS overlay ovr158, in original order. Function and
    global names are the originals from the FM Towns symbol table where it has them; the
-   source file's own name is not known. */
+   source file's own name is not known.
+
+   RedispStat is panel_dispatch[2] in PANELS.C (drawn when the right-hand panel shows the
+   statistics page, after the panel art), mous_in_stat is INTERACT.C's mous_in_panel's
+   handler for that page, and panel_check redraws the page in mode 1. Everything is drawn
+   with the 5x6 italic font in colour 0xC4 (header and numbers) or 0xC9 (the skill list),
+   right-aligned at x 0x135.
+
+   Data owned: skill_top (the first skill row shown), the level ordinal suffixes and
+   spsave, two saved screen areas allocated on the first draw (the skill list's
+   background, which sp_skill copies back before writing a row).
+
+   Name: descriptive (the character panel's statistics page). */
 
 #include <string.h>
 #include <stdlib.h>
@@ -15,10 +27,13 @@
 #include "sys.h"
 #include "ui.h"
 
-/* The first skill shown in the list (DS:1B92). FM Towns has no name for it (it shows as
-   _dtypes+0x1C there), so it was static; the name is ours. */
+/* The first row shown in the skill list (DS:1B92): 0 shows the unspent skill points
+   first, n starts at skill n - 1. */
+/* name: FM Towns has no name for it (it shows as _dtypes+0x1C there), so it was static;
+   the name is ours. */
 static unsigned char skill_top = 0;
-/* Level ordinals, DS:1B93. DOS only (FM Towns prints no ordinal), so the name is ours. */
+/* Level ordinals, DS:1B93: levels 1 to 3 take ST, ND, RD and every higher level TH. */
+/* name: DOS only (FM Towns prints no ordinal), so the name is ours. */
 static char ordinals[4][3] = { "ST", "ND", "RD", "TH" };
 /* Saved screen areas, DS:1B9F. FM Towns has 12 bytes here, three pointers. */
 int spsave[3] = { 0, 0, 0 };
@@ -28,6 +43,8 @@ extern unsigned long far *Time;
 extern struct Inplist near *inplist;
 extern char RightPanel;
 
+/* The header: the name (up to 15 characters, upper-cased, centred), the class and the
+   level with its ordinal ("12TH"). */
 void far sp_hdr(void)
 {
     char n;
@@ -37,6 +54,7 @@ void far sp_hdr(void)
     buf[0xF] = 0;
     strupr(buf);
     string_to_screen(buf, (0x48 - string_width(buf)) / 2 + 0xF0, 0xBD);
+    /* "Fighter" .. "Shepherd", upper-cased in the string buffer */
     string_to_screen(seg039_3452_814(get_string((player->pclass + 0x17) | STR_CHARGEN)), 0xF0, 0xB6);
     itoa(player->level, buf, 10);
     n = player->level < 4 ? player->level - 1 : 3;
@@ -44,8 +62,9 @@ void far sp_hdr(void)
     string_to_screen(buf, 0x135 - string_width(buf), 0xB6);
 }
 
-/* IDA's PrintPlayerAttribute_ovr158_F3. FM Towns has sp_att_ here, between sp_hdr_ and
-   sp_hp_, and RedispStat_ calls it for 0 to 2 just as the DOS code calls this. */
+/* Attribute i (0 to 2, as playerdat->attr holds them), one row each from y 0xB5 down. */
+/* name: IDA's PrintPlayerAttribute_ovr158_F3. FM Towns has sp_att_ here, between sp_hdr_
+   and sp_hp_, and RedispStat_ calls it for 0 to 2 just as the DOS code calls this. */
 void far sp_att(unsigned char i)
 {
     char buf[4];
@@ -80,6 +99,7 @@ void far sp_mp(void)
     string_to_screen(buf, 0x135 - string_width(buf), 0x93);
 }
 
+/* Experience is shown divided by ten. */
 void far sp_xp(void)
 {
     char buf[10];
@@ -88,6 +108,9 @@ void far sp_xp(void)
     string_to_screen(buf, 0x135 - string_width(buf), 0x8C);
 }
 
+/* Row i of the six-row skill list: the unspent skill points when the row is the first
+   and the list is at its top, else skill i + skill_top - 1, each with its name from block
+   2 (string 0x1F + skill: "Attack" .. "Swimming"; 0x1F + 100 = 131 is "Skill Pt"). */
 void far sp_skill(unsigned char i)
 {
     char buf[4];
@@ -133,6 +156,11 @@ void far RedispStat(void)
     mouse_show();
 }
 
+/* A click on the statistics page: in the arrow strip at the bottom (y under 10) scrolls
+   the skill list one row back (left half) or on (right half), skill_top staying within
+   0..15 (mvcheck), then
+   waits up to 8 ticks for the button to come up. The first dir, from the button, is
+   overwritten and has no effect. */
 void far mous_in_stat(void)
 {
     int v;

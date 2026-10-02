@@ -1,7 +1,13 @@
 ; /* target: seg004_0849_4B30 */
 ; /* opts: /ml */
 ;
-; The texture-mapping scanline routine _asm_texture_map_scanline_per_tp.
+; The unshaded ("tp") pair of the horizontal span drawers _asm_texture_map (TEXMAP.ASM) calls
+; through DS:CF42: perspective-correct (per) and linear (lin). They are used when shadem
+; (DS:2688) is 0, and draw texels as they are, without lightabs. Inputs, variables and texel
+; addressing are those of PERTLP.ASM's shaded pair, without the shade.
+;
+; name: descriptive (module 9 of seg004, after its first routine); both routines have FM Towns
+; names. They are plain labels, not procs, hence "Procs: none" below.
 ;
 ; SEG004 split into its original modules: this is module 9 of 14, +4B30..+4E10 of the segment
 ; (file DCF0h), a module of the second library (UWLIB.LIB).
@@ -24,6 +30,10 @@ SEG004_TEXT segment para public use16 'CODE'
         public  _asm_texture_map_scanline_lin_tp
         public  _asm_texture_map_scanline_per_tp
 
+; _asm_texture_map_scanline_per_tp: a perspective-correct unshaded span, one pair of divides (u
+; * w / w, v * w / w) for every pixel. log2 width is written into the two `shl ax,2`
+; instructions at L4C69+2 and L4CAA+2 (self-modifying code). Nothing is drawn if the right end
+; is left of the left end or any u or v end is negative.
 _asm_texture_map_scanline_per_tp:
         mov     eax,dword ptr ds:[0CF74h]
         mov     dword ptr ds:[0CCB8h],eax
@@ -140,6 +150,9 @@ L4CAA:
         mov     byte ptr es:[di],al
 _seg004_0849_4CB9:
         ret
+; _asm_texture_map_scanline_lin_tp: a linear unshaded span, one pixel per loop, v kept
+; multiplied by the width. A nonzero u or v step gets 14h (about 1/3300 of a texel) added; the
+; shaded and vertical routines do not do that.
 _asm_texture_map_scanline_lin_tp:
         mov     eax,dword ptr ds:[0CF60h]
         mov     dword ptr ds:[0CCB0h],eax

@@ -19,7 +19,11 @@ struct FontInfo {
     int maxwidth;                       /* 0x0A, the widest character, in pixels */
 };
 
-/* The state of a cutscene, on show_anm's stack, 0x5C bytes. */
+/* The state of a cutscene, on show_anm's stack, 0x5C bytes. Field names are ours, from
+   the code that uses them (CUTS.C); frame3B is the frame a skip or jump runs to, frame3D
+   and frame3F the frame a pause is on and its length (in 256-tick units), repeat41 and
+   repeat43 the loops left and the frame that loops, fade45 the speech file playing (-1
+   none), fade47 and fade49 a pending fade-in and fade-out length (-1 none, -2 done). */
 struct CutsState {
     char name[0x13];                    /* CUTS\csXXX.nXX */
     int x, y, w, h;                     /* 0x13, the window; 320 by 200 for full screen */
@@ -39,13 +43,16 @@ struct CutsState {
     union {
         unsigned char value;
         struct { unsigned b0:1, b1:1, b2:1, b3:1, b4:1, b5:1, b6:1, b7:1; } bit;
-    } flags;                            /* 0x5B */
+    } flags;                            /* 0x5B: b0 skipping, b1 input arrived, b2 play on
+                                           in this file, b3 play on in the cutscene, b4
+                                           Escape allowed, b5 speech available, b6 speech
+                                           playing, b7 the wait ignores keys */
 };
 
 /* SPRITE.ASM */
 void far change_sprite(int spr, int x, int y, int w, int h);
-/* The sprite library, seg000. create_sprite is called with one argument and with three,
-   so its callers had no prototype for it, and it is declared without one. */
+/* The sprite library, seg000. create_sprite is called with one argument and with three.
+   match: its callers had no prototype for it, so it is declared without one. */
 int far create_sprite();
 void far draw_mask(int spr, int frame);
 void far draw_sprite(int spr, int frame);
@@ -95,9 +102,9 @@ int far string_width(char far *s);
 void far uhline(int x1, int y, int x2);
 void far urectangle(int, int, int, int);
 void far uvline(int x, int y1, int y2);
-/* A 6-int call in a different file; FM Towns vcopy_ matches the first four parameters
-   exactly (by position and value) but takes only four, so this probably is not it.
-   Unresolved; kept under its DOS label. */
+/* name: a 6-int call in a different file; FM Towns vcopy_ matches the first four
+   parameters exactly (by position and value) but takes only four, so this probably is not
+   it. Unresolved; kept under its DOS label. */
 void far vcopy(int sx, int sy, int w, int h, int x, int y);
 void far vcopyfb(int x, int y, int w, int h, int handle);  /* 0085:517B, FM Towns vcopyfb_ */
 void far vscreen_focus(int, int);
@@ -134,9 +141,9 @@ void far * far seg009_7(int icon);
 void far seg009_73(int icon, int x, int y, int height, int width);
 void far * far grs_unpack(void far *data);
 void far grs_fbplot(int icon, int x, int y);
-/* seg009 (1A6D): grs_which1 and pic_to_fbuf are FM Towns names, called the same way. FM
-   Towns reads _grs_off[n] directly where DOS calls seg009_7, which maps the EMS page
-   holding the cursor art first; it has no FM Towns name. */
+/* name: seg009 (1A6D): grs_which1 and pic_to_fbuf are FM Towns names, called the same
+   way. FM Towns reads _grs_off[n] directly where DOS calls seg009_7, which maps the EMS
+   page holding the cursor art first; it has no FM Towns name. */
 int far grs_which1(int icon);
 void far pic_to_screen(int icon, int x, int y, int height, int width);
 void far seg009_2CC(int icon, int width, int height);
@@ -170,8 +177,8 @@ enum Font {
 #define PAL_CHARGEN     3               /* character creation (ovr101) */
 
 /* GRFX.C: graphics start-up, fonts and palettes */
-/* IDA OpenFont, ovr118. FM Towns game_stats calls a set_font_size_ wrapper here, but every
-   other FM Towns call site, and the map's call-graph pairing, give grfx_quikfont_. */
+/* name: IDA OpenFont, ovr118. FM Towns game_stats calls a set_font_size_ wrapper here, but
+   every other FM Towns call site, and the map's call-graph pairing, give grfx_quikfont_. */
 void far grfx_quikfont(int n);
 void far grfx_close(void);
 void far grfx_setpal(void far *src);
@@ -185,8 +192,8 @@ void far cameras_fade(void);
 extern unsigned first_button;
 extern unsigned first_tmobj;
 extern unsigned first_vram;
-/* declared before load_gr_ems: the two names have the same public-order key (404), and
-   Turbo C lists such publics in reverse order of first sight, as the stub order needs */
+/* match: declared before load_gr_ems: the two names have the same public-order key (404),
+   and Turbo C lists such publics in reverse order of first sight, as the stub order needs */
 unsigned char far load_tr_ems(char *art);
 void far reload_gr_vpic(int offset, char *art, int image);
 unsigned char far read_gr_far(char *art, int image, void far *dst);
@@ -208,9 +215,9 @@ int far cutsop_jump(unsigned far *code, struct CutsState *st);
 int far cutsop_punt(unsigned far *code, struct CutsState *st);
 int far cutsop_say(unsigned far *code, struct CutsState *st);
 int far cutsop_wait(unsigned far *code, struct CutsState *st);
-/* cutsop_skip and cutsop_wait share a public-order key (875); Turbo C lists such publics in
-   reverse order of first sight, and the stub order puts cutsop_skip first, so it is
-   declared later */
+/* match: cutsop_skip and cutsop_wait share a public-order key (875); Turbo C lists such
+   publics in reverse order of first sight, and the stub order puts cutsop_skip first, so
+   it is declared later */
 int far cutsop_skip(unsigned far *code, struct CutsState *st);
 int far cutsop_clang(unsigned far *code, struct CutsState *st);
 int far cutsop_palrange(unsigned far *code, struct CutsState *st);
@@ -231,8 +238,8 @@ void far punt_tasks(void);
 void far punt_single_task(int task);
 void far task_palfade(int task, int done);
 void far remove_task(int task);
-/* declared early so that it is seen before record_task: both names have the public-order
-   key 970, and the stub order lists record_task first */
+/* match: declared early so that it is seen before record_task: both names have the
+   public-order key 970, and the stub order lists record_task first */
 char far * far bufferPointer(void);
 void far palette_fade(int step, int total, int first, int last, unsigned char far *pal);
 int far virtual_screen(int w, int h, int split);
@@ -279,8 +286,7 @@ void far show_credits(void);
 /* FARDATA.ASM */
 extern unsigned char far cmpbuf1_start[];
 extern unsigned char far cmpbuf2_start[];
-/* the digital effects' buffer (SOUND.C) */
-/* the digital buffers; name provisional */
+/* the digital effects' buffer (SOUND.C); name provisional */
 extern char far dfx_buffer[];
 extern unsigned long far gr_offs[];
 extern unsigned char far seg_5DFD[];
@@ -288,7 +294,6 @@ extern unsigned char far seg_5DFD[];
 /* Defined where no source has it yet: data the link takes from the EXE. */
 void far CallbackFunctionSleepRelated_seg021_22FD_CB7(int);
 /* DS:34AA: the first EMS page of the sounds */
-/* the first EMS page of the sounds */
 extern unsigned char far sound_fpage;
 
 #endif

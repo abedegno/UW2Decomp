@@ -18,7 +18,32 @@
 ; driver's function table, API_timer is the interrupt handler, init_DDA_arrays clears the
 ; timer tables, set_PIT_divisor programs the PIT, and so on). seg022_2405_5F3 is an
 ; unsigned 32-bit division with no FM counterpart (FM divides natively).
-; The data labels are left as L + offset.
+; The data labels are left as L + offset; the comments in the data below give what the
+; code does with each.
+;
+; How UW2 uses it (SOUND.C): AIL_startup, then AIL_register_driver on each .ADV file
+; loaded into memory, AIL_describe_driver, AIL_detect_device and AIL_init_driver; two
+; AIL timers (the game clock at 256 Hz and the effects at 16 Hz); and the driver calls
+; for XMIDI sequences, timbres, MIDI channel messages and digital sound buffers.
+;
+; Timers: API_timer takes over int 8. Each of 16 timers (handles 0-15) has a callback, the
+; DS it was registered with, a period in microseconds and an accumulator; timer 16 is
+; the old BIOS handler (bios_caller) at 54925 us, 18.2 Hz. The PIT is programmed for the
+; shortest period in use (program_timers); every interrupt adds that period to each
+; running timer's accumulator and calls the timer when the accumulator reaches its
+; period. So a timer's rate is exact on average, not per tick.
+;
+; Drivers: up to 16. A driver is an .ADV image whose first word is the offset of its
+; function table, (number, offset) word pairs ending at -1, and which has "Copy" at +2
+; (its copyright string). find_proc looks a function number up, and call_driver jumps
+; to it with the C caller's stack untouched, so the driver function takes the C
+; arguments and returns straight to the C caller. The function numbers run from 64h
+; (describe) to 0C2h (true_sequence_channel); see the stubs at the end.
+;
+; name: original. The procedures are those of AIL.ASM, "Application Program Interface
+; module", in John Miles' public-domain AIL 2.14 source (map/filenames.tsv). That source
+; is not in this workspace, so the comments here come from the code; the version word
+; 0D3h at L03B8 may mean the API is a 2.1x release (an inference from the number only).
 
         .model  medium
 
@@ -114,6 +139,27 @@ iret_op:
         public  _AIL_release_channel
         public  _AIL_true_sequence_channel
 
+; The module's data, in the code segment.
+; L0000  number of AIL timers registered (the first hooks int 8, the last unhooks it)
+; L0002  1 while API_timer is running its callbacks (a nested tick skips them)
+; L0004  17 far callbacks, 4 bytes each; L0044 is timer 16, bios_caller
+; L0048  17 words, the DS each timer was registered with
+; L006A  17 words, each timer's state: 0 free, 1 registered and stopped, 2 running
+; L008C  17 doublewords, accumulated microseconds since each timer last fired
+; L00D0  17 doublewords, each timer's period in microseconds
+; L0114  the period the PIT is programmed for, in microseconds (-1 before any)
+; L0118  the old int 8 vector, offset then segment
+; L011C  API_timer's loop index; -1 makes a running loop start again
+; L011E  program_timers' shortest period
+; L0122  the last PIT divisor (AIL_interrupt_divisor returns it)
+; L0124  16 far pointers to each driver's function table, 0 for a free handle
+; L0164  16 words, each driver's service timer handle, -1 for none
+; L0184  16 words, 1 once a driver is initialised (AIL_init_driver)
+; L01A8  the driver loop index of AIL_shutdown and AIL_register_driver
+; L01AE  AIL_init_driver's timer handle
+; L01B0  'Test', a guard below API_timer's 512-byte stack, which grows down from L03B4
+; L03B4  the interrupted SS:SP while API_timer runs on its own stack
+; L03B8  0D3h, the API version: a driver whose description asks for more is refused
 L0000:
         db      0h,0h
 L0002:
@@ -179,7 +225,10 @@ L03B6:
         db      0h,0h
 L03B8:
         db      0D3h,0h
-; FindEntryInAdvFile_seg022_2405_3BA  (+3BA)
+; name: IDA's FindEntryInAdvFile_seg022_2405_3BA  (+3BA)
+; find_proc: in BX a driver handle, AX a function number. Out: DX:AX the far address of
+; that function in the driver, or 0:0 when the handle is out of range or free, or the
+; driver has no such function. Uses ES, CX.
 _find_proc proc far
         cmp     bx,10h
         jae     short L03E4
@@ -209,7 +258,10 @@ L03EB:
         retf
 _find_proc endp
 
-; PushAdvTableEntry_seg022_2405_3F2  (+3F2)
+; name: IDA's PushAdvTableEntry_seg022_2405_3F2  (+3F2)
+; call_driver: in AX a function number; the driver handle is the first C argument (at
+; [sp+4], since the stubs jump here). Jumps to the driver's function by push and retf,
+; leaving the stack as the C caller built it; returns 0 in AX if there is none.
 _call_driver proc far
         mov     bx,sp
         mov     bx,word ptr ss:[bx+4]
@@ -226,7 +278,12 @@ L0409:
         retf
 _call_driver endp
 
-; TimerInterupt_seg022_2405_40A  (+40A)
+; name: IDA's TimerInterupt_seg022_2405_40A  (+40A)
+; API_timer: the int 8 handler. Unless already inside it, switches to its own stack and,
+; for timers 0 to 16 in state 2, adds the PIT period to the accumulator and, when it
+; reaches the timer's period, subtracts the period and calls the timer with its own DS.
+; Timer 16 calls the BIOS handler. Then sends EOI to the PIC and returns with iret if the
+; 'Test' guard is intact; if the stack has overrun it, it stops at an int 3 for ever.
 _API_timer proc far
         cmp     word ptr cs:L0002,0
         je      short L0415
@@ -308,6 +365,8 @@ L04DD:
 _API_timer endp
 
 ; seg022_2405_4E1  (+4E1)
+; init_DDA_arrays: clears every timer's state, accumulator and period, and marks the PIT
+; period unknown (-1), with interrupts off.
 _init_DDA_arrays proc far
         push    ds
         push    si
@@ -337,6 +396,7 @@ _init_DDA_arrays proc far
 _init_DDA_arrays endp
 
 ; seg022_2405_51D  (+51D)
+; bios_caller: timer 16's callback; calls the saved int 8 vector as an interrupt.
 _bios_caller proc far
         pushf
         call    dword ptr cs:L0118
@@ -344,6 +404,8 @@ _bios_caller proc far
 _bios_caller endp
 
 ; seg022_2405_524  (+524)
+; hook_timer_process: saves the int 8 vector, makes bios_caller timer 16's callback, and
+; points int 8 at API_timer.
 _hook_timer_process proc far
         push    ds
         push    si
@@ -374,6 +436,7 @@ _hook_timer_process proc far
 _hook_timer_process endp
 
 ; seg022_2405_570  (+570)
+; unhook_timer_process: puts the saved int 8 vector back.
 _unhook_timer_process proc far
         push    ds
         push    si
@@ -395,6 +458,8 @@ _unhook_timer_process proc far
 _unhook_timer_process endp
 
 ; seg022_2405_5A0  (+5A0)
+; set_PIT_divisor(divisor): programs PIT channel 0 (36h: low then high byte, mode 3) with
+; the divisor, 0 meaning 65536, and remembers it in L0122.
 _set_PIT_divisor proc far
         push    bp
         mov     bp,sp
@@ -423,6 +488,8 @@ L05BB:
 _set_PIT_divisor endp
 
 ; seg022_2405_5C9  (+5C9)
+; set_PIT_period(us): the divisor for a period in microseconds, us * 10000 / 8380
+; (the PIT's 1.19318 MHz, near enough), or 0 for 54925 us (18.2 Hz) and longer.
 _set_PIT_period proc far
         push    bp
         mov     bp,sp
@@ -449,6 +516,8 @@ L05E6:
 _set_PIT_period endp
 
 ; seg022_2405_5F3  (+5F3)
+; seg022_2405_5F3(long a, long b): unsigned a / b, in DX:AX. Shift-and-subtract over 32
+; bits, or one div when both fit 16 bits.
 _seg022_2405_5F3 proc far
         push    bp
         mov     bp,sp
@@ -499,6 +568,9 @@ L0639:
 _seg022_2405_5F3 endp
 
 ; seg022_2405_63E  (+63E)
+; program_timers: finds the shortest period among the timers in use (state not 0) and,
+; if it differs from the PIT's, reprograms the PIT for it, clears every accumulator and
+; makes a running API_timer loop start again.
 _program_timers proc far
         push    ds
         push    si
@@ -557,6 +629,7 @@ L06C8:
 _program_timers endp
 
 ; seg022_2405_6D3  (+6D3)
+; AIL_startup: no timers, no drivers, no driver timers (-1), nothing initialised.
 _AIL_startup proc far
         push    ds
         push    si
@@ -588,6 +661,9 @@ _AIL_startup proc far
 _AIL_startup endp
 
 ; seg022_2405_717  (+717)
+; AIL_shutdown(char far *msg): for every registered driver, releases its service timer
+; and shuts it down (AIL_shutdown_driver with msg); then releases every timer, which
+; restores int 8 and the PIT.
 _AIL_shutdown proc far
         push    bp
         mov     bp,sp
@@ -633,6 +709,10 @@ L075F:
 _AIL_shutdown endp
 
 ; seg022_2405_77C  (+77C)
+; AIL_register_timer(void (far *fn)()): takes the first free handle of 0 to 15, stopped,
+; with fn, the caller's DS and no period (-1). The first timer registered also clears
+; the tables, hooks int 8 and starts timer 16 (the BIOS) at 54925 us. Returns the handle,
+; or -1 if all 16 are in use.
 _AIL_register_timer proc far
         push    bp
         mov     bp,sp
@@ -693,6 +773,9 @@ L082B:
 _AIL_register_timer endp
 
 ; seg022_2405_837  (+837)
+; AIL_release_timer_handle(h): frees timer h (-1 is ignored). Releasing the last one
+; sets the PIT back to 18.2 Hz and unhooks int 8. The PIT is not reprogrammed for the
+; timers that remain.
 _AIL_release_timer_handle proc far
         push    bp
         mov     bp,sp
@@ -724,6 +807,7 @@ L0874:
 _AIL_release_timer_handle endp
 
 ; seg022_2405_880  (+880)
+; AIL_release_all_timers: AIL_release_timer_handle for 15 down to 0.
 _AIL_release_all_timers proc far
         push    ds
         push    si
@@ -745,6 +829,7 @@ L0888:
 _AIL_release_all_timers endp
 
 ; seg022_2405_89E  (+89E)
+; AIL_start_timer(h): a stopped timer (state 1) starts running (state 2).
 _AIL_start_timer proc far
         push    bp
         mov     bp,sp
@@ -768,6 +853,7 @@ L08BA:
 _AIL_start_timer endp
 
 ; seg022_2405_8C6  (+8C6)
+; AIL_start_all_timers: AIL_start_timer for 15 down to 0.
 _AIL_start_all_timers proc far
         push    ds
         push    si
@@ -789,6 +875,7 @@ L08CE:
 _AIL_start_all_timers endp
 
 ; seg022_2405_8E4  (+8E4)
+; AIL_stop_timer(h): a running timer (state 2) stops (state 1).
 _AIL_stop_timer proc far
         push    bp
         mov     bp,sp
@@ -812,6 +899,7 @@ L0900:
 _AIL_stop_timer endp
 
 ; seg022_2405_90C  (+90C)
+; AIL_stop_all_timers: AIL_stop_timer for 15 down to 0.
 _AIL_stop_all_timers proc far
         push    ds
         push    si
@@ -833,6 +921,9 @@ L0914:
 _AIL_stop_all_timers endp
 
 ; seg022_2405_92A  (+92A)
+; AIL_set_timer_period(h, unsigned long us): sets timer h's period and clears its
+; accumulator, with the timer stopped while program_timers re-fits the PIT; its state is
+; then put back.
 _AIL_set_timer_period proc far
         push    bp
         mov     bp,sp
@@ -867,6 +958,8 @@ _AIL_set_timer_period proc far
 _AIL_set_timer_period endp
 
 ; seg022_2405_97F  (+97F)
+; AIL_set_timer_frequency(h, unsigned long hz): AIL_set_timer_period with 1000000 / hz.
+; Its retf is the first instruction under the next label.
 _AIL_set_timer_frequency proc far
         push    bp
         mov     bp,sp
@@ -894,6 +987,11 @@ _AIL_set_timer_frequency proc far
 _AIL_set_timer_frequency endp
 
 ; seg022_2405_9BF  (+9BF)
+; AIL_set_timer_divisor(h, divisor): AIL_set_timer_period with the period of a PIT
+; divisor, divisor * 10000 / 11932 us, or 54925 for 0. Nothing in UW2 calls it.
+; match: the label is at +9BF, where the target table (IDA's function start) puts it,
+; so the retf ending AIL_set_timer_frequency comes first and the routine proper begins
+; one byte later.
 _AIL_set_timer_divisor proc far
         retf
         push    bp
@@ -929,6 +1027,8 @@ L09E4:
 _AIL_set_timer_divisor endp
 
 ; seg022_2405_9FC  (+9FC)
+; AIL_interrupt_divisor: returns the PIT divisor last programmed. Drivers get its address
+; through AIL_describe_driver.
 _AIL_interrupt_divisor proc far
         push    ds
         push    si
@@ -944,6 +1044,11 @@ _AIL_interrupt_divisor proc far
 _AIL_interrupt_divisor endp
 
 ; seg022_2405_A10  (+A10)
+; AIL_register_driver(void far *drv): takes the first free driver handle for the image at
+; drv, which must have "Copy" at +2; its function table is at drv + the word at drv.
+; Returns the handle, or -1 if there is no free handle, the image is not a driver, or
+; its description asks for an API version above 0D3h. (In that last case the handle
+; stays taken.) Its last three instructions follow the next label.
 _AIL_register_driver proc far
         push    bp
         mov     bp,sp
@@ -995,6 +1100,9 @@ L0A8E:
 _AIL_register_driver endp
 
 ; seg022_2405_A97  (+A97)
+; AIL_release_driver_handle(h): frees driver handle h. Nothing in UW2 calls it.
+; match: the label is at +A97, where the target table puts it, so the pop ds, pop bp and
+; retf that end AIL_register_driver come first and the routine proper begins at +A9A.
 _AIL_release_driver_handle proc far
         pop     ds
         pop     bp
@@ -1023,6 +1131,9 @@ L0ABC:
 _AIL_release_driver_handle endp
 
 ; seg022_2405_AC8  (+AC8)
+; AIL_describe_driver(h): driver function 64h, given the address of
+; AIL_interrupt_divisor; returns a far pointer to the driver's description (struct
+; DrvrDesc in sound.h).
 _AIL_describe_driver proc far
         push    bp
         mov     bp,sp
@@ -1043,6 +1154,11 @@ _AIL_detect_device proc far
 _AIL_detect_device endp
 
 ; seg022_2405_AF4  (+AF4)
+; AIL_init_driver(h, io, irq, dma, drq): if the description's word at +14h is not -1
+; and the driver has function 67h, registers that function as an AIL timer at that many
+; hertz (the word is probably the driver's service rate; the code uses it as a
+; frequency). Then calls driver function 66h with the arguments, marks the driver
+; initialised and starts its timer.
 _AIL_init_driver proc far
         push    bp
         mov     bp,sp
@@ -1112,6 +1228,8 @@ L0B9A:
 _AIL_init_driver endp
 
 ; seg022_2405_BA6  (+BA6)
+; AIL_shutdown_driver(h, char far *msg): for an initialised driver, clears the flag,
+; releases its service timer and jumps to driver function 68h with the arguments.
 _AIL_shutdown_driver proc far
         mov     bx,sp
         mov     bx,word ptr ss:[bx+4]
@@ -1136,6 +1254,8 @@ L0BD8:
 _AIL_shutdown_driver endp
 
 ; seg022_2405_BD9  (+BD9)
+; From here to the end every AIL_ routine is a stub: AX = its driver function number,
+; then call_driver. The numbers are those the FM Towns build passes for the same names.
 _AIL_index_VOC_block proc far
         mov     ax,78h
         jmp     _call_driver
@@ -1261,7 +1381,7 @@ _AIL_timbre_request proc far
         jmp     _call_driver
 _AIL_timbre_request endp
 
-; FindAndPushAdvEntry_9C_seg022_2405_C57  (+C57)
+; name: IDA's FindAndPushAdvEntry_9C_seg022_2405_C57  (+C57)
 _AIL_install_timbre proc far
         mov     ax,9Ch
         jmp     _call_driver
@@ -1303,7 +1423,7 @@ _AIL_resume_sequence proc far
         jmp     _call_driver
 _AIL_resume_sequence endp
 
-; FindAndPushAdvEntryAE_seg022_2405_C81  (+C81)
+; name: IDA's FindAndPushAdvEntryAE_seg022_2405_C81  (+C81)
 _AIL_sequence_status proc far
         mov     ax,0AEh
         jmp     _call_driver

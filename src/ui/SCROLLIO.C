@@ -4,7 +4,20 @@
    click, the [MORE] prompt, and reading a typed line or a yes/no answer from the player:
    the whole of DOS overlay ovr139, in original order. Function and global names are the
    originals from the FM Towns symbol table where it has them; the source file's own name
-   is not known. */
+   is not known.
+
+   Entry points: init_scroll (GAMESCR.C's init_gamedisp) selects and clears the message
+   scroll; scroll_more is SCROLL.C's [MORE] prompt; scroll_clear empties the current
+   scroll; wdialog reads a line of text typed into the scroll (the quantity to pick up,
+   INVPANEL.C; a save's description, GAMEWRAP.C; the player's own words in a
+   conversation, CONVERSE.C); wyorn asks a yes or no question (disarming a trap,
+   INTERACT.C; MAP.C; WORLDEV.C); wd_replace and wd_bool rewrite the answer in place.
+   Typing ends with Enter, Escape or any mouse click; Escape gives back the initial text
+   (wdialog) or No (wyorn) and prints "-" (wdialog only) in place of the answer.
+
+   Data owned: answer_x, where the answer starts on the current line.
+
+   Name: descriptive (the message scroll's input side: scroll_more, wyorn). */
 
 #include <string.h>
 #include <stdlib.h>
@@ -18,8 +31,8 @@ extern struct FontInfo far *cur_font;                /* DS:21CC, provisional */
 extern unsigned long far *Time;                  /* DS:2158; SCROLL.C calls it
                                                     PITTimerGlobal */
 extern struct Inplist near *inplist;             /* DS:E4 */
-/* This file's _BSS, DS:8186: where the answer starts. Static in FM Towns, so static here;
-   provisional name. Only this file uses it. */
+/* This file's _BSS, DS:8186: where the answer starts. Only this file uses it. */
+/* name: static in FM Towns, so static here; provisional name. */
 static int answer_x;
 
 int far scroll_print(char far *s);
@@ -34,12 +47,17 @@ void far init_scroll(void)
     draw_edges();
 }
 
-/* Declared here because TLINK numbers the overlay's stub entries in the order Turbo C lists
-   the publics, which for names with the same hash key is the order they were first seen:
-   the EXE's stub has scroll_clear and wdialog before scroll_wait and wd_bool. */
+/* match: declared here because TLINK numbers the overlay's stub entries in the order
+   Turbo C lists the publics, which for names with the same hash key is the order they
+   were first seen: the EXE's stub has scroll_clear and wdialog before scroll_wait and
+   wd_bool. */
 void far scroll_clear(char redraw);
 int far wdialog(char *prompt, char *initial, char *result, char anychar, int maxlen);
 
+/* Waits for the input to change from what it is on entry (a key or a click), or for
+   ticks of *Time when ticks is not 0, keeping the music going; the buttons must be
+   released before and after. With mouse set, the cursor is shown during the wait if it
+   is over the scroll. Used by the \p and \P escapes and the [MORE] prompt. */
 void far scroll_wait(int ticks, char mouse)
 {
     unsigned long end;
@@ -61,6 +79,9 @@ void far scroll_wait(int ticks, char mouse)
         mouse_hide();
 }
 
+/* The [MORE] prompt: scrolls up a line, writes [MORE] in colour 0x12 at the start of the
+   new line, waits for a key or click, then erases it and allows one more line before the
+   next prompt. */
 void far scroll_more(void)
 {
     int color;
@@ -80,6 +101,8 @@ void far scroll_more(void)
     scroll->cur_x = scroll->left;
 }
 
+/* The scroll answers are typed into: the menu scroll in mode 4 (a conversation), else
+   the game's message scroll. */
 void far pick_scroll(void)
 {
     if (inplist->mode == 4)
@@ -88,6 +111,8 @@ void far pick_scroll(void)
         do_main_scroll();
 }
 
+/* Replaces the answer typed after the prompt with the number n (INVPANEL.C, once the
+   quantity has been checked). */
 void far wd_replace(int n)
 {
     char buf[6];
@@ -123,6 +148,15 @@ void far wd_bool(char yes)
         scroll_print("No");
 }
 
+/* Reads a line typed into the scroll after prompt (or ">"), at most maxlen characters
+   (50 at most) and no wider than the line; with anychar 0 only digits are accepted.
+   initial is shown first and selected: pos is kept negative while it is untouched, and
+   the first ordinary key replaces it. Editing keys, each with several codes (keypad,
+   cursor keys and Ctrl letters as Emacs has them): Home or Ctrl+A to the start, End or
+   Ctrl+E to the end, Left or Ctrl+B, Right or Ctrl+F, Backspace, Delete or Ctrl+D, Ctrl+K
+   cuts to the end. The cursor block blinks by loop count, not by time. The text goes to
+   result; returns the key that ended input (13 Enter, 27 Escape, or 1 to 3 for a
+   click). */
 int far wdialog(char *prompt, char *initial, char *result, char anychar, int maxlen)
 {
     int width;
@@ -259,6 +293,10 @@ int far wdialog(char *prompt, char *initial, char *result, char anychar, int max
     return key;
 }
 
+/* Asks a yes or no question: the question text, or game string id when question is 0,
+   then the current answer (*answer) as Yes or No, which Y and N change. Returns the key
+   that ended it (13 or a mouse button) with the answer in *answer, or -1 for Escape
+   (answer No). */
 int far wyorn(char *question, int id, char *answer)
 {
     char cur;
@@ -306,6 +344,8 @@ int far wyorn(char *question, int id, char *answer)
     return key;
 }
 
+/* Empties the current scroll and resets its cursor and line count; redraw hides the
+   mouse around it when the cursor is over the scroll. */
 void far scroll_clear(char redraw)
 {
     if (redraw) {

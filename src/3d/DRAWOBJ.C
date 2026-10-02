@@ -1,9 +1,33 @@
 /* target: seg033_2FBE */
 /* opts: -mm -1 -G -O -Y -d */
-/* Drawing one object into the 3D view's render database: do_obj picks the kind of
-   drawing from the object's common data, do_rect sends a 3D model, do_door a door.
-   The whole of DOS resident segment seg033_2FBE, in original order. Function and global
-   names are the originals from the FM Towns symbol table where it has them. */
+/* DRAWOBJ.C: drawing one object into the 3D view's render database.
+
+   GAMESORT.C's do_objsort calls do_obj for each object of a tile, farthest first,
+   with objxloc, objyloc and objzloc set to its view position and locsqmod to its
+   distance shade. do_obj picks the kind of drawing from the object type's render
+   field in COMOBJ.DAT (ComObjData): 0 a sprite (do_uwobj, opcode 0x3A), 1 a critter
+   (do_uwcrit, 0x5A, its frame looked up in the critter's art page), 2 a 3D model
+   (do_rect) or a door (do_door), 3 a texture-mapped object (a 3D model with a
+   texture). Opcode names are from the FM Towns opcode table (see GRIDDB.C).
+
+   do_rect emits one call of a 3D model: the model's colours and texture in the model
+   variables (Clk(n), opcode 0x02), the origin (0x18 do_org, three longs), and a call
+   of the model's code at label 0x60 + model (0x50 do_ihcall turned by a heading, or
+   0x12 do_sfcal unturned), then the origin set back to 0. The models' bytecode is
+   the 3D object data in the renderer's far data (docs/LAYOUT.md); grdb_blank reads
+   their label positions from the table before the database buffer.
+
+   In a pick frame (PickUp) each object first gets its pick colour (0xAE
+   do_setbmcol), and color_to_obj and color_to_map record the object and its tile for
+   UI/INTERACT.C's pick_3d.
+
+   Data owned: rect_cols and rect_sub (the models' colours and the model for each 3D
+   object type), dirtab, and ActDoors (used elsewhere; see below).
+
+   name: descriptive (map/filenames.tsv: "drawing an object into the render database
+   (do_obj, do_rect, do_door)"). The whole of DOS resident segment seg033_2FBE, in
+   original order. Function and global names are the originals from the FM Towns
+   symbol table where it has them. */
 
 #include <dos.h>
 #include "conv.h"
@@ -14,7 +38,7 @@
 #include "sys.h"
 #include "view3d.h"
 
-/* tmapson, lighton, curautocode and the other scalars at DS:534-53F, and the tables
+/* match: tmapson, lighton, curautocode and the other scalars at DS:534-53F, and the tables
    after them up to DS:5F9, belong to the file before this one in the data segment
    (FM Towns puts them with process_grid and txtwal), so they are extern here. */
 extern unsigned char PickUp;
@@ -24,7 +48,7 @@ extern unsigned TxmTerr[];
 extern unsigned long far *Time;
 extern struct Object far *objdata;
 
-/* This file's _BSS, DS:2F96..2F9B, though nothing here uses it: the level's door textures,
+/* match: this file's _BSS, DS:2F96..2F9B, though nothing here uses it: the level's door textures,
    which ovr119 and ovr140 use. It lies between seg019's _BSS (keys rising to tCacheOK's 1004)
    and seg034's (from holdmid's 112), and its key (209) fits neither run; FM Towns too has
    it on its own between seg019's mhighptr and seg034's holdmid. */
@@ -69,7 +93,9 @@ unsigned char rect_cols[32][5] = {
     { 0x02, 0xCC, 0x02, 0x00, 0x00 },
     { 0x12, 0x15, 0x35, 0x24, 0x02 }
 };
-/* The model drawn for each 3D object type 0x10-0x2F, -1 for none. */
+/* The model drawn for each 3D object type, indexed by item & 0x3F less 0x10 for
+   render type 2 objects (probably items 0x150 to 0x16F; item & 0x3F below 0x10 is a
+   door), -1 for none. */
 int rect_sub[32] = {
     0x03, 0x08, 0x08, 0x07, 0x07, 0x06, 0x05, 0x0B,
     0x18, 0x09, 0x17, 0x1B, 0x1C, 0x19, 0x1A, 0x04,
@@ -86,6 +112,11 @@ unsigned char dirtab[32] = {
    (as dirtab+0x20), so the name is ours. */
 static int rect_flagcol[2] = { 0x8C, 0xC8 };
 
+/* Draw one object. The player's own object and invisible objects are skipped. A
+   mobile object that is not a critter takes its fine position within the tile from
+   goal_word and attitude_word, turned for the quadrant. An animation object
+   (MAJOR_ANIMOBJ) draws as its owner field's item. Items 0xE8 to 0xFF (other than
+   0xE0 to 0xE7) draw as the runestone sprite. */
 void far do_obj(struct Object far *o)
 {
     int frame;
@@ -245,6 +276,16 @@ void far do_obj(struct Object far *o)
     }
 }
 
+/* Emit a 3D model for object o. heading -1 turns it by the object's own heading
+   (in eighths of a turn), otherwise by heading in sixteenths; tex is the texture
+   for models that take one (-1: from rect_cols and the object's flags). Flag 0x40
+   models get variable 5 set: 0 for a static object, and for a mobile one its pitch,
+   with the heading taken from its fine heading as well. Model 0x1D takes two colours from the
+   owner field; model 0x1E (probably the large blackrock gem) lights one face per bit
+   of quest byte QB_GEMS_USED, the face of player->vars[6] & 7 in another colour,
+   and blinks when the byte is 0xFF. Models 0x10 and 0x11 with no texture mapping,
+   and model 2 at detail level 1, get variable 8 set around the call (hilite;
+   variable 8 is also process_grid's texture-mapping flag). */
 void far do_rect(unsigned char model, struct Object far *o, char heading, int tex)
 {
     int head;
@@ -318,7 +359,8 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
                 }
                 else {
                     curautocode = 2;
-                    /* the cast keeps the compiler from moving the 0x10 to the end */
+                    /* match: the cast keeps the compiler from moving the 0x10 to
+                       the end */
                     tex = (int)(first_tmobj + first + 0x10) + OBJ_FLAGS(o) % ntex;
                     *dbptr++ = 2;
                     *dbptr++ = Clk(0xB);
@@ -437,6 +479,14 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
     *dbptr++ = 0;
 }
 
+/* Draw a door: item & 7 is the door type (6 the portcullis, 7 the secret door,
+   others a textured door using door texture first_tmobj + 0x40 + type), and the
+   object's flags & 7 how far it is open. A door is drawn as its frame (model 1, in
+   the tile's wall texture) and its leaf (model 0xE, 0xF for the secret door, or
+   0xC for the portcullis, which is raised by objyloc rather than turned). The
+   order of the two (first, step) comes from the door's heading, its direction of
+   opening and the eye's side of it: probably the part farther from the eye first. Sets curautocode 1 so
+   the automap marks the tile as having a door. */
 void far do_door(unsigned char item, struct Object far *o)
 {
     int h;
@@ -479,8 +529,8 @@ void far do_door(unsigned char item, struct Object far *o)
         *dbptr++ = Clk(5);
         *dbptr++ = dir << 12;
     }
-    /* a portcullis gets this after its own 0x4C block: the 0x400 store jumps into
-       the shared tail here */
+    /* a portcullis gets this after its own 0x4C block.
+       match: the 0x400 store jumps into the shared tail here */
     *dbptr++ = 0x4C;
     *dbptr++ = 0;
     *dbptr++ = 0;

@@ -11,6 +11,8 @@
 ; padding before a paragraph-aligned module (TASM 2.0 pads `align 16` with 87 DB/90, not
 ; zeros).
 ; Its relocations are entries 2276-2277 of UW2.EXE's relocation table.
+; Runs with DS on seg021's data segment (see STARTUP.ASM and SYSENTRY.ASM).
+; name: descriptive (system module 5); init and errorexit are the FM Towns names.
 
         .186
 
@@ -37,12 +39,27 @@ SEG021_TEXT segment para public 'CODE'
         public  _seg021_22FD_2BD
 
 ; seg021_22FD_240  (+240)
+; Far entry to errorexit: shuts down with SI as the message to print at exit. Nothing in
+; UW2 calls it.
 _seg021_22FD_240 proc far
         call    errorexit
         retf
 _seg021_22FD_240 endp
 
 ; seg021_22FD_244  (+244)
+; init: brings the system layer up. In order: the mouse (_6C8), the CPU type (_1D0), the
+; 3D data's segment (_2B6), the int 24h handler (_setvect24), the Tandy check (_2BD), the
+; joystick (_30A), the int 9 keyboard handler (_598) and the video mode save (_730). Then
+; it hooks program termination: the far pointer at DS:0 points at the PSP's terminate
+; address (PSP:000A, see STARTUP.ASM); init copies the address there to DS:18Ch and
+; writes its own exit routine, L028C, in its place, so DOS runs L028C whenever the
+; program ends, however it ends.
+; If the flag word at DS:370h is nonzero, start-up has failed: the message is the one
+; already at DS:190h, or "No graphics adapter" (DS:560h), and errorexit shuts down. The
+; only code that sets DS:370h is _730's `dec`, which a `clc; jae` always skips, so the
+; graphics adapter check is disabled and this path is never taken.
+; errorexit: SI is the message for the exit routine (DS:190h, cPerror), then shutdown
+; (_17, STARTUP.ASM).
 _init proc near
         call    _seg021_22FD_6C8
         call    _seg021_22FD_1D0
@@ -77,6 +94,12 @@ L028B:
         ret
 
 ; Reached through the far pointer init stored at DS:0 (the exit chain).
+; The exit routine, entered from DOS at termination: loads seg021's data segment into DS,
+; ES and SS with SP = 122h (a small stack below DS:122h), calls the hook at DS:192h (its
+; initial value, 02BCh, is the `ret` at the end of _2B6, so it does nothing unless
+; something stores a routine there; nothing in UW2 does), removes the int 9 handler (_5C8),
+; prints the '$'-terminated message at DS:[190h] if it is not 0 (pfatal and the divide-by-
+; zero handler put cExitMessage there), and jumps on to the original terminate address.
 L028C:
         mov     ax,seg dseg062_62a6
         mov     es,ax
@@ -98,6 +121,8 @@ L02B2:
 _init endp
 
 ; seg021_22FD_2B6  (+2B6)
+; Stores the segment of the 3D renderer's data (seg052_519C) at DS:18Ah. Its final ret,
+; at +2BC, doubles as the default exit hook (see above).
 _seg021_22FD_2B6 proc near
         mov     ax,seg seg052_519C
         mov     word ptr ds:[18Ah],ax
@@ -105,6 +130,11 @@ _seg021_22FD_2B6 proc near
 _seg021_22FD_2B6 endp
 
 ; seg021_22FD_2BD  (+2BD)
+; Tandy check: the far pointer at DS:186h is F000:FFFE, the BIOS model byte. If that is
+; FFh (IBM PC) and the byte at F000:C000 is 21h, the machine is taken to be a Tandy 1000
+; (presumably: that is the usual Tandy test) and DS:120h is set to FFFFh. KEYQUEUE.ASM
+; then translates the Tandy keyboard's scan codes and JOYPORT.ASM treats the joystick
+; differently.
 _seg021_22FD_2BD proc near
         push    ds
         lds     si,dword ptr ds:[186h]

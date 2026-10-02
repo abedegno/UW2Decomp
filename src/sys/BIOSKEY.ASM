@@ -10,6 +10,10 @@
 ; padding before a paragraph-aligned module (TASM 2.0 pads `align 16` with 87 DB/90, not
 ; zeros).
 ; It has no relocations.
+; The game reads the keyboard through its own int 9 handler (KBDINT.ASM, KEYQUEUE.ASM), so
+; these BIOS routines serve only to empty the BIOS buffer; the two far thunks are not called
+; from anywhere in UW2.
+; name: descriptive (system module 4, the BIOS keyboard).
 
         .186
 
@@ -25,18 +29,23 @@ SEG021_TEXT segment para public 'CODE'
         public  _seg021_22FD_236
 
 ; seg021_22FD_220  (+220)
+; Far thunk: waits for a key through the BIOS (int 16h function 0) and returns it in AX.
 _seg021_22FD_220 proc far
         call    L022E
         retf
 _seg021_22FD_220 endp
 
 ; seg021_22FD_224  (+224)
+; Far thunk for _236.
 _seg021_22FD_224 proc far
         call    _seg021_22FD_236
         retf
 _seg021_22FD_224 endp
 
 ; seg021_22FD_228  (+228)
+; Takes a key from the BIOS buffer if there is one: AX = the key (scan code in AH, ASCII
+; in AL) and ZF clear, or AX = 0 and ZF set if the buffer is empty. L022E, inside it, reads
+; a key unconditionally.
 _seg021_22FD_228 proc near
         mov     ah,1
         int     16h
@@ -51,6 +60,7 @@ L0233:
 _seg021_22FD_228 endp
 
 ; seg021_22FD_236  (+236)
+; Empties the BIOS keyboard buffer. An unnamed far entry in SYSENTRY.ASM reaches it.
 _seg021_22FD_236 proc near
         call    _seg021_22FD_228
         jne     _seg021_22FD_236

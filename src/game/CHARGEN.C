@@ -4,7 +4,23 @@
    class, skills, portrait, difficulty, name, confirmation), the button pictures they are
    drawn from, and the entry point create_player: the whole of DOS overlay ovr101, in
    original order. Function and global names are the originals from the FM Towns symbol
-   table; the source file's own name is not known. */
+   table.
+
+   create_player (MAINMENU.C's start menu) blanks the record with init_char(1) and runs
+   strt_chargen, which loads the background (screen image 1), the button pictures
+   (CHRBTNS.GR), DATA\SKILLS.DAT and DATA\CHRGEN.DAT, then gen_char, which steps through
+   eight questions: 0 sex, 1 handedness, 2 class, 3 skills, 4 portrait, 5 difficulty,
+   6 name, 7 keep this character. Escape goes back to the start (or out, from the
+   first question).
+   Rules found here: choosing a class sets the attributes from SKILLS.DAT and spreads
+   the class's bonus points over them (roll_stats, at most 30 each); each class then has
+   five skill entries in SKILLS.DAT, each either a fixed skill or a menu of skills to
+   pick one from, and each pick adds to that skill (SKILLS.C's add_to_skill).
+   Data: sknow (skills chosen so far), chroff and chrbuf (the button pictures).
+   SKILLS.DAT (191 bytes in the GOG data): 8 classes of 4 bytes (strength, dexterity,
+   intelligence, bonus points), then for each class five entries, each a count and that
+   many skill numbers. CHRGEN.DAT: 8 struct ChrOpt, then their answer string lists.
+   Name: descriptive (character creation: strt_chargen, create_player). */
 
 #include <stdlib.h>
 #include <string.h>
@@ -43,8 +59,9 @@ extern struct FontInfo far *cur_font;
 extern char in_game;
 extern unsigned char far Transparency;
 extern unsigned char far stdat[][4];
-/* This file's _BSS, DS:47B8..47BF (ovr097's ends at 47B8), by name: sknow 43, chroff 275,
-   chrbuf 395. FM Towns keeps the three together too. */
+/* This file's _BSS, DS:47B8..47BF (ovr097's ends at 47B8). */
+/* match: laid out by name: sknow 43, chroff 275, chrbuf 395. */
+/* name: FM Towns keeps the three together too. */
 int sknow;
 int *chroff;                            /* offsets of the button pictures in chrbuf */
 unsigned char far *chrbuf;
@@ -59,6 +76,12 @@ void far fadeout(unsigned char far *pal, int steps, int x);
 void far grfx_clear(void);
 void far load_weapcm(void);
 
+/* The starting record of a new character. Fixed values: level 1, one skill point, the
+   game clock at 0x465000, the time of day (X clock 0) at 15 of 72, the two moonstones
+   on levels 3 and 45, hunger 0xC0, fatigue and food_heal 0x30, every quest, variable,
+   X clock and lore entry zero, an empty rune shelf. Random: the portrait and sex, and
+   unless blank every skill at 3d4 and every attribute at 2d10 + 10. Hit points start at
+   the computed maximum less 6 to 11. */
 void far init_char(char blank)
 {
     register int i;
@@ -117,6 +140,10 @@ void far init_char(char blank)
     FixPlayerEquips();
 }
 
+/* Walks the class's five skill entries in SKILLS.DAT from entry *idx: an empty entry
+   gives no skill (NUM_SKILLS), a one-skill entry gives that skill at once, and an entry
+   of several skills becomes the skill menu (opt, their names as string numbers 0x1F
+   on) and returns 1 to ask the player. Returns 0 when the five are done. */
 unsigned char far set_sklmnu(unsigned char *idx, unsigned char *skills, struct ChrOpt far *opt,
                     unsigned char far *dat)
 {
@@ -186,6 +213,8 @@ void far show_skills(void)
     }
 }
 
+/* Adds each chosen skill from skills[start] on (add_to_skill) and returns the new count
+   done. */
 int far set_skills(register int start, unsigned char *skills)
 {
     register int i;
@@ -198,6 +227,9 @@ int far set_skills(register int start, unsigned char *skills)
     return start;
 }
 
+/* The class's attributes: the three bases from SKILLS.DAT, then its bonus points given
+   out 1 to 4 at a time to a random attribute, none above 30. Skills are cleared, and
+   the maximum HP, mana and weight are recomputed with HP full. */
 void far roll_stats(void)
 {
     int pts;
@@ -223,6 +255,9 @@ void far roll_stats(void)
     ThePlayer->hp = playerdat->avghit;
 }
 
+/* Draws a question and its answer buttons, laid out in as many columns as fit in the
+   right half of the screen. Button picture 0 carries the answer's text, picture 3 a
+   picture (the portraits). */
 void far drawopt(struct ChrOpt far *opt)
 {
     int h, w, i;
@@ -309,7 +344,8 @@ void far selopt(struct ChrOpt far *opt, unsigned char new, unsigned char old)
     xbase = opt->spacing + 0xA0;
     ybase = 0xC5 - (0xC4 - (opt->rows + hasq) * (h + 4) + 4) / 2;
     for (j = 0; j < 2; j++) {
-        if (sel[j] < 0)                 /* never true, but compiled (a jae over a jmp) */
+        if (sel[j] < 0)                 /* match: never true, but compiled (a jae over a
+                                           jmp) */
             continue;
         if (opt->count <= sel[j])
             continue;
@@ -343,9 +379,11 @@ void far selopt(struct ChrOpt far *opt, unsigned char new, unsigned char old)
     Transparency = 0;
 }
 
-/* Called jname_input in the target table, but this is FM Towns mousopt: it calls selopt,
-   mouse_getxy and mouse_get_input, and pickopt calls it on a mouse button. FM Towns
-   jname_input is the Japanese name entry and has no DOS counterpart. */
+/* Follows the mouse while a button is held, highlighting the answer under it. Returns
+   the answer released on, or -1 - cur when released over none. */
+/* name: called jname_input in the target table, but this is FM Towns mousopt: it calls
+   selopt, mouse_getxy and mouse_get_input, and pickopt calls it on a mouse button. FM
+   Towns jname_input is the Japanese name entry and has no DOS counterpart. */
 int far mousopt(struct ChrOpt far *opt, int cur)
 {
     int mx, my, h, w, sel, hstep, wstep, q;
@@ -385,6 +423,10 @@ int far mousopt(struct ChrOpt far *opt, int cur)
     return sel;
 }
 
+/* Gets one answer. For the name question it reads typed characters (up to 29, leading
+   spaces skipped, backspace deletes) until Enter with a name not empty. Otherwise the
+   mouse or the cursor keys move the selection and Enter or a click chooses; Escape or
+   Alt+X returns -1. */
 int far pickopt(struct ChrOpt far *opt)
 {
     int key;
@@ -498,6 +540,11 @@ int far pickopt(struct ChrOpt far *opt)
     return sel;
 }
 
+/* Runs the eight questions (see the file comment) and fills in the record: sex (which
+   also picks the portrait set, pictures 7 or 12), lefty, class with its attributes and
+   fixed skills, the skill picks, the portrait (body), easy, the name (at most 29
+   characters), and on "Yes" to keeping the character the final HP and mana. "No"
+   starts again. Returns 0 if Escape is pressed at the first question. */
 char far gen_char(unsigned char far *buf, unsigned char far *dat, struct ChrOpt far *opts)
 {
     int x, y, w, h;
@@ -624,7 +671,7 @@ restart:
             break;
         }
     }
-    done = get_string(0x310);
+    done = get_string(0x310);           /* "awakens . . ." */
     mouse_hide();
     set_cuts_ems(1);
     grSoftPageFlip();
@@ -656,6 +703,8 @@ int far move_chrpic(unsigned char far *p, int size, register int n)
     return size != 0;
 }
 
+/* Loads the chargen screen and its data and runs gen_char. A missing file is fatal
+   (error 5). */
 char far strt_chargen(void)
 {
     int n;
@@ -741,8 +790,9 @@ char far create_player(void)
     return r;
 }
 
-/* Not referenced in DOS and has no FM Towns counterpart. The name is provisional (IDA's
-   ovr101_18CB), chosen so that its tools/bssorder.py key puts it in the EXE's overlay stub order. */
+/* Puts obj in inventory slot slot, if there is an object. Not referenced in DOS. */
+/* name: has no FM Towns counterpart. The name is provisional (IDA's ovr101_18CB), chosen
+   so that its tools/bssorder.py key puts it in the EXE's overlay stub order. */
 void far AddObjIfAny_ovr101_18CB(struct Object far *obj, int slot)
 {
     if (obj != 0)

@@ -1,12 +1,44 @@
 /* target: seg043_3619 */
 /* opts: -mm -1 -G -O -d */
-/* The message scroll: DOS resident segment seg043_3619, in original order. Function names
-   are the originals from the FM Towns symbol table where the map confirms them.
-   set_mouse_in and do_main_scroll are identified here (not in the map) by exact
-   structural correspondence with FM Towns set_mouse_in_ and do_main_scroll_: see the
-   final report. draw_scroll has no FM Towns counterpart; it is probably a small
-   box-border helper that Watcom inlined into draw_scroll_ (the next FM Towns function,
-   which starts exactly where our segment ends). */
+/* The message scroll: the strip of text at the bottom of the game screen (and its
+   counterparts in conversations and the menus), printing to it with word wrap, colour and
+   pause escapes, scrolling it up a line, and its animated edges. DOS resident segment
+   seg043_3619, in original order. Function names are the originals from the FM Towns
+   symbol table.
+
+   Entry point: scroll_print(s) prints a far string to the current scroll (scroll, chosen
+   by do_main_scroll, do_npc_scroll or do_play_scroll) and returns scroll->start_line. The
+   text passes through four stages: scroll_print cuts it into pieces of at most 49
+   characters at spaces, scroll_print1 splits those at backslash escapes, scroll_print2 at
+   newlines, and scroll_print3 prints one piece, handling an escape at its start and
+   wrapping by word (scroll_wrap) when it does not fit. Escapes (only while scroll_esc is
+   set; SCROLLIO.C's wdialog clears it to echo typed text): \0 to \6 set the colour from
+   spec_col, \p and \P pause for 600 and 200 ticks or a click (SCROLLIO.C's
+   scroll_wait), \m forces the [MORE] prompt. A newline is not drawn: it sets
+   more_pending so the next piece starts a new line, scrolling the box (scroll_up) or
+   asking for [MORE] (SCROLLIO.C's scroll_more) when it is full. Only screen modes 1 and 4
+   (the 3D view and conversations) print; elsewhere scroll_print returns -1.
+
+   Data owned: the three Scroll records (main_scroll, the game's message scroll; npc_scroll,
+   a conversation's; menu_scroll, used in mode 4 by SCROLLIO.C's pick_scroll), the escape
+   colours, the current scroll and its mode, start_line and the edge animation phases.
+
+   The [MORE] rule: scroll->start_line counts the lines filled since the box was cleared,
+   and each scroll_print copies it to start_line, the number of older lines that may
+   scroll out of sight; each scroll_up uses one. When a new line is needed in a full box
+   and none is left, scroll_more shows [MORE] and waits. So (inferred) the player is only
+   stopped when the current message's own lines would scroll away unread. The scroll's field names in ui.h
+   do not say what they hold; see struct Scroll there.
+
+   Neighbours: game_sprint and the other GAMESTRN.C printers end here; SCROLLIO.C has the
+   interactive side (the [MORE] prompt, typed answers, clearing).
+
+   Name: descriptive (the message scroll: scroll_print, draw_scroll). */
+
+/* name: set_mouse_in and do_main_scroll were first identified by exact structural
+   correspondence with FM Towns set_mouse_in_ and do_main_scroll_ (see their comments);
+   map/functions.tsv now lists both as anchors. draw_scroll is FM Towns draw_scroll_, the
+   same two rectangles. The last function, seg043_3619_669, has no FM Towns counterpart. */
 
 #include <dos.h>
 #include <string.h>
@@ -14,9 +46,9 @@
 #include "sys.h"
 #include "ui.h"
 
-/* This file's _BSS, DS:34B0..34B3 (seg044's starts at 34B4), by name: scroll 83,
-   mouse_in_scroll 653. It cannot start any lower than 34AC: the bytes below run up from
-   sound_fpage (key 363), which seg042 uses. */
+/* This file's _BSS, DS:34B0..34B3 (seg044's starts at 34B4). */
+/* match: laid out by name: scroll 83, mouse_in_scroll 653. It cannot start any lower
+   than 34AC: the bytes below run up from sound_fpage (key 363), which seg042 uses. */
 struct Scroll near *scroll;                      /* DS:34B0, FM Towns _scroll */
 unsigned char mouse_in_scroll;                   /* DS:34B2, FM Towns _mouse_in_scroll */
 /* This file's _DATA, DS:0938..098D, in definition order (seg042's data ends at 0937, odd;
@@ -45,17 +77,21 @@ void far scroll_clear(int which);
 void far rectangle(int top, int mid, int bottom, int count);
 void far scroll_wait(int ticks, int also);
 
-/* Not anchored in the map; the target table keeps the IDA name. This is FM Towns
-   set_mouse_in_ by exact correspondence (same four Scroll fields, same order, into the
-   same mouse_check_reg_ call, storing the result to the same mouse_in_scroll byte). */
+/* Whether the cursor touches the current scroll's box, so printing must hide it first. */
+/* name: not anchored in the map when named; the target table keeps the IDA name. This is
+   FM Towns set_mouse_in_ by exact correspondence (same four Scroll fields, same order,
+   into the same mouse_check_reg_ call, storing the result to the same mouse_in_scroll
+   byte). */
 void far set_mouse_in(void)
 {
     mouse_in_scroll = mouse_check_reg(scroll->top, scroll->y0, scroll->bottom, scroll->x0);
 }
 
-/* Not anchored either. This is FM Towns do_main_scroll_: it sits immediately before
-   do_npc_scroll_/do_play_scroll_ there, and sets the same three fields (mode 0,
-   didMouseInput 1, scroll pointer) that do_npc_scroll_/do_play_scroll_ set with 1/2. */
+/* Selects the game's message scroll for printing (scroll_mode 0). */
+/* name: not anchored either when named. This is FM Towns do_main_scroll_: it sits
+   immediately before do_npc_scroll_/do_play_scroll_ there, and sets the same three fields
+   (mode 0, didMouseInput 1, scroll pointer) that do_npc_scroll_/do_play_scroll_ set with
+   1/2. */
 void far do_main_scroll(void)
 {
     scroll_mode = 0;
@@ -77,6 +113,9 @@ void far do_play_scroll(void)
     scroll = &menu_scroll;
 }
 
+/* Advances the message scroll's rolled-paper edges, left and right of the text, by one of
+   five animation frames (pictures 0x20AB.. and 0x20B0..); called each time the text
+   scrolls, so the paper appears to roll. */
 void far draw_edges(void)
 {
     pic_to_screen(edge_phase + 0x20AB, scroll->top - 4, 0x1E, 0x1C, 4);
@@ -86,6 +125,7 @@ void far draw_edges(void)
         edge_phase = 0;
 }
 
+/* The same for the conversation scroll's edges: three tiles each side, six frames. */
 void far draw_conv_edges(void)
 {
     register int i;
@@ -99,6 +139,8 @@ void far draw_conv_edges(void)
         conv_edge_phase = 0;
 }
 
+/* Scrolls the text up by one line height (the box's contents above the last line are
+   moved up), clears the freed line in the paper colour 0x71 and rolls the edges. */
 void far scroll_up(int n)
 {
     vcopy(scroll->top, scroll->last_y - cur_font->height,
@@ -114,7 +156,7 @@ void far scroll_up(int n)
 
 int far scroll_print(char far *s)
 {
-    /* 0x31 (49) bytes are copied into this buffer below; it is declared two bytes short
+    /* match: 0x31 (49) bytes are copied into this buffer below; it is declared two bytes short
        of that because `found`, as a register variable, still reserves a two-byte spill
        slot right after it, and the true end of the 49-byte region is that slot, used
        below as `sentinel`. Matched against the EXE's frame size (sub sp,36h) and the
@@ -124,7 +166,7 @@ int far scroll_print(char far *s)
     register int remaining;
     char saved;
     int chunklen;
-    char pad1;                 /* unused; the EXE reserves it too (frame is 0x36 bytes) */
+    char pad1;                 /* match: unused; the EXE reserves it too (frame 0x36) */
     char sentinel;
 
     if (scrmode != 1 && scrmode != 4)
@@ -167,6 +209,9 @@ int far scroll_print(char far *s)
     return scroll->start_line;
 }
 
+/* Splits at backslash escapes, so each escape starts a piece. flag says whether the text
+   continues after this piece (scroll_print passes 1 for all but the last 49-character
+   chunk); a piece followed by more text, or by \m, is printed with 1. */
 void far scroll_print1(char *text, int flag)
 {
     char *di;
@@ -185,6 +230,7 @@ void far scroll_print1(char *text, int flag)
     scroll_print2(di, flag);
 }
 
+/* Splits at newlines, keeping each newline at the end of its piece. */
 void far scroll_print2(char *text, int flag)
 {
     char saved, unused;
@@ -204,6 +250,13 @@ void far scroll_print2(char *text, int flag)
     scroll_print3(di, flag);
 }
 
+/* Prints one piece. A leading escape is acted on first (\P waits 200 ticks, \p falls
+   into it with 400 more, so 600). If the previous piece ended a line, a new line is
+   started: when the box is full, either the text scrolls up (while start_line - flag is
+   not negative, that is while more lines may pass without the player seeing them) or
+   the [MORE] prompt is shown. A piece too wide for the rest of the line goes to
+   scroll_wrap; otherwise it is drawn, a final newline being dropped and remembered in
+   more_pending. */
 void far scroll_print3(char *text, int flag)
 {
     int width;
@@ -272,6 +325,9 @@ void far scroll_print3(char *text, int flag)
     }
 }
 
+/* Word wrap: prints as much of the text as fits before the right edge, breaking at the
+   last space (or, for a single word longer than a line, mid-word on a fresh line), and
+   continues on new lines, dropping the spaces at each break. */
 void far scroll_wrap(char *text, int flag)
 {
     char *end;
@@ -316,6 +372,10 @@ void far scroll_wrap(char *text, int flag)
     }
 }
 
+/* Clears a scroll box to the paper colour 0x71. Despite the parameter names the four
+   values are the box's left x, top y, right x and bottom y, as the graphics library's
+   rectangle takes them (SCROLLIO.C's init_scroll passes 0x10, 0x1E, 0xDF, 1). With flag
+   set a frame in colour 1 is drawn first, 14 pixels in on the left. */
 void far draw_scroll(int x, int y, int w, int h, char flag)
 {
     if (flag) {
@@ -326,10 +386,11 @@ void far draw_scroll(int x, int y, int w, int h, char flag)
     rectangle(x, y, w, h);
 }
 
-/* The segment's last function (342C:0669). Nothing in UW2.EXE calls it and FM Towns has no
-   counterpart, so the name is provisional. It draws the four corner pictures 1068h-106Bh
-   transparent, then two nested boxes and a filled rectangle. It belongs to this file: the
-   EXE's relocations for it run in one descending sequence with this file's last record. */
+/* The segment's last function (342C:0669). Nothing in UW2.EXE calls it. It draws the four
+   corner pictures 1068h-106Bh transparent, then two nested boxes and a filled rectangle,
+   probably a framed text box. It belongs to this file: the EXE's relocations for it run
+   in one descending sequence with this file's last record. */
+/* name: FM Towns has no counterpart, so the name is provisional. */
 extern unsigned char far Transparency;          /* 370D:0DC5 */
 
 void far seg043_3619_669(int x, int y, int r, int b)

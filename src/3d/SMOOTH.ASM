@@ -3,13 +3,30 @@
 ;
 ; smooth_closure and smooth_over.
 ;
+; What it does in the game: Gouraud-shaded polygons for the 3D view. INTERP.ASM's do_closure
+; jumps to smooth_closure when the current fill routine (ds:14A6h) is seg003's Gouraud
+; routine, which do_goursurf, do_uwsurf and do_transsurf select. smooth_closure is
+; do_closure with a shade per vertex: it projects the vertex buffer, writes each vertex's
+; shade byte (point +7, set by do_setshade or do_uwshade) beside it, and calls seg003's
+; polygon routine; its clippers (seg004_0849_7FC, 92E, A64, B98, the counterparts of
+; INTERP's clip_top, clip_bot, clip_right, clip_left) interpolate the shade at each new
+; vertex as well as the position. smooth_over is a separate routine that nothing in the EXE
+; calls.
+;
+; Data: none of its own apart from L0D7F, the word the divide overflow handler saves BP in.
+; Output goes to seg_370D: the projected vertices at 415Eh and their shades at 55EEh, one
+; word apart.
+;
+; name: descriptive (map/filenames.tsv: "3D library module 3: smooth_closure, smooth_over");
+; the two names are FM Towns'.
+;
 ; SEG004 split into its original modules: this is module 3 of 14, +600..+DB0 of the segment
 ; (file 97C0h), a module of the second library (UWLIB.LIB).
 ; Procs: smooth_closure, seg004_0849_798, seg004_0849_7FC, seg004_0849_92E, seg004_0849_A64,
 ; seg004_0849_B98, smooth_over, seg004_0849_D83.
-; Evidence for the bounds: starts on a paragraph after 5 zero bytes following a jmp: TLINK's
-; padding before a paragraph-aligned module (TASM 2.0 pads `align 16` with 87 DB/90, not
-; zeros).
+; match: evidence for the bounds: starts on a paragraph after 5 zero bytes following a jmp:
+; TLINK's padding before a paragraph-aligned module (TASM 2.0 pads `align 16` with 87 DB/90,
+; not zeros).
 ; Its relocations are entries 2319-2327 of UW2.EXE's relocation table.
 
         .386
@@ -41,6 +58,13 @@ SEG004_TEXT segment para public use16 'CODE'
         public  _smooth_over
 
 ; seg004_0849_600  (+600)
+; Draws the Gouraud polygon in the vertex buffer (ds:1B8h..1B6h). Raises int 2 if the buffer
+; has run past 0B1Ah. Codes AND nonzero: skipped. Codes OR zero: projected (the add
+; immediates at seg004_0849_644 and 64F are the screen centre, patched by render_3d) with
+; the shades copied to seg_370D:55EEh, then drawn with BP = ds:[14A8h]. Codes OR with bit 80h
+; (behind the eye): clipped against top, bottom, left and right in turn, retrying after each.
+; Otherwise projected with overflow checks (immediates at 6B2 and 6C2), drawn with BP =
+; ds:[14A6h], or clipped on overflow (L079C). Continues with the next opcode.
 _smooth_closure proc near
         cmp     word ptr ds:[1B6h],0B1Ah
         jle     short L060A
@@ -213,6 +237,11 @@ L0792:
 _smooth_closure endp
 
 ; seg004_0849_798  (+798)
+; Recovery entry for the divide overflow during smooth_closure's checked projection (it is
+; stored at ss:[5A5h]): drops the int 0 frame, then (L079C) clips against right, left, top
+; and bottom as the codes require and projects again; gives up when nothing is left,
+; restoring DS and ES to seg052_519C. The counterpart of INTERP's clip_overflow and
+; do_3d_clip.
 _seg004_0849_798 proc near
         sti
         add     sp,6
@@ -256,6 +285,8 @@ L07EE:
 _seg004_0849_798 endp
 
 ; seg004_0849_7FC  (+7FC)
+; Clips the Gouraud polygon against y = z (code bit 4), like INTERP's clip_top, also
+; interpolating each new vertex's shade (+7).
 _seg004_0849_7FC proc near
         mov     byte ptr ds:[14CAh],0
         mov     byte ptr ds:[14CBh],0FFh
@@ -395,6 +426,7 @@ L0929:
 _seg004_0849_7FC endp
 
 ; seg004_0849_92E  (+92E)
+; Gouraud clip against y = -z (code bit 8), like clip_bot.
 _seg004_0849_92E proc near
         mov     byte ptr ds:[14CAh],0
         mov     byte ptr ds:[14CBh],0FFh
@@ -536,6 +568,7 @@ L0A5F:
 _seg004_0849_92E endp
 
 ; seg004_0849_A64  (+A64)
+; Gouraud clip against x = z (code bit 2), like clip_right.
 _seg004_0849_A64 proc near
         mov     byte ptr ds:[14CAh],0
         mov     byte ptr ds:[14CBh],0FFh
@@ -677,6 +710,7 @@ L0B93:
 _seg004_0849_A64 endp
 
 ; seg004_0849_B98  (+B98)
+; Gouraud clip against x = -z (code bit 1), like clip_left.
 _seg004_0849_B98 proc near
         mov     byte ptr ds:[14CAh],0
         mov     byte ptr ds:[14CBh],0FFh
@@ -821,6 +855,12 @@ _seg004_0849_B98 endp
 
 ; smooth_over  (+CD0): FM smooth_over, the same loop (copy the projected x and y, then
 ; an intensity from the vertex normal's length)
+; In: CX = the vertex count. For each 14-byte record at seg_370D:658h it copies the screen x
+; and y to 415Eh, takes the three words at +8 (each >> 5), and computes the length of that
+; vector by four Newton steps from 64; the shade is the low bytes of the length and [64Ch]
+; multiplied, >> 6, plus [650h] (at least 0) plus [64Eh], at most 15. Then it points seg003's handler pair at 0BC3h/0BC5h
+; at 0BF2h/0CD9h (as do_transsurf does) and calls the polygon routine with BP =
+; _seg003_0272_5959 and CX = ds:[0C7FCh] of seg052_519C. Nothing in the EXE calls it.
 _smooth_over proc near
         mov     ax,seg seg_370D
         mov     es,ax
@@ -902,14 +942,18 @@ L0D50:
         ret
 _smooth_over endp
 
-; The opcode table's do_uwsetup slot points here, at the word where the divide overflow
-; handler below saves BP (FM do_uwsetup is the handler itself). The table is in the data
-; segment, so this is the only trace of it in the module.
+; name: the opcode table's do_uwsetup slot (0DAh) points here, at the word where the divide
+; overflow handler below saves BP (FM do_uwsetup is the handler itself). The table is in the
+; data segment, so this is the only trace of it in the module. An opcode 0DAh would execute
+; this data, so UW2's programs presumably never use it.
 do_uwsetup:
 L0D7F   dw      0
         dw      0
 
 ; seg004_0849_D83  (+D83): divide overflow handler, installed by the smooth shading code
+; (stored at ss:[5A5h] while clipping). Skips the 2-byte idiv, then retries the divide with
+; the dividend halved (sar dx; rcr ax), or returns 7FFFh when the halved high word equals CX
+; (a partial overflow check).
 _seg004_0849_D83 proc far
         mov     word ptr cs:L0D7F,bp
         mov     bp,sp

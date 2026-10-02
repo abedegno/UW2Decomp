@@ -1,8 +1,36 @@
 ; /* target: seg004_0849_4E10 */
 ; /* opts: /ml */
 ;
-; _asm_project_polygon, _asm_texture_map_1, the divide overflow handler,
-; asm_texture_map_from_draw_poly, compute_lighting_value and compute_square_root_32.
+; The front end of the texture mapper: from a polygon the model interpreter has collected to one
+; handed to _asm_texture_map or _asm_texture_map_v. TMAPOPS.ASM's opcode handlers build a
+; polygon from the model's points and call asm_texture_map_from_draw_poly, which turns it into
+; 32-byte vertex records (the layout is in CLIP.ASM), chooses perspective or linear mapping and
+; the horizontal or vertical (wall) mapper, and calls _asm_texture_map_1. That clips (CLIP.ASM),
+; projects each vertex and gives it a distance shade (_asm_project_polygon,
+; compute_lighting_value), and calls the mapper. A divide overflow anywhere in this abandons the
+; polygon: the module installs its own int 0 handler for the duration.
+;
+; Data (FD58, DS; names from FM Towns where it uses the same variable):
+;   DS:2470 scrh, 2472 scrw   the projection's y and x scale, half the view's height and width
+;                             (the span clamps use twice them as the screen size; the EXE's
+;                             initial values are 100 and 160, a 320x200 screen)
+;   DS:2474 biasx, 2476 biasy the screen position of the view's centre
+;   DS:2688 shadem            nonzero: shade the texels through lightabs
+;   DS:C788 mapper_rtn, C800 wmap_bitmap_offset   see L5072
+;   DS:CCE4 biasy << 16, for the projection loop
+;   DS:CCE8 v_bitmap_width_minus_1, CCEA the row mask (FM v_bitmap_pixel_size), CCEC
+;           v_log_bitmap_width
+;   DS:CCEE global_vertical_scan_flag, CCF0 global_floor_or_ceiling_flag
+;   DS:CCF2 the texture descriptor _asm_texture_map reads: width, height, pixel offset (0),
+;           segment
+;   DS:CCFC the vertex records (FM _rv2+0Ch), at most 8
+;   DS:CEFC mk_lastwid, the screen row stride: seg_370D:0AEE (FM lastwid) + 2
+;   seg_370D:064C _smooth_div, 064E _smooth_base, 0650 _smooth_lowpass: the shading constants
+;   CS:L4F83 the vertex count; CS:_divide_overflow_has_occurred; CS:old_divide_overflow_handler
+;
+; name: descriptive (module 10 of seg004, named after _asm_project_polygon). All the public
+; routines have FM Towns names except the handler install and restore (FM Towns has them too,
+; unnamed, at divide_overflow_handler+64h and +79h).
 ;
 ; SEG004 split into its original modules: this is module 10 of 14, +4E10..+51B0 of the segment
 ; (file DFD0h), a module of the second library (UWLIB.LIB).
@@ -38,6 +66,13 @@ SEG004_TEXT segment para public use16 'CODE'
         public  _seg004_0849_4F73
 
 ; seg004_0849_4E10  (+4E10)
+; _asm_project_polygon: perspective projection and shading of a polygon's vertices.
+;   in:  SI = vertex records, CX = count
+;   out: each record's sx = x * scrw / z + biasx and sy = y * scrh / z + biasy (16.16, sy
+;        clamped at 0), and l = compute_lighting_value. Registers preserved except EAX, EDX.
+; The multiply is by the integer scale and the 16.16 product is widened to 32.32 before the
+; divide by z, so the result stays 16.16. A z near 0 can overflow the divide; the int 0 handler
+; then sets _divide_overflow_has_occurred and _asm_texture_map_1 drops the polygon.
 __asm_project_polygon proc near
         push    cx
         push    si
@@ -82,6 +117,16 @@ L4E71:
 __asm_project_polygon endp
 
 ; seg004_0849_4E8A  (+4E8A)
+; _asm_texture_map_1: clip, project and map one polygon. Near call, arguments on the stack:
+;   [bp+4] texture descriptor (DS:CCF2), [bp+6] vertices, [bp+8] count, [bp+0Ah] mapping
+;   type (2 perspective, otherwise linear), [bp+0Ch] (0 from the only caller), [bp+0Eh] shadem,
+;   [bp+10h] 1
+; With type 2 or [bp+0Ch] = 0 it goes on; [bp+0Ch] above 0 returns at once and below 0 executes
+; int 2 (the debug break; see GRMISC.ASM). It clips unless accept_flag (DS:25D3) is set, stops
+; if a divide has overflowed, projects, checks again, and calls _asm_texture_map_v when
+; global_vertical_scan_flag is set and _asm_texture_map otherwise, with (descriptor, clipped
+; vertices, count, type, shadem, 1). _divide_overflow_has_occurred, the byte after the code,
+; lives in the code segment (CS-relative) so the int 0 handler can set it whatever DS holds.
 __asm_texture_map_1 proc near
         push    bp
         mov     bp,sp
@@ -133,10 +178,20 @@ L4EF9:
         int     2
         nop
         jmp     L4EF4
-_divide_overflow_has_occurred db 0     ; FM _divide_overflow_has_occurred
+_divide_overflow_has_occurred db 0     ; name: FM Towns _divide_overflow_has_occurred
 __asm_texture_map_1 endp
 
 ; seg004_0849_4EFF  (+4EFF)
+; divide_overflow_handler: the int 0 handler while a polygon is mapped. cRender (C3DENTRY.ASM)
+; points int 0 at dseg062_62a6:05A0, which passes control to the seg004 offset held at 05A5 (FM
+; overflow_ptr; see INSTANCE.ASM); _seg004_0849_4F5C puts this handler's offset there. It sets
+; _divide_overflow_has_occurred and resumes after the faulting divide with EAX = 30000000h. To
+; find the next instruction it skips a 66h operand-size prefix and any segment prefixes (36h,
+; 2Eh, 3Eh, 26h), then the opcode and its ModRM byte: ModRM 3Eh (idiv with a direct 16-bit
+; address) skips two more bytes, mod 01 one more (an 8-bit displacement), mod 00 and mod 11
+; none. Mod 10 is also given one more byte, though in 16-bit addressing it carries a 16-bit
+; displacement; no divide in these modules uses that form. Any other ModRM high nibble executes
+; int 2. Only the div and idiv forms (reg field 6 or 7) can reach the tests that succeed.
 _divide_overflow_handler proc far
         push    bp
         mov     bp,sp
@@ -189,10 +244,13 @@ L4F4B:
         mov     eax,30000000h
         pop     bp
         iret
-old_divide_overflow_handler dw 0       ; FM old_divide_overflow_handler: the handler it replaced
+old_divide_overflow_handler dw 0       ; name: FM Towns old_divide_overflow_handler; holds the handler offset it replaced
 _divide_overflow_handler endp
 
 ; seg004_0849_4F5C  (+4F5C)
+; Installs divide_overflow_handler: saves the offset at dseg062_62a6:05A5 in
+; old_divide_overflow_handler and puts the handler's offset there. Called at the start of
+; asm_texture_map_from_draw_poly.
 _seg004_0849_4F5C proc near
         push    es
         mov     ax,seg dseg062_62a6
@@ -205,6 +263,8 @@ _seg004_0849_4F5C proc near
 _seg004_0849_4F5C endp
 
 ; seg004_0849_4F73  (+4F73)
+; Restores the int 0 target offset _seg004_0849_4F5C saved. L4F83, the word after it, is the
+; polygon's vertex count (FM _rv2+20Ch).
 _seg004_0849_4F73 proc near
         push    es
         mov     ax,seg dseg062_62a6
@@ -217,6 +277,20 @@ L4F83   dw      0
 _seg004_0849_4F73 endp
 
 ; seg004_0849_4F85  (+4F85)
+; asm_texture_map_from_draw_poly: map one polygon the model interpreter built (called by
+; TMAPOPS's _seg004_0849_3F77).
+;   in:  BX = texture descriptor, 8 bytes: width (a power of 2), width * height - 1, segment,
+;        (height - 1) * width
+;        SI = polygon buffer of 12-byte vertices: x, y, z (integer view coordinates), the clip
+;        code word, u (8.8 texel column), v (texel offset, row * width)
+;        CX = vertex count; more than 8 executes int 2 and keeps 8
+;   out: nothing; all registers preserved (pusha/popa)
+; It fills the descriptor and size variables (CCE8 .. CCF8, CEFC) and writes the vertex records
+; at DS:CCFC last to first, so their order is reversed. x, y and z become 16.16 with no
+; fraction; u and v become the texel column and row (u's integer part, v / width) plus half a
+; texel. L5072 classifies the polygon; the result goes to global_vertical_scan_flag and
+; global_floor_or_ceiling_flag, and the polygon to _asm_texture_map_1 with shadem (DS:2688) as
+; the shading flag. Its own divide overflow handler is installed for the duration.
 _asm_texture_map_from_draw_poly proc near
         pusha
         call    _seg004_0849_4F5C
@@ -306,6 +380,18 @@ L4FF6:
         call    _seg004_0849_4F73
         popa
         ret
+; L5072, the classifier (L5071 is its early return). in: SI = records, CX = count. out: AX =
+; mapping type, CX = 0, BX = vertical, BP = floor or ceiling.
+;
+; If every vertex has the same integer y, the polygon is parallel to the view's x-z plane, a
+; floor or ceiling while the view is level (BP = 1): perspective (AX = 2), horizontal spans.
+; Otherwise it is perspective when the nearest z is negative or the farthest z is more than
+; twice (nearest + 1), and linear (AX = 0) when the depth varies less than that. Then, if
+; mapper_rtn (C788) equals wmap_bitmap_offset (C800, initially 20Fh), the polygon came from one
+; of the wall opcodes (do_wtmap, do_gwtmap, do_compact_wtmap ...), and it is drawn in vertical
+; columns (BX = 1) with linear mapping: down a column of an upright wall the depth does not
+; change while the view is not pitched. That reading of "w" as wall rests on FM Towns' names
+; wmap_bitmap and start_wmapbm; probable.
 L5071:
         ret
 L5072:
@@ -369,6 +455,16 @@ L50DF:
 _asm_texture_map_from_draw_poly endp
 
 ; seg004_0849_50E0  (+50E0)
+; compute_lighting_value: a vertex's shade from its distance to the eye.
+;   in:  SI = vertex record (view space x, y, z)
+;   out: EAX = shade, 16.16, between 0 and 15.0; EDX changed, ECX, EBX, ESI kept
+; d = sqrt(x*x + y*y + z*z) (16.16); shade = (d >> 5) * _smooth_div >> 6, plus
+; _smooth_lowpass << 16, clamped at 0 if negative, plus _smooth_base << 16, capped at 0F0000h.
+; The three constants are words in seg_370D (064C, 064E, 0650; FM Towns names) that set_light
+; (LIGHTING.C) reads from SHADES.DAT for the current light level; VIEW3D.C and GAMESORT.C work
+; out the same formula in C. The shade selects a row of lightabs (PGCACHE.ASM), which is loaded
+; from LIGHT.DAT; in the copy built into the EXE row 0 leaves a colour alone and row 15 maps
+; every colour to 0, so a larger shade is darker.
 _compute_lighting_value proc near
         push    ecx
         push    ebx
@@ -414,6 +510,13 @@ L5152:
 _compute_lighting_value endp
 
 ; seg004_0849_515A  (+515A)
+; compute_square_root_32: the square root of a 64-bit number.
+;   in:  EDX:EAX
+;   out: EAX = root; ESI, EBX and ECX changed, EDX kept
+; Newton's method: the first estimate is (EDX + 1) << 12, and it iterates estimate = (estimate +
+; n / estimate) / 2 until an iteration moves the estimate by less than about 40h. If that first
+; estimate overflows it starts from EDX + 1 instead, and returns 0FFFFFFFFh at once when the low
+; word of EDX + 1 is 0 (jcxz tests CX only).
 _compute_square_root_32 proc near
         push    edx
         mov     esi,eax

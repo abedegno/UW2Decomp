@@ -5,7 +5,20 @@
    (roaming sight, attaching the view to an object, the crystal ball, the moongate
    vortex, looking up and down). The whole of DOS overlay ovr143, in original order.
    Function and global names are the originals from the FM Towns symbol table where it
-   has them; the source file's own name is not known. */
+   has them.
+   Entry points: init_player (UWEDIT.C's init_world, once at start-up) makes the player
+   object critdata[1], points player at PlayerDat (the struct Player record that
+   PLAYDATA.C loads and saves), and registers every key and mouse binding of the game and
+   conversation screens. mous_player and demous_player (the 3D view's start and exit in
+   UWEDIT.C, and the view's resizing) set up the view's click region and the eight cursor
+   regions round its edges. The camera functions (home_cam, move_cam, attach_eye,
+   crystal_ball, the moongate vortex, chg_plyp) are called from the spells, the debug
+   keys and the input handlers.
+   Data owned: PlayerDat (the player record's storage), MoveCrits, nextstep, watertime,
+   IsJoy, the 3D view's rectangle (PLeft, PBot, PWid, PHgt), curvrad and the region
+   handles.
+   Name: original (init_player is in System Shock's PLAYER.C, setting up the player in
+   both). */
 
 #include "combat.h"
 #include "conv.h"
@@ -19,10 +32,11 @@
 #include "ui.h"
 #include "view3d.h"
 
-/* The file's _DATA starts with these, DS:19DC to DS:19E6, where ovr142's data ends: the
-   string after them is at the odd DS:19E7, so this file's word-aligned _DATA starts earlier,
-   and watertime (to DS:19E6) began at DS:19E3, nextstep at DS:19DF, PMsHndle at DS:19DD,
-   leaving DS:19DC. FM Towns has the four together too, as PMsHndle, MoveCrits, nextstep,
+/* match: the file's _DATA starts with these, DS:19DC to DS:19E6, where ovr142's data
+   ends: the string after them is at the odd DS:19E7, so this file's word-aligned _DATA
+   starts earlier, and watertime (to DS:19E6) began at DS:19E3, nextstep at DS:19DF,
+   PMsHndle at DS:19DD, leaving DS:19DC. */
+/* name: FM Towns has the four together too, as PMsHndle, MoveCrits, nextstep,
    watertime. */
 unsigned char MoveCrits = 1;            /* seg035 moves critters only while set */
 int PMsHndle = 0;                       /* input_addmouse's handle for the 3D view */
@@ -34,11 +48,13 @@ extern struct Inplist near *inplist;
 extern unsigned vort_rad;
 extern unsigned vort_timer;
 
-/* This file's _BSS, DS:8298..8631 (ovr142's ends at 8297, ovr147's starts at 8632), laid
-   out by name (tools/bssorder.py): IsJoy 1, region_south 18, PHgt 136, PLeft 192, rgnh_ul 218,
-   rgnh_left 226, PlayerDat 408, curvrad 555, region_br 706, PBot 712, region_dl 722,
-   region_up 858, PWid 920, hrgn_ur 976, rgnh_r 1002. The eight are the handles of the cursor
-   regions over the 3D view: FM Towns keeps them as statics, so they are static here, with
+/* This file's _BSS, DS:8298..8631 (ovr142's ends at 8297, ovr147's starts at 8632). The
+   eight static ints are the handles of the cursor regions over the 3D view. PlayerDat is
+   the storage of struct Player (0x37D bytes, one spare). */
+/* match: laid out by name (tools/bssorder.py): IsJoy 1, region_south 18, PHgt 136, PLeft
+   192, rgnh_ul 218, rgnh_left 226, PlayerDat 408, curvrad 555, region_br 706, PBot 712,
+   region_dl 722, region_up 858, PWid 920, hrgn_ur 976, rgnh_r 1002. */
+/* name: FM Towns keeps the region handles as statics, so they are static here, with
    provisional names chosen for their keys. */
 char IsJoy;
 static int region_south;                /* DS:829A, the region below the view */
@@ -69,8 +85,10 @@ void far npc_barter(int a);
 void far play_barter(int a);
 void far mous_in_3d(int a);
 
-/* Resets the player object. FM Towns calls it from init_player_structure; DOS from
-   init_player, which holds that function's body. */
+/* Resets the player object: no links, whoami 0xFD, the adventurer's item id, quality
+   and owner zero. */
+/* name: FM Towns calls it from init_player_structure; DOS from init_player, which holds
+   that function's body. */
 void far InitPlayerRec(void)
 {
     ThePlayer->ol.f.link = 0;
@@ -86,6 +104,24 @@ void far InitPlayerRec(void)
     ThePlayer->id = ThePlayer->id & 0xFE00 | ITEM_ADVENTURER;
 }
 
+/* Sets up the player at start-up: the player object is critdata[1], on level 1, with the physics square handler
+   player_sqhandler; player points at PlayerDat; playerdat is the creature type record of
+   the adventurer, whose average hit points are the starting HP; the player's name gets
+   a string handle in block STRBLK_PLAYER. Then the bindings, each with the input modes
+   it works in (third argument: 1 the game, 4 a conversation, others combinations):
+   w a s d z c x e q j J  parse_playin's movement and jump commands;
+   A D S X W and the three arrows over the view  player_simple_move;
+   1 2 3                  change the view's pitch (chg_plyp: -1, centre, +1), and in
+                          a conversation the answer to pick (conv_play_menu);
+   special keys 0x80 to 0x89  the icon panel, pull_chain, sleep, use a skill (2, which
+                          player_use_skill turns into SKILL_TRACK), cast;
+   Ctrl+S R M F D Q       do_option_shortcut (save, restore, music, sound, detail, quit,
+                          inferred from the letters);
+   p . ;                  attack (player_attack 9, 3 and 6);
+   Tab and the cursor keys  keyboard_mouse, the mouse from the keyboard;
+   Escape and the barter areas  conversation screen;
+   Alt+H                  toggles mouse_hand;
+   Alt with 0x86 and 0x87  show_version and report_loc. */
 void far init_player(void)
 {
     nextstep = 0;
@@ -214,8 +250,8 @@ void far demous_player(void)
     undefineMouseRegion(region_br);
 }
 
-/* Prints the level and the player's tile, each as two octal digits. FM Towns has a
-   sprintf version at the same place. */
+/* Prints the level and the player's tile, each as two octal digits. */
+/* name: FM Towns has a sprintf version at the same place. */
 void far report_loc(void)
 {
     char buf[8];
@@ -236,7 +272,7 @@ void far report_loc(void)
 
 void far show_version(void)
 {
-    game_sprint(0x123);
+    game_sprint(0x123);                 /* "Underworld II: Labyrinth of Worlds v" */
     scroll_print("F1.99S\n");
 }
 
@@ -362,7 +398,7 @@ void far crystal_ball(struct Object far *obj, int x, int y)
 {
     char automap;
 
-    if (player->skills[SKILL_SEARCH] == 0x2D)
+    if (player->skills[SKILL_SEARCH] == 0x2D)   /* why 45 in search stops it is not known */
         return;
     campos[0] = (x << 8) + (OBJ_FINEX(obj) << 5);
     campos[1] = (y << 8) + (OBJ_FINEY(obj) << 5);
@@ -380,9 +416,12 @@ void far crystal_ball(struct Object far *obj, int x, int y)
     FixPlayerEquips();
 }
 
-/* Spins the view into the moongate at tile (32, 32). Not in the FM Towns build; the name is
-   provisional (IDA's LaunchPlayerAtMoongate_ovr143_E09), chosen so that its tools/bssorder.py
-   key puts it in the EXE's overlay stub order. */
+/* Spins the view into the moongate at tile (32, 32): the camera is detached, the
+   distance and angle to the gate found, and 64 frames are drawn with the vortex angle
+   stepping by 0xCCB each, then the view goes back to the player. */
+/* name: not in the FM Towns build; the name is provisional (IDA's
+   LaunchPlayerAtMoongate_ovr143_E09), chosen so that its tools/bssorder.py key puts it in
+   the EXE's overlay stub order. */
 void far Vortex_ovr143_E09(void)
 {
     long xd, yd;
@@ -418,7 +457,8 @@ void far chg_plys(int *val, int dir, int limit)
     }
 }
 
-/* Rolls the view. Not in the FM Towns build; the name is provisional (IDA's
+/* Rolls the view (the camera's, or the player's bank). */
+/* name: not in the FM Towns build; the name is provisional (IDA's
    ChangeCameraRoll_ovr143_F58), chosen so that its key puts it in the EXE's stub order. */
 void far RollView_ovr143_F58(int step)
 {
@@ -428,6 +468,8 @@ void far RollView_ovr143_F58(int step)
         chg_plys(&PlayerBank, step, 0);
 }
 
+/* Changes the pitch by step (the 1, 2 and 3 keys; 0 recentres), within 0x1000 either
+   way. */
 void far chg_plyp(int step)
 {
     if (MoveCamera)

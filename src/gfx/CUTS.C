@@ -5,15 +5,51 @@
    as time-based tasks, subtitles, and the LBACK backgrounds. The whole of DOS overlay ovr108,
    in original order.
 
-   Names are the FM Towns originals where it has the function, matched by position among the
+   show_cutscene(n) plays cutscene n: numbers below 100h fill the screen (the intro, the
+   dreams, the ending, the credits), numbers from 100h play in the 3D view's window (pictures shown by
+   looking at or using an object, LOOK.C and USEITEMS.C, and by spells). A cutscene is a
+   series of files CUTS\csNNN.nXX (NNN and XX written in octal): .n00 is the opcode script,
+   and .n01 onwards are Deluxe Paint Animator LPF animations played one after another.
+   show_anm reads the first 0x400 bytes of the script into stdat (the far work area,
+   struct Stdat) and loops over the LPF files; cuts_process_anm opens one, reads its
+   0xB00-byte header (struct AnmHdr), and plays its large pages with cuts_process_lp, which
+   draws each record (frame) and runs the script's opcodes for that frame.
+
+   The script is a stream of words: a record is the frame number it fires on, the opcode,
+   then the opcode's arguments. cuts_process_opcodes runs every record for the current
+   frame through cuts_dispatch; each cutsop_ handler returns how many argument words it
+   used, so the stream can be stepped without a length field. Frame 997 (3E5h) runs before
+   a file's LPF is opened and frame 999 (3E7h) after its last frame. Opcode 0 to 27 are, in
+   cuts_dispatch's order: txt, erase, func, pause, skip, next, end, loop, data, fadeout,
+   fadein, jump, punt, say, wait, clang, palrange, palfade, palset, palsimplefade, vscreen,
+   focus, lback, pan, splity, music, test, wait_for_sound. func, palset, clang and test do
+   nothing in DOS but skip their arguments.
+
+   Memory: the LPF's 64 KB large pages are read into three 64 KB EMS windows (set_cuts_ems),
+   which reuse the EMS pages of the level's textures, so show_cutscene reloads the textures
+   afterwards (load_txtmaps) when a game is running. While one page plays, the next is read
+   a slice per frame (readlpinc). Speech is a SOUND\BSPnn.VOC file streamed through four EMS
+   pages and two 2 KB AIL buffers (big_speech_play, update_big_speech); the cutscene loop
+   keeps feeding it. Palette fades scheduled by the script run as time-based tasks: up to
+   16 callbacks that run_timebased_tasks steps every 8 ticks of *Time.
+
+   Drawing: a record is either a whole frame, drawn with show (GRCORE.ASM), or a run/skip/
+   dump delta, which draw_rsd writes straight into planar VGA memory. Wide scenes use a
+   virtual screen larger than 320 by 200 (virtual_screen, through the graphics library),
+   panned with vscreen_focus, with LBACK backgrounds loaded from CUTS\lbackNNN.byt.
+
+   name: inferred, from the cuts_ and cutsop_ prefixes of the FM Towns names. Names are the
+   FM Towns originals where it has the function, matched by position among the
    neighbours, by the opcode table (_cuts_dispatch gives each cutsop_ its number) and by the
    same callees and globals. FM Towns has no counterpart of makeFourChars_ovr108_671,
-   writeCutsValue_ovr108_2EAC, record_task, MovePanView_ovr108_3333 or bufferPointer, whose
-   provisional names were chosen for their keys: Turbo C lists a file's publics by the tools/bssorder.py key of
-   each name and TLINK numbers overlay stub entries from the last one listed, so these names
-   reproduce the EXE's stub order (the target table keeps IDA's names); it has get_token_,
-   draw_into_buffer_ and do_update_ where DOS has them inside draw_rsd and cuts_process_lp.
-   virtual_screen and lback_vscreen sit elsewhere in FM Towns but here in DOS. */
+   writeCutsValue_ovr108_2EAC, record_task, MovePanView_ovr108_3333 or bufferPointer; it has
+   get_token_, draw_into_buffer_ and do_update_ where DOS has them inside draw_rsd and
+   cuts_process_lp. virtual_screen and lback_vscreen sit elsewhere in FM Towns but here in
+   DOS.
+   match: the provisional names were chosen for their keys: Turbo C lists a file's publics
+   by the tools/bssorder.py key of each name and TLINK numbers overlay stub entries from the
+   last one listed, so these names reproduce the EXE's stub order (the target table keeps
+   IDA's names). */
 
 #include <dos.h>
 #include <string.h>
@@ -113,9 +149,10 @@ void far load_new_music(int, int);
 /* EMS and files. */
 extern char ws_active;
 /* The first EMS page of the speech being streamed: the one-byte far variable at 6388:0000.
-   FM Towns has it as a static (_task_sofar+0x22, beside sp_npages and audio_inpage at +0x20
-   and +0x21), so the name is provisional. cutsop_say passes sound_fpage instead, as FM
-   Towns' cutsop_say_ does (_sound_fpage). Far, so its own segment (segment table entry 77). */
+   cutsop_say passes sound_fpage, as FM Towns' cutsop_say_ does (_sound_fpage).
+   name: FM Towns has it as a static (_task_sofar+0x22, beside sp_npages and audio_inpage at
+   +0x20 and +0x21), so the name is provisional.
+   match: far, so its own segment (segment table entry 77). */
 static unsigned char far speech_fpage;
 void far MapMemory_seg013_1D3C_C7(int phys, int page);
 unsigned char far seg013_1D3C_E4(int bank, int page, int count);
@@ -163,9 +200,10 @@ CutsOp cuts_dispatch[29] = {
 unsigned char lmask[4] = { 0x0F, 0x0E, 0x0C, 0x08 };    /* planes from the first pixel on */
 unsigned char rmask[4] = { 0x01, 0x03, 0x07, 0x0F };    /* planes up to the last pixel */
 
-/* Uninitialised data, DS:5550 to DS:5D1B. Turbo C lays _BSS out by a hash of the names
-   (tools/bssorder.py). The publics are the FM Towns names; FM Towns has no names for the
-   statics, so theirs are ours, chosen to land where the EXE has them. */
+/* Uninitialised data, DS:5550 to DS:5D1B.
+   match: Turbo C lays _BSS out by a hash of the names (tools/bssorder.py). The publics are
+   the FM Towns names; FM Towns has no names for the statics, so theirs are ours, chosen to
+   land where the EXE has them. */
 static unsigned long tclock;            /* DS:5550 (12) */
 static unsigned long prev_time;         /* DS:5554 (24) */
 static int prevunused;                  /* DS:5558 (24), never referenced */
@@ -195,7 +233,10 @@ int logw;                               /* DS:5CF8 (932) */
 int logh;                               /* DS:5CFA (932) */
 int task_period[16];                    /* DS:5CFC (940) */
 
-/* 0x0 */
+/* 0x0: starts SOUND\BSP<file>.VOC: reads up to pages 16 KB EMS pages of it from page on
+   (the rest is read later by update_big_speech), queues the first 2 KB chunk, header
+   included, on AIL buffer 0 at volume and pan. Returns 100, or 0xFF if speech is off or
+   the file or the driver fails (a driver failure turns speech off for good). */
 unsigned char far big_speech_play(unsigned char file, unsigned char volume,
     unsigned char pan, unsigned char page, unsigned char pages)
 {
@@ -255,7 +296,9 @@ fail:
     return 0xFF;
 }
 
-/* 0x32F */
+/* 0x32F: refills each of the two AIL buffers that has finished (status 3) with the next
+   2 KB of speech, reading the next 16 KB of the file into the EMS ring when playback
+   crosses into a new page, and restarts playback. Called every frame and from the fades. */
 void far update_big_speech(void)
 {
     long amount;
@@ -323,7 +366,8 @@ int far get_cuts_ems(void)
     return num_buf = 3;
 }
 
-/* 0x623 */
+/* 0x623: maps LPF buffer which (0..2) at physical page 0: the four EMS pages from
+   tmap_fpage + 4 * which, the level textures' pages. Returns the EMS frame, or 0. */
 unsigned char far * far set_cuts_ems(int which)
 {
     seg042_35ED_12B();
@@ -348,7 +392,8 @@ char * far makeFourChars_ovr108_671(unsigned long value, char *out)
     return out;
 }
 
-/* 0x6AD */
+/* 0x6AD: sorts the large page numbers 0..n-1 into order by their first record (a bubble
+   sort), giving the order to play them in. */
 void far build_lptab(struct LpDesc far *desc, unsigned n, unsigned char far *order)
 {
     int tmp;
@@ -369,7 +414,8 @@ void far build_lptab(struct LpDesc far *desc, unsigned n, unsigned char far *ord
     } while (!changed);
 }
 
-/* 0x751 */
+/* 0x751: reads the LPF header. Each colour cycle's rate word becomes (word >> 8) & 0x3F,
+   the value anm_cycle divides by. */
 unsigned char far read_anmhdr(unsigned char far *dst)
 {
     int wanted, actual;
@@ -384,7 +430,8 @@ unsigned char far read_anmhdr(unsigned char far *dst)
     return actual == wanted;
 }
 
-/* 0x7BF */
+/* 0x7BF: reads large page page (at 0xB00 + page * 64 KB in the file) into dst. It returns
+   no value, so its caller's -1 test reads whatever is in AX. */
 int far readlp(unsigned page, struct LpDesc far *desc, void far *dst)
 {
     int size;
@@ -394,7 +441,8 @@ int far readlp(unsigned page, struct LpDesc far *desc, void far *dst)
     got = intoFarBuffer_ovr167_5DA(stdat.anm_fd, dst, size);
 }
 
-/* 0x819 */
+/* 0x819: reads the next n bytes of large page page into dst, continuing where the last
+   call stopped (lp_page, lp_left); returns the bytes read. */
 int far readlpinc(unsigned page, struct LpDesc far *desc, unsigned n, void far *dst)
 {
     char far *target = dst;
@@ -414,7 +462,7 @@ int far readlpinc(unsigned page, struct LpDesc far *desc, unsigned n, void far *
     return amount;
 }
 
-/* 0x8C8 */
+/* 0x8C8: the LPF palette (blue, green, red, pad; 8 bits) to VGA order and 6 bits. */
 void far conv_anmpal(unsigned char far *src, unsigned char far *dst)
 {
     unsigned char far *pal;
@@ -431,7 +479,8 @@ void far conv_anmpal(unsigned char far *src, unsigned char far *dst)
     }
 }
 
-/* 0x934 */
+/* 0x934: rotates each active colour cycle of the LPF once 0x38E / rate ticks have passed
+   since it last moved. */
 void far anm_cycle(struct Cycle far *cycles)
 {
     int i;
@@ -448,7 +497,8 @@ void far anm_cycle(struct Cycle far *cycles)
     }
 }
 
-/* 0x9FE, opcode 27 */
+/* 0x9FE, opcode 27: wait_for_sound(n): keeps the speech going until it ends, cutting it
+   off after n * 256 ticks. */
 int far cutsop_wait_for_sound(unsigned far *code, struct CutsState *st)
 {
     unsigned long until;
@@ -463,7 +513,8 @@ int far cutsop_wait_for_sound(unsigned far *code, struct CutsState *st)
     return 1;
 }
 
-/* 0xA55 */
+/* 0xA55: a pending fade-in (fade47 >= 0): clears the subtitle bar, fades in over fade47,
+   keeping the speech going if it is playing, and swallows the input that arrived. */
 void far cuts_perform_fadein(struct CutsState *st)
 {
     set_the_color(0xF0);
@@ -513,7 +564,8 @@ void far cuts_do_fadeout(struct CutsState *st, int frame)
         cuts_perform_fadeout(st);
 }
 
-/* 0xB8E */
+/* 0xB8E: one step of a pan begun by cutsop_pan: the focus moves step pixels per frame
+   in direction dir (pan_dx, pan_dy: 0 adds to y, 1 to x, 2 takes from y, 3 from x). */
 void far do_pan(struct CutsState *st)
 {
     focus_x = st->panx51 + (stdat.frame + 1) * st->step57 * pan_dx[st->dir55];
@@ -528,14 +580,15 @@ int far cutsop_test(unsigned far *code, struct CutsState *st)
     return 1;
 }
 
-/* 0xBF1, opcode 24 */
+/* 0xBF1, opcode 24: splity(y): the row where the picture stops and the subtitle bar
+   begins, or none (999). */
 int far cutsop_splity(unsigned far *code, struct CutsState *st)
 {
     splity = *code == 999 ? -1 : *code - 1;
     return 1;
 }
 
-/* 0xC12, opcode 25 */
+/* 0xC12, opcode 25: music(theme), 0 stops the music. */
 int far cutsop_music(unsigned far *code, struct CutsState *st)
 {
     if (*code == 0) stop_music();
@@ -543,7 +596,9 @@ int far cutsop_music(unsigned far *code, struct CutsState *st)
     return 1;
 }
 
-/* 0xC38, opcode 0: a subtitle, split at newlines and then to lines 320 pixels wide */
+/* 0xC38, opcode 0: txt(colour, string): a subtitle, string string of the cutscene's
+   string block, split at newlines and then to lines 320 pixels wide; drawn by
+   cuts_draw_text after the frame. String FFFFh clears it. */
 int far cutsop_txt(unsigned far *code, struct CutsState *st)
 {
     char far *text;
@@ -611,7 +666,7 @@ int far cutsop_func(unsigned far *code, struct CutsState *st)
     return 2;
 }
 
-/* 0xE64, opcode 3 */
+/* 0xE64, opcode 3: pause(n): hold this frame for n * 256 ticks or until a key. */
 int far cutsop_pause(unsigned far *code, struct CutsState *st)
 {
     if (st->flags.bit.b0) return 1;
@@ -621,7 +676,7 @@ int far cutsop_pause(unsigned far *code, struct CutsState *st)
     return 1;
 }
 
-/* 0xE91, opcode 14 */
+/* 0xE91, opcode 14: wait(a, b): pause for a, or for b, ignoring keys, when speech is on. */
 int far cutsop_wait(unsigned far *code, struct CutsState *st)
 {
     if (st->flags.bit.b0) return 2;
@@ -634,7 +689,8 @@ int far cutsop_wait(unsigned far *code, struct CutsState *st)
     return 2;
 }
 
-/* 0xED8, opcode 4 */
+/* 0xED8, opcode 4: skip(frame, n): a key pressed from here skips (draws nothing) up to
+   frame; without speech, also pauses n before it. */
 int far cutsop_skip(unsigned far *code, struct CutsState *st)
 {
     if (st->flags.bit.b0) return 2;
@@ -647,14 +703,14 @@ int far cutsop_skip(unsigned far *code, struct CutsState *st)
     return 2;
 }
 
-/* 0xF19, opcode 5 */
+/* 0xF19, opcode 5: next: end this LPF file and go on to the next. */
 int far cutsop_next(unsigned far *code, struct CutsState *st)
 {
     st->flags.bit.b2 = 0;
     return 0;
 }
 
-/* 0xF27, opcode 6 */
+/* 0xF27, opcode 6: end: end the cutscene after this file. */
 int far cutsop_end(unsigned far *code, struct CutsState *st)
 {
     st->flags.bit.b2 = 0;
@@ -662,7 +718,7 @@ int far cutsop_end(unsigned far *code, struct CutsState *st)
     return 0;
 }
 
-/* 0xF3B, opcode 7 */
+/* 0xF3B, opcode 7: loop(n): when this frame is next reached, replay the file n times. */
 int far cutsop_loop(unsigned far *code, struct CutsState *st)
 {
     st->repeat41 = code[0];
@@ -673,7 +729,10 @@ int far cutsop_loop(unsigned far *code, struct CutsState *st)
     return 1;
 }
 
-/* 0xF69, opcode 8 */
+/* 0xF69, opcode 8: data(file, ext): the next file's name. File 996 picks one of cutscenes
+   034..037 (octal) at random. For any other value file is never set, so the digits
+   come from whatever the stack held; the scripts probably only use 996 (an inference from
+   the code, not checked against every script). */
 int far cutsop_data(unsigned far *code, struct CutsState *st)
 {
     int file;
@@ -687,7 +746,8 @@ int far cutsop_data(unsigned far *code, struct CutsState *st)
     return 2;
 }
 
-/* 0xFDA, opcode 13: speech, or its subtitle when there is no speech */
+/* 0xFDA, opcode 13: say(colour, string, voc): speech file BSP<voc>.VOC, or its subtitle
+   (txt) when speech is off or fails; 999 is text only, 998 nothing when speech is on. */
 int far cutsop_say(unsigned far *code, register struct CutsState *st)
 {
     if (st->flags.bit.b5) {
@@ -704,7 +764,7 @@ int far cutsop_say(unsigned far *code, register struct CutsState *st)
     return 3;
 }
 
-/* 0x104C, opcode 9 */
+/* 0x104C, opcode 9: fadeout(n): fade out over n (fadeout's count), full screen only. */
 int far cutsop_fadeout(unsigned far *code, struct CutsState *st)
 {
     if (st->windowed == 0 && st->fade49 > -2) st->fade49 = code[0];
@@ -712,7 +772,7 @@ int far cutsop_fadeout(unsigned far *code, struct CutsState *st)
     return 1;
 }
 
-/* 0x1080, opcode 10 */
+/* 0x1080, opcode 10: fadein(n). */
 int far cutsop_fadein(unsigned far *code, struct CutsState *st)
 {
     if (st->windowed == 0 && st->fade47 > -2) st->fade47 = code[0];
@@ -720,7 +780,7 @@ int far cutsop_fadein(unsigned far *code, struct CutsState *st)
     return 1;
 }
 
-/* 0x10B4, opcode 11 */
+/* 0x10B4, opcode 11: jump(frame): skip ahead to frame, unless it is the next one. */
 int far cutsop_jump(unsigned far *code, struct CutsState *st)
 {
     if (code[-2] != code[0] - 1) {
@@ -732,7 +792,7 @@ int far cutsop_jump(unsigned far *code, struct CutsState *st)
     return 1;
 }
 
-/* 0x10ED, opcode 12 */
+/* 0x10ED, opcode 12: punt(flag): whether Escape may end the cutscene. */
 int far cutsop_punt(unsigned far *code, struct CutsState *st)
 {
     st->flags.bit.b4 = code[0];
@@ -797,7 +857,8 @@ int far cutsop_palsimplefade(unsigned far *code, register struct CutsState *st)
     return 3;
 }
 
-/* 0x12D3, opcode 20 */
+/* 0x12D3, opcode 20: vscreen(w, h, split): a virtual screen of w by h; 320, 200, 999 is
+   the plain screen. */
 int far cutsop_vscreen(unsigned far *code, register struct CutsState *st)
 {
     virtual_screen(code[0], code[1], code[2] == 999 ? -1 : code[2] - 1);
@@ -807,7 +868,7 @@ int far cutsop_vscreen(unsigned far *code, register struct CutsState *st)
     return 3;
 }
 
-/* 0x1337, opcode 21 */
+/* 0x1337, opcode 21: focus(x, y): the point of the virtual screen shown. */
 int far cutsop_focus(unsigned far *code, struct CutsState *st)
 {
     vscreen_focus(code[0], code[1] == 999 ? -1 : code[1]);
@@ -816,14 +877,16 @@ int far cutsop_focus(unsigned far *code, struct CutsState *st)
     return 2;
 }
 
-/* 0x1375, opcode 22 */
+/* 0x1375, opcode 22: lback(x, y, n): draw background CUTS\lbackNNN.byt into the virtual
+   screen. */
 int far cutsop_lback(unsigned far *code, struct CutsState *st)
 {
     lback_vscreen(code[0], code[1], code[2]);
     return 3;
 }
 
-/* 0x1393, opcode 23 */
+/* 0x1393, opcode 23: pan(dir, step, count): pan from the current focus for count frames
+   (do_pan). */
 int far cutsop_pan(unsigned far *code, register struct CutsState *st)
 {
     int dir, step, count;
@@ -857,7 +920,10 @@ void far anm_sound(register struct CutsState *st)
     }
 }
 
-/* 0x140D */
+/* 0x140D: the state at the start of a cutscene. The flag bits, as the code uses them:
+   b0 skipping (a key was pressed inside a skip), b1 a key or button arrived, b2 keep
+   playing this file, b3 keep playing the cutscene, b4 Escape may end it, b5 speech is
+   available, b6 speech is playing, b7 the current wait ignores keys. */
 struct CutsState * far cuts_init_info(register struct CutsState *st)
 {
     st->fade45 = -1;
@@ -895,7 +961,9 @@ char * far cuts_make_fname(register char *name, int n, int ext)
     return name;
 }
 
-/* 0x14DF */
+/* 0x14DF: reads all pending input; returns the last key or button, or -1. With a state,
+   any input sets b1, Escape (where allowed, and not in cutscene 2) ends the cutscene and
+   cuts off the speech, and input inside a skip starts skipping (b0). */
 int far gobble_input_events(register struct CutsState *st)
 {
     int key;
@@ -920,7 +988,8 @@ int far gobble_input_events(register struct CutsState *st)
     return key;
 }
 
-/* 0x157B */
+/* 0x157B: clears the bar below splity and draws the subtitle lines centred, in colour
+   color38 of the cutscene's palette, the first line at the top. */
 void far cuts_draw_text(register struct CutsState *st)
 {
     int x;
@@ -939,7 +1008,8 @@ void far cuts_draw_text(register struct CutsState *st)
     }
 }
 
-/* 0x162B */
+/* 0x162B: the work done while waiting: colour cycles, music and speech, and the timed
+   tasks every 8 ticks. */
 int far run_time_critical_things(struct CutsState *st, struct AnmHdr far *hdr)
 {
     anm_cycle(hdr->cycles);
@@ -951,7 +1021,7 @@ int far run_time_critical_things(struct CutsState *st, struct AnmHdr far *hdr)
     return 0;
 }
 
-/* 0x1693 */
+/* 0x1693: holds the frame for frame3F * 256 ticks, until a key (unless b7) or b1. */
 int far cuts_run_pause(register struct CutsState *st, struct AnmHdr far *hdr)
 {
     unsigned long last;
@@ -969,7 +1039,10 @@ int far cuts_run_pause(register struct CutsState *st, struct AnmHdr far *hdr)
     return 0;
 }
 
-/* 0x175F */
+/* 0x175F: runs the script records for frame. When a record might run past the end of the
+   0x400-byte buffer (the margin taken is 4 words, or 1 << (frame >> 5) once frame is 32 or
+   more), the file is moved back by the unread words and the buffer refilled from the
+   record. An opcode of 29 or more stops the scan. */
 void far cuts_process_opcodes(int frame, register struct CutsState *st)
 {
     while (*stdat.code == frame && st->repeat41 == 0) {
@@ -1066,6 +1139,10 @@ void far cuts_process_opcodes(int frame, register struct CutsState *st)
     while (n4-- > 0) { *d2 = *s2; s2 += 4; d2++; } \
 }
 
+/* Decodes a delta record (the run/skip/dump stream LPFDELTA.ASM also decodes) straight into
+   planar VGA memory at x, y (y bottom-up, rows going down the screen), w by h, leaving
+   out skipx columns and skipy rows of the 320-wide frame. Runs write four pixels a byte
+   with the map mask; dumps copy one plane at a time. */
 void far draw_rsd(unsigned char far *src, int x, int y, int w, int h,
     int skipx, int skipy)
 {
@@ -1155,7 +1232,10 @@ void far draw_rsd(unsigned char far *src, int x, int y, int w, int h,
     }
 }
 
-/* 0x2359 */
+/* 0x2359: plays the records of one large page. Each record is drawn (unless skipping),
+   page-flipped where the scene allows it, the next large page is read a slice further,
+   the frame's opcodes run, and the loop waits until 256 / rate ticks have passed since the
+   previous frame started. Returns 1 to replay the file (loop), else 0. */
 int far cuts_process_lp(register struct CutsState *st, struct AnmHdr far *anm,
     struct LpDesc far *lp)
 {
@@ -1271,7 +1351,8 @@ void far reset_inf_values_eof(register struct CutsState *st)
     st->flags.bit.b7 = 0;
 }
 
-/* 0x28C7 */
+/* 0x28C7: plays the LPF file named in st: header, palette, the first three large pages
+   into EMS, then every large page in order, then the frame-999 records. */
 void far cuts_process_anm(struct CutsState *st)
 {
     unsigned char far *img;
@@ -1330,7 +1411,9 @@ done:
     close(stdat.anm_fd);
 }
 
-/* 0x2B73 */
+/* 0x2B73: plays cutscene cuts in the window x, y, w, h (y is the top row, bottom-up):
+   loads the script, then plays .n01, .n02 ... until an end, Escape, or a missing file;
+   fades out and restores the plain screen after a full-screen one. */
 void far show_anm(int cuts, int x, int y, int w, int h)
 {
     unsigned char far *n0x;
@@ -1388,7 +1471,9 @@ void far show_anm(int cuts, int x, int y, int w, int h)
     mem_set(stdat.screen, 0, 0xFA00);
 }
 
-/* 0x2DC5 */
+/* 0x2DC5: the entry point (see the file comment). Sets the big font and the string block
+   C00h + n, plays it, then puts the game screen back. Cutscene 2 starts music theme 1;
+   cutscene 103h's window is a few rows taller. */
 void far show_cutscene(register unsigned n)
 {
     int x;
@@ -1435,7 +1520,8 @@ void far init_cutscene(void)
 {
 }
 
-/* 0x2EAC: write a value into a cutscene's opcode file, then show it */
+/* 0x2EAC: write a value into a cutscene's opcode file, then show it. It writes value
+   over the words at byte offsets 4, 6 and 12 of csNNN.n00. Nothing in the C calls it; probably a development aid. */
 void far writeCutsValue_ovr108_2EAC(unsigned n, int value)
 {
     unsigned char ok;
@@ -1456,7 +1542,10 @@ void far writeCutsValue_ovr108_2EAC(unsigned n, int value)
     show_cutscene(n);
 }
 
-/* 0x2FF0 */
+/* 0x2FF0: advances the tasks by the time since the last call, in steps of 8 ticks (the
+   remainder carried in residue): each active task counts steps against its period and
+   is called when its count rises, then a last time with done set when it reaches its
+   total, and removed. reset starts the clock again. */
 void far run_timebased_tasks(int reset)
 {
     static int residue = 0;
@@ -1512,7 +1601,8 @@ void far punt_single_task(register int task)
     }
 }
 
-/* 0x3191 */
+/* 0x3191: installs fn in a free task slot, to run total times, once per period steps;
+   returns the slot, or 0 when all 16 are taken (the same as slot 0). */
 int far install_timebased_task(Task fn, int period, int total)
 {
     register int i;
@@ -1554,7 +1644,8 @@ void far remove_task(int task)
     tasks[task] = 0;
 }
 
-/* 0x32CC */
+/* 0x32CC: sets entries first..last-1 of pal to step / total of the way from start_pal to
+   end_pal and loads them into the DAC. */
 void far palette_fade(int step, int total, int first, int last, unsigned char far *pal)
 {
     int from;
@@ -1578,7 +1669,8 @@ void far MovePanView_ovr108_3333(int task, int done)
     vscreen_focus(focus_x, focus_y);
 }
 
-/* 0x33A8 */
+/* 0x33A8: sets a virtual screen of w by h (graphics library seg003_0272_4A3A) and the
+   split row. */
 int far virtual_screen(int w, int h, int split)
 {
     logw = w;
@@ -1602,7 +1694,9 @@ int far virtual_screen(int w, int h, int split)
     ShowClip = 1; \
     set_the_window(top, bottom, right, left)
 
-/* 0x33E0 */
+/* 0x33E0: loads CUTS\lbackNNN.byt (a raw 320 by 200 picture) into stdat.screen and draws
+   it into the virtual screen with its top left at x, y, in two parts when the screen has
+   a split. Returns bltfromdrive's result. */
 int far lback_vscreen(int x, int y, unsigned n)
 {
     int split = splity == -1 ? 0 : splity;
@@ -1634,7 +1728,7 @@ int far lback_vscreen(int x, int y, unsigned n)
     return ok;
 }
 
-/* 0x3620 */
+/* 0x3620: the digital effects' buffer; nothing in the C calls it. */
 char far * far bufferPointer(void)
 {
     return dfx_buffer;

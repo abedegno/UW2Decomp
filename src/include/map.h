@@ -1,5 +1,9 @@
 /* map.h: The level map: loading and saving tiles, textures and lighting, and collision with
-   the terrain. */
+   the terrain. The tile map itself is mapdata, the start of the level block (struct
+   LevelBlock, level.h), 64 by 64 struct Tile with the origin at the south west corner and
+   x + y * 64 as a tile's index (Map_GetAddr). Sources: MAP.C, MAPADDR.C, TEXTMAPS.C and
+   LIGHTING.C in src/map; COLLIDE.C (src/motion) owns struct MotionCalc and struct
+   Collision. docs/subsystems/map.md describes the subsystem. */
 #ifndef MAP_H
 #define MAP_H
 
@@ -32,7 +36,11 @@ struct MotionCalc {
 };
 
 /* A square of the level map, 4 bytes; the map (mapdata) is 64 by 64 of them. UW-Formats
-   (4.2, the tilemap) documents the fields. */
+   (4.2, the tilemap) documents the fields. light's bit 0 (bit 8 of the word) is the
+   tile's light flag PHYSICS.C tests when the player moves; door's bit 0 (bit 14) is the
+   no-magic flag (SPELLS.C's anti_magic_p) and its bit 1 (bit 15) marks a door
+   (TRIGGER.C), as UW-Formats has them. floor indexes TxmID; the wall index is in the
+   object link (TILE_WALL). */
 struct Tile {
     unsigned type:4;                    /* 0x00: solid, open, the diagonals and slopes */
     unsigned height:4;
@@ -86,7 +94,7 @@ enum TileType {
 #define TERRAIN_LAVA    2
 #define TERRAIN_ICE     3
 
-/* MAP.C: loading and saving the level map */
+/* MAP.C: loading and saving the level map. hgt_val converts a floor height to a z. */
 extern int hgt_val[17];
 char far Anim_Load(char far *source);
 char far Anim_Save(char far *destination);

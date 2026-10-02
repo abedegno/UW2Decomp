@@ -4,7 +4,19 @@
    floor texture numbers and the door textures in LEV.ARK, loading the textures, and
    reading each texture's terrain type from DATA\TERRAIN.DAT: the whole of DOS overlay
    ovr140, in original order. Function and global names are the originals from the FM
-   Towns symbol table where it has them; the source file's own name is not known. */
+   Towns symbol table where it has them; the source file's own name is not known.
+
+   A tile names its textures by small indices (struct Tile's floor, 4 bits, and its wall,
+   6 bits; map.h); TxmID maps those to texture numbers in T64.TR. The level's block in
+   LEV.ARK is 0x86 bytes at block 0x4F + level (blocks 80 to 159, UW-Formats 4.1 and 4.4):
+   64 words of texture numbers, then three words holding the six door textures a byte
+   each (ActDoors). load_txtmaps loads the textures themselves (LOADGR.C's load_tr_ems,
+   then the doors). TxmTerr holds each texture's terrain word from TERRAIN.DAT, whose
+   class bits (map.h, TERR_CLASS) mark water, lava and ice. GAMEWRAP.C's GetLevel and
+   SaveLevel call Txm_Load and Txm_Save after the map block, with LEV.ARK still open.
+
+   name: inferred. init_txtlib, load_txtmaps and Txm_Load are FM Towns names, and System
+   Shock's TEXTMAPS.C (load_textures) does the same job. */
 
 #include <stdio.h>
 #include <dos.h>
@@ -49,7 +61,10 @@ void far ovr140_4F(int n, int x, int y)
     show(x, y, p, 0x10, 0x10, 0, 0);
 }
 
-/* arc is not read; GAMEWRAP.C passes 0. */
+/* Reads level lev's texture block from the save directory's LEV.ARK into TxmID, ActDoors
+   and TxmTerr, and loads the textures. flags bit 2: the archive is already open (and is
+   left open). A block that is not 0x86 bytes long makes the result 0, but the buffer is
+   still used. arc is not read; GAMEWRAP.C passes 0. */
 unsigned char far Txm_Load(int arc, int lev, int flags)
 {
     unsigned char ok;
@@ -76,6 +91,9 @@ unsigned char far Txm_Load(int arc, int lev, int flags)
     return ok;
 }
 
+/* Writes TxmID and ActDoors back as level lev's texture block. flags bit 2: the archive
+   is already open; otherwise bit 1 opens it in the save directory or, failing that,
+   DATA\. */
 unsigned char far Txm_Save(int arc, int lev, register int flags)
 {
     unsigned char ok;
@@ -101,7 +119,7 @@ void far load_txtmaps(void)
     load_doors();
 }
 
-/* IDA's LoadTerrainDat_ovr140_24B. FM Towns has Load_Terrains_ at the same place, after
+/* name: IDA's LoadTerrainDat_ovr140_24B. FM Towns has Load_Terrains_ at the same place, after
    load_txtmaps_, doing the same: fopen the terrain file, then for each of the 64 textures
    fseek to twice its number and fread two bytes into TxmTerr. */
 void far Load_Terrains(int *ids)

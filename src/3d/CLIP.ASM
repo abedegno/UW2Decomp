@@ -1,7 +1,41 @@
 ; /* target: seg004_0849_40B0 */
 ; /* opts: /ml */
 ;
-; Polygon clipping: the clip_vertex routines and _asm_clip_polygon with its four edges.
+; Polygon clipping against the view frustum, for the texture mapper. _asm_clip_polygon takes a
+; polygon in view space and clips it against four planes through the eye, x = -z, x = z, y = z
+; and y = -z (FM Towns names the stages left, right, top and bottom), with one
+; Sutherland-Hodgman pass per plane. The planes are at 45 degrees, which fits the projection in
+; PROJPOLY.ASM: it scales by scrw and scrh, which compute_min_max_y and the span clamps treat as
+; half the screen width and height. There is no near or far plane; a vertex the clipper would
+; place at the eye (z = 0) rejects the whole polygon.
+;
+; The only caller is _asm_texture_map_1 (PROJPOLY.ASM), and only when accept_flag (DS:25D3, FM
+; Towns name) is clear. Its initial value is 0 and no instruction in seg003, seg004 or seg021
+; writes it (set_accept, in INSTANCE.ASM, is an empty routine in both builds), so every textured
+; polygon goes through the clipper. The routines run with DS on the 3D data segment FD58
+; (seg052_519C), as all of seg004 does.
+;
+; The vertex record (32 bytes, 16.16 fixed point; the same in PROJPOLY, TEXMAP and TEXMAPV):
+;   +00 x, +04 y, +08 z   view space
+;   +0C sx, +10 sy        screen position, written by _asm_project_polygon
+;   +14 u, +18 v          texture coordinates
+;   +1C l                 shade, 0 .. 15.0, written by _asm_project_polygon
+; The clipper interpolates x, y, u and v and sets z on the plane; it leaves sx, sy and l alone,
+; since projection comes after clipping.
+;
+; Data (FD58; names from FM Towns, which keeps the same order):
+;   DS:C880 the stack pointer saved for the abort path
+;   DS:C882 Clipped_through_eye_flag, cleared on entry and set by nothing in this module
+;   DS:C888 _vertices, the first vertex of the stage's input
+;   DS:C88A _vcount, the stage's output count
+;   DS:C88C _inside, the previous vertex's state: 0FFh at the start, 1 inside, 0 outside
+;   DS:C890 the input count
+;   DS:C892 and DS:CA92 the two vertex buffers the stages alternate between, 200h bytes
+;   (16 vertices) each
+; The result is always left in C892.
+;
+; name: inferred. The routines have their FM Towns names; System Shock's 3D library clip.c holds
+; g3_clip_polygon and its edge intersections, the same job in C.
 ;
 ; SEG004 split into its original modules: this is module 7 of 14, +40B0..+46F0 of the segment
 ; (file D270h), a module of the second library (UWLIB.LIB).
@@ -32,6 +66,20 @@ SEG004_TEXT segment para public use16 'CODE'
         public  _clip_vertex_y_z
 
 ; seg004_0849_40B0  (+40B0)
+; clip_vertex_x_neg_z: the point where the edge from A to B crosses the plane x = -z.
+;   in:  SI = vertex A, BX = vertex B, DI = output vertex
+;   out: [DI] = A + t (B - A) for x, y, u and v, with t = (-zA - xA) / ((xB - xA) + (zB - zA))
+;        in 16.16; z = -x. CX is preserved.
+;
+; If the denominator is 0, or the new vertex lies at x = 0 (and so at the eye), it jumps to
+; _asm_clip_polygon's abort path, which drops the stack back to _asm_clip_polygon's frame and
+; returns CX = 0: the whole polygon is rejected.
+;
+; The push/rep movsb/pop sequence after each `jmp L46E5` in these four routines is never reached
+; (it would copy A to the output unchanged).
+;
+; The other three are the same for the other planes: _y_neg_z (y = -z), _x_z (x = z), _y_z (y =
+; z).
 _clip_vertex_x_neg_z proc near
         push    cx
         mov     ecx,dword ptr [bx]
@@ -310,6 +358,18 @@ L4388:
 _clip_vertex_y_z endp
 
 ; seg004_0849_438A  (+438A)
+; _asm_clip_polygon_left: one Sutherland-Hodgman stage against x = -z, keeping the side where -x
+; < z.
+;   in:  SI = input vertices, CX = their count, DI = output buffer
+;   out: CX = output count (0 if nothing is left); DI past the last output vertex
+;
+; For each vertex: inside after outside emits the crossing and then the vertex; inside after
+; inside emits the vertex; outside after inside emits the crossing. The edge from the last
+; vertex back to the first is done after the loop. The first vertex has no previous state
+; (_inside = 0FFh), so its incoming edge is handled only by that closing step.
+;
+; _bottom (-y < z), _right (x < z) and _top (y < z) are the same with the other test and
+; intersection routine.
 __asm_clip_polygon_left proc near
         mov     word ptr ds:[0C88Ah],0
         mov     word ptr ds:[0C888h],si
@@ -624,6 +684,16 @@ L4681:
 __asm_clip_polygon_top endp
 
 ; seg004_0849_4686  (+4686)
+; _asm_clip_polygon: clip a polygon against the four planes.
+;   in:  SI = vertices (32-byte records), CX = count (at most 16, the buffers' size)
+;   out: SI = DS:C892, the clipped polygon; CX = its vertex count, 0 if it is invisible or was
+;        rejected
+;
+; Copies the input to C892, then runs left (C892 to CA92), right (back to C892), top and bottom,
+; stopping as soon as a stage leaves nothing. It saves SP in C880 so the intersection routines
+; can abandon the polygon from any depth (L46E5).
+;
+; The loop at L46A3 only advances SI, which is then reloaded: it does nothing.
 __asm_clip_polygon proc near
         mov     word ptr ds:[0C890h],cx
         mov     word ptr ds:[0C888h],si

@@ -5,7 +5,31 @@
    the player makes, screen shake from water, lava and quakes, and placing the 3D camera.
    The whole of DOS resident segment seg035_31AB, in original order. Function and global
    names are the originals from the FM Towns symbol table except where a comment says the
-   name is ours; the source file's own name is not known. */
+   name is ours; the source file's own name is not known.
+
+   The clock: the 3D view's change handlers call check_physics every frame (game/UWEDIT.C
+   keeps it running through change_state). It measures the time since the last call on
+   the tick counter *Time (at most 0x40), adds it to the game clock and calls
+   move_physics, which moves the player (move_player: PHYSICS.C's
+   set_player_phys_params, MOTION.C's do_physics, PHYSICS.C's phys_affect_player), moves
+   the critters and objects (critter/AI.C's move_mobile, by frames of 16 time units,
+   halved under Haste), and does the screen effects and sounds. player_simple_move, the
+   step keys, runs the same round for one fixed step.
+
+   Input: PlayerInput is the movement command (PHYSICS.C's do_player_input has the list),
+   set by parse_playin from the mouse in the view or the key bindings, and by
+   do_player_keyboard from the keys held down (key_on). ForwInpRate and TurnInpRate are
+   how fast to go forward and turn, from the mouse's position or fixed for the keys.
+
+   Effects: playerMod[0..3] are offsets to the camera's height, heading, pitch and bank
+   (get_eye adds them when doMod is set): head bob while walking, the swimmer's bob and
+   roll, the jump crouch, the slow float while levitating or flying (motion_state 8),
+   and three timed shakes started by set_effect (0x20 combEfflen, 0x40
+   tremEfflen, 0x80 slidEfflen, bits of player->motion_state). The camera position itself
+   is get_eye's.
+
+   name: descriptive (map/filenames.tsv: player input and motion, player_mous_move,
+   move_player). */
 
 #include <stdlib.h>
 #include "critter.h"
@@ -28,8 +52,9 @@ signed char sliEffect[16] = { 0, 0, -1, -2, -3, -4, -5, -6, -6, -4, -3, -2, -1, 
 signed char rorEffect[16] = { -4, -3, -2, -1, 0, 1, 2, 3, 4, 3, 2, 1, 0, -1, -2, -3 };
 int PlayerInput = 0;
 int PlayerTurn = 15;
-/* Nothing reads these two. Their 3 bytes split as char and int, as in FM Towns, where
-   _oldPlayerInput sits on the next even address after _IgnoringInput. */
+/* Nothing reads these two. */
+/* name: their 3 bytes split as char and int, as in FM Towns, where _oldPlayerInput sits
+   on the next even address after _IgnoringInput. */
 char IgnoringInput = 0;
 int oldPlayerInput = 0;
 unsigned char water_eff = 0xFF;
@@ -37,8 +62,11 @@ char MoveCamera = 0;
 int ForwInpRate = 0;
 int TurnInpRate = 0;
 unsigned char KeybUsed = 0;
-/* The statics below have no FM Towns names (it addresses them from _TurnInpRate), so
-   their names are ours. */
+/* name: the statics below have no FM Towns names (it addresses them from _TurnInpRate),
+   so their names are ours. */
+/* mouse_moves: the inputs for the three thirds of the view's bottom strip; move_keys: the
+   scan codes of w s a d z c x e q; step_sfx: the footstep sounds (two feet) on floor,
+   ice with grip and slippery ice; step_pan: the left and right foot's pan. */
 static unsigned char mouse_moves[3] = { 9, 8, 10 };
 static unsigned char move_keys[9] = { 0x11, 0x1F, 0x1E, 0x20, 0x2C, 0x2E, 0x2D, 0x12, 0x10 };
 static unsigned long last_time = 0;
@@ -52,13 +80,16 @@ static unsigned char noise_count = 0;
 
 extern struct Inplist near *inplist;
 extern unsigned long far *Time;
+/* PHYSICS.C's pFPS[3]; this file reads only pFPS[0], the run speed. */
 extern int pFPS;
 /* DS:19B2, the noise and visibility the player's actions add up to. */
 extern char plyNotice[2];
-/* This file's _BSS, DS:33C6..33E7 (seg034's ends at 33C5; seg037's starts at 33E8), laid
-   out by name (tools/bssorder.py): doMod 28, vort_rad 126, vort_timer 286, vort_theta 406,
-   playerMod and PlayerPitch 552, PlayerBank 576, camang 595, campos 603, vort_x and
-   vort_y 1006. All FM Towns names. */
+/* This file's _BSS, DS:33C6..33E7 (seg034's ends at 33C5; seg037's starts at 33E8). All
+   FM Towns names. campos and camang are the camera when it is not on an object (UsPtr 0);
+   the vort_ variables are the moongate vortex's spinning camera. */
+/* match: laid out by name (tools/bssorder.py): doMod 28, vort_rad 126, vort_timer 286,
+   vort_theta 406, playerMod and PlayerPitch 552, PlayerBank 576, camang 595, campos 603,
+   vort_x and vort_y 1006. */
 unsigned char doMod;
 int playerMod[4];
 int PlayerPitch;
@@ -75,6 +106,9 @@ unsigned char far play_effect_here(unsigned char fx, unsigned char pan, char vol
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
                      unsigned char damage, unsigned char type);
 
+/* The mouse button is down in the 3D view (ui/INTERACT.C): moves the Wizard Eye camera,
+   or reads the mouse as movement and keeps the pointer inside the view while the button
+   is held (pmouseHandled). */
 void far player_mous_move(void)
 {
     if (WizEye)
@@ -88,6 +122,12 @@ void far player_mous_move(void)
     }
 }
 
+/* The movement command. command -1 is the mouse: with the left button down, the
+   bottom fifth of the view (y probably counts up from PBot, the bottom) picks a
+   sideways or backward move by third, and elsewhere the pointer's distance from the
+   centre third sets the turn rate and its height the forward rate; both buttons are a
+   jump (forward if in the air or swimming). Otherwise command is a key binding's
+   (game/PLAYER.C): 6 and 7 the jumps, 0 stop, the rest read through do_player_keyboard. */
 void far parse_playin(int command)
 {
     int buttons;
@@ -145,6 +185,10 @@ void far parse_playin(int command)
     }
 }
 
+/* The movement keys held down: w forward fast, s forward slowly, a and d turn, x back,
+   z and c sideways, e and q up and down when levitating or flying. Ignored with exactly
+   one of Shift and Caps Lock (the capital letters are PHYSICS.C's step moves), or with
+   Alt or Ctrl. */
 void far do_player_keyboard(void)
 {
     int i;
@@ -205,6 +249,9 @@ void far do_player_keyboard(void)
     }
 }
 
+/* A step key or arrow (dir is simple_fizix's turn): makes the step, then runs one
+   0x40-unit round of the world's physics with it, and waits until 0x18 ticks have
+   passed since the key. */
 void far player_simple_move(int dir)
 {
     unsigned long start;
@@ -236,6 +283,8 @@ void far player_simple_move(int dir)
     mouse_clearQ();
 }
 
+/* Called every frame: runs the physics for the time since the last call (see the top
+   of the file). The animated objects advance once per 0x40 units of time. */
 void far check_physics(void)
 {
     unsigned long delta;
@@ -271,6 +320,9 @@ void far check_physics(void)
     }
 }
 
+/* One round: the player (unless easy, a step move, or nothing is moving), the mobile
+   objects for frames (unless critters are stopped or time is stopped), the screen
+   effects, and the player's noise and footsteps. */
 void far move_physics(int incr, int frames, unsigned char easy)
 {
     doMod = 0;
@@ -289,6 +341,7 @@ void far move_physics(int incr, int frames, unsigned char easy)
     make_noise(easy);
 }
 
+/* Runs the player's physics until the player is at rest (game/SKILLS.C). */
 void far finish_player(void)
 {
     PlayerInput = 0;
@@ -297,6 +350,8 @@ void far finish_player(void)
         move_player(0x40);
 }
 
+/* One step of the player's physics, then the head bob for walking, the crouch of a
+   jump and the sway of a sideways move. */
 void far move_player(int incr)
 {
     PN.radius = ComObjData[OBJ_ITEM(ThePlayer)].radius;
@@ -333,6 +388,9 @@ void far move_player(int incr)
     PlayerInput = 0;
 }
 
+/* The player's sounds: a looping water sound while swimming (restarted every 0x1800
+   ticks) with strokes panned left and right, and footsteps (by floor and ice, alternating
+   feet) at a rate that rises with speed. */
 void far make_noise(char easy)
 {
     unsigned char ice;
@@ -400,9 +458,10 @@ void far make_noise(char easy)
     }
 }
 
-/* IDA's ApplyPlayerSneakScore. FM Towns has set_sound_ at this position, between
+/* name: IDA's ApplyPlayerSneakScore. FM Towns has set_sound_ at this position, between
    make_noise_ and parse_effect_, and its code is the same: the player's noise and
    visibility nibbles at playerdat+1Dh from _plyNotice. */
+/* The noise rises at once with speed and decays one step every eight rounds. */
 void far set_sound(char easy)
 {
     char n;
@@ -431,6 +490,12 @@ void far set_sound(char easy)
     playerdat->visibility = plyNotice[1];
 }
 
+/* The camera offsets from the movement state: swimming (0x11; newFPS never sets 0x10)
+   dips the view
+   by swim_count and, once under, rolls and sways it; lava burns 1 point one time in
+   five, and the djinn capture at step 3 moves to step 4 with string 0x14E; the float
+   of levitating or flying; and the three timed shakes, which count down and clear their
+   motion_state bits. */
 void far parse_effect(void)
 {
     signed char amp = 1;
@@ -518,6 +583,9 @@ void far parse_effect(void)
     }
 }
 
+/* Starts a timed shake: 0x20 (combat), 0x40 (a tremor) or 0x80 (sliding on ice), for
+   amount rounds. The names are from the variables (combEfflen, tremEfflen,
+   slidEfflen); PHYSICS.C uses 0x80 for ice and 0x40 in an unreferenced function. */
 void far set_effect(unsigned char which, char amount)
 {
     switch (which)
@@ -537,9 +605,12 @@ void far set_effect(unsigned char which, char amount)
     player->motion_state |= which;
 }
 
-/* IDA's PositionCameraAtObject. FM Towns has get_eye_ at this position, after
-   set_effect_, and its code is the same: the camera follows the player, a trap camera,
-   another object, the object behind the player, or the moongate vortex. */
+/* name: IDA's PositionCameraAtObject. FM Towns has get_eye_ at this position, after
+   set_effect_, and its code is the same. */
+/* Places the 3D camera (cPlayer) by UsPtr: the player's eye (0xA4 above the feet) with
+   the effect offsets, a fixed camera (0, campos and camang), another mobile object
+   (above critdata), a view from behind the player (critdata - 1), or the moongate
+   vortex (critdata - 2). */
 void far get_eye(void)
 {
     int x, y;

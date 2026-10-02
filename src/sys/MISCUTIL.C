@@ -1,5 +1,14 @@
 /* target: ovr167 */
 /* opts: -mm -1 -G -O -Y -d */
+/* A grab bag, the whole of DOS overlay ovr167: directions (mpos and octant, which turn
+   a vector into one of eight directions; the compass helpers; get_theta, a vector's
+   angle), the "it is to the north" messages of print_path_to, the start-up checks
+   (check_dirs, check_fds, OkEnoughMem_ovr167_463), whole-file reads and writes, the DOS
+   read and write calls for far buffers that every file loader uses, the PLAYER.DAT
+   cipher (build_xor_table .. xorwrite, used by PLAYDATA.C), and opening files in the
+   data or save directory (data_fopen, our_open). It owns no data but its strings.
+   name: descriptive (miscellaneous utilities). */
+
 #include <dos.h>
 #include <io.h>
 #include <fcntl.h>
@@ -11,7 +20,7 @@
 #include "sys.h"
 #include "ui.h"
 
-/* FM Towns names are used where the same operation is clear in its code:
+/* name: FM Towns names are used where the same operation is clear in its code:
    flip_bool toggles a byte; check_dirs checks the data directories; check_fds
    probes eight temporary files; blttodrive writes a buffer; build_xor_table
    makes the 80-byte key table; xor_xor_table transforms one block; xorread
@@ -29,6 +38,10 @@
 
 void far flip_bool(char *p) { if (*p) *p = 0; else *p = 1; }
 
+/* Which ninth of an a by b box (x, y) falls in, as a direction: the 3 by 3 grid's
+   column q and row r give 0 to 7 round the edge and 8 for the centre. With
+   unsolve_compass, its inverse, this probably served a clickable compass; nothing in the
+   sources calls either. */
 int far solve_compass(int a, int b, int x, int y)
 {
     register int q = ((x * 3) / a) % 3;
@@ -41,6 +54,9 @@ int far solve_compass(int a, int b, int x, int y)
     return 8;
 }
 
+/* The direction of the vector (x, y), 0 to 7: 0 is +y, 2 +x, 4 -y, 6 -x, and the odd
+   values the diagonals between; a component counts as zero when it is less than half the
+   other. Used by the detect-monster spell (SPELLS2.C) and world events. */
 int far mpos(char x, char y)
 {
     if (abs(x) / 2 > abs(y)) {
@@ -56,6 +72,8 @@ int far mpos(char x, char y)
     }
 }
 
+/* The octant of the vector (x, y), 0 to 7, split at the axes and the diagonals (unlike
+   mpos, which centres its sectors on them). */
 int far octant(char x, char y)
 {
     if (y > 0) {
@@ -72,6 +90,14 @@ char x1, y1, x2, y2;
 { return mpos(x2 - x1, y2 - y1); }
 
 void far scroll_print(char far *s);
+/* Prints s and then where something is, to the message scroll: with radius < 0, the
+   direction -radius - 1 given by the caller; otherwise, if (ox, oy) is further than
+   radius tiles (Manhattan distance) from (px, py), the direction to it. Directions are
+   game strings 0x28 + mpos (presumably the eight direction phrases). If `ignored`
+   (despite its name, it is used) is nonzero and differs from `previous`, game string
+   0x37 + ignored - previous follows after " and "; with no direction and a nonzero
+   `ignored` it says "very near". Used by the detect-monster spell and a trap
+   (TRIGGER.C). */
 void far print_path_to(char far *s, int px, int py, int ignored,
                                                    int ox, int oy, int previous, int radius)
 {
@@ -94,6 +120,8 @@ void far print_path_to(char far *s, int px, int py, int ignored,
     scroll_print(".\n");
 }
 
+/* Draws a 3 by 3 box of colour n on the compass of size x by y centred at (cx, cy), at
+   the place of direction t: the inverse of solve_compass. */
 void far unsolve_compass(int x, int y, int t, int cx, int cy, int n)
 {
     register int xx = cx + x / 2;
@@ -108,6 +136,9 @@ void far unsolve_compass(int x, int y, int t, int cx, int cy, int n)
     box(xx - 1, yy - 1, xx + 1, yy + 1);
 }
 
+/* The angle of the vector from (sx, sy) to (x, y) as a 16-bit binary angle: the vector
+   is scaled to length 7FFFh (cSqRt) and cAtan2 (IMATH.ASM) turns the unit vector into an
+   angle from its arcsine or arccosine table. 0 for a zero vector. Used by PATHFIND.C. */
 int far get_theta(int sx, int sy, int x, int y)
 {
     int dx = x - sx;
@@ -141,6 +172,8 @@ char far dir_exist(char *name)
     return 0;
 }
 
+/* Start-up check that the DATA, CRIT and CUTS directories exist; else first_punt with
+   "Could not read data." (D001). */
 void far check_dirs(void)
 {
     unsigned char ok = 1;
@@ -152,12 +185,16 @@ void far check_dirs(void)
 
 unsigned far coreleft(void);
 unsigned long far farcoreleft(void);
+/* 1 if at least 2200 bytes of near heap and 1500 bytes of far heap are free. */
 int far OkEnoughMem_ovr167_463(void)
 {
     if (coreleft() >= 0x898 && farcoreleft() >= 0x5DCL) return 1;
     return 0;
 }
 
+/* Start-up check that eight files can be open at once (a.tmp to h.tmp are created and
+   deleted), so that the FILES= setting is big enough; else first_punt(6), shown as A006,
+   "Resource problem or internal error". */
 void far check_fds(void)
 {
     int handles[8];
@@ -179,6 +216,8 @@ void far check_fds(void)
     if (!ok) first_punt(6);
 }
 
+/* Write n bytes from buf as the whole file `name` (blttodrive), or read n bytes of it
+   into buf (bltfromdrive); 1 if all went well. */
 char far blttodrive(void far *buf, char *name, unsigned n)
 {
     unsigned char ok = 1;
@@ -201,6 +240,9 @@ char far bltfromdrive(char *name, void far *buf, unsigned n)
     return ok;
 }
 
+/* read() and write() for a far buffer: DOS functions 3Fh and 40h through intdosx, with
+   errno set and -1 returned on failure. The medium-model library's read and write take
+   near buffers, so every loader that fills far or EMS memory goes through these. */
 int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n)
 {
     struct SREGS sregs;
@@ -230,6 +272,14 @@ int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n)
     return out.x.ax;
 }
 
+/* The PLAYER.DAT cipher (UW-Formats 9.2.2). build_xor_table fills the 80-byte key table
+   from the seed byte, the file's first byte: four rounds of strides over the table, after
+   a first loop over entries 3Ch-4Fh that the next round overwrites. That first loop only
+   adds 7 to the seed in the end; UW-Formats found it in a trace of uw2edit.exe, and UW2
+   has it too. xor_xor_table then codes one block of at most 80 bytes, each byte combined
+   with the key, the previous output and the previous input, which makes the same routine
+   decode and encode. Blocks shorter than 2 bytes are left untouched. xorread and xorwrite
+   run it over a buffer 80 bytes at a time. */
 void far build_xor_table(unsigned char key, unsigned char *tab)
 {
     register int i;
@@ -290,6 +340,9 @@ int far xorwrite(int fd, unsigned char key, unsigned char far *buf, unsigned n)
 }
 
 void far fopen(char *path, int mode);
+/* Opens a file in DATA\ (data_fopen, with stdio), or, with our_open, in the save game's
+   working directory HomeDir (directory 0) or DATA\ (otherwise): mode 0 read, 1 create for
+   writing, 2 create for reading and writing, 3 read and write, all binary. */
 void far data_fopen(char *name, int mode)
 {
     char path[0x42];

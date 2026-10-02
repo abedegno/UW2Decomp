@@ -1,18 +1,27 @@
 ; /* target: seg020 */
 ; /* opts: /ml */
 ;
-; One routine: copies a small block to the planar VGA screen, plane by plane, four bytes
-; down each column (row offsets from _Ytab), storing the value 90h as it is and
-; subtracting a constant from every other byte. Hand-written assembly; it uses no 186
-; instructions, so it is written without a CPU directive. Its two forward jumps carry
-; no padding, so they were written `short`.
+; One routine, seg020_1(char near *src, int x, int y, int value): copies a 4 by 4 pixel
+; block from DS:src (four rows of four bytes) to the planar VGA screen at x, y (row
+; offsets from _Ytab), a column per plane, storing the byte 90h as it is and subtracting
+; the low byte of value from every other byte. Registers: SI the source, DI the screen
+; byte, AH the map mask bit, CH the value, BP counts the columns (the routine reuses BP
+; after its frame is set up).
 ;
-; The routine starts at seg020:0001 (IDA put its proc at +24, inside it); nothing calls
-; it directly, so it has neither an FM Towns nor a symbols.tsv name.
-
-; The segments are declared by hand, not with .model medium and .code: seg020 starts at an
-; odd address in the EXE, right after seg019's code, so its code segment was byte-aligned,
-; and .model medium declares SEG020_TEXT word-aligned (and refuses another alignment).
+; After the plane bit wraps from 8 to 1 the next column is written one byte on, but the
+; column after that reloads DI from BX, the block's first byte, so a block starting at
+; x & 3 of 2 or 3 would put its last column in the wrong byte. The routine starts at
+; seg020:0001 (IDA put its proc at +24, inside it); nothing calls it directly, so the
+; slip may never have mattered.
+;
+; name: descriptive (copies a block to the planar VGA screen); the routine has neither an
+; FM Towns nor a symbols.tsv name.
+; match: hand-written assembly; it uses no 186 instructions, so it is written without a
+; CPU directive. Its two forward jumps carry no padding, so they were written `short`.
+; match: the segments are declared by hand, not with .model medium and .code: seg020
+; starts at an odd address in the EXE, right after seg019's code, so its code segment
+; was byte-aligned, and .model medium declares SEG020_TEXT word-aligned (and refuses
+; another alignment).
 
 SEG020_TEXT segment byte public 'CODE'
 SEG020_TEXT ends

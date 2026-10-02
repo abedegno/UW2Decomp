@@ -1,7 +1,13 @@
 /* target: seg036_32A9 */
 /* opts: -mm -1 -G -O -d */
-/* Map_GetAddr and CreateObj: the whole of DOS segment seg036_32A9, in original order.
-   Names are the originals from the FM Towns symbol table. */
+/* MAPADDR.C: Map_GetAddr and CreateObj, the whole of DOS resident segment seg036_32A9, in
+   original order. Map_GetAddr is the bounds-checked way into the tile map (mapdata, owned
+   by MAP.C) that most of the game uses; CreateObj takes a free record from the object
+   store (OBJECTS.C's Obj_Alloc) and gives it a new object's default fields. The file owns
+   no data.
+
+   name: descriptive (the file's own name is not known). The function names are the
+   originals from the FM Towns symbol table. */
 
 #include "critter.h"
 #include "map.h"
@@ -9,11 +15,18 @@
 
 extern struct Tile far *mapdata;
 
+/* The tile at x, y, or a null pointer when either is outside 0..63. */
 struct Tile far * far Map_GetAddr(int x, int y)
 {
     return ((x & ~0x3F) + (y & ~0x3F)) == 0 ? mapdata + (x + (y << 6)) : 0L;
 }
 
+/* A new object of type `item` from the mobile (mobile nonzero) or static free list, or a
+   null pointer when the list is empty. The new object has quality 40, no owner, no next
+   link, z 0, heading 0, fine x and y 3 (near the middle of a tile), and the id flags
+   (bits 9-14) clear. An item whose ComObj stack field is 0 or 2 gets a quantity of 1
+   (ID_ISQUANT with link 1); any other has a link of 0. A creature is then set up by
+   init_this_critter. The object is not placed in any tile list. */
 struct Object far * far CreateObj(int item, char mobile)
 {
     struct Object far *obj;

@@ -3,7 +3,20 @@
 /* Using objects: bones, the watch, crystals, gems, poles, anvils, food, oil, books, lockpicks,
    keys, containers, lights, doors, runes and the rest: the whole of DOS overlay ovr138, in
    original order. Function and global names are the originals from the FM Towns symbol
-   table; the source file's own name is not known. */
+   table; the source file's own name is not known.
+
+   OBJUSE.C's UseObj dispatches here by class: UseCont, UseLight, UseFood, UseUtil,
+   UseUnique, UseMagic, UseBook, UseRect (doors, furniture, switches) and UseRune. The
+   *On functions (UseBonesOn, UseKeyGem, UsePoleOn, UseAnvilOn, UseOilOn, UseLockpickOn,
+   UseKeyOn, UseRockHammerOn) are the second half of a two-object use: OBJUSE.C's UseThing
+   stores one as ObjectActor, and INTERACT.C calls it with the object clicked next, the
+   first object being ObjectActing. Their how is nonzero for a real use, and other is set
+   when the target is in the inventory rather than in the world (inferred from UseAnvilOn
+   and UseRockHammerOn, which want the opposite). The door functions (OpenDoor, CloseDoor,
+   changeDoor) turn a door into the moving door animation object and hand it to EFFECT.C's
+   animation list. Game state touched here includes hunger, drunkenness, the key gem quest
+   bytes and X clocks, and the map scraps.
+   Name: descriptive (using particular objects). */
 
 #include <string.h>
 #include <stdlib.h>
@@ -25,7 +38,7 @@ extern struct Inplist near *inplist;
 extern signed char Food[];
 extern long nextSpellTime;
 extern char ValidLightSlots[];
-/* This file's _BSS, DS:8184 (ovr137's ends there): of the files before ovr140's TxmTerr,
+/* match: this file's _BSS, DS:8184 (ovr137's ends there): of the files before ovr140's TxmTerr,
    only this one uses it (seg044 does too). */
 char door_type;
 
@@ -51,6 +64,8 @@ void far play_effect_here(unsigned char a, int b, int c);
 void far UseObj(struct Object far *who, struct Object far *obj, int how);
 void far repair_item(struct Object far *obj, int skill, int how);
 
+/* Bones or a skull used on a gravestone are buried and deleted; on anything else, "It
+   seems to have no effect." */
 void far UseBonesOn(struct Object far *obj, char how)
 {
     unsigned char used;
@@ -62,14 +77,16 @@ void far UseBonesOn(struct Object far *obj, char how)
     if (OBJ_ITEM(obj) == ITEM_GRAVESTONE)
     {
         used = 1;
-        game_sprint(0x94);
+        game_sprint(0x94); /* "You thoughtfully give the bones a final resting place." */
     }
     if (!used)
-        game_sprint(0x92);
+        game_sprint(0x92); /* "It seems to have no effect." */
     else
         using_punt(ObjectActing, how, 1);
 }
 
+/* The pocketwatch prints the time from the game clock: 0x3C00 ticks a minute and 0xE1000
+   an hour, on a 12-hour dial. */
 void far UseWatch(void)
 {
     char hours;
@@ -81,7 +98,7 @@ void far UseWatch(void)
     if (hours == 0)
         hours = 12;
     minutes = player->game_clock / 0x3C00L % 60;
-    str_copy(text, get_string(0x227));
+    str_copy(text, get_string(0x227)); /* "The watch reads " */
     i = strlen(text);
     if (hours > 9)
         text[i++] = hours / 10 + '0';
@@ -94,13 +111,15 @@ void far UseWatch(void)
     game_sprint(0x60);
 }
 
+/* A storage crystal prints a four-character signature, letter digit letter digit, made
+   from its quality. */
 void far UseCrystal(int quality)
 {
     char label[6];
     int i;
     int v;
 
-    game_sprint(0x160);
+    game_sprint(0x160); /* "You \"read\" the crystal's signature: " */
     v = (0x49 - quality) * 2;
     for (i = 0; i < 4; i++)
     {
@@ -112,6 +131,12 @@ void far UseCrystal(int quality)
     scroll_print(label);
 }
 
+/* A blackrock key gem (0x118-0x11F, gem 1 to 8 from its index) used on the large
+   blackrock gem in the world, if the key gem's owner field is set (probably once it has
+   been treated). It is used up, the X clock XC_GEMS counts it and picks the message
+   (0x152 plus the new count), gem 4 also advances XC_CASTLE, and QB_GEMS_USED gets the
+   gem's bit (gems 6 and 7 swap bits) while vars[6] records it. A different sound plays when
+   all eight bits are set. Otherwise "The key gem remains inert in your hand." */
 void far UseKeyGem(struct Object far *obj, char how, unsigned char other)
 {
     int gem;
@@ -125,7 +150,7 @@ void far UseKeyGem(struct Object far *obj, char how, unsigned char other)
         if (gem == 4)
             player->xclock[XC_CASTLE]++;
         do_sfx(4, player->xclock[XC_GEMS] << 2);
-        game_sprint(0x152);
+        game_sprint(0x152); /* "The key gem fuses with the larger gem, and the face lights up." */
         player->xclock[XC_GEMS]++;
         game_sprint(player->xclock[XC_GEMS] + 0x152);
         if ((gem & 6) == 6)
@@ -140,22 +165,24 @@ void far UseKeyGem(struct Object far *obj, char how, unsigned char other)
             play_effect_here(0x2C, 0x40, 0x14);
     }
     else
-        game_sprint(0x15B);
+        game_sprint(0x15B); /* "The key gem remains inert in your hand." */
 }
 
+/* A pole reaches a switch out of arm's range and uses it. */
 void far UsePoleOn(struct Object far *obj)
 {
     UsingPole = 0;
     FixPlayerEquips();
     if (OBJ_CLASS(obj) == CLASS_SWITCH)
     {
-        game_sprint(0xAB);
+        game_sprint(0xAB); /* "Using the pole you trigger the switch." */
         UseObj(ThePlayer, obj, 0);
     }
     else
-        game_sprint(0xAC);
+        game_sprint(0xAC); /* "The pole cannot be used on that." */
 }
 
+/* An anvil used on an object in the inventory repairs it with the repair skill. */
 void far UseAnvilOn(struct Object far *obj, unsigned char how, unsigned char other)
 {
     if (!how || !other)
@@ -166,6 +193,23 @@ void far UseAnvilOn(struct Object far *obj, unsigned char how, unsigned char oth
     repair_item(obj, player->skills[SKILL_REPAIR], 1);
 }
 
+/* Eating and drinking: food, potions, drinks and a few plants. Returns -2 when it cannot
+   be used now, -1 for something that is not edible, 0 when the player is too full, 1 when
+   eaten. A stack on the cursor, or eating outside input mode 1 (mid conversation),
+   returns -2; the message for each (0x84 "You can only use those individually...", 0x16B
+   "You may eat after you finish speaking.") is chosen but never printed.
+   The nourishment of class 0x0B food is its byte in MISC.C's Food table: positive feeds the
+   player through player_eat; negative is alcohol, adding its size to the drunk level (up
+   to 0x3F) and then rolling skill_check(attribute 0, drunk): -1 passes out into sleep and
+   wakes unsteady, 0 an effect for drunk / 6, 2 restores some health. The items handled by
+   name each print their own line (taste is a string number counted up through the case
+   fall-throughs: leeches 0xF4 to the mushroom 0xF7, water 0xFC to potions 0xFF); other food
+   prints "That <name>" with a taste from 0xBB "tasted putrid" to 0xBF "tasted great", from
+   (quality + random 0 to 19) / 16. The mushroom may restore a little mana and counts up
+   shrooms (to 3); one plant (0x114) puts the player to sleep for 2 to 5 unless in the
+   void. A spell in the food is cast with no delay, then traps fire. Meat on a stick, a
+   piece of meat, a honeycomb and the three bottles leave a stick, a bone, a lump of wax or
+   an empty bottle, in the same slot if it was a single item or else on the cursor. */
 int far UseFood(struct Object far *who, struct Object far *food, unsigned char how)
 {
     int qty;
@@ -248,7 +292,7 @@ int far UseFood(struct Object far *who, struct Object far *food, unsigned char h
     {
         if (nutrition != 0xFF && !player_eat(nutrition))
         {
-            game_sprint(0x8C);
+            game_sprint(0x8C); /* "You are too full to eat that now." */
             return 0;
         }
         if (!is_potion)
@@ -290,11 +334,11 @@ int far UseFood(struct Object far *who, struct Object far *food, unsigned char h
             switch (skill_check(playerdat->attr[0], player->drunk))
             {
             case -1:
-                game_sprint(0x100);
+                game_sprint(0x100); /* "As the alcohol hits you, you stumble and collapse into sleep." */
                 player_sleep(-2);
                 if (ThePlayer->hp != 0)
                 {
-                    game_sprint(0x102);
+                    game_sprint(0x102); /* "You wake feeling somewhat unstable but better." */
                     set_effect(0x40, player->drunk / 6 + 10);
                 }
                 break;
@@ -302,7 +346,7 @@ int far UseFood(struct Object far *who, struct Object far *food, unsigned char h
                 set_effect(0x40, player->drunk / 6);
                 break;
             case 2:
-                game_sprint(0x101);
+                game_sprint(0x101); /* "The drink makes you feel a little better for now." */
                 restore_hp(ThePlayer, -2);
                 break;
             }
@@ -358,6 +402,10 @@ int far UseFood(struct Object far *who, struct Object far *food, unsigned char h
     return 1;
 }
 
+/* An oil flask used on an object in the inventory: a piece of wood becomes a torch of
+   quality 40; an unlit lantern or torch gains 0x20 quality (to at most 0x3F). The flask is
+   used up. Strings 0xC1-0xC3 are the lantern's and 0xC5-0xC7 the torch's (off is 4 for
+   anything not a lantern): lit, refuelled, already full. */
 void far UseOilOn(struct Object far *obj, unsigned char how, unsigned char other)
 {
     int off;
@@ -379,7 +427,7 @@ void far UseOilOn(struct Object far *obj, unsigned char how, unsigned char other
             force_mouse_cursor(id);
             GameInputMode = 1;
         }
-        game_sprint(0xC4);
+        game_sprint(0xC4); /* "Dousing a cloth with oil and applying it to the wood, you make a torch." */
         using_punt(ObjectActing, how, 1);
         if (CursorObjPtr == obj)
         {
@@ -417,9 +465,16 @@ void far UseOilOn(struct Object far *obj, unsigned char how, unsigned char other
     else if (id == ITEM_LIT_LANTERN || id == ITEM_LIT_TORCH)
         game_sprint(off + 0xC1);
     else
-        game_sprint(0xC0);
+        game_sprint(0xC0); /* "You cannot use oil on that." */
 }
 
+/* Reading from the inventory. The map opens the automap (in mode 1); a bit of a map is
+   copied to the player's map (update_map_scraps), its link set to LINK_SPECIAL once
+   copied, or, already copied, opens the automap at that scrap (player->map_scrap). A book
+   or scroll with id bit 10 plays cutscene 0x100 plus its link; otherwise its link below
+   0x100 is a string in block 3 (STR_BOOKS), printed after "You read the <name>...".
+   Reading book text 6 sets bit 2 of quests[26] (quests 104 to 107). A link of 0x100 or more
+   calls the empty make_stew. An enchanted scroll casts its spell and is used up. */
 void far UseBook(struct Object far *obj, unsigned char how)
 {
     char far *str;
@@ -435,7 +490,7 @@ void far UseBook(struct Object far *obj, unsigned char how)
         return;
     if (OBJ_ITEM(obj) == ITEM_MAP)
     {
-        game_sprint(0x8E);
+        game_sprint(0x8E); /* "You unroll your map." */
         if (inplist->mode == 1)
             newscr(2);
     }
@@ -457,12 +512,12 @@ void far UseBook(struct Object far *obj, unsigned char how)
             else
             {
                 obj->ol.f.link = LINK_SPECIAL;
-                game_sprint(9);
+                game_sprint(9); /* "You copy the map scrap to your map." */
                 update_map_scraps(scrap, owner, link);
             }
         }
         else
-            game_sprint(0xA);
+            game_sprint(0xA); /* "You do not have your map." */
     }
     else if (!(obj->id & ID_ENCHANT) || OBJ_MAJOR(obj) == MAJOR_RECT)
     {
@@ -491,6 +546,9 @@ void far UseBook(struct Object far *obj, unsigned char how)
     }
 }
 
+/* Picking a lock with checkLock (OBJUSE.C), passing minus (Picklock skill + 1). A fumble
+   breaks the pick unless a dexterity check against 20 succeeds; with no Picklock skill an
+   unlocked lock reports the attempt failed rather than "not locked". */
 void far UseLockpickOn(struct Object far *obj, unsigned char how)
 {
     int result;
@@ -508,25 +566,28 @@ void far UseLockpickOn(struct Object far *obj, unsigned char how)
     switch (result)
     {
     case 1:
-        game_sprint(3);
+        game_sprint(3); /* "There is no lock on that." */
         break;
     case 5:
         using_punt(ObjectActing, 1, 1);
-        game_sprint(0x86);
+        game_sprint(0x86); /* "You broke your pick." */
         break;
     case 0:
-        game_sprint(0x85);
+        game_sprint(0x85); /* "Your lockpicking attempt failed." */
         break;
     case 4:
-        game_sprint(0x88);
+        game_sprint(0x88); /* "That is not locked." */
         break;
     default:
         play_effect_here(0x13, 0x40, 0);
-        game_sprint(0x87);
+        game_sprint(0x87); /* "You succeed in picking the lock." */
         break;
     }
 }
 
+/* A key used on a lock: the key's owner field is the lock number it fits. The message is
+   checkLock's result plus 2: "The key does not fit.", "There is no lock on that.", "The
+   key locks the lock.", "The key unlocks the lock.", "That is already open." */
 void far UseKeyOn(struct Object far *obj, unsigned char how)
 {
     int result;
@@ -540,6 +601,8 @@ void far UseKeyOn(struct Object far *obj, unsigned char how)
     game_sprint(result + 2);
 }
 
+/* A container: locked ones say so; in the inventory it opens in the panel (OpenTheBag),
+   in the world its contents are dumped onto the floor (DumpTheBag). */
 void far UseCont(struct Object far *who, struct Object far *obj, char how)
 {
     char name[20];
@@ -557,6 +620,11 @@ void far UseCont(struct Object far *who, struct Object far *obj, char how)
         DumpTheBag(obj, who == ThePlayer);
 }
 
+/* Lights a light or puts it out (unlit items 0x90-0x93, lit 0x94-0x97). A light must be a
+   single item in the inventory, and a used-up one (quality 1 or less) will not light.
+   When it is not in one of the four light slots (ValidLightSlots, 5 to 8: the shoulders and
+   hands), a torch, candle, lantern or light sphere is moved to the first free one, or
+   "Your hands are full." */
 void far UseLight(struct Object far *obj, unsigned char how)
 {
     int slot;
@@ -573,12 +641,12 @@ void far UseLight(struct Object far *obj, unsigned char how)
         qty = 1;
     if (!how)
     {
-        game_sprint(0x89);
+        game_sprint(0x89); /* "Lights may only be used if equipped." */
         return;
     }
     if (OBJ_QUALITY(obj) <= 1)
     {
-        game_sprint(0x8A);
+        game_sprint(0x8A); /* "That light is already used up." */
         return;
     }
     slot = FindSlot(obj);
@@ -606,7 +674,7 @@ void far UseLight(struct Object far *obj, unsigned char how)
             }
             if (newslot == 0)
             {
-                game_sprint(0x105);
+                game_sprint(0x105); /* "Your hands are full." */
                 return;
             }
             InvRemoveOneObject(obj);
@@ -626,6 +694,9 @@ void far UseLight(struct Object far *obj, unsigned char how)
     RedisplayInvSlot(slot);
 }
 
+/* Quest items: the stoppered bottle cannot be opened; the horn sounds properly (an
+   instrument tune, and the second message) only once the X clock XC_DJINN reaches 6; plant
+   0x114 is eaten; a blackrock key gem asks what to use it on. */
 void far UseUnique(struct Object far *who, struct Object far *obj, unsigned char how)
 {
     int n = 0;
@@ -633,7 +704,7 @@ void far UseUnique(struct Object far *who, struct Object far *obj, unsigned char
     switch (OBJ_ITEM(obj))
     {
     case ITEM_BOTTLE_116:
-        game_sprint(0x8D);
+        game_sprint(0x8D); /* "You are unable to remove the stopper." */
         break;
     case ITEM_HORN:
         if (player->xclock[XC_DJINN] >= 6)
@@ -652,6 +723,10 @@ void far UseUnique(struct Object far *who, struct Object far *obj, unsigned char
     }
 }
 
+/* Starts a door moving: it becomes the moving door (0x1CF) with its own index within the
+   major class (0-7 closed, 8-15 open) kept in its owner field, and joins the animation
+   list for 5 frames (a portcullis, index 6, for 4). EFFECT.C turns it back into a door
+   when the animation ends. */
 void far moveDoor(struct Object far *door)
 {
     int len = 5;
@@ -663,6 +738,8 @@ void far moveDoor(struct Object far *door)
     add_animobj(Obj_MemTPtr(door), len, 0, MapObj_X, MapObj_Y);
 }
 
+/* Reverses a door that is moving: flips bit 3 of its id flags, fires its traps with how 9
+   (now closing) or 8 (now opening), and turns the frames left into frames done. */
 void far changeDoor(struct Object far *door)
 {
     int cur;
@@ -681,6 +758,10 @@ void far changeDoor(struct Object far *door)
         set_animlen(door, len - cur);
 }
 
+/* Opens a closed door (index below 8), or reverses a moving door that is closing (owner 8
+   and up). A closed door other than a portcullis is first raised 0x18 in z (inferred: the
+   z an open door is drawn at), its owner bit 0 cleared, and its traps fire with how 8.
+   Plays the door sound (0x14 for a portcullis, 0xB for a door) at the door. */
 void far OpenDoor(struct Object far *who, struct Object far *door)
 {
     unsigned char type;
@@ -713,6 +794,8 @@ void far OpenDoor(struct Object far *who, struct Object far *door)
                 (MapObj_Y << 3) + OBJ_FINEY(door), 0);
 }
 
+/* Closes an open door, or reverses a moving door that is opening; traps fire with how 9.
+   No sound when quick_time is set. door_type keeps the door's type for the sound. */
 void far CloseDoor(struct Object far *who, struct Object far *door)
 {
     unsigned char type;
@@ -754,6 +837,9 @@ void far ToggleDoor(struct Object far *who, struct Object far *door)
         CloseDoor(who, door);
 }
 
+/* Spills a container's contents onto the floor (TREASURE.C's drop_link_chain), counting it
+   as theft from its owner if the item can be owned (player_did_bad), and tells the player
+   "You empty the <name>." or "The <name> is empty." */
 void far DumpTheBag(struct Object far *bag, char to_player)
 {
     char dumped;
@@ -780,6 +866,10 @@ void far DumpTheBag(struct Object far *bag, char to_player)
     editchng(2);
 }
 
+/* The flam and tym rune traps, set off by whoever touches them. A flam rune does 3d4 + 4
+   damage of type 8 (probably fire) and becomes an explosion animation with a fireball
+   effect. A tym rune paralyses the player for 4 to 19 (and stops him) or gives a critter
+   goal 0xF (probably paralysed) for a random time, then disappears. */
 void far UseRune(struct Object far *who, struct Object far *rune)
 {
     if (OBJ_ITEM(rune) == ITEM_FLAM_RUNE)
@@ -796,7 +886,7 @@ void far UseRune(struct Object far *who, struct Object far *rune)
         {
             player->paralyzed = (rand() & 0xF) + 4;
             PN.vel[0] = PN.vel[1] = PN.speed = 0;
-            game_sprint(0x163);
+            game_sprint(0x163); /* "You feel your limbs stiffen.  You are unable to move." */
         }
         else
             hit_critter_goal(0xF, 1, ((rand() & 0x3F) << 2) + 0x40, who, MapObj_X, MapObj_Y);
@@ -804,6 +894,12 @@ void far UseRune(struct Object far *who, struct Object far *rune)
     }
 }
 
+/* Major class 5 by minor class. 0, doors: a closed door opens unless locked (the player
+   hears "The <name> is locked." and a rattle); a critter cannot open a door with owner
+   bit 0 set. An open door closes. 2, decals: the lever (0x161) and switch (0x162) step
+   their id flags through 0 to 7; the bed (0x167) puts the player to sleep; anything else
+   is looked at. 1, furniture: a barrel or chest (0x15B, 0x15D) not marked is_quant is
+   dumped out like a container, as theft if owned. 3, switches: flip_switch. */
 void far UseRect(struct Object far *who, struct Object far *obj)
 {
     char name[20];
@@ -857,6 +953,11 @@ void far UseRect(struct Object far *who, struct Object far *obj)
     }
 }
 
+/* Class 0x12 items. From the inventory: the bedroll sleeps (in mode 1), the mandolin and
+   flute play, leeches cure poison at the cost of a backfire and are used up, the rock
+   hammer and oil flask ask for a target, and the fishing pole fishes (go_fish), putting a
+   fish of quality 0x3F on the cursor on success. In the world: the fountain casts the
+   spell it holds (the strength message for spell 4), or is dry at quality 0. */
 void far UseMagic(struct Object far *who, struct Object far *obj, char how)
 {
     struct Object far *fish;
@@ -878,7 +979,7 @@ void far UseMagic(struct Object far *who, struct Object far *obj, char how)
             break;
         case ITEM_LEECHES:
             if (player->poison > 0)
-                game_sprint(0xEF);
+                game_sprint(0xEF); /* "The leeches remove the poison as well as..." */
             player->poison = 0;
             backfire(ThePlayer, 2);
             using_punt(obj, how, 1);
@@ -905,12 +1006,12 @@ void far UseMagic(struct Object far *who, struct Object far *obj, char how)
         {
         case ITEM_FOUNTAIN_12E:
             if (OBJ_QUALITY(obj) == 0)
-                game_sprint(0x93);
+                game_sprint(0x93); /* "The fountain is dry." */
             else if (decode_obj_spell(obj, &spell, &power, &flag))
             {
                 inanimate_spell(MapObj_X, MapObj_Y, obj, who, spell, power);
                 if (spell == 4)
-                    game_sprint(0x108);
+                    game_sprint(0x108); /* "The waters of the fountain renew your strength." */
                 else
                     game_sprint(0xFC);
             }
@@ -921,6 +1022,10 @@ void far UseMagic(struct Object far *who, struct Object far *obj, char how)
     }
 }
 
+/* A rock hammer used on a boulder in the world (not one the player carries) breaks it into
+   1 or 2 pieces plus one for each size it is above a boulder (0x155): each piece is one or
+   two sizes smaller, and anything smaller than a small boulder becomes 3 to 8 sling
+   stones. The pieces are placed where the boulder was. */
 void far UseRockHammerOn(struct Object far *obj, unsigned char how, char other)
 {
     int z;
@@ -942,7 +1047,7 @@ void far UseRockHammerOn(struct Object far *obj, unsigned char how, char other)
     id = OBJ_ITEM(obj);
     if (id >= ITEM_LARGE_BOULDER_153 && id <= ITEM_SMALL_BOULDER)
     {
-        game_sprint(0x95);
+        game_sprint(0x95); /* "The rock breaks into smaller pieces." */
         tile = Map_GetAddr(MapObj_X, MapObj_Y);
         xoff = OBJ_FINEX(obj);
         yoff = OBJ_FINEY(obj);
@@ -968,9 +1073,12 @@ void far UseRockHammerOn(struct Object far *obj, unsigned char how, char other)
         editchng(2);
     }
     else
-        game_sprint(0x92);
+        game_sprint(0x92); /* "It seems to have no effect." */
 }
 
+/* Class 0x0C and 0x0D scenery: bones and skulls (0xC2-0xC6), the anvil and the pole ask
+   for a target (the pole also sets UsingPole, which extends reach, inferred); two plants
+   are eaten. */
 void far UseUtil(struct Object far *obj, char how)
 {
     if (OBJ_ITEM(obj) >= ITEM_SKULL_C2 && OBJ_ITEM(obj) <= ITEM_PILE_OF_BONES_C6)

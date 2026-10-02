@@ -1,7 +1,16 @@
 /* target: seg023 */
 /* opts: -mm -1 -G -O -d */
-/* Palette colour cycling: DOS resident segment seg023, in original order. Function and
-   global names are the originals from the FM Towns symbol table where it has them. */
+/* Palette colour cycling: DOS resident segment seg023, in original order.
+
+   The game animates some colours by rotating palette entries rather than redrawing pixels.
+   cycle_colors is called from the input loop (INTERACT.C, with the low byte of *Time) and
+   rotates its banks once every 64 ticks; rotate_bank is also used by the cutscene player
+   (CUTS.C anm_cycle) for the colour cycles of an LPF file. Both work on the in-memory
+   palette (palette, owned by GRCORE.ASM) and send the changed entries to the VGA DAC with
+   local_do_palette (MODEX.ASM). The file owns only its phase bytes and a one-entry save.
+
+   name: descriptive (our name for what the file does); rotate_bank and cycle_colors are the
+   FM Towns names. */
 
 #include "gfx.h"
 #include "sys.h"
@@ -33,6 +42,10 @@ void far rotate_bank(unsigned char first, unsigned char count, unsigned char up)
     p[2] = saved[2];
 }
 
+/* Called with a running time byte. last_phase follows t >> 5 and last_half t >> 6, so the
+   banks rotate only when t >> 6 changes, every 64 ticks. Each call that rotates moves the
+   four 4-entry banks at E0h..EFh one place down and the runs 3..7 and 8..10 one place up,
+   then uploads E0h..EFh and 3..10. */
 void far cycle_colors(unsigned char t)
 {
     if ((t >> 5) == last_phase)

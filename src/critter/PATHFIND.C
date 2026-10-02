@@ -1,15 +1,52 @@
 /* target: seg006_1413 */
 /* opts: -mm -1 -G -O -Y -d */
 /* Critter motion, homing projectiles, path traversal and doors: the whole of DOS resident
-   segment seg006_1413, in original order. Function names are the FM Towns originals; the
-   FM Towns build has the functions in the same order, which fixes the names of the ones
-   the target table lists under IDA names: store_targ (HomingDartTargeting), crit_hndlr_fly
-   and crit_hndlr_swim (FlierNPCCollision, SwimmerNPCCollision), crit_hndlr_obj (static
-   here, the tail of crit_hndlr_walk's range; init_ai installs the four handlers in FM
-   Towns as in DOS), hyp_move (TraverseMultipleTiles), make_path_from_flood_data
-   (StorePath), add_to_beeline_path (TestStraightPathTraversal), find_free_path
+   segment seg006_1413, in original order.
+
+   What it does in the game: it gets a critter to a square. crit_head_for_loc, called by
+   AI.C's goals, picks the way: follow a stored path, walk straight at the square when
+   beeline finds the tiles between walkable, or search for a path with flood_path (a
+   breadth-first flood over at most 40 steps in a box 5 tiles around the start and the
+   destination) and store it in one of 16 shared path slots, or give up and wander. A
+   critter that bumps into a door tries to open it (try_to_open_door). It also has the
+   collision handlers the physics engine calls for walking, flying and swimming critters
+   (crit_hndlr_walk, _fly, _swim, installed by init_ai), move_me_joe for mobile objects
+   that are not critters, the steering of homing darts (check_homing) and of satellites
+   (check_sat), line_of_sight, and build_corpse, which leaves a dead critter's remains.
+
+   Data owned: the per-critter scratch globals AI.C works with (meptr, mycst, myid, the
+   critter's tile, fine position, height and home, its target's position and distances,
+   and the flags of the last physics step: control, failed, aligned, hitwall, didhitobj,
+   hitadoor, didmove); the path squares of the search (pathsq, pathlen), the 16 stored
+   paths (paths) with their free mask (freepaths), the flood frontiers, and the step
+   tables (PathingOffset, path_turns, slope_for_dir). The flood search writes its
+   per-square records (struct StaticTile, critter.h) into stdat, a 64 by 64 far buffer
+   shared with other code.
+
+   Path terrain: hyp_move's flags argument is the handler's noclimb word and costflags
+   its w6 word (init_ai): 0x1000 asks for height checks, and bit 8 << class forbids
+   (flags) or adds 2 to the danger of (costflags) a floor of terrain class 0 plain, 1
+   water, 2 lava or 3 ice. So walkers avoid water and treat lava as dangerous, and
+   swimmers (noclimb 0x10A8) keep off plain floor and lava. A path may also drop to a
+   lower floor; the danger a path collects (drops cost their height less one) must stay
+   within the critter's acceptable_danger (AI.C).
+
+   Neighbours: AI.C (seg007) calls crit_head_for_loc, deltatotheta, line_of_sight,
+   set_loc and build_corpse; MOTION.C's do_physics moves the critters and calls the
+   handlers; CRITTIME.C uses flood_path to bring wandering monsters to the sleeping
+   player; OBJUSE.C's checkLock and UseObj open doors.
+
+   name: function names are the FM Towns originals; the FM Towns build has the functions
+   in the same order, which fixes the names of the ones the target table lists under IDA
+   names: store_targ (HomingDartTargeting), crit_hndlr_fly and crit_hndlr_swim
+   (FlierNPCCollision, SwimmerNPCCollision), crit_hndlr_obj (static here, the tail of
+   crit_hndlr_walk's range; init_ai installs the four handlers in FM Towns as in DOS),
+   hyp_move (TraverseMultipleTiles), make_path_from_flood_data (StorePath),
+   add_to_beeline_path (TestStraightPathTraversal), find_free_path
    (FindSetIndexOfBitField), store_path (UpdateSeg57TurningValues) and close_to_square
-   (CheckIfAtOrNearTargetTile). */
+   (CheckIfAtOrNearTargetTile).
+   Name: inferred (the job of System Shock's PATHFIND.C: critter motion and path finding,
+   flood_path, find_free_path, move_along_path). */
 #include <stdlib.h>
 #include <dos.h>
 #include "critter.h"
@@ -24,11 +61,11 @@
 #include "uw2.h"
 
 struct PathOffset { signed char x,y; };
-/* Uninitialised data, DS:222C..227F: this file's _BSS. Turbo C lays it out by a hash of
-   each name (tools/bssorder.py), so the definitions below are in that order. Names are
-   the FM Towns ones; FM Towns keeps the six marked static as statics (at _tp_act+N), so
-   their names are chosen here to land at the right address. Many of these are used only
-   by seg007 (critter AI), which declares them extern. */
+/* match: uninitialised data, DS:222C..227F: this file's _BSS. Turbo C lays it out by a
+   hash of each name (tools/bssorder.py), so the definitions below are in that order.
+   Many of these are used only by seg007 (critter AI), which declares them extern. */
+/* name: the names are the FM Towns ones; FM Towns keeps the six marked static as statics
+   (at _tp_act+N), so their names are chosen here to land at the right address. */
 int crit_terr;                          /* 222C */
 unsigned char doorx, doory;             /* 222E */
 int tdx, tdy;                           /* 2230 */
@@ -70,15 +107,21 @@ unsigned char myoldfacing;              /* 2278 */
 int YP;                                 /* 227A */
 unsigned char myoldheading;             /* 227C */
 static int projxpos;                    /* 227E, homing dart's fine x; name chosen for layout */
-/* This file's far data. Turbo C gives each far variable a paragraph-aligned segment of
-   its own (SEG006n_FAR), in definition order, and TLINK places the segments in the order
-   it first sees them: so pathsq (6062:0000, 63 squares), paths (6072:0000, 16 paths),
-   flood_list0 (608E:0000) and flood_list1 (6096:0000) are the far segments that PATHFIND
-   defined, segment table entries 65 to 68, the first after those no C file defined. */
+/* The squares of the path being built (pathsq, pathlen of them; beeline keeps each
+   square's floor height in the unused byte, flood_path marks a step that needs a jump in
+   flag) and the 16 stored paths, one per critter following a path (its slot in the low
+   nibble of its home word, b15 bit 7 set while it has one). */
+/* match: this file's far data. Turbo C gives each far variable a paragraph-aligned
+   segment of its own (SEG006n_FAR), in definition order, and TLINK places the segments
+   in the order it first sees them: so pathsq (6062:0000, 63 squares), paths (6072:0000,
+   16 paths), flood_list0 (608E:0000) and flood_list1 (6096:0000) are the far segments
+   that PATHFIND defined, segment table entries 65 to 68, the first after those no C file
+   defined. */
 struct PathSq far pathsq[63];
 struct PathRec far paths[16];
 extern struct StaticTile far stdat[MAP_SIZE][MAP_SIZE];
-/* The two flood fill frontiers (64 squares each); static in FM Towns, provisional names. */
+/* The two flood fill frontiers (64 squares each). */
+/* name: static in FM Towns, provisional names. */
 struct PathPt { unsigned char x, y; };
 static struct PathPt far flood_list0[64], far flood_list1[64];
 extern struct Object far * far CreateObj(int id, int owner);
@@ -94,10 +137,12 @@ extern void far put_effect(struct Object far *obj, int type, int size,
 extern void far process_area(char count, unsigned char src,
     unsigned char (far *callback)(int, int, struct Object far *),
     unsigned char type, char x, char y, char w, char h);
-/* Initialised data, DS:00AC..00C2: the step for each of the four path directions, the
-   free path slots (a bit per entry of paths), the direction from one square to the next
-   by [dx + 1][dy + 1], and the slope tile type climbed in each direction. FM Towns keeps
-   the three tables as statics (__D16Infoseg+N), so their names are provisional. */
+/* Initialised data, DS:00AC..00C2: the step for each of the four path directions (0 +y,
+   1 +x, 2 -y, 3 -x), the free path slots (a bit per entry of paths), the direction from
+   one square to the next by [dx + 1][dy + 1], and the slope tile type climbed in each
+   direction (TILE_SLOPE_N ... W). */
+/* name: FM Towns keeps the three tables as statics (__D16Infoseg+N), so their names are
+   provisional. */
 static struct PathOffset PathingOffset[4] = { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } };
 unsigned freepaths = 0xFFFF;
 static unsigned char path_turns[3][3] = {
@@ -108,6 +153,11 @@ extern void far critter_set_goal(unsigned char goal, int target);
 static unsigned char far crit_hndlr_obj(struct Phys *pn);
 unsigned char far do_crit_phys(struct Phys *pn, struct Handler *tp);
 
+/* Leave a dead critter's remains. fluids (the creature's corpse field, AI.C passes it
+   first) makes item 0xD9 + fluids where the critter lay (0xDB rubble, 0xDC wood chips,
+   0xDD bones, 0xDE and 0xDF blood stains, ...). corpse (its remains field) makes item
+   0xC0 + corpse (0xC2 skull, 0xC4 bone, ...) placed near the critter, with the critter
+   type as owner; outside the Pits of Carnage (world 7) only 7 times in 16. */
 void far build_corpse(struct Object far *obj, char fluids, char corpse) {
     struct Object far *remains;
     struct Tile far *home = Map_GetAddr(OBJ_HOMEX(obj),
@@ -133,6 +183,12 @@ corpse_part:
     }
 }
 
+/* One step for a mobile object that is not a critter (a missile, a thrown object ...),
+   called by AI.C's move_mobile. A spent object (hp 0) of quality class below 3 is
+   deleted (Obj_Punt; returns 0 so the loop revisits the slot), or given 1 hit point if
+   Obj_Punt keeps it. Objects marked no_hit ignore
+   falling (CT3.ignore 0x1000). After the physics step its time bin advances, and homing
+   darts and satellites steer. */
 unsigned char far move_me_joe(void) {
     unsigned char result;
     unsigned char unused;
@@ -161,6 +217,8 @@ unsigned char far move_me_joe(void) {
     (void)unused;
     return result;
 }
+/* process_area callback for check_homing: remember the object nearest the dart
+   (htarget, by fine Manhattan distance). */
 unsigned char far store_targ(int unused1, int unused2,
                                                       struct Object far *target) {
     int x = (OBJ_HOMEX(target) << 3)
@@ -176,6 +234,7 @@ unsigned char far store_targ(int unused1, int unused2,
     }
     return 0;
 }
+/* Turn angle src (0-255) magnitude/64 of the way towards dst, the short way round. */
 int far merge_angles(int src, int dst, int magnitude) {
     volatile int tmp;
     int result;
@@ -191,6 +250,11 @@ int far merge_angles(int src, int dst, int magnitude) {
     result = 0xFF & (magnitude * (dst - src) / 64 + src);
     return result;
 }
+/* Steer a homing dart: look for the nearest object in a 3 by 4 tile box ahead of it
+   (process_area, skipping its shooter, last_hit) and turn towards it, harder the closer
+   it is, and pitch towards its height; with no target it weaves at random. It trails a
+   sparkle effect (type 14) half the time and loses a hit point one step in four, which
+   limits its flight; a dart with the loner bit set dies at once. */
 void far check_homing(void) {
     int xhome, yhome, width, height;
     register int step, cardinal;
@@ -254,6 +318,10 @@ void far check_homing(void) {
     if (OBJ_LONER(meptr) != 0) meptr->hp = 0;
     else if (!(rand() & 3) && meptr->hp) meptr->hp = meptr->hp - 1;
 }
+/* Steer a satellite round its source (last_hit, the caster): its heading mixes the
+   tangent to the circle round the source with a pull back towards a distance of about
+   4 fine units, its pitch follows the source's height, and its speed is kept at 15. It
+   loses a hit point about one step in 32. */
 void far check_sat(void) {
     int satx, saty, srcx, srcy;
     int dist, turn, pitch, zdiff, zpitch, newpitch;
@@ -296,6 +364,10 @@ void far check_sat(void) {
     if (OBJ_LONER(meptr) != 0) meptr->hp = 0;
     else if ((rand() & 0x1F) == 1 && meptr->hp > 0) meptr->hp = meptr->hp - 1;
 }
+/* Set up the critter physics records and handlers: CN1/CT1 walkers, CN2/CT2 fliers
+   (never fall: ignore 0x1000), CN3/CT3 other mobile objects, CN4/CT4 swimmers (ignore
+   water, 0x10). mask is the collision bits passed to the special handler; noclimb and
+   w6 also serve flood_path as forbidden and costly terrain (see the file header). */
 void far init_ai(void) {
     CN1.acc[0] = 0; CN1.acc[1] = 0; CN1.flags = 0x80;
     CN2.acc[0] = 0; CN2.acc[1] = 0; CN2.flags = 0x80;
@@ -310,6 +382,7 @@ void far init_ai(void) {
     CT4.mask = 0x1728; CT4.noclimb = 0x10A8; CT4.w6 = 0;
     CT4.ignore = 0x10; CT4.special = crit_hndlr_swim;
 }
+/* The collision bits (MOTION.C's list) for obj where it stands, from TerrainCheck. */
 int far get_terrain(struct Object far *obj) {
     struct MotionCalc calc;
     curP = &calc;
@@ -322,6 +395,13 @@ int far get_terrain(struct Object far *obj) {
     TerrainCheck(8);
     return curP->hits0 | curP->hits1;
 }
+/* The walking critter's collision handler (CT1.special), called by do_physics with the
+   collision bits. Falling (0x1000) starts gravity and takes control away. A critter
+   whose footprint is on water and nothing else ((bits & 0xF8) == 0x10) drowns: a splash
+   (effect 6) and the last frame of its dying sequence. Otherwise water, and a drop
+   (0x800) or lava (0x20) it was not already on, stop it (failed) unless it is following
+   a stored path; a wall or high step (0x300) fails; an object (0x400) is noted in
+   collobject, with hitadoor for a door. */
 unsigned char far crit_hndlr_walk(struct Phys *pn) {
     struct Object far *door;
     register struct Phys *motion = pn;
@@ -423,6 +503,16 @@ unsigned char far do_crit_phys(struct Phys *pn, struct Handler *tp) {
     do_physics(pn, tp);
     return 1;
 }
+/* Can a critter move from square (x2, y2) to (x3, y3), having come from (x1, y1)?
+   x1 == 0 means (x2, y2) is the start, x3 == 0 that (x2, y2) is the destination.
+   Checks the tile walls between the squares (tile_walls), locked doors (checkLock 0)
+   whose frame lies across the move, given by the door's heading and its fine position,
+   the floor and solid object heights (a step up of more than one height unit fails,
+   a slope counts one higher unless climbed the right way) and the terrain (see the file
+   header). height is the critter's floor height on entering (x2, y2); *out gets the
+   height after the move and *dist collects danger, which must stay within cur_danger.
+   Sets jump when the move needs one, which only creatures with bA_5 make. Returns 1
+   if the move is possible. */
 unsigned char far hyp_move(unsigned char x1, unsigned char y1,
     unsigned char x2, unsigned char y2, unsigned char x3, unsigned char y3,
     int flags, int costflags, unsigned char height, unsigned char far *out,
@@ -634,6 +724,8 @@ unsigned char far hyp_move(unsigned char x1, unsigned char y1,
     *out = h23b;
     return 1;
 }
+/* line_of_sight's step test: can a sight line at height (fine units) pass from square
+   (x1, y1) into (x2, y2)? Fails on a wall between them or a floor above the line. */
 unsigned char far hyp_see(unsigned char oldx, unsigned char oldy,
     unsigned char x1, unsigned char y1, unsigned char x2, unsigned char y2,
     unsigned char height) {
@@ -666,6 +758,12 @@ unsigned char far hyp_see(unsigned char oldx, unsigned char oldy,
     }
     return 1;
 }
+/* Search for a walkable path from (x, y) at floor height height0 to (destx, desty),
+   breadth first, with hyp_move as the step test and range as the danger allowance.
+   The search stays in a box reaching 5 tiles beyond the start and destination, takes
+   at most 40 steps and keeps at most 64 squares in each frontier; where two routes meet
+   it prefers the one ending nearer destz. On success the path is in pathsq and pathlen
+   and it returns 1. */
 unsigned char far flood_path(char x, char y, unsigned char height0,
     char destx, char desty, char destz, unsigned char range) {
     char tx, ty, nx, ny;
@@ -685,6 +783,8 @@ unsigned char far flood_path(char x, char y, unsigned char height0,
     cur = flood_list0;
     next = flood_list1;
     mem_set(stdat, 0, 0x5000);
+    /* The test reads "world 0, level 0 of the world", which is true only for PlayerLevel
+       0, so in play the reach is always 5. */
     if ((PlayerLevel - 1) / LEVELS_PER_WORLD == 0 && (PlayerLevel - 1) % LEVELS_PER_WORLD + 1 == 0) reach = 10;
     else reach = 5;
     minx = x < destx ? (x - reach > 1 ? x - reach : 1)
@@ -774,6 +874,8 @@ unsigned char far flood_path(char x, char y, unsigned char height0,
     }
     return 0;
 }
+/* Read the path back from the flood records in stdat, from the destination (x, y) to
+   the start, into pathsq, with each step's jump flag. */
 void far make_path_from_flood_data(unsigned char length, unsigned char x,
     unsigned char y) {
     struct StaticTile far *tile;
@@ -789,6 +891,9 @@ void far make_path_from_flood_data(unsigned char length, unsigned char x,
         pathsq[i].flag = tile->pathflag;
     }
 }
+/* Is the straight line of tiles from (x1, y1) to (x2, y2) walkable, with no jumps?
+   Walks the line tile by tile (a DDA with a 7-bit fraction), testing each step with
+   hyp_move and building pathsq. Returns 1 if so, 0 if not, -1 for the same tile. */
 int far beeline(int x1, int y1, int x2, int y2) {
     signed char dx, dy;
     unsigned char x, y;
@@ -850,6 +955,9 @@ int far beeline(int x1, int y1, int x2, int y2) {
         tp_act->noclimb, tp_act->w6, pathsq[pathlen - 2].unused,
         (unsigned char far *)&pathsq[pathlen - 2].unused, &unused);
 }
+/* Can a point at (x1, y1, z1) see (x2, y2, z2)? Positions in fine units (8 to a tile),
+   heights in object units. Steps the line tile by tile, with the height interpolated,
+   testing walls and floors with hyp_see; a line longer than 10 tiles is never clear. */
 unsigned char far line_of_sight(int x1, int y1, int z1, int x2, int y2, int z2) {
     int dz;
     unsigned char lastx, lasty, z, destx, desty, oldx, oldy, x, y;
@@ -954,6 +1062,8 @@ unsigned char far line_of_sight(int x1, int y1, int z1, int x2, int y2, int z2) 
         frac += slope;
     }
 }
+/* beeline's step: append (x, y) to pathsq and test the move into it. Fails past 63
+   squares or where the step would need a jump. */
 unsigned char far add_to_beeline_path(unsigned char x,
     unsigned char y) {
     unsigned char traversable, unused;
@@ -978,6 +1088,7 @@ unsigned char far add_to_beeline_path(unsigned char x,
         return traversable && !jump;
     }
 }
+/* The first free path slot (a set bit of freepaths) in *found; 0 if all 16 are taken. */
 unsigned char far find_free_path(unsigned char *found) {
     unsigned char i;
     if (freepaths == 0) return 0;
@@ -989,6 +1100,8 @@ unsigned char far find_free_path(unsigned char *found) {
     }
     return 0;
 }
+/* Pack pathsq into a stored path: the start square, the length, two bits of direction
+   per step and one jump bit per step. */
 void far store_path(struct PathRec far *path) {
     unsigned char i, j, direction, slope;
     path->flag.bits.count = 0;
@@ -1011,6 +1124,8 @@ void far store_path(struct PathRec far *path) {
         path->slopes[i / 8] = slope;
     }
 }
+/* Advance a stored path to its next square (path->x, path->y), noting whether the step
+   is a jump; returns 0 at the end of the path. */
 unsigned char far set_next_square_on_path(struct PathRec far *path) {
     register int direction;
     if (path->flag.bits.count >= path->index) return 0;
@@ -1025,6 +1140,9 @@ unsigned char far set_next_square_on_path(struct PathRec far *path) {
     path->flag.bits.count = path->flag.bits.count + 1;
     return 1;
 }
+/* Is a critter on tile (xhome, yhome) at fine position (xpos, ypos) at the path square
+   (pathx, pathy)? Unless the step is a jump (flag), being within two fine units of the
+   edge towards the square counts as being there. */
 int far close_to_square(unsigned char flag,
     int xhome, int yhome, int xpos, int ypos, int pathx, int pathy) {
     if (!flag) {
@@ -1036,6 +1154,9 @@ int far close_to_square(unsigned char flag,
     if (xhome == pathx && yhome == pathy) return 1;
     return 0;
 }
+/* Follow a stored path: step to the next square when at the current one, then head for
+   the square's centre (or its near edge), or jump for a jump step. Returns 0 when the
+   path is done. */
 unsigned char far move_along_path(struct PathRec far *path) {
     int x,y;
     unsigned char tilex,tiley,heading;
@@ -1067,6 +1188,8 @@ unsigned char far move_along_path(struct PathRec far *path) {
     }
     return 1;
 }
+/* A jump step on a path: walk to the edge of the square, then leap towards the next
+   square (rate 1, pitch 22, speed 11). */
 void far do_that_jump_kinda_thing(struct PathRec far *path) {
     int x,y;
     unsigned char heading;
@@ -1094,6 +1217,8 @@ void far do_that_jump_kinda_thing(struct PathRec far *path) {
     }
     set_htx(heading);
 }
+/* The nearest of the 8 headings (0 is +y, counting clockwise towards +x) for the vector
+   (x, y). */
 unsigned char far deltatotheta(char x, char y) {
     char dx = x << 1;
     char dy = y << 1;
@@ -1105,6 +1230,9 @@ unsigned char far deltatotheta(char x, char y) {
         else return y > -(int)dx ? 3 : 4;
     }
 }
+/* Set the current critter's destination square and height (the destination fields of
+   the word at 0x0F and the target height). A new destination sets b18 bit 5 (destination
+   changed) and clears bit 6 (gave up). */
 void far set_loc(unsigned char x, unsigned char y, unsigned char z) {
     if (OBJ_DESTX(meptr) != x
         || OBJ_DESTY(meptr) != y
@@ -1116,6 +1244,17 @@ void far set_loc(unsigned char x, unsigned char y, unsigned char z) {
         meptr->b18 = meptr->b18 & 0xBF;
     }
 }
+/* Move the current critter towards square (x, y) at height z. The b18 flags: bit 5 the
+   destination changed, bit 6 gave up on it (wander awhile, cleared at random one step
+   in eight), bit 7 the straight line is clear; b15 bit 7 a stored path is in use.
+   At the destination it stops (a critter going home, goal 1, starts milling, goal 8).
+   Without control (falling, jumping) it only keeps its path in step. After bumping into
+   something: a door is tried (try_to_open_door) or, one time in four, given up on; two
+   attacking critters ignore each other; a flier passes an open door by changing pitch;
+   anything else makes it give up. Then it follows its path, walks straight if beeline
+   allows, searches for a path (flood_path, within acceptable_danger) into a free slot,
+   or wanders (crit_drunkwalk). A moving critter walks at its run speed when attacking
+   (goal 5), else at its walking speed. */
 void far crit_head_for_loc(unsigned char x, unsigned char y, char z) {
     char dx, dy;
     unsigned char heading, slot, blocked, opening;
@@ -1237,6 +1376,8 @@ void far crit_head_for_loc(unsigned char x, unsigned char y, char z) {
         meptr->b14 = meptr->b14 & 0xF8 | 4;
     }
 }
+/* A flier's pitch on the way to (x, y): keep about 20 height units above the floor here
+   and at the destination (never above 0x78), with a little random bobbing. */
 void far adjust_height(unsigned char x, unsigned char y) {
     struct Tile far *destinationTile, far *originTile;
     unsigned char z, destinationHeight, originHeight, newPitch;
@@ -1261,6 +1402,11 @@ void far adjust_height(unsigned char x, unsigned char y) {
     newPitch = change + 0x10;
     meptr->b14 = OBJ_RATE(meptr) | ((newPitch & 0x1F) << 3);
 }
+/* A critter bumped into a door. Secret doors (item 0x147, 0x14F) are left alone, and on
+   level 10 (Prison Tower, its second level) critters never open doors. A creature with a
+   locks value uses the door (UseObj); on a closed door it then tries the lock half the
+   time (checkLock with -locks, a lock picking skill check). Otherwise, one time in four,
+   it bashes the door for rand() % its first attack's damage (damage_item, type 4). */
 void far try_to_open_door(struct Object far *door) {
     if ((door->id & 7) == 7) return;
     if (PlayerLevel == 10) return;

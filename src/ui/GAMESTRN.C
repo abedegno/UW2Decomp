@@ -1,5 +1,33 @@
 /* target: seg039_3452 */
 /* opts: -mm -1 -G -O -Y -d */
+/* The game's strings: DATA\STRINGS.PAK, read and Huffman-decoded on demand, plus up to
+   two blocks of strings made at run time, and the helpers that print strings to the
+   message scroll and fix up item names. Resident segment seg039_3452, in original order.
+
+   String ids: an id is block << 9 | index (ui.h's STR_* bases). get_string(id) looks the
+   block up among the made blocks first (make_string adds strings to block 0x7C, a
+   conversation's dynamic strings, and 0x7D, the player's name), and otherwise decodes the
+   string from the file with read_string; block 0 means the current conversation's or
+   cutscene's block (CutsceneOrConversationStringBlock, conv.h), so conversation code can
+   use bare indexes. game_sprint(n) prints string n of block 1 (STR_GAME), and
+   game_strings_3 prints up to three block 1 strings run together; most of the game's
+   messages go out through these two.
+
+   STRINGS.PAK: a word, the number of Huffman tree nodes; the nodes, 4 bytes each (the
+   character, a byte this code does not read, then the left and right child; a node whose
+   left child is 0xFF is a leaf, and the root is the last node); a word, the number of
+   blocks; for each block its number (word) and file offset (long). At a block's offset: a
+   word, its string count, then a word per string, the string's offset relative to the end
+   of that table. A string is decoded bit by bit, high bit first, 1 going right, until a
+   '|' or 0xFF character or 512 characters.
+
+   Data owned: the tree (StringsPak_Address_Indices, far heap), the open file, the bit
+   reader's state, str_buff (eight 512-byte slots used in turn, so a string read_string
+   returns stays valid only until eight more have been read) and the two made blocks.
+
+   Name: original (init_strings and get_string are in System Shock's GAMESTRN.C, the
+   game's strings in both). */
+
 #include <ctype.h>
 #include "conv.h"
 #include "file.h"
@@ -15,8 +43,9 @@ struct StringBlock {
 
 /* The string decoder's buffer and the two cached string blocks: far, so a segment each
    (617D:0000 and 627D:0000, segment table entries 72 and 73), defined in this order. Only
-   this file uses them. FM Towns names the buffer str_buff (read_string_); its blocks
-   follow str_file (StringsPak_FileHandle here) unnamed, so they were static. */
+   this file uses them. */
+/* name: FM Towns names the buffer str_buff (read_string_); its blocks follow str_file
+   (StringsPak_FileHandle here) unnamed, so they were static. */
 char far str_buff[0x1000];
 static struct StringBlock far Strings[2];
 
@@ -40,6 +69,7 @@ int far fread(void *p, int size, int count, int file);
 int far fseek(int file, long offset, int whence);
 int far fgetc(int file);
 
+/* Empties the two made blocks and loads the Huffman tree; a failure is fatal. */
 unsigned char far init_strings(void)
 {
     int i, j;
@@ -54,6 +84,8 @@ unsigned char far init_strings(void)
 
 void far free_strings(void) { seg039_3452_5E1(); }
 
+/* The string with this id: a pointer into a made block, or a freshly decoded copy in
+   str_buff. Strings past a block's end come back empty. */
 char far * far get_string(int id)
 {
     int found;
@@ -70,6 +102,9 @@ char far * far get_string(int id)
     return read_string(block, string);
 }
 
+/* Adds s (the pointer itself, not a copy) as the next string of a made block, taking one
+   of the two block slots if the block is new, and returns its id; 0 if both slots hold
+   other blocks. Strings are never freed one by one, only by clear_dynamics. */
 int far make_string(char far *s, int block)
 {
     int index;
@@ -91,7 +126,10 @@ int far make_string(char far *s, int block)
     return index | (block << 9);
 }
 
-/* FM Towns replace_string_ occupies the corresponding slot and stores a new pointer. */
+/* Points an existing made string at new text; returns the id, or 0 if its block is not
+   one of the made ones. */
+/* name: FM Towns replace_string_ occupies the corresponding slot and stores a new
+   pointer. */
 int far replace_string(char far *s, int id)
 {
     int string;
@@ -107,7 +145,8 @@ int far replace_string(char far *s, int id)
     return 0;
 }
 
-/* FM Towns clear_dynamics_ occupies this slot and clears a block's pointers. */
+/* Empties a made block (a conversation's strings when it ends), keeping its slot. */
+/* name: FM Towns clear_dynamics_ occupies this slot and clears a block's pointers. */
 void far clear_dynamics(int block)
 {
     int found = -1;
@@ -121,6 +160,10 @@ void far clear_dynamics(int block)
     }
 }
 
+/* Copies an object's name to dst: for a creature with a whoami of 1 to 0xEF its personal
+   name (block 7, string whoami + 0x10, if not empty), else the item name of its id from
+   block 4 put into shape by fix_name_string. Returns 0 (and a space) when the item has no
+   name. */
 int far get_name(char far *dst, struct Object far *obj, char article, char plural)
 {
     int item = obj->id & ID_ITEM;
@@ -139,6 +182,11 @@ int far get_name(char far *dst, struct Object far *obj, char article, char plura
     return 1;
 }
 
+/* Item names in block 4 have the form "article_singular&plural" (for example
+   "a_sword&swords"; ITEMS.H's comments use the singular). Picks the plural after the '&'
+   (or, with none, appends an "s"), or cuts the plural off; then drops the article before
+   the '_' or, with article set, turns the '_' into a space. Works in place on s, which
+   must have room for the extra "s". */
 char far * far fix_name_string(char far *s, unsigned char article, char plural)
 {
     char far *amp = FindStringDelimiter(s, '&');
@@ -170,6 +218,9 @@ void far game_strings_3(int first, int second, int third)
     scroll_print(text);
 }
 
+/* Reads the node count and the Huffman tree from strings.pak into far memory and opens
+   the file again for the strings themselves. Returns 0, or an error code for first_punt
+   (ERR_READ | 2, ERR_LOWMEM | 1). */
 int far LoadFileStringsPak_seg039_547(void)
 {
     int file;
@@ -192,6 +243,8 @@ void far seg039_3452_5E1(void)
     farfree(StringsPak_Address_Indices);
 }
 
+/* Decodes string `string` of block `block` from the file into the next slot of
+   str_buff, seeking through the block table each time (no index is kept). */
 char far * far read_string(int block, int string)
 {
     unsigned char c;
@@ -230,6 +283,7 @@ char far * far read_string(int block, int string)
     return result;
 }
 
+/* The next bit of the file, high bit of each byte first; non-zero for a 1. */
 int far seg039_3452_781(int file)
 {
     int bit;
@@ -243,6 +297,8 @@ int far seg039_3452_781(int file)
     return bit;
 }
 
+/* Walks the Huffman tree from node index (the root) to a leaf, one bit per step, and
+   returns the leaf's character. */
 int far seg039_3452_7B2(int file, int index)
 {
     register int value;
@@ -263,6 +319,7 @@ char far * far seg039_3452_814(char far *s)
     return start;
 }
 
+/* Lower-cases a far string in place and returns it (BABL.C compares strings this way). */
 char far * far seg039_3452_857(char far *s)
 {
     char far *start = s;
@@ -270,6 +327,10 @@ char far * far seg039_3452_857(char far *s)
     return start;
 }
 
+/* atoi for a far string (BABL.C's conversation built-in that turns a string into a
+   number): skips leading white space, then reads decimal digits. The minus sign is
+   looked for at s[0] only, so a sign after leading spaces stops the number at 0, and
+   "-5" works only because the sign is the first character. */
 /* isspace and isdigit by hand: <ctype.h>'s _ctype indexed with the character as a signed
    char, plus one (the C library's table at DS:1BF6 starts with the entry for EOF). */
 int far seg039_3452_89A(char far *s)
@@ -285,6 +346,7 @@ int far seg039_3452_89A(char far *s)
     return *s == '-' ? -n : n;
 }
 
+/* strcat for far strings, returning dst. */
 char far * far str_cat(char far *dst, char far *src)
 {
     char far *start = dst;

@@ -1,4 +1,7 @@
-/* sound.h: Sound and music, and the AIL driver API. */
+/* sound.h: Sound and music, and the AIL driver API. SOUND.C (resident seg016) plays the
+   effects and music; AIL.ASM (seg022) is Miles' AIL 2 application interface, which
+   loads nothing itself and passes most calls on to the .ADV driver.
+   docs/subsystems/sound.md describes the subsystem. */
 #ifndef SOUND_H
 #define SOUND_H
 
@@ -10,7 +13,9 @@ struct SoundBuff;
 
 #include "object.h"
 
-/* AIL's sound buffer, 12 bytes. */
+/* AIL's sound buffer, 12 bytes: what AIL_register_sound_buffer plays. SOUND.C fills two
+   of them (dsbuf) in turn from its EMS cache; AIL_index_VOC_block sets pack_type and
+   sample_rate from a .VOC header. */
 struct SoundBuff {
     unsigned pack_type;
     unsigned sample_rate;
@@ -18,7 +23,9 @@ struct SoundBuff {
     unsigned long len;                  /* 0x08 */
 };
 
-/* AIL's description of a driver. */
+/* AIL's description of a driver, returned by AIL_describe_driver. AIL_init_driver also
+   reads a word at 0x14, past these fields, as the driver's service rate in hertz (-1
+   for none). */
 struct DrvrDesc {
     unsigned min_api;
     unsigned drvr_type;                 /* 0x02: 2 digital, 3 XMIDI */

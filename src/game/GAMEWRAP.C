@@ -4,11 +4,32 @@
    copying a slot to and from the working directory, loading and saving one level's map,
    and the special cases some levels need on arrival or departure. The whole of DOS
    overlay ovr149, in original order. Function and global names are the originals from
-   the FM Towns symbol table; the source file's own name is not known.
+   the FM Towns symbol table.
 
-   init_save (IDA MaybeCreateSaveGameFolder_ovr149_0) is the FM Towns function just before
-   GetLevel_: both make the working directory, empty it with clear_dir and then require
-   1200 bytes free on the disk. */
+   How a save works. The game in progress lives in HomeDir, UWHOME\SAVE0\: UWEDIT.C copies
+   the pristine LEV.ARK and SCD.ARK there at start-up, and every level change writes the
+   level being left back into SAVE0's LEV.ARK (SaveLevel) and reads the new one from it
+   (GetLevel). A saved game is a copy of that directory: SAVE1 to SAVE4. SaveGame asks for
+   a description (up to 30 characters; Escape aborts), writes it to SAVE0\DESC, writes
+   PLAYER.DAT and the current level (SavePlayerInv, SaveLevel), then copies every file of
+   SAVE0 into SAVEn. RestoreGame empties SAVE0, copies SAVEn into it, resets the player
+   (UWEDIT.C's reset_game), reads PLAYER.DAT (RestorePlayerInv) and loads the saved
+   level. get_save_descs reads each slot's DESC for the menu.
+
+   Changing level: ChangeLevel (UWEDIT.C's new_player_pos) runs do_level_hacks for the
+   level being left (mode 1), saves it, loads the new one and runs do_level_hacks for it
+   (mode 0), then brings the schedules' clocks up to date (Sched_SetAllClocks).
+   do_level_hacks is where some worlds' special rules live (see its comment).
+
+   Entry points: init_save (UWEDIT.C's init_world), ShowSaveRest and DoSaveRest (the
+   options panel, WRAPPER.C), GetLevel and do_level_hacks (also MAINMENU.C, when a game
+   starts), ChangeLevel, copy_file, clear_dir.
+   Data: none of its own.
+   Name: original (copy_file is in System Shock's GAMEWRAP.C, saving and loading games in
+   both). */
+/* name: init_save (IDA MaybeCreateSaveGameFolder_ovr149_0) is the FM Towns function just
+   before GetLevel_: both make the working directory, empty it with clear_dir and then
+   require 1200 bytes free on the disk. */
 
 #include <string.h>
 #include <stdio.h>
@@ -49,10 +70,12 @@ void far load_digi_fx(int which);
 void far clearobj(int n);
 void far Killorn_just_crashed(int how);
 
-/* The tests in SaveLevel and copy_file have empty bodies: the bytes keep each test with no jump after it,
-   as if a debugging message had been compiled out. */
+/* match: the tests in SaveLevel and copy_file have empty bodies: the bytes keep each
+   test with no jump after it, as if a debugging message had been compiled out. */
 #define complain(what)
 
+/* Makes the SAVE0 directory, empties it, and checks for 1200 bytes free on the
+   current drive. Returns 0 (start-up then stops with "Not enough disk space") if not. */
 char far init_save(void)
 {
     long space;
@@ -73,6 +96,9 @@ char far init_save(void)
     return 1;
 }
 
+/* Loads level from SAVE0's LEV.ARK (archive 0): the map and objects, with the player's
+   inventory kept aside meanwhile, then the level's minimum light (DL.DAT), its texture
+   map, its automap (archive 4) and its creatures. PlayerLevel becomes level. */
 int far GetLevel(int level)
 {
     int sq;
@@ -99,11 +125,13 @@ int far GetLevel(int level)
     return ok;
 }
 
-/* Declared here because TLINK numbers the overlay's stub entries in the order Turbo C lists
-   the publics, which for names with the same hash key is the order they were first seen:
-   the EXE's stub has SaveGame before SaveLevel. */
+/* match: declared here because TLINK numbers the overlay's stub entries in the order
+   Turbo C lists the publics, which for names with the same hash key is the order they
+   were first seen: the EXE's stub has SaveGame before SaveLevel. */
 int far SaveGame();
 
+/* Writes level back into SAVE0's LEV.ARK: the map and objects (without the player's
+   inventory, which is freed and restored round it), the texture map and the automap. */
 char far SaveLevel(int level)
 {
     char ok;
@@ -129,6 +157,9 @@ char far SaveLevel(int level)
     return ok;
 }
 
+/* Reads SAVE1\DESC to SAVE4\DESC (the slot digit replaces the last '0' of HomeDir) into
+   descs, setting bit n - 1 of *found for each slot n that exists; the rest read
+   "<not used yet>". */
 void far get_save_descs(char descs[][40], int *found)
 {
     int i;
@@ -163,7 +194,7 @@ void far ShowSaveRest(void)
 
     scroll_clear(1);
     get_save_descs(descs, &found);
-    game_sprint(0x120);
+    game_sprint(0x120);                 /* "Save Game Descriptions" */
     scroll_esc = 0;
     for (i = 0; i < 4; i++) {
         scroll_print("\n");
@@ -176,6 +207,10 @@ void far ShowSaveRest(void)
 
 char far RestoreGame();
 
+/* Saves to or restores from slot 1 to 4 and prints the outcome, string 0xAE + msg:
+   restore 1 no game there, 2 complete, 3 failed; save 4 failed, 5 succeeded,
+   6 aborted (SaveGame returns 0, 1 or 2). After a restore the screen, the effects and
+   the physics are brought up to date. */
 void far DoSaveRest(int restore, int slot)
 {
     int found;
@@ -205,7 +240,7 @@ void far DoSaveRest(int restore, int slot)
         }
     } else
         msg = SaveGame(slot, descs[slot - 1]) + 4;
-    game_sprint(msg + 0xAE);
+    game_sprint(msg + 0xAE);            /* "No save game there." ... "Save Game Aborted." */
 }
 
 char far RestoreGame(char slot)
@@ -216,9 +251,9 @@ char far RestoreGame(char slot)
     strcpy(path, HomeDir);
     p = strrchr(path, '0');
     *p = slot + '0';
-    game_sprint(0xB5);
+    game_sprint(0xB5);                  /* "Restoring Game " */
     if (clear_dir(HomeDir)) {
-        game_sprint(0xB9);
+        game_sprint(0xB9);              /* "..." after each step */
         if (copy_dir(path, HomeDir)) {
             game_sprint(0xB9);
             reset_game();
@@ -246,7 +281,7 @@ int far SaveGame(char slot, char *desc)
     set_creatures_to_saved_game();
     strcpy(path, HomeDir);
     scroll_clear(1);
-    game_sprint(0xB7);
+    game_sprint(0xB7);                  /* "Please enter a save file description:" */
     if (wdialog(0, desc, desc, 1, 0x1E) == 0x1B) {
         ret = 2;
         goto fail;
@@ -254,7 +289,7 @@ int far SaveGame(char slot, char *desc)
     if (strlen(desc) == 0)
         strcpy(desc, " ");
     scroll_print("\n");
-    game_sprint(0xB6);
+    game_sprint(0xB6);                  /* "Saving Game " */
     strcat(path, "desc");
     if (!blttodrive(desc, path, strlen(desc)))
         goto fail;
@@ -301,6 +336,9 @@ unsigned char far clear_dir(char *dir)
     return 1;
 }
 
+/* Copies srcdir + name to dstdir + name through the workspace, 0xF000 bytes at a time.
+   Returns 0 if either file cannot be opened, there is no workspace, or a write falls
+   short. */
 unsigned char far copy_file(char *srcdir, char *dstdir, char *name)
 {
     int out;
@@ -347,6 +385,7 @@ unsigned char far copy_file(char *srcdir, char *dstdir, char *name)
     return ok;
 }
 
+/* Copies every file of src into dst; returns 0 if a copy failed. */
 unsigned char far copy_dir(char *src, char *dst)
 {
     char path[66];
@@ -363,6 +402,10 @@ unsigned char far copy_dir(char *src, char *dst)
     return 1;
 }
 
+/* Moves the game from level from to level to: ends fighting and any object held on
+   the cursor, runs the leaving hacks, saves from, loads to, runs the arriving hacks,
+   recomputes mana and runs the schedules' clocks. Returns 0 if the load fails
+   (new_player_pos then stops the game with a fatal error). */
 char far ChangeLevel(int from, int to)
 {
     char ok;
@@ -385,6 +428,9 @@ char far ChangeLevel(int from, int to)
     return ok;
 }
 
+/* Unlocks and opens the door in square (x, y) and ends its animation. Used on arrival
+   in level 1, Lord British's castle, at the arrival square (probably so the player
+   never arrives behind a shut door; inferred). */
 void far gruesome_door_hack(int x, int y)
 {
     struct Object far *door;
@@ -400,6 +446,23 @@ void far gruesome_door_hack(int x, int y)
     }
 }
 
+/* Per-level special cases. mode 0 is arriving, 1 leaving, 3 after a restore (which only
+   reloads the sound effects). The world is (level - 1) / 8 (Guide: 0 Britannia,
+   1 Prison Tower, 2 Killorn, 3 Ice, 4 Talorus, 5 Academy, 6 Tombs, 7 Pits, 8 the
+   Ethereal Void):
+   - arriving anywhere: the creatures are set up and, with no weapon drawn, walking
+     music starts; leaving: the critters are moved on as if time had passed. If
+     player->b60_11 is set, arriving only runs clearobj.
+   - level 1, arriving: the door at the arrival square is opened (gruesome_door_hack).
+   - Prison Tower, leaving: prison_alarm_check; leaving its level 2 also fires the
+     triggers at (31, 36) and (35, 34).
+   - Killorn, leaving its level 1 with quest 50 set (the keep is going to crash):
+     Killorn_just_crashed(1). The case then falls into the Academy's, so leaving level 3
+     of Killorn takes the telekinesis wand away from the player (remove_TK_wand) as leaving
+     level 3 of the Academy does.
+   - Tombs, arriving with quest 7 set (Loth is dead): genocide(0xFF), which kills the
+     critters is_my_race matches for race 0xFF and destroys the floating skulls.
+   - Ethereal Void: the automap is switched off on arrival and back on when leaving. */
 void far do_level_hacks(int level, int mode)
 {
     punt_all_digi_fx();

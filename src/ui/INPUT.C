@@ -4,17 +4,38 @@
    handle, a mode mask and a far handler, and the dispatch of one mouse or key event to
    the first entry that takes it. The whole of DOS resident segment seg010_1CA1, in
    original order. Function and global names are the originals from the FM Towns symbol
-   table. */
+   table.
+
+   How it is used: each screen registers its click areas with input_addmouse and its keys
+   with _input_addkey, giving a mask of the screen modes (inplist->mode: 1 the 3D view,
+   2 the automap, 4 a conversation, set by UWEDIT.C's change_screen) in which the entry is
+   live, and removes them with input_del. MAINLOOP.C's mainloop and CONVERSE.C call
+   input_dispatch once a pass with inplist; it reads one event through MOUSE.C's
+   mouse_get_input_sp and calls the handler with the entry's argument, after filling in
+   inplist (the click position relative to the region, the buttons or key code, mouse or
+   key). Handlers read inplist to find out what happened.
+
+   Data owned: the two dispatch tables (mous_dispatch, key_dispatch, grown and shrunk with
+   realloc on the near heap), their counts, the handle counters (mouse handles count up from
+   1, key handles down from -1, so the sign of a handle says which table it is in) and the
+   Inplist record inp that inplist points at.
+
+   Name: original (init_input is in System Shock's INPUT.C, RCS r:/prj/cit/src/input.c,
+   the input dispatcher in both). */
 
 #include <stdlib.h>
 #include "sys.h"
 #include "ui.h"
 
-/* A mouse region, 0x12 bytes. */
+/* A mouse region, 0x12 bytes. Screen y counts up from the bottom row (0) to the top (199)
+   in this engine (MOUSE.C: the up key warps the pointer to y 199), so despite the "upper
+   left" and "lower right" in the field names (ulx, uly) is the bottom left corner and
+   (lrx, lry) the top right:
+   a point is inside when ulx <= x <= lrx and uly <= y <= lry. */
 struct MouseDispatch {
     int hndl;
-    int lrx, lry;                       /* 0x02: bottom right corner */
-    int ulx, uly;                       /* 0x06: top left corner */
+    int lrx, lry;                       /* 0x02: the corner with the larger x and y */
+    int ulx, uly;                       /* 0x06: the corner with the smaller x and y */
     int arg;                            /* 0x0A: handed to the handler */
     int mask;                           /* 0x0C: the modes it answers in */
     void (far *func)(int arg);          /* 0x0E */
@@ -104,6 +125,9 @@ int far _input_addkey(int key, int arg, int mask, void (far *func)(int))
     return p->hndl;
 }
 
+/* Removes the entry with this handle from whichever table its sign selects. The last
+   entry is moved into the hole, so the tables do not keep registration order after a
+   delete. Handle 0 and unknown handles are ignored. */
 void far input_del(int hndl)
 {
     int i = 0;
@@ -143,6 +167,11 @@ void far input_del(int hndl)
     }
 }
 
+/* Takes one input event and hands it to a handler. Codes 1 to 3 are the mouse buttons
+   held (1 left, 2 right, 3 both; MOUSE.C), anything higher a key code. Mouse regions are
+   searched from the most recently added backwards, so a region added later wins over one
+   it overlaps; the click position is made relative to the region's (ulx, uly) corner. An
+   event that no live entry takes is dropped. */
 void far input_dispatch(struct Inplist *in)
 {
     int code;
@@ -172,9 +201,11 @@ void far input_dispatch(struct Inplist *in)
     }
 }
 
-/* IDA's ProcessEventHandlers. Named from FM Towns: dispatch_key_ follows input_dispatch_
-   there, is what input_dispatch_ calls for a key, and makes the same search of
-   key_dispatch on the key code and the mode mask. */
+/* Calls the first key handler (oldest first) registered for this code in the current
+   mode; only input_dispatch calls it. */
+/* name: IDA's ProcessEventHandlers. Named from FM Towns: dispatch_key_ follows
+   input_dispatch_ there, is what input_dispatch_ calls for a key, and makes the same search
+   of key_dispatch on the key code and the mode mask. */
 void far dispatch_key(struct Inplist *in, int code)
 {
     register int i;

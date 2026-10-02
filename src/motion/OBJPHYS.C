@@ -4,7 +4,30 @@
    to and from the physics record, moving objects between the static and mobile lists,
    and settling a placed object into its tile. The whole of DOS resident segment
    seg030_2BB7, in original order. Function and global names are the originals from the
-   FM Towns symbol table; the source file's own name is not known. */
+   FM Towns symbol table; the source file's own name is not known.
+
+   An object in the map is either static (an 8-byte record, objdata and above, no motion
+   state) or mobile (the longer records of critdata, below objdata: creatures and anything
+   in motion). get_phys_data and set_phys_data convert between a mobile or static object
+   and a struct Phys (motion.h) for MOTION.C's do_physics: critter/AI.C and PATHFIND.C
+   call them around each critter's or moving object's step. When a moving object comes to
+   rest set_phys_data turns it back into a static object (mob_to_static) and settles it
+   with obj_deal; a static object given speed becomes mobile (static_to_mob, mob_init).
+   The caller passes the object's tile in the globals XP and YP (critter.h).
+
+   A mobile non-creature keeps its exact position in fields a creature uses for its AI:
+   goal_word and attitude_word hold x and y in 1/256 tiles and b0F z in 1/8 units. A
+   creature's or static object's position is only known to 1/8 tile, so get_phys_data
+   fills the low bits at random.
+
+   do_objhit is MOTION.C's response to touching an object: it uses usable objects and
+   triggers (UseObj, UseTrigger), lets a missile strike (obj/OBJUSE.C's UseObj calls
+   missile_newhit for a missile, MAJOR_HACK minor 1, used on what it hit), and pushes the
+   other object (bounce_obj). obj_deal settles an object
+   dropped or placed in a tile: it destroys it in a wall or in another object, splashes
+   it in water, may burn it in lava, and sets it moving if it lands on nothing.
+
+   name: descriptive (map/filenames.tsv: object physics, bounce_obj, static_to_mob). */
 
 #include "combat.h"
 #include "critter.h"
@@ -18,11 +41,13 @@ extern struct Object far *objdata;
 extern struct MissileInfo Missile[];
 extern unsigned char curBin;
 
-/* This file's _BSS, DS:25BC..25C2 (seg031's starts at 25C4, word-aligned). No FM Towns
-   names: FM Towns keeps them as statics (inside its static block after _Valor, +0x4F..+0x55,
-   in a different order), so they are static, with provisional names whose keys
-   (tools/bssorder.py) lay them out as UW2 has them: objhit_used 87, objhit_tilex and
-   objhit_tiley 151, objhit_myx and objhit_myy 183, deal_bounced and deal_blocked 908. */
+/* This file's _BSS, DS:25BC..25C2 (seg031's starts at 25C4, word-aligned). */
+/* name: no FM Towns names: FM Towns keeps them as statics (inside its static block after
+   _Valor, +0x4F..+0x55, in a different order), so they are static, with provisional
+   names. */
+/* match: the names' keys (tools/bssorder.py) lay them out as UW2 has them: objhit_used
+   87, objhit_tilex and objhit_tiley 151, objhit_myx and objhit_myy 183, deal_bounced
+   and deal_blocked 908. */
 static unsigned char objhit_used;           /* DS:25BC */
 static unsigned char objhit_tilex, objhit_tiley;    /* DS:25BD, the other object's tile */
 static unsigned char objhit_myx, objhit_myy; /* DS:25BF, the moving object's tile */
@@ -47,6 +72,9 @@ void far ObjectCheck(char a, int b);
 /* Later in this file. */
 struct Object far * far obj_deal(struct Object far *obj, int x, int y, char how);
 
+/* CP (the moving object) pushes other: other gets CP's heading, speed 0xBC and a
+   vertical velocity scaled by the ratio of the masses (at most twice CP's). An object of
+   no mass is stopped instead. Returns 4, "bounce", to do_objhit. */
 int far bounce_obj(struct Object far *obj, struct Object far *other)
 {
     struct Phys phys;
@@ -73,6 +101,11 @@ int far bounce_obj(struct Object far *obj, struct Object far *other)
     return 4;
 }
 
+/* proj strikes hit: the missile's damage (Missile[] by its in-class index), scaled by
+   the Missile skill and a skill check when the player (object 1) fired it and its
+   Missile[] ammo field is -64 (meaning not known), applied with missile_thwack at the
+   hit object's tile if the missile was the one used, else at the missile's own. A satellite does not strike the object it
+   last hit again. After hitting a creature, b0A bit 7 is set (probably spent). */
 void far missile_newhit(struct Object far *proj, struct Object far *hit)
 {
     unsigned damage;
@@ -111,6 +144,13 @@ void far missile_newhit(struct Object far *proj, struct Object far *hit)
     }
 }
 
+/* The object index (the mover) touches oCollisions[ci] (ci -1: the floor). Each record
+   is handled once per move (link bit 0x20). Using: if the other object is usable it is
+   used on the mover, if it is a trigger it fires; if it is touchable and the mover is
+   usable (a missile, for one), the mover is used on it. Returns 2 to pass through, 4 to
+   bounce (bounce_obj), 0x10 if using destroyed the mover (MapObj_X < 0), or a trigger's
+   result. Two mobile non-creatures hitting mark each other (b15 bit 7) and do not hit
+   again, except fireballs and the resilient sphere. */
 int far do_objhit(int ci, int index)
 {
     int item;
@@ -171,6 +211,12 @@ int far do_objhit(int ci, int index)
     return 2;
 }
 
+/* Fills pp from obj and its ComObjData entry. Mobile objects: heading from the 8-bit
+   heading, speed from b13 (in units of 0x2F), vertical velocity from the pitch
+   ((pitch - 16) << 6), gravity from b13 bit 7, terrain byte from the stored code. A
+   resting mobile non-creature with no_hit clear gets a speed from OBJ_SPEED and the light
+   field instead. Static objects: XP, YP give the tile, they have no motion, and hp is
+   their quality. impact is cleared. */
 void far get_phys_data(struct Object far *obj, struct Phys *pp)
 {
     char jitter = 1;
@@ -229,6 +275,14 @@ void far get_phys_data(struct Object far *obj, struct Phys *pp)
     pp->impact = 0;
 }
 
+/* Writes pp back to obj, whose tile is XP, YP on entry. Moves it between tile lists
+   when it changes tile (leaving and entering pressure plates, check_pplate 0xE and 6) or
+   changes height (hgt_change). An impact above 0x180 damages it (a creature a quarter,
+   an object with under 0x20 hit points four times) with a thud for objects; on lava
+   (terrain 4) it takes 1 fire damage (type 8, probably) one time in five. A moving
+   static object becomes mobile and a stopped mobile non-creature becomes static and is
+   settled (mob_to_static, obj_deal). Returns 1 if obj is still mobile, 0 if it is
+   static or was destroyed. */
 unsigned char far set_phys_data(struct Object far *obj, struct Phys *pp)
 {
     int xmoved = 0;
@@ -318,6 +372,8 @@ unsigned char far set_phys_data(struct Object far *obj, struct Phys *pp)
     return 0;
 }
 
+/* Replaces the static object obj, in tile XP, YP, with a new mobile copy and frees the
+   static record; returns the mobile object, or 0 if none is free (obj then stays). */
 struct Object far * far static_to_mob(struct Object far *obj)
 {
     struct Object far *mob;
@@ -341,6 +397,9 @@ struct Object far * far static_to_mob(struct Object far *obj)
     return mob;
 }
 
+/* Sets a new mobile object's motion fields: heading, gravity (none for no_hit types),
+   home tile x, y, the update bin (curBin + 1), full hit points, and for a non-creature
+   its exact position at the middle of its 1/8 tile. */
 void far mob_init(struct Object far *obj, int x, int y)
 {
     obj->heading = OBJ_HEADING(obj) << 5;
@@ -363,6 +422,10 @@ void far mob_init(struct Object far *obj, int x, int y)
     }
 }
 
+/* An object carrying the spell 0xD/3 (decode_obj_spell, with its flag set) that lands
+   in water on floor texture 0xC1 prints string 0x14C and advances the djinn capture
+   (XC_DJINN) to at least 2. Probably the filanium mud step of that quest, by the name;
+   the string has not been checked. */
 void far do_filanium(struct Object far *obj, int x, int y)
 {
     struct Tile far *tile;
@@ -379,6 +442,11 @@ void far do_filanium(struct Object far *obj, int x, int y)
         player->xclock[XC_DJINN] = 2;
 }
 
+/* Replaces the mobile object obj, in tile XP, YP, with a new static copy and releases
+   the mobile record. Its type's fate (ComObjData) may destroy it instead: 1 to 8 is the
+   chance in 8 that it is culled, if Obj_Elem_Fate also allows it, and 9 runs mts_doanim
+   on it; landing in water (terrain code 1) splashes and counts as fate 8. Light sources
+   4-6 become 0-2 (probably lit to unlit). Returns the static object, or 0. */
 struct Object far * far mob_to_static(struct Object far *obj)
 {
     struct Object far *st;
@@ -428,10 +496,12 @@ struct Object far * far mob_to_static(struct Object far *obj)
     return st;
 }
 
-/* IDA seg030_2BB7_107A. The map pairs it with FM Towns update_hack_vecs_ by size and
-   position only; the code agrees (a byte flag picks a random turn of the heading with
-   speed 0xBC, or a random speed (rand()+1 & 3) * 0x2F with gravity -4), so the
-   original name is used. */
+/* name: IDA seg030_2BB7_107A. The map pairs it with FM Towns update_hack_vecs_ by size
+   and position only; the code agrees (a byte flag picks a random turn of the heading with
+   speed 0xBC, or a random speed (rand()+1 & 3) * 0x2F with gravity -4), so the original
+   name is used. */
+/* After obj_deal set a settled object moving again: it slides off an object it landed
+   on the edge of (deal_bounced), or tumbles. */
 void far update_hack_vecs(struct Phys *pp)
 {
     if (deal_bounced) {
@@ -443,6 +513,13 @@ void far update_hack_vecs(struct Phys *pp)
     }
 }
 
+/* Settles obj in tile x, y. Destroyed (Obj_Punt) in a wall, a high floor or another
+   object; in water it splashes and is destroyed; in lava (class 2) it survives only if
+   its qualclass is 3 or check_res lets it; on ice nothing more happens. Over a drop it
+   becomes mobile and falls: it slides off a solid object it sits on the edge of
+   (deal_bounced), and with how it also gets a small random speed and pitch. Near the
+   floor the object check first uses a point footprint, and only if the object would fall
+   is it tried again with its full footprint. Returns the object, or 0 if destroyed. */
 struct Object far * far obj_deal(struct Object far *obj, int x, int y, char how)
 {
     char destroy;

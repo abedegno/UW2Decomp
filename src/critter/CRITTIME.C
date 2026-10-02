@@ -4,8 +4,33 @@
    to the critters and mobile objects while the player sleeps, monsters that find the
    sleeping player, teleporting a critter, the last critter hit, theft noticed by the
    owners, the pit warriors in the arena of fire, and the castle NPCs' schedule: the whole
-   of DOS overlay ovr107, in original order. Function and global names are the originals
-   from the FM Towns symbol table; the source file's own name is not known. */
+   of DOS overlay ovr107, in original order.
+
+   What it does in the game: everything done to critters from outside the per-frame AI
+   loop (AI.C). The entry points and their callers:
+   - change_critter_goal: spells (SPELLS.C), conversations (CONVVARS.C, BARTER.C) and
+     SCD schedules (SCDEVENT.C) set a critter's goal.
+   - yearly_checkup: PLAYTIME.C's periodic player update rerolls every critter's fed and
+     ally bits.
+   - update_all_critters_whilst_player_snoozes: sleep (SKILLS.C), level re-entry
+     (GAMEWRAP.C) and a world event (WORLDEV.C) let time pass for the level: critters
+     heal, go home and settle their attitudes, mobile objects come to rest.
+   - hostile_creatures_near and wandering_monster_check: SKILLS.C's sleep refuses with
+     hostiles close by and lets a hostile monster walk up to the sleeper.
+   - teleport_critter: conversations and SCD events move NPCs.
+   - set_creatures_from/to_saved_game, init_level_creature_stuff: GAMEWRAP.C's saving,
+     restoring and level change keep AI.C's record of the last critter hit.
+   - player_grabbed: taking an owned object (INTERACT.C, WORLDEV.C) angers the owners who
+     see it.
+   - maybe_cheat_arena_fire and arena_opponent_runs: arena traps in the Pits of Carnage
+     (TRIGGER.C).
+   - maybe_go_hang_out: the castle NPCs' daily schedule (WORLDEV.C's move_folks_around).
+
+   Data owned: wander_found and hostile_found (results of the area callbacks), and stolen
+   and grab_owner for player_grabbed's callback.
+
+   Function and global names are the originals from the FM Towns symbol table.
+   Name: descriptive (critters between moments: yearly_checkup, change_critter_goal). */
 
 #include <stdlib.h>
 #include <string.h>
@@ -26,8 +51,10 @@ extern unsigned char far *ActiveMob;
 extern unsigned char far *LastActiveMob;
 extern unsigned TxmTerr[];
 extern unsigned char stay_centered;
-/* This file's _BSS, DS:554E (ovr104's ends at 554D; ovr108's starts at 5550): only this file
-   uses it, and FM Towns has it as a static. Provisional name. */
+/* Set when wander_that_monster brought a monster to the player. */
+/* match: this file's _BSS, DS:554E (ovr104's ends at 554D; ovr108's starts at 5550):
+   only this file uses it. */
+/* name: FM Towns has it as a static. Provisional name. */
 static char wander_found;
 extern char crithit;
 extern char typehit;
@@ -50,6 +77,7 @@ void far get_name(char far *buf, struct Object far *obj, int article, int plural
 void far scroll_print(char far *s);
 void far remove_opponent(struct Object far *npc);
 
+/* critter_set_goal (AI.C) for any critter, not only the current one. */
 void far change_critter_goal(struct Object far *npc, char goal, int gtarg)
 {
     struct Object far *save;
@@ -60,7 +88,10 @@ void far change_critter_goal(struct Object far *npc, char goal, int gtarg)
     meptr = save;
 }
 
-/* IDA: SomethingWithUpdatingAllNPCHunger. FM Towns has yearly_checkup next after
+/* For every active mobile object: the fed bit (b19 bit 7) becomes random, and three
+   times in four the ally bit (b19 bit 6) is cleared. Called from PLAYTIME.C's periodic
+   update. */
+/* name: IDA: SomethingWithUpdatingAllNPCHunger. FM Towns has yearly_checkup next after
    change_critter_goal, and its code is this loop. */
 void far yearly_checkup(void)
 {
@@ -75,6 +106,10 @@ void far yearly_checkup(void)
     }
 }
 
+/* Where in a tile of this type (map.h's tile types) to place a critter, as fine x and y
+   (0-7): the middle of an open tile, the open corner of a diagonal. Returns 0 for a solid
+   tile. Type 5 (TILE_DIAG_NW) gets (6, 1) like type 2, though its open corner would be
+   (1, 6); probably a slip in the original. */
 unsigned char far set_gridx_and_y_based_on_tile_type(unsigned char type, unsigned char *x,
                                                      unsigned char *y)
 {
@@ -106,6 +141,12 @@ unsigned char far set_gridx_and_y_based_on_tile_type(unsigned char type, unsigne
     return 1;
 }
 
+/* Time passes for one critter (update_all_critters_whilst_player_snoozes). A summoned
+   critter (temporary) is removed. Otherwise the transient flags of b19 are cleared, it
+   faces a random way (unless waiting to talk, goal 10), heals half way to its average
+   hit points (unless it may not heal), and, if not a loner, counts towards its race's
+   mood: -1 if hostile, +1 if friendly. Then it goes home (the home square in quality
+   and owner) if it can be placed there. */
 void far up_crit(struct Object far *npc, char *counts)
 {
     struct Tile far *tile;
@@ -171,6 +212,9 @@ void far up_crit(struct Object far *npc, char *counts)
     SET_Z(npc, z);
 }
 
+/* Time passes for a mobile object that is not a critter: fireballs and resilient
+   spheres are left alone (returns 0), anything else is deleted if Obj_Punt allows or
+   else made static and dropped to the floor. Returns 1 when the mobile list changed. */
 unsigned char far up_mob(struct Object far *obj)
 {
     struct Tile far *tile;
@@ -201,6 +245,10 @@ unsigned char far up_mob(struct Object far *obj)
     return 1;
 }
 
+/* Let time pass for the level: up_crit or up_mob for every active mobile object, then
+   every critter that is not a loner shifts its attitude (0 hostile to 3 friendly) by its
+   race's net count of friendly less hostile members, clamped to 0..3. So a race whose
+   members are mostly hostile grows more hostile, and the other way round. */
 void far update_all_critters_whilst_player_snoozes(void)
 {
     struct Object far *npc;
@@ -237,11 +285,14 @@ void far update_all_critters_whilst_player_snoozes(void)
     }
 }
 
-/* Statics: FM Towns keeps these three after curelem, with no names of their own. */
+/* name: statics: FM Towns keeps these three after curelem, with no names of their own. */
 static char hostile_found = 0;
 
-/* IDA: TestForNPCHostileAndAwareOfPlayer. FM Towns has check_for_hostile_creature in this
-   place, and hostile_creatures_near passes it to gronk_area as here. */
+/* gronk_area callback: a critter other than the player that is attacking, guarding or
+   cornered (goals 5, 4, 9) and knows where its target is (b19 bit 0) sets
+   hostile_found. */
+/* name: IDA: TestForNPCHostileAndAwareOfPlayer. FM Towns has check_for_hostile_creature
+   in this place, and hostile_creatures_near passes it to gronk_area as here. */
 char far check_for_hostile_creature(int x, int y, struct Object far *target,
                                     struct Tile far *tile, unsigned char src)
 {
@@ -256,6 +307,8 @@ char far check_for_hostile_creature(int x, int y, struct Object far *target,
     return 0;
 }
 
+/* Is a hostile, alert critter within 2 tiles of the player? SKILLS.C then refuses sleep
+   with string 0x20E, "There are hostile creatures near!". */
 char far hostile_creatures_near(void)
 {
     hostile_found = 0;
@@ -263,6 +316,12 @@ char far hostile_creatures_near(void)
     return hostile_found;
 }
 
+/* gronk_area callback for wandering_monster_check: half the time, a hostile critter
+   within sqrt(3) times its range of the sleeping player, with a safe walking path to
+   the player (flood_path, no danger allowed) at least two squares long, is moved two
+   squares short of the player's (pathsq[pathlen - 2]; the path ends at pathsq[pathlen]),
+   knowing where the player is. Ward traps (item 0x189)
+   under triggers along the path go off on the way. Returns 1 if it moved one. */
 char far wander_that_monster(int x, int y, struct Object far *target, struct Tile far *where,
                              unsigned char src)
 {
@@ -304,7 +363,7 @@ char far wander_that_monster(int x, int y, struct Object far *target, struct Til
                 }
             }
         }
-        tx = pathsq[pathlen - 2].x;         /* FM Towns names pathsq - 8 objyloc */
+        tx = pathsq[pathlen - 2].x;         /* name: FM Towns names pathsq - 8 objyloc */
         ty = pathsq[pathlen - 2].y;
         tile = Map_GetAddr(tx, ty);
         if (!set_gridx_and_y_based_on_tile_type(tile->type, &fx, &fy))
@@ -329,6 +388,9 @@ char far wander_that_monster(int x, int y, struct Object far *target, struct Til
     return 0;
 }
 
+/* Move a critter to tile (x, y), placed by set_gridx_and_y_based_on_tile_type, on the
+   floor or, for a flier, half way up to height 0x80; fails (0) if the tile is solid or
+   can_place refuses. Clears its transient b19 flags. how is not used. */
 char far teleport_critter(struct Object far *critter, int x, int y, int how)
 {
     struct Object far *obj;
@@ -367,6 +429,8 @@ char far teleport_critter(struct Object far *critter, int x, int y, int how)
     return 0;
 }
 
+/* One hostile critter within 8 tiles may come to the sleeping player
+   (wander_that_monster). SKILLS.C wakes the player when it does. */
 char far wandering_monster_check(void)
 {
     wander_found = 0;
@@ -374,8 +438,9 @@ char far wandering_monster_check(void)
     return wander_found;
 }
 
-/* IDA: LoadCombatState. FM Towns' set_creatures_from_saved_game copies the same five
-   player fields at 0x308-0x30F into the same globals. */
+/* Restore AI.C's record of the last critter the player hit from the player record. */
+/* name: IDA: LoadCombatState. FM Towns' set_creatures_from_saved_game copies the same
+   five player fields at 0x308-0x30F into the same globals. */
 void far set_creatures_from_saved_game(void)
 {
     crithit = player->crithit;
@@ -385,7 +450,8 @@ void far set_creatures_from_saved_game(void)
     hity = player->hity;
 }
 
-/* IDA: SaveRecentCombatAction; FM Towns' set_creatures_to_saved_game, the reverse copy. */
+/* name: IDA: SaveRecentCombatAction; FM Towns' set_creatures_to_saved_game, the reverse
+   copy. */
 void far set_creatures_to_saved_game(void)
 {
     player->crithit = crithit;
@@ -395,10 +461,11 @@ void far set_creatures_to_saved_game(void)
     player->hity = hity;
 }
 
+/* Free all 16 stored paths (PATHFIND.C) and clear every critter's has-a-path bit. */
 void far clear_paths(void)
 {
     struct Object far *obj;
-    int i = 0x25;                       /* a dead store, but the DOS bytes have it */
+    int i = 0x25;                       /* match: a dead store, but the DOS bytes have it */
 
     for (i = 2; i < NUM_MOBILE; i++) {
         obj = Obj_IntTMem(i);
@@ -407,6 +474,7 @@ void far clear_paths(void)
     freepaths = 0xFFFF;
 }
 
+/* On entering a level: forget the last critter hit and free the paths. */
 void far init_level_creature_stuff(void)
 {
     crithit = 0;
@@ -417,6 +485,12 @@ void far init_level_creature_stuff(void)
 static struct Object far *stolen = 0;
 static unsigned char grab_owner = 0;
 
+/* process_area callback for player_grabbed: a critter of the owning race (grab_owner's
+   low 5 bits; bit 0x20 for loners, who otherwise do not care, and 0x20 alone for loners
+   only) that has the stolen object within its sight range and in line of sight grows
+   one step less friendly and says so: "<name> is angered by your action." (string
+   0x2F0, new attitude 0), " is annoyed by your action." (0x2F1, 1) or " notes your
+   action." (0x2F2, 2). */
 char far critter_get_told(int x, int y, struct Object far *target, struct Tile far *tile,
                           unsigned char src)
 {
@@ -455,7 +529,7 @@ char far critter_get_told(int x, int y, struct Object far *target, struct Tile f
             att = 0;
         SET_ATTITUDE(npc, att);
         get_name(text, npc, 1, 0);
-        str_cat(text, get_string(att + 0xF0 | STR_GAME));
+        str_cat(text, get_string(att + 0xF0 | STR_GAME));    /* " is angered...", " is annoyed...", " notes your action." */
         if (text[0] >= 'a' && text[0] <= 'z')
             text[0] = text[0] - 0x20;
         scroll_print(text);
@@ -464,7 +538,9 @@ char far critter_get_told(int x, int y, struct Object far *target, struct Tile f
     return 0;
 }
 
-/* IDA: ClearOwnerShip. FM Towns' clear_owner, which player_grabbed passes to Obj_Check. */
+/* Make an object nobody's (if it can have an owner). */
+/* name: IDA: ClearOwnerShip. FM Towns' clear_owner, which player_grabbed passes to
+   Obj_Check. */
 unsigned char far clear_owner(struct Object far *obj)
 {
     if (ComObjData[OBJ_ITEM(obj)].can_own)
@@ -472,6 +548,10 @@ unsigned char far clear_owner(struct Object far *obj)
     return 0;
 }
 
+/* The player picked up obj, an owned object (or owner names the owner). Up to 20
+   critters of the owning race within 7 tiles who see it react (critter_get_told). The
+   object then belongs to nobody (unless its owner value is above 0x1D), and so does
+   everything in a container. */
 void far player_grabbed(struct Object far *obj, unsigned char owner)
 {
     grab_owner = 0;
@@ -489,6 +569,8 @@ void far player_grabbed(struct Object far *obj, unsigned char owner)
     }
 }
 
+/* Arena trap (TRIGGER.C, trap kind 31, in the Pits): try to rescue each of the five pit
+   fighters from the fire. */
 void far maybe_cheat_arena_fire(void)
 {
     register int i;
@@ -497,6 +579,13 @@ void far maybe_cheat_arena_fire(void)
         maybe_rescue_guy_from_fire(Obj_IntTMem(player->pit_fighters[i]));
 }
 
+/* A pit fighter standing on lava, where the player cannot see, is teleported to a
+   square on a ring round tile 0x16, 0x16 chosen by its direction from there, if the
+   player cannot see that square either.
+   The units look mixed up: x and y are fine positions (8 to a tile), yet they go to
+   Map_GetAddr, which takes tiles and returns a null pointer past tile 63, and the result
+   goes to teleport_critter as a tile too. FM Towns has the same code, so this is the
+   original's behaviour; whether the rescue can ever work is an open question. */
 void far maybe_rescue_guy_from_fire(struct Object far *obj)
 {
     int x;
@@ -527,8 +616,11 @@ void far maybe_rescue_guy_from_fire(struct Object far *obj)
         teleport_critter(obj, tx, ty, 0);
 }
 
-/* IDA: DefeatLivingPitWarrior. FM Towns' arena_opponent_runs: the same win count, goal 6
-   and call to remove_opponent. */
+/* An arena opponent ran from the fight (TRIGGER.C, trap kind 30): the player's win
+   count in the pits goes up (QB_PIT_RECORD), with the best tally kept in the X clock
+   XC_PIT_KILLS, and the opponent flees and leaves the fight. */
+/* name: IDA: DefeatLivingPitWarrior. FM Towns' arena_opponent_runs: the same win count,
+   goal 6 and call to remove_opponent. */
 void far arena_opponent_runs(struct Object far *obj)
 {
     player->quest_bytes[QB_PIT_RECORD]++;
@@ -538,6 +630,10 @@ void far arena_opponent_runs(struct Object far *obj)
     remove_opponent(obj);
 }
 
+/* Castle schedule step for one NPC (gronk_whoami callback): pick where it spends this
+   part of the day (where_shall_we_hang_out), make that its home and send it there
+   (goal 1); if the player can see neither where it is nor where it is going, it is
+   teleported there at once. Always returns 1. */
 char far maybe_go_hang_out(struct Object far *npc)
 {
     int x;
@@ -554,8 +650,19 @@ char far maybe_go_hang_out(struct Object far *npc)
     return 1;
 }
 
-/* IDA: CastleNPC_Schedule. FM Towns' where_shall_we_hang_out, called by maybe_go_hang_out
-   with the same time of day switch and castle tables. */
+/* Where a castle NPC (whoami 0x82 to 0x8F, and 0xA8) goes. The day is split into
+   two-hour stages from the hour (game_clock / 0xE1000 % 24): stage 0 is 1 to 2 am, up to
+   stage 11, 11 pm to 1 am. A random place 0-5 is picked, but at night (stages 0-2) and
+   otherwise one time in three the stage decides: its own spot (loc 0) at night and at
+   stage 11, the area x 0x1B-0x23, y 0x22-0x25 (loc 1) in the afternoon (stages 6-8), and
+   loc 4 at stages 3, 5 and 9. Places: 0 its own spot from the xs and ys tables (by
+   whoami - 0x82; 0xA8 has 0x2A, 0x24), 1 to 3 a random square in a rectangle, 4 stays
+   where it is (its rectangle is set but the case falls into the default), 5 stays home.
+   Miranda (0x88) always, and everyone before the castle plot starts (XC_CASTLE 0), keep
+   their own spot, as do Lord British (0x8E) once bit 3 of quests[28] is set and Nystul
+   (0x82) once XC_CASTLE reaches 12. Names from string block 7 at whoami + 16. */
+/* name: IDA: CastleNPC_Schedule. FM Towns' where_shall_we_hang_out, called by
+   maybe_go_hang_out with the same time of day switch and castle tables. */
 void far where_shall_we_hang_out(struct Object far *npc, int *x, int *y)
 {
     int hour;
@@ -628,7 +735,7 @@ void far where_shall_we_hang_out(struct Object far *npc, int *x, int *y)
             y1 = 0x2F;
             x2 = 0x2F;
             y2 = 0x34;
-            /* no break: the DOS bytes fall into the default */
+            /* match: no break: the DOS bytes fall into the default */
         default:
             *x = OBJ_HOMEX(npc);
             *y = OBJ_HOMEY(npc);

@@ -2,13 +2,41 @@
 /* opts: -mm -1 -G -O -Y -d */
 /* The mouse: the cursor, its save-under, the input queue, the mouse regions that pick the
    cursor shape, keyboard warping of the pointer, and the keyboard reader the input loop
-   shares with it. DOS resident segment seg015_1D7C, in original order. Function names are
-   the FM Towns originals; their order there matches this segment one for one, apart from
-   the unnamed static flush_keys, which FM Towns does not have. The functions the target
-   table still lists by IDA name are named from that one-for-one order, and each matches
-   its FM Towns namesake statement for statement: mous_3d_set (IDA _F7), mous_3d_show
-   (_1F6, empty in both), mouse_Qgetxy (_210), mouse_clearQ (_23A), do_keyarray_input
-   (_432), mouse_check_reg (_6F9), MousReSave3d (_BB7) and warpMouse (_D3C). */
+   shares with it. DOS resident segment seg015_1D7C, in original order.
+
+   Coordinates: x runs 0 to 319 left to right and y 0 to 199 from the bottom of the screen
+   up (moveMouse subtracts the driver's downward motion; the keypad 8 key warps to y 199).
+
+   Main entry points: get_input (through mouse_get_input and mouse_get_input_sp) is the
+   one place every input loop reads an event: it alternates between the mouse and the
+   keyboard and returns 1 to 3 for the buttons held (1 left, 2 right; swapped when
+   mouse_hand is set), a key code (do_keyboard_input, with KEY_CTRL, KEY_ALT and
+   KEY_SHIFT added, ui.h) or -1. moveMouse polls the driver (or the joystick, JOYSTICK.C)
+   and moves and redraws the cursor; it is called from every wait loop. mouse_release and
+   mouse_dragged wait for the buttons to come up. defineMouseRegion and force_mouse_cursor
+   choose the cursor picture; keyboard_mouse moves the pointer from the keypad.
+
+   Data owned: the pointer position and cursor picture, the save-under bookkeeping, a
+   one-deep queue of a button press seen while the game was busy (MousQUp records it from
+   the 3D renderer and do_mouse_input replays it), up to 20 cursor regions, the
+   force_mouse_cursor stack (three deep), the keyboard warp state and the 3D view's
+   rectangle (m3dx ... m3dt) used to draw the cursor into the frame buffer.
+
+   Neighbours: INPUT.C's input_dispatch, the scroll, menu and option loops and the automap
+   read input through here; the graphics library (seg003) draws the cursor; INS and DEL
+   (scan codes 0x52 and 0x53) act as the left and right buttons (mouse_btns).
+
+   Name: inferred (the mouse: init_mouse, mouse_getxy, mouse_putxy, mouse_constrain;
+   System Shock's input library MOUSE.C has the same calls, mouse_init, mouse_get_xy,
+   mouse_put_xy, mouse_constrain_xy). */
+
+/* name: function names are the FM Towns originals; their order there matches this segment
+   one for one, apart from the unnamed static flush_keys, which FM Towns does not have. The
+   functions the target table still lists by IDA name are named from that one-for-one
+   order, and each matches its FM Towns namesake statement for statement: mous_3d_set (IDA
+   _F7), mous_3d_show (_1F6, empty in both), mouse_Qgetxy (_210), mouse_clearQ (_23A),
+   do_keyarray_input (_432), mouse_check_reg (_6F9), MousReSave3d (_BB7) and warpMouse
+   (_D3C). */
 
 #include <stdlib.h>
 #include <ctype.h>
@@ -42,12 +70,13 @@ static unsigned long warp_time = 0;     /* DS:289 */
 static unsigned long key_time = 0;      /* DS:28D */
 static char mouse_first = 1;            /* DS:291, get_input alternates mouse and keys */
 
-/* Uninitialised data, DS:22E6..23E1. Turbo C lays _BSS out by a hash of the names, ties
-   in definition order. Measured from probe compiles, the bucket is
-   (c[0] + 256*c[1] + 8*c[len-2] + 64*len) & 1023 and buckets go out in ascending order.
-   The five m3d publics are the FM Towns names and share one bucket (909). The statics are
-   FM Towns _mcurhndl+0x10 to +0xDA, which has no names for them, so these names are ours,
-   chosen to land where the EXE has them (bucket in brackets). */
+/* Uninitialised data, DS:22E6..23E1. */
+/* match: Turbo C lays _BSS out by a hash of the names, ties in definition order. Measured
+   from probe compiles, the bucket is (c[0] + 256*c[1] + 8*c[len-2] + 64*len) & 1023 and
+   buckets go out in ascending order. The five m3d publics are the FM Towns names and share
+   one bucket (909). The statics are FM Towns _mcurhndl+0x10 to +0xDA, which has no names
+   for them, so these names are ours, chosen to land where the EXE has them (bucket in
+   brackets). */
 static int m_curs;                      /* DS:22E6 (125), the cursor set_mouse_data chose */
 static int rgn_ylo[20];                 /* DS:22E8 (146), the mouse regions */
 static int hotspot_x;                   /* DS:2310 (160), the cursor's hot spot */
@@ -92,6 +121,9 @@ void far rectangle(int x0, int y0, int x1, int y1);
 void far seg011_6(int from3d);
 void far seg011_2C6(int *dx, int *dy, int from3d);
 
+/* Sets the full-screen bounds and the default cursor (picture 0x106C, the arrow used
+   whenever no region or forced cursor applies), allocates the 40 by 40 save-under buffer
+   and clears the region table. Returns -1 if the buffer cannot be had. */
 int far init_mouse(void)
 {
     int i;
@@ -108,6 +140,9 @@ int far init_mouse(void)
     return 0;
 }
 
+/* Puts back the background saved under the cursor (colour 0x101 selects the save-under
+   buffer as the source of the graphics library's rectangle), so the cursor disappears.
+   Returns whether anything was saved. */
 unsigned char far _actual_mhide(void)
 {
     if (mouse_saved) {
@@ -118,6 +153,8 @@ unsigned char far _actual_mhide(void)
     return mouse_saved;
 }
 
+/* mouse_show and mouse_hide nest: the cursor is drawn on the first show and removed on
+   the matching last hide. */
 void far mouse_show(void)
 {
     if (++mouse_shown == 1)
@@ -147,6 +184,11 @@ char far mous_in_3d_p(void)
     return mouse_check_reg(m3dx, m3dy - m3dh, m3dx + m3dw, m3dy);
 }
 
+/* Called by the 3D renderer (VIEW3D.C's send_db) before the frame buffer goes to the
+   screen. Sets m3dt to 0 if the cursor is outside the 3D view, 2 if wholly inside, 1 if
+   across its edge, and when it overlaps draws the cursor into the frame buffer
+   (draw3dMouse) so the copy to the screen carries it; a nested show count is reduced
+   instead. mous_3d_show, the matching call after the copy, is empty. */
 void far mous_3d_hide(void)
 {
     int x0, x1;
@@ -180,6 +222,8 @@ void far mouse_getxy(int *x, int *y)
     *y = mouse_y;
 }
 
+/* Where the last button event happened: the queued position if that event came from the
+   queue (q_taken), else the pointer now. */
 void far mouse_Qgetxy(int *x, int *y)
 {
     if (q_taken) {
@@ -223,6 +267,10 @@ int far mouse_getbut(int *b)
     return *b;
 }
 
+/* Waits until the button that was last seen down is released, keeping the pointer and
+   the keyboard warp alive, and with how set also running do_changes so the game goes on
+   updating (MAINLOOP.C). If MousQUp saw the button come up meanwhile (q_release cleared)
+   the wait ends at once; a press still held at the end is queued for do_mouse_input. */
 void far mouse_release(char how)
 {
     int want;
@@ -246,6 +294,10 @@ void far mouse_release(char how)
     }
 }
 
+/* While a button stays down, returns 1 as soon as the pointer has moved more than six
+   pixels (x plus y distance) from where it was, 0 if the button is released first. A
+   look click on an object that turns into a drag picks the object up (INTERACT.C's
+   player_3dlook). */
 unsigned char far mouse_dragged(char how)
 {
     int x0, y0;
@@ -282,6 +334,9 @@ void far mouse_freereign(void)
     max_y = 0xC7;
 }
 
+/* Moves the pointer and returns the buttons held, or -1 for none. A press queued by
+   MousQUp or mouse_release is returned once when the buttons are now up, so a quick click
+   during a long frame is not lost. */
 int far do_mouse_input(void)
 {
     int b = 0;
@@ -303,6 +358,10 @@ int far do_mouse_input(void)
     return b;
 }
 
+/* Key repeat from the held-key array: no more often than every 30 ticks of *Time since
+   the last key, scans key_on (indexed by scan code) round from just after the last key
+   found, and returns the character Asc gives for the first key held (the shifted table
+   half when Shift is down), or 0. Used when the caller asks for held keys (array set). */
 int far do_keyarray_input(void)
 {
     int c;
@@ -325,6 +384,11 @@ int far do_keyarray_input(void)
     return c;
 }
 
+/* Reads one key (or with array set, a held key from do_keyarray_input instead) and
+   returns its input code, -1 for none: the low byte is the character, or 0x80 and up for
+   the special keys (the keypad keys are 0x8C to 0x94, Tab is 9); Shift adds KEY_SHIFT to
+   special keys only, Caps Lock flips the case of letters, and Alt and Ctrl add KEY_ALT
+   and KEY_CTRL. So Ctrl+S is 0x173 (ICONS.C's do_option_shortcut). */
 int far do_keyboard_input(char array)
 {
     int c;
@@ -348,6 +412,9 @@ int far do_keyboard_input(char array)
     return c;
 }
 
+/* The input reader under every loop: tries the mouse and the keyboard in turn, starting
+   with whichever was not tried first last time, so neither can starve the other. Returns
+   1 to 3 for mouse buttons, a key code above 3, or -1. Sets didMouseInput (SCROLL.C). */
 int far get_input(char array)
 {
     int c;
@@ -357,7 +424,7 @@ int far get_input(char array)
         mouse_first = 0;
         if ((c = do_mouse_input()) < 0)
             return do_keyboard_input(array);
-        return c;               /* the dead jump the EXE has before the else */
+        return c;               /* match: the dead jump the EXE has before the else */
     } else {
         mouse_first = 1;
         if ((c = do_keyboard_input(array)) < 0)
@@ -376,6 +443,9 @@ int far mouse_get_input_sp(void)
     return get_input(1);
 }
 
+/* Claims a free slot of the 20 cursor regions: while the pointer is inside the box the
+   cursor is picture id (checkMouse). Returns the slot, the handle for undefineMouseRegion,
+   or -1 if all are in use. */
 int far defineMouseRegion(int x0, int y0, int x1, int y1, int id)
 {
     int i;
@@ -414,6 +484,10 @@ void far undefineMouseRegion(int handle)
     }
 }
 
+/* Overrides the cursor picture regardless of regions, saving the old one on a stack up to
+   three deep (a fourth force is ignored). Used for the mode cursors (INTERACT.C's
+   deal_with_icons, 0x1077), the automap's pen and eraser and an object held on the
+   cursor. */
 void far force_mouse_cursor(int id)
 {
     if (force_depth != 3) {
@@ -425,6 +499,8 @@ void far force_mouse_cursor(int id)
     }
 }
 
+/* Pops force_mouse_cursor's stack, back to the arrow if it underflows. Bit 0 of how hides
+   the cursor first and bit 1 shows it after, so 3 does both. */
 void far unforce_mouse_cursor(int how)
 {
     if (how & 1)
@@ -439,6 +515,9 @@ void far unforce_mouse_cursor(int how)
         mouse_show();
 }
 
+/* Whether the cursor touches the box: the pointer may lie outside it by up to half the
+   cursor's width and height. Used to decide whether drawing in an area needs the mouse
+   hidden (SCROLL.C's set_mouse_in) and whether the pointer is over the 3D view. */
 char far mouse_check_reg(int x0, int y0, int x1, int y1)
 {
     int dy, dx;
@@ -449,6 +528,8 @@ char far mouse_check_reg(int x0, int y0, int x1, int y1)
            x0 - dx <= mouse_x && x1 + dx >= mouse_x;
 }
 
+/* Makes picture id the cursor: its width and height come from the picture's header and
+   the hot spot is its middle. */
 void far set_mouse_data(int id)
 {
     unsigned char far *p;
@@ -465,6 +546,10 @@ void far set_mouse_data(int id)
         MousReSave();
 }
 
+/* Picks the cursor picture from the region under the pointer: nothing to do while a
+   cursor is forced or the pointer is still in the region found last time; otherwise the
+   first region containing it (in slot order) sets its picture, and leaving every region
+   restores the arrow (0x106C). */
 void far checkMouse(void)
 {
     int i;
@@ -491,6 +576,14 @@ void far checkMouse(void)
     }
 }
 
+/* Moves the pointer by the driver's motion (or by the joystick when it is steering the
+   pointer, seg011_2C6), or, with no motion, one step of a keyboard warp toward
+   (warp_x, warp_y): every 10 ticks, up to m_warp_rate pixels per axis, the rate growing by
+   8 to 40 while warping freely and halving once a held arrow key is released. Real
+   motion cancels a warp. The pointer is clamped to mouse_constrain's box and the cursor
+   redrawn. With calledfrom3d (MousQUp's argument; VIEW3D.C passes 0) the clip window is
+   opened to the whole screen around the redraw. seg011_6 also runs the joystick's movement
+   controls every call when a joystick is present. */
 void far moveMouse(void)
 {
     int wl, wt, wr, wb;
@@ -577,6 +670,9 @@ void far moveMouse(void)
         set_the_window(wl, wt, wr, wb);
 }
 
+/* Called while the game is busy (VIEW3D.C, between building the vision grid and the
+   frame's database) to keep the pointer moving and remember a button press for
+   do_mouse_input; a release clears q_release so a pending mouse_release ends. */
 void far MousQUp(char from3d)
 {
     int b;
@@ -640,6 +736,8 @@ void far draw3dMouse(void)
     ShowClip = Transparency = 0;
 }
 
+/* Starts a keyboard warp of the pointer toward (x, y), clamped to the constraint box;
+   moveMouse carries it out. */
 void far warpMouse(int x, int y)
 {
     m_warp_rate = 1;
@@ -657,6 +755,12 @@ void far warpMouse(int x, int y)
     m_warp_dy = y > mouse_y ? -1 : 1;
 }
 
+/* Moves the pointer from the keyboard. Tab jumps it between three places, the 3D view
+   (100, 130), the inventory panel (270, 120) and the bottom right (305, 7), in that order
+   (0x4A3, probably Shift+Tab, goes the other way). The keypad keys 1 to 9 except 5 (codes
+   0x8C to 0x94) warp it toward the matching screen edge or corner; pressing the same key
+   again while it moves speeds it up. k is the key's scan code, which moveMouse watches in
+   key_on to slow the warp when the key is let go. */
 void far keyboard_mouse(int key)
 {
     int k = 0;
@@ -742,6 +846,9 @@ void far keyboard_mouse(int key)
     }
 }
 
+/* The buttons held: the driver's, or when it reports none, INS (scan code 0x52) as the
+   left button and DEL (0x53) or the joystick's second button as the right. mouse_hand
+   (left-handed) swaps left and right. */
 int far mouse_btns(void)
 {
     int b = 0;

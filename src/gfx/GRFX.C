@@ -1,5 +1,23 @@
 /* target: ovr118 */
 /* opts: -mm -1 -G -O -Y -d */
+/* Graphics start-up, fonts and palettes, and the screen fades: the whole of DOS overlay
+   ovr118.
+
+   grfx_init starts the graphics library (seg003, through seg021's entry points), sets the
+   full-screen window and loads the default font. Fonts are DATA\FONTxxxx.SYS files
+   (enum Font, gfx.h): grfx_load_font reads the 12-byte header into cur_font (struct
+   FontInfo) and 128 characters into bytefont, then setup_font (GRCORE.ASM) takes them up.
+   Palettes are 768-byte records of DATA\PALS.DAT (read_quikpal); grfx_setpal and
+   grfx_palrange copy into the library's palette and load the DAC with local_do_palette
+   (MODEX.ASM). fadein and fadeout ramp the whole palette between black and a target in
+   count * 8 steps, 8 ticks of *Time apart, through fade_buffer; the cutscene player
+   (CUTS.C) uses them with its speech pump. out3d and in3d dissolve the 3D view, one step
+   per call of a seg021 callback into the graphics library, each step sent to the screen
+   with send_FB (PANELS.C); fill_FB fills the view with one colour (damage and spell
+   flashes). The file owns fade_buffer and the font and palette file names.
+
+   name: inferred, from the grfx_ prefix of the FM Towns names (grfx_init, grfx_load_font,
+   grfx_setpal ...). */
 #include <dos.h>
 #include <string.h>
 #include "file.h"
@@ -9,16 +27,16 @@
 #include "ui.h"
 #include "view3d.h"
 
-/* FM Towns names; the target table still identifies these DOS entries by IDA name. */
+/* name: FM Towns names; the target table still identifies these DOS entries by IDA name. */
 
 extern struct FontInfo far *cur_font;
 extern unsigned long far *Time;
-/* This file's _BSS, DS:5E34..6733 (ovr116's ends at 5E33; ovr119's starts at 6734, its
+/* match: this file's _BSS, DS:5E34..6733 (ovr116's ends at 5E33; ovr119's starts at 6734, its
    keys starting again from gsize's 119): only this file uses it. */
 unsigned char fade_buffer[0x900];
 extern char far stdat;
 extern unsigned char ShowStupidFirstPersonWeapon;
-/* The file's _DATA, DS:14C4 to DS:14FE. FM Towns has these as statics after its public
+/* match: the file's _DATA, DS:14C4 to DS:14FE. FM Towns has these as statics after its public
    _grfx_driver (font_name is _grfx_driver+0xD there, font_suffixes +0x1A), which is FM
    Towns' own graphics driver block; DOS has no such block, and its first 12 bytes would
    overlap ovr117's data. The byte grfx_load_font sets (_grfx_driver+0xC in FM Towns) is
@@ -44,6 +62,8 @@ void far grfx_init(void)
     grfx_quikfont(FONT_5X6P);
 }
 
+/* Loads a font file: its header into cur_font, then (charsize + widthsize) * 128 bytes of
+   character bitmaps and widths into bytefont. Returns 0 if the file cannot be opened. */
 unsigned char far grfx_load_font(char *name)
 {
     register int fd;
@@ -79,6 +99,7 @@ void far grfx_clear(void)
     mouse_show();
 }
 
+/* Reads palette n of PALS.DAT (0x300 bytes, 6-bit RGB) into dest; 1 if all of it was read. */
 unsigned char far read_quikpal(int n, void far *dest)
 {
     register int fd;
@@ -113,6 +134,11 @@ void far grfx_palrange(void far *src, int start, int count)
     local_do_palette(count, (char)start);
 }
 
+/* Fades from palette src to black. count 0 goes black at once; otherwise the palette steps
+   down linearly in count * 8 steps, each 8 ticks of *Time after the last (with *Time at
+   256 Hz, as the cutscene work measured, count / 4 seconds). acc holds each entry scaled
+   by the number of steps. pump calls the cutscene speech streamer before each step, so
+   speech keeps playing during the fade. */
 void far fadeout(unsigned char far *src, int count, int pump)
 {
     int step;
@@ -144,6 +170,7 @@ void far fadeout(unsigned char far *src, int count, int pump)
     }
 }
 
+/* Fades from black to palette src, the reverse of fadeout. */
 void far fadein(unsigned char far *src, int count, int pump)
 {
     int step;
@@ -173,6 +200,8 @@ void far fadein(unsigned char far *src, int count, int pump)
     }
 }
 
+/* Calls callback(0) .. callback(count), sending the 3D view to the screen after each, then
+   fills the view with colour. The first-person weapon is not drawn meanwhile. */
 void far out3d(int count, void (far *callback)(int), int colour)
 {
     register int i;
@@ -186,6 +215,9 @@ void far out3d(int count, void (far *callback)(int), int colour)
     mouse_show();
 }
 
+/* The reverse of out3d: keeps a copy of the rendered view (the 0x6800 bytes, 208 by 128,
+   at the start of stdat) in the workspace, shows colour, then for count .. 1 restores the
+   copy after each callback(i) and send. Does nothing if the workspace is in use. */
 void far in3d(int count, void (far *callback)(int), int colour)
 {
     unsigned far *screen;
@@ -216,14 +248,19 @@ void far in3d(int count, void (far *callback)(int), int colour)
     mouse_show();
 }
 
+/* fadeout3d and fadein3d ignore n and always take 12 steps of seg021's callback (which
+   calls the graphics library at seg003_0272_764); new_player_pos uses them around a
+   teleport. */
 void far fadeout3d(int n) { out3d(12, CallbackFunctionSleepRelated_seg021_22FD_CB7, 1); }
 void far fadein3d(int n) { in3d(12, CallbackFunctionSleepRelated_seg021_22FD_CB7, 1); }
-/* DOS only: fadeout3d and fadein3d over n steps with another callback. The names are
-   provisional (IDA's ovr118_534 and ovr118_54B), chosen so that their tools/bssorder.py keys
-   put them in the EXE's overlay stub order. */
+/* DOS only: fadeout3d and fadein3d over n steps with another callback (seg003_0272_788).
+   match: the names are provisional (IDA's ovr118_534 and ovr118_54B), chosen so that their
+   tools/bssorder.py keys put them in the EXE's overlay stub order. */
 void far steps_fadeout3d_ovr118_534(int n) { out3d(n, Callback_seg021_22FD_CEA, 2); }
 void far steps_fadein3d_ovr118_54B(int n) { in3d(n, Callback_seg021_22FD_CEA, 2); }
 
+/* Fills the 3D view with one colour and shows it at once (a flash), then asks for a
+   redraw (editchng(2)). */
 void far fill_FB(int colour)
 {
     cFillFB(colour);
@@ -235,6 +272,9 @@ void far fill_FB(int colour)
     editchng(2);
 }
 
+/* The crystal ball's view (PLAYER.C crystal_ball, which sets campos and camang first):
+   fade to the detached camera (attach_eye(-1)), stay there while the mouse button is held
+   (mouse_release, MOUSE.C), then fade back to the player's eye. */
 void far cameras_fade(void)
 {
     render_FB();

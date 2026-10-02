@@ -1,11 +1,36 @@
 /* target: ovr119 */
 /* opts: -mm -1 -G -O -Y -d */
-/* Art loading: .GR picture files into EMS pages or video memory, and .TR textures.
-   Function names are the FM Towns originals at the same positions, using the same
-   globals in the same way (load_tr_ems is also the name TEXTMAPS calls, stub +4D).
-   LoadScaled_ovr119_804 and GrLoadAt_ovr119_949 have no FM Towns counterpart: the FM Towns file
-   has load_tr_ems_ alone after reload_obj_ems_, and nothing between load_gr_video_ and
-   reload_gr_vpic_. Both names are provisional, chosen for their keys: Turbo C lists a file's
+/* Art loading: .GR picture files into EMS pages or video memory, and .TR textures: the
+   whole of DOS overlay ovr119.
+
+   load_all_gr runs once at start-up. It reads the 32 auxiliary 16-colour palettes of
+   DATA\ALLPALS.DAT into Palettes, then loads every .GR file the game keeps resident and
+   assigns each picture a slot of grs_off, in this order: question, views, objects (slots
+   from first_obj, through obj_tab), animo (first_anim), buttons, cursors, gempt and 3dwin
+   (from first_button), tmflat and tmobj (from first_tmobj), and, in video memory, lfti,
+   flasks, compass, inv, power, eyes, chains, spells, scrledge and optb (from first_vram).
+   grs_which1 (GRSPIC.C) maps the game's icon numbers onto those ranges. EMS pictures are
+   packed a paragraph-aligned picture after another into 16 KB logical pages from page 4,
+   mapped one at a time into physical page 2; a slot records the page in its top four bits
+   and the paragraph in the low twelve. Video memory pictures get a block from valloc
+   (VALLOC.ASM) and are copied in by MODEX.ASM; their slot holds the video offset.
+
+   Every load goes through gronk_gr, which opens a file with _ld_open and reads each
+   picture with _ld_gr to the address an adr callback gives, then lets a move callback
+   record it. Per level, load_tr_ems (called by TEXTMAPS.C) loads the level's 64 wall and
+   floor textures into EMS from tmap_fpage, and load_doors its six door pictures.
+
+   A .GR, .TR or .CR file (UW-Formats 3.2) starts with a type byte (1, 2 or 3, which
+   _ld_open checks against gr_ext's index), for .TR a texture size byte, a word count of
+   pictures, for .CR the palettes, then a table of count + 1 doubleword offsets, which
+   _ld_open reads into gr_offs (the 3D library's far buffer, 570 entries).
+
+   name: descriptive. Function names are the FM Towns originals at the same positions,
+   using the same globals in the same way (load_tr_ems is also the name TEXTMAPS calls,
+   stub +4D). LoadScaled_ovr119_804 and GrLoadAt_ovr119_949 have no FM Towns counterpart:
+   the FM Towns file has load_tr_ems_ alone after reload_obj_ems_, and nothing between
+   load_gr_video_ and reload_gr_vpic_.
+   match: both names are provisional, chosen for their keys: Turbo C lists a file's
    publics by the tools/bssorder.py key of each name and TLINK numbers overlay stub entries
    from the last one listed, so these reproduce the EXE's stub order (the target table keeps
    IDA's LoadArtFile_ovr119_804 and ovr119_949). */
@@ -19,14 +44,15 @@
 #include "sys.h"
 #include "view3d.h"
 
-/* Graphics slot bookkeeping. These words start the file's _DATA, straight after
-   ovr118's "pals.dat"; FM Towns keeps the first five as public globals. */
+/* Graphics slot bookkeeping: where each range of grs_off starts.
+   match: these words start the file's _DATA, straight after ovr118's "pals.dat"; FM Towns
+   keeps the first five as public globals. */
 unsigned first_obj = 0;             /* DS:14FE */
 unsigned first_button = 0;          /* DS:1500 */
 unsigned first_tmobj = 0;           /* DS:1502 */
 unsigned first_vram = 0;            /* DS:1504 */
 void far *load_adr = 0;             /* DS:1506, not used by the DOS code */
-/* FM Towns keeps the rest as statics after _grfx_driver (+0x38 onwards), so no names. */
+/* name: FM Towns keeps the rest as statics after _grfx_driver (+0x38 onwards), so no names. */
 static unsigned mapped_page = 0;    /* EMS page now mapped at physical page 2 */
 static unsigned gr_index = 0;       /* next graphics slot in grs_off */
 static unsigned ems_off = 0;        /* next free paragraph in the EMS page */
@@ -34,7 +60,7 @@ static unsigned char ems_page = 4;  /* EMS logical page being filled */
 static char gr_ext[6][4] = { "", ".gr", ".tr", ".cr", ".sr", ".ar" };
 static int reload_base = -1;        /* object slot that reload_obj_ems starts at */
 
-/* This file's _BSS, DS:6734..6945, laid out by name (tools/bssorder.py): gsize 119,
+/* match: this file's _BSS, DS:6734..6945, laid out by name (tools/bssorder.py): gsize 119,
    constadr 131, npals 270, tmpoffs and tmpcnt 612, Palettes 632, grfp 663, PalStore 736;
    ovr118's fade_buffer (846) before it and ovr120's Missile (621) after it start other runs. */
 char gsize;                         /* texture edge, from the .tr header */
@@ -52,6 +78,9 @@ extern char far stdat;
 void far MapMemory_seg013_1D3C_C7();
 unsigned char far preload_cr();
 
+/* Reads a .CR file's palette count and palettes (32 bytes each). They are kept in a
+   malloc'd block whose near address goes to *PalStore when *PalStore is nonzero, and
+   skipped otherwise. */
 unsigned char far get_pals(void)
 {
     if (fread(&npals, 1, 1, grfp) != 1)
@@ -67,6 +96,8 @@ unsigned char far get_pals(void)
     return 1;
 }
 
+/* Opens DATA\<art><ext> for reading, checks its type byte and reads its header and offset
+   table (see the file comment). Returns 1 with grfp open, else 0 with it closed. */
 unsigned char far _ld_open(char *art, char type)
 {
     char path[66];
@@ -201,6 +232,9 @@ void far *far adr_const(void)
     return constadr;
 }
 
+/* Copies a picture read into stdat to a new video memory block: an 8-bit bitmap (type 4)
+   is stored as w, h and its pixels by MODEX's 2A2; any other is copied as it is (361).
+   The slot holds the video offset. */
 unsigned char far movenew_vram(unsigned char far *image, int unused, int index)
 {
     int address = valloc(image[1], (unsigned)image[2] + 1);
@@ -214,6 +248,7 @@ unsigned char far movenew_vram(unsigned char far *image, int unused, int index)
     return 1;
 }
 
+/* As movenew_vram, into the block the slot already has (reloading a picture). */
 unsigned char far move_vram(unsigned char far *image, int unused, int index)
 {
     int address = grs_off[index + gr_index];
@@ -259,6 +294,7 @@ unsigned char far gronk_gr(char *art, int start, int count,
     return ok;
 }
 
+/* Loads every picture of art into EMS at the next slots. */
 unsigned char far load_gr_ems(char *art)
 {
     unsigned char ok = gronk_gr(art, 0, -1, (void far *(far *)(int))adrnew_ems,
@@ -267,6 +303,8 @@ unsigned char far load_gr_ems(char *art)
     return ok;
 }
 
+/* As load_gr_ems for object art: obj_tab[2 * i] gets each picture's slot (0 for an empty
+   picture), so empty pictures take no slot. */
 unsigned char far load_obj_ems(char *art)
 {
     unsigned char ok = gronk_gr(art, 0, -1, (void far *(far *)(int))adrnew_ems,
@@ -274,6 +312,8 @@ unsigned char far load_obj_ems(char *art)
     return ok;
 }
 
+/* As load_obj_ems for count pictures, recorded from object base on (tmflat's 16 pictures
+   at object 170h). */
 unsigned char far reload_obj_ems(char *art, int base, int count)
 {
     reload_base = base;
@@ -347,6 +387,8 @@ unsigned char far load_gr_video(char *art)
     return ok;
 }
 
+/* Reloads count pictures of art from start into the video memory blocks of the slots from
+   icon offset (a 2000h-range icon number) on. */
 unsigned char far GrLoadAt_ovr119_949(int offset, char *art, int start, int count)
 {
     register int old = gr_index;
@@ -358,6 +400,7 @@ unsigned char far GrLoadAt_ovr119_949(int offset, char *art, int start, int coun
     return ok;
 }
 
+/* Reloads one picture into the video memory block of icon offset. */
 void far reload_gr_vpic(int offset, char *art, int image)
 {
     register int old = gr_index;
@@ -367,12 +410,15 @@ void far reload_gr_vpic(int offset, char *art, int image)
     gr_index = old;
 }
 
+/* Reads one picture of art to dst, recording nothing. */
 unsigned char far read_gr_far(char *art, int image, void far *dst)
 {
     constadr = dst;
     return gronk_gr(art, image, 1, (void far *(far *)(int))adr_const, 0L);
 }
 
+/* The start-up load (see the file comment). Returns 0, or an ERR_READ code: 8 no
+   ALLPALS.DAT, 4 a .GR file failed, 9 the critter art (preload_cr) failed. */
 int far load_all_gr(void)
 {
     unsigned char ok = 1;

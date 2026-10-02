@@ -3,12 +3,33 @@
 ;
 ; sphere_check, get_dist and do_obj (the model opcode handler).
 ;
+; What it does in the game: do_obj is opcode 38h of the model interpreter (INTERP.ASM), the
+; header that starts each placed thing in the render database: GRIDDB.C's process_grid and
+; do_3d_pickup open every frame with one, and the opcode table points 38h here. It places the
+; thing (sets the object origin and the coordinate shift) and culls it, skipping its whole
+; program when it is behind the eye, out of 16-bit range or outside the view, using
+; sphere_check's bounding-sphere test. get_dist is a distance estimate that nothing in the
+; DOS EXE calls.
+;
+; Data: none of its own. It works in seg052_519C (the interpreter's DS): the matrix at 14B2h,
+; the eye position at 247Ah, the object origin at 25E6h..25EAh, the shift at 25E0h, the
+; frustum factors 24E6h..24EAh from scale_matrix, scratch words at 0Eh..20h, and the
+; bit-length table at 22h (entry v = 7 - the bit length of v).
+;
+; Neighbours: INTERP.ASM (the dispatch and the opcode table), INSTANCE.ASM (self_modify,
+; set_accept, scale_matrix, and seg004_0849_35FF, which patches modify_axis2 here).
+;
+; name: descriptive (map/filenames.tsv: "3D library module 2: sphere_check, get_dist,
+; do_obj"); the routine names are FM Towns', which has them in this order just before the
+; image decoders. Note DRAWOBJ.C has a C function do_obj too (FM do_obj_, a different
+; routine: it writes object entries into the database).
+;
 ; SEG004 split into its original modules: this is module 2 of 14, +260..+600 of the segment
 ; (file 9420h), a module of the second library (UWLIB.LIB).
 ; Procs: sphere_check, get_dist, do_obj.
-; Evidence for the bounds: starts on a paragraph after 10 zero bytes following a jmp: TLINK's
-; padding before a paragraph-aligned module (TASM 2.0 pads `align 16` with 87 DB/90, not
-; zeros).
+; match: evidence for the bounds: starts on a paragraph after 10 zero bytes following a jmp:
+; TLINK's padding before a paragraph-aligned module (TASM 2.0 pads `align 16` with 87 DB/90,
+; not zeros).
 ; It has no relocations.
 
         .386
@@ -27,6 +48,16 @@ SEG004_TEXT segment para public use16 'CODE'
         public  modify_axis2
 
 ; seg004_0849_260  (+260)
+; Bounding-sphere test against the view frustum. In: BX, AX, BP = the object origin words
+; (25E6h, 25E8h, 25EAh: negated eye-relative x, y, z), SI = radius, CL = shift. Shifts all
+; four by CL and negates the position, takes its depth along the matrix's z column (kept at
+; ds:0Eh, the shift at ds:10h), and tests it against the near plane and the four side planes
+; (the x and y columns, with the radius scaled by 24E8h and 24EAh). Out: CF set when the
+; sphere is wholly outside one plane. Otherwise CF clear, SI = -1 when the sphere is wholly
+; inside (the first path) or 0 when it crosses a plane (the second, from L036F), and AX =
+; the depth shifted back by the original shift (scaled by 8000h / -24E6h when 24E6h is
+; negative, 7FFFh if that overflows) and halved; 0 when the centre is behind the eye. Called
+; only by do_obj.
 _sphere_check proc near
         mov     word ptr ds:[10h],cx
         shl     si,cl
@@ -231,6 +262,11 @@ L040D:
 _sphere_check endp
 
 ; seg004_0849_40F  (+40F)
+; Distance estimate from the three 32-bit eye-relative coordinates do_obj leaves at ds:16h,
+; 1Ah and 1Eh: takes absolute values and combines the largest with fractions of the others
+; (halvings and quarterings, an octagonal approximation). Out: BP:BX. Nothing in the EXE calls
+; it. In the y term the absolute value's correction is added to CX, not SI (`add cx,dx`
+; after `xor si,dx`), which looks like a slip; it would matter only if something called it.
 _get_dist proc near
         push    si
         mov     bx,word ptr ds:[16h]
@@ -311,6 +347,21 @@ L0496:
 _get_dist endp
 
 ; seg004_0849_49C  (+49C)
+; Opcode 38h, the object header. Operands: skip (the offset from after the operand to the
+; end of the object's program), shift, then three (extent, 32-bit coordinate) pairs for x,
+; y and z, then the radius, then the object's program. Clears 25E2h; computes each
+; coordinate relative to the eye (247Ah..2484h) and shifts it by `shift` (right when
+; positive, left when negative); if any relative coordinate does not fit in 16 bits the
+; object is skipped with 25E2h = -1 (L05E3). Stores the negated values as the object origin
+; (25E6h..25EAh). The extents are added to the coordinates' magnitudes and ORed together,
+; and the bit-length table at ds:22h turns that into 25E0h, 15 minus its bit length: the
+; left shift the point loaders apply, so a small or near object keeps the most precision.
+; A first cull at modify_axis2 (FM name; the add or sub and the axis address are patched by
+; seg004_0849_35FF to the axis the view looks most along) skips the object if its radius
+; plus that coordinate is negative, behind the eye. Then sphere_check; if it passes, AX
+; goes to 25FAh, self_modify loads the origin into the loaders, set_accept gets sphere_check's
+; SI, and the program after the radius is run. Every rejection dispatches the opcode after
+; the object (SI = the skip target).
 do_obj proc near
         mov     word ptr ds:[25E2h],0
         lodsw

@@ -2,14 +2,37 @@
 /* opts: -mm -1 -G -O -Y -d */
 /* Bartering in conversations: the trade slots on the conversation screen, the
    conversation built-ins setup_to_barter, do_offer, do_demand, do_decline,
-   do_judgement, give_all_stuff and the npc_inv_* family, and how a trader values
-   an item. The whole of DOS overlay ovr097, in original order. Names are the
-   originals from the FM Towns symbol table where it has them; the functions it
-   lacks were static there, and their provisional names were chosen for their keys: Turbo C lists a file's publics by the tools/bssorder.py key of
-   each name and TLINK numbers overlay stub entries from the last one listed, so these names
-   reproduce the EXE's stub order (the target table keeps IDA's names).
+   do_judgement, give_all_stuff, set_likes_dislikes and the npc_inv_* family, and how a
+   trader values an item. The whole of DOS overlay ovr097, in original order.
+
+   Each side has six slots, two columns by three rows, the NPC's at x 0x4B and the
+   player's at x 0x7C. The player drags items into their own slots and clicks to select
+   them; a script calls setup_to_barter to fill the NPC's slots from its inventory, then
+   do_offer or do_demand to trade the selected items. Objects in the slots are out of
+   both inventories (barter_items holds their indices); end_barter drops what is left
+   next to its owner.
+
+   Entry points: barter_init and end_barter (strt_converse and free_converse in
+   CONVERSE.C), the mouse handlers play_barter and npc_barter (game/PLAYER.C) and
+   conv_inv_special (inv/BAGS.C), the built-ins above (bound in Converse), and the
+   helpers CONVERSE.C's inventory built-ins call (player_barter_items, player_barter_give,
+   npc_inv_add, npc_barter_find, npc_barter_give, npc_barter_give_id, npc_inv_create,
+   npc_inv_delete, assess_value, RedisplayBarterSlots).
+
+   The NPC's temper comes from its creature class (Creature[], critter.h) in barter_init:
+   greed is the % gain it wants, patience the bad offers it takes, npc_assess how far
+   off its valuations are; the player's charisma skill lowers greed and raises patience.
+   A conversation can scale greed and set fudge through babl_hack (BABLHACK.C).
+
+   Name: descriptive (map/filenames.tsv: bartering, setup_to_barter, npc_barter).
 
    The two sides of a trade are indexed 0 for the NPC and 1 for the player. */
+/* name: Names are the originals from the FM Towns symbol table where it has them; the
+   functions it lacks were static there, and have provisional names (the target table
+   keeps IDA's names). */
+/* match: The provisional names were chosen for their keys: Turbo C lists a file's
+   publics by the tools/bssorder.py key of each name and TLINK numbers overlay stub
+   entries from the last one listed, so these names reproduce the EXE's stub order. */
 #include <stdlib.h>
 #include <time.h>
 #include "conv.h"
@@ -22,9 +45,10 @@
 #include "ui.h"
 #include "uw2.h"
 
-/* A trade adjustment set by a conversation (ovr096), read when bartering. DS:BFE, the
-   first byte of this file's _DATA: its string at DS:BFF follows ovr096's data, which ends
-   at an even address, so this byte is ours. */
+/* A trade adjustment set by a conversation (babl_hack mode 9, ovr096): do_judgement adds
+   it to the value of the NPC's side. */
+/* match: DS:BFE, the first byte of this file's _DATA: its string at DS:BFF follows
+   ovr096's data, which ends at an even address, so this byte is ours. */
 char fudge = 0;
 extern unsigned char far Transparency;
 extern struct Inplist near *inplist;
@@ -37,10 +61,11 @@ void far mouse_release(int how);
 
 static void far ReturnTradeObjectsToNPC_ovr097_F76(int only_unselected);
 
-/* This file's uninitialised data. FM Towns names greed and npc_assess, which are public;
-   the rest were static there and their names here were chosen so that Turbo C lays
-   them out in _BSS where the EXE has them (it orders a file's _BSS by a hash of the
-   name, see tools/bssorder.py). */
+/* This file's uninitialised data. */
+/* name: FM Towns names greed and npc_assess, which are public; the rest were static
+   there. */
+/* match: The static names were chosen so that Turbo C lays them out in _BSS where the
+   EXE has them (it orders a file's _BSS by a hash of the name, see tools/bssorder.py). */
 static unsigned char barter_result;     /* the last offer or demand succeeded */
 static unsigned char barter_selected[2][6];
 static int npc_wit;                     /* worked out by barter_init, never read */
@@ -54,7 +79,11 @@ static int barter_vals[2][2][6];        /* the player's and the NPC's valuations
 static int barter_saves[2][6];          /* what was on screen under each slot */
 static int barter_items[2][6];          /* the object in each slot, 0 for none */
 
-/* Conversation built-in: fill the NPC's trade slots from its inventory. */
+/* Conversation built-in: fill the NPC's trade slots from its inventory (at most 0x28
+   objects looked at), generating the inventory first if it has none. Once all six are
+   full it goes round again, each further item replacing the slot's item (which goes
+   back into the inventory) with chance 3 in 8, until it comes back to the first item it
+   put back. */
 void far setup_to_barter(void)
 {
     struct Object far *obj;
@@ -100,7 +129,11 @@ void far setup_to_barter(void)
     set_workspace();
 }
 
-/* Set up the slots and the NPC's trading temper when a conversation starts. */
+/* Set up the slots and the NPC's trading temper when a conversation starts. The random
+   seed is the NPC's object index, so the same NPC always gets the same temper:
+   greed = range(haggle * 6, -25, 25), patience = range(patience, -20, 100), npc_assess =
+   range((15 - shrewd) * 6, -25, 50), each then adjusted by charisma (greed - 2 * charm,
+   patience + charm / 2). npc_wit is worked out but never read. */
 void far barter_init(void)
 {
     int charm;
@@ -217,8 +250,9 @@ int far npc_slot_hit_abs(int x, int y)
 }
 
 /* Which slot of either side is at x, y: 1 with the side, slot and that side's arrays
-   filled in, or 0. Unnamed (static) in the FM Towns build, which has it straight
-   after npc_slot_hit_abs. */
+   filled in, or 0. */
+/* name: Unnamed (static) in the FM Towns build, which has it straight after
+   npc_slot_hit_abs. */
 static int far ovr097_5F0(int x, int y, int *side, int *slot,
                    int **content, register unsigned char **active)
 {
@@ -266,7 +300,11 @@ void far npc_barter(void)
 }
 
 /* A click on a trade slot: pick up what is there (asking how many of a stack), put
-   down what is held, toggle the slot's selection, or look at the item. */
+   down what is held, toggle the slot's selection, or look at the item. The NPC's items
+   can only be picked up after a successful offer or demand (barter_result), and
+   nothing can be put down in the NPC's slots. Looking uses the lore skill: an NPC item
+   gets detail 2 on a lore check against 20, the player's own 1 plus the result of a
+   check against 15. */
 void far UseTradeSlot_ovr097_6E8(int side, int slot, int *content,
                                                  unsigned char *active)
 {
@@ -293,7 +331,7 @@ void far UseTradeSlot_ovr097_6E8(int side, int slot, int *content,
                 found->ol.f.link += moved->ol.f.link;
                 if (Obj_Rem(&found->qn.link, moved)) Obj_Free(moved);
             }
-            game_sprint(0x10C);
+            game_sprint(0x10C);   /* "That is too heavy to take.\n" */
             return;
         }
         had_cursor = 1;
@@ -542,8 +580,17 @@ unsigned char far nothing_there(int *content, unsigned char *selected)
 }
 
 /* The player offers the selected items for the NPC's selected items. The five
-   arguments are the strings to say: accepted, not good enough, worse than before,
-   out of patience and nothing offered. Returns 1 when the trade is made. */
+   arguments, arg5 to arg1, are the strings to say: accepted, not good enough, worse than
+   before, out of patience and nothing offered. Returns 1 when the trade is made.
+
+   Both sides are valued by the NPC (with its likes and dislikes, blurred by npc_assess),
+   and the offer's gain is (player's - NPC's) * 100 / NPC's, in %. At or above greed the
+   NPC accepts: its unselected items go back to its inventory, the player's selected
+   items it does not dislike go to it, and its selected items stay in the slots for the
+   player to take. Otherwise: a first offer under half of greed costs 1 patience; an
+   offer worse than the last costs 2; and later an offer that closed less than a third
+   of the gap left by the last one (inferred from (greed - last) * 3 / 2 > greed - eval)
+   costs 1. An offer that costs nothing says nothing. */
 int far do_offer(int far *args)
 {
     int player_value;
@@ -594,10 +641,17 @@ int far do_offer(int far *args)
     return 0;
 }
 
-/* The player demands the NPC's selected items for nothing. The three arguments are
-   the strings to say: nothing selected, given up and refused. Whether the NPC gives in
-   weighs the player's health, level, readiness to fight and charm against the NPC's
-   health, temper and mood and the value demanded. Returns 1 when it gives in. */
+/* The player demands the NPC's selected items for nothing. The three arguments, arg3
+   to arg1, are the strings to say: nothing selected, given up and refused. Whether the
+   NPC gives in weighs the player's health, level, readiness to fight and charm against
+   the NPC's health, temper and mood and the value demanded. Returns 1 when it gives in.
+
+   player = level + drawn + health + charisma / 6, where health is 2 - 2 * damage taken
+   / average hit points; npc = class level + mood (-1 an ally, 1 attitude below 2, else
+   0) + its health likewise + value demanded / 10, times 1.5 on dungeon levels 9 and
+   0x11 (PlayerLevel). The player must score more. Giving in lowers npc_attitude by one
+   (not below 1), as does demanding nothing; refusing sets the NPC to attack the player
+   (goal 5, target 1). */
 int far do_demand(int far *args)
 {
     int player_score;
@@ -661,12 +715,18 @@ int far do_demand(int far *args)
     return 0;
 }
 
-/* Conversation built-ins: decline, and the player's own appraisal of the offer. */
+/* Conversation built-ins: decline (all the NPC's slot items go back), and the player's
+   own appraisal of the offer. */
 void far do_decline(void)
 {
     ReturnTradeObjectsToNPC_ovr097_F76(0);
 }
 
+/* The appraisal: both sides valued without likes, blurred by 50 - appraise * 1.5 %,
+   fudge added to the NPC's side, and the gain in % mapped to a verdict from "a terrible
+   deal" (above 50, the player gives far more) to "an excellent deal" (-50 or less),
+   prefixed by a certainty from "...I guess" (appraise below 6) to "...I know" (24 and
+   up). Spoken as the player's line. */
 void far do_judgement(void)
 {
     int skill, player_value, npc_value, accuracy, certainty;
@@ -697,9 +757,9 @@ void far do_judgement(void)
     else if (evaluation > -35) result = 6;
     else if (evaluation > -50) result = 7;
     else result = 8;
-    str_copy(appraisal, get_string((certainty + 3) | STR_CONV));
-    str_cat(appraisal, get_string(0xE02));
-    str_cat(appraisal, get_string((result + 8) | STR_CONV));
+    str_copy(appraisal, get_string((certainty + 3) | STR_CONV)); /* "...I guess" .. "...I know" */
+    str_cat(appraisal, get_string(0xE02));  /* " that I am getting " */
+    str_cat(appraisal, get_string((result + 8) | STR_CONV)); /* "a terrible deal.." .. "an excellent deal.." */
     play_say(appraisal);
 }
 
@@ -723,7 +783,10 @@ int far total_offering_ovr097_17CB(int use_likes, int *items,
 }
 
 /* An object's value, scaled by quantity and quality and blurred by up to accuracy %,
-   the same each time for the same object. */
+   the same each time for the same object. With use_likes a disliked item is worth 0
+   and a liked one 1.5 times as much. Value is the class value (ComObjData) times the
+   quantity times quality / 64 (coins count as quality 63), at least 1 if the quality is
+   not 0. The blur seeds rand with the object index, then reseeds from the clock. */
 int far assess_value(int use_likes, int item, int accuracy)
 {
     struct Object far *obj;
@@ -757,6 +820,7 @@ int far assess_value(int use_likes, int item, int accuracy)
     return value;
 }
 
+/* base plus a random min..max % of it (max itself excluded). */
 int far range(int base, int min, int max)
 {
     return base + base * (min + (int)(((long)rand() * (max - min)) / 0x8000L)) / 100;
@@ -805,7 +869,8 @@ void far npc_inv_add(struct Object far *obj)
     if (obj) Obj_Add(&talking_to->ol.link, obj);
 }
 
-/* Conversation built-in: the player gives an object from the slots to the NPC. */
+/* The player gives an object from the slots to the NPC (for give_to_npc and
+   give_ptr_npc, CONVERSE.C). */
 void far player_barter_give(int index)
 {
     register int slot;
@@ -825,8 +890,9 @@ void far player_barter_give(int index)
     set_workspace();
 }
 
-/* Conversation built-in: find an item (or above 999 a class) in the NPC's or the
-   player's inventory; returns its index. */
+/* For find_inv: find an item (or from 1000 a major and minor, (item - 1000) >> 2 and & 3)
+   in the NPC's or the player's inventory, searching containers too; returns its index or
+   0. */
 int far npc_barter_find(int item, int from_player)
 {
     struct Object far *found;
@@ -854,8 +920,8 @@ int far npc_barter_find(int item, int from_player)
     return Obj_MemTPtr(found);
 }
 
-/* Conversation built-in: the NPC hands over an item of the given type (or, above
-   999, of class item - 1000): into the player's hand, else into a free trade slot,
+/* For take_from_npc: the NPC hands over an item of the given type (or, from 1000, of
+   class item - 1000, that is item types (item - 1000) * 16 onwards): into the player's hand, else into a free trade slot,
    else dropped at the NPC's feet. Returns 1, 2 when dropped, 3 when even that fails,
    or 0 when there is none or the player's hand is full. */
 int far npc_barter_give(register int item)
@@ -933,7 +999,9 @@ int far npc_barter_give_id(register int index)
     return 0;
 }
 
-/* Conversation built-ins: create an item in, or delete one from, the NPC's inventory. */
+/* For do_inv_create and do_inv_delete: create an item (quality 63) in the NPC's
+   inventory, returning its index, or delete the first of a type (with its contents,
+   inferred from Obj_FreeLinkChain), returning 1 if found. */
 int far npc_inv_create(int item)
 {
     struct Object far *obj;
@@ -960,7 +1028,8 @@ int far npc_inv_delete(int item)
     return 0;
 }
 
-/* Conversation built-in: point at the NPC's lists of liked and disliked items. */
+/* set_likes_dislikes(arg2 likes, arg1 dislikes): point at the NPC's lists of liked and
+   disliked items, two script arrays ending in -1. */
 int far npc_likes_dislikes(int far *args)
 {
     npc_likes = getmem_addr(args[-2]);
@@ -998,7 +1067,8 @@ int far does_npc_like(int index)
     return liked;
 }
 
-/* Conversation built-in: the NPC gives the player everything in its slots. */
+/* Conversation built-in: the NPC gives the player everything in its slots: all are
+   selected and left in the slots for the player to take, as after an accepted offer. */
 int far give_all_stuff(void)
 {
     register int i;

@@ -6,7 +6,38 @@
    DOS resident segment seg016_1E73, in original order. Function and global names are
    the originals from the FM Towns symbol table where it has them.
 
-   The FM Towns build has this file's functions in the same order, so the IDA-named ones
+   Start-up (UWEDIT.C): seg016_1E73_2FCB reads the music and speech card numbers from
+   UW.CFG, init_sounds loads SOUND\DMnn.ADV for the music card and SOUND\DDnn.ADV for the
+   speech card (nn the card number in octal), registers them with AIL (AIL.ASM), reads
+   SOUND\SOUNDS.DAT into `effects` and the timbre library SOUND\UW.<suffix>, and
+   init_timers starts the game clock: an AIL timer at 256 Hz whose callback increments
+   *Time, so the game's time counts 1/256 seconds. A second AIL timer at 16 Hz runs
+   digi_fx_timer (or fx_timer without a digital driver).
+
+   Effects: play_effect and its variants take an effect number. Below 100 it is an entry
+   of SOUNDS.DAT (patch, note, volume, length, priority, and whether SOUND\SPnn.VOC
+   exists); 100 and up name SOUND\UWnn.VOC (nn = number - 100), played centred at full
+   volume. A sound with a .VOC goes to the one digital channel (digi_fx_play); otherwise,
+   or when that fails, it is played as a MIDI note on one of three channels locked from
+   the music driver (fx_play). Digital sounds are cached in four 16 KB EMS pages from
+   sound_fpage, mapped through frame page 2, and streamed to the driver through two
+   2 KB buffers (dsdata, in dfx_buffer) that AIL plays in turn; update_digi_playback,
+   called from the main loop, refills them and moves the pan and volume with the source.
+   Positioned sounds take their pan and volume from sound_move.
+
+   Music: the theme playing (curmusic) and the one wanted next (newmusic) are numbers
+   whose two octal digits name SOUND\UWAnn.XMI (UWRnn.XMI for the MT-32), so the files
+   run 01 to 07, 10 to 17, 30 and 31. Other files ask for a theme with set_new_music;
+   change_music_maybe, from the main loop, switches themes and picks a walking theme for
+   the world. Themes 2 to 4 are the combat themes and 8 to 15 the walking themes (macros
+   COMBAT and WALKING below); 5 plays while the player's weapon is drawn, 6 must finish
+   before anything replaces it, and 0x18 (UWx30.XMI) is left to repeat. UW-Formats'
+   titles for the UW2 files agree for 2 to 6 (enemy wounded, combat, dangerous situation,
+   armed, victory) and call 30 the introduction.
+
+   name: descriptive (the file's own name is not known); see the note below for the
+   function names. */
+/* name: The FM Towns build has this file's functions in the same order, so the IDA-named ones
    take the FM Towns name at the same place among their neighbours where the code
    corresponds (same callees, same globals): digi_fx_timer, init_digi_fx, free_dfx_ems,
    digi_fx_play, stop_digi_file, free_digi_stuff, cllbck_tst, load_global_timbre,
@@ -79,18 +110,19 @@ struct Effect {
     unsigned priority;                  /* 0x06 */
 };
 
-/* EMS and the workspace (seg013 and seg042). Names provisional. */
+/* EMS and the workspace (seg013 and seg042). name: provisional. */
 void far MapMemory_seg013_1D3C_C7(int phys, int page);
 char far seg013_1D3C_E4(int a, int b, int c);
 extern char ws_active;                  /* DS:0922, set while the workspace is mapped */
-/* The effects table, 49 entries: far, so its own segment (60A0:0000, segment table entry
-   70, after AI's); EFFECT.C and CUTS.C, its other users, are linked too late. */
+/* The effects table, SOUNDS.DAT's entries (49 at most). */
+/* match: far, so its own segment (60A0:0000, segment table entry 70, after AI's);
+   EFFECT.C and CUTS.C, its other users, are linked too late to own it. */
 struct Effect far effects[49];
 
 extern unsigned long far *Time;
 extern unsigned long lastcombattime;
 
-/* FM Towns calls this bltfromdrive_ (read_file_to_mbuf_ and load_sound_driver_ call it
+/* name: FM Towns calls this bltfromdrive_ (read_file_to_mbuf_ and load_sound_driver_ call it
    where DOS calls 65E0:007A), and MISCUTIL defines it under that name. */
 unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
 unsigned char far OkEnoughMem_ovr167_463(void);
@@ -100,10 +132,11 @@ unsigned char far OkEnoughMem_ovr167_463(void);
     if (ws_active) { seg013_1D3C_E4(0, 0, 4); seg042_35ED_12B(); } \
     else if (obj_inpage1 != 0xFF) MapMemory_seg013_1D3C_C7(2, obj_inpage1)
 
-/* Uninitialised data, DS:23E2 to DS:24AB. Turbo C lays _BSS out by a hash of the names,
-   ties in definition order (see MOUSE.C for the hash). The publics are the FM Towns names;
-   FM Towns has no names for the statics, so theirs are ours, chosen to land where the EXE
-   has them (bucket in brackets). */
+/* Uninitialised data, DS:23E2 to DS:24AB. */
+/* match: Turbo C lays _BSS out by a hash of the names, ties in definition order (see
+   MOUSE.C for the hash). The publics are the FM Towns names; FM Towns has no names for
+   the statics, so theirs are ours, chosen to land where the EXE has them (bucket in
+   brackets). */
 static unsigned timbre_size;            /* DS:23E2 (4), the size of the timbre being read */
 static struct GtlHdr timbre_entry;      /* DS:23E4 (4), its directory entry */
 static int seq_state_sz;                /* DS:23EA (11), AIL's state table size */
@@ -168,6 +201,13 @@ static unsigned char sound_started = 0;
 
 void far kill_all_digi_effects(void);
 
+/* The 16 Hz effects timer when there is a digital driver. If a new sound has interrupted
+   the one playing (channel_punt) and digi_fx_play is not in the middle of setting up
+   (channel_sem), it registers the waiting buffers and starts playback. Then, like
+   fx_timer, it counts down each MIDI effect's ticks and silences it when they run out
+   (all notes off on the PC speaker, else a note off and the channel released). Also
+   keeps dsfx_playing, which other files read, equal to whether the digital channel is
+   busy. */
 void far digi_fx_timer(void)
 {
     unsigned char i, bit;
@@ -231,6 +271,8 @@ unsigned char far init_digi_fx(void)
     return 1;
 }
 
+/* Loads effect fx's .VOC into the EMS cache without playing it (UWEDIT.C preloads 1, 2
+   and 0xB). */
 void far load_digi_fx(unsigned char fx)
 {
     unsigned char r;
@@ -256,6 +298,8 @@ void far punt_all_digi_fx(void)
     ds_page_status = 0;
 }
 
+/* Frees the EMS pages of cache slot `slot`, appending each page number to list and
+   counting it in *count. */
 void far free_dfx_ems(char slot, char *list, char *count)
 {
     int i;
@@ -270,6 +314,11 @@ void far free_dfx_ems(char slot, char *list, char *count)
     }
 }
 
+/* Copies the next 2 KB (or what is left) of the sound playing on channel chan, from
+   offset off of its cached EMS page `page`, into buffer buf, and sets up dsbuf[buf] for
+   AIL. The first chunk of a sound (page 0, offset 0) starts with the .VOC header, which
+   AIL_index_VOC_block parses for the sample rate and packing; its 0x20 header bytes are
+   not counted as sound. Returns 0 if the .VOC is not one AIL accepts. */
 unsigned char far load_dfx_page(int chan, int page, long off, int buf)
 {
     long len;
@@ -298,6 +347,16 @@ unsigned char far load_dfx_page(int chan, int page, long off, int buf)
     return 1;
 }
 
+/* Plays effect fx on the digital channel at volume vol and pan pan (0 to 0x7F, 0x40 the
+   centre). The .VOC is read into the EMS cache unless it is already there: a free slot
+   and enough free pages (one per 16 KB) are found, first by evicting cached sounds that
+   are not playing and then by stopping a playing one of no higher priority. The new
+   sound then takes the channel if its priority (SOUNDS.DAT's plus vol, or 0x7D00 for the
+   UWnn files) is at least the playing one's. Effects of length 5000 or more loop
+   (length >> 6) - 1 times. With load_only set it stops after caching. Returns 100 (the
+   channel plus 100, as kill_effect expects) on success, 100 when only loaded, and 0xFF on
+   failure. A sound that fills the cache with no slot free, or that AIL cannot parse,
+   turns the digital sound off for the session (speechok = 0). */
 unsigned char far digi_fx_play(unsigned char fx, unsigned char vol, unsigned char pan)
 {
     char num[4];
@@ -504,6 +563,10 @@ fail_sem:
     return 0xFF;
 }
 
+/* The pan and volume for a sound at x, y (in eighths of a tile) heard by the player.
+   pan is 0x40 less the sideways part of the direction to the source in the player's
+   frame, clamped to 0..0x7F; volume is vol within one tile, nothing beyond six tiles,
+   and falls off linearly between (vol * (48 - d) / 40), clamped to 0..0x7F. */
 void far sound_move(int x, int y, int vol, int *pan, int *volume)
 {
     long ldx;
@@ -554,6 +617,10 @@ void far sound_move(int x, int y, int vol, int *pan, int *volume)
         *volume = 0;
 }
 
+/* Called each pass of the main loop: re-pans the digital sound if it has a source
+   (a fixed point or a moving object), restarts a looping sound when both buffers have
+   played out, refills whichever buffer AIL has finished with (status 3) from the EMS
+   cache, and keeps playback running. */
 void far update_digi_playback(void)
 {
     unsigned char chan;
@@ -637,6 +704,7 @@ void far free_digi_stuff(void)
     dsdata[0] = dsdata[1] = 0;
 }
 
+/* The game clock: AIL calls it 256 times a second (init_timers). */
 void far cllbck_tst(void)
 {
     (*Time)++;
@@ -665,6 +733,11 @@ void far punt_sound_stuff(unsigned char failed)
         printf("Sound system initialization failed.\n");
 }
 
+/* Sets up the music driver for sound_card and, when there is one, the speech driver;
+   the timbres; the effects table and timer (init_fx); and the 9000-byte music buffer.
+   Card 1 (DM01.ADV, the PC speaker) gets effects only, no music. Any failure turns all
+   sound off and prints "Sound system initialization failed." Note that the driver name
+   is built by writing into the string literal. */
 unsigned char far init_sounds(void)
 {
     register char *name = "dm00.adv";
@@ -724,6 +797,10 @@ fail:
     return 0;
 }
 
+/* Reads one timbre from the global timbre library open on fd: a directory of 6-byte
+   entries (struct GtlHdr) ending at bank 0xFF, each pointing at a timbre that starts
+   with its own length word. Returns the timbre in a new far block (the caller frees it)
+   or 0. */
 void far * far load_global_timbre(int fd, unsigned char bank, unsigned char patch)
 {
     unsigned far *p;
@@ -747,6 +824,9 @@ void far * far load_global_timbre(int fd, unsigned char bank, unsigned char patc
     return p;
 }
 
+/* Opens SOUND\UW.<suffix> (the driver's data_suffix: AD, MT, OPL), gives the driver the
+   timbre cache it asks for, and on the MT-32 (card 5) installs every effect's timbre
+   from bank 1 at once. */
 unsigned char far init_timbres(void)
 {
     int i;
@@ -789,6 +869,10 @@ unsigned char far install_timbre(unsigned char bank, unsigned char patch)
     return 0;
 }
 
+/* Loads theme `music` (0: the current one) as the AIL sequence, unless it is already
+   loaded, installing every timbre the sequence asks for; with start, starts it at normal
+   tempo and volume 0x60 and centres the pitch bend of channels 2 to 10. A failure turns
+   the music off for the session (music_ok = 0). */
 unsigned char far load_new_music(unsigned char music, char start)
 {
     register char *name = "uwr00.xmi";
@@ -834,6 +918,9 @@ fail:
     return 0;
 }
 
+/* Loads an AIL driver file into drv_mem[n]. The block is a paragraph larger than the
+   file and the driver is put at the start of its next paragraph, so it begins at
+   offset 0 of a segment. */
 void far * far load_sound_driver(char *name, int n)
 {
     void far *p;
@@ -863,6 +950,7 @@ void far play_music(void)
     AIL_set_relative_volume(music_driver, xmi_sequence, 0x60, 0);
 }
 
+/* Reads a whole file into a new far block. Nothing in the sources calls it. */
 void far * far seg016_1E73_19DE(char *name)
 {
     long len;
@@ -997,6 +1085,11 @@ static void far fade_music(unsigned char up)
         AIL_set_relative_volume(music_driver, xmi_sequence, 0, 4000);
 }
 
+/* Plays effect fx as if from x, y (eighths of a tile), vol added to its own volume.
+   Tries the digital channel and falls back to a MIDI note. Effects 0x5A and 0x5B are
+   played as effects 1 and 2, and as MIDI notes only on speech card 1. Returns the
+   effect's handle for kill_effect (a MIDI slot 0 to 2, or 100 for the digital channel)
+   or 0xFF. */
 unsigned char far play_effect(unsigned char fx, int x, int y, char vol)
 {
     struct Effect far *e;
@@ -1050,6 +1143,8 @@ unsigned char far play_effect(unsigned char fx, int x, int y, char vol)
     return fx_play(fx, e->patch, e->note, v, pan, e->length);
 }
 
+/* Plays effect fx at a given pan, with no position (the digital source is cleared, so
+   it is not re-panned). */
 unsigned char far play_effect_here(unsigned char fx, unsigned char pan, char vol)
 {
     int v;
@@ -1088,6 +1183,8 @@ unsigned char far play_effect_on_mobile(unsigned char fx, struct Object far *obj
                        (OBJ_HOMEY(obj) << 3) + OBJ_FINEY(obj), vol);
 }
 
+/* Plays effect fx from object obj, and if it went to the digital channel, keeps
+   following the object as it moves (digi_src type 2). */
 unsigned char far play_effect_on_mobile_src(unsigned char fx, struct Object far *obj, char vol)
 {
     struct Effect far *e;
@@ -1109,7 +1206,7 @@ unsigned char far play_effect_on_mobile_src(unsigned char fx, struct Object far 
         digi_src.obj = obj;
     } else {
         r = fx_play(fx, e->patch, e->note, v, pan, e->length);
-        /* an empty test: the direction cannot be recovered from the bytes */
+        /* match: an empty test: the direction cannot be recovered from the bytes */
         if (r == 0xFF)
             ;
     }
@@ -1162,7 +1259,8 @@ void far kill_all_digi_effects(void)
 }
 
 /* The timer for MIDI effects when there is no digital driver: the second half of
-   digi_fx_timer. FM Towns has it as _fx_timer; static here because the target table
+   digi_fx_timer. */
+/* name: FM Towns has it as _fx_timer. match: static here because the target table
    counts it in kill_all_digi_effects. */
 static void far fx_timer(void)
 {
@@ -1184,6 +1282,8 @@ static void far fx_timer(void)
     }
 }
 
+/* Reads SOUND\SOUNDS.DAT: a count byte, then 8 bytes an effect: patch, note, volume,
+   length (high byte first), the .VOC flag, and a priority stored as low + high * 200. */
 unsigned char far read_fx_data(void)
 {
     struct Effect far *e;
@@ -1245,6 +1345,14 @@ unsigned char far init_fx(void)
     return 1;
 }
 
+/* Plays an effect as a MIDI note on the first of three free effect slots: locks a
+   channel from the music driver, selects timbre bank 1 (controller 0x72, which AIL's
+   XMIDI drivers use as the patch bank select), sets the patch, centres pitch bend,
+   resets the controllers, sets volume, expression and pan, and starts the note. length
+   is in 1/256 seconds (the timer counts it down at 16 Hz), -1 to hold. On the PC speaker
+   (card 1) only six effects sound, at fixed notes and lengths on channel 2. Returns the
+   slot, or 0xFF. MIDI status bytes are written as channel + 0x8F and so on because AIL's
+   channels count from 1. */
 unsigned char far fx_play(unsigned char fx, unsigned char patch, unsigned char note,
                           unsigned char vel, unsigned char pan, register int length)
 {
@@ -1308,6 +1416,12 @@ note_on:
     return i;
 }
 
+/* Lets the player play a musical instrument object (which: 0 to 2, patches 0x39, 0x48 and
+   0x5C of bank 0). Keys 1 to 9 and 0 play ten notes upward from middle C (0x3C), Alt
+   an octave higher and Ctrl an octave lower; a note stops after half a second (0x80
+   ticks) or at the next key; Escape ends. Prints strings 0x109 and 0x10A around it, or
+   only 0x10B when there is no sound card. The last 16 notes go into hist, which nothing
+   reads here. */
 void far play_instrument(register int which)
 {
     char hpos;
@@ -1426,12 +1540,16 @@ void far free_sounds(void)
     free_s_mem();
 }
 
+/* Asks for theme m next, unless theme 6 is playing. */
 void far set_new_music(unsigned char m)
 {
     if (curmusic != 6)
         newmusic = m;
 }
 
+/* Chooses the walking theme for the player's world ((PlayerLevel - 1) / 8, nine
+   worlds): pick 0 to 2, -1 for a random one, -2 to keep the current choice unless the
+   world has changed. Entering a new world always takes its first theme. */
 void far set_random_walking_music(register int pick)
 {
     unsigned char world;
@@ -1447,6 +1565,8 @@ void far set_random_walking_music(register int pick)
     newmusic = walking_music[(PlayerLevel - 1) / 8][pick];
 }
 
+/* Restarts the theme when it has ended, except that themes 1, 6 and 7 are followed by
+   theme 10. */
 void far loop_music_maybe(void)
 {
     int m;
@@ -1462,6 +1582,14 @@ void far loop_music_maybe(void)
 #define WALKING(m)  ((m) >= 8 && (m) <= 15)
 #define COMBAT(m)   ((m) >= 2 && (m) <= 4)
 
+/* Called from the main loop to keep the right theme playing. Ten seconds (0xA00 ticks)
+   after the last combat a combat theme gives way to theme 5 if the weapon is drawn, or
+   to a walking theme. A requested theme starts at once, except that one combat theme
+   replaces another at most every eight seconds (0x800 ticks). When a theme ends without
+   a request: unless it was a combat theme or 0x18, a walking theme is picked when
+   scrmode is 1 (probably the game screen; BAGS.C treats modes 1 and 4 so); then theme 5
+   follows if the weapon is drawn and it was not a combat theme, and otherwise a walking
+   theme, a combat theme or 0x18 repeats. */
 void far change_music_maybe(void)
 {
     if (!music_ok)
@@ -1510,6 +1638,8 @@ unsigned char far music_over(void)
     return AIL_sequence_status(music_driver, xmi_sequence) != 1;
 }
 
+/* Overrides the driver's default port, IRQ and DMA with UW.CFG's (s: IRQ, port, DMA)
+   where both are set (not -1). */
 void far do_settings(struct DrvrDesc far *d, register int *s)
 {
     if (d->io != -1 && s[1] != -1)
@@ -1520,6 +1650,8 @@ void far do_settings(struct DrvrDesc far *d, register int *s)
         d->dma = s[2];
 }
 
+/* Loads and starts the digital driver SOUND\DDnn.ADV for speech_card, trying UW.CFG's
+   port, IRQ and DMA first and then the driver's own defaults. Sets speechok. */
 unsigned char far init_speech(void)
 {
     register char *name = "dd00.adv";
@@ -1591,7 +1723,11 @@ static void far voc_stub(void)
 }
 
 /* Reads the two lines of UW.CFG that set up the sound: the music card, then the speech
-   card, each with its IRQ, port and DMA. */
+   card, each with its IRQ, port (hex) and DMA. Music cards are the DMnn.ADV drivers
+   (1 PC speaker, 2 AdLib, 3 Sound Blaster FM, 4 and 7 Sound Blaster Pro FM, 5 MT-32,
+   6 Pro Audio Spectrum FM, by the strings in the GOG release's drivers), speech cards
+   the DDnn.ADV ones (1 Sound Blaster, 2 Sound Blaster Pro, 3 Pro Audio Spectrum); 0 is
+   none. */
 void far seg016_1E73_2FCB(FILE *fp)
 {
     int card;

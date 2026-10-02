@@ -11,6 +11,7 @@
 ; padding before a paragraph-aligned module (TASM 2.0 pads `align 16` with 87 DB/90, not
 ; zeros).
 ; It has no relocations.
+; name: descriptive (system module 3, CPU detection).
 
         .186
 
@@ -23,6 +24,13 @@ SEG021_TEXT segment para public 'CODE'
         public  _seg021_22FD_1D0
 
 ; seg021_22FD_1D0  (+1D0)
+; Identifies the processor with the classic flag and shift tests and stores the result in
+; DS:110h (seg021's data segment): 386h if FLAGS bits 12-14 can be set (386), 286h if
+; they cannot but bits 12-15 do not stick at 1 (286); otherwise 186h if `shl ax,cl` with
+; CL = 21h leaves a bit (186 and later mask the count to 5 bits), 30h if `mul al` of 40h
+; leaves ZF set (presumably the NEC V20/V30 test, the flags after MUL being undefined on
+; Intel parts, so "30" for V30), and 86h for an 8086/8088. Called by init; nothing in the
+; C sources reads the result.
 _seg021_22FD_1D0 proc near
         pushf
         xor     ax,ax

@@ -1,7 +1,34 @@
 ; /* target: seg004_0849_51B0 */
 ; /* opts: /ml */
 ;
-; A texture-mapping scanline routine (_51B0).
+; The vertical span drawer: one screen column of a wall, for _asm_texture_map_v (TEXMAPV.ASM,
+; its only caller, through _seg004_0849_68B5). It is FM Towns'
+; _asm_texture_map_scanline_lin_tlpv: linear, textured, lit, vertical.
+;
+; Inputs (FD58, 16.16; FM Towns names):
+;   DS:CCC4 _x (an integer column)
+;   DS:CFE0 _v_y0, CFE4 _v_y1   the column's top and bottom
+;   DS:CFE8 _v_u0, CFEC _v_u1, CFF0 _v_v0, CFF4 _v_v1, CFF8 _v_l0, CFFC _v_l1
+;   DS:2688 shadem; CCE8, CCEA, CCEC as for the horizontal spans; CEFC mk_lastwid, the frame
+;   buffer's row stride
+;   GS = the texture's segment, ES = the frame buffer's
+; (_seg004_0849_68B5 also stores the two w values at D000 and D004; this routine does not read
+; them.)
+; Working variables: DS:CF00 _du, CF04 _dv, CF0C _dl; CF10 _u, CF14 _v, CF1C _l, CF20 _l2;
+; CF24 _x0_my_floor, CF26 _x1_my_floor, CF5A _y; CF2C the texel column.
+;
+; The column is drawn from y0 down to y1 with the texel column fixed at u0 (u is the same all
+; the way down a column of an upright wall; _du is worked out but not used), stepping v linearly
+; (v kept multiplied by the width) and the shade. The same checks as the horizontal routines
+; apply: nothing is drawn if any u or v end is negative or the column is empty, and the last
+; pixel is computed exactly from v1 and l1. There are three loops, each two pixels per pass with
+; dithered shades (see PERTLP.ASM): stepping shade; constant shade, when l0 and l1 have the same
+; integer part (the two dither rows then sit in DL and DH); and no shading, when shadem is 0.
+;
+; name: descriptive (module 11 of seg004). The routine is seg004_0849_51B0 in symbols.tsv, with
+; no name of its own; FM Towns' _asm_texture_map_scanline_lin_tlpv reads the same variables in
+; the same order and is the routine FM Towns' _asm_texture_map_v calls, so that is probably its
+; original name.
 ;
 ; SEG004 split into its original modules: this is module 11 of 14, +51B0..+54C0 of the segment
 ; (file E370h), a module of the second library (UWLIB.LIB).
@@ -25,6 +52,8 @@ SEG004_TEXT segment para public use16 'CODE'
         public  _seg004_0849_51B0
 
 ; seg004_0849_51B0  (+51B0)
+; _asm_texture_map_scanline_lin_tlpv (probable name): draw one shaded vertical column. No
+; register inputs (see the module header); changes EAX..EDX, ESI, EDI, EBP.
 _seg004_0849_51B0 proc near
         mov     eax,dword ptr ds:[0CFE8h]
         mov     dword ptr ds:[0CF10h],eax

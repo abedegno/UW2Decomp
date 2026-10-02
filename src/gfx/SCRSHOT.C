@@ -1,5 +1,20 @@
 /* target: ovr116 */
 /* opts: -mm -1 -G -O -Y -d */
+/* Saving the screen as a GIF file: the whole of DOS overlay ovr116.
+
+   UWEDIT.C binds Alt+Q (key 271h) to save_screenshot, passing a segment just above stdat's
+   start as scratch space for the encoder's tables. save_screenshot picks the first unused
+   name UWPICnnn.GIF (nnn in octal, as the digits are built three bits at a time), writes a
+   GIF87a header for a 320 by 200 picture with a 256-colour global table (the VGA palette
+   scaled from 6 to 8 bits), an image descriptor and the LZW data, and the ';' trailer.
+   The encoder (ovr116_2A3) is the usual GIF LZW with a 5003-entry open-addressed hash
+   table (as in the Unix compress lineage): codes start at bits + 1 bits, grow to 12, and
+   a clear code restarts the table when it fills. ovr116_1C3 packs codes into 255-byte
+   sub-blocks that ovr116_194 writes; GifPixel_ovr116_420 reads the screen a row at a time,
+   top row first, with grab (MODEX.ASM). The file owns the header templates and the
+   encoder state.
+
+   name: descriptive; save_screenshot is a provisional name (symbols.tsv). */
 #include <dos.h>
 #include <io.h>
 #include <fcntl.h>
@@ -16,7 +31,10 @@ static unsigned char gif_image[10] = {
     ',',0,0,0,0,0x40,0x01,0xC8,0,7
 };
 
-/* GIF encoder state, DS:5E0C through DS:5E33. The field order follows the DOS offsets. */
+/* GIF encoder state, DS:5E0C through DS:5E33: codes, hash and suffix are the LZW table's
+   prefix codes, codes and suffix bytes; pixels a row of the screen; bytes the sub-block
+   being built.
+   match: the field order follows the DOS offsets. */
 static struct {
     int bits, bitpos;
     unsigned far *codes;
@@ -68,6 +86,7 @@ void far save_screenshot(int seg)
     close(fd);
 }
 
+/* Resets the LZW table for a root size of bits. */
 static void far ovr116_149(int bits)
 {
     register int i;
@@ -79,12 +98,15 @@ static void far ovr116_149(int bits)
     for (i = 0; i < 0x138B; i++) gif.hash[i] = 0;
 }
 
+/* Writes a data sub-block: its length byte, then size bytes of gif.bytes. */
 void far ovr116_194(int fd, char size)
 {
     write(fd, &size, 1);
     FarWrite_ovr167_627(fd, gif.bytes, (unsigned char)size);
 }
 
+/* Appends code, gif.codebits wide, to the bit stream, flushing a sub-block once 254
+   bytes are full. */
 static void far ovr116_1C3(int fd, int code)
 {
     long value;
@@ -108,6 +130,8 @@ static void far ovr116_1C3(int fd, int code)
     gif.bitpos += gif.codebits;
 }
 
+/* Writes the LZW-coded image: the minimum code size byte, then the sub-blocks and the
+   empty block that ends them. */
 void far ovr116_2A3(int fd, int bits)
 {
     int next;
@@ -160,8 +184,9 @@ void far ovr116_2A3(int fd, int bits)
     ovr116_194(fd, 0);
 }
 
-/* The next pixel for the GIF encoder, or -1 at the end; the name is provisional (IDA's ovr116_420), chosen so that its tools/bssorder.py key
-   puts it in the EXE's overlay stub order. */
+/* The next pixel for the GIF encoder, or -1 at the end.
+   match: the name is provisional (IDA's ovr116_420), chosen so that its tools/bssorder.py
+   key puts it in the EXE's overlay stub order. */
 int far GifPixel_ovr116_420(void)
 {
     if (gif.x == 0x140 && gif.y == 0xC7) return -1;

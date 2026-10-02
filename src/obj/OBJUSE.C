@@ -4,7 +4,19 @@
    object in the hand, keys, wands, potions, switches, locks, spells and traps carried by
    objects, and their charges. The whole of DOS resident segment seg040_34E7, in original
    order. Function and global names are the originals from the FM Towns symbol table; the
-   source file's own name is not known. */
+   source file's own name is not known.
+
+   UseObj is the entry point for every "use": the player using an object in the 3D view or
+   in the inventory (INTERACT.C, BAGS.C), a critter opening a door (PATHFIND.C) and two
+   objects colliding (OBJPHYS.C). It dispatches on the object's major and minor class to the
+   Use functions, most of them in USEITEMS.C (ovr138), then sets off any trap or trigger
+   the object holds (checkTrap) and any spell it carries (checkSpell). An object that needs
+   a second object ("Use key on what?") goes through UseThing, which puts it on the cursor
+   and stores the function to call in ObjectActor; INTERACT.C makes that call on the next
+   click. This file also owns the lock rules (checkLock), the reading of spells held by
+   objects (decode_obj_spell, useNSpellCharges) and the delay between casts from objects
+   (nextSpellTime).
+   Name: inferred (the job of System Shock's OBJUSE.C, object_use and door_locked). */
 
 #include <string.h>
 #include <stdlib.h>
@@ -40,6 +52,12 @@ void far UseTrigger(struct Object far *who, struct Object far *obj, struct Objec
 char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
 int far useNSpellCharges(struct Object far *obj, char n);
 
+/* Uses obj on behalf of who (the player or a critter). how is 1 when the player uses it
+   from the inventory and 0 in the world (the 3D view, a critter, a collision). In input
+   mode 4 (probably a conversation) only containers can be used. After the class's handler,
+   traps and triggers inside the object fire with checkTrap's how 4, and a spell it holds
+   is cast, except for wands, food, potions, books and the flam and tym runes, whose
+   handlers do that themselves or not at all. Returns obj. */
 struct Object far * far UseObj(struct Object far *who, struct Object far *obj, unsigned char how)
 {
     int minor;
@@ -142,6 +160,10 @@ struct Object far * far UseObj(struct Object far *who, struct Object far *obj, u
     return obj;
 }
 
+/* Deletes a used-up object: from the inventory when inv is set (taking one from a
+   stack), otherwise from the list it is in at the tile (MapObj_X, MapObj_Y), or as a loose
+   chain if it is not there. how is passed to Obj_Punt as its force flag. Returns 1 when
+   the object is gone. */
 int far using_punt(struct Object far *obj, char inv, char how)
 {
     struct Tile far *tile;
@@ -167,6 +189,8 @@ int far using_punt(struct Object far *obj, char inv, char how)
     return obj == 0;
 }
 
+/* Puts obj, or a new static object of item when obj is 0, on the mouse cursor (input
+   mode 1, carrying), unless the cursor already holds something (then returns 0). */
 struct Object far * far place_new(struct Object far *obj, int item)
 {
     if (CursorObjPtr != 0)
@@ -181,6 +205,8 @@ struct Object far * far place_new(struct Object far *obj, int item)
     return obj;
 }
 
+/* A key or lockpick used from the inventory asks for the lock to use it on; the lock item
+   itself (ITEM_LOCK) does nothing. */
 void far UseKey(struct Object far *obj, unsigned char how)
 {
     if (!how)
@@ -191,6 +217,9 @@ void far UseKey(struct Object far *obj, unsigned char how)
         UseThing(obj, UseKeyOn);
 }
 
+/* Starts a two-object use: prints "Use <name> on what?", puts obj on the cursor and
+   enters input mode 2; the next click calls fn (ObjectActor) on the chosen object with
+   ObjectActing set to obj. */
 void far UseThing(struct Object far *obj, void (far *fn)())
 {
     char buf[40];
@@ -206,6 +235,10 @@ void far UseThing(struct Object far *obj, void (far *fn)())
     ObjectActor = fn;
 }
 
+/* Using a wand from the inventory casts its spell (checkSpell) and fires its traps. A
+   wand whose spell object is gone (useNSpellCharges removes it) becomes the matching
+   broken wand, item + 4, with "With a loud <SNAP!>, the wand cracks." Broken wands
+   (0x9C-0x9F) do nothing. */
 void far UseWand(struct Object far *wand, unsigned char how)
 {
     union Link far *link;
@@ -221,16 +254,19 @@ void far UseWand(struct Object far *wand, unsigned char how)
             spell = Obj_InList(&link, 0, MAJOR_SPEC, 2, 0);
             if (spell == 0) {
                 wand->id = wand->id & 0xFFF0 | (OBJ_INCLASS(wand) + 4) & 0xF;
-                game_sprint(0x8B);
+                game_sprint(0x8B); /* "With a loud <SNAP!>, the wand cracks." */
                 RedisplayInvSlot(FindSlot(wand));
             }
         }
     }
 }
 
-/* Drinking a potion. IDA calls this PotionDrink; the FM Towns function in the same place,
-   between UseWand_ and flip_switch_, is UseReag_, with the same 0xE1..0xE7 test and call
-   to UseFood_. */
+/* Drinking a potion (0xE1-0xE7) through UseFood when used from the inventory; returns 0
+   for a potion and 1 for anything else in the class (a runestone), which tells UseObj to
+   go on and check its traps and spell. */
+/* name: IDA calls this PotionDrink; the FM Towns function in the same place, between
+   UseWand_ and flip_switch_, is UseReag_, with the same 0xE1..0xE7 test and call to
+   UseFood_. */
 char far UseReag(struct Object far *who, struct Object far *obj, char how)
 {
     int id;
@@ -244,6 +280,10 @@ char far UseReag(struct Object far *who, struct Object far *obj, char how)
     return 1;
 }
 
+/* Flips a switch (class 0x17) to its other state, item index +8 or -8, with a click
+   sound. state 3 always flips; state 1 or 2 only flips a switch in its first state and
+   state 4 and up only one in its second (state > 2 against index > 7); state 0 never.
+   Returns 1 when it flipped. */
 char far flip_switch(struct Object far *obj, int state)
 {
     int type;
@@ -260,6 +300,17 @@ char far flip_switch(struct Object far *obj, int state)
     return 1;
 }
 
+/* The lock rules. door is a door or container; key is 0 to only ask whether it is locked,
+   a key's lock number (the key's owner field) to use a key, or minus the lockpicking skill
+   plus one to pick it. The lock is a lock object (ITEM_LOCK) in door's contents: id bit 9
+   set when locked, its link the number of the key that fits, its z the difficulty.
+   Returns 0 locked (or the attempt failed), 1 no lock, 2 the key locked it, 3 unlocked,
+   4 not locked (or open), 5 a lockpick fumble (skill_check's -1).
+   Picking rolls skill_check(skill, z * 3); a z of 0xE needs a skill of at least 0x20 and a
+   z of 0xF cannot be picked. Unlocking sets off the door's traps with how 0xB, then deletes
+   the lock, or only clears its locked bit when its id bit 10 is set (a lock that can be
+   locked again). A key can lock an unlocked lock, but not on an open door or an open
+   container (odd item below 0x8C, inferred), which answers 4. */
 int far checkLock(struct Object far *who, struct Object far *door, int key)
 {
     struct Object far *lock;
@@ -305,6 +356,13 @@ int far checkLock(struct Object far *who, struct Object far *door, int key)
     return 3;
 }
 
+/* Casts the spell an object holds, if any (decode_obj_spell) and if it is the kind cast
+   on use (id bit 11 of the spell object). Used by the player (how nonzero), the caster is
+   who, and casts are limited to one per 0x2FD game clock ticks, about 3 game seconds (the
+   watch in USEITEMS.C counts 0x3C00 ticks a minute); otherwise it prints "You are not yet
+   ready to cast another spell." In the world the object itself is the source, and the
+   player touching an unbroken wand (0x98-0x9B) casts nothing. Spends one charge. Returns 1
+   when cast. */
 char far checkSpell(int x, int y, struct Object far *who, struct Object far *obj, char how)
 {
     int major;
@@ -316,7 +374,7 @@ char far checkSpell(int x, int y, struct Object far *who, struct Object far *obj
         if (how != 0) {
             if (player->game_clock < nextSpellTime) {
                 play_effect_here(0x15, 0x40, 0);
-                game_sprint(0xB);
+                game_sprint(0xB); /* "You are not yet ready to cast another spell." */
                 return 0;
             }
             nextSpellTime = player->game_clock + 0x2FD;
@@ -333,6 +391,13 @@ char far checkSpell(int x, int y, struct Object far *who, struct Object far *obj
     return 0;
 }
 
+/* Runs the traps and triggers in obj's contents. how says what happened to the object
+   (UseObj passes 4 for use, OpenDoor and CloseDoor 8 and 9, checkLock 0xB for an unlock).
+   A trigger (trap minor class 2 or 3) goes to UseTrigger, and the next one in the list
+   runs after it; a switch runs only one, and a switch in its second state (index above 7)
+   runs the second trap in its list. A plain trap (minor 0 or 1) with no flags, other than
+   item 0x188 (TRAP_DOOR), goes off only on use (how 4): SetOffTrap, then delete_trap
+   removes it. */
 void far checkTrap(struct Object far *who, struct Object far *obj, int how, int x, int y)
 {
     union Link far *link;
@@ -372,6 +437,8 @@ void far checkTrap(struct Object far *who, struct Object far *obj, int how, int 
     }
 }
 
+/* The ObjectActor for throwing or firing: releases the missile ObjectActing with
+   ObjectActorArg and ends the targeting mode. */
 void far BlastFunction(void)
 {
     release_missile(ObjectActing, ObjectActorArg);
@@ -380,6 +447,14 @@ void far BlastFunction(void)
     mouse_release(1);
 }
 
+/* Finds the spell an object carries: a spell object (item 0x120, MAJOR_SPEC minor 2 index
+   0) in its contents, or, for an is_quant object with the enchanted bit, the object
+   itself (not for major class 5, MAJOR_RECT, nor for traps). A spell object with
+   quality 0 is hidden 4 times in 10 unless always_decode is set. With id bit 11 set (a
+   spell cast on use, its charges shown by LOOK.C) major is 12 plus link bits 6-8, or -1
+   when they are 0, and effect is link bits 0-5; otherwise major is link >> 4 and effect
+   the low 4 bits (probably a passive enchantment, such as a weapon's). *flag is bit 11. Returns 1
+   when there is a spell. */
 char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag)
 {
     union Link far *link;
@@ -411,15 +486,19 @@ char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsig
     return 1;
 }
 
-/* IDA calls this ClearsEnchantmentFlag; the FM Towns function in the same place, between
-   decode_obj_spell_ and useNSpellCharges_, is remove_spell_, with the same three tests and
-   the same clearing of bit 12. */
+/* Clears an is_quant object's enchanted bit (id bit 12). */
+/* name: IDA calls this ClearsEnchantmentFlag; the FM Towns function in the same place,
+   between decode_obj_spell_ and useNSpellCharges_, is remove_spell_, with the same three
+   tests and the same clearing of bit 12. */
 void far remove_spell(struct Object far *obj)
 {
     if (OBJ_ISQUANT(obj) && (obj->id & ID_ENCHANT) && OBJ_MAJOR(obj) != MAJOR_RECT)
         obj->id = obj->id & 0xEFFF;
 }
 
+/* Spends n charges of the cast-on-use spell in obj's contents; its quality is the charge
+   count. When there are not enough charges the spell object is deleted, 4 times in 10.
+   Returns the charges left (0 when none). */
 int far useNSpellCharges(struct Object far *obj, char n)
 {
     union Link far *link;

@@ -3,16 +3,38 @@
 /* Conversations: starting one (TalkTo, strt_converse), loading the script and registering
    the built-in functions (Converse), the menus, the say, respond and print built-ins, and
    the inventory built-ins a script uses to look at, give and take objects while bartering:
-   the whole of DOS overlay ovr103, in original order. Function and global names are the
-   originals from the FM Towns symbol table where it has them; the FM Towns build keeps
-   babl_menu, babl_fmenu, pause and babl_ask as statics, so the C functions behind those
-   built-ins have provisional names, chosen for their keys: Turbo C lists a file's publics by the tools/bssorder.py key of
-   each name and TLINK numbers overlay stub entries from the last one listed, so these names
-   reproduce the EXE's stub order (the target table keeps IDA's names).
+   the whole of DOS overlay ovr103, in original order.
 
-   Each built-in gets a far pointer just past its arguments on the conversation stack:
-   stack[-1] is the first argument, stack[-2] the second and so on. Each argument is the
-   address of a conversation variable, which getmem reads and babl_setmem writes. */
+   The flow: TalkTo (from the player's talk command in ui/INTERACT.C, from critter/AI.C
+   when an NPC talks first, and from talk_to_disembodied in event/WORLDEV.C) checks the
+   NPC will talk, sets talking_to and cnv_id and switches to screen 4. The screen's start
+   function, strt_converse (game/UWEDIT.C's screen table), draws the conversation screen
+   with both portraits and names, sets up the trade slots (barter_init, BARTER.C) and
+   calls Converse, which loads the script into the screen buffer (load_script, BABL.C),
+   binds about fifty built-ins with bab_fun, hands over the variables
+   (setup_converse_data, CONVVARS.C), runs the script (babl_run) and takes them back.
+   Then newscr(1) returns to the game, whose screen exit free_converse puts things back
+   and does any teleport the script asked for (do_babl_teleport, BABLHACK.C).
+
+   A menu (babl_menu, babl_fmenu) prints numbered options in the player's scroll and runs
+   converse_event_loop until conv_play_menu, the handler for the keys 1..5 and for a click
+   on the scroll (game/PLAYER.C), records the choice.
+
+   Data owned here: talking_to, cnv_id, conv_buffer and the screen and menu state below.
+
+   Name: descriptive (map/filenames.tsv: conversations, TalkTo, strt_converse,
+   Converse). */
+/* name: Function and global names are the originals from the FM Towns symbol table where
+   it has them; the FM Towns build keeps babl_menu, babl_fmenu, pause and babl_ask as
+   statics, so the C functions behind those built-ins have provisional names (the target
+   table keeps IDA's names). */
+/* match: The provisional names were chosen for their keys: Turbo C lists a file's
+   publics by the tools/bssorder.py key of each name and TLINK numbers overlay stub
+   entries from the last one listed, so these names reproduce the EXE's stub order. */
+/* Each built-in gets a far pointer to the top of the conversation stack, stack[0] being
+   the argument count: stack[-1] is UW-Formats' arg1 (the last value pushed before the
+   count), stack[-2] arg2 and so on. Each argument is the address of a conversation
+   variable, which getmem reads and babl_setmem writes. */
 
 #include <string.h>
 #include <stdlib.h>
@@ -32,10 +54,11 @@ extern unsigned char far *foreground_color;
 extern struct Inplist near *inplist;
 extern struct FontInfo far *cur_font;
 
-/* This file's own uninitialised data, DS:47FC..4927, in its _BSS with talking_to. The FM
-   Towns build keeps all of it static, so none of it has an original name and it is static
-   here, with provisional names chosen so that Turbo C's name order (tools/bssorder.py) lays
-   it out as UW2 has it: RightPanelSaved 58, convoPics 187, convo_mode 259, convoScreen 331,
+/* This file's own uninitialised data, DS:47FC..4927, in its _BSS with talking_to. */
+/* name: The FM Towns build keeps all of it static, so none of it has an original name and
+   it is static here, with provisional names. */
+/* match: The names were chosen so that Turbo C's name order (tools/bssorder.py) lays it
+   out as UW2 has it: RightPanelSaved 58, convoPics 187, convo_mode 259, convoScreen 331,
    convoWorkspace 507, convo_askstr 515, convoContinue 587, convo_facedata 643,
    babl_unref4854 650, convo_line_option 795, babl_choice 826, babl_opts 834,
    babl_display 874, talking_to 916, bablOptionIds 962, bablOptCount 978. Nothing reads or
@@ -101,6 +124,13 @@ int far teleport_talker();
 
 int far set_inv_quality(int far *);
 
+/* Start a conversation with thing, if it will talk. A wisp is talked to through
+   talk_to_disembodied(0x30). Anything not a creature, a critter with goal 15, or any
+   critter while time is stopped gets a refusal. Otherwise whoami 0x8C always talks; a
+   critter with goal 10 always talks; else it talks when its whoami is not 0xFF and it is
+   either an ally, or friendly (attitude not 0) and not attacking the player (goal 5, 6
+   or 9 with target 1). The conversation is whoami's slot, or 0x100 + the creature class
+   for whoami 0, and must exist in CNV.ARK. */
 void far TalkTo(struct Object far *thing)
 {
     unsigned char who, subclass;
@@ -109,18 +139,18 @@ void far TalkTo(struct Object far *thing)
         return;
     }
     if (OBJ_MAJOR(thing) != MAJOR_CREATURE) {
-        scroll_print(get_string(0xe00));
+        scroll_print(get_string(0xe00));  /* "You cannot talk to that!\n" */
         return;
     }
     if (OBJ_GOAL(thing) == 0xf) {
-        scroll_print(get_string(0xe01));
+        scroll_print(get_string(0xe01));  /* "You get no response.\n" */
         return;
     }
     talking_to = thing;
     who = talking_to->whoami;
     subclass = OBJ_INMAJOR(talking_to);
     if (TimeStop) {
-        scroll_print(get_string(0xe01));
+        scroll_print(get_string(0xe01));  /* "You get no response.\n" */
         return;
     }
     if (who == 0x8c) goto ready;
@@ -137,21 +167,22 @@ who_check:
 goal_check:
     if (OBJ_GOAL(talking_to) == 10)
         goto ready;
-    scroll_print(get_string(0xe01));
+    scroll_print(get_string(0xe01));  /* "You get no response.\n" */
     return;
 ready:
     if (who == 0) cnv_id = (unsigned)subclass + 0x100;
     else cnv_id = who;
     if (check_arc(2, "DATA\\", cnv_id) <= 0) {
-        scroll_print(get_string(0xe01));
+        scroll_print(get_string(0xe01));  /* "You get no response.\n" */
         return;
     }
     kill_all_effects();
     newscr(4);
 }
 
-/* adr_convpic and move_convpic are FM Towns names (TalkTo, adr_convpic, move_convpic,
-   strt_converse in the same order); the code matches the FM Towns functions. */
+/* name: adr_convpic and move_convpic are FM Towns names (TalkTo, adr_convpic,
+   move_convpic, strt_converse in the same order); the code matches the FM Towns
+   functions. */
 
 /* gronk_gr's allocator: the next n bytes of the portrait buffer */
 char far * far adr_convpic(int n)
@@ -168,6 +199,9 @@ int far move_convpic(char far *image, int ok, int which)
     return ok != 0;
 }
 
+/* The conversation screen's start function. The player's head is portrait
+   female * 5 + body of "heads"; the NPC's is whoami - 1 of "charhead", else its class
+   of "ghed", else ghed 0 (a fatal error if none loads). */
 void far strt_converse(void)
 {
     unsigned char who, loaded = 0;
@@ -227,6 +261,9 @@ void far strt_converse(void)
     newscr(1);
 }
 
+/* The conversation screen's exit function: release the screen buffer, give back what is
+   left in the trade slots (end_barter), restore the right panel and the main scroll,
+   catch up the schedules and animated objects (8 updates), and do the script's teleport. */
 void far free_converse(void)
 {
     register int i;
@@ -247,14 +284,19 @@ void far free_converse(void)
     cs_check();
 }
 
-/* FM Towns do_escape_key_, also empty, at this position */
+/* name: FM Towns do_escape_key_, also empty, at this position */
 void far do_escape_key(void) { }
 
+/* Load and run the conversation (who and subclass are not used; cnv_id already says
+   which). The script's heap is the conversation screen buffer from offset 0x400. An NPC
+   without an inventory gets one generated first. At the end the last line stays for
+   0x1F4 (scroll_wait units) when the player spoke last, and none when the NPC spoke last
+   or turned hostile. */
 void far Converse(unsigned char who, int subclass)
 {
     register int wait_time;
     if (load_script(cnv_file, convoScreen + 0x400) < 0) {
-        scroll_print(get_string(0xe01));
+        scroll_print(get_string(0xe01));  /* "You get no response.\n" */
         return;
     }
     bab_fun("babl_menu", conv_choice_ovr103_A13);
@@ -319,9 +361,11 @@ void far Converse(unsigned char who, int subclass)
     scroll_wait(wait_time, 0);
 }
 
-/* FM Towns converse_event_loop_ is this loop (loop_music_maybe, do_changes, the menu,
-   input_dispatch); Converse registers babl_menu and babl_fmenu as the two statics after it,
-   converse_event_loop_+0xD8 and +0x27C. */
+/* Wait for a menu choice, keeping music and animation going; when menus_active has been
+   cleared it reprints the options. */
+/* name: FM Towns converse_event_loop_ is this loop (loop_music_maybe, do_changes, the
+   menu, input_dispatch); Converse registers babl_menu and babl_fmenu as the two statics
+   after it, converse_event_loop_+0xD8 and +0x27C. */
 void far converse_event_loop(void)
 {
     int i;
@@ -355,6 +399,8 @@ dispatch:
     }
 }
 
+/* babl_menu(arg1 array): show the strings of a 0-terminated array of string ids as a
+   numbered menu and return the number chosen (from 1). Only 1..5 have keys. */
 int far conv_choice_ovr103_A13(int far *stack)
 {
     int i, base, string_no, used;
@@ -399,6 +445,8 @@ int far conv_choice_ovr103_A13(int far *stack)
     return babl_choice;
 }
 
+/* babl_fmenu(arg1 strings, arg2 flags): the same, showing only the strings whose flag
+   is non-zero, and returning the chosen string's id rather than its number. */
 int far conv_fmenu_ovr103_BF2(int far *stack)
 {
     int i, base, string_no, value, value_base, used;
@@ -450,6 +498,9 @@ int far conv_fmenu_ovr103_BF2(int far *stack)
     return bablOptionIds[babl_choice];
 }
 
+/* The menu's input handler: option is the key's number, or 0 for a click, whose row in
+   the scroll picks the option. Echoes the choice as the player's line and frees the
+   substituted texts. */
 void far conv_play_menu(int option)
 {
     int y, row;
@@ -479,6 +530,7 @@ void far conv_play_menu(int option)
     babl_choice = selected;
 }
 
+/* The "say" built-in (and SAY_OP): the NPC's line, in the NPC's scroll, \P first. */
 void far npc_say(char far *s)
 {
     str_copy(conv_buffer, "\\P");
@@ -491,6 +543,7 @@ void far npc_say(char far *s)
     convo_say_flag = 0;
 }
 
+/* The "respond" built-in (and RESPOND_OP): a line in the player's scroll. */
 void far play_respond(char far *s)
 {
     str_copy(conv_buffer, s);
@@ -502,6 +555,7 @@ void far play_respond(char far *s)
     convo_say_flag = 1;
 }
 
+/* The player's chosen line, in the conversation scroll in colour \1. */
 void far play_say(char far *s)
 {
     str_copy(conv_buffer, "\\1");
@@ -514,6 +568,7 @@ void far play_say(char far *s)
     convo_say_flag = 1;
 }
 
+/* print(arg1 string): narration, in colour \2. */
 void far conv_print(int far *stack)
 {
     char far *original, far *expanded;
@@ -531,6 +586,7 @@ void far conv_print(int far *stack)
     if (expanded != original) bab_free(expanded);
 }
 
+/* pause(arg1): wait arg1 * 0x1F4 (scroll_wait units). */
 int far conv_pause_ovr103_10DD(int far *stack)
 {
     register int duration;
@@ -541,6 +597,8 @@ int far conv_pause_ovr103_10DD(int far *stack)
     return 1;
 }
 
+/* babl_ask: let the player type up to 0x32 characters; returns the id of a dynamic
+   string holding them, the same id for every call in a conversation. */
 int far getInputText_ovr103_1117(void)
 {
     char response[0xa0];
@@ -556,13 +614,14 @@ int far getInputText_ovr103_1117(void)
     return babl_ask_handle;
 }
 
-/* The inventory built-ins, in FM Towns order: conv_check_inv (show_inv), find_barter,
+/* name: The inventory built-ins, in FM Towns order: conv_check_inv (show_inv), find_barter,
    find_barter_total, conv_give_inv (give_to_npc), give_ptr_npc, conv_inv_delete,
    conv_find_inv, conv_take_inv, conv_take_inv_id, conv_inv_create, conv_inv_name
    (identify_inv), count_inv, check_inv_quality, set_inv_quality, switch_pic. Each one's
    callees agree with its FM Towns namesake. */
 
-/* show_inv: the player's offered items, as item ids and object indices */
+/* show_inv(arg1 indices, arg2 item ids): fill the two arrays (6 entries) with the
+   player's selected trade items; returns how many. */
 int far conv_check_inv(int far *stack)
 {
     int ids[6], indices[6];
@@ -580,6 +639,8 @@ int far conv_check_inv(int far *stack)
     return count;
 }
 
+/* find_barter(arg1 item): the object index of the player's selected trade item of that
+   type, or (1000 and up) of major (item - 1000) >> 2, minor (item - 1000) & 3; else 0. */
 int far find_barter(int far *stack)
 {
     int count, ids[6], indices[6];
@@ -598,6 +659,11 @@ int far find_barter(int far *stack)
     return 0;
 }
 
+/* find_barter_total(arg4 item, arg3 count out, arg2 indices out, arg1 total out): the
+   player's selected trade items of type item, and their total quantity; 1 when any.
+   A class search (1000 and up) is coded in the test but the enclosing check skips it,
+   so it always finds nothing. Its arrays hold 5 entries, but player_barter_items can
+   write 6 when all six player slots are selected. */
 int far find_barter_total(int far *stack)
 {
     int wanted, matches, ids[5], indices[5], matching[5], count;
@@ -625,7 +691,8 @@ int far find_barter_total(int far *stack)
     return total > 0 ? 1 : 0;
 }
 
-/* give_to_npc: give the listed objects, if all are among the player's offered items */
+/* give_to_npc(arg2 count, arg1 indices): give the listed objects to the NPC if every
+   one is among the player's selected trade items; 1 if given, else 0. */
 int far conv_give_inv(int far *stack)
 {
     int count, have, ids[6], indices[6], slot_of[6], item_of[6];
@@ -647,8 +714,8 @@ int far conv_give_inv(int far *stack)
     return 1;
 }
 
-/* give the NPC qty of one object, splitting a quantity if need be, from the trade area
-   or else from the player's inventory */
+/* give_ptr_npc(arg2 object, arg1 qty): give the NPC qty of one object, splitting a
+   stack if need be, from the trade slots or else from the player's inventory. */
 int far give_ptr_npc(int far *stack)
 {
     int index;
@@ -683,6 +750,9 @@ int far give_ptr_npc(int far *stack)
     return 1;
 }
 
+/* do_inv_delete, find_inv, take_from_npc, take_id_from_npc and do_inv_create: thin
+   wrappers of BARTER.C's npc_inv_delete, npc_barter_find, npc_barter_give,
+   npc_barter_give_id and npc_inv_create. */
 int far conv_inv_delete(int far *stack) { return npc_inv_delete(getmem(stack[-1])); }
 
 int far conv_find_inv(int far *stack) { return npc_barter_find(getmem(stack[-2]), getmem(stack[-1])); }
@@ -693,8 +763,9 @@ int far conv_take_inv_id(int far *stack) { return npc_barter_give_id(getmem(stac
 
 int far conv_inv_create(int far *stack) { return npc_inv_create(getmem(stack[-1])); }
 
-/* identify_inv: the object's name with an article or a count, as a new string, and
-   its value */
+/* identify_inv(arg4 object, arg3 with article, arg2 name out, arg1 identified): the
+   object's name with an article or a count, as a new dynamic string stored in arg2, and
+   its value to the NPC (assess_value with likes, blurred by npc_assess) returned. */
 int far conv_inv_name(int far *stack)
 {
     int index, value, handle, describe;
@@ -760,7 +831,8 @@ int far count_inv(int far *stack)
     return qty;
 }
 
-/* reads the quality but never returns it: the result is whatever AX holds */
+/* check_inv_quality: reads the quality but never returns it, so the script gets
+   whatever AX holds at the end. */
 int far check_inv_quality(int far *stack)
 {
     struct Object far *obj;
@@ -771,6 +843,7 @@ int far check_inv_quality(int far *stack)
     quality = obj->qn.f.quality;
 }
 
+/* set_inv_quality(arg2 object, arg1 quality): set it, to 6 bits. */
 int far set_inv_quality(int far *stack)
 {
     struct Object far *obj;
@@ -781,7 +854,8 @@ int far set_inv_quality(int far *stack)
     return 1;
 }
 
-/* show another portrait for the NPC: a whoami below 0x100, else a generic head */
+/* switch_pic(arg1): show another portrait and name for the NPC: whoami arg1 below
+   0x100, else generic head arg1 - 0x100 (up to 0x140), else ghed 0. */
 int far switch_pic(int far *stack)
 {
     int which;

@@ -5,9 +5,29 @@
    searching lists, pressure-plate weights, consistency checks and garbage collection.
    The whole of DOS resident segment seg029_2A8E, in original order. Function and global
    names are the originals from the FM Towns symbol table where it has them.
-   -Y: Obj_Elem_Fate passes chkTenacious as a far function pointer, and the EXE pushes
-   the segment as a relocated constant (push 28A1h) where the switches without -Y give
-   push cs; nothing else in the file changes with it. */
+
+   Every object of a level lives in the level block (struct LevelBlock, level.h): 256
+   mobile records of 27 bytes (critdata; index 0 is unused and index 1 is the player) and
+   768 static records of 8 bytes (objdata, indices 0x100-0x3FF). An object is named by its
+   index, and lists are chained through link words (union Link): each tile's list head,
+   each object's next link (qn) and, unless the object is is_quant, its contents link
+   (ol). Free objects sit on two stacks of indices, critbot..critptr (254 mobile, indices
+   2 to 0xFF) and objbot..objptr (768 static); Obj_Alloc pops one and Obj_Free pushes it
+   back. ActiveMob..LastActiveMob is a byte list of the mobile objects in use, which the
+   critter code walks each frame.
+   Main entry points: Obj_Alloc and Obj_Free; Obj_Add, Obj_AddEnd and Obj_Rem on a list;
+   Obj_Punt, which deletes an object and its contents; Obj_PtrTMem, Obj_IntTMem and
+   Obj_MemTPtr, between indices and pointers; the searches Obj_Find, Obj_InList,
+   Obj_FindInMap; check_weight for pressure plates (TRIGGER.C); Obj_GarbageCollect, which
+   culls distant objects when a free list runs out and when the player sleeps (SKILLS.C);
+   ObjCrunch, the consistency check MAP.C runs before saving a level. Map_ObjFix (called by
+   MAP.C's Map_Init and UWEDIT.C's clearobj) lays the store out empty. Nearly every
+   subsystem calls into this file.
+   Name: inferred (the Obj_ prefix, and System Shock's object lists are OBJECTS.C).
+
+   match: -Y: Obj_Elem_Fate passes chkTenacious as a far function pointer, and the EXE
+   pushes the segment as a relocated constant (push 28A1h) where the switches without -Y
+   give push cs; nothing else in the file changes with it. */
 
 #include <stdlib.h>
 #include "file.h"
@@ -24,13 +44,13 @@
 #define MEMTPTR(o)      ((o) < (struct Object far *)objdata ? (o) - critdata \
                          : (struct StaticObj far *)(o) - objdata + NUM_MOBILE)
 
-/* The object store, laid out in the map block by Map_ObjFix. This is the file's _BSS,
-   DS:2588..25BB. Turbo C lays out uninitialised data by a hash of the names, not in
-   definition order, so the names fix the layout: the publics are the FM Towns names and
-   land in the EXE's order. The four statics have no FM Towns names (they are _Valor+0x47
-   to +0x4D there); the names below are ours, picked from candidates compiled as probes
-   because they hash into the right places (mobcount and objcount after FM Towns's
-   animcount and timercount). */
+/* The object store, laid out in the map block by Map_ObjFix. */
+/* match: this is the file's _BSS, DS:2588..25BB. Turbo C lays out uninitialised data by a
+   hash of the names, not in definition order, so the names fix the layout: the publics are
+   the FM Towns names and land in the EXE's order. */
+/* name: the four statics have no FM Towns names (they are _Valor+0x47 to +0x4D there); the
+   names below are ours, picked from candidates compiled as probes because they hash into
+   the right places (mobcount and objcount after FM Towns's animcount and timercount). */
 struct Object far *critdata;            /* the mobile objects */
 unsigned char far *LastActiveMob;       /* the end of the active mobile list */
 union Link far *Obj_Find_Head;         /* the list in which Obj_Find found its object */
@@ -54,6 +74,11 @@ extern unsigned char timercount;
 /* Elsewhere in the game. */
 void far trap_obj_del(union Link far *head, struct Object far *obj);
 
+/* Empties the object store: clears every tile's object list, points critdata, objdata and
+   the free stacks into the level block, fills the free stacks with every index from 2 to
+   0x3FF (mobile 2-0xFF, then static 0x100-0x3FF; 0 is "none" and 1 the player), clears the
+   player's links and inventory, and empties the active mobile list and the animation and
+   timer counts. MAP.C's Map_Load then overwrites the stacks with the level's own. */
 void far Map_ObjFix(void)
 {
     struct Tile far *t;
@@ -80,14 +105,16 @@ void far Map_ObjFix(void)
     LastActiveMob = ActiveMob;
 }
 
+/* Returns 1 if fn is true for obj or anything after it in its list, searching each
+   object's contents depth first before moving to the next one; 0 for an empty list. */
 unsigned char far Obj_Check(struct Object far *obj, unsigned char (far *fn)(struct Object far *obj))
 {
     if (obj == 0)
         return 0;
     while (!(*fn)(obj)) {
         if (!OBJ_ISQUANT(obj) && obj->ol.f.link > 0) {
-            /* the EXE compares and discards the result; FM Towns also calls
-               Obj_PtrTMem twice here, and drops the comparison */
+            /* match: the EXE compares and discards the result; FM Towns also
+               calls Obj_PtrTMem twice here, and drops the comparison */
             if (Obj_PtrTMem(&obj->ol.link) == ThePlayer)
                 ;
             if (Obj_Check(Obj_PtrTMem(&obj->ol.link), fn))
@@ -100,7 +127,9 @@ unsigned char far Obj_Check(struct Object far *obj, unsigned char (far *fn)(stru
     return 1;
 }
 
-/* IDA ObjectCullingRngTest; FM Towns chkTenacious_ sits at the same place, between
+/* Whether an object resists culling: id bit 13 set, or its ComObj tenacity plus half of
+   (quantity - 1) is above cull_range. A big stack is harder to cull than a single item. */
+/* name: IDA ObjectCullingRngTest; FM Towns chkTenacious_ sits at the same place, between
    Obj_Check_ and Obj_Elem_Fate_, and does the same: flag bit 13, half the quantity plus
    the 4-bit field at byte 9 of ComObjData, compared with the static Obj_Elem_Fate sets.
    Obj_Elem_Fate passes it to Obj_Check in both builds. */
@@ -117,6 +146,11 @@ unsigned char far chkTenacious(struct Object far *obj)
     return ComObjData[OBJ_ITEM(obj)].tenacity + extra / 2 > cull_range;
 }
 
+/* Decides whether an object may be deleted (1) or must stay (0). A nonzero range gains a
+   random 0 to 2; the object stays if it or anything inside it is tenacious against that
+   (chkTenacious), and otherwise goes with chance range in 10. So range 0 never deletes,
+   and Obj_Punt's range 10 deletes everything but objects with tenacity above 10 to 12
+   (or holding one). */
 unsigned char far Obj_Elem_Fate(int range, struct Object far *obj)
 {
     if (obj == 0)
@@ -145,6 +179,11 @@ unsigned char far Obj_Fate(int range, union Link far *head)
     return Obj_Elem_Fate(range, obj);
 }
 
+/* Deletes up to count objects (with their contents) from tiles more than 10 - range tiles
+   from the player (taxicab distance), each tile's list in order, using Obj_Fate's random
+   rule. Obj_Alloc calls it with range 3 when a free list is empty (5 mobile or 10 static
+   objects, whichever kind is freed); SKILLS.C calls it with range 1 for 20 objects when
+   the player sleeps. */
 void far Obj_GarbageCollect(int range, int count)
 {
     union Link far *tilehead;
@@ -182,6 +221,9 @@ void far Obj_GarbageCollect(int range, int count)
     }
 }
 
+/* Pops a free mobile (mobile nonzero) or static object, garbage collecting once if the
+   stack is empty; returns 0 if still none. A mobile object is added to the active list.
+   The record is not cleared here (CreateObj in MAPADDR.C fills it in). */
 struct Object far * far Obj_Alloc(char mobile)
 {
     if (mobile) {
@@ -202,6 +244,9 @@ struct Object far * far Obj_Alloc(char mobile)
     }
 }
 
+/* Pushes an object back on its free stack; a mobile one also leaves the active list and,
+   if it is the camera object (UsPtr), releases the camera. It must already be off any
+   list. */
 void far Obj_Free(struct Object far *obj)
 {
     if (obj < (struct Object far *)objdata) {
@@ -216,6 +261,8 @@ void far Obj_Free(struct Object far *obj)
     }
 }
 
+/* Obj_Add puts obj at the head of a list, Obj_AddEnd at its tail; Obj_Rem unlinks it and
+   returns 1, or 0 if it was not in the list (1 for a null obj). */
 void far Obj_Add(union Link far *head, struct Object far *obj)
 {
     obj->qn.f.next = head->f.index;
@@ -250,6 +297,9 @@ unsigned char far Obj_Rem(union Link far *head, struct Object far *obj)
     return 0;
 }
 
+/* Deletes obj and its contents, from list head if given (otherwise it is assumed to be
+   off every list), when force is set or Obj_Elem_Fate(10) allows it. An animated object
+   also leaves the animation list. Returns 0 when deleted, else obj. */
 struct Object far * far Obj_Punt(union Link far *head, struct Object far *obj, char force)
 {
     union Link link;
@@ -267,6 +317,8 @@ struct Object far * far Obj_Punt(union Link far *head, struct Object far *obj, c
     return obj;
 }
 
+/* Frees every object in a list, last first, and everything inside them. A trap goes
+   through trap_obj_del instead (the trap code unlinks and frees it). */
 void far Obj_FreeChain(union Link far *head)
 {
     struct Object far *obj;
@@ -322,6 +374,9 @@ struct Object far * far Obj_IntTMem(int index)
     return (struct Object far *)(objdata + index - NUM_MOBILE);
 }
 
+/* Finds the object with index index in a list, searching contents too when recurse is
+   set. On success Obj_Find_Head is the list head it was in (top level only: a match
+   inside a container leaves it at the container's list). */
 struct Object far * far Obj_Find(union Link far *head, char recurse, int index)
 {
     struct Object far *found;
@@ -351,16 +406,18 @@ unsigned char far IsMobElem(struct Object far *obj)
     return 0;
 }
 
-/* IDA AddtoEndOfTileMapMobiles; FM Towns active_critter_ is at the same place after
+/* Appends a mobile index to the active list. */
+/* name: IDA AddtoEndOfTileMapMobiles; FM Towns active_critter_ is at the same place after
    IsMobElem_ and appends a byte at LastActiveMob the same way. */
 void far active_critter(int index)
 {
     *LastActiveMob++ = index;
 }
 
-/* IDA RemoveFromMobilesList; FM Towns free_critter_ follows active_critter_ and does
-   the same search of ActiveMob..LastActiveMob, moving the last entry into the hole.
-   The byte compare (cmp al,cl) with a word parameter is the cast. */
+/* Removes a mobile index from the active list, moving the last entry into the hole. */
+/* name: IDA RemoveFromMobilesList; FM Towns free_critter_ follows active_critter_ and does
+   the same search of ActiveMob..LastActiveMob. */
+/* match: the byte compare (cmp al,cl) with a word parameter is the cast. */
 void far free_critter(int index)
 {
     unsigned char far *p;
@@ -375,8 +432,9 @@ void far free_critter(int index)
     }
 }
 
-/* Whether an index is on a free list. No FM Towns counterpart (it goes straight from
-   free_critter_ to Obj_InList_) and nothing calls it, so it keeps the IDA name. */
+/* Whether an index is on a free list. */
+/* name: no FM Towns counterpart (it goes straight from free_critter_ to Obj_InList_) and
+   nothing calls it, so it keeps the IDA name. */
 unsigned char far UNREFERENCED_seg029_2A8E_B04(int index)
 {
     unsigned far *p;
@@ -393,6 +451,9 @@ unsigned char far UNREFERENCED_seg029_2A8E_B04(int index)
     return 0;
 }
 
+/* Finds the first object in *head's list whose major class, minor class and index within
+   the class match (-1 matches anything), searching contents when recurse is set. When the
+   object is inside a container, *head is changed to the container's list. */
 struct Object far * far Obj_InList(union Link far **head, char recurse, int major, int minor, int index)
 {
     struct Object far *obj;
@@ -416,6 +477,7 @@ struct Object far * far Obj_InList(union Link far **head, char recurse, int majo
     return 0;
 }
 
+/* Whether obj is item id or holds one anywhere inside it. */
 unsigned char far HasOrIsObj(struct Object far *obj, int id)
 {
     union Link far *list;
@@ -430,6 +492,9 @@ unsigned char far HasOrIsObj(struct Object far *obj, int id)
     return 0;
 }
 
+/* Scans the map's tile lists (and their contents) for a match from tile (*x, *y) onward,
+   row by row, and returns it with *x and *y at its tile. The caller resumes the search by
+   advancing *x; an *x past the row moves to the next row. */
 struct Object far * far Obj_FindInMap(int major, int minor, int index, int *x, int *y)
 {
     struct Tile far *t;
@@ -462,6 +527,12 @@ struct Object far * far Obj_FindInMapSquare(int major, int minor, int index, int
     return Obj_InList(&head, 0, major, minor, index);
 }
 
+/* The weight on a list, in ComObj mass units (tenths of a stone), counting each stack's
+   quantity and the contents of containers; only objects at height z unless z is negative.
+   When adjust is not -1, the player counts adjust instead of the player's inventory.
+   min -1 returns the total; min 0 or above returns whether the total exceeds min,
+   stopping early; min -2 is the recursive call, adding to the running total. TRIGGER.C
+   uses it for pressure plates. */
 int far check_weight(union Link far *head, int min, int z, int adjust)
 {
     struct Object far *obj;
@@ -489,6 +560,8 @@ int far check_weight(union Link far *head, int min, int z, int adjust)
     return total_weight;
 }
 
+/* flog_list (a tile's list) and count_list (any chain) count how often each index is
+   reached, for Obj_ListOkay; an object reached twice makes them return 1 ("bad"). */
 unsigned char far flog_list(int x, int y, unsigned char *counts, union Link far *head)
 {
     struct Object far *obj;
@@ -534,7 +607,10 @@ unsigned char far count_list(struct Object far *obj, unsigned char *counts)
     return bad;
 }
 
-/* ObjCrunch passes its argument on, but nothing here reads it. */
+/* Checks the object store: no index twice on the free stacks or in the lists, and every
+   object either free or reachable from a tile, the player (when GrSq is negative,
+   probably when the player is off the map) or the object on the cursor. Returns 1 when
+   all is consistent. ObjCrunch passes its argument on, but nothing here reads it. */
 unsigned char far Obj_ListOkay(char how)
 {
     unsigned far *p;
@@ -585,6 +661,9 @@ unsigned char far Obj_ListOkay(char how)
     return !bad;
 }
 
+/* Called by MAP.C before a level is saved: if the lists are consistent, zeroes every free
+   record (so the saved block is clean) and returns 1; otherwise reports "badobjlist"
+   through errmsg and returns 0. */
 unsigned char far ObjCrunch(char how)
 {
     unsigned far *p;

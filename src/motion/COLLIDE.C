@@ -4,7 +4,35 @@
    under the four corners of a mover's footprint, the walls between them, the objects
    it overlaps sorted by height, and the placing of objects in the map. The whole of DOS
    resident segment seg028_2941, in original order. Function and global names are the
-   originals from the FM Towns symbol table where it has them. */
+   originals from the FM Towns symbol table where it has them.
+
+   All of it works on the collision record curP points at (struct MotionCalc, map.h):
+   the caller sets x, y, z (1/8 tiles, z in object units), radius, height and the
+   object's index, and the checks fill hits0, hits1, floor, top, slope, open, found,
+   count and first. MOTION.C points curP at Ppd; can_place, obj_deal (OBJPHYS.C) and the
+   player and critter code use a local record and restore curP.
+
+   TerrainCheck looks at the 3x3 tiles around the centre (tiles[], one terrain word each:
+   type, height and floor terrain class, read lazily) and at five points: the centre and
+   the four corners of the square footprint radius wide. GetHgt gives the floor height at
+   a point (0x80 for a wall, or the solid half of a diagonal; slopes rise one unit per
+   cell). SolveCenter and SolvePnt turn each height into state bits against z and the
+   step range (MOTION.C's header lists them): wall, too high, a drop, or on a floor of a
+   given terrain class. A corner in another tile that a diagonal wall blocks (tile_walls)
+   is a wall too. ComputeHeading then sums the corners into the direction of the blocking
+   walls (slope) and of the open side (open), which MOTION.C's do_2dbounce uses.
+
+   ObjectCheck finds the objects whose square overlaps the footprint, in the tiles around
+   (at most 8, oCollisions), and process_objlist sorts them: those whose top is at or
+   below z first (bottom of the list, by top), then those overlapping the mover's height
+   (first and count), by bottom.
+
+   can_place, put_at, near_mob_put_at and drop_around_place place objects: they are used
+   all over the game to drop, create and move things, and drop_around_place tries up to
+   24 random spots within range.
+
+   name: descriptive (map/filenames.tsv: terrain and object collision, placing
+   objects). */
 
 #include <mem.h>
 #include <stdlib.h>
@@ -32,11 +60,14 @@ extern struct Object far *objdata;
 /* Elsewhere in the game. */
 struct Object far * far obj_deal(struct Object far *obj, int x, int y, int a);
 
-/* Uninitialised data, DS:251A..2587. Turbo C lays _BSS out by a hash of the names, ties
-   in definition order, so the names fix the layout. The publics are the FM Towns names;
-   the statics (_Valor+0x13 to +0x44 there) have none, and xlow, xhigh, ypos, ylow,
-   yhigh, tiles, pnt, firstsolve and pos_x are ours, chosen by compiling candidates as
-   probes because they land where the EXE has them. */
+/* Uninitialised data, DS:251A..2587. nvokHgt and nvokTerr are can_place's results: the
+   height an object placed there would rest at and the terrain byte there. */
+/* match: Turbo C lays _BSS out by a hash of the names, ties in definition order, so the
+   names fix the layout. */
+/* name: the publics are the FM Towns names; the statics (_Valor+0x13 to +0x44 there)
+   have none, and xlow, xhigh, ypos, ylow, yhigh, tiles, pnt, firstsolve and pos_x are
+   ours, chosen by compiling candidates as probes because they land where the EXE has
+   them. */
 static char xlow;                       /* the mover's extent within its tile */
 static char xhigh;
 static char ypos;                       /* the mover's position within its tile */
@@ -52,9 +83,13 @@ static char firstsolve;
 static char pos_x;
 int nvokTerr;
 
-/* Initialised data, DS:03B6..03D1. */
+/* Initialised data, DS:03B6..03D1. tile_off: the map offset of each of the 3x3 tiles
+   from the centre, in tiles[] order (rows of 64). */
 static signed char tile_off[9] = { -65, -64, -63, -1, 0, 1, 63, 64, 65 };
 
+/* The floor height at point n (0 to 3 the corners, 4 the centre): the tile's height * 8,
+   0x80 for a solid tile or the closed half of a diagonal, plus the rise across a slope.
+   *steep is set in a diagonal tile. */
 unsigned char far GetHgt(unsigned char n, unsigned char *steep)
 {
     unsigned char h = (tiles[pnt[n].tile] & 0xF0) >> 1;
@@ -100,8 +135,11 @@ unsigned char far GetHgt(unsigned char n, unsigned char *steep)
     return h;
 }
 
-/* GetSlopeHgt (IDA GetTileZOffset): FM Towns has it between GetHgt and SolvePnt, and it
-   reads the centre tile's slope and height the same way. */
+/* name: GetSlopeHgt (IDA GetTileZOffset): FM Towns has it between GetHgt and SolvePnt,
+   and it reads the centre tile's slope and height the same way. */
+/* The floor height under x, y (1/256 tiles) in the centre tile, in the physics record's
+   z units (1/8 of an object unit), following a slope exactly; back_to_space uses it to
+   keep a walker on a slope. */
 int far GetSlopeHgt(int x, int y)
 {
     int h = 0;
@@ -127,6 +165,9 @@ int far GetSlopeHgt(int x, int y)
     return h;
 }
 
+/* Sets pnt[n].flags from the floor at corner n against curP->z, within range: 0x200 a
+   wall, 0x100 too high, 0x800 a drop, else 8 << the floor's terrain class. Raises
+   curP->top to the highest floor seen. Returns 0 if the corner is in a diagonal tile. */
 unsigned char far SolvePnt(unsigned char n, unsigned char range)
 {
     unsigned char steep;
@@ -148,6 +189,8 @@ unsigned char far SolvePnt(unsigned char n, unsigned char range)
     return !steep;
 }
 
+/* SolvePnt for the centre, into hits0, which also gets the terrain class (bits 0-1),
+   4 for standing on the floor and 0x2000 for a slope. */
 unsigned char far SolveCenter(unsigned char range)
 {
     unsigned char steep;
@@ -169,6 +212,9 @@ unsigned char far SolveCenter(unsigned char range)
     return !steep;
 }
 
+/* The terrain under curP's footprint: the centre into hits0 and floor, the four corners
+   into hits1 (with the centre's bits), top the highest floor. range is how far up or down
+   the floor may be and still count as underfoot (the mover's step height). */
 void far TerrainCheck(unsigned char range)
 {
     char off;
@@ -251,8 +297,13 @@ void far TerrainCheck(unsigned char range)
 static signed char side[4] = { 1, -1, -1, 1 };
 static unsigned char dirs[3][3] = { { 5, 4, 3 }, { 6, 9, 2 }, { 7, 0, 1 } };
 
-/* ComputeHeading (IDA seg028_2941_803): the FM Towns function after TerrainCheck, with the
-   same tables, the same sums over the four corners and the same 8-way switch. */
+/* name: ComputeHeading (IDA seg028_2941_803): the FM Towns function after TerrainCheck,
+   with the same tables, the same sums over the four corners and the same 8-way switch. */
+/* From the last TerrainCheck: curP->slope, the direction (0 to 7, eighths of a turn, 9
+   for none) of the corners that hit a wall or a high floor, and curP->open, that of the
+   corners that are clear. A single blocking corner on a diagonal (on the first solve)
+   is turned into a wall direction by the mover's heading and, head on, by which side of
+   the corner the point lies. */
 void far ComputeHeading(void)
 {
     char ox;
@@ -336,14 +387,19 @@ void far ComputeHeading(void)
         curP->open = 9;
 }
 
-/* get_home_tile (IDA GetTileAttribute8): FM Towns returns the centre tile's type too. */
+/* name: get_home_tile (IDA GetTileAttribute8): FM Towns returns the centre tile's type
+   too. */
 int far get_home_tile(void)
 {
     return tiles[4] & 0xF;
 }
 
-/* obj_coll_check (IDA CreateCollisionRecord): the FM Towns function before ObjectCheck,
-   testing the same four bounds and filling an oCollisions record. */
+/* name: obj_coll_check (IDA CreateCollisionRecord): the FM Towns function before
+   ObjectCheck, testing the same four bounds and filling an oCollisions record. */
+/* Adds obj, in tile x, y relative to the centre, to oCollisions if its square (a whole
+   tile for radius 4) overlaps the mover's: bottom and top from its z and height, the
+   link's low bits 9, plus 0x10 if the mover's centre is inside it. Critters shrink each
+   other's radius by one so they can pass close. */
 void far obj_coll_check(struct Object far *obj, int link, char x, char y, char isnpc)
 {
     char x0;
@@ -392,6 +448,12 @@ void far obj_coll_check(struct Object far *obj, int link, char x, char y, char i
     c->offset = x + (y << 6);
 }
 
+/* Collects the objects around curP into oCollisions (at most 8, and at most 64 per
+   tile's list). Skips the mover itself, flat static objects, mobile non-creatures whose
+   b15 bit 7 is set (OBJPHYS.C's do_objhit sets it when two mobile objects hit, so
+   probably an object that has already struck something) and, for critters, objects
+   ComObjData marks c3_2. flat with no height uses a point footprint; useflag keeps only
+   touchable objects. */
 void far ObjectCheck(unsigned char flat, unsigned char useflag)
 {
     struct Tile far *tile;
@@ -456,8 +518,8 @@ void far ObjectCheck(unsigned char flat, unsigned char useflag)
     }
 }
 
-/* oCswap (IDA SwapCollisionRecords): the FM Towns function between ObjectCheck and
-   process_objlist, swapping two oCollisions records. */
+/* name: oCswap (IDA SwapCollisionRecords): the FM Towns function between ObjectCheck
+   and process_objlist, swapping two oCollisions records. */
 void far oCswap(unsigned char i)
 {
     struct Collision t;
@@ -467,6 +529,10 @@ void far oCswap(unsigned char i)
     oCollisions[i + 1] = t;
 }
 
+/* Sorts oCollisions (bubble sorts): by top up to the first object whose top is above
+   curP->z, which becomes curP->first, then the rest by bottom; curP->count is how many
+   of those reach into the mover's height. So oCollisions[0..first-1] are underfoot and
+   [first..first+count-1] are in the way. */
 void far process_objlist(void)
 {
     char k;
@@ -494,6 +560,12 @@ void far process_objlist(void)
         ;
 }
 
+/* Whether an object of type item (index its object number, for ObjectCheck to skip)
+   fits at x, y, z (1/8 tiles): not through the ceiling, no wall or high floor under its
+   footprint, nothing in its way, and, unless flier, not left hanging more than range
+   above what it would rest on. Sets nvokHgt to that height (the floor or the top of a
+   solid object below) and nvokTerr to the terrain byte there. Uses its own collision
+   record and restores curP. */
 unsigned char far can_place(int item, int index, int x, int y, int z, unsigned char flier, unsigned char range)
 {
     int radius;
@@ -558,6 +630,9 @@ out:
     return ok;
 }
 
+/* Puts obj near x, y, z (1/8 tiles) with drop_around_place, or failing that exactly at
+   x, y unless Obj_Elem_Fate culls it (nocull skips that); a culled object is freed.
+   Returns 1 if the object is in the map. */
 unsigned char far put_at(int x, int y, int z, struct Object far *obj, int range, unsigned char nocull)
 {
     if (drop_around_place(obj, x, y, z, range))
@@ -572,14 +647,19 @@ unsigned char far put_at(int x, int y, int z, struct Object far *obj, int range,
     return 0;
 }
 
+/* put_at at src's position. */
 unsigned char far near_mob_put_at(struct Object far *src, struct Object far *obj, int range, unsigned char nocull)
 {
     return put_at((OBJ_HOMEX(src) << 3) + OBJ_FINEX(src), (OBJ_HOMEY(src) << 3) + OBJ_FINEY(src),
                   OBJ_Z(src), obj, range, nocull);
 }
 
+/* When set, drop_around_place tries the exact spot first. */
 char stay_centered = 0;
 
+/* Tries up to 24 random spots within range of x, y for obj with can_place, and adds it
+   at the end of the first one's tile list; a mobile object gets its home tile, a static
+   one is settled by obj_deal. Returns 0 if none fits. */
 unsigned char far drop_around_place(struct Object far *obj, int x, int y, int z, int range)
 {
     unsigned char tries;

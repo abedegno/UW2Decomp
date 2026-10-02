@@ -9,7 +9,20 @@
    An archive starts with a word, the number of blocks n, and a long, then four tables of n
    longs: the blocks' file offsets (at 6), their flags (at 6 + 4n: bit 0 compress when
    writing, bit 1 compressed, bit 2 has room reserved), their lengths (at 6 + 8n) and the
-   room allocated to each (at 6 + 12n). */
+   room allocated to each (at 6 + 12n). An offset of 0 means the block is absent. A
+   compressed block is ACLZW.C's format: the uncompressed length as a long, then LZSS.
+   (UW-Formats 9.1 describes the same layout but places the long at 0004; the code reads
+   it straight after the count, at 2.)
+
+   Only one archive is open at a time, in arcfile: open_arc opens it, get_arc and put_arc
+   act on it, close_arc closes it, and their archive-number arguments are ignored. Callers:
+   MAP.C and TEXTMAPS.C (LEV.ARK, the level maps and texture lists), BABL.C (CNV.ARK, the
+   conversations), SHOWPIC.C (BYT.ARK, full-screen pictures), SCHEDULE.C (SCD.ARK),
+   AUTOMAP.C and GAMEWRAP.C. Writing a block that has grown rebuilds the whole file. The
+   table copies live in stdat (FARDATA.ASM), the shared big buffer, which put_arc also
+   uses as its copy buffer.
+   name: inferred, from the arc_ prefix of the FM Towns names (open_arc, close_arc,
+   get_arc, put_arc ...). */
 
 #include <io.h>
 #include <fcntl.h>
@@ -18,9 +31,7 @@
 #include "file.h"
 #include "sys.h"
 
-/* The open archive. FM Towns keeps it at 7BDA0 with no symbol of its own, so it was a
-   static; in DOS it is the far segment seg065 (load paragraph 637E), presumably this
-   file's far data. Declared extern, name and home provisional. */
+/* The open archive. */
 struct ArcFile {
     int fd;                             /* 0x00 */
     unsigned count;                     /* 0x02, number of blocks */
@@ -28,12 +39,15 @@ struct ArcFile {
     char name[0x50];                    /* 0x08, the file's path */
 };
 
-/* The open archive: far, so its own segment (637E:0000, segment table entry 75). FM
-   Towns' open_arc_ stores to it unnamed, so it was static; provisional name. */
+/* The open archive: far, so its own segment (637E:0000, segment table entry 75).
+   name: FM Towns keeps it at 7BDA0 with no symbol of its own and its open_arc_ stores to
+   it unnamed, so it was static; the name is provisional. */
 static struct ArcFile far arcfile;
 extern char far stdat[];
 
-/* The table copies, in the big shared buffer stdat. */
+/* The table copies, in the big shared buffer stdat; arc_read_tables fills them and
+   arc_write_tables writes them back, both only when put_arc rebuilds a file. arcstr is
+   not used in this file or elsewhere. */
 unsigned long far *offtab = (unsigned long far *)(stdat + 0x2000);
 unsigned long far *flagtab = (unsigned long far *)(stdat + 0x2800);
 unsigned long far *lentab = (unsigned long far *)(stdat + 0x3000);
@@ -73,6 +87,9 @@ int far arc_write_tables(int fd, register unsigned n)
     return ok;
 }
 
+/* Reads (get_ulong) or writes (put_ulong) the long at offset off of the file, leaving
+   the file position where it was. The block tables are read and patched through these,
+   one entry at a time. */
 unsigned long far get_ulong(register int fd, int off)
 {
     unsigned long val;
@@ -112,7 +129,8 @@ char * far decode_ark(register int which, char *dir, register char *buf)
     return buf;
 }
 
-/* Copies size bytes from src to dst; the count copied. */
+/* Copies size bytes from src to dst, 100 at a time; the count copied (0 if a write came
+   up short). put_arc uses it to copy a compressed block from its temporary file. */
 unsigned far ac_suck_data(int dst, int src, register unsigned size)
 {
     unsigned total;
@@ -135,6 +153,10 @@ unsigned far ac_suck_data(int dst, int src, register unsigned size)
     return total;
 }
 
+/* Opens archive `which` (1 LEV.ARK, 2 CNV.ARK, 3 TEST.ARK, 4 BYT.ARK, 5 SCD.ARK) in
+   directory dir (callers pass "DATA\\" for the shipped files or HomeDir for the save
+   game's working copies) for reading and writing, and reads its block count. 1 if it
+   opened. */
 unsigned char far open_arc(int which, char *dir)
 {
     unsigned char ok = 1;
@@ -167,6 +189,17 @@ unsigned char far close_arc(int arc)
     return ok;
 }
 
+/* Writes len bytes from buf as block blk of the open archive, compressing them first
+   (into the temporary file _mem.tmp in HomeDir) if the block's flags ask for it and
+   compression helps. Then one of three cases:
+   - the data fits the block's room (its allocation, if it has room reserved, else its
+     exact old length): it is written in place;
+   - the block is new (offset 0): it is appended, with 15% of its size in zeros as room to
+     grow if the block is flagged for reserved room;
+   - it has outgrown its room: the archive is copied to _arc.tmp without the block's old
+     copy, the later blocks' offsets are moved down by the old allocation, the block is
+     appended (with its 15%) and the copy replaces the archive.
+   Any short write is fatal (E002). Returns 1. */
 unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len)
 {
     unsigned long off;
@@ -391,11 +424,13 @@ int far check_arc(int which, char *dir, int blk)
     return off != 0;
 }
 
+/* Empty in FM Towns too. */
 void far explode_arc(void)
 {
 }
 
-/* The number of blocks in the archive at `name`; -1 if it cannot be opened. */
+/* The number of blocks in the archive at `name`; -1 if it cannot be opened. Nothing in
+   the sources calls it. */
 int far count_arc(char *name)
 {
     unsigned count;

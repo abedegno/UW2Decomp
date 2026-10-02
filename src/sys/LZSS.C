@@ -1,14 +1,19 @@
 /* target: ovr127 */
 /* opts: -mm -1 -G -O -Y -d */
-/* LZSS compression of save-file blocks: the whole of DOS overlay ovr127, in original order.
+/* LZSS compression of .ark archive blocks: the whole of DOS overlay ovr127, in original order.
    This is Haruhiko Okumura's LZSS.C of 1989 (a 4096-byte ring buffer, matches of 3 to 18
    bytes, a binary search tree over the buffer), with its globals gathered into one work
    area reached through the far pointer globals, and its getc and putc turned into reads
-   from and writes to a memory buffer refilled from or flushed to a file. ac_unshrink_disk
+   from and writes to a memory buffer refilled from or flushed to a file (despite the
+   "LZW" in the original function names, the algorithm is LZSS). ac_unshrink_disk
    and ac_shrink_disk in ovr153 set the work area up and call the two public entries.
+   This is the compression UW-Formats 9.1 describes for UW2's .ark files: its "offset of
+   18" on positions is the ring buffer's start at N - F, and its count plus 3 is
+   THRESHOLD + 1. Uncompressed bytes before the stream's first are taken as spaces (the
+   ring buffer is filled with ' '), as in Okumura's code.
 
-   Names: DecompressLZW_disk and CompressLZW_disk are the originals, anchored by the map.
-   The two helpers carried IDA names (DataCompressionSubFunction_ovr127_0 and
+   name: inferred, Okumura's file name. DecompressLZW_disk and CompressLZW_disk are the
+   originals, anchored by the map. The two helpers carried IDA names (DataCompressionSubFunction_ovr127_0 and
    DataCompressionRelatedFunction_ovr127_23C); in FM Towns the two functions just before
    DecompressLZW_disk_ are InsertNode_ and DeleteNode_, in the same order, with the same
    work-area offsets (match_position at +0Eh, match_length at +10h, text_buf at +12h,
@@ -136,8 +141,9 @@ void far DeleteNode(register int p)
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
 /* Reading the compressed stream: buf and left track the part of work not yet used, and
-   n counts what is still to be read from the file. GETC stores the byte in tmp before
-   advancing buf: written tmp = *buf++ the increment comes first. */
+   n counts what is still to be read from the file.
+   match: GETC stores the byte in tmp before advancing buf: written tmp = *buf++ the
+   increment comes first. */
 #define FILL() (len = min(n, worksize), buf = work, \
                 left = intoFarBuffer_ovr167_5DA(fd, work, len), n -= left)
 #define GETC() (left ? (left--, tmp = *buf, buf++, tmp) : \

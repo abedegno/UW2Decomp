@@ -4,12 +4,44 @@
 ; The image decoders: uncmp_pal, and exp_8str, exp_4str, exp_4run, exp_5run and exp_8run (FM
 ; Towns names) with their helpers.
 ;
+; What it does in the game: turns a .GR/.CR image (object sprites, critter frames) from its
+; stored form into one byte per pixel, translated to screen colours through the image's
+; auxiliary palette and, optionally, one row of the distance-shading table lightabs. The 3D
+; view uses it for every object and critter sprite it draws, and cFrmtoRaw (seg021's C entry,
+; through PGCACHE's far stub seg004_0849_7F0C) lets C code decode one too.
+;
+; Entry points: the five exp_ routines, reached only through PGCACHE's uncmp_tab, which is
+; indexed by the image's format byte used directly as a word offset: 2 exp_8run, 4 exp_8str,
+; 6 exp_5run, 8 exp_4run, 0Ah exp_4str (UW-Formats 3.2: 04 8-bit uncompressed, 06 5-bit
+; run-length, 08 4-bit run-length, 0A 4-bit uncompressed). Format 0 is PGCACHE's int 3 trap.
+; Common inputs (from do_uwobj): AX = the paragraph of the image, whose header is at AX:0
+; (format, width, height, auxiliary palette number); BP = the offset of its size word (4);
+; DS:SI = the 16 or 32 byte auxiliary palette (LOADGR's _Palettes); DH = the lightabs row to
+; shade with, 0FFh for none. Output: the pixels at AX:0 on return, AX = their paragraph
+; (cmpbuf1_start for the uncompressed forms, cmpbuf1_start+540h for the run-length forms,
+; which unpack their words to cmpbuf1_start:0 first and decode to cmpbuf1_start:5400h).
+;
+; Data it owns: uncmp_pal, the 32-byte translation table at CS:0 that seg004_0849_63 fills
+; from the auxiliary palette before each 4-bit or 5-bit decode (INSTANCE.ASM keeps a far
+; pointer to it). The decoders write the code segment, so seg004 must be in writable memory,
+; which it is in real mode.
+;
+; The run-length format (UW-Formats 3.2.2): a stream of 4- or 5-bit words alternating repeat
+; records (a count and one word repeated) and run records (a count and that many literal
+; words). A count word of 0 extends the count over more words; in a repeat record a count of
+; 1 means no repeat (go straight to the run record) and 2 means "several repeat records in a
+; row", whose number follows as a count. seg004_0849_194 is that decoder; it works on the
+; words after they have been unpacked one per byte.
+;
+; name: descriptive (map/filenames.tsv: "3D library module 1: the image decoders"); the
+; routine names are FM Towns'.
+;
 ; SEG004 split into its original modules: this is module 1 of 14, +0..+260 of the segment
 ; (file 91C0h), a module of the second library (UWLIB.LIB).
 ; Procs: exp_8str, exp_4str, seg004_0849_63, seg004_0849_CB, exp_4run, exp_5run, exp_8run,
 ; seg004_0849_18D, seg004_0849_194.
-; Evidence for the bounds: it starts the segment (paragraph-aligned in the segment table); it
-; ends where the next module's padding begins.
+; match: evidence for the bounds: it starts the segment (paragraph-aligned in the segment
+; table); it ends where the next module's padding begins.
 ; Its relocations are entries 2310-2318 of UW2.EXE's relocation table.
 
         .386
@@ -38,6 +70,10 @@ _uncmp_pal      db      0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,
                 db      0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah,0Ah
 
 ; seg004_0849_20  (+20)
+; exp_8str: format 4, 8-bit uncompressed. In: AX = image paragraph, BP = offset of its size
+; word, DH = lightabs row. Copies `size` bytes to cmpbuf1_start:0, each translated through
+; lightabs row DH (BX from seg004_0849_CB; xlat reads cs:BX+AL). Out: AX = cmpbuf1_start,
+; ES:DI past the last pixel. The aux palette is not used: 8-bit pixels are already colours.
 _exp_8str proc near
         call    _seg004_0849_CB
         mov     si,bp
@@ -56,6 +92,10 @@ L0030:
 _exp_8str endp
 
 ; seg004_0849_39  (+39)
+; exp_4str: format 0Ah, 4-bit uncompressed. In: as exp_8str, plus DS:SI = the 16-colour aux
+; palette. Builds the 16-entry uncmp_pal (seg004_0849_63, CX = 1 row), then for each of
+; `size` source bytes writes two pixels, high nibble first, each through uncmp_pal, to
+; cmpbuf1_start:0. Out: AX = cmpbuf1_start. Note the loop counts bytes, two pixels each.
 _exp_4str proc near
         mov     cx,1
         call    _seg004_0849_63
@@ -82,6 +122,12 @@ L004C:
 _exp_4str endp
 
 ; seg004_0849_63  (+63)
+; Builds uncmp_pal (at CS:0) for a 4-bit or 5-bit image. In: DS:SI = the aux palette, CX =
+; its length in 16-byte rows (1 for 4-bit, 2 for 5-bit), AX = image paragraph, DH = the
+; lightabs row or 0FFh. With DH = 0FFh the palette is copied as it is; otherwise each entry
+; is passed through lightabs row DH, so the image comes out shaded for its distance. The loop
+; is unrolled 16 times, one row per iteration. Out: DS = the image (from AX), BX = 0 (the
+; offset of uncmp_pal, for the callers' xlat), SI past the palette, ES = SEG004_TEXT.
 _seg004_0849_63 proc near
         mov     di,0
         mov     bx,SEG004_TEXT
@@ -154,6 +200,10 @@ L00C5:
 _seg004_0849_63 endp
 
 ; seg004_0849_CB  (+CB)
+; exp_8str's set-up: BX = offset lightabs + DH * 256 (the shading row), DS = AX (the image).
+; The cmp's result is overwritten by the add, so DH = 0FFh is not treated specially here
+; (it would index past lightabs' 16 rows); probably no caller asks for an unshaded 8-bit
+; image, but that is not checked.
 _seg004_0849_CB proc near
         cmp     dh,0FFh
         mov     bh,dh
@@ -164,6 +214,11 @@ _seg004_0849_CB proc near
 _seg004_0849_CB endp
 
 ; seg004_0849_D9  (+D9)
+; exp_4run: format 8, 4-bit run-length. In: as exp_4str; here the size word counts 4-bit
+; words (nibbles). Builds uncmp_pal, unpacks the (size + 1) / 2 bytes to one nibble per byte
+; at cmpbuf1_start:0 (high nibble first, untranslated), then runs the record decoder
+; seg004_0849_18D over those `size` bytes into cmpbuf1_start:5400h, translating each pixel
+; through uncmp_pal. Out: AX = cmpbuf1_start + 540h, the paragraph of the pixels.
 _exp_4run proc near
         mov     cx,1
         call    _seg004_0849_63
@@ -200,6 +255,10 @@ L00F1:
 _exp_4run endp
 
 ; seg004_0849_11C  (+11C)
+; exp_5run: format 6, 5-bit run-length (UW-Formats: some critter frames). In and out as exp_4run, with a
+; 32-entry uncmp_pal (CX = 2 rows). Unpacks the bit stream, most significant bit first, five
+; bytes into eight 5-bit words per iteration, (size + 7) / 8 iterations, with rotates rather
+; than a bit loop; then decodes as exp_4run does.
 _exp_5run proc near
         mov     cx,2
         call    _seg004_0849_63
@@ -256,6 +315,8 @@ L0137:
 _exp_5run endp
 
 ; seg004_0849_18B  (+18B)
+; exp_8run: format 2 has no decoder; it returns at once, leaving AX as it was. Its second
+; `ret` (L018C) is the end-of-input exit of the record decoder below.
 _exp_8run proc near
         ret
 L018C:
@@ -263,6 +324,9 @@ L018C:
 _exp_8run endp
 
 ; seg004_0849_18D  (+18D)
+; The record decoder's entry. In: DS:SI = the unpacked words (one per byte), CX = how many,
+; ES:DI = output, BX = 0 (uncmp_pal). Sets BP = SI + CX, the end of the input, and DX = 3
+; (the step past a four-word count's last three words), then falls into seg004_0849_194.
 _seg004_0849_18D proc near
         mov     bp,cx
         add     bp,si
@@ -270,6 +334,21 @@ _seg004_0849_18D proc near
 _seg004_0849_18D endp
 
 ; seg004_0849_194  (+194)
+; The run-length record decoder: one repeat record then one run record per pass, looping
+; until SI reaches BP (exit through L018C). The first word is the repeat count:
+;   3 up:   repeat the next word that many times;
+;   0:      an extended count (L01F9 path): if the next word is nonzero, count = it << 4 |
+;           the word after; if it is zero, the four words after form a 16-bit count
+;           (UW-Formats describes this as 0 0 0 w3 w4 w5; the code takes the third zero
+;           word as the count's top nibble, which is the same when it is zero);
+;   1:      no repeat record this time;
+;   2:      (L0213) a count of repeat records follows; each is decoded by a recursive call,
+;           and to make the recursive call stop after its repeat record the routine
+;           patches its own code: L01A6's first byte becomes C3h (ret) for the duration and
+;           is restored to 29h (the first byte of `sub ax,ax`) afterwards.
+; Then the run record at L01A6: a count (extended the same way, a zero count reaching L01CE)
+; and that many words copied, each through uncmp_pal. In/out registers as seg004_0849_18D;
+; DI advances over the output.
 _seg004_0849_194 proc near
         cmp     si,bp
         jae     L018C

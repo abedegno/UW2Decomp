@@ -1,9 +1,25 @@
 ; /* target: seg001_023B */
 ; /* opts: /ml */
 ;
-; A small block allocator for the off-screen buffer, and the save/restore of screen
-; rectangles into its blocks. Hand-written assembly with .186 (push 109h assembles as
-; 68 09 01, and valloc has shr ax,2 as C1 E8 02; TASM without .186 would expand the push).
+; A small block allocator for spare video memory, and the save/restore of screen
+; rectangles into its blocks: DOS segment seg001.
+;
+; The VGA's 256 KB hold more than the visible pages. seg001_023B_C, called once from
+; UWEDIT.C at start-up, takes all the video memory the graphics library has not claimed
+; (its bump pointer at seg_370D:410Ah, limit at 4108h, advanced by seg003_0272_49AE) as
+; this allocator's pool. valloc hands out blocks of it, measured as one plane's bytes
+; ((w / 4 + 1) * h); LOADGR.C keeps the screen furniture's pictures in such blocks, and
+; SPRITE.ASM saves what each sprite covers in one. save_rect and restore_rect copy a
+; screen rectangle into a block and back through the graphics library's rectangle with
+; the special pens 109h and 10Ah (probably copy-to and copy-from the block whose offset
+; is put at seg_370D:646h or 648h; that is how the routines use them, the library side
+; is not yet read).
+;
+; The allocator's data is the far segment seg_5F5D: [4] the pool's start, [6] its end,
+; [8] the bump pointer, [0Ah] the end of the block records, which start at 0Ch, 0Dh
+; bytes each: +0 video offset, +2 size, +4 1 if free, +5 x, +7 y, +9 w, +0Bh h (the
+; rectangle saved in it). Freed blocks are merged with free neighbours, and a free block
+; at the top of the pool goes back to the bump pointer.
 ;
 ; Each routine has two entries. The C entry (valloc, vfree, save_rect, restore_rect)
 ; builds a bp frame, loads its stack arguments into registers, sets c_entry and falls
@@ -11,19 +27,21 @@
 ; save_rect and restore_rect, MODEX calls seg001_023B_5A). On the way out the register
 ; routine pops the C entry's frame only when c_entry is set, then clears it.
 ;
-; The module starts at segment offset 0Ah with the c_entry word (IDA's org 0Ah, dw 0):
-; every entry writes cs:[0Ah], and the word at file 30EA follows seg000's retf at 30E9,
-; so the target table now starts there (base 0x30EA, org 0xA) rather than at 0Ch.
-;
-; Names: valloc, vfree, save_rect and restore_rect are in symbols.tsv (FM Towns). The FM
+; name: original. valloc and vfree are in System Shock's 2D library VALLOC.C (RCS
+; n:/project/lib/src/2d/valloc.c, "video memory management"), the same job.
+; match: hand-written assembly with .186 (push 109h assembles as 68 09 01, and valloc has
+; shr ax,2 as C1 E8 02; TASM without .186 would expand the push).
+; match: the module starts at segment offset 0Ah with the c_entry word (IDA's org 0Ah, dw
+; 0): every entry writes cs:[0Ah], and the word at file 30EA follows seg000's retf at
+; 30E9, so the target table now starts there (base 0x30EA, org 0xA) rather than at 0Ch.
+; name: valloc, vfree, save_rect and restore_rect are in symbols.tsv (FM Towns). The FM
 ; Towns build also has the register entries of the last two: save_rect (fd91: stores the
 ; rectangle in its record, set_the_color 109h, rectangle) and restore_rect (fdc4: colour
 ; 10Ah, reloads the rectangle, rectangle), the same work as +1EF and +268 here, so those
 ; take the FM names (without an underscore, as assembly symbols; the C names have one).
 ; FM's valloc and vfree are malloc/free wrappers with no register entry, so +5A keeps its
-; symbols.tsv name and +112 is a local label. seg_5F5D (the allocator's data: block
-; records of 0Dh bytes from offset 0Ch, the end of the records at [0Ah]) and seg_370D keep
-; provisional names.
+; symbols.tsv name and +112 is a local label. seg_5F5D (the allocator's data) and
+; seg_370D keep provisional names.
 
         .model  medium
         .186
@@ -47,7 +65,10 @@
 
 c_entry dw      0                       ; 1 while a C entry's frame is live
 
-; seg001_023B_C  (+C)
+; seg001_023B_C  (+C): void seg001_023B_C(void)
+; Initialises the pool: claims the graphics library's free video memory (all of it but
+; one byte) and sets the pool to run from what that returns up to the library's limit,
+; with one block record (the first, a sentinel for vfree's merge with the block before).
 _seg001_023B_C proc far
         push    ds
         push    es
@@ -77,7 +98,14 @@ _seg001_023B_C proc far
         retf
 _seg001_023B_C endp
 
-; seg001_023B_4A  (+4A)
+; seg001_023B_4A  (+4A): int valloc(int w, int h)
+; Register entry seg001_023B_5A: AX = w, BX = h. Returns AX = the block's video offset,
+; or 0 when the pool is full or a split finds the record table full (its end at 104Ch;
+; only the split path checks it, after it has already moved the records up). Size is
+; (w / 4 + 1) * h.
+; First fit: a free record of exactly that size is reused; a larger free record is split,
+; the records after it moved up to make room for the remainder; failing both, a new block
+; comes from the bump pointer.
 _valloc proc far
         push    bp
         mov     bp,sp
@@ -166,7 +194,11 @@ L00FD:
         retf
 _valloc endp
 
-; seg001_023B_105  (+105)
+; seg001_023B_105  (+105): int vfree(int block)
+; Register entry L0112 (_vfree+0Dh, which SPRITE.ASM calls): AX = the block's offset.
+; Returns 1 if no record has that offset, else 0. Merges the block with a free record
+; just before or after it (removing the merged records), else marks it free; a block
+; that ends at the bump pointer is returned to it.
 _vfree proc far
         push    bp
         mov     bp,sp
@@ -258,7 +290,10 @@ L01CD:
         retf
 _vfree endp
 
-; seg001_023B_1D5  (+1D5)
+; seg001_023B_1D5  (+1D5): int save_rect(int block, int x, int y, int w, int h)
+; Register entry save_rect: SI block, AX x, BX y (the top row, bottom-up), CX w, DX h.
+; Records the rectangle in the block's record and copies the screen's x, y .. x+w-1,
+; y-h+1 into the block (pen 109h). Returns 0, or 1 if the block is unknown.
 _save_rect proc far
         push    bp
         mov     bp,sp
@@ -321,7 +356,9 @@ L0253:
         retf
 _save_rect endp
 
-; MaybeRedrawSlot_seg001_023B_25B  (+25B)
+; MaybeRedrawSlot_seg001_023B_25B  (+25B): int restore_rect(int block)
+; Register entry restore_rect: AX block. Copies the block back to the rectangle recorded
+; by save_rect (pen 10Ah). Returns 0, or 1 if the block is unknown.
 _restore_rect proc far
         push    bp
         mov     bp,sp

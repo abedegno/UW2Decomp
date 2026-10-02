@@ -1,11 +1,33 @@
 /* target: seg032_2E9B */
 /* opts: -mm -1 -G -O -d */
-/* Setting up the 3D view: placing the view window, the cycling colour table, building
-   the render database, putting the camera into the first quadrant, the distance shading
-   table, and the vision grid that walks two rays out from the eye across the map and
-   marks which tiles can be seen. The whole of DOS resident segment seg032_2E9B, in
-   original order. Function and global names are the originals from the FM Towns symbol
-   table where it has them; the source file's own name is not known. */
+/* VIEW3D.C: setting up and drawing a frame of the 3D view.
+
+   Entry points: place_3d_view (the view window and zoom, at start-up), init_3d (the
+   renderer and an empty render database), establish_view (draw a frame and copy it to
+   the screen; the main loop's do_3d_view), render_FB (draw a frame into the frame
+   buffer only, for fades and screens drawn over the view), do_3d_grab (draw a pick
+   frame for pick_3d), set_cyb (the hallucination effect).
+
+   A frame: setup_vars copies the player's position into the camera (get_eye fills
+   cPlayer) and turns it into the first quadrant, so the grid code only has to look one
+   way (quad says how far it was turned; chgtable and trans_grid turn map steps and tile
+   types to match). do_2dclip then builds the vision grid (init_grid, build_grid: two
+   edge rays leave the eye at the heading +-0x2040 and walk outwards row by row,
+   narrowing at walls, and every grid cell between them gets the faces it shows,
+   enc_n_chk), and GRIDDB.C's process_grid turns the grid into render-database bytecode.
+   send_db sets the clip window to the view, has seg021's cRender run the database
+   (seg004's render_3d) into the frame buffer, and copies the frame buffer to the screen
+   with cFBtoScreen, hiding the mouse cursor around the copy.
+
+   Data owned: the vision grid glocs (17 rows of 33 cells, the eye at row 0 column 16;
+   struct Gloc in view3d.h) and its edge list gvecs/gvechead; the quadrant tables; the
+   view size (xwid, xhgt), zoom and demo_mode; DbEntry, where each frame's bytecode
+   starts.
+
+   name: descriptive (map/filenames.tsv: "setting up the 3D view and the vision grid").
+   The whole of DOS resident segment seg032_2E9B, in original order. Function and
+   global names are the originals from the FM Towns symbol table where it has them; the
+   source file's own name is not known. */
 
 #include <dos.h>
 #include <stdlib.h>
@@ -21,7 +43,7 @@
 #include "ui.h"
 #include "view3d.h"
 
-/* A ray edge walking the vision grid. The list is chained by the low nibble of link,
+/* An edge of the vision arc walking the grid. The list is chained by the low nibble of link,
    15 ending it; bit 7 of link says which side of the arc the edge is on. */
 struct Gvec {
     char link;                          /* 0x00 */
@@ -40,6 +62,7 @@ struct Gvec {
 int chgtable[4][3] = {
     { 1, MAP_SIZE, -1 }, { -MAP_SIZE, 1, MAP_SIZE }, { -1, -MAP_SIZE, 1 }, { MAP_SIZE, -1, -MAP_SIZE }
 };
+/* The heading of each quadrant's turn, subtracted from the camera's heading. */
 unsigned headmod[4] = { 0, 0x4000, 0x8000, 0xC000 };
 /* Tile types as seen from each quadrant. */
 unsigned char trans_grid[4][16] = {
@@ -49,7 +72,10 @@ unsigned char trans_grid[4][16] = {
     { 0, 1, 3, 5, 2, 4, 8, 9, 7, 6 }
 };
 static char cyb_on = 0;
-/* The faces seen of each tile type from each of 7 directions. */
+/* The faces seen of each tile type (after trans_grid) from each of 7 directions
+   (enc_n_chk's sel: straight ahead, left or right, nearer the row or the column, on
+   the diagonal): the grid flags, 0x80 visible, 0x04 a slope and 0x44 a diagonal (the
+   low two bits say which), 0x20/0x10/0x08 the walls that may be seen. */
 unsigned char enc_dat[16][7] = {
     { 0 },
     { 0xB8, 0x98, 0xB0, 0x98, 0xB0, 0x98, 0xB0 },
@@ -72,7 +98,7 @@ static int side_step[2] = { -1, 1 };
 
 extern struct Inplist near *inplist;
 extern unsigned long far *Time;
-/* This file's _BSS, DS:26EA..2C67 (seg031's ends at 26E9; seg019's starts at 2C68 with
+/* match: this file's _BSS, DS:26EA..2C67 (seg031's ends at 26E9; seg019's starts at 2C68 with
    cWCol, key 27), laid out by name (tools/bssorder.py): lcldblen 148, xhgt 176, glocs 191,
    mxY 237, quad 377, strtime 411, mapptr 653, curZoom 667, gvecs 703, demo_mode 708,
    trans 804, gvechead 879, loct 900, DbEntry 916, xwid 960. All FM Towns names. */
@@ -90,13 +116,20 @@ struct Gloc glocs[17][33];
 struct Gvec gvecs[15];
 char gvechead;
 int far *DbEntry;
-/* The 4 KB far buffer at 5DFD:0000 (segment table entry 60) that seg004's texture loader
-   copies a bitmap into; seg032_2E9B_195 points the bitmap table's segments back at it.
-   DOS only, no FM Towns name: IDA's segment name. */
+/* seg_5DFD (declared in gfx.h) is the 4 KB far buffer at 5DFD:0000 (segment table entry
+   60) that seg004's texture loader copies a bitmap into; seg032_2E9B_195 points the
+   bitmap table's segments back at it.
+   name: seg_5DFD is DOS only, no FM Towns name: IDA's segment name.
+   smooth_base is renderer data, the base added to the distance shade; GAMESORT.C reads
+   it as a byte, so each file declares it its own way. */
 extern int far smooth_base;
 
 void far gr_putlab(int lab);
 
+/* Place the view window (w by h at x, y; y is its bottom row, since mous_player gets
+   y - h + 1 as the top),
+   tell the mouse code where it is, and set the zoom: 0x6062 when inplist->mode has
+   bit 3, 0x61A8 and demo_mode when it has bit 0, else 0x7ED2. */
 void far place_3d_view(int x, int y, int w, int h)
 {
     demo_mode = 0;
@@ -116,8 +149,14 @@ void far place_3d_view(int x, int y, int w, int h)
     cZoom(curZoom);
 }
 
-/* IDA seg032_2E9B_9B. FM Towns set_cyb_ sits at the same place after place_3d_view_ and
-   does the same: six rand() masks or six fixed values into the colour table. */
+/* The hallucination effect (PLAYDATA.C turns it on for one of its three random
+   effects while ShroomsEnabled, and off afterwards): word 1 of the first six 8-byte
+   entries of the renderer's bitmap table (at bmsegoff) gets random values, or its
+   normal values 0xF0, 0xF0, 0x3E0, 0x3E0, 0xFC0, 0xFC0 back. Those words are probably
+   the texture-coordinate masks of the six bitmap slots, so random ones scramble the
+   textures; this has not been checked in seg004.
+   name: IDA seg032_2E9B_9B. FM Towns set_cyb_ sits at the same place after
+   place_3d_view_ and does the same. */
 void far set_cyb(char on)
 {
     int far *p = (int far *)&bmsegoff;
@@ -156,7 +195,9 @@ void far set_cyb(char on)
     }
 }
 
-/* This and the next have no FM Towns counterpart and no callers in DOS. */
+/* This and the next have no FM Towns counterpart and no callers in DOS (probably
+   debugging leftovers). The next toggles SpecShadeMode, and when it was on points the
+   segments of bitmap slots 1, 3 and 5 at the seg_5DFD buffer. */
 void far seg032_2E9B_18B(void)
 {
     quad = 0x42;
@@ -185,6 +226,8 @@ void far seg032_2E9B_195(int on)
     }
 }
 
+/* Initialise the renderer (cInit3d), start an empty render database with a 0 word at
+   its entry (DbEntry), and build the distance shades for range 8. */
 void far init_3d(void)
 {
     cInit3d();
@@ -202,6 +245,9 @@ void far reset_db(void)
     dbptr = DbEntry;
 }
 
+/* Run the database: render into the frame buffer with the clip window set to the
+   view, and copy the frame buffer to the screen. The window is put back to the full
+   320x200 screen afterwards. */
 void far send_db(void)
 {
     set_the_window(0, xhgt - 1, xwid - 1, 0);
@@ -214,6 +260,9 @@ void far send_db(void)
     set_the_window(0, 0xC7, 0x13F, 0);
 }
 
+/* Render a pick frame (GRIDDB.C's do_3d_pickup) into the frame buffer without
+   showing it; pick_3d then reads the colour under the cursor. It reuses the vision
+   grid of the last frame. */
 void far do_3d_grab(void)
 {
     reset_db();
@@ -237,6 +286,7 @@ void far render_FB(void)
     set_the_window(0, 0xC7, 0x13F, 0);
 }
 
+/* Draw a frame and show it. strtime records the tick count at the start. */
 void far establish_view(void)
 {
     strtime = *Time;
@@ -249,7 +299,10 @@ void far establish_view(void)
     send_db();
 }
 
-/* Turn the camera into the first quadrant: the grid code only looks one way. */
+/* Turn the camera into the first quadrant: the grid code only looks one way. The
+   heading's octant picks the quadrant (q), the camera's position within its tile is
+   rotated to match and the quadrant's heading taken off, and mapptr is the eye's
+   tile. loct is set when the heading is in an odd octant. Always returns 1. */
 char far setup_vars(void)
 {
     char q;
@@ -289,8 +342,12 @@ char far setup_vars(void)
     return ok;
 }
 
-/* Fill the shade of every grid cell from its distance to the eye. IDA ShadeCalcs; FM Towns
-   preset_grid_ follows setup_vars_ and is the same code (cSqRt, smooth_div, glocs+1). */
+/* Fill the shade of every grid cell from its distance to the eye: cells beyond range
+   get 15 (dark, and treated as not seen by the grid walk), the rest a shade of 0..14
+   from smooth_div, smooth_lowpass and smooth_base (renderer data). GAMESORT.C makes
+   the same calculation for each object.
+   name: IDA ShadeCalcs; FM Towns preset_grid_ follows setup_vars_ and is the same code
+   (cSqRt, smooth_div, glocs+1). */
 void far preset_grid(int range)
 {
     int d;
@@ -328,8 +385,11 @@ void far preset_grid(int range)
     }
 }
 
-/* Start the two edges of the vision arc at the eye. IDA SetRangeOfVisonParams; FM Towns
-   init_grid_ follows preset_grid_ and fills gvecs and gvechead the same way. */
+/* Start the two edges of the vision arc at the eye, at the heading -0x2040 (gvecs[0])
+   and +0x2040 (gvecs[1]), a little over a quarter turn apart. In a solid tile there is
+   no arc (gvechead 15) and nothing is drawn.
+   name: IDA SetRangeOfVisonParams; FM Towns init_grid_ follows preset_grid_ and fills
+   gvecs and gvechead the same way. */
 void far init_grid(void)
 {
     struct Gloc *g = &glocs[0][16];
@@ -448,7 +508,10 @@ char far enc_n_chk(register struct Gvec *v, char dir, char want)
     return 0;
 }
 
-/* Move both edges on to the next row; 0 when the arc has closed. */
+/* Move both edges on to the next row; 0 when the arc has closed. Each edge first
+   moves inwards past cells beyond the shading range, and its direction is re-aimed
+   from the eye through its current point, widened a little (abs(dx) / 50 + 2) so
+   rounding does not lose a column. */
 char far newdels(struct Gvec *a, struct Gvec *b)
 {
     if (++a->y > 16)
@@ -487,7 +550,11 @@ char far newdels(struct Gvec *a, struct Gvec *b)
     return 1;
 }
 
-/* Walk one edge across its row to the next row boundary. */
+/* Walk one edge across its row to the next row boundary, stepping sideways through
+   cells while its slope says it leaves through a side, and stopping at a side wall of
+   either cell (tile_walls bits), at a cell beyond the range, or 16 columns out. loc2
+   records the outermost cell the edge reached on this row, which fill_the_grid and
+   build_grid use as the fill limits. */
 void far move_to_next(struct Gvec *v)
 {
     int rem;
@@ -555,7 +622,9 @@ void far move_to_next(struct Gvec *v)
         v->loc2 = v->loc;
 }
 
-/* Fill the cells between an edge and the next one on this row. */
+/* Fill the cells between an edge and the next one on this row, marking each with
+   enc_n_chk; where a wall splits the span the edges are moved, and when they cross the
+   pair is dropped from the list. */
 void far fill_the_grid(struct Gvec **cur, struct Gloc **out)
 {
     struct Gvec tmp;
@@ -601,6 +670,8 @@ void far fill_the_grid(struct Gvec **cur, struct Gloc **out)
     }
 }
 
+/* Build the vision grid row by row from the eye outwards until no edge pair is left;
+   cells outside every span get flags 0. mxY is the last row reached. */
 void far build_grid(void)
 {
     struct Gloc *g;
@@ -632,6 +703,8 @@ void far build_grid(void)
     } while (gvechead != 15);
 }
 
+/* Build the vision grid and the frame's database; MousQUp(0) is called in between
+   (probably to service the mouse during the frame). */
 void far do_2dclip(void)
 {
     init_grid();

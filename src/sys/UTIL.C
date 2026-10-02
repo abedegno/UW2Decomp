@@ -3,7 +3,12 @@
 /* Small helpers: stepping a value within a limit, moving a point along a heading, waiting
    a number of ticks, and rolling dice. The whole of DOS resident segment seg041_35D7, in
    original order. Function names are the originals from the FM Towns symbol table where
-   it has them; the source file's own name is not known. */
+   it has them. Callers are spread across the game: mvcheck by STATS.C and PLAYER.C,
+   move_along by combat, missiles, spells, physics, skills and world events, rollem by
+   combat, damage, spells, treasure and character creation.
+   move_along uses the table sines of cFstSinCos (C3DENTRY.ASM, IMATH.ASM); the wait reads
+   the tick counter of TICKS.ASM through Time.
+   name: descriptive (small helpers). */
 
 #include <stdlib.h>
 #include "sys.h"
@@ -23,7 +28,11 @@ int far mvcheck(int *val, int limit, int step, int dir)
     return 1;
 }
 
-/* Moves (*x, *y) dist along heading. */
+/* Moves (*x, *y) dist along heading, a byte angle (256 to the turn). 0x140 - heading
+   turns the game's compass heading into the angle of the sine table (a quarter turn
+   further round and the other way), and the high byte form (<< 8) is what cFstSinCos
+   indexes by. The sine and cosine (+-7FFFh) are scaled to dist and each nonzero step is
+   rounded away from zero, so a move is never lost to truncation. */
 void far move_along(int heading, int dist, int *x, int *y)
 {
     int dy;
