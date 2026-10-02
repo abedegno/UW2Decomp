@@ -272,7 +272,7 @@ void far update_screen(void)
     int i;
     int bit;
 
-    now = *Time & 0xFF;
+    now = GAME_TIME() & 0xFF;
     did = 0;
     if (now_adjust) {
         for (i = 0, bit = 1; i < 9; i++, bit <<= 1) {

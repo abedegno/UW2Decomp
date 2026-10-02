@@ -285,7 +285,7 @@ void far render_FB(void)
 /* Draw a frame and show it. strtime records the tick count at the start. */
 void far establish_view(void)
 {
-    strtime = *Time;
+    strtime = GAME_TIME();
     if (setup_vars()) {
         reset_db();
         do_2dclip();

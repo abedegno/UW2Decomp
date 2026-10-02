@@ -7,9 +7,11 @@ are unique across the whole tree. A source's DOS segment is its `/* target: */` 
 that need a particular segment's source (the link order, the overlay manager) ask for it by
 segment, never by file name, so renaming or moving a file needs no change here.
 
-    all_sources()        every .C and .ASM under src/ except src/include and src/port (the
-                         port's own code, docs/PORT.md, which the DOS build never compiles),
-                         sorted by path
+    all_sources()        every .C and .ASM under src/ except src/include, src/port (the
+                         port's own code, docs/PORT.md, which the DOS build never compiles)
+                         and src/replay (the record and replay code, which only the replay
+                         DOS build and the port compile), sorted by path
+    replay_sources()     the .C files of src/replay
     stem(path)           'GAMESTRN' for src/ui/GAMESTRN.C
     target(path)         the /* target: */ segment, or None
     by_stem()            {stem: path}
@@ -25,6 +27,7 @@ here = os.path.dirname(os.path.abspath(__file__)); root = os.path.dirname(here)
 SRC = os.path.join(root, 'src')
 INCLUDE = os.path.join(SRC, 'include')
 PORT = os.path.join(SRC, 'port')
+REPLAY = os.path.join(SRC, 'replay')
 _TARGET = re.compile(r'/\*\s*target:\s*(\w+)\s*\*/')
 
 
@@ -34,6 +37,7 @@ def all_sources():
         for p in glob.glob(os.path.join(SRC, '**', '*.' + ext), recursive=True):
             if os.path.commonpath([p, INCLUDE]) == INCLUDE: continue
             if os.path.commonpath([p, PORT]) == PORT: continue
+            if os.path.commonpath([p, REPLAY]) == REPLAY: continue
             out.append(p)
     out.sort()
     seen = {}
@@ -42,6 +46,10 @@ def all_sources():
         if s in seen: raise SystemExit(f'two sources with the stem {s}: {seen[s]} and {p}')
         seen[s] = p
     return out
+
+
+def replay_sources():
+    return sorted(glob.glob(os.path.join(REPLAY, '*.C')))
 
 
 def stem(path):

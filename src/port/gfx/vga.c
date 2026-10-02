@@ -142,6 +142,50 @@ void vga_get_dac(uint8_t rgb6[768])
     memcpy(rgb6, dac, sizeof dac);
 }
 
+/* The CPU's window onto video memory, A000:0000, for C that builds pointers into it (CUTS.C's
+   delta decoder, through PLANAR_STORE): a 64 KB region of the paragraph map whose bytes are
+   never read; a store through a pointer into it is a CPU write at that offset. A far pointer's
+   arithmetic wraps its offset at 64 KB, and the decoder's row arithmetic relies on that (a
+   row address minus a few bytes, a row table entry plus a column past FFFFh), so the window
+   has 64 KB of slack on each side, and a pointer anywhere in the three is the offset it
+   would have in DOS, modulo 64 KB. */
+static uint8_t window[0x30000];
+#define WINDOW (window + 0x10000)
+
+void vga_window_init(void)
+{
+    pm_add("A000 the VGA window", WINDOW, 0x10000, 0xA000);
+}
+
+int vga_in_window(const volatile void *p)
+{
+    return (const volatile uint8_t *)p >= window && (const volatile uint8_t *)p < window + sizeof window;
+}
+
+void port_vga_store(volatile void *p, unsigned char v)
+{
+    if (!vga_in_window(p)) {
+        if (p) {
+            port_log("planar store outside the window: %+td from A000:0000\n", (volatile uint8_t *)p - WINDOW);
+            *(volatile unsigned char *)p = v;
+            return;
+        }
+        port_fatal("a planar store through a null pointer (MK_FP(0xA000, 0) found no region?)");
+    }
+    vga_write((uint16_t)((volatile uint8_t *)p - WINDOW), v);
+}
+
+/* For the state dump (src/replay/REPLAY.C): a plane of video memory, a CRTC register. */
+const uint8_t *vga_plane(int p)
+{
+    return mem[p & 3];
+}
+
+uint8_t vga_reg_crtc(int i)
+{
+    return crtc[i & 31];
+}
+
 /* What the CRT controller shows: 320 pixels across; 200 rows when each row is scanned twice
    (maximum scan line 1, mode 13h and the game's mode 0) or 400 when once (mode 1). Each row
    starts at the display start plus the offset register's words, the pixel panning shifts it,

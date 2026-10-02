@@ -50,12 +50,12 @@ void far scroll_wait(int ticks, char mouse)
 
     mouse_release(1);
     key = mouse_get_input();
-    end = *Time + ticks;
+    end = GAME_TIME() + ticks;
     if (mouse_in_scroll && mouse)
         mouse_show();
     while (mouse_get_input() == key) {
         change_music_maybe();
-        if (ticks && *Time > end)
+        if (ticks && GAME_TIME() > end)
             break;
     }
     mouse_release(1);

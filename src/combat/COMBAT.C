@@ -698,7 +698,8 @@ void far clear_fight_state(void)
 void far player_attack(int swing)
 {
     int16 charge;
-    unsigned char held;
+    unsigned char held STACK_JUNK(0);   /* read before it is set when there is no attack key: see
+                                           FINDINGS.md */
     int tx;
     int ty;
     struct Tile far *tile;
@@ -752,12 +753,12 @@ void far player_attack(int swing)
             if (held) {
                 playerdat->noise = 10;
                 if (elapsed < 0) {
-                    otime = *Time;
+                    otime = GAME_TIME();
                     elapsed = 0;
                     return;
                 }
-                elapsed += (int)(*Time - otime);
-                otime = *Time;
+                elapsed += (int)(GAME_TIME() - otime);
+                otime = GAME_TIME();
                 while (elapsed > 0x10) {
                     play_pow += wd[4];
                     if (play_pow > 100)

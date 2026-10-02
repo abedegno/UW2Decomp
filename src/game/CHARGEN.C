@@ -74,7 +74,7 @@ void far init_char(char blank)
 {
     register int i;
 
-    srand(*Time);
+    SRAND(GAME_TIME());
     player->lefty = 1;
     player->exp = 0;
     player->skill_points = 1;
@@ -730,8 +730,8 @@ char far strt_chargen(void)
         goto fail;
     intoFarBuffer_ovr167_5DA(fd, buf + n, 10000);
     close(fd);
-    opts = (struct ChrOpt far *)(buf + n);
-    strs = (uint16 far *)(opts + 8);
+    opts = FILE_RECORDS(struct ChrOpt, buf + n, 8, "wnfwwwww");
+    strs = (uint16 far *)FILE_RECORDS_END(opts, 8);
     for (i = 0; i < 8; i++) {
         opts[i].strings = strs;
         while (*strs++ != 0)

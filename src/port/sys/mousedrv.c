@@ -14,7 +14,7 @@
 
 #define D dseg062_62a6
 #define W(o) ((int16_t)(D[(o)] | D[(o) + 1] << 8))
-#define SETW(o, v) (D[(o)] = (uint8_t)(v), D[(o) + 1] = (uint8_t)((uint16_t)(v) >> 8))
+#define SETW(o, v) port_setw(&D[(o)], (uint16_t)(v))
 
 static _Atomic int mick_x, mick_y, pos_x, pos_y, buttons;
 static float frac_x, frac_y;

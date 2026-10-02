@@ -179,10 +179,10 @@ void far mous_in_stat(void)
         }
     }
     grfx_quikfont(FONT_5X6P);
-    start = *Time;
+    start = GAME_TIME();
     do
         key = mouse_get_input_sp();
-    while (*Time - start < 8 && key < 3 && (key & 3));
+    while (GAME_TIME() - start < 8 && key < 3 && (key & 3));
 }
 
 void far panel_check(void)

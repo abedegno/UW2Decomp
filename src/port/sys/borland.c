@@ -284,7 +284,12 @@ int bc_rand(void)
     return (int)((rand_seed >> 16) & 0x7FFF);
 }
 
-void bc_srand(unsigned seed) { rand_seed = seed; }
+/* srand: the seed's low word, high word 0, as Borland's srand stores it (a host unsigned is
+   32 bits, and srand((unsigned)time(NULL)) passes them all). */
+void bc_srand(unsigned seed) { rand_seed = (uint16_t)seed; }
+
+/* The seed, for the state dump (src/replay/REPLAY.C). */
+uint32_t port_rand_seed(void) { return rand_seed; }
 
 long bc_time(long *t)
 {

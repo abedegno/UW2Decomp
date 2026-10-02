@@ -4,6 +4,10 @@ link them into build/port/uw2port.
 
     python3 tools/portbuild.py          build and link; exit 1 if any step fails
     python3 tools/portbuild.py --run    then run it, passing UW2PORT_ARGS (docs/BUILDING.md)
+    python3 tools/portbuild.py --debug  the debug build (make port-debug): -g and UBSan's
+                                        -fsanitize=null, in build/port-debug/uw2port; a null
+                                        dereference is reported with its file and line and the
+                                        program goes on, so a replay lists every one it meets
 
 The port's own C is compiled with its headers and the game's; the platform backend (SDL3,
 src/port/platform/sdl3) with SDL's flags from pkg-config, and the link takes SDL's libraries.
@@ -66,9 +70,21 @@ def main(argv):
     ap = argparse.ArgumentParser(description='Build and link the native port.')
     ap.add_argument('--cc', default=os.environ.get('CC', 'cc'))
     ap.add_argument('--run', action='store_true')
+    ap.add_argument('--debug', action='store_true')
     a = ap.parse_args(argv)
+    global OUT, EXE
+    link_extra = []
+    if a.debug:
+        OUT = os.path.join(root, 'build', 'port-debug')
+        EXE = os.path.join(OUT, 'uw2port')
+        portcheck.OUT = OUT
+        san = ['-g', '-fsanitize=null']
+        portcheck.FLAGS = portcheck.FLAGS + san
+        PORT_FLAGS.extend(san)
+        link_extra = ['-fsanitize=null']
     os.makedirs(OUT, exist_ok=True)
     game = [p for p in sources.all_sources() if p.upper().endswith('.C') and not portcheck.dos_only(p)]
+    game += sources.replay_sources()     # the record and replay hooks' code, shared with the replay DOS build
     with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as ex:
         gres = list(ex.map(lambda p: portcheck.compile_one(a.cc, p), game))
         pres = list(ex.map(lambda p: compile_port(a.cc, p), port_sources()))
@@ -81,7 +97,7 @@ def main(argv):
     warn = [(p, e) for p, rc, e, o in pres if o and 'warning' in e]
     for p, e in warn:
         print(f'{os.path.relpath(p, root)}: warnings\n' + '\n'.join(l for l in e.split('\n') if 'warning' in l)[:2000])
-    r = subprocess.run([a.cc, '-o', EXE] + objs + pkg_config('--libs'), capture_output=True, text=True, cwd=root)
+    r = subprocess.run([a.cc, '-o', EXE] + link_extra + objs + pkg_config('--libs'), capture_output=True, text=True, cwd=root)
     if r.returncode:
         und = sorted(set(re.findall(r'"_?([A-Za-z_]\w*)", referenced from', r.stderr)))
         print(f'link failed: {len(und)} undefined names' + (': ' + ' '.join(und) if und else ''))

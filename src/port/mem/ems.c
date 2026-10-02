@@ -17,7 +17,10 @@ uint16 ems_frame;                               /* EMS.C's DS:22CE */
 static uint16 ems_pages;
 static uint16 ems_handle = 0xFFFF;
 static unsigned char *store;
-static unsigned char frame[0x10000];
+/* The frame: 64 KB mapped twice in a row, so that a pointer run past its end wraps to its
+   start as a far pointer's offset does (mem/frame.c). */
+unsigned char *port_frame_alloc(void);
+static unsigned char *frame;
 static int slot[4] = { -1, -1, -1, -1 };        /* the logical page in each frame slot */
 
 static int map(unsigned physical, unsigned logical)
@@ -43,8 +46,9 @@ int seg013_1D3C_A(unsigned min_pages, unsigned max_pages)
     if (!store) return 0;
     ems_handle = 1;
     ems_frame = FRAME_SEG;
+    if (!frame && !(frame = port_frame_alloc())) port_fatal("ems: cannot map the page frame");
     pm_remove(frame);
-    pm_add("EMS page frame", frame, sizeof frame, FRAME_SEG);
+    pm_add("EMS page frame", frame, 0x10000, FRAME_SEG);
     seg052_519C_E4D4 = ems_handle;
     port_log("ems: %u pages\n", ems_pages);
     return ems_pages;

@@ -27,3 +27,41 @@ void cInit3d(void)
     for (i = 0; i < 8; i++) SETB(0x558E + i, dseg062_62a6[(uint16_t)(si + i)]);
     seg003_0272_31E7(0x558E);
 }
+
+uint16_t seg004_uncmp(uint16_t bx, uint16_t ax, uint16_t bp, const uint8_t *pal, uint8_t dh);
+
+/* cFrmtoRaw(data, pal, mode): the image whose size word data points at, decoded through
+   uncmp_tab (3d/expand.c) by its format byte mode, with the auxiliary palette pal and no
+   shading (DH FFh). Returns the pixels' far pointer, the paragraph the decoder returned and
+   offset 0, as DX:AX. */
+void *cFrmtoRaw(void *data, unsigned char *pal, unsigned char mode)
+{
+    uint16_t ax = seg004_uncmp(mode, (uint16_t)FP_SEG(data), (uint16_t)FP_OFF(data), pal, 0xFF);
+    return port_mk_fp(ax, 0);
+}
+
+/* cPlaceFB(x, y, w, h): the frame's screen offset (0C7h - y) * 80 + x / 4, an 8-bit multiply
+   (mul cl), into 370D:094E, then setup_frame_buf (GRENTRY.ASM's _7A8) for w by h. */
+void cPlaceFB(int x, int y, int w, int h)
+{
+    uint16_t ax = (uint16_t)((uint8_t)(0xC7 - y) * 0x50);
+    ax = (uint16_t)(ax + ((uint16_t)x >> 2));
+    SETW(0x94E, ax);
+    seg003_0272_7A8((uint16_t)w, (uint16_t)h);
+}
+
+/* cFBtoScreen, cFillFB(colour), cDimFB(shade) and cLiteFB(count): GRENTRY.ASM's _7F9, _6E4,
+   _764 and _788 */
+void cFBtoScreen(void) { seg003_0272_7F9(); }
+void cFillFB(int c) { seg003_0272_6E4((uint8_t)c); }
+void CallbackFunctionSleepRelated_seg021_22FD_CB7(int shade) { seg003_0272_764((uint16_t)shade); }
+void Callback_seg021_22FD_CEA(int count) { seg003_0272_788((uint16_t)count); }
+
+/* cZoom(z): the word after the one seg052:[0158] points at (in the renderer's data) set to z. */
+void cZoom(unsigned z)
+{
+    uint16_t di = (uint16_t)(seg052_519C[0x158] | seg052_519C[0x159] << 8);
+    di = (uint16_t)(di + 2);
+    seg052_519C[di] = (uint8_t)z;
+    seg052_519C[(uint16_t)(di + 1)] = (uint8_t)(z >> 8);
+}

@@ -8,6 +8,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* A little-endian word store that evaluates its value once: the port's SETW macros, written
+   as two byte stores, evaluated the value twice, so `SETW(o, W(o) + n)` saw its own new low
+   byte the second time and got the high byte wrong whenever the low byte carried. */
+static inline void port_setw(uint8_t *p, uint16_t v)
+{
+    p[0] = (uint8_t)v;
+    p[1] = (uint8_t)(v >> 8);
+}
+
 /* Diagnostics. port_log prints when UW2PORT_TRACE is set in the environment (or -v), and
    port_fatal stops the program with a message. port_halt is where a stub or an unported path
    ends up: the game's thread parks, the window stays, and the message says why. */
@@ -55,6 +64,11 @@ uint8_t vga_read(uint16_t off);                /* a CPU read of A000:off (loads 
 void vga_set_mode(int mode);                   /* int 10h, AH = 0 */
 void vga_scanout(uint8_t *pixels, int *w, int *h, uint8_t rgb6[768]);
 void vga_get_dac(uint8_t rgb6[768]);
+const uint8_t *vga_plane(int p);               /* for the state dump */
+void vga_window_init(void);                    /* A000:0000 in the paragraph map */
+int vga_in_window(const volatile void *p);     /* p points into it */
+void port_vga_store(volatile void *p, unsigned char v);
+uint8_t vga_reg_crtc(int i);
 
 /* Ports other than the VGA's (sys/borland.c dispatches outportb and inportb). */
 void port_outb(unsigned port, uint8_t v);

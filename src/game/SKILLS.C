@@ -374,8 +374,8 @@ unsigned char far dream(int sleepfactor)
         game_sprint(0x13 - sleepfactor);        /* "Your sleep is uneasy." or "You feel rested." */
         return 1;
     }
-    timer = *Time;
-    while (timer + 0x180 > *Time)
+    timer = GAME_TIME();
+    while (timer + 0x180 > GAME_TIME())
         ;
     game_sprint(0x13 - sleepfactor);
     return 0;

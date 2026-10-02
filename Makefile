@@ -11,6 +11,7 @@
 #   make hooks         install the git pre-push hook that runs make check
 #   make port-check    compile the C for the host, compile only (docs/PORT.md, Milestone 1)
 #   make port          compile the C for the host and link it with the stubs: build/port/uw2port
+#   make port-debug    the same with -g and UBSan's -fsanitize=null: build/port-debug/uw2port
 #
 # make setup needs the Borland disk images the first time:
 #   make setup TC_DISKS="/path/to/Turbo C++ 1.01" TASM_DISKS="/path/to/Turbo Assembler 2.0"
@@ -19,7 +20,7 @@ PY := $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 TC_DISKS ?=
 TASM_DISKS ?=
 
-.PHONY: game exact check check-all boot setup setup-emu2 hooks port-check port help
+.PHONY: game exact check check-all boot setup setup-emu2 hooks port-check port port-debug help
 .DEFAULT_GOAL := game
 
 game:
@@ -67,6 +68,9 @@ port-check:
 
 port:
 	@$(PY) tools/portbuild.py
+
+port-debug:
+	@$(PY) tools/portbuild.py --debug
 
 help:
 	@sed -n '1,/^$$/p' Makefile

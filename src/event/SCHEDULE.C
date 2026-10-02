@@ -109,7 +109,7 @@ unsigned char far do_migrations(void)
         if (result) return result;
     }
     SCD_dseg_67d6_8634->migrations = 0;
-    Sched_Save(0);
+    AX_LAST(Sched_Save(0));             /* its result is left in AX */
 }
 
 void far Sched_SetBuf(int ofs, int seg)

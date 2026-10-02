@@ -13,7 +13,7 @@ extern unsigned char seg_5F5D[];
 /* seg_5F5D is 5F5D:0004, so offset o of the segment is seg_5F5D[o - 4] */
 #define V(o) (seg_5F5D + (uint16_t)(o) - 4)
 #define VW(o) ((uint16_t)(V(o)[0] | V(o)[1] << 8))
-#define VSETW(o, v) (V(o)[0] = (uint8_t)(v), V(o)[1] = (uint8_t)((uint16_t)(v) >> 8))
+#define VSETW(o, v) port_setw(V(o), (uint16_t)(v))
 #define VB(o) (V(o)[0])
 
 unsigned seg003_0272_49AE(int n);
@@ -135,3 +135,48 @@ void vfree(int block)
 {
     vfree_regs((uint16_t)block);
 }
+
+
+/* save_rect (+1EF, C entry _save_rect): the block's record gets the rectangle (x, y, w, h; y
+   its top), and the rectangle is copied into the block through pen 109h, whose video memory
+   offset is the block (370D:0646) and whose span writer saves (VIDMODE's _2DF3). 0, or 1 when
+   no record has the block. */
+int save_rect_regs(int block, int x, int y, int w, int h)
+{
+    uint16_t di = 0x0C;
+    for (;;) {
+        if (VW(di) == (uint16_t)block) break;
+        di += 0x0D;
+        if (di >= VW(0x0A)) return 1;
+    }
+    VSETW(di + 5, x);
+    VSETW(di + 7, y);
+    VSETW(di + 9, w);
+    VSETW(di + 0x0B, h);
+    SETW(0x646, block);
+    set_the_color(0x109);
+    rectangle(x, y, (int16_t)(x + w - 1), (int16_t)(y - VW(di + 0x0B) + 1));
+    return 0;
+}
+
+/* restore_rect (+268, C entry _restore_rect): the block back to the rectangle save_rect
+   recorded, through pen 10Ah (offset at 370D:0648, the restoring span writer _2F96). */
+int restore_rect_regs(int block)
+{
+    uint16_t si = 0x0C;
+    int16_t x, y;
+    for (;;) {
+        if (VW(si) == (uint16_t)block) break;
+        si += 0x0D;
+        if (si >= VW(0x0A)) return 1;
+    }
+    SETW(0x648, block);
+    set_the_color(0x10A);
+    x = (int16_t)VW(si + 5);
+    y = (int16_t)VW(si + 7);
+    rectangle(x, y, (int16_t)(x + VW(si + 9) - 1), (int16_t)(y - VW(si + 0x0B) + 1));
+    return 0;
+}
+
+void save_rect(int block, int x, int y, int w, int h) { save_rect_regs(block, x, y, w, h); }
+void restore_rect(int block) { restore_rect_regs(block); }

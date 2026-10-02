@@ -1473,10 +1473,10 @@ void far play_instrument(register int which)
                     if (ok)
                         AIL_send_channel_voice_message(music_driver, ch + 0x8F, n, 0x7F);
                     last = n;
-                    t = *Time;
+                    t = GAME_TIME();
                 }
             }
-            if (t > 0 && *Time - t > 0x80) {
+            if (t > 0 && GAME_TIME() - t > 0x80) {
                 t = -1;
                 if (ok)
                     AIL_send_channel_voice_message(music_driver, ch + 0x7F, last, 0);
@@ -1586,7 +1586,7 @@ void far change_music_maybe(void)
         return;
     if (curmusic == MUSIC_VICTORY && !music_over())
         return;
-    if (COMBAT(curmusic) && *Time > lastcombattime + 0xA00) {
+    if (COMBAT(curmusic) && GAME_TIME() > lastcombattime + 0xA00) {
         if (player->drawn)
             newmusic = MUSIC_ARMED;
         else
@@ -1594,15 +1594,15 @@ void far change_music_maybe(void)
     }
     if (newmusic != 0 && newmusic != curmusic) {
         if (COMBAT(curmusic) && COMBAT(newmusic)) {
-            if (*Time > theme_changed + 0x800) {
+            if (GAME_TIME() > theme_changed + 0x800) {
                 load_new_music(newmusic, 1);
-                theme_changed = *Time;
+                theme_changed = GAME_TIME();
             } else
                 newmusic = curmusic;
         } else
             load_new_music(newmusic, 1);
         if (COMBAT(newmusic))
-            theme_changed = *Time;
+            theme_changed = GAME_TIME();
     } else if (music_over()) {
         if ((!(WALKING(curmusic) || COMBAT(curmusic) || curmusic == MUSIC_INTRO) || WALKING(curmusic))
                 && scrmode == 1)
@@ -1613,7 +1613,7 @@ void far change_music_maybe(void)
             newmusic = curmusic;
         load_new_music(newmusic, 1);
         if (COMBAT(newmusic))
-            theme_changed = *Time;
+            theme_changed = GAME_TIME();
         else
             theme_changed = 0;
     }

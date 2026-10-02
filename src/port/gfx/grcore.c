@@ -28,9 +28,35 @@ void seg003_call(uint16_t off, uint16_t si)
 {
     char why[64];
     switch (off) {
+    /* GRCORE.ASM's jump table entries for the span writers, which some code stores in 4112 in
+       place of the routine itself (copy_visible_to_hidden's 52CC) */
+    case 0x52C9: off = 0x2D83; break;
+    case 0x52CC: off = 0x2F18; break;
+    case 0x52CF: off = 0x2D0D; break;
+    case 0x52D2: off = 0x2E79; break;
+    case 0x52D5: off = 0x2E3A; break;
+    case 0x52D8: off = 0x303B; break;
+    case 0x52DB: off = 0x2FD6; break;
+    case 0x52DE: off = 0x2F96; break;
+    case 0x52E1: off = 0x2DF3; break;
+    case 0x52E7: off = 0x2C9A; break;
+    case 0x52EA: off = 0x283C; break;
+    default: break;
+    }
+    if (seg003_fb_span(off, si)) return;
+    switch (off) {
+    case 0x2C9A: case 0x2D0D: case 0x2DF3: case 0x2E3A: case 0x2E79: case 0x2F18: case 0x2F96:
+        seg003_span(off, si); return;
     case 0x2D83: seg003_0272_2D83(si); return;
     case 0x5372: seg003_0272_5372(si); return;
     case 0x5467: seg003_0272_5467(si); return;
+    case 0x5578: seg003_0272_5578(si); return;
+    case 0x568B: seg003_0272_568B(si); return;
+    case 0x56E3: seg003_0272_56E3(si); return;
+    case 0x581B: seg003_0272_581B(si); return;
+    case 0x586D: seg003_0272_586D(si); return;
+    case 0x58C7: seg003_0272_58C7(si); return;
+    case 0x58F8: seg003_0272_58F8(si); return;
     /* rets: _283C, nullsub_1 (31E5, 31E6), the five at 2C95 .. 2C99 */
     case 0x283C: case 0x31E5: case 0x31E6:
     case 0x2C95: case 0x2C96: case 0x2C97: case 0x2C98: case 0x2C99:
@@ -109,3 +135,107 @@ unsigned seg003_0272_49AE(int n)
     SETW(0x410A, bx);
     return ax;
 }
+
+/* GRCORE.ASM's other entries, each loading the registers its routine takes. */
+void copy_visible_to_hidden(void) { seg003_0272_327D(); }
+void copy_hidden_to_visible(void) { seg003_0272_328F(); }
+
+/* _4A3A -> _2977: a virtual screen (width, BX, CX: see vidmode.c) */
+void seg003_0272_4A3A(int ax, int bx, int cx) { seg003_0272_2977((uint16_t)ax, (uint16_t)bx, (uint16_t)cx); }
+void vscreen_focus(int x, int y) { seg003_0272_2A0D((uint16_t)x, (uint16_t)y); }
+
+/* box -> _336E: clip_rect, then ubox */
+void box(int x0, int y0, int x1, int y1)
+{
+    int16_t ax = (int16_t)x0, bx = (int16_t)y0, cx = (int16_t)x1, dx = (int16_t)y1;
+    if (clip_rect(&ax, &bx, &cx, &dx)) seg003_0272_3371(ax, bx, cx, dx);
+}
+
+void uhline(int x0, int y, int x1) { seg003_0272_34AE((int16_t)x0, (int16_t)y, (int16_t)x1); }
+/* uvline: x, y0, y1 (the wrapper puts the third argument in DX) */
+void uvline(int x, int y0, int y1) { seg003_0272_3324((int16_t)x, (int16_t)y0, (int16_t)y1); }
+void seg003_0272_4B93(int x, int y0, int y1) { seg003_0272_331A((int16_t)x, (int16_t)y0, (int16_t)y1); }
+void seg003_0272_4BDA(int x0, int y, int x1) { seg003_0272_347F((int16_t)x0, (int16_t)y, (int16_t)x1); }
+void seg003_0272_4C64(int x, int y0, int y1) { seg003_0272_3321((int16_t)x, (int16_t)y0, (int16_t)y1); }
+
+/* gr_read_pixel -> 529F (_30FB, unclipped); _47A0 -> 52A2 (_30E3, -1 outside the window);
+   plot_pixel -> 52A5 (_3094); _4824 -> 52A8 (_30AC) */
+unsigned char gr_read_pixel(int x, int y) { return (unsigned char)seg003_0272_30FB((uint16_t)x, (uint16_t)y); }
+int seg003_0272_47A0(int x, int y) { return (int16_t)seg003_0272_30E3((int16_t)x, (int16_t)y); }
+void plot_pixel(int x, int y) { seg003_0272_3094((int16_t)x, (int16_t)y); }
+void seg003_0272_4824(int x, int y) { seg003_0272_30AC((uint16_t)x, (uint16_t)y); }
+
+/* The string entries copy the far string to 370D:4FA8 first (above the library's stack):
+   repne scasb over at most 84h bytes for the 0, then rep movsb of the length plus two (the
+   string, its 0 and the byte after), or 85h bytes when there is no 0 in the first 84h. */
+static uint16_t copy_string(const char *s)
+{
+    uint16_t n = 0, len;
+    while (n < 0x84 && s[n]) n++;
+    len = n < 0x84 ? (uint16_t)(n + 2) : 0x85;
+    for (n = 0; n < len; n++) SETB(0x4FA8 + n, (uint8_t)s[n]);
+    return 0x4FA8;
+}
+
+uint16_t seg003_0272_43C5(uint16_t si);
+void seg003_0272_3B36(uint16_t ax, uint16_t bx, uint16_t si);
+void seg003_0272_3B8F(uint16_t ax, uint16_t bx, uint16_t si);
+
+/* string_to_screen -> 527E (_3B36); _44DC -> 5287 (_3B8F, shadowed); string_width -> _43C5 */
+void string_to_screen(char *s, int x, int y)
+{
+    uint16_t si = copy_string(s);
+    seg003_0272_3B36((uint16_t)x, (uint16_t)y, si);
+}
+
+void seg003_0272_44DC(char *s, int x, int y)
+{
+    uint16_t si = copy_string(s);
+    seg003_0272_3B8F((uint16_t)x, (uint16_t)y, si);
+}
+
+int string_width(char *s)
+{
+    return (int16_t)seg003_0272_43C5(copy_string(s));
+}
+
+/* The other bitmap entries: _5025 -> _21ED (from video memory), fbshow -> _2214 (into the frame
+   buffer), _50E7 -> _2B62 and _511C -> _222B (the linear buffer), vcopyfb -> _2242, vcopy ->
+   _2250; and fbuf_setcolor -> GRENTRY's _B9B. */
+void seg003_0272_5025(int off, int x, int y, int w, int h, int xo, int yo)
+{
+    SETW(0x0DC6, xo);
+    SETW(0x0DC8, yo);
+    seg003_0272_21ED((int16_t)x, (int16_t)y, (uint16_t)off, 0xA000, (int16_t)w, (int16_t)h);
+}
+
+void fbshow(void *bm, int x, int y, int w, int h)
+{
+    SETW(0x0DC6, 0);
+    SETW(0x0DC8, 0);
+    seg003_0272_2214((int16_t)x, (int16_t)y, (uint16_t)FP_OFF(bm), (uint16_t)FP_SEG(bm), (int16_t)w, (int16_t)h);
+}
+
+void seg003_0272_50E7(int ax, int dx, int bx, int cx)
+{
+    seg003_0272_2B62((uint16_t)ax, (uint16_t)bx, (uint16_t)cx, (uint16_t)dx);
+}
+
+void seg003_0272_511C(unsigned char *bm, int x, int y, int w, int h)
+{
+    SETW(0x0DC6, 0);
+    SETW(0x0DC8, 0);
+    seg003_0272_222B((int16_t)x, (int16_t)y, (uint16_t)FP_OFF(bm), (uint16_t)FP_SEG(bm), (int16_t)w, (int16_t)h);
+}
+
+void vcopyfb(int x, int y, int w, int h, int di)
+{
+    seg003_0272_2242((int16_t)x, (int16_t)y, (int16_t)w, (int16_t)h, (uint16_t)di);
+}
+
+void vcopy(int x, int y, int w, int h, int x2, int y2)
+{
+    seg003_0272_2250((int16_t)x, (int16_t)y, (int16_t)w, (int16_t)h, (uint16_t)x2, (uint16_t)y2);
+}
+
+void fbuf_setcolor(int c) { seg003_0272_B9B((uint16_t)c); }

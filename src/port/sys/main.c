@@ -17,6 +17,11 @@
      --exit-after MS        quit MS milliseconds after start
      --exit-on-halt         quit (status 3) where the port stops, at a stub or an unported path,
                             instead of leaving the window up
+     --record               record the session to RECORD.OUT in the home directory, with the
+                            state dumps in STATE.OUT (src/replay/REPLAY.C; F12 ends it)
+     --replay FILE          replay the recording FILE (copied to the home directory as
+                            REPLAY.IN) instead of reading the clock, keyboard and mouse, writing
+                            the state dumps to STATE.OUT; the game quits at its end
      -v                     trace (also UW2PORT_TRACE=1)
    Anything else goes to the game as its own command line (the dungeon file, UWEDIT.C). */
 #include <stdarg.h>
@@ -31,6 +36,7 @@ void borland_init(void);
 void port_crash_handlers(void);
 
 int port_trace;
+extern int16_t rp_request;              /* src/replay/REPLAY.C: 0 off, 1 record, 2 replay */
 
 void port_log(const char *fmt, ...)
 {
@@ -57,8 +63,11 @@ void port_backtrace(void);
 
 static int exit_on_halt;
 
+void rp_halt(void);
+
 void port_halt(const char *why)
 {
+    rp_halt();
     fprintf(stderr, "uw2port: %s; the game stops here%s\n", why, exit_on_halt ? "" : " (the window stays)");
     if (port_trace) port_backtrace();
     fflush(stdout);
@@ -101,11 +110,33 @@ static void on_lifecycle(int ev)
     port_log("lifecycle event %d\n", ev);
 }
 
+/* --replay: the recording goes into the home directory as REPLAY.IN, where the game's own
+   open finds it. */
+static int copy_to_home(const char *src, const char *home, const char *name)
+{
+    char path[1200];
+    unsigned char buf[65536];
+    size_t n;
+    FILE *in = fopen(src, "rb"), *out;
+    snprintf(path, sizeof path, "%s/%s", home, name);
+    out = in ? fopen(path, "wb") : NULL;
+    if (!out) {
+        fprintf(stderr, "uw2port: cannot copy %s to %s\n", src, path);
+        if (in) fclose(in);
+        return 1;
+    }
+    while ((n = fread(buf, 1, sizeof buf, in)) > 0) fwrite(buf, 1, n, out);
+    fclose(in);
+    fclose(out);
+    return 0;
+}
+
 static void usage(void)
 {
     fprintf(stderr, "usage: uw2port [--data DIR] [--home DIR] [--scale N] [--no-aspect] [--no-integer]\n"
                     "               [--hidden] [--screenshot-after MS] [--screenshot FILE] [--window-shot FILE]\n"
                     "               [--shot-at-flip K:FILE] [--exit-after MS] [--exit-on-halt]\n"
+                    "               [--record | --replay FILE]\n"
                     "               [-v] [game arguments]\n");
     exit(2);
 }
@@ -113,7 +144,7 @@ static void usage(void)
 int main(int argc, char *argv[])
 {
     static char home_buf[1024], exe[1200];
-    const char *data = ".", *home = getenv("UW2PORT_HOME");
+    const char *data = ".", *home = getenv("UW2PORT_HOME"), *replay = NULL;
     PlatConfig cfg;
     PlatHooks hooks;
     int i;
@@ -143,6 +174,8 @@ int main(int argc, char *argv[])
         }
         else if (!strcmp(a, "--exit-after") && i + 1 < argc) cfg.exit_after_ms = atol(argv[++i]);
         else if (!strcmp(a, "--exit-on-halt")) exit_on_halt = 1;
+        else if (!strcmp(a, "--record")) rp_request = 1;
+        else if (!strcmp(a, "--replay") && i + 1 < argc) { rp_request = 2; replay = argv[++i]; }
         else if (!strcmp(a, "-v")) port_trace = 1;
         else if (!strcmp(a, "--help") || !strcmp(a, "-h")) usage();
         else if (a[0] == '-' && a[1] == '-') usage();
@@ -159,6 +192,9 @@ int main(int argc, char *argv[])
         return 1;
     }
     if (plat_resolve("UW2.EXE", PLAT_READ, exe, sizeof exe) || port_load_exe(exe)) return 1;
+    vga_window_init();
+    if (rp_request != 1 && rp_request != 2) rp_request = 0;   /* the port reads the world */
+    if (replay && copy_to_home(replay, home, "REPLAY.IN")) return 1;
     borland_init();
     port_crash_handlers();
     /* The game finds its home through UWHOME; the port's home directory plays that part,

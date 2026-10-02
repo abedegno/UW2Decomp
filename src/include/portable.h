@@ -111,6 +111,103 @@ void port_far_copy(void *dst, const void *src, unsigned n);
 #define AX_RESULT(v) return (v)
 #endif
 
+/* AX_LAST(e): the last statement of such a function when it is an expression (a call) whose
+   value the callers find in AX: the statement as it was, (e);, under Turbo C, and `return (e);`
+   on the host. */
+#ifdef __TURBOC__
+#define AX_LAST(e) (e)
+#else
+#define AX_LAST(e) return (e)
+#endif
+
+/* The record and replay hooks (docs/PORT.md, "The differential test"): the few places where
+   the game reads the world outside the program. GAME_TIME() is a read of the 1/256 s game
+   clock *Time, KEY() the next key event with the key states it leaves (key_on, Shift, Ctrl,
+   Alt, CapsLock), MOUSE() the mouse motion into *MouseDx and *MouseDy, MBUTTONS() the
+   buttons, JOY_READ() and JOY_BUTTONS() the joystick into joy_position and joy_buttons,
+   WALL_TIME(p) the time of day (its callers all pass a null p), SRAND(s) a seed given to
+   srand, and CHECKPOINT(n) a named point where both builds dump the game state.
+
+   - The DOS build: the original tokens (CHECKPOINT is nothing), so the bytes are the same;
+     the gate proves it.
+   - The replay DOS build, the modding build with the sources that use these compiled with
+     -DREPLAY and src/replay/REPLAY.C linked in (tools/replay.py): calls into REPLAY.C, which
+     records each value the game reads to a file, or replays the values from one.
+   - The port: the same calls, into the same REPLAY.C; with neither --record nor --replay
+     they read the world as the DOS build does. */
+#if defined(__TURBOC__) && !defined(REPLAY)
+#define GAME_TIME()     (*Time)
+#define KEY()           key()
+#define MOUSE()         mouse()
+#define MBUTTONS()      mbuttons()
+#define JOY_READ()      seg021_22FD_7CD()
+#define JOY_BUTTONS()   seg021_22FD_809()
+#define WALL_TIME(p)    time(p)
+#define SRAND(s)        srand(s)
+#define CHECKPOINT(n)
+#else
+uint32 far rp_time(void);
+int far rp_key(void);
+void far rp_mouse(void);
+int far rp_mbuttons(void);
+void far rp_joy(void);
+void far rp_joyb(void);
+int32 far rp_walltime(void);
+void far rp_srand(unsigned seed);
+void far rp_checkpoint(int n);
+#define GAME_TIME()     rp_time()
+#define KEY()           rp_key()
+#define MOUSE()         rp_mouse()
+#define MBUTTONS()      rp_mbuttons()
+#define JOY_READ()      rp_joy()
+#define JOY_BUTTONS()   rp_joyb()
+#define WALL_TIME(p)    rp_walltime()
+#define SRAND(s)        rp_srand(s)
+#define CHECKPOINT(n)   rp_checkpoint(n)
+#endif
+
+/* PLANAR_STORE(p, v): store the byte v through p, a far pointer into the VGA's window at
+   A000:0000, where the sequencer's map mask (set with outportb beforehand) chooses the planes
+   the byte goes to. The original store under Turbo C; on the host a pointer cannot apply the
+   map mask, so the store goes to the emulated VGA (port_vga_store, src/port/gfx/vga.c), which
+   does what the card does with a CPU write. CUTS.C's delta decoder writes the screen this way. */
+#ifdef __TURBOC__
+#define PLANAR_STORE(p, v) (*(p) = (v))
+#else
+void port_vga_store(volatile void *p, unsigned char v);
+#define PLANAR_STORE(p, v) port_vga_store((p), (v))
+#endif
+
+/* FILE_RECORDS(T, p, n, layout) and FILE_RECORDS_END(q, n): n records of struct T that the
+   original lays straight over file data at p (CHARGEN.C's DATA\chrgen.dat), and what follows
+   them in the file. Under Turbo C the original tokens, (T far *)(p) and (q + n). On the host
+   such a struct holds pointers, so it has the host's layout (HOST_LAYOUT_BEGIN), not the
+   file's: the records are copied into host structs field by field (src/port/sys/records.c),
+   by layout, one letter a field in order: w a 16-bit word, n a near pointer (2 bytes in the
+   file), f a far pointer (4 bytes); the pointers start null, as the code sets them before it
+   reads them. FILE_RECORDS_END then gives the file's bytes after the n records. */
+#ifdef __TURBOC__
+#define FILE_RECORDS(T, p, n, layout) ((T far *)(p))
+#define FILE_RECORDS_END(q, n) ((q) + (n))
+#else
+void *port_file_records(void *p, int n, const char *layout, unsigned host_size);
+void *port_file_records_end(const void *q);
+#define FILE_RECORDS(T, p, n, layout) ((T *)port_file_records((p), (n), (layout), sizeof(T)))
+#define FILE_RECORDS_END(q, n) port_file_records_end(q)
+#endif
+
+/* STACK_JUNK(v): the initialiser of a local the original reads before it ever sets it. In DOS
+   the read gets whatever the stack held there, which depends on the calls before and on the
+   timer interrupts that push onto the game's stack, so two DOS runs of one recording can
+   differ (docs/FINDINGS.md lists the sites). Nothing under Turbo C, so the DOS bytes are the
+   same; `= v` in the replay build and the port, which then both start from v, the value with
+   which DOS takes the path it takes when the stack holds zero. */
+#if defined(__TURBOC__) && !defined(REPLAY)
+#define STACK_JUNK(v)
+#else
+#define STACK_JUNK(v) = (v)
+#endif
+
 /* HOST_LAYOUT_BEGIN and HOST_LAYOUT_END, around a struct that holds pointers. The port packs
    every struct as Turbo C does (src/port/compat.h), so that file records and the structs laid
    over buffers keep their DOS layout; a struct with pointer fields cannot keep it, since a

@@ -19,7 +19,7 @@
 
 #define D dseg062_62a6
 #define W(o) ((uint16_t)(D[(o)] | D[(o) + 1] << 8))
-#define SETW(o, v) (D[(o)] = (uint8_t)(v), D[(o) + 1] = (uint8_t)((v) >> 8))
+#define SETW(o, v) port_setw(&D[(o)], (uint16_t)(v))
 
 static _Atomic uint16_t write_ptr = 0x300;     /* KBDINT.ASM's _590 */
 static atomic_flag lock = ATOMIC_FLAG_INIT;

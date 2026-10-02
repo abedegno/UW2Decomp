@@ -262,7 +262,7 @@ char far simple_fizix(int turn)
                 else if (PN.acc[2] == 0 && !flying)
                     PN.acc[2] = -4;
                 parse_player_terr(nvokTerr, 0);
-                SET_FRAME(ThePlayer, ((unsigned)*Time & 0xFF) >> 6);
+                SET_FRAME(ThePlayer, ((unsigned)GAME_TIME() & 0xFF) >> 6);
                 oldP = curP;
                 curP = &calc;
                 curP->index = 1;
@@ -565,7 +565,7 @@ void far phys_affect_player(void)
     }
     SET_FINEX_UNSIGNED(ThePlayer, (PN.x >> 5) & 7);
     SET_FINEY(ThePlayer, (PN.y >> 5) & 7);
-    SET_FRAME(ThePlayer, ((unsigned)*Time & 0xFF) >> 6);
+    SET_FRAME(ThePlayer, ((unsigned)GAME_TIME() & 0xFF) >> 6);
     if ((sq = (PN.x >> 8) + ((PN.y >> 8) << 6)) != GrSq)
     {
         change_GrSq(sq, PN.z >> 3);

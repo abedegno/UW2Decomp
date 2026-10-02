@@ -143,7 +143,7 @@ int far babl_hack(int16 far *args)
         dx = 1;
         dy = 1;
         count = 0;
-        srand(time(0));
+        SRAND(WALL_TIME(0));
         if (side == 1 || side == 2)
             dx = -1;
         if (side > 1)

@@ -4,11 +4,4 @@
    declared size. A real replacement takes these names out of this file. */
 #include "stub.h"
 
-void CallbackFunctionSleepRelated_seg021_22FD_CB7(void) { port_stub("CallbackFunctionSleepRelated_seg021_22FD_CB7"); }  /* void (int) */
-void Callback_seg021_22FD_CEA(void) { port_stub("Callback_seg021_22FD_CEA"); }  /* void (int) */
-void cFBtoScreen(void) { port_stub("cFBtoScreen"); }  /* void (void) */
-void cFillFB(void) { port_stub("cFillFB"); }  /* void (int) */
-void cFrmtoRaw(void) { port_stub("cFrmtoRaw"); }  /* void *(void *, unsigned char *, unsigned char) */
-void cPlaceFB(void) { port_stub("cPlaceFB"); }  /* void (int, int, int, int) */
 void cRender(void) { port_stub("cRender"); }  /* void (void) */
-void cZoom(void) { port_stub("cZoom"); }  /* void (unsigned int) */

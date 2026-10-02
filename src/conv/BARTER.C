@@ -153,7 +153,7 @@ void far barter_init(void)
             showSelection_ovr097_E83(side, slot);
         }
     barter_result = 0;
-    srand(Obj_MemTPtr(talking_to));
+    SRAND(Obj_MemTPtr(talking_to));
     greed = range(crit->haggle * 6, -25, 25);
     patience = range(crit->patience, -20, 100);
     npc_assess = range((15 - crit->shrewd) * 6, -25, 50);
@@ -808,9 +808,9 @@ int far assess_value(int use_likes, int item, int accuracy)
             if (value == 0) value = 1;
         } else value = 0;
     }
-    srand(item);
+    SRAND(item);
     value = range(value, -accuracy, accuracy);
-    srand(time(0));
+    SRAND(WALL_TIME(0));
     return value;
 }
 

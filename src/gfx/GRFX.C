@@ -145,7 +145,7 @@ void far fadeout(unsigned char far *src, int count, int pump)
     register int scale = count;
     buf = fade_buffer;
     acc = (uint16 far *)(buf + 0x300);
-    start = *Time;
+    start = GAME_TIME();
     if (pump) anm_sound_callback();
     if (scale == 0) {
         for (i = 0; i < 0x300; i++) buf[i] = 0;
@@ -159,9 +159,9 @@ void far fadeout(unsigned char far *src, int count, int pump)
                 buf[i] = acc[i] / (unsigned)scale;
             }
             if (pump) anm_sound_callback();
-            while (*Time - start < 8) ;
+            while (GAME_TIME() - start < 8) ;
             grfx_setpal(buf);
-            start = *Time;
+            start = GAME_TIME();
         }
     }
 }
@@ -177,7 +177,7 @@ void far fadein(unsigned char far *src, int count, int pump)
     register int scale = count;
     buf = fade_buffer;
     acc = (uint16 far *)(buf + 0x300);
-    start = *Time;
+    start = GAME_TIME();
     if (pump) anm_sound_callback();
     if (scale == 0) grfx_setpal(src);
     else {
@@ -189,9 +189,9 @@ void far fadein(unsigned char far *src, int count, int pump)
                 buf[i] = acc[i] / (unsigned)scale;
             }
             if (pump) anm_sound_callback();
-            while (*Time - start < 8) ;
+            while (GAME_TIME() - start < 8) ;
             grfx_setpal(buf);
-            start = *Time;
+            start = GAME_TIME();
         }
     }
 }

@@ -142,6 +142,7 @@ int far SetOffTrap(struct Object far *who, struct Object far *context,
     }
     result = UseTrap(trap, x, y);
     CharacterThatTriggeredTrap = 0;
+    AX_RESULT(result);                  /* AX still holds UseTrap's result */
 }
 /* The variable traps' operations: 0 add, 1 subtract, 2 set, 3 and, 4 or, 5 xor, 6 shift
    left, 7 count up while equal (value + 1 if value == right, else 0). */

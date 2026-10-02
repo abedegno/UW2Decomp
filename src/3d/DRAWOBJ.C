@@ -307,7 +307,7 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
     }
     else if (flags & 0x80) {
         AnimObjInPipe = 1;
-        anim = (*Time & 0x1FF) >> 6;
+        anim = (GAME_TIME() & 0x1FF) >> 6;
         if (anim & 4)
             anim = 3 - (anim & 3);
         for (i = 0; i < (flags & 7); i++) {
@@ -381,7 +381,7 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
         int colour;
         int blink;
 
-        blink = (unsigned char)((*Time >> 7) & 1);
+        blink = (unsigned char)((GAME_TIME() >> 7) & 1);
         for (j = 0, face = 0; j <= 0x10; j++, face++) {
             if (player->quest_bytes[QB_GEMS_USED] != 0xFF) {
                 colour = 0x52;
@@ -399,7 +399,7 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
             *dbptr++ = colour;
         }
         if (player->quest_bytes[QB_GEMS_USED] != 0xFF) {
-            j = (*Time >> 6) & 7;
+            j = (GAME_TIME() >> 6) & 7;
             if (j > 3)
                 j = 7 - j;
             colour = j + 0x53;

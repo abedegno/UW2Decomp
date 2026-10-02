@@ -92,8 +92,11 @@ __asm__(
 extern unsigned char port_far_block[];
 unsigned char dseg062_62a6[DSEG062_62A6_SIZE];
 /* PGCACHE.ASM's lightabs, the 16 distance-shading rows of 256 colours, in seg004's code at
-   065C:6D3E */
-unsigned char lightabs[0x1000];
+   065C:6D3E; with the rest of seg004 after it, which a shade row from 16 up reads in DOS
+   (the dither in GRENTRY.ASM's smooth spans can reach row 16) */
+unsigned char lightabs[0x10000 - 0x6D3E];
+/* PGCACHE.ASM's 16 bytes at 065C:6D20, whose first is the smooth spans' base colour */
+unsigned char seg004_0849_6D20[0x1E];
 unsigned char port_dgroup_image[0x10000];
 
 /* The DOS segments inside the block, for the paragraph map. */
@@ -118,6 +121,29 @@ static uint32_t crc32(const unsigned char *p, size_t n)
         for (k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320u ^ (c >> 1) : c >> 1;
     }
     return c ^ 0xFFFFFFFFu;
+}
+
+/* DOS adds the load segment to every word the EXE's relocation table lists as it loads the
+   program; those in the blocks copied above are segment parts of far pointers in the data
+   (seg003's pointers into its own data and stdat, seg021's, DGROUP's), so they get the port's
+   load segment, which the paragraph map gives the blocks. */
+static void relocate(const unsigned char *exe)
+{
+    unsigned n = (unsigned)(exe[6] | exe[7] << 8), at = (unsigned)(exe[0x18] | exe[0x19] << 8), i;
+    for (i = 0; i < n; i++) {
+        const unsigned char *r = exe + at + 4 * i;
+        uint32_t lin = (uint32_t)(r[2] | r[3] << 8) * 16 + (uint32_t)(r[0] | r[1] << 8);
+        unsigned char *w = NULL;
+        unsigned v;
+        if (lin >= FAR_FIRST && lin + 1 < FAR_END) w = port_far_block + (lin - FAR_FIRST);
+        else if (lin >= FD71_SEG * 16u && lin + 1 < FD71_SEG * 16u + DSEG062_62A6_SIZE) w = dseg062_62a6 + (lin - FD71_SEG * 16u);
+        else if (lin >= DGROUP_SEG * 16u && lin + 1 < DGROUP_SEG * 16u + sizeof port_dgroup_image)
+            w = port_dgroup_image + (lin - DGROUP_SEG * 16u);
+        if (!w) continue;
+        v = (unsigned)(w[0] | w[1] << 8) + PORT_LOAD_SEG;
+        w[0] = (unsigned char)v;
+        w[1] = (unsigned char)(v >> 8);
+    }
 }
 
 int port_load_exe(const char *path)
@@ -149,6 +175,7 @@ int port_load_exe(const char *path)
     memcpy(dseg062_62a6, exe + hdr + FD71_SEG * 16, DSEG062_62A6_SIZE);
     memcpy(lightabs, exe + hdr + 0x65C * 16 + 0x6D3E, sizeof lightabs);
     memcpy(port_dgroup_image, exe + hdr + DGROUP_SEG * 16, sizeof port_dgroup_image);
+    relocate(exe);
     free(exe);
     for (i = 0; i < sizeof segs / sizeof segs[0]; i++)
         pm_add(segs[i].name, port_far_block + (segs[i].lin - FAR_FIRST), segs[i].size, segs[i].seg + PORT_LOAD_SEG);

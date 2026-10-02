@@ -40,7 +40,7 @@ int32 joy_last_tick = 0;
 void far seg011_6(int unused)
 {
     int x, y;
-    seg021_22FD_7CD();
+    JOY_READ();
     x = joy_position[0] - joy_center_x;
     y = joy_position[1] - joy_center_y;
     if (x > 0) x = (int)((int32)x * 127) / joy_max_x;
@@ -51,7 +51,7 @@ void far seg011_6(int unused)
     else if (x < -127) x = -127;
     if (y > 127) y = 127;
     else if (y < -127) y = -127;
-    seg021_22FD_809();
+    JOY_BUTTONS();
     joymovecur = joy_buttons[0];
     fauxright = joy_buttons[1];
     if (joymovecur == 0) {
@@ -79,10 +79,10 @@ void far seg011_6(int unused)
 unsigned char far seg011_12B(int16 *x, int16 *y)
 {
     int key;
-    for (seg021_22FD_809(); joy_buttons[0] || joy_buttons[1]; seg021_22FD_809()) ;
+    for (JOY_BUTTONS(); joy_buttons[0] || joy_buttons[1]; JOY_BUTTONS()) ;
     goto check_press;
 poll_again:
-    seg021_22FD_809();
+    JOY_BUTTONS();
     loop_music_maybe();
 check_press:
     {
@@ -92,7 +92,7 @@ check_press:
         if (key == 27) return 0;
         if (joy_buttons[0] == 0 && joy_buttons[1] == 0) goto check_press;
     }
-    seg021_22FD_7CD();
+    JOY_READ();
     *x = joy_position[0] - joy_center_x;
     *y = joy_position[1] - joy_center_y;
     return 1;
@@ -111,7 +111,7 @@ void far JoyStickCalibration_seg011_1B8(void)
     int16 high_y = joy_max_y;
     if (!IsJoy) return;
     scroll_clear(0);
-    seg021_22FD_7CD();
+    JOY_READ();
     joy_center_x = joy_position[0];
     joy_center_y = joy_position[1];
     game_sprint(0x16c);                 /* "Centering joystick....centered.\nPush ..." */
@@ -160,9 +160,9 @@ void far seg011_2C6(int16 *out_x, int16 *out_y, int unused)
     else if (x < -127) x = -127;
     if (y > 127) y = 127;
     else if (y < -127) y = -127;
-    if ((uint32)(*Time - joy_last_tick) > (int32)joy_interval) {
+    if ((uint32)(GAME_TIME() - joy_last_tick) > (int32)joy_interval) {
         register int scaled_y;
-        joy_last_tick = *Time;
+        joy_last_tick = GAME_TIME();
         max_step = 127 / joy_divisor;
         scaled_x = x / joy_divisor;
         scaled_y = y / joy_divisor;

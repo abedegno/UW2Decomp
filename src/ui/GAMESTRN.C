@@ -243,7 +243,7 @@ char far * far read_string(int block, int string)
 {
     unsigned char c;
     char far *result;
-    int count, item, relative, string_count;
+    int16 count, item, relative, string_count;   /* read from the file as words */
     int32 address;
     register int index, found;
     result = str_buff + OutString;

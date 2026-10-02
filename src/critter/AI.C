@@ -1120,7 +1120,7 @@ unsigned char far critter_ai(void)
         if (OBJ_FRAME(meptr) == 0 && OBJ_GTARG(meptr) == 1) {
             if (get_current_music() < MUSIC_FOE_HURT || get_current_music() > MUSIC_DANGER)
                 set_new_music(MUSIC_COMBAT);
-            lastcombattime = *Time;
+            lastcombattime = GAME_TIME();
         }
         if (OBJ_FRAME(meptr) == 3)
             critter_attack(meptr, rand() % 9, atk_charge[OBJ_ATKFRAME(meptr)].charge, OBJ_SEQ(meptr) - 3,
@@ -1515,14 +1515,14 @@ unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
             set_new_music(MUSIC_FOE_HURT);
         else
             set_new_music(MUSIC_COMBAT);
-        lastcombattime = *Time;
+        lastcombattime = GAME_TIME();
     } else if (obj == ThePlayer && who) {
         ratio = (ThePlayer->hp << 6) / (playerdat->avghit + 1);
         if (ratio < 0x10)
             set_new_music(MUSIC_DANGER);
         else
             set_new_music(MUSIC_COMBAT);
-        lastcombattime = *Time;
+        lastcombattime = GAME_TIME();
     }
     return 0;
 }

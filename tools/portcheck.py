@@ -191,6 +191,7 @@ def main(argv):
     a = ap.parse_args(argv)
     os.makedirs(OUT, exist_ok=True)
     srcs = [p for p in sources.all_sources() if p.upper().endswith('.C') and not dos_only(p)]
+    srcs += sources.replay_sources()    # the record and replay hooks' code, which the port links too
     if a.diag:
         want = a.diag.upper()
         srcs = [p for p in srcs if sources.stem(p) == os.path.splitext(os.path.basename(want))[0]]

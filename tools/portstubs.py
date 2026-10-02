@@ -73,6 +73,7 @@ def declarations(names):
     want = set(names); found = {}
     flags = [f for f in portcheck.FLAGS if not f.startswith('-W') and f != '-ferror-limit=0']
     srcs = [p for p in sources.all_sources() if p.upper().endswith('.C') and not portcheck.dos_only(p)]
+    srcs += sources.replay_sources()
 
     def one(p):
         r = subprocess.run(['cc'] + flags + ['-w', '-fsyntax-only', '-Xclang', '-ast-dump=json', p],

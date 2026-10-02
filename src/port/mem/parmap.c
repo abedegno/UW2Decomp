@@ -260,3 +260,11 @@ void *port_null_far(const char *file, int line)
     fprintf(stderr, "uw2port: far null pointer read at %s:%d\n", file, line);
     return null_far;
 }
+
+/* The copies themselves, for the state dump's NULL section (src/replay/REPLAY.C): DS:0 on
+   (far_table 0) or the vector table (1). */
+unsigned char *port_null_copy(int far_table)
+{
+    nulls();
+    return far_table ? null_far : null_near;
+}

@@ -82,7 +82,13 @@ The sources also build the native port (PORT.md). Every change still has to pass
 - A struct with pointer fields goes between `HOST_LAYOUT_BEGIN` and `HOST_LAYOUT_END`.
 - A dereference that can see a null pointer in DOS is written through `NULLTRAP(p)` (near) or `FARNULLTRAP(p)` (far), with a comment.
 - A file whose code is DOS-only says `port: dos-only` in its header comment, and the port replaces it.
-- A function the original wrote with no return statement, whose callers use what it left in AX, ends with `AX_RESULT(v)`, where `v` is that value, with a comment saying where it comes from.
+- A function the original wrote with no return statement, whose callers use what it left in AX, ends with `AX_RESULT(v)`, where `v` is that value, with a comment saying where it comes from; when the value is the result of the function's last call, that statement is `AX_LAST(call)` instead.
+- Read such compiled behaviour (AX at a function's end, what an uninitialised local holds, how an overflow wraps) from our own build: `tools/match.py --dis NAME` on the matched object shows the same instructions as `UW2.EXE`, with our names. The C cannot say, because it must leave the undefined behaviour in place to keep the bytes; the port-only macro (`AX_RESULT`, `STACK_JUNK`, the width types) records the answer.
+- Every read of the world outside the program goes through a replay hook of `portable.h`, so that a session can be recorded and replayed in both builds (PORT.md, "The differential test"): a read of the game clock is `GAME_TIME()`, never `*Time`; and `key()`, `mouse()`, `mbuttons()`, the joystick reads, `time()` and `srand()` are `KEY()`, `MOUSE()`, `MBUTTONS()`, `JOY_READ()`, `JOY_BUTTONS()`, `WALL_TIME()` and `SRAND()`. `CHECKPOINT(n)` marks a place where both builds dump the game state.
+- A store through a far pointer into the VGA's window at A000:0000 is `PLANAR_STORE(p, v)`.
+- A local the original reads before it ever sets it is declared with `STACK_JUNK(v)` after its name, with a comment; [FINDINGS.md](FINDINGS.md) lists such sites.
+- A local or field that a file read (`fread`, `read`, `intoFarBuffer_ovr167_5DA`) fills with a word has an explicit width; a plain `int` would keep two bytes of junk on the host.
+- A struct with pointer fields that the code lays straight over file data is reached through `FILE_RECORDS(T, p, n, layout)` and `FILE_RECORDS_END(q, n)` (CHARGEN.C's `DATA\chrgen.dat`).
 - Port-only C (the replacements for the assembly modules, the emulated hardware, the platform layer) lives under `src/port` and never in a game source; a file there says in its first line which module it replaces, or "replaces nothing".
 
 Each of these is the original tokens under Turbo C (port-only C is never seen by it). After a change, `make port-check` should show no new error or warning, and `make port` should still link.

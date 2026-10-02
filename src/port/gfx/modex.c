@@ -32,7 +32,13 @@ void local_do_palette(int count, unsigned char first)
 
 void mem_set(void *p, int value, int count)
 {
-    memset(p, value & 0xFF, (uint16_t)count);
+    uint16_t n = (uint16_t)count, i;
+    /* rep stosb into the VGA's window writes video memory through the map mask */
+    if (vga_in_window(p)) {
+        for (i = 0; i < n; i++) port_vga_store((unsigned char *)p + i, (unsigned char)value);
+        return;
+    }
+    memset(p, value & 0xFF, n);
 }
 
 int str_len(char *s)

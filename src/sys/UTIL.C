@@ -64,8 +64,8 @@ void far seg041_35D7_E9(unsigned ticks)
 {
     uint32 start;
 
-    start = *Time;
-    while (*Time < start + ticks)
+    start = GAME_TIME();
+    while (GAME_TIME() < start + ticks)
         ;
 }
 

@@ -411,6 +411,7 @@ int far readlp(unsigned page, struct LpDesc far *desc, void far *dst)
     lseek(STDAT.anm_fd, ((int32)page << 16) + 0xB00L, 0);
     size = desc->nbytes + desc->nrecords * 2 + 8;
     got = intoFarBuffer_ovr167_5DA(STDAT.anm_fd, dst, size);
+    AX_RESULT(got);                     /* AX still holds intoFarBuffer's result */
 }
 
 /* 0x819: reads the next n bytes of large page page into dst, continuing where the last
@@ -459,12 +460,12 @@ void far anm_cycle(struct Cycle far *cycles)
     unsigned char n;
     for (i = 0; i < 16; i++) {
         if (cycles[i].period != 0) {
-            if ((unsigned)(*Time - cycles[i].started) <
+            if ((unsigned)(GAME_TIME() - cycles[i].started) <
                 0x38E / cycles[i].period) continue;
             n = cycles[i].last - cycles[i].first + 1;
             rotate_bank(cycles[i].first, n, 0);
             local_do_palette(n, cycles[i].first);
-            cycles[i].started = *Time;
+            cycles[i].started = GAME_TIME();
         }
     }
 }
@@ -474,9 +475,9 @@ void far anm_cycle(struct Cycle far *cycles)
 int far cutsop_wait_for_sound(uint16 far *code, struct CutsState *st)
 {
     uint32 until;
-    until = *Time + (*code << 8);
+    until = GAME_TIME() + (*code << 8);
     while (!speech_over()) {
-        if (*Time >= until) {
+        if (GAME_TIME() >= until) {
             cutoff_cutscene_speech();
             break;
         }
@@ -986,8 +987,8 @@ int far run_time_critical_things(struct CutsState *st, struct AnmHdr far *hdr)
 {
     anm_cycle(hdr->cycles);
     anm_sound(st);
-    if (*Time - STDAT.tick >= 8) {
-        STDAT.tick = *Time;
+    if (GAME_TIME() - STDAT.tick >= 8) {
+        STDAT.tick = GAME_TIME();
         run_timebased_tasks(0);
     }
     return 0;
@@ -1000,9 +1001,9 @@ int far cuts_run_pause(register struct CutsState *st, struct AnmHdr far *hdr)
     uint32 now;
     register int in;
     in = -1;
-    last = (*Time - STDAT.start) >> 8;
+    last = (GAME_TIME() - STDAT.start) >> 8;
     while (in == -1 && !st->flags.bit.b1 &&
-           (now = (*Time - STDAT.start) >> 8) < st->frame3F) {
+           (now = (GAME_TIME() - STDAT.start) >> 8) < st->frame3F) {
         if (st->flags.bit.b7) in = gobble_input_events(0);
         else in = gobble_input_events(st);
         if (now > last) last = now;
@@ -1070,15 +1071,15 @@ void far cuts_process_opcodes(int frame, register struct CutsState *st)
     if (i == last) { \
         mask = lmask[plane] & rmask[(plane + (k) - 1) % 4]; \
         outportb(0x3C4, 2); outportb(0x3C5, mask); \
-        *dst = *src; \
+        PLANAR_STORE(dst, *src); \
     } else { \
         mask = lmask[plane]; \
         outportb(0x3C4, 2); outportb(0x3C5, mask); \
-        *dst = *src; \
+        PLANAR_STORE(dst, *src); \
         i++; \
         mask = rmask[(plane + (k) - 1) % 4]; \
         outportb(0x3C4, 2); outportb(0x3C5, mask); \
-        dst[last] = *src; \
+        PLANAR_STORE(dst + last, *src); \
         if (i < last) { \
             outportb(0x3C4, 2); outportb(0x3C5, 0x0F); \
             mem_set(dst + i, *src, last - i); \
@@ -1091,7 +1092,7 @@ void far cuts_process_opcodes(int frame, register struct CutsState *st)
     n4 = cnt / 4; \
     cnt--; \
     outportb(0x3C4, 2); outportb(0x3C5, 1 << p); \
-    while (n4-- > 0) { *d2 = *s2; s2 += 4; d2++; }
+    while (n4-- > 0) { PLANAR_STORE(d2, *s2); s2 += 4; d2++; }
 
 #define NEXT_PLANE() \
     if (++p >= 4) { p -= 4; d++; } \
@@ -1108,7 +1109,7 @@ void far cuts_process_opcodes(int frame, register struct CutsState *st)
     s2 = s; d2 = d; \
     n4 = cnt / 4; \
     outportb(0x3C4, 2); outportb(0x3C5, 1 << p); \
-    while (n4-- > 0) { *d2 = *s2; s2 += 4; d2++; } \
+    while (n4-- > 0) { PLANAR_STORE(d2, *s2); s2 += 4; d2++; } \
 }
 
 /* Decodes a delta record (the run/skip/dump stream LPFDELTA.ASM also decodes) straight into
@@ -1225,7 +1226,7 @@ int far cuts_process_lp(register struct CutsState *st, struct AnmHdr far *anm,
     register int i;
 
     first = 1;
-    STDAT.start = *Time;
+    STDAT.start = GAME_TIME();
     page = set_cuts_ems(STDAT.ems_page);
     sizes = ((struct LpPage far *)page)->sizes;
     data = (unsigned char far *)(sizes + lp->nrecords);
@@ -1288,7 +1289,7 @@ int far cuts_process_lp(register struct CutsState *st, struct AnmHdr far *anm,
         gobble_input_events(st);
         if (st->repeat41 == 0) cuts_process_opcodes(STDAT.frame, st);
         if (!st->flags.bit.b0 && first)
-            while (!st->flags.bit.b0 && (now = *Time) - STDAT.start < 0x100 / anm->rate) {
+            while (!st->flags.bit.b0 && (now = GAME_TIME()) - STDAT.start < 0x100 / anm->rate) {
                 run_time_critical_things(st, anm);
                 gobble_input_events(st);
             }
@@ -1529,9 +1530,9 @@ void far run_timebased_tasks(int reset)
         last = 0;
         return;
     }
-    if (last) diff = *Time - last;
+    if (last) diff = GAME_TIME() - last;
     else diff = 0;
-    last = *Time;
+    last = GAME_TIME();
     steps = diff >> 3;
     residue += (int)diff & 7;
     if (residue > 7) {
@@ -1594,7 +1595,7 @@ int far install_timebased_task(Task fn, int period, int total)
 /* 0x3200: a task that notes when it last ran */
 void far record_task(int task)
 {
-    tclock = *Time;
+    tclock = GAME_TIME();
     prev_time = task_time[task];
     task_time[task] = tclock;
 }

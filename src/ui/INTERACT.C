@@ -105,7 +105,7 @@ void far display_scr(void)
         v = (v + 8 & 0xFF) >> 4;
         set_screen_frame(2, v);
     }
-    cycle_colors(*Time & 0xFF);
+    cycle_colors(GAME_TIME() & 0xFF);
     if (ThePlayer->hp == 0)
         player_is_dead();
     v = (player->game_clock >> 8) - lastDurCheck;

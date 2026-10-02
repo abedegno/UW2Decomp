@@ -198,7 +198,7 @@ int far scroll_print(char far *s)
     FAR_COPY(copy, s, remaining + 1);
     scroll_print1(copy, 0);
 
-    click_time = *Time;
+    click_time = GAME_TIME();
     if (mouse_in_scroll)
         mouse_show();
     return scroll->start_line;

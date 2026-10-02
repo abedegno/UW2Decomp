@@ -15,7 +15,7 @@
 
 #define D dseg062_62a6
 #define W(o) ((uint16_t)(D[(o)] | D[(o) + 1] << 8))
-#define SETW(o, v) (D[(o)] = (uint8_t)(v), D[(o) + 1] = (uint8_t)((uint16_t)(v) >> 8))
+#define SETW(o, v) port_setw(&D[(o)], (uint16_t)(v))
 
 /* TICKS.ASM: the game clock, 1/256 s, in seg021's code segment (FM Towns time). */
 uint32 seg021_22FD_710;

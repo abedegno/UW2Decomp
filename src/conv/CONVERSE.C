@@ -802,6 +802,7 @@ int far check_inv_quality(int16 far *stack)
     index = getmem(stack[-1]);
     obj = Obj_IntTMem(index);
     quality = obj->qn.f.quality;
+    AX_RESULT(quality);                 /* the quality is still in AX */
 }
 
 /* set_inv_quality(arg2 object, arg1 quality): set it, to 6 bits. */

@@ -246,16 +246,16 @@ void far player_simple_move(int dir)
     uint32 start;
     int frames;
 
-    start = *Time;
+    start = GAME_TIME();
     if (simple_fizix(dir))
     {
-        last_time = *Time;
+        last_time = GAME_TIME();
         frame_inc = frame_inc + 4;
         PN.speed = 0;
         if (DoAnimO)
             update_animobj(1);
         player->game_clock += 0x40;
-        last_time = *Time;
+        last_time = GAME_TIME();
         frames = frame_inc;
         if (Hasted)
         {
@@ -267,7 +267,7 @@ void far player_simple_move(int dir)
         move_physics(0x40, frames, 1);
         editchng(10);
     }
-    while (*Time - start < 0x18)
+    while (GAME_TIME() - start < 0x18)
         ;
     mouse_clearQ();
 }
@@ -279,7 +279,7 @@ void far check_physics(void)
     uint32 delta;
     unsigned char frames;
 
-    delta = *Time - last_time;
+    delta = GAME_TIME() - last_time;
     if (delta > 0x40)
     {
         delta = 0x40;
@@ -288,15 +288,15 @@ void far check_physics(void)
     }
     else
     {
-        frame_inc = frame_inc + (unsigned char)((*Time >> 4) - (last_time >> 4));
-        frames = (*Time >> 6) - (last_time >> 6);
+        frame_inc = frame_inc + (unsigned char)((GAME_TIME() >> 4) - (last_time >> 4));
+        frames = (GAME_TIME() >> 6) - (last_time >> 6);
     }
     if (delta != 0)
     {
         if (frames != 0 && DoAnimO)
             update_animobj(frames);
         player->game_clock += delta;
-        last_time = *Time;
+        last_time = GAME_TIME();
         frames = frame_inc;
         if (Hasted)
         {
@@ -387,14 +387,14 @@ void far make_noise(char easy)
 
     if (player->motion_state & 1)
     {
-        if (water_eff != 0xFF && watertime + 0x1800 <= *Time)
+        if (water_eff != 0xFF && watertime + 0x1800 <= GAME_TIME())
         {
             kill_effect(water_eff);
             water_eff = 0xFF;
         }
         if (water_eff == 0xFF)
         {
-            watertime = *Time;
+            watertime = GAME_TIME();
             water_eff = play_effect_here(0, 0x40, 0);
         }
         swim_count++;
@@ -402,7 +402,7 @@ void far make_noise(char easy)
         if (!swim_count)
         {
             swim_pan = !swim_pan;
-            if (PN.speed != 0 && *Time > nextstep)
+            if (PN.speed != 0 && GAME_TIME() > nextstep)
                 play_effect_here(0x1A, step_pan[swim_pan], (PN.speed >> 5) - 0x10);
         }
     }
@@ -431,9 +431,9 @@ void far make_noise(char easy)
                 play_effect_here(step_sfx[ice * 2 + step_foot], step_pan[step_foot],
                                  (PN.speed >> 5) - 0x10);
                 step_foot = !step_foot;
-                nextstep = *Time + 100;
+                nextstep = GAME_TIME() + 100;
             }
-            else if (PN.speed > 0x2F && *Time > nextstep)
+            else if (PN.speed > 0x2F && GAME_TIME() > nextstep)
             {
                 play_effect_here(step_sfx[ice * 2 + step_foot], step_pan[step_foot],
                                  (PN.speed >> 5) - 0x10);
@@ -441,7 +441,7 @@ void far make_noise(char easy)
                 delay = 6000 / ((PN.speed >> 2) + 1) + 0x40;
                 if (delay > 200)
                     delay = 200;
-                nextstep = *Time + delay;
+                nextstep = GAME_TIME() + delay;
             }
         }
     }

@@ -59,7 +59,7 @@ void far arc_read_tables(register int fd)
 {
     int32 pos = tell(fd);
     register int ok = 1;
-    unsigned n;
+    uint16 n;                           /* read from the file as a word */
     int32 hdr;
 
     lseek(fd, 0L, 0);
@@ -410,7 +410,7 @@ unsigned far get_arc(int arc, unsigned blk, char far *buf)
 /* Whether archive `which` in `dir` holds block blk; -1 if it cannot be opened. */
 int far check_arc(int which, char *dir, int blk)
 {
-    unsigned count;
+    uint16 count;                       /* read from the file as a word */
     uint32 off;
     char name[0x50];
     register int fd;
@@ -433,7 +433,7 @@ void far explode_arc(void)
    the sources calls it. */
 int far count_arc(char *name)
 {
-    unsigned count;
+    uint16 count;                       /* read from the file as a word */
     unsigned char ok = 1;
     register int fd;
 

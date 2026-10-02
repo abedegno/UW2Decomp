@@ -239,7 +239,7 @@ void far mouse_clearQ(void)
 /* Not in FM Towns and never called: empties the keyboard buffer. */
 static void far flush_keys(void)
 {
-    while (key())
+    while (KEY())
         ;
 }
 
@@ -248,7 +248,7 @@ void far mouse_putxy(int x, int y)
     mouse_hide();
     checkMouse();
     if (*MouseOn)
-        mouse();
+        MOUSE();
     mouse_x = x;
     mouse_y = y;
     mouse_show();
@@ -362,7 +362,7 @@ int far do_keyarray_input(void)
     int c;
     int start;
 
-    if (*Time - key_time < 30)
+    if (GAME_TIME() - key_time < 30)
         return 0;
     c = 0;
     start = key_index = (key_index + 1) & 0x7F;
@@ -388,13 +388,13 @@ int far do_keyboard_input(char array)
 {
     int c;
 
-    c = key();
+    c = KEY();
     if (array)
         c = do_keyarray_input();
     c &= 0xFF;
     if (c == 0)
         return -1;
-    key_time = *Time;
+    key_time = GAME_TIME();
     if (c & 0x80) {
         if (*Shift)
             c |= KEY_SHIFT;
@@ -593,7 +593,7 @@ void far moveMouse(void)
         if (IsJoy && joymovecur)
             seg011_2C6(&dx, &dy, calledfrom3d);
         else {
-            mouse();
+            MOUSE();
             dx = *MouseDx;
             dy = *MouseDy;
         }
@@ -609,16 +609,16 @@ void far moveMouse(void)
                     warp_key = 0;
                     return;
                 }
-            } else if (*Time - warp_time < 10)
+            } else if (GAME_TIME() - warp_time < 10)
                 return;
         } else {
-            if (*Time - warp_time < 10)
+            if (GAME_TIME() - warp_time < 10)
                 return;
             m_warp_rate += 8;
             if (m_warp_rate > 40)
                 m_warp_rate = 40;
         }
-        warp_time = *Time;
+        warp_time = GAME_TIME();
         axes = 3;
         n = m_warp_rate;
         while (n-- && axes) {
@@ -848,7 +848,7 @@ int far mouse_btns(void)
 {
     int b = 0;
 
-    if (!*MouseOn || (b = mbuttons()) == 0) {
+    if (!*MouseOn || (b = MBUTTONS()) == 0) {
         if (key_on[0x52])
             b |= 1;
         if (key_on[0x53] || IsJoy && fauxright)

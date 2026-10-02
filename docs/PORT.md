@@ -1,6 +1,6 @@
 # Porting UW2 to modern systems
 
-This page is the design for a native port of UW2 built from the matched sources. Milestones 1 to 3 are done: the C compiles on a modern host with no errors, `make port` links it into a native macOS binary, and the binary boots the real game data in an SDL3 window, runs `init_world` to the end and shows the two opening screens exactly as DOS does. Their results are below, followed by the plan for Milestone 4. What the later milestones describe does not exist yet.
+This page is the design for a native port of UW2 built from the matched sources. Milestones 1 to 3 are done: the C compiles on a modern host with no errors, `make port` links it into a native macOS binary, and the binary boots the real game data in an SDL3 window, runs `init_world` to the end and shows the two opening screens exactly as DOS does. Milestone 4 is done up to the 3D renderer: a session recorded in DOS replays in the port from boot through the title cutscene, the main menu and character creation into the game, with the same game state and the same video memory as DOS at every checkpoint, and the port stops at the first 3D frame. Their results are below, followed by the plan for what is left and for Milestone 5, and the phase 2 enhancements. What the later milestones describe does not exist yet.
 
 ## Goals and non-goals
 
@@ -42,6 +42,7 @@ Every change to a shared source has to pass the gate. So a change made for the p
 | `src/port/3d/`, `src/port/gfx/`, `src/port/sys/`, `src/port/sound/` | C written for the port to replace the assembly modules and the DOS-only C files, named after the module each replaces, and the emulated hardware (`gfx/vga.c`, `sys/pit.c`) | no |
 | `src/port/mem/` | the paragraph map, the far heap, EMS, and the far data loaded from the user's EXE | no |
 | `src/port/stubs/` | the link stubs, one file per source of the names (written by `tools/portstubs.py`); a replacement deletes its stubs | no |
+| `src/replay/REPLAY.C` | the record and replay hooks and the state dump, shared by the replay DOS build (compiled with `-DREPLAY` and linked in as one more resident module) and the port; the gate never compiles it | only the replay build |
 | `src/port/platform/plat.h` | the platform API, with no SDL in it | no |
 | `src/port/platform/files.c`, `png.c` | the parts of the platform layer any POSIX host shares: the data root and DOS paths, and the PNG writer | no |
 | `src/port/platform/sdl3/` | the SDL3 backend of the platform API, the only code that includes SDL | no |
@@ -49,6 +50,7 @@ Every change to a shared source has to pass the gate. So a change made for the p
 | `tools/portbuild.py` | the port build and link (`make port`) | no |
 | `tools/portstubs.py` | writes `src/port/stubs/` from the names a link still needs and the port's C does not define | no |
 | `tools/portshot.py` | the screen comparison with DOS (Milestone 3's exit test) | no |
+| `tools/replay.py`, `tools/replaydos.mjs` | the replay DOS build, recording and replaying sessions in DOS and the port, and comparing the state dumps (Milestone 4) | no |
 | `tools/widths.py` | rewrites integer declarations to the explicit widths | no |
 | `tools/layoutcheck.py` | compares every struct's layout under Turbo C (in DOS) and the port | no |
 | `tools/intaudit.py` | the promotion and overflow audit, on clang's AST | no |
@@ -276,7 +278,7 @@ Replayed in that order, the same values give the same `rand` sequence and the sa
 
 ### Where the hooks go
 
-The hooks go in the shared sources, at the few places where the game reads the outside world. Reads of `*Time` become a `GAME_TIME()` macro, and input reads go through `get_input`, `key`, `mouse` and the joystick. Under the normal DOS build each macro expands to the original tokens, so the gate passes. A replay DOS build is the modding build compiled with `-DREPLAY`, which records or replays through a file. The port has the same hooks in its build. So the recording can be made in DOS (`tools/rungame.mjs` drives it in headless DOS through dos-mcp) and played in the port, or the other way round.
+The hooks go in the shared sources, at the few places where the game reads the outside world (`portable.h`): every read of `*Time` is `GAME_TIME()`, and `key`, `mouse`, `mbuttons`, the joystick reads, `time()` and `srand` are `KEY()`, `MOUSE()`, `MBUTTONS()`, `JOY_READ()`, `JOY_BUTTONS()`, `WALL_TIME()` and `SRAND()`. Under the normal DOS build each macro expands to the original tokens, so the gate passes. A replay DOS build is the modding build with those sources compiled with `-DREPLAY` and `src/replay/REPLAY.C` linked in, which records or replays through a file. The port has the same hooks in its build. So the recording can be made in DOS (`tools/replaydos.mjs` drives it in headless DOS through dos-mcp) and played in the port, or the other way round. The Milestone 4 results have the formats.
 
 ### What is compared
 
@@ -295,7 +297,7 @@ The faithful port reproduces each likely bug, and the replay test proves it does
 | 1. Measure (done) | `src/port/compat.h`, the stand-in headers, `make port-check` | every C source compiles or fails with a categorised reason; the unresolved names are listed; the gate passes |
 | 2. Compile and link (done) | gated source changes for the errors and the pointer, prototype and Borland issues; explicit widths; the layout check; the promotion audit; the null-pointer static pass; the far pointer macros; link stubs; `make port` | `make port-check` shows 0 errors and no pointer truncation in the shared C; `make port` links a native binary with stubs that abort; `tools/layoutcheck.py` shows every file record identical; the gate passes |
 | 3. Boot to the title (done) | the platform layer on SDL3 (video, pointer events, keyboard, time, files, lifecycle, silent audio); the paragraph map, the far heap and EMS; Borland's library; seg021 in C; the parts of seg003, MODEX, VALLOC and the VGA emulation the opening screens need; AIL with no driver; `port_null_near` and `port_null_far` | the port runs `init_world` past `display_screen(5, 6)` and shows the first title screen, and its VGA scan-out matches a DOS screenshot of that frame byte for byte |
-| 4. Replay, and the way into the game | `GAME_TIME()` and the input hooks in the shared sources; the replay DOS build; `state_dump()`; the null-pointer write check; the cutscene player's screen access, the rest of seg003, the sprites and the mouse cursor, text; a `-fsanitize=null` debug build | a DOS session recorded and replayed in DOS gives identical dumps twice in a row; the same session from boot through the title cutscene, the main menu and character creation to the first game screen replays in the port with identical dumps at each checkpoint, and the title, menu and character creation screens match DOS byte for byte |
+| 4. Replay, and the way into the game (done up to the 3D renderer) | `GAME_TIME()` and the input hooks in the shared sources; the replay DOS build; `state_dump()`; the null-pointer write check; the cutscene player's screen access, the rest of seg003, the sprites and the mouse cursor, text; a `-fsanitize=null` debug build | a DOS session recorded and replayed in DOS gives identical dumps twice in a row; the same session from boot through the title cutscene, the main menu and character creation to the first game screen replays in the port with identical dumps at each checkpoint, and the title, menu and character creation screens match DOS byte for byte |
 | 5. The game screen | the panels, the inventory, the message scroll, the automap screen; everything but the 3D view | a recorded session in the first level replays in the port with identical dumps, and every screen outside the 3D view matches DOS byte for byte |
 | 6. 3D view | seg004 in C | the 3D frame buffer matches DOS byte for byte for a set of recorded positions, including pick frames |
 | 7. Sound | the AIL API, the XMIDI sequencer, the OPL and MT-32 backends, the digital channel | every theme plays; effects, speech and the cutscene audio play; music timing matches a DOS recording |
@@ -520,26 +522,94 @@ One, proved by the gate: `AX_RESULT` (`portable.h`), used once, at the end of GR
 - **The clock is read without a barrier.** The game reads `*Time` directly while the PIT thread increments it. The port is built without optimisation, so every read happens; `GAME_TIME()` (Milestone 4) makes it explicit.
 - **Paragraph map windows.** `intoFarBuffer_ovr167_5DA` and `FarWrite_ovr167_627` take `FP_SEG` of near buffers on the stack, which makes a window each time (`-v` logs them). The idiom deserves a named macro.
 
-## The Milestone 4 plan
+## Milestone 4 results
 
-Milestone 4 has two halves, done side by side: the record and replay harness, which makes every later comparison exact, and the rest of the way from the title to the first game screen.
+Milestone 4 built the record and replay harness and took the port from the title into the game, as far as the first 3D frame. Run on 2 October 2026 (Apple clang 21, SDL 3.4.16, js-dos through dos-mcp 0.3.0), with the standard session `newgame` (boot, the title cutscene, Escape twice through the introduction, the main menu, Create Character with every default, the name Avatar, then sixteen seconds in the game):
 
-**Record and replay.** As designed above ("The differential test"):
+- **DOS replays itself exactly.** The session was recorded in DOS (28 million hook calls, a 27 KB recording) and replayed twice; all 43 checkpoints of the two replays are identical, in every section: the player record, the level, Borland's rand seed, seg003's data, the DAC and all 256 KB of video memory. Two things had to be found first: the stop key, and a local the game reads before setting it (below).
+- **The port replays it exactly as far as it goes.** Every checkpoint from boot to the game screen, 37 of them, is identical to DOS's, in every section, including the video memory of every screen: the title cutscene, the introduction's first frames, the main menu, each of character creation's screens with its text and buttons, the name typed, the confirmation, and the game screen drawn before its first 3D frame (`CHECKPOINT(4)`). The port then stops at `cRender`, the 3D renderer, which has no C yet.
+- **The exit test is met up to the renderer.** What is left is the first 3D frame and the rest of the session, which needs `cRender` for every frame.
 
-1. `GAME_TIME()` for every read of `*Time`, and hooks in `key`, `mouse`, `mbuttons`, the joystick reads, `time()` and `srand`, in the shared sources, each the original tokens under Turbo C. The gate proves them.
-2. The replay DOS build: the modding build compiled with `-DREPLAY`, recording to and replaying from a file in the game directory. `tools/rungame.mjs` drives a recording session in headless DOS.
-3. `state_dump()` in both builds: the player record, the level block, the SCD state, the quest variables, the frame buffer, the palette, and the VGA's planes and registers, at chosen points (every N clock reads, each screen change).
-4. The port's replay: the same hooks read the recording, and the PIT thread stops driving `*Time`. The first check is that a DOS recording replayed twice in DOS gives identical dumps, then that the port gives the same dumps.
-5. The null-pointer write check after each DOS session (C0's message, DS:0 to DS:3 and the vector table through dos-mcp's `read_memory`), and a `-fsanitize=null` debug build of the port over the same sessions.
+### The replay harness
 
-**From the title to the game.** In the order the boot reaches them, each stub replaced from its assembly as in Milestone 3, and each screen checked with `tools/portshot.py` (new hold points) and then by replay:
+**Hooks.** `portable.h` has the hooks (CONTRIBUTING.md, "Writing for both builds"): `GAME_TIME()` (71 reads of `*Time` in 19 files), `KEY()`, `MOUSE()`, `MBUTTONS()`, `JOY_READ()`, `JOY_BUTTONS()`, `WALL_TIME()`, `SRAND()` and `CHECKPOINT(n)` (five, in `main` and `strt_demscr`). Under Turbo C each is the original tokens, and the gate proves it. Under `-DREPLAY` and on the host they call `src/replay/REPLAY.C`, which in DOS is linked into the modding build as one more resident module (`tools/link.py --mod --add`). Recording, a hook reads the world as the game would and writes what it got; replaying, it returns what was recorded and leaves the world alone (key events restore seg021's key state, `key_on` and the modifiers, from the recording). The DOS build replays when `REPLAY.IN` is in the game's directory and records otherwise; the port takes `--record` or `--replay FILE` and otherwise reads the world.
 
-1. The title cutscene, cutscene 9: GRCORE's page copies (`copy_visible_to_hidden`, `copy_hidden_to_visible`, `vcopy`), the virtual screen and its focus (`seg003_0272_4A3A`, `vscreen_focus`, VIDMODE's `_2977` and `_2A0D`, with the line compare and panning the VGA emulation already scans out), and CUTS.C's planar writes through a portable macro (above). The LPF decoding and the palette fades are C already.
-2. The main menu (MAINMENU.C): text (GRLIBI's string drawing and `string_width`), lines and boxes, the sprites (SPRITE.ASM), VALLOC's `save_rect` and `restore_rect` with their pens, and the mouse cursor. Input then comes from pointer events and keys for the first time, so the replay harness has to be in place.
-3. Character creation (CHARGEN.C), and the other cutscenes the menu can start.
-4. Into the game: `strt_demscr` draws the panels (screen image 4, `init_gamedisp`), and the first `render_FB` reaches `cRender`, the 3D renderer (Milestone 6). The milestone ends there, with the panels matching DOS.
+**The recording.** The game polls its inputs hundreds of thousands of times a minute and almost always gets what it got last time, so each kind of input is a stream of runs, a count and a value; the program makes its calls in the same order on replay, so the streams need not record how they interleave. The streams are written in chunks of up to 200 bytes, tagged with the stream, as their buffers fill. The header holds the call count at which recording stopped: F12 stops it (the game never sees the key), and a replay stops at the same call. The session above is 18.3 million clock reads in 8,443 runs and 3 million polls of each input in 47 to 107 runs.
 
-The exit test: one DOS session, recorded from boot through the title cutscene, the main menu and a new character to the first game screen, replays in the port with identical dumps at every checkpoint, and the title, menu and character creation screens match DOS byte for byte.
+**The dumps.** Both builds write `STATE.OUT`: a record per checkpoint (a `CHECKPOINT`, every 400h ticks of the replayed clock, each key event, each change of the buttons, the end), named by the call count and the clock. Each has the player record, the rand seed, the level block once one is loaded, the null-pointer area, the far blocks' segments and the calls per stream; the full ones (all but the periodic) add seg003's data, the DAC, six CRTC registers and the four planes of video memory. `src/replay/REPLAY.C` has the formats.
+
+**The tools.** `tools/replay.py` builds the replay DOS EXE, records and replays in DOS through `tools/replaydos.mjs` (js-dos, about forty seconds a run), replays in the port, and compares two dumps checkpoint by checkpoint, the screen also as the CRT controller would show it; `check` does all of it. Two ranges of seg003's data are machinery and are not compared: its private stacks (370D:4E00..4FA7 and 5500..5547), where interrupts push whatever is in the registers, and the tick count its retrace wait keeps (0652). Words that are a far block's segment are compared as segments, since the load segment differs between the replay EXE, DOS set-ups and the port. `UWRPCK` sets the periodic interval, and `UWRPTRACE=lo,hi` writes every hook call in a clock range, with its caller's address, to `TRACE.OUT`; that is how the next point was found.
+
+**Stack junk.** The first DOS replays parted in the game by one poll of the mouse. The trace showed `player_attack` reading its local `held` before setting it when there is no attack key, and polling the mouse only when the junk is zero ([FINDINGS.md](FINDINGS.md#the-attack-check-reads-an-uninitialised-flag)). The timer interrupts write the game's stack, so the junk differs from run to run. `STACK_JUNK(0)` gives it 0 in the replay build and the port; clang lists five more such locals, not reached yet.
+
+**Two port bugs the replays found.** Besides those under "What replaces what": the port's macros that store a word into the emulated data segments evaluated the value twice, so `SETW(o, W(o) + n)` read back its own new low byte and got the high byte wrong whenever the low byte carried (it showed as a lost record in VALLOC's block list and one sprite's background never saved); and the string entries' copy to 370D:4FA8 takes one byte past the string's 0, from the caller's buffer, which is stack junk, so the comparison leaves that byte out.
+
+**The js-dos side.** dos-mcp's `fsRead` refuses a second read of a path, even one that failed because the file was not there yet, so `replaydos.mjs` waits for the batch's `DONE.TXT` by listing the directory, and every call into the page has a time limit.
+
+### Null pointers
+
+- **DOS writes.** Every dump has DS:0 to 30h, C0's null-pointer checksum over DS:4..30h and the interrupt vector table. Over the session the checksum stays intact, DS:0..3 always holds one of the two forms of ovr167's stub entry (`27 06 00`, or `06` and the overlay's segment while it is loaded), and no vector changes after `init_world`. After the game exits, dos-mcp's `read_memory` finds DGROUP by C0's copyright string and reads the same: DS:0..3 `06 77 7A 00` (ovr167 loaded), checksum intact, so no "Null pointer assignment".
+- **DOS reads.** The replay build compiles the `NULLTRAP`-marked sources with `-DNULLTRAP`; none of the marked sites was reached.
+- **The port.** `make port-debug` builds with UBSan's `-fsanitize=null`; over the whole session it reports no null dereference, and the port's stand-ins for DS:0 and the vector table were not needed.
+
+### What replaces what
+
+Each replacement is written from the DOS assembly, as in Milestone 3, keeping the module's data at the assembly's offsets so that the dumps compare it with DOS.
+
+| Replaced | By | What |
+| --- | --- | --- |
+| VIDMODE.ASM (the rest) | `gfx/vidmode.c` | the span writers (solid on both pages, copy, copy onto both pages, save, restore, xor), pixels, vertical lines, the virtual screen and `vscreen_focus` (line compare, display start, panning), the linear buffer, and the bitmap entries with their three record builders (show, fbshow, `_5025`, `_511C`, vcopyfb, vcopy) |
+| GRLIBF.ASM (the rest) | `gfx/grlibf.c` | page copies, pixel, lines, boxes |
+| GRLIBI.ASM (text) | `gfx/grlibi.c` | `string_width`, the rasteriser into the bit buffer, the single-colour blitter, `shift_left_1` and the shadowed string |
+| GRLIBL.ASM (the rest) | `gfx/grlibl.c` | the transfers from video memory (plane by plane, latched, transparent), screen to screen both ways, into the linear buffer |
+| GRENTRY.ASM | `gfx/grentry.c` | the frame buffer: clear, fill, dim, light, `cPlaceFB`'s set-up (the copier's self-written ret is a variable), `cFBtoScreen`, its span writers and the Gouraud spans |
+| GRCORE.ASM (the rest but `grab`) | `gfx/grcore.c` | the C entries, including the string entries' copy to 370D:4FA8 |
+| SPRITE.ASM | `gfx/sprite.c` | the sprites, quirks included (FINDINGS.md) |
+| VALLOC.ASM's `save_rect`, `restore_rect` | `gfx/valloc.c` | through pens 109h and 10Ah |
+| EXPAND.ASM, PGCACHE.ASM's `uncmp_tab` | `3d/expand.c` | the image decoders (the record decoder's self-modifying ret is a flag) |
+| SETPNT.ASM | `3d/setpnt.c` | `SetPnt` |
+| C3DENTRY.ASM (all but `cRender`) | `sys/c3dentry.c` | `cPlaceFB`, `cFBtoScreen`, `cFillFB`, `cDimFB`, `cLiteFB`, `cZoom`, `cFrmtoRaw` |
+
+The port's own fixes: the EXE's relocations are applied to the far data it loads (the segment words in seg003's data were the EXE's, not the loaded ones); the CPU's window at A000:0000 is a region of the paragraph map whose stores go to the VGA (`PLANAR_STORE`, and `mem_set` into it), with slack either side for offsets that wrap; the EMS page frame is mapped twice in a row, so that a pointer run past E000:FFFF wraps to E000:0000 as a far pointer does (the cutscene player walks a large page's records that far, and on the host it overwrote the paragraph map); and Borland's `srand` keeps only the seed's low word. The stubs left are `cRender`, `grab`, the two joystick reads, and nine zeroed variables.
+
+### Shared-source changes
+
+All proved by the gate (`make check` passes; `make check-all` too):
+
+- `portable.h`: the replay hooks, `PLANAR_STORE`, `STACK_JUNK`, `FILE_RECORDS` and `FILE_RECORDS_END`, `AX_LAST`.
+- `GAME_TIME()` in 19 files; the input hooks in MOUSE.C, JOYSTICK.C, UWEDIT.C, CHARGEN.C, BABLHACK.C and BARTER.C; `CHECKPOINT` 1 to 5 in UWEDIT.C.
+- CUTS.C's planar writes through `PLANAR_STORE` (five stores).
+- COMBAT.C's `held` with `STACK_JUNK(0)`.
+- Locals filled by a file read given their DOS width: GAMESTRN.C's `read_string` (on the host the upper bytes were junk, so every string from STRINGS.PAK came back empty) and ARC.C's three block counts.
+- CHARGEN.C reads `DATA\chrgen.dat` through `FILE_RECORDS`: its question records are laid straight over the file's bytes, but `struct ChrOpt` holds pointers, so on the host it has another layout.
+- `AX_RESULT` or `AX_LAST` at the end of CONVERSE.C's `check_inv_quality`, SCHEDULE.C's `do_migrations`, TRIGGER.C's `SetOffTrap` and CUTS.C's `readlp`, the values read from the code.
+
+`make port-check` shows 0 errors. The tools: `link.py --add`, `sources.py` (src/replay, which the gate skips), `portbuild.py --debug`, `portcheck.py` and `portstubs.py` (which now include REPLAY.C), `replay.py` and `replaydos.mjs`.
+
+### Screens
+
+`tools/portshot.py`'s two held screens still match (0 of 64,000 pixels). The replay comparison is stronger than further hold points: it compares all four planes of video memory and the DAC at every full checkpoint, on every screen the session passes through, so no new hold points were added.
+
+## What is left of Milestone 4, and the Milestone 5 plan
+
+**The 3D renderer (Milestone 4's last step).** `cRender` and what it runs: seg004 in `src/3d` (INSTANCE, INTERP, CLIP, PROJPOLY, SCANLINE, TEXMAP, TEXMAPV, PERTP, PERTLP, SMOOTH, SPHERE, TMAPOPS, the rest of PGCACHE) and seg003's GRMISC, GRDISP, GRLIBM, GRLIBN and SCALEBM, about 15,000 lines of assembly, written in C from DOS with the FM Towns routines as a reading aid, as planned under "The FM Towns build as a template". The exit test is the newgame session replaying to its end with identical dumps (the frame buffer is in `stdat`, and every frame reaches video memory through `cFBtoScreen`). These constraints cost nothing now and keep phase 2 open; none may change the faithful output:
+
+- `render_3d` and the C written for seg004 draw into a frame buffer they are given (a pointer, width, height and pitch), not into 320 by 200 globals, wherever that costs nothing.
+- Every object and critter sprite is drawn through one call per object (the scaled-sprite path: SCALEBM.ASM and the renderer's object opcodes) that receives the object id, the frame, its world position and facing, its screen position and scale, and the light level, so that an enhancement can put something else there (a voxel model) without touching the faithful code.
+
+**Milestone 5: sound, then the rest of the game loop.**
+
+1. Sound: AIL's API in C, translated from the AIL 2.14 source; the XMIDI sequencer; the OPL backend (Nuked OPL3 with the AdLib driver's timbre handling and UW.AD) and the MT-32 one (libmt32emu); the digital channel with AIL's double buffering for effects, speech and the cutscenes. With a card configured, the 16 Hz effects timer changes state the game reads (`dsfx_playing`, the effect channels), so a replay with sound drives the AIL timers from the replayed clock rather than from the host's.
+2. The rest of the game loop: the panels, inventory, message scroll and automap screens, conversations (BABL.C's four-byte reads into an `int` need care, FINDINGS.md), the locals clang lists as read before set, saves moving both ways, and longer recorded sessions into several worlds.
+
+## Phase 2 enhancements
+
+Phase 2 adds options; faithful mode, pixel for pixel DOS, stays the default and the replay suite runs with every option off.
+
+- **Higher-resolution software rendering, with the palette lighting kept.** The renderer draws into a frame buffer it is given, so a larger one can be passed. What assumes 320 by 200 today has to be generalised: the frame buffer's row table (370D:095C, 200 rows) and its offsets in `stdat`, the projection constants and the view window (`cPlaceFB`, `place_3d_view`), the span and texture mappers' fixed-point steps, the pick buffer (one colour per object, read back at the cursor), the scaled sprites' clipping, and the 2D layer around the view, which stays at 320 by 200 and is scaled. Lighting keeps going through `lightabs` and the palette, so the look is the game's.
+- **Presentation shaders through SDL3's GPU API**: integer and smooth scaling, aspect correction, and CRT-style shaders, applied to the scanned-out picture, never to the game's own drawing.
+- **Voxel sprites, as an option.** The per-object sprite call above is the hook: an enhancement draws a voxel model there instead of the sprite, in software, with slab rendering in the style of Build's KVX and lit by the same palette tables. The models come from hand-made `.vox` or KVX files, or are generated on the user's own machine from the game's directional sprite frames by visual-hull carving and cleaned up by hand. Since they are derived from the game's art, generated models are never shipped.
+- **A GPU renderer**, through SDL3's GPU API behind the same render interface. Low priority: UnderworldGodot already gives the game a modern 3D engine.
 
 ## Risks
 
