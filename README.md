@@ -1,5 +1,7 @@
 # UW2Decomp
 
+The method and tools are generalised in [Exhume](https://github.com/abedegno/Exhume), a toolkit and set of Claude Code skills for byte-matching decompilation of old DOS games; this repository is its first case study.
+
 A byte-matching decompilation of Ultima Underworld II: Labyrinth of Worlds (DOS, 1993; developed by Looking Glass Technologies, published by Origin Systems). The C in `src/` recompiles with Borland Turbo C++ 1.01 to the same machine code as the shipped `UW2.EXE`.
 
 This is a fan research project, not affiliated with or endorsed by the rights holders. This repository holds no game data and no Borland software. You need your own copy of UW2 (the GOG release works) and the Turbo C++ 1.01 disk images, which Borland released free of charge.
