@@ -21,6 +21,7 @@ Optional, for the map tools and the assembly drafts (see [MAP.md](MAP.md)):
 - `make check` is the gate, below. `make check-all` is the same with every source recompiled.
 - `make boot` boots the modding build in headless DOS and saves screenshots of the title, the intro and the main menu under `build/boot/`. Look at them.
 - `make hooks` installs a git pre-push hook that runs `make check` and stops the push when it fails.
+- `make port-check` compiles every C source for the host with Apple clang, compile only, and summarises the errors, warnings and unresolved names ([PORT.md](PORT.md#milestone-1-baseline)). It never touches the DOS build.
 - `make help` prints this list.
 
 Everything built goes under `build/`, which is never committed.
@@ -63,3 +64,4 @@ All of them are in `tools/`, and each describes itself at the top.
 | Linking | `link.py`, `extract.py`, `exediff.py`, `addrscan.py` (numbers that could be addresses) |
 | Target tables and names | `targets.py`, `syncnames.py` |
 | The map | `doslist.py`, `locate.py`, `callgraphs.py`, `callpairs.py`, `anchors.py`, `align.py`, `files.py` |
+| The port | `portcheck.py` (`make port-check`: compiles the C for the host, compile only; [PORT.md](PORT.md#milestone-1-baseline)) |

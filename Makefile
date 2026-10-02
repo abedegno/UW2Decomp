@@ -8,6 +8,7 @@
 #   make boot          boot the modding build to the intro and screenshot it
 #   make setup         toolchain, Python venv and npm packages (idempotent)
 #   make hooks         install the git pre-push hook that runs make check
+#   make port-check    compile the C for the host, compile only (docs/PORT.md, Milestone 1)
 #
 # make setup needs the Borland disk images the first time:
 #   make setup TC_DISKS="/path/to/Turbo C++ 1.01" TASM_DISKS="/path/to/Turbo Assembler 2.0"
@@ -16,7 +17,7 @@ PY := $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 TC_DISKS ?=
 TASM_DISKS ?=
 
-.PHONY: game exact check check-all boot setup hooks help
+.PHONY: game exact check check-all boot setup hooks port-check help
 .DEFAULT_GOAL := game
 
 game:
@@ -53,6 +54,9 @@ setup:
 
 hooks:
 	@sh tools/install-hooks.sh
+
+port-check:
+	@$(PY) tools/portcheck.py
 
 help:
 	@sed -n '1,/^$$/p' Makefile

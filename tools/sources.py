@@ -7,7 +7,9 @@ are unique across the whole tree. A source's DOS segment is its `/* target: */` 
 that need a particular segment's source (the link order, the overlay manager) ask for it by
 segment, never by file name, so renaming or moving a file needs no change here.
 
-    all_sources()        every .C and .ASM under src/ except src/include, sorted by path
+    all_sources()        every .C and .ASM under src/ except src/include and src/port (the
+                         port's own code, docs/PORT.md, which the DOS build never compiles),
+                         sorted by path
     stem(path)           'GAMESTRN' for src/ui/GAMESTRN.C
     target(path)         the /* target: */ segment, or None
     by_stem()            {stem: path}
@@ -22,6 +24,7 @@ import os, re, glob
 here = os.path.dirname(os.path.abspath(__file__)); root = os.path.dirname(here)
 SRC = os.path.join(root, 'src')
 INCLUDE = os.path.join(SRC, 'include')
+PORT = os.path.join(SRC, 'port')
 _TARGET = re.compile(r'/\*\s*target:\s*(\w+)\s*\*/')
 
 
@@ -30,6 +33,7 @@ def all_sources():
     for ext in ('C', 'ASM'):
         for p in glob.glob(os.path.join(SRC, '**', '*.' + ext), recursive=True):
             if os.path.commonpath([p, INCLUDE]) == INCLUDE: continue
+            if os.path.commonpath([p, PORT]) == PORT: continue
             out.append(p)
     out.sort()
     seen = {}
