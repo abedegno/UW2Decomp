@@ -59,6 +59,8 @@ The row events (`SCDEVENT.C`): 1 change goal, 2 teleport (only where the player 
 
 ## Open questions
 
+[FINDINGS.md](../FINDINGS.md) collects the open questions and likely bugs of every subsystem in one place.
+
 - `gronkify_slay` (`SCDEVENT.C`) tests byte 6 of the schedule work area against 15 as if it were the block number; in `SCHEDULE.C`'s layout that byte belongs to the migration queue.
 - `Sched_InsertLong` (`SCHEDULE.C`) moves the current level's next-row index once for each level whose clock has passed the new row, rather than each level's own; probably a slip.
 - Several hack traps (`do_trap_hack`) are known only by their FM Towns names (`skup_ductosnore`, `do_qbert`); what the player sees has not been checked in the game.

@@ -61,5 +61,7 @@ Each side has six trade slots (`BARTER.C`). The player drags items into his slot
 
 ## Open questions
 
+[FINDINGS.md](../FINDINGS.md) collects the open questions and likely bugs of every subsystem in one place.
+
 - The order in which a script's source wrote a built-in's arguments is not known; the comments number them as UW-Formats does (arg1 the last pushed).
 - `npc_wit` is computed in `barter_init` and never read.

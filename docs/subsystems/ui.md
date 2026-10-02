@@ -60,6 +60,8 @@ The right-hand panel shows the inventory, the rune bag or the statistics (`Right
 
 ## Open questions
 
+[FINDINGS.md](../FINDINGS.md) collects the open questions and likely bugs of every subsystem in one place.
+
 - What the 0x20 and 0x30 kinds of a `PlayersMap` byte mean exactly (`DoTile` draws one with colours 0xE9.. and the other dark).
 - `BROWSE.C`'s seven hooks were compiled out of both builds; what they browsed is unknown.
 - The roles of several `struct Scroll` fields (`ui.h`) are named by use only.

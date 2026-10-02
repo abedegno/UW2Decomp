@@ -1,0 +1,323 @@
+# What the decompilation found
+
+This page collects what matching UW2 byte for byte revealed about the game: likely bugs in the shipped program, the game rules the code implements, how the engine works, code nothing calls, and the questions still open. The detail lives in the [subsystem notes](subsystems/), [LAYOUT.md](LAYOUT.md), [MATCHING.md](../MATCHING.md) and the comments in `src/`; each entry here links to it.
+
+Everything here is read from the matched sources, which compile to the same bytes as the shipped `UW2.EXE`, so a statement about what the code does is a statement about what DOS UW2 does. Two other witnesses are used where they help: the FM Towns build of UW2 (`tools/fmt.py`, the same program compiled for a 32-bit machine, with Looking Glass's own names), and the game data of the GOG release. Statements about intent or about the effect in the game are inferences, and say so.
+
+Bugs are labelled by how sure we are that the code is wrong (what the code does is always read from the code):
+
+- **confirmed**: a second piece of evidence shows the code is wrong, such as the FM Towns build doing it differently or the game data reaching the faulty path;
+- **likely**: the code leaves little doubt that it was not meant, but nothing outside the code shows it;
+- **possible**: it looks wrong, but there is a plausible intent the code fulfils.
+
+"Both builds" means the FM Towns build has the same code, so the mistake, if it is one, is in the original source and not in the DOS port.
+
+## 1. Likely bugs in the original game
+
+Each entry was re-read against the source before it was written here. The section ends with the candidates that did not hold up.
+
+### Relk's skull says nothing
+
+- **What happens:** looking at a skull or bones prints whose remains they are, by the owner field. The code has a case that prints "Relk." for owner 0x3D, but the condition in front of it lets through only owners below 0x3C and owner 0x3F, so the case never runs. Had it run, it would also have printed a creature name after "Relk.", because the next test has an `else` and this one does not.
+- **Where:** `BonesLook` in [obj/LOOK.C](../src/obj/LOOK.C).
+- **Evidence:** code reading; both builds. The game data reaches the dead case: the shipped `LEV.ARK` has a skull (item 0xC2) with owner 0x3D on level 17, in the object list of tile (32, 42), as static object 0x225. It is the only skull or bones object with that owner.
+- **Confidence:** confirmed.
+- **Effect:** looking at Relk's skull gives only the plain description; "Relk." is never printed.
+- **For a port:** matching DOS means printing nothing extra; printing "Relk." is what the code was evidently written to do.
+
+### A critter placed in a north-west diagonal tile goes to the wrong corner
+
+- **What happens:** `set_gridx_and_y_based_on_tile_type` picks the fine position where a moved critter stands in a tile: the middle of an open tile, the open corner of a diagonal. Type 5 (`TILE_DIAG_NW`) gets (6, 1), the same as type 2 (`TILE_DIAG_SE`), where its open corner is (1, 6). The other two diagonals get their own corners.
+- **Where:** [critter/CRITTIME.C](../src/critter/CRITTIME.C); used by `teleport_critter`, by critters going home while the player sleeps, and by the wandering monster placement in the same file.
+- **Evidence:** code reading; both builds (the FM Towns jump table sends case 5 to case 2's code).
+- **Confidence:** likely.
+- **Effect:** the critter is aimed at the closed half of the tile. `can_place` probably refuses it there, so the move fails; not checked in the game.
+- **For a port:** (1, 6) is the consistent value; DOS uses (6, 1).
+
+### Inserting a schedule row bumps the wrong level's index
+
+- **What happens:** each schedule keeps, for each level, the time reached and the index of the next row to run. When rows are inserted, every level whose clock is past the new row should have its own next index moved on. `Sched_InsertLong` instead moves the current level's index once for each such level, and leaves the other levels' indexes alone.
+- **Where:** `Sched_InsertLong` in [event/SCHEDULE.C](../src/event/SCHEDULE.C). Its only caller is `do_migrations`, which adds queued NPC migrations to block 0, the day schedule.
+- **Evidence:** code reading; both builds. `Sched_Delete`, in the same file, does the correct per-clock fix-up.
+- **Confidence:** likely.
+- **Effect:** after a migration, the current level can skip day-schedule rows, and another level can run a row a second time when the player returns to it. The day clock resets a level's index to 0 when it wraps, which limits the damage to the rest of that day. Not observed in the game.
+- **For a port:** fixing it changes which schedule rows run; matching DOS needs the slip.
+
+### gronkify_slay tests the wrong byte
+
+- **What happens:** schedule event 3 kills NPCs. For the NPC the player is talking to, a repeating row should instead count up `xclock[XC_CHANGED]` when byte 6 of the schedule work area is 15. In `SCHEDULE.C`'s layout, byte 6 is the event code of the first queued migration row, not the block number, and event codes run from 1 to 11.
+- **Where:** `gronkify_slay` in [event/SCDEVENT.C](../src/event/SCDEVENT.C); the layout is `struct SCDWork` in [event/SCHEDULE.C](../src/event/SCHEDULE.C).
+- **Evidence:** code reading; both builds (FM Towns also reads `Workspace+6`, and keeps the block number at +104h).
+- **Confidence:** likely.
+- **Effect:** the count-up probably never happens; the NPC is spared either way. Whether any plot step waits for it is not known.
+- **For a port:** a consideration only; what the test was meant to see is unknown (block 15 is a guess).
+
+### Saving more than 44 notes on one level corrupts them
+
+- **What happens:** a level's automap notes (`ATM_Strings`, 100 records of 0x36 bytes) sit inside `stdat`, at offset 468Eh. Their `LEV.ARK` blocks are flagged compress-on-write (flags 5 in all 80 note blocks), so `SaveTheWords` sends them through `put_arc` to `ac_shrink_disk`, which puts the LZSS work area at the start of `stdat`. Before it reads its input, the compressor sets `rson[4097..4352]` and `dad[0..4095]` to NIL, which covers offsets 5029h to 7229h of `stdat`, and its first `InsertNode` calls write `rson[4060..4078]` at 4FDFh to 5003h. That is note 44 (from its byte 9) onwards. The compressor then reads the notes from the same memory.
+- **Where:** `SaveTheWords` in [ui/AUTOMAP.C](../src/ui/AUTOMAP.C), `put_arc` in [sys/ARC.C](../src/sys/ARC.C), `ac_setup_lzw` in [sys/ACLZW.C](../src/sys/ACLZW.C), `CompressLZW_disk` and `struct LzwWork` in [sys/LZSS.C](../src/sys/LZSS.C), the buffer in [sys/FARDATA.ASM](../src/sys/FARDATA.ASM).
+- **Evidence:** code reading, with the block flags read from the shipped `LEV.ARK`. Found while re-checking the `stdat` overlap candidates below. The FM Towns build was not checked (its 32-bit work area may be laid out differently).
+- **Confidence:** likely.
+- **Effect:** with 45 or more notes on a level, the 45th note is partly overwritten and the later ones are saved as NIL words (00 10). With fewer notes the input ends before 951h and nothing is lost. Not tried in the game.
+- **For a port:** a port that keeps the notes in their own memory loses the bug without trying; matching DOS would need the overlap on purpose.
+
+### A cutscene "data" opcode uses an uninitialised file number
+
+- **What happens:** cutscene opcode 8, `data(file, ext)`, names the next animation file. For file 996 it picks one of cutscenes 034 to 037 (octal) at random; for any other value DOS never sets `file`, so the three digits of the name come from whatever the stack slot held. The FM Towns build has `else file = code[0]`.
+- **Where:** `cutsop_data` in [gfx/CUTS.C](../src/gfx/CUTS.C).
+- **Evidence:** the DOS code (IDA's listing reads `[bp-2]` uninitialised on that path) against FM Towns' `cutsop_data_`. The shipped scripts use other values: `CS000.N00` has `data(0, 10)`, `data(0, 8)` and `data(0, 11)`, and `CS040.N00` has `data(40, 1)` twice.
+- **Confidence:** confirmed (DOS differs from FM Towns).
+- **Effect:** unknown. The intro (cutscene 0) plays correctly in DOS, so the stack slot evidently holds a harmless value there; whether cutscene 040 loads the right file has not been checked.
+- **For a port:** FM Towns' version is the intended one; matching DOS exactly would mean reproducing the stack's contents.
+
+### A chained bitfield assignment sets stray cutscene flags
+
+- **What happens:** `reset_inf_values_eof` clears three flag bits with `b0 = b1 = b6 = 0`. Turbo C 1.01 compiles a three-deep chain of bitfield stores by OR-ing an uninitialised DX, shifted left by one, into the middle field's byte (`shl dx,1; or [si+5Bh],dl`), so any of bits 1 to 7 of the flags byte can be set. The function then clears bit 0, sets bits 2 and 4, and clears bit 7, so bits 1, 3, 5 and 6 (a key arrived, keep playing the cutscene, speech available, speech playing) can be left set.
+- **Where:** [gfx/CUTS.C](../src/gfx/CUTS.C); the compiler behaviour is described in [MATCHING.md](../MATCHING.md).
+- **Evidence:** the DOS bytes. It is the compiler's code generation, so the source was right and the program is not.
+- **Confidence:** confirmed.
+- **Effect:** unknown. Several opcodes clear bit 1 again before it is read; what the other bits do at the start of the next file was not traced.
+- **For a port:** the source's intent (clear the three bits) is clear.
+
+### mm3x9_bpsi and mm3x9t saturate the wrong product
+
+- **What happens:** these routines multiply a row by a 3 x 3 matrix and saturate each of the three products on overflow. The fix-up for the third product reads and writes CX, the second product's register, instead of DI.
+- **Where:** [3d/INSTANCE.ASM](../src/3d/INSTANCE.ASM).
+- **Evidence:** the DOS code against FM Towns' `mm3x9_bpsi`, which saturates DI.
+- **Confidence:** confirmed.
+- **Effect:** when the third product overflows, the second result is overwritten and the third is left wrapped. Overflow of a 1.15 matrix product is probably rare; no visible effect is known.
+- **For a port:** a port with wider arithmetic does not overflow there at all.
+
+### do_fetchmap reads tmcolor from the wrong segment
+
+- **What happens:** after mapping a texture, `do_fetchmap` sets `tmcolor` (FD58:2696) from the texture's first byte, but it loads DS from SI (the bitmap slot's address) where it should use the texture's segment, so it reads a byte at segment C8xxh.
+- **Where:** [3d/PGCACHE.ASM](../src/3d/PGCACHE.ASM).
+- **Evidence:** the DOS code against FM Towns, which reads the texture.
+- **Confidence:** confirmed.
+- **Effect:** none: nothing in the DOS code reads FD58:2696 (searched in every source; its neighbours at 2692h and 2694h are read).
+- **For a port:** nothing to do.
+
+### do_bcompact_map maps with a leftover AX
+
+- **What happens:** the opcode `do_bcompact_map` (the mirrored compact floor mapper) jumps into the shared code with AX unset, so its texture block is whatever the previous handler left in AX; FM Towns loads `bmap_blk_ptr` first.
+- **Where:** [3d/TMAPOPS.ASM](../src/3d/TMAPOPS.ASM).
+- **Evidence:** the DOS code against FM Towns.
+- **Confidence:** likely.
+- **Effect:** probably none: the C never emits the opcode. The 3D models' bytecode has not been searched for it.
+- **For a port:** nothing to do unless a model uses it.
+
+### The pit fighters' rescue from lava mixes units
+
+- **What happens:** `maybe_rescue_guy_from_fire` works in fine positions (8 to a tile) but passes them to `Map_GetAddr` and `teleport_critter`, which take tiles. Near the arena (around tile 0x16, 0x16) the fine coordinates are above 63, so `Map_GetAddr` returns a null pointer and the lava test reads low memory.
+- **Where:** [critter/CRITTIME.C](../src/critter/CRITTIME.C).
+- **Evidence:** code reading; both builds.
+- **Confidence:** likely.
+- **Effect:** the rescue probably never works as meant: a pit fighter on lava is not moved, or is moved by chance. Not checked in the game.
+- **For a port:** fixing it rescues fighters that DOS leaves in the lava.
+
+### Grass never turns into mushrooms in the dying courtyard
+
+- **What happens:** `kill_plants` (one object in three, at each stage of the castle plot) wilts plants and turns wilted plants into debris, grass or mushrooms. Its grass case chooses a mushroom or debris one time in 15 each, then returns before changing the object.
+- **Where:** `kill_plants` in [event/WORLDEV.C](../src/event/WORLDEV.C).
+- **Evidence:** code reading; both builds.
+- **Confidence:** possible (a `break` was probably meant, but the courtyard gets mushrooms another way from stage 13).
+- **Effect:** grass in the courtyard never changes.
+- **For a port:** a consideration only.
+
+### Mending's light-source exclusion compares the wrong field
+
+- **What happens:** `mendable` refuses lights in MAJOR_MISC minor class 1 by testing `OBJ_CLASS(obj) != 0x90 && OBJ_CLASS(obj) != 0x94`, but `OBJ_CLASS` is major * 4 + minor (9 here), so both tests always pass. 0x90 and 0x94 are the first unlit and the first lit light item ids, so the test was probably meant to limit Mending to the wands in that class.
+- **Where:** [combat/SPELLS2.C](../src/combat/SPELLS2.C).
+- **Evidence:** code reading; both builds.
+- **Confidence:** possible.
+- **Effect:** Mending accepts lanterns, torches, candles and light spheres. What it then does to them was not traced.
+- **For a port:** a consideration only.
+
+### Object-cast Mass Paralyze is Repel Undead
+
+- **What happens:** spell 64, Mass Paralyze by the order of the names in string block 6, is class 6 (area) minor 5, which selects `area_spells[4]`, `sp_repel_undead`, with target mode 0 (critters). `area_spells` has no area paralysis handler, and `sp_repel_undead` does nothing unless the player is the caster.
+- **Where:** `spells[]` and `area_spells[]` in [combat/SPELLS.C](../src/combat/SPELLS.C).
+- **Evidence:** code reading; both builds have the same table entry (30 18 63 05) and the same `area_spells`.
+- **Confidence:** possible (either the string order is off by one there, or an object carrying Mass Paralyze really repels undead).
+- **Effect:** unknown; whether any object in the game carries spell 64 has not been checked.
+- **For a port:** a consideration only.
+
+### Floor heights 14 and 15 convert to z 0
+
+- **What happens:** `hgt_val`, which turns a tile's 4-bit floor height into z, has 0 for heights 14 and 15 (between 0x340 for 13 and 0x400 for 16).
+- **Where:** [map/MAP.C](../src/map/MAP.C); read by `grdb_elem`'s face visibility test in [3d/GRIDDB.C](../src/3d/GRIDDB.C) and by `player_setup` in [motion/PHYSICS.C](../src/motion/PHYSICS.C).
+- **Evidence:** code reading; both builds have the same table. The shipped `LEV.ARK` has 8 open tiles at these heights: two at height 14 on level 25 and six at height 15 on level 65 (in the Ethereal Void).
+- **Confidence:** possible.
+- **Effect:** probably none visible. The floor of such a tile always counts as facing the eye, which is right whenever the eye is above it; a slope rising from height 13 gets a wrong back-face test; a player placed on such a tile by `player_setup` starts at z 0. None of this was checked in the game.
+- **For a port:** 0x380 and 0x3C0 are the evident values.
+
+### "contains" ignores case only without substitution
+
+- **What happens:** the conversation built-in "contains" lowercases its two source strings in place but searches the `@`-substituted copies; when either string had a substitution, its copy keeps its case.
+- **Where:** `StringContains_ovr095_BDB` and `convert_string` in [conv/BABL.C](../src/conv/BABL.C).
+- **Evidence:** code reading (`convert_string` returns its argument when there is no `@`).
+- **Confidence:** possible.
+- **Effect:** a keyword test on substituted text is case-sensitive; no script was checked for one.
+- **For a port:** a consideration only.
+
+### Smaller slips with no known effect
+
+- `SetOffTrap` ([event/TRIGGER.C](../src/event/TRIGGER.C)) has no return statement. Its callers use the result, which is `UseTrap`'s, still in AX because the stores after the call do not touch AX. It works by accident.
+- `seg004_0849_CB` ([3d/EXPAND.ASM](../src/3d/EXPAND.ASM)) compares DH with 0FFh and then overwrites the flags, so an unshaded 8-bit image would index past `lightabs`; probably no caller asks for one.
+- Three slips are in code nothing calls (see [Dead code](#dead-code)): `get_dist` ([3d/SPHERE.ASM](../src/3d/SPHERE.ASM)) adds the y term's sign correction to CX instead of SI; `seg020_1` ([gfx/PLANECPY.ASM](../src/gfx/PLANECPY.ASM)) puts the last column in the wrong byte for blocks starting at x & 3 of 2 or 3; `seg009_2CC` ([gfx/GRSPIC.C](../src/gfx/GRSPIC.C)) loses its result in the video memory branch.
+
+### Candidates that did not hold up
+
+- **`ATM_Strings` inside the area `clear_fbuf` wipes** (from [sys.md](subsystems/sys.md#open-questions)): not a bug. `clear_fbuf` clears `stdat` up to offset 69D4h at the start of every 3D frame, over the notes. But the notes are only held there between `GetTheWords` and `SaveTheWords`, which run on the map screen and inside `update_map_scraps`, where no 3D frame is drawn. The buffer is shared in time by design. Re-reading this found the compression problem above instead.
+- **ACLZW's work area running past `stdat`**: not a bug in itself. `ac_setup_lzw` uses FFFFh bytes from `stdat`, through `ATM_Strings` and into `cmpbuf1_start` and `cmpbuf2_start` (the image decoders' scratch, [3d/EXPAND.ASM](../src/3d/EXPAND.ASM)), which follow it in the same order in both builds. Archive I/O and image decoding do not run at the same time. The only harm found is to the notes, above.
+- **`do_fetchmap`'s `tmcolor`** stays in the list above, but with no effect, since nothing reads the value.
+
+## 2. Game rules recovered from the code
+
+Each rule links to the note that has the detail and the function names.
+
+### Skill checks and experience
+
+| Rule | Value | Detail |
+|---|---|---|
+| Skill check | `value - target + rand() % 31`: over 28 a critical (2), over 15 a success (1), over 2 a failure (0), else a bad failure (-1) | [game.md](subsystems/game.md#rules-found-in-the-code) |
+| Experience gain | halved (rounded at random), and halved again plus one above level 2 * world + 2 | [game.md](subsystems/game.md#rules-found-in-the-code) |
+| Levels | at 500 times 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192; experience is kept in tenths and capped at 0x7FFF0 | [game.md](subsystems/game.md#rules-found-in-the-code) |
+| Skill points | one per 1500 experience; a point raises a skill by 1 to 3 depending on the governing attribute, never above twice the attribute or 30 | [game.md](subsystems/game.md#rules-found-in-the-code) |
+| Derived values | hit points 30 + level * strength / 5; mana (mana skill + 1) * intelligence / 8; carrying capacity strength * 13 + 300 | [game.md](subsystems/game.md#rules-found-in-the-code) |
+| Kill experience | 4 * exp + 2d(exp) from the creature record, 1.5 to 3 times that for a powerful critter | [combat.md](subsystems/combat.md#melee) |
+| Exploration | newly mapped tiles are counted; after the frame, count * (level / 8 + 1) / 10 experience, while the character's level is 1 to 15 | [3d.md](subsystems/3d.md#automap-and-experience) |
+| Death | a ninth of the experience; outside Britannia the player wakes by the blackrock gem, in Britannia the game ends, and a player killed by a castle guard on level 1 goes to jail | [game.md](subsystems/game.md#rules-found-in-the-code) |
+
+### Melee
+
+- To hit: `skill_check(attack skill + hit angle, defence)`, the hit angle 0 face to face up to 4 from behind; a critical multiplies the damage by 1 or 2. A bad miss can wear the player's weapon. ([combat.md](subsystems/combat.md#melee))
+- Damage: `(d / 6)d6 + 1d(d % 6)`, scaled by the charged power / 128, plus the hit angle, less the armour at the hit location (5/3 of it for a powerful critter), and halved against the player on easy.
+- The player's attack skill is Attack / 2 + the weapon skill + Valor + dexterity / 7 (+7 on easy); damage is the weapon's for the swing kind + strength / 9, or bare handed 2/5 of the skill + strength / 6 + 4. Weapon enchantments add damage (2e + 1) or accuracy (2e - 7); higher effects are special weapons.
+- Critters perceive by hearing and sight ranges scaled by the target's noise and visibility; in reach they strike one time in four; casters cast within 8 tiles with chance caster / 128; archers shoot within 4 tiles; they flee by the damage taken and their nerve. ([critters.md](subsystems/critters.md#rules-found-in-the-code))
+
+### Damage types and resistances
+
+| Bit | Type | Notes |
+|---|---|---|
+| 0x03 | magic | resisted by chance, `(resist & 3)` in 3 |
+| 0x04 | physical | melee |
+| 0x08 | fire | double against a cold-resistant target |
+| 0x10 | poison | |
+| 0x20 | cold | double against a fire-resistant target that does not resist cold |
+| 0x40 | missiles | |
+| 0x80 | undead | a resist bit only, used to tell the undead |
+
+Any other resisted bit cancels the damage. Objects shift damage right by their toughness (class 3 is indestructible), doors wear down without breaking, and destroyed objects become debris by their kind. ([combat.md](subsystems/combat.md#damage))
+
+### Casting
+
+| Rule | Value |
+|---|---|
+| Circle | spell index / 8 + 1; 69 spells, the last five cast only by objects |
+| Requirements | level at least 2 * circle - 1, mana at least 3 * circle; in Britannia only circles 1 to 3 |
+| Roll | `skill_check(Casting, 3 * circle)`: 0 fails, -1 backfires for (circle / 2)d8, never below 3 hit points |
+| Cooldown | (2 * circle - level) * 4 + 128 ticks; spells cast from objects once per 0x2FD ticks |
+| Cost | paid at once, except missile and targeted spells, which pay on release and waive it if nothing is hit |
+| Anti-magic | a tile's no-magic bit stops every spell |
+
+World rules: mana cannot be restored by magic in the Scintillus Academy (world 5) outside parts of its first and eighth levels; Map Area, Locate and Roaming Sight fail in the Ethereal Void (world 8), where Tremor drops the floor's things instead of boulders. Every spell class, Repel Undead's budget, Charm's '+' test, Enchantment's tiers, Gate Travel's moonstones and the lines of power are in [combat.md](subsystems/combat.md#casting).
+
+### Time and clocks
+
+- `game_clock` counts 1/256 seconds, driven by a 256 Hz AIL timer. ([sound.md](subsystems/sound.md#the-pieces), [game.md](subsystems/game.md#rules-found-in-the-code))
+- `duration_check` runs every 20 seconds of game time: spells and lights run down every call, poison every 3rd, hunger, sobering, wandering monsters and the critters' yearly check every 30th, and every 60th (20 minutes) the day clock moves one of its 72 steps and the day's schedule runs.
+- Sleep lasts 7 to 10 hours in two parts; healing comes by fatigue and comfort; the dreams follow the castle plot (stages 4, 6, 10 and 14) or are chosen at random. ([game.md](subsystems/game.md#rules-found-in-the-code))
+- A conversation setting X clock 0 moves the game clock 20 minutes a step. ([conversations.md](subsystems/conversations.md#built-ins))
+
+### Schedules and triggers
+
+- `SCD.ARK` has 16 schedules, one per X clock; each has rows sorted by time and a clock per level, and a level the player is away from catches up on his return. The row events are change goal, teleport (only where unseen), kill, set a quest bit, fire scheduled triggers, special cases, set attitude, set or test variables, and remove. ([events.md](subsystems/events.md#schedules))
+- Traps, schedules and conversations share one numbering of variables: 0 to 0xFF the player's, 0x100 to 0x17F quest bits, 0x180 to 0x18F quest bytes, 0x190 to 0x19F the X clocks. ([events.md](subsystems/events.md#numbered-variables))
+- A trigger runs its trap chain when the action's mode matches its entry in `Triggers[]`; id bits say who may set it off; one without `ID_FLAG10` is used up. Timer triggers fire every z + 1 ticks while the player is within 8 squares. ([events.md](subsystems/events.md#triggers-and-traps))
+- Quests 0 to 127 are bits and 128 to 143 bytes; a conversation that sets a bit quest to a value other than 0 or 1 spills into its neighbours. ([conversations.md](subsystems/conversations.md#built-ins))
+
+### Lights
+
+- Light levels 0 to 7 come from `SHADES.DAT` and set the shading and the view's reach (vision radius 3 to 7); level 5 swaps in `MONO.DAT`'s grey maps. ([map.md](subsystems/map.md#light))
+- A light burns only in the shoulder and hand slots and only as a single item; anywhere else it goes out. A used-up light (quality 1 or less) will not light; oil adds 0x20 quality. ([inventory.md](subsystems/inventory.md#rules-found-in-the-code), [objects.md](subsystems/objects.md#using-objects))
+- Crossing onto a tile whose light flag differs recomputes the light level. ([map.md](subsystems/map.md#light))
+
+### Ownership and races
+
+- Taking an owned object angers up to 20 critters of the owning race within 7 tiles who can see it, each by one step; the object then belongs to nobody. Damaging an owned object also counts against the player. ([critters.md](subsystems/critters.md#rules-found-in-the-code), [combat.md](subsystems/combat.md#damage))
+- Hitting a critter that is not a loner turns its race hostile within hearing for 0x200 clock units. While the player sleeps, each race's attitude drifts by the net count of its friendly and hostile members. ([critters.md](subsystems/critters.md#rules-found-in-the-code))
+- A dead critter's loot belongs to its race; taking an owned book (0x138) is a crime against the humans. ([objects.md](subsystems/objects.md#loot), [ui.md](subsystems/ui.md#the-3d-view-and-the-panels))
+
+### Inventory, objects and the map
+
+- Reach: within a squared distance of 0x90 fine units and from 12 below to 24 above the player (doubled with a pole), along a line that neither climbs nor crosses into other terrain. ([ui.md](subsystems/ui.md#the-3d-view-and-the-panels))
+- Stacking, container masks and capacities, wear, and the weight display (tenths of a stone, by inference) are in [inventory.md](subsystems/inventory.md#rules-found-in-the-code).
+- Locks: `skill_check(Picklock, 3 * difficulty)`; difficulty 0xE needs a skill of 0x20, and 0xF cannot be picked. Food values, `CMB.DAT`'s five combinations and the rune traps are in [objects.md](subsystems/objects.md#using-objects).
+- Bartering: an NPC's greed, patience and valuation error are seeded by its object index; an item is worth value * quantity * quality / 64; demands weigh level, readiness to fight, health and Charisma. ([conversations.md](subsystems/conversations.md#bartering))
+- Map scraps: a scrap's map is kept as the automap of level 0x47 + its quality; reading it copies the sections it covers and gives a little experience for each new tile. ([ui.md](subsystems/ui.md#the-automap))
+- Repair, fishing, the blackrock gem's facets, jail and the castle's day are in [events.md](subsystems/events.md#world-events).
+
+## 3. Engine findings
+
+- **Screen and frame buffer.** The game runs the VGA in mode X, and every routine reaches a row through a table built from the bottom up, so y counts up from the bottom of the screen. The 3D view is drawn into a linear frame buffer in `stdat`, also bottom-up, and copied to the screen afterwards. ([gfx.md](subsystems/gfx.md#the-screen), [3d.md](subsystems/3d.md#orientation))
+- **The renderer.** Each frame the C turns the map into a bytecode program (the vision grid, then one tile at a time, farthest first), and seg004 runs it as threaded code: every handler jumps to the next through a table holding the same opcodes in the same order as FM Towns. Points are transformed as they are defined, with the eye position patched into the code, and a level view swaps in cheaper handlers. Floors and walls get exact perspective at the ends of each row or column and linear mapping between. Divide overflows are caught by redirecting int 0. A pick frame redraws the scene in identifying colours to find what is under the cursor. ([3d.md](subsystems/3d.md))
+- **Sprite scaler.** Sprites are decoded into a buffer and drawn by a scaler generated as code for each sprite's width. ([3d.md](subsystems/3d.md#sprites-and-critters), [gfx.md](subsystems/gfx.md))
+- **Critter page cache.** Critter animations are paged from `CRIT\CRnn.0p` into an EMS cache of 32 KB slots, loaded when a frame needs them, aged every frame and evicted least recently used. ([3d.md](subsystems/3d.md#sprites-and-critters), [critters.md](subsystems/critters.md#critter-art))
+- **Keyboard.** The game's own int 9 handler stores raw scan codes in a 64-byte ring and never chains to the BIOS, so the BIOS sees no keys while the game runs. ([sys.md](subsystems/sys.md#input-and-time))
+- **Debug keys.** `init_debug` ([sys/DEBUG.C](../src/sys/DEBUG.C)) runs at start-up in the shipped game and binds Ctrl+J to the joystick calibration and Alt with key code 83h to raising the COM1 interrupt in software ([sys/COM1INT.C](../src/sys/COM1INT.C)).
+- **Mushroom lighting.** `random_light` fills the light maps with 4 KB from segment 0 (the interrupt vectors and the BIOS data area); FM Towns uses the start of its own data segment. ([map.md](subsystems/map.md#light))
+- **Memory.** UW2 needs EMS 4.0. The four physical pages normally hold a critter page pair, an art page and a texture page, and `get_workspace` lends the whole frame as a 64 KB scratch area. `stdat` is shared in time by the frame buffer, the archive tables, LZSS, the cutscene player and the automap notes. ([sys.md](subsystems/sys.md#memory))
+- **Overlays.** Most of the C runs as Borland VROOMM overlays from a 300h-paragraph buffer, kept in EMS through `_OvrInitEms`. ([sys.md](subsystems/sys.md#the-overlay-manager))
+- **Sound.** Miles' AIL 2 owns int 8 and runs up to 16 timers; UW2 uses two, the 256 Hz game clock and a 16 Hz effects timer. ([sound.md](subsystems/sound.md))
+- **Toolchain.** Turbo C++ 1.01, medium model, `-mm -1 -G -O -Y -d` (the switches vary by file, and each file records its own); Turbo Assembler 2.0 for the assembly, with seg004 in 386 code and the overlay manager showing MASM 5.1's encodings. ([MATCHING.md](../MATCHING.md))
+- **Link.** TLINK linked the program as `uwedit.exe` on 12 May 1993, with `C0.ASM` changed in three places. seg003, seg004 and seg021 were libraries of 14, 14 and 17 assembly modules, recovered from TLINK's padding and the relocation order. The relinked EXE matches except for two bytes, the code flags of seg003 and seg004 in the overlay segment table. ([README](../README.md#linking))
+- **Shared code.** The FM Towns build was linked from the same object list in the same order and kept 3237 original names; System Shock's source release shares file names and functions with UW2 (`interp.asm`, `DAMAGE.C`, `GAMEWRAP.C` and others); `LZSS.C` is Okumura's 1989 code almost line for line; `AIL.ASM` is Miles' AIL 2.14. ([README](../README.md#where-the-sources-are))
+- **Layout.** Every address the assembly writes as a number, and the four DGROUP addresses that had to become names, are audited in [LAYOUT.md](LAYOUT.md).
+
+## 4. Dead code and open questions
+
+### Dead code
+
+Routines nothing in the EXE calls, by the sources and the IDA listing:
+
+- Graphics: POLYFILL.ASM's wall mapper (FM Towns' `wmap_bitmap`) and the routine after `L0582`; [LPFDELTA.ASM](../src/gfx/LPFDELTA.ASM), a run/skip/dump decoder; [PLANECPY.ASM](../src/gfx/PLANECPY.ASM); GRCORE.ASM's `seg003_0272_43F5` and the far string compare and copy at `5220`; GRDISP.ASM's `5363` and `536B`; GRSPIC.C's `seg009_2CC`; CUTS.C's `writeCutsValue_ovr108_2EAC` and `bufferPointer`. ([gfx.md](subsystems/gfx.md#open-questions))
+- 3D: SPHERE.ASM's `get_dist`; INTERP.ASM's `seg004_0849_DB0`, `DD2`, `E11` and `F08`; SMOOTH.ASM's `smooth_over`; VIEW3D.C's `seg032_2E9B_18B` and `seg032_2E9B_195`. ([3d.md](subsystems/3d.md#open-questions))
+- System: STUBS.C (seven stubs), STUBS2.C and EMPTY.C; EMS.C's three single-page routines; UTIL.C's `seg041_35D7_E9`; BIOSKEY.ASM's two thunks; CRITERR.ASM's `_diskerr` entry; TICKS.ASM's clock increment at +714; the joystick calibration routines `_375`, `_380` and `_38F` (no caller traced); SYSENTRY.ASM's far entries after `_809`. ([sys.md](subsystems/sys.md#open-questions))
+- Sound: SOUND.C's `seg016_1E73_19DE`, `seg016_1E73_1BC3`, `toggle_music`, `fade_music`, `stop_speech`, `init_voc_playback` and `voc_stub`; AIL.ASM's `AIL_set_timer_divisor` and `AIL_release_driver_handle`. ([sound.md](subsystems/sound.md#open-questions))
+- UI: BROWSE.C's seven hooks (empty in both builds); MOUSE.C's `flush_keys`; MAINMENU.C's `UnknownAutomapLoop_ovr147_A56`; INTERACT.C's `seg026_2716_F8A` and `seg026_2716_F98`; SCROLL.C's `seg043_3619_669`, which draws a framed box; AUTOMAP.C's `CornerShade_ovr094_9D2`. ([ui.md](subsystems/ui.md#open-questions))
+- Game code: MAP.C's `OverwriteAllTiles_ovr128_37` and TEXTMAPS.C's `ovr140_4F` (probably leftovers of the level editor); OBJECTS.C's `UNREFERENCED_seg029_2A8E_B04`; EFFECT.C's `add_timer_obj`; INVDATA.C's `FindEmptySlot`; CRPAGES.C's `ovr117_2FD`; MOTION.C's `seg031_2CFA_A3F`; PHYSICS.C's `unreferenced_seg008_1B09_160` (a flash, a hit and a shake); BABL.C's `bab_nothing_ovr095_2296`; TRIGSAVE.C's `ovr162_0` (no caller found in the sources).
+- Dead data: `npc_wit` in [conv/BARTER.C](../src/conv/BARTER.C) is computed and never read; `sound_b292` in [sound/SOUND.C](../src/sound/SOUND.C) is written and never read; LZSS's `flag0` is tested to no effect; `tmcolor` (above) is written and never read; opcode 0DAh of the model interpreter points at a data word in SMOOTH.ASM (`do_uwsetup`, which in FM Towns is the overflow handler itself), so no program can use it.
+- Empty but called: `make_stew` (both builds); `seg021_22FD_C10` ([sys/SYSLIBP.ASM](../src/sys/SYSLIBP.ASM)), which `render_3d` calls on its own stack every frame; the exit hook at FD71:192h.
+
+### Open questions
+
+Merged from the notes, without repeating the open parts of the bugs above.
+
+Answered while writing this page:
+
+- **Levels 65 to 72** ([3d.md](subsystems/3d.md#open-questions)): `GRIDDB.C` tests `(PlayerLevel - 1) / 8 == 8`, so these are world 8, the Ethereal Void, drawn with no ceiling and no distance lighting. Why level 68 is excepted is still open.
+- **What reads `tmcolor`** ([3d.md](subsystems/3d.md#open-questions)): nothing.
+- **Whether floor heights 14 and 15 occur** ([map.md](subsystems/map.md#open-questions)): they do, on levels 25 and 65.
+- **`BonesLook`'s "Relk." case** ([objects.md](subsystems/objects.md#open-questions)): the data has the skull it was written for.
+
+Still open:
+
+- Rendering: what `do_set_gmap_ctxt`, `do_defdelta` and the frame header's model variables 4, 8 and 9 do exactly; whether the words `set_cyb` overwrites are the texture masks; the geometry behind `do_door`'s drawing order; why `seg032_2E9B_195` toggles `SpecShadeMode`; whether the 3D models' bytecode uses `do_bcompact_map`. ([3d.md](subsystems/3d.md#open-questions))
+- Graphics: the pens of VIDMODE.ASM's `_2FD6` and `_303B` and the third word of each screen-mode record; what `_2977`'s split-screen virtual screen serves besides the cutscenes. ([gfx.md](subsystems/gfx.md#open-questions))
+- Cutscenes: whether cutscene 040 loads the right file in DOS, given `cutsop_data` (above). ([gfx.md](subsystems/gfx.md#cutscenes))
+- Fields named by offset only: many `struct Creature` fields and critter flag bits (`bA_1`, `b0F`, `b2D_0`, `b19`) and the summoning exclusions 0x7B and 0x7C ([critters.md](subsystems/critters.md#open-questions), [combat.md](subsystems/combat.md#open-questions)); `struct Player`'s `b3C`, `b60_11` (set by Armageddon) and `b62_5` ([game.md](subsystems/game.md#open-questions)); `Phys.b1D`, `MotionParams.f21` and `Handler.w6` ([motion.md](subsystems/motion.md#open-questions)); the id bits `ID_FLAG9`, `ID_FLAG10` and `ID_FLAG11` ([objects.md](subsystems/objects.md#open-questions)); `struct Scroll`'s fields ([ui.md](subsystems/ui.md#open-questions)).
+- Movement states: `player_sleep`'s motion states 1, 2 and 8 (probably swimming and falling), and bit 0x10 of `motion_state`, which is tested with swimming but never set by `newFPS`; the collision state bits have no original names. ([game.md](subsystems/game.md#open-questions), [motion.md](subsystems/motion.md#open-questions))
+- Race numbering: whether the owner field and the `Creature` race number share a numbering, which the names given to races 0xB, 0x15, 0x17 (the liche), 0x1C and 6 assume. ([combat.md](subsystems/combat.md#open-questions), [events.md](subsystems/events.md#open-questions))
+- Combat: which of `do_miss`'s effects 7 and 8 is which sound; what the missile `ammo` value -64 marks in `missile_newhit`. ([combat.md](subsystems/combat.md#open-questions), [motion.md](subsystems/motion.md#open-questions))
+- Critters: what goal 11's fluttering is used for. ([critters.md](subsystems/critters.md#open-questions))
+- Plot and places: what the player sees of the hack traps known only by their FM Towns names (`skup_ductosnore`, `do_qbert`); `do_filanium`'s link to the djinn quest (string 0x14C); which callers of `player_setup` drop the player from near the ceiling. ([events.md](subsystems/events.md#open-questions), [motion.md](subsystems/motion.md#open-questions))
+- Time: whether `Sched_WrapTime` in PLAYTIME.C and `pass_time`'s `Sched_SetAllClocks` ever disagree about the day clock. ([game.md](subsystems/game.md#open-questions))
+- Conversations: the order in which the scripts' source wrote a built-in's arguments. ([conversations.md](subsystems/conversations.md#open-questions))
+- Objects and inventory: which container has which `Containers[]` mask; whether the food table's values are nourishment; what a book link of 0x100 or more meant (`make_stew`); the unit of weight; what using each kind of object from a slot does. ([inventory.md](subsystems/inventory.md#open-questions), [objects.md](subsystems/objects.md#open-questions))
+- Map: why level 5 is the grey `MONO.DAT` level and what sets it; `Txm_Load` opening only the save directory's archive; `Map_Save`'s question, string 0x96. ([map.md](subsystems/map.md#open-questions))
+- Automap: what the 0x20 and 0x30 kinds of a `PlayersMap` byte mean; what `player_newsq` takes from `PlayersMap` into `player->automap`. ([ui.md](subsystems/ui.md#open-questions), [motion.md](subsystems/motion.md#open-questions))
+- Screen furniture: whether the gargoyle eyes' sequence reflects anything in the game. ([ui.md](subsystems/ui.md#open-questions))
+- Sound: AIL.ASM's data labels against the AIL 2.14 source, and the version word 0D3h; offset 14h of the driver description; why effects 0x5A and 0x5B play as MIDI only with speech card 1; the unit behind the loop count of effects of length 5000 and more; the song titles of themes other than 2 to 6. ([sound.md](subsystems/sound.md#open-questions))
+- System: who writes FD71:0120, which the keyboard layout choice and the joystick set-up read. ([sys.md](subsystems/sys.md#open-questions))
+- Link: why the code flags of seg003 and seg004 are 0 in the original (possibly another TLINK 3.0x) ([README](../README.md#linking)); how the overlay manager sizes its buffer, and how far an overlay's code can grow ([LAYOUT.md](LAYOUT.md#limits-that-still-apply)); the owners of eight small unreferenced DGROUP gaps ([README](../README.md#linking)).

@@ -90,6 +90,8 @@ Most of UW2's C code is in overlays: one buffer in conventional memory holds the
 
 ## Open questions
 
+[FINDINGS.md](../FINDINGS.md) collects the open questions and likely bugs of every subsystem in one place.
+
 - FD71:0120 is read by the keyboard layout choice and by the joystick set-up, and nothing found writes it; it is probably a setting, but which is not known.
 - `stdat` (FARDATA.ASM entry 52) holds the automap notes (`ATM_Strings`, 468Eh in), and seg003's `clear_fbuf` clears the frame buffer over the same bytes (34E9h words from offset 2) at the start of every 3D frame. The notes can only survive if they are kept there just while no 3D frame is drawn (the map screen) and saved elsewhere otherwise; not checked. ACLZW.C's work area also runs past `stdat`'s 6AA6h bytes into the compression buffers after it.
 - The joystick calibration routines (`_375`, `_380`, `_38F`) have no caller traced.

@@ -86,6 +86,8 @@ check_physics (each frame)
 
 ## Open questions
 
+[FINDINGS.md](../FINDINGS.md) collects the open questions and likely bugs of every subsystem in one place.
+
 - The collision state bits and the terrain byte have no original names; the meanings above are from the code. Bit 0x10 of `player->motion_state` is tested with swimming (0x11) but `newFPS` never sets it.
 - `Phys.b1D`, `MotionParams.f21` and `Handler.w6` (read only by critter path finding) have no known meaning.
 - `player_newsq` sets `player->automap` from a nibble of `PlayersMap`; what either means is not known.

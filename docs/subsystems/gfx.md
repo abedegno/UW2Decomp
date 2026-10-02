@@ -85,6 +85,8 @@ CUTS.C plays `CUTS\csNNN.nXX` files: `.n00` is a script and the rest are Deluxe 
 
 ## Open questions
 
+[FINDINGS.md](../FINDINGS.md) collects the open questions and likely bugs of every subsystem in one place.
+
 - POLYFILL.ASM's wall mapper is never called in DOS (seg004's `mapper_rtn` only marks wall polygons for the vertical mapper); LPFDELTA.ASM and PLANECPY.ASM have no callers either, and PLANECPY.ASM has a slip in its column addressing. They are probably left from earlier versions.
 - The plane-by-plane span copies `_2FD6` and `_303B` (VIDMODE.ASM) have not been traced to their pens; nor has the third word of each screen-mode record (mode 0 is 320 by 200, mode 1 320 by 400).
 - What `_2977`'s split-screen virtual screen is used for besides the cutscenes.

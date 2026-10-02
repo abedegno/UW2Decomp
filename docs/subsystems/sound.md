@@ -42,6 +42,8 @@ Function names in `SOUND.C` are the FM Towns originals where that build has them
 
 ## Open questions
 
+[FINDINGS.md](../FINDINGS.md) collects the open questions and likely bugs of every subsystem in one place.
+
 - The AIL 2.14 source is not in this workspace, so `AIL.ASM`'s comments come from the code, not from Miles' comments. Comparing the two would name the data labels. The version word 0D3h that drivers are checked against probably corresponds to an AIL 2.1x release; that is an inference from the number only.
 - What `AIL_init_driver` reads at offset 14h of the driver description is used as a frequency; it is probably the service rate field of AIL's driver description, which `struct DrvrDesc` does not yet include.
 - Effects 0x5A and 0x5B play as effects 1 and 2, and as MIDI only with speech card 1. Why card 1 differs is not known.

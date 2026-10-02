@@ -60,6 +60,8 @@ The inventory is not part of a level's object lists when a level is saved. `Save
 
 ## Open questions
 
+[FINDINGS.md](../FINDINGS.md) collects the open questions and likely bugs of every subsystem in one place.
+
 - Which container has which `Containers[]` mask (data in `OBJECTS.DAT`, not checked).
 - `FindEmptySlot` (INVDATA.C) is never called and is not in the FM Towns build.
 - What using each kind of object from a slot does is `UseObj` in `obj/OBJUSE.C` and `obj/USEITEMS.C`, not traced here.

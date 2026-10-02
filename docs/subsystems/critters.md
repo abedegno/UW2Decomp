@@ -66,6 +66,8 @@ Critter pictures are in `CRIT\CRxx.yy`, critter file xx (octal) split into fragm
 
 ## Open questions
 
+[FINDINGS.md](../FINDINGS.md) collects the open questions and likely bugs of every subsystem in one place.
+
 - Many `struct Creature` fields and critter flag bits are named by offset only (`bA_1`, `b0F`, `b2D_0`, `b1C_0` as nerve, `b19` bits); the names given in comments come from use.
 - `maybe_rescue_guy_from_fire` (`CRITTIME.C`) mixes fine and tile units in the same way in both builds; whether the rescue can work is not known.
 - `set_gridx_and_y_based_on_tile_type` places critters in diagonal tile 5 at the corner of type 2, probably a slip.

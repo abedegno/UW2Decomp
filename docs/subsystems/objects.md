@@ -62,6 +62,8 @@ Rules found in the code:
 
 ## Open questions
 
+[FINDINGS.md](../FINDINGS.md) collects the open questions and likely bugs of every subsystem in one place.
+
 - Several id bits are named only by number (`ID_FLAG9`, `ID_FLAG10`, `ID_FLAG11`); their meaning differs by class (triggers, books, spells).
 - `make_stew` is an empty stub in both builds; what a link of 0x100 or more on a book meant is not known.
 - `BonesLook` (`LOOK.C`) has a case for "Relk." (owner 0x3D) that its own condition makes unreachable.

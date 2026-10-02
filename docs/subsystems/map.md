@@ -54,6 +54,8 @@ The renderer shades through 16 colour maps of 256 bytes, `cLightTabs`, filled fr
 
 ## Open questions
 
+[FINDINGS.md](../FINDINGS.md) collects the open questions and likely bugs of every subsystem in one place.
+
 - Why level 5 is the grey (`MONO.DAT`) level, and what sets it: UW-Formats says the mono maps are for invisibility; the callers pass computed levels, which have not been traced.
 - `hgt_val` has zeros for heights 14 and 15 and 0x400 at index 16. Whether heights 14 and 15 occur in UW2's levels is not checked.
 - `OverwriteAllTiles_ovr128_37` (fill the map with one tile) and `ovr140_4F` (draw a texture at 16 by 16) have no callers and no FM Towns names; probably leftovers of the level editor (the program was linked as `uwedit.exe`).

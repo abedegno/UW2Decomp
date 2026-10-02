@@ -56,6 +56,8 @@ The game in progress lives in `UWHOME\SAVE0\` (`HomeDir`): at start-up the prist
 
 ## Open questions
 
+[FINDINGS.md](../FINDINGS.md) collects the open questions and likely bugs of every subsystem in one place.
+
 - `player_sleep`'s motion states 1 and 2 (death when passing out) and 8 (a fall) are named only by what the code does with them; probably swimming and falling.
 - The meaning of several `struct Player` fields named by offset (`b3C`, `b60_11`, `b62_5`); `b60_11` is set by Armageddon.
 - Whether the hourly schedule (`Sched_WrapTime` in `PLAYTIME.C`) and `pass_time`'s `Sched_SetAllClocks` ever disagree about the day clock; both compute it from `game_clock`.

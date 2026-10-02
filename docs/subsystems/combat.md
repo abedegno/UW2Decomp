@@ -83,6 +83,8 @@ Some of the spell rules:
 
 ## Open questions
 
+[FINDINGS.md](../FINDINGS.md) collects the open questions and likely bugs of every subsystem in one place.
+
 - Spell 64 (Mass Paralyze by the string order) is class 6, minor 5, which indexes `area_spells[4]`, `sp_repel_undead`, with target mode 0 (critters). Either the string order is off by one there or object-cast Mass Paralyze repels undead; not checked in the game.
 - Race 0x17 is special in several places (Smite Undead does half the hit points, Study Monster lists extra spells and a resistance). By the owner race strings (block 1, 0x172 + race, used by `obj/LOOK.C`) it is the liche, if the owner field and the `Creature` race number share a numbering, which is not checked.
 - `do_miss`'s two sounds (effects 7 and 8) are chosen by weapon kind and armour kind; which sound is which is not checked.
