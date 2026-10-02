@@ -5,86 +5,28 @@
    originals from the FM Towns symbol table; the source file's own name is not known. */
 
 #include <stdlib.h>
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* item id 0-8 (major 6-8, minor 4-5, index 0-3) */
-    unsigned pos;                       /* z 0-6, heading 7-9, x 10-12, y 13-15 */
-    union {
-        unsigned word;                  /* the next object in this list */
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;                  /* the head of the contents list, or the quantity */
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-    char pad08[0x0D - 0x08];
-    unsigned flags0D;                   /* 0x0D, loot generated in bit 12 */
-    char pad0F[0x16 - 0x0F];
-    unsigned home;                      /* 0x16, x in bits 10-15, y in bits 4-9 */
-};
+#include "combat.h"
+#include "critter.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
 
 #define OBJ_ID(o)       ((o)->id & 0x1FF)
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
 #define OBJ_MINOR(o)    (((o)->id & 0x30) >> 4)
 #define OBJ_INDEX(o)    (((o)->id & 0x3F) >> 0)
 
-/* One critter type's record, 0x30 bytes. */
-struct Creature {
-    char pad00[9];
-    unsigned char race;                 /* 0x09 */
-    char pad0A[0x20 - 0x0A];
-    struct {
-        unsigned char present:1;
-        unsigned char item:7;
-    } arms[2];                          /* 0x20 */
-    struct {
-        unsigned prob:4;
-        unsigned item:12;
-    } other[2];                         /* 0x22 */
-    unsigned treasure_prob:4;           /* 0x26 */
-    unsigned treasure_rate:4;
-    unsigned food_prob:4;               /* 0x27 */
-    unsigned food_item:4;
-    char pad28[0x30 - 0x28];
-};
-
-/* One object type's common properties, 11 bytes. */
-struct ComObj {
-    char pad0[4];
-    unsigned char value;                /* 0x04 */
-    char pad5[7 - 5];
-    unsigned b7:7;                      /* 0x07 */
-    unsigned can_own:1;
-    unsigned b8:8;                      /* 0x08 */
-    unsigned b9:8;                      /* 0x09 */
-    unsigned qualtype:4;                /* 0x0A */
-    unsigned bA:4;
-};
-
-struct MissileDat {
-    char pad0[2];
-    unsigned char ammo;                 /* 0x02 */
-};
-
-extern struct Object far *ThePlayer;
-extern int PlayerLevel;
-extern int MapObj_X, MapObj_Y;
-extern struct Creature Creature[];
-extern struct ComObj ComObjData[];
-extern struct MissileDat Missile[];
+extern struct MissileInfo Missile[];
 /* This file's _BSS, DS:863A: only this file uses it; no FM Towns name, so static. */
 static struct Creature near *LootCreature;
 
-void far remove_lock(struct Object far *obj, int how);
 struct Object far * far Obj_PtrTMem(unsigned far *link);
-int far Obj_MemTPtr(struct Object far *obj);
 char far IsMobElem(struct Object far *obj);
 char far put_at(int x, int y, int z, struct Object far *obj, int a, int b);
 void far UseTrigger(struct Object far *who, int a, int b, struct Object far *trig, int how);
 struct Object far * far CreateObj(int id, int b);
 void far Obj_Add(unsigned far *head, struct Object far *obj);
-int far rollem(int dice, int sides);
 
 char far drop_link_chain(struct Object far *cont, int owner)
 {
@@ -151,7 +93,7 @@ void far generate_treasure(struct Object far *npc)
         type = 0;
     if (type == 1)
         type = 0;
-    if ((value = ComObjData[type + 0xA0].value) == 0)
+    if ((value = (unsigned char)ComObjData[type + 0xA0].value) == 0)
         value = 1;
     if (value >= 12)
         value = value * 8 - 68;
@@ -206,7 +148,7 @@ void far generate_weapons(struct Object far *npc)
         else
             quality = rand() % 64;
         obj->qn.f.quality = quality;
-        if (OBJ_MINOR(obj) == 1 && Missile[obj->id & 0xF].ammo == 0xC0)
+        if (OBJ_MINOR(obj) == 1 && (unsigned char)Missile[obj->id & 0xF].ammo == 0xC0)
             obj->ol.f.link = rand() % 8 + 4;
         Obj_Add(&npc->ol.word, obj);
     }
@@ -238,7 +180,7 @@ void far generate_inventory(struct Object far *npc)
 {
     int minor, index;
 
-    if ((npc->flags0D & 0x1000) >> 12)
+    if ((npc->attitude_word & 0x1000) >> 12)
         return;
     minor = OBJ_MINOR(npc);
     index = npc->id & 0xF;
@@ -247,5 +189,5 @@ void far generate_inventory(struct Object far *npc)
     generate_food(npc);
     generate_weapons(npc);
     generate_equipment(npc);
-    npc->flags0D = npc->flags0D & 0xEFFF | 0x1000;
+    npc->attitude_word = npc->attitude_word & 0xEFFF | 0x1000;
 }

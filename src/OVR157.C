@@ -7,78 +7,18 @@
 
 #include <string.h>
 #include <stdlib.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x21];
-    unsigned char skills[20];           /* 0x21 */
-    char pad35[0x39 - 0x35];
-    unsigned char hunger;               /* 0x39 */
-    unsigned char fatigue;              /* 0x3A */
-    unsigned char food_heal;            /* 0x3B */
-    unsigned char b3C;                  /* 0x3C */
-    unsigned char level;                /* 0x3D */
-    char pad3E[0x5E - 0x3E];
-    unsigned char moonstone;            /* 0x5E, level the moonstone is on */
-    char pad5F[0x60 - 0x5F];
-    unsigned b60:1;                     /* 0x60 */
-    unsigned poison:4;
-    unsigned active_spells:4;
-    unsigned b60_9:2;
-    unsigned b60_11:1;
-    unsigned shrooms:2;
-    unsigned drunk:6;                   /* word 0x61, bits 6..11 */
-    unsigned automap:1;                 /* word 0x62, bit 4 */
-    unsigned b62_5:3;
-    char pad63[0x72 - 0x63];
-    unsigned long flags72;              /* 0x72 */
-    char pad76[0x96 - 0x76];
-    unsigned long quests[2];            /* 0x96 */
-    char pad9E[0xE6 - 0x9E];
-    unsigned char lines_cut;            /* 0xE6, Guardian lines cut, a bit per world */
-    char padE7[0x305 - 0xE7];
-    unsigned char b305;                 /* 0x305 */
-};
-
-/* The player's critter data, reached through the near pointer `playerdat`. */
-struct Critter {
-    char pad0[4];
-    unsigned char max_vit;              /* 0x04 */
-};
-
-struct PlayerStats {
-    char pad0[0x4A];
-    unsigned weight;                    /* 0x4A, weight carried */
-};
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* item 0-8 (major class 6-8), is_quant 15 */
-    unsigned pos;                       /* z 0-6, heading 7-9, y fine 10-12, x fine 13-15 */
-    union {
-        unsigned word;
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-    unsigned char hp;                   /* 0x08 */
-    unsigned char b09;                  /* 0x09 */
-    unsigned char b0A;                  /* 0x0A */
-    unsigned goal_word;                 /* 0x0B, goal in bits 0-3 */
-    unsigned attitude_word;             /* 0x0D, undead in bit 10, attitude in bits 14-15 */
-    unsigned w0F;                       /* 0x0F */
-    char pad11[0x12 - 0x11];
-    unsigned char b12;                  /* 0x12 */
-    unsigned char b13;                  /* 0x13 */
-    unsigned char b14;                  /* 0x14 */
-    unsigned char b15;                  /* 0x15 */
-    unsigned home;                      /* 0x16, x in bits 10-15, y in bits 4-9 */
-    unsigned char b18;                  /* 0x18, fine heading in bits 0-4 */
-    unsigned char b19;                  /* 0x19 */
-    unsigned char whoami;               /* 0x1A */
-};
+#include "combat.h"
+#include "critter.h"
+#include "event.h"
+#include "file.h"
+#include "gfx.h"
+#include "inv.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
 
 #define OBJ_Z(o)        ((o)->pos & 0x7F)
 #define OBJ_HEADING(o)  (((o)->pos & 0x380) >> 7)
@@ -104,61 +44,11 @@ struct Object {
 #define OBJ_TYPE(o)     (((o)->id & 0x3F) >> 0)
 #define OBJ_UNDEAD(o)   (((o)->attitude_word & 0x400) >> 10)
 
-/* One critter type's record, 0x30 bytes. */
-struct Creature {
-    unsigned char level;                /* 0x00 */
-    char pad01[0x04 - 0x01];
-    unsigned char avghit;               /* 0x04 */
-    char pad05[0x09 - 0x05];
-    unsigned char race;                 /* 0x09 */
-    unsigned char b0A_0:1;              /* 0x0A */
-    unsigned char b0A_1:1;
-    unsigned char b0A_2:4;
-    unsigned char b0A_6:1;
-    unsigned char flier:1;
-    char pad0B[0x0F - 0x0B];
-    unsigned char b0F;                  /* 0x0F */
-    char pad10[0x1D - 0x10];
-    unsigned char stealth:4;            /* 0x1D */
-    unsigned char b1D_4:4;
-    char pad1E[0x2A - 0x1E];
-    unsigned char spells[3];            /* 0x2A */
-    unsigned char b2D_0:1;              /* 0x2D */
-    unsigned char caster:7;
-    unsigned char b2E;                  /* 0x2E */
-    char pad2F[0x30 - 0x2F];
-};
-
-/* A rune spell: its class in the top five bits of the first byte. */
-struct Spell {
-    unsigned char cls;
-    char pad1[2];
-    unsigned char sub;
-};
-
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    unsigned b8:2;
-    unsigned floor:4;                   /* bits 10-13: floor texture */
-    unsigned b14:2;
-    unsigned objects;                   /* 0x02, head of the tile's object list */
-};
-
 #define SPELL_CLASS(s)  (((s).cls & 0xF8) >> 3)
 
 extern struct Spell far spells[];
-extern struct Creature Creature[];
-extern struct Object far *ThePlayer;
-extern struct Player near *player;
-extern struct Object far *ActiveObj;
-extern int PlayerLevel;
-extern struct Object far *critdata;
 extern unsigned char curBin;
-extern struct Critter near *playerdat;
-extern struct PlayerStats PlayerDat;
-extern int GameInputMode;
-extern int area_spell_state;
+extern struct Player PlayerDat;
 extern void (far *npp_func)(void);
 extern unsigned char far *ActiveMob;
 extern unsigned char far *LastActiveMob;
@@ -166,66 +56,32 @@ extern unsigned char far *LastActiveMob;
 char dtypes[6] = { 3, 4, 8, 0x10, 0x20, 0x40 };
 int demons[5] = { 0x4B, 0x4B, 0x5E, 0x64, 0x68 };
 
-char far * far get_string(int id);
-char far * far str_cat(char far *dst, char far *src);
-unsigned char far check_res(struct Object far *obj, unsigned char damage, unsigned char type);
-void far game_sprint(int id);
 void far scroll_print(char far *s);
-int far GetObjDesc(struct Object far *obj, int lore, char *s);
-struct Tile far * far Map_GetAddr(int x, int y);
-struct Object far * far build_new_obj(int item, struct Tile far *tile);
-void far damage_square(int x, int y, unsigned char kind, unsigned char src);
-int far Obj_MemTPtr(struct Object far *obj);
 int far add_animobj(int index, int len, int a, char x, char y);
-void far Obj_Free(struct Object far *obj);
 void far Obj_Add(unsigned far *head, struct Object far *obj);
-void far fireball_effect(struct Object far *obj, int x, int y);
 struct Object far * far Obj_InList(unsigned far **head, int a, int major, int minor, int idx);
 char far Obj_Rem(unsigned far *head, struct Object far *obj);
-int far debris_type(int item, char type);
 int far useNSpellCharges(struct Object far *obj, int n);
-int far FindSlot(struct Object far *obj);
-void far DamageInventory(int slot, int damage, int type, int a, int b);
-void far FixPlayerEquips(void);
-void far DisplayInventory(void);
 unsigned char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
-void far editchng(int bits);
 struct Object far * far Obj_PtrTMem(unsigned far *link);
-void far move_along(int heading, int dist, int *x, int *y);
 unsigned char far can_place(int item, int a, int x, int y, int z, int b, char dist);
 struct Object far * far CreateObj(int item, char mobile);
 unsigned char far IsMobElem(struct Object far *obj);
-void far creature_obj_init(void);
-void far mob_init(struct Object far *obj, int x, int y);
 struct Object far * far obj_deal(struct Object far *obj, int x, int y, char how);
-void far print_path_to(char far *s, int x1, int y1, int z1, int x2, int y2, int z2, int dist);
 int far mpos(char dx, char dy);
-int far skill_check(int value, int target);
-char far * far fix_name_string(char far *s, int article, int b);
 unsigned char far put_at(int x, int y, int z, struct Object far *obj, int a, int b);
 char far set_curmagic(char cls, char sub, char flags);
 void far do_teleport(struct Object far *who, int x, int y, int level);
-void far player_setup(int a, int b, int c);
 void far set_drugged(int on);
-void far get_hp_back(struct Object far *obj, char amount);
-void far home_cam(int how);
-void far attach_eye(int how);
-int far rollem(int dice, int sides);
 typedef char (far *SpellFn)(int x, int y, struct Object far *target, struct Tile far *tile,
                             unsigned char src);
 void far gronk_area(struct Object far *who, char count, SpellFn fn, unsigned char type,
                     unsigned char dist, unsigned char radius);
 void far set_effect(int which, int amount);
 void far play_effect_on_mobile(int fx, struct Object far *obj, int vol);
-void far do_mstone(void);
-void far FreePlayerInv(unsigned far *list);
 void far clearobj(int n);
-void far clear_runes(void);
-void far clear_shelf(void);
-void far pretty_panelagain(void);
 void far play_effect_here(int fx, int vol, int c);
 void far put_effect(struct Object far *obj, int type, int size, int a, int b, int x, int y);
-void far do_sfx(int which, int arg);
 void far UseTrigger(struct Object far *who, struct Object far *obj, struct Object far *trigger, int how);
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
                      unsigned char damage, unsigned char type);
@@ -249,7 +105,7 @@ char far study_monster_spells(struct Object far *obj, struct Creature *crit, cha
                 spl[i] = 0x39;
                 i++;
             }
-            if (crit->b2E > 0x2D) {
+            if (crit->locks > 0x2D) {
                 spl[i] = 0x23;
                 i++;
             }
@@ -257,7 +113,7 @@ char far study_monster_spells(struct Object far *obj, struct Creature *crit, cha
                 spl[i] = 0x1C;
                 i++;
             }
-            if (crit->caster >= 0x19 && crit->level >= 9) {
+            if (crit->caster >= 0x19 && crit->armour[0] >= 9) {
                 spl[i] = 0x3B;
                 i++;
             }
@@ -421,7 +277,7 @@ void far sp_enchant_faildestroymess(struct Object far *obj, int x, int y)
     if (add_animobj(Obj_MemTPtr(boom), 4, 0, x, y) == -1)
         Obj_Free(boom);
     else {
-        Obj_Add(&tile->objects, boom);
+        Obj_Add(&tile->objects.word, boom);
         fireball_effect(boom, x, y);
     }
 }
@@ -612,9 +468,6 @@ char far sp_true_sight(struct Object far *caster, struct Object far *target)
     return 0;
 }
 
-char far tremor_area(int x, int y, struct Object far *target, struct Tile far *tile,
-                     unsigned char src);
-
 void far creat_spell(struct Object far *caster, char which)
 {
     struct Object far *obj;
@@ -661,8 +514,8 @@ void far creat_spell(struct Object far *caster, char which)
             lvl = 2;
         do
             item = lvl + rand() % lvl + 0x40;
-        while (Creature[item & ~0x1C0].avghit == 0 || Creature[item & ~0x1C0].b0A_1
-               || item == 0x7B || item == 0x7C || Creature[item & ~0x1C0].b0A_6);
+        while (Creature[item & ~0x1C0].avghit == 0 || Creature[item & ~0x1C0].bA_1
+               || item == 0x7B || item == 0x7C || Creature[item & ~0x1C0].swims);
         break;
     case 6:
         item = 0x1E;
@@ -688,29 +541,29 @@ void far creat_spell(struct Object far *caster, char which)
             } else {
                 obj->attitude_word = obj->attitude_word & 0x3FFF;
                 obj->b19 = obj->b19 & 0xFE | 1;
-                obj->w0F = obj->w0F & 0xFFC0 | (OBJ_HOMEX(ThePlayer) & 0x3F) << 0;
-                obj->w0F = obj->w0F & 0xF03F | (OBJ_HOMEY(ThePlayer) & 0x3F) << 6;
+                obj->b0F = obj->b0F & 0xFFC0 | (OBJ_HOMEX(ThePlayer) & 0x3F) << 0;
+                obj->b0F = obj->b0F & 0xF03F | (OBJ_HOMEY(ThePlayer) & 0x3F) << 6;
             }
         } else if (which == 6) {
             owner = 0;
             mob_init(obj, homex, homey);
-            obj->b09 = heading + (rand() & 1) * 0x7F + 0x40;
+            obj->heading = heading + (rand() & 1) * 0x7F + 0x40;
             if (OBJ_MAJOR(caster) == 1) {
                 if ((owner = Obj_MemTPtr(caster)) >= 0x100)
                     owner = 0;
             }
-            obj->b12 = owner;
+            obj->last_hit = owner;
             obj->b15 = obj->b15 & 0x7F;
             obj->b0A = obj->b0A & 0x7F;
             z += 0x12;
             if (z > 0x78)
                 z++;
-            obj->w0F = z << 3;
+            obj->b0F = z << 3;
             obj->b13 = obj->b13 & 0x80 | (rand() % 0xF + 0xF & 0x7F) << 0;
         } else
             obj->qn.f.quality = 0x3F;
         SET_Z(obj, z);
-        Obj_Add(&tile->objects, obj);
+        Obj_Add(&tile->objects.word, obj);
         if (which < 4)
             obj_deal(obj, homex, homey, 1);
         editchng(2);
@@ -751,7 +604,7 @@ void far mdetect(int dist, int skill)
         xv = OBJ_HOMEX(obj) - px;
         yv = OBJ_HOMEY(obj) - py;
         if (abs(xv) < dist && abs(yv) < dist) {
-            if ((res = skill_check(skill, 0xF - Creature[OBJ_TYPE(obj)].stealth)) > 0)
+            if ((res = skill_check(skill, 0xF - Creature[OBJ_TYPE(obj)].noise)) > 0)
                 counts[mpos(xv, yv)]++;
             if (res == 2)
                 cands[mpos(xv, yv)] = OBJ_TYPE(obj);
@@ -813,7 +666,7 @@ char far tremor_area(int x, int y, struct Object far *target, struct Tile far *t
     }
     if (put_at(x * 8 + 3, y * 8 + 3, 0x6E, boulder, 0, 0) && IsMobElem(boulder)) {
         boulder->b13 = boulder->b13 & 0x80 | ((rand() & 3) + 2 & 0x7F) << 0;
-        boulder->b09 = rand() & 0xFF;
+        boulder->heading = rand() & 0xFF;
         boulder->b0A = boulder->b0A & 0xF0 | (curBin + (rand() & 3) & 0xF) << 0;
         boulder->b14 = boulder->b14 & 0xF8 | (rand() % 3 + 1 & 7) << 0;
     }
@@ -858,8 +711,8 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
             player->shrooms = 0;
             set_drugged(0);
             player->drunk = 0;
-            player->b305 = 0;
-            get_hp_back(ThePlayer, playerdat->max_vit);
+            player->paralyzed = 0;
+            get_hp_back(ThePlayer, playerdat->avghit);
             player->hunger = 0xFF;
             player->food_heal = 0;
             player->fatigue = 0;
@@ -896,10 +749,10 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
             play_effect_on_mobile(0x12, caster, 0);
             break;
         case 10:                        /* gate travel */
-            if (player->moonstone) {
+            if (player->moonstones[0]) {
                 npp_func = do_mstone;
-                area_spell_state = player->moonstone;
-                do_teleport(ThePlayer, 0x3F, 0x3F, player->moonstone);
+                area_spell_state = player->moonstones[0];
+                do_teleport(ThePlayer, 0x3F, 0x3F, player->moonstones[0]);
                 player_setup(0, 0, -1);
                 editchng(0x7FFE);
             } else
@@ -926,9 +779,6 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
         }
 }
 
-char far check_Guardian_magic_marker(int x, int y, struct Object far *obj, struct Tile far *tile,
-                                     unsigned char src);
-
 void far thump_your_magic_twanger_froggie(void)
 {
     area_spell_state = 0;
@@ -951,18 +801,18 @@ char far check_Guardian_magic_marker(int x, int y, struct Object far *obj, struc
     if (OBJ_ITEM(obj) != 0x35 || !((obj->id & 0x2000) >> 13) || !((obj->id & 0x4000) >> 14))
         return 0;
     obj->id = obj->id & 0xDFFF;
-    if (player->lines_cut & bit)
+    if (player->quest_bytes[0] & bit)
         cut = 1;
     if (!cut)
         put_effect(obj, 7, 4, 0, 7, x, y);
-    if (Obj_Rem(&tile->objects, obj))
+    if (Obj_Rem(&tile->objects.word, obj))
         Obj_Free(obj);
     if (cut)
         return 1;
-    if ((player->lines_cut |= bit) == 0xFF)
-        player->flags72 = (player->flags72 & ~4L) + 4;
+    if ((player->quest_bytes[0] |= bit) == 0xFF)
+        player->quests[3] = (player->quests[3] & ~4L) + 4;
     if ((PlayerLevel - 1) / 8 == 3)
-        player->quests[1] = (player->quests[1] & ~1L) + 1;
+        player->quests[13] = (player->quests[13] & ~1L) + 1;
     area_spell_state = 1;
     do_sfx(4, 0xF);
     return 1;

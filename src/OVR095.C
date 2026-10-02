@@ -19,6 +19,10 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include "conv.h"
+#include "file.h"
+#include "sys.h"
+#include "ui.h"
 
 /* A block of the script heap: its size in bytes (header and tag included) and, while
    free, the next free block. An allocated block points at itself and ends with a tag,
@@ -71,79 +75,18 @@ char *opcode_text[] = {
 
 /* Other files' data. The byte in a segment of its own is a static in the FM Towns
    build, written only by load_script; its name is provisional. */
-extern unsigned cnv_id;
-extern int CutsceneOrConversationStringBlock;
 extern char far stdat[];
 /* 40h bytes, far, so its own segment (6384:0000, segment table entry 76); load_script
    clears the first. FM Towns' load_script_ stores to it unnamed, so it was static;
    provisional name. */
 static char far seg066_0[0x40];
 
-/* Far string routines (seg017 and seg039). */
-int far str_len(char far *s);
-char far * far str_copy(char far *dst, char far *src);
-void far str_ncopy(char far *dst, char far *src, int n);
-char far * far FindStringDelimiter(char far *s, int c);
-char far * far str_str(char far *s, char far *find);
-int far str_cmp(char far *a, char far *b);
-void far mem_set(void far *dst, char value, int size);
-char far * far seg039_3452_857(char far *s);
-int far seg039_3452_89A(char far *s);
-char far * far get_string(int id);
-int far make_string(char far *s, int block);
-void far clear_dynamics(int block);
-
-int far our_open(char *name, int mode, int flags);
-int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, int n);
-int far FarWrite_ovr167_627(int fd, void far *buf, int n);
-unsigned char far open_arc(int arc, char *dir);
 int far get_arc(int arc, int blk, char far *buf);
 void far close_arc(int arc);
 int far scroll_print(char far *s);
-void far pfatal_code(int code);
 
 /* This file's functions called before their definitions. */
-int far DoReadHeader_ovr095_12C3(void);
-void far DoCopyCode_ovr095_14B1(void);
-char far * far convert_string(char far *s);
-int far AtIndex_ovr095_11C0(char far **s);
-void far vmAdd_ovr095_18CF(void);
-void far babl_neg_ovr095_1908(void);
-void far MUL_OPCODE_ovr095_192C(void);
-void far subOpcode_ovr095_1965(void);
-void far BABL_DIV_ovr095_199E(void);
-void far BablMod_ovr095_19EE(void);
-void far babBitOr_ovr095_1A3E(void);
-void far babl_and_ovr095_1A83(void);
-void far VM_GT_ovr095_1AC8(void);
-void far vmTstge_ovr095_1B0A(void);
-void far vmTstlt_ovr095_1B4C(void);
-void far VmTstle_ovr095_1B8E(void);
-void far ExecTsteq_ovr095_1BD0(void);
-void far opcode_tstne_ovr095_1C12(void);
-void far babl_call_ovr095_1C54(void);
-int far bab_ret_ovr095_1C82(void);
-void far exec_fetchm_ovr095_1CAA(void);
-void far vmOffset_ovr095_1CD7(void);
-void far BABL_STORE_ovr095_1D11(void);
-void far talk_calli_ovr095_1D44(void);
-void far vm_strcmp_ovr095_1DC1(void);
-void far vmSay_ovr095_1EA2(void);
-void far babl_respond_ovr095_1F4A(void);
-int far getmem(int addr);
-int far conv_local_ovr095_2030(int addr);
 void far bab_fun(char *name, void (far *fn)());
-void far bab_var_clear(void);
-int far unbound(void);
-int far BabRand_ovr095_A5B(int far *args);
-int far bab_compare_ovr095_A8B(int far *args);
-int far babPluralize_ovr095_B95(int far *args);
-int far StringContains_ovr095_BDB(int far *args);
-int far babl_str_append_ovr095_D0A(int far *args);
-int far STRING_COPY_ovr095_DC7(int far *args);
-int far conv_find_ovr095_E36(int far *args);
-int far conv_length_ovr095_E8D(int far *args);
-int far DoVal_ovr095_EB2(int far *args);
 
 /* The whole work area starts as one free block. A static in the FM Towns build. */
 static void far ovr095_0(char far *work)

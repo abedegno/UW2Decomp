@@ -3,35 +3,15 @@
 /* Graphic resource lookup, decoding, cursor drawing and image scaling. */
 
 #include <dos.h>
+#include "gfx.h"
+#include "sys.h"
+#include "view3d.h"
 
-extern unsigned far *grs_off;
-extern unsigned far *obj_tab;
-extern unsigned first_vram, first_button;
 extern unsigned char Palettes[];
-extern unsigned char far cmpbuf1_start[], far cmpbuf2_start[];
-extern unsigned char far tmap_fpage;
-extern unsigned char far tmap_inpage, far obj_inpage1;
-extern unsigned far EmsBuff;
 extern unsigned char far Transparency;
 
 void far MapMemory_seg013_1D3C_C7(int physical, int page);
-void far DRAW_RELATED_seg017_2179_320(unsigned offset, int far *width, int far *height);
-void far seg003_0272_5025(int icon, int x, int y, int width, int height, int a, int b);
 void far show(int x, int y, void far *data, int width, int height, int a, int b);
-void far fbshow(void far *data, int x, int y, int width, int height);
-void far * far cFrmtoRaw(void far *data, unsigned char far *pal, unsigned char mode);
-
-void far * far seg009_7(int icon);
-void far seg009_73(int icon, int x, int y, int height, int width);
-void far * far grs_unpack(void far *data);
-void far grs_fbplot(int icon, int x, int y);
-int far grs_which1(int icon);
-void far pic_to_screen(int icon, int x, int y, int height, int width);
-void far seg009_2CC(int icon, int width, int height);
-void far pic_to_fbuf(int icon, int x, int y);
-void far mask_to_screen(int icon, int x, int y, int width, int height, int clip);
-unsigned far seg009_392(int index);
-void far * far grs_scaledown(unsigned char far *source, int width, int height, int scale);
 
 void far * far seg009_7(int icon)
 {

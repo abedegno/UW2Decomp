@@ -9,53 +9,15 @@
 
 #include <stdlib.h>
 #include <string.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0xD6];
-    unsigned long questsD6;             /* 0xD6 */
-    char padDA[0xE7 - 0xDA];
-    unsigned char arena_wins;           /* 0xE7 */
-    char padE8[0x308 - 0xE8];
-    unsigned char crithit;              /* 0x308 */
-    unsigned char typehit;              /* 0x309 */
-    long crithittime;                   /* 0x30A */
-    unsigned char hitx;                 /* 0x30E */
-    unsigned char hity;                 /* 0x30F */
-    char pad310[0x360 - 0x310];
-    unsigned char pit_fighters[5];      /* 0x360 */
-    char pad365[0x369 - 0x365];
-    unsigned long game_clock;           /* 0x369 */
-    char pad36D[0x36E - 0x36D];
-    unsigned char xclock1;              /* 0x36E */
-    char pad36F[0x37B - 0x36F];
-    unsigned char arena_best;           /* 0x37B */
-};
-
-/* A link to an object, with six bits of something else below it. */
-union Link {
-    unsigned word;
-    struct { unsigned low:6, index:10; } f;
-};
-
-/* A mobile object, 0x1B bytes. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* item 0-8 (major class 6-8) */
-    unsigned pos;                       /* z 0-6, heading 7-9, y fine 10-12, x fine 13-15 */
-    union Link qn;                      /* quality 0-5, the next object 6-15 */
-    union Link ol;                      /* owner 0-5, the contents or a link 6-15 */
-    unsigned char hp;                   /* 0x08 */
-    unsigned char b09;                  /* 0x09 */
-    unsigned char b0A;                  /* 0x0A */
-    unsigned goal_word;                 /* 0x0B, goal in bits 0-3 */
-    unsigned attitude_word;             /* 0x0D, attitude in bits 14-15 */
-    char pad0F[0x15 - 0x0F];
-    unsigned char b15;                  /* 0x15 */
-    unsigned home;                      /* 0x16, x in bits 10-15, y in bits 4-9 */
-    unsigned char b18;                  /* 0x18 */
-    unsigned char b19;                  /* 0x19 */
-    unsigned char whoami;               /* 0x1A */
-};
+#include "critter.h"
+#include "event.h"
+#include "file.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "ui.h"
+#include "uw2.h"
 
 #define OBJ_ITEM(o)     ((o)->id & 0x1FF)
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
@@ -86,48 +48,6 @@ struct Object {
 #define SET_FED(o, v)     ((o)->b19 = (o)->b19 & 0x7F | ((v) & 1) << 7)
 #define SET_B19_0(o, v)   ((o)->b19 = (o)->b19 & 0xFE | ((v) & 1) << 0)
 
-
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    unsigned b8:2;
-    unsigned floor:4;                   /* bits 10-13 */
-    unsigned b14:2;
-    union Link objects;                 /* 0x02, head of the tile's object list */
-};
-
-/* One critter type's record, 0x30 bytes. */
-struct Creature {
-    char pad00[4];
-    unsigned char avghit;               /* 0x04 */
-    char pad05[0x09 - 0x05];
-    unsigned char race;                 /* 0x09 */
-    unsigned char b0A_0:7;              /* 0x0A */
-    unsigned char flier:1;
-    char pad0B[0x1C - 0x0B];
-    unsigned char b1C_0:4;              /* 0x1C */
-    unsigned char hunt:4;
-    char pad1D[0x1E - 0x1D];
-    unsigned char b1E_0:4;              /* 0x1E */
-    unsigned char hearing:4;
-    char pad1F[0x30 - 0x1F];
-};
-
-/* The common object properties, one 11-byte record per item. */
-struct ComObj {
-    unsigned height:8;                  /* 0x00 */
-    char pad1[6 - 1];
-    unsigned c6_0:15;                   /* 0x06 */
-    unsigned owned:1;                   /* word 0x06, bit 15 */
-    char pad8[0x0B - 0x08];
-};
-
-/* One step of the path flood_path found. */
-struct PathSq {
-    unsigned char x, y;
-    char pad2[2];
-};
-
 /* The static data of a map square. */
 struct StDat {
     char pad0[2];
@@ -138,20 +58,9 @@ struct StDat {
 typedef char (far *SpellFn)(int x, int y, struct Object far *target, struct Tile far *tile,
                             unsigned char src);
 
-extern struct Player near *player;
-extern struct Object far *ThePlayer;
-extern struct Object far *critdata;
 extern unsigned char far *ActiveMob;
 extern unsigned char far *LastActiveMob;
-extern struct Creature Creature[];
-extern struct ComObj ComObjData[];
 extern unsigned TxmTerr[];
-extern struct Object far *meptr;
-extern struct Creature near *mycst;
-extern unsigned char pathlen;
-extern unsigned char myxpos, myypos;
-extern int XP, YP;
-extern int MapObj_X, MapObj_Y;
 extern unsigned char stay_centered;
 /* This file's _BSS, DS:554E (ovr104's ends at 554D; ovr108's starts at 5550): only this file
    uses it, and FM Towns has it as a static. Provisional name. */
@@ -159,24 +68,18 @@ static char wander_found;
 extern char crithit;
 extern char typehit;
 extern long crithittime;
-extern unsigned char hitx, hity;
 extern int freepaths;
 extern struct PathSq far pathsq[];
 extern struct StDat far stdat[64][64];
 
 void far critter_set_goal(char goal, int gtarg);
-void far set_critter_vars(struct Object far *obj);
-struct Tile far * far Map_GetAddr(int x, int y);
 void far Obj_FreeLinkChain(union Link far *head, struct Object far *obj);
-int far Obj_MemTPtr(struct Object far *obj);
 struct Object far * far Obj_PtrTMem(union Link far *link);
 struct Object far * far Obj_IntTMem(int index);
 unsigned char far can_place(int item, int index, int x, int y, int z, char flier, char dist);
 unsigned char far Obj_Rem(union Link far *head, struct Object far *obj);
 void far Obj_Add(union Link far *head, struct Object far *obj);
 struct Object far * far Obj_Punt(union Link far *head, struct Object far *obj, int how);
-struct Object far * far mob_to_static(struct Object far *obj);
-unsigned char far drop_around_place(struct Object far *obj, int x, int y, int z, int how);
 void far gronk_area(struct Object far *who, char count, SpellFn fn, unsigned char type,
                     unsigned char dist, unsigned char radius);
 void far process_area(char count, unsigned char src, SpellFn fn, unsigned char type,
@@ -186,12 +89,8 @@ void far UseTrap(struct Object far *trap, int x, int y);
 void far set_loc(int x, int y, int z);
 char far line_of_sight(int x, int y, int z, int tx, int ty, int tz);
 void far get_name(char far *buf, struct Object far *obj, int article, int plural);
-char far * far get_string(int id);
-char far * far str_cat(char far *dst, char far *src);
 void far scroll_print(char far *s);
 void far Obj_Check(struct Object far *obj, char (far *fn)(struct Object far *obj));
-unsigned char far player_looking(int x, int y);
-int far octant(char x, char y);
 void far remove_opponent(struct Object far *npc);
 
 void far change_critter_goal(struct Object far *npc, char goal, int gtarg)
@@ -291,8 +190,8 @@ void far up_crit(struct Object far *npc, char *counts)
             break;
         }
     }
-    x = npc->qn.f.low;
-    y = npc->ol.f.low;
+    x = npc->qn.f.quality;
+    y = npc->ol.f.owner;
     tile = Map_GetAddr(x, y);
     if (xhome == x && yhome == y)
         return;
@@ -433,16 +332,16 @@ char far wander_that_monster(int x, int y, struct Object far *target, struct Til
     set_critter_vars(obj);
     dist = (myxpos - OBJ_HOMEX(ThePlayer)) * (myxpos - OBJ_HOMEX(ThePlayer))
          + (myypos - OBJ_HOMEY(ThePlayer)) * (myypos - OBJ_HOMEY(ThePlayer));
-    if (mycst->hunt * mycst->hunt * 3 < dist)
+    if (mycst->range * mycst->range * 3 < dist)
         return 0;
     if (flood_path(myxpos, myypos, OBJ_Z(meptr) >> 3, OBJ_HOMEX(ThePlayer),
                    OBJ_HOMEY(ThePlayer), OBJ_Z(ThePlayer) >> 3, 0) && pathlen >= 2) {
         for (i = 0; i < pathlen; i = i + 1) {
             tile = Map_GetAddr(pathsq[i].x, pathsq[i].y);
-            for (link = &tile->objects; link->f.index != 0; link = &next->qn) {
+            for (link = &tile->objects; link->f.index != 0; link = &next->qn.link) {
                 next = Obj_PtrTMem(link);
-                if (OBJ_CLASS(next) == 0x1A && next->ol.f.index > 0) {
-                    trap = Obj_PtrTMem(&next->ol);
+                if (OBJ_CLASS(next) == 0x1A && next->ol.f.link > 0) {
+                    trap = Obj_PtrTMem(&next->ol.link);
                     if (OBJ_MAJOR(trap) == 6 && OBJ_MINOR(trap) == 0 && OBJ_MINOR4(trap) == 9)
                         UseTrap(trap, pathsq[i].x, pathsq[i].y);
                 }
@@ -591,7 +490,7 @@ char far critter_get_told(int x, int y, struct Object far *target, struct Tile f
     oz = OBJ_Z(stolen) + ComObjData[OBJ_ITEM(stolen)].height + 12;
     dx = (nx - ox) / 8;
     dy = (ny - oy) / 8;
-    if (dx * dx + dy * dy > cst->hearing * cst->hearing)
+    if (dx * dx + dy * dy > cst->sight * cst->sight)
         return 0;
     if (line_of_sight(nx, ny, nz, ox, oy, oz)) {
         att = OBJ_ATTITUDE(npc) - 1;
@@ -611,8 +510,8 @@ char far critter_get_told(int x, int y, struct Object far *target, struct Tile f
 /* IDA: ClearOwnerShip. FM Towns' clear_owner, which player_grabbed passes to Obj_Check. */
 char far clear_owner(struct Object far *obj)
 {
-    if (ComObjData[OBJ_ITEM(obj)].owned)
-        obj->ol.f.low = 0;
+    if (ComObjData[OBJ_ITEM(obj)].can_own)
+        obj->ol.f.owner = 0;
     return 0;
 }
 
@@ -621,19 +520,17 @@ void far player_grabbed(struct Object far *obj, unsigned char owner)
     grab_owner = 0;
     if (owner > 0)
         grab_owner = owner;
-    else if (ComObjData[OBJ_ITEM(obj)].owned)
-        grab_owner = obj->ol.f.low;
+    else if (ComObjData[OBJ_ITEM(obj)].can_own)
+        grab_owner = obj->ol.f.owner;
     if (grab_owner != 0) {
         stolen = obj;
         process_area(0x14, 0, critter_get_told, 0, MapObj_X - 7, MapObj_Y - 7, 0xF, 0xF);
-        if (owner >= 0 && (obj->ol.f.low & 0x1F) <= 0x1D)
-            obj->ol.f.low = 0;
+        if (owner >= 0 && (obj->ol.f.owner & 0x1F) <= 0x1D)
+            obj->ol.f.owner = 0;
         if (OBJ_CLASS(obj) == 8)
             Obj_Check(obj, clear_owner);
     }
 }
-
-void far maybe_rescue_guy_from_fire(struct Object far *obj);
 
 void far maybe_cheat_arena_fire(void)
 {
@@ -677,14 +574,12 @@ void far maybe_rescue_guy_from_fire(struct Object far *obj)
    and call to remove_opponent. */
 void far arena_opponent_runs(struct Object far *obj)
 {
-    player->arena_wins++;
-    if (player->arena_wins > player->arena_best)
-        player->arena_best = player->arena_wins;
+    player->quest_bytes[1]++;
+    if (player->quest_bytes[1] > player->xclock[14])
+        player->xclock[14] = player->quest_bytes[1];
     SET_GOAL(obj, 6);
     remove_opponent(obj);
 }
-
-void far where_shall_we_hang_out(struct Object far *npc, int *x, int *y);
 
 char far maybe_go_hang_out(struct Object far *npc)
 {
@@ -692,8 +587,8 @@ char far maybe_go_hang_out(struct Object far *npc)
     int y;
 
     where_shall_we_hang_out(npc, &x, &y);
-    npc->qn.f.low = x;
-    npc->ol.f.low = y;
+    npc->qn.f.quality = x;
+    npc->ol.f.owner = y;
     SET_GOAL(npc, 1);
     if (!player_looking((OBJ_HOMEX(npc) << 3) + OBJ_FINEX(npc),
                         (OBJ_HOMEY(npc) << 3) + OBJ_FINEY(npc)))
@@ -729,15 +624,15 @@ void far where_shall_we_hang_out(struct Object far *npc, int *x, int *y)
             loc = 1;
             break;
         }
-    if (npc->whoami == 0x88 || player->xclock1 == 0)
+    if (npc->whoami == 0x88 || player->xclock[1] == 0)
         loc = 0;
-    else if (npc->whoami == 0x8E && (int)((player->questsD6 & 8) >> 3))
+    else if (npc->whoami == 0x8E && (int)((player->quests[28] & 8) >> 3))
         loc = 0;
-    else if (npc->whoami == 0x82 && player->xclock1 >= 0xC)
+    else if (npc->whoami == 0x82 && player->xclock[1] >= 0xC)
         loc = 0;
     if (loc == 5) {
-        *x = npc->qn.f.low;
-        *y = npc->ol.f.low;
+        *x = npc->qn.f.quality;
+        *y = npc->ol.f.owner;
     } else if (loc == 0) {
         char xs[14] = { 0x2A, 0x24, 0x15, 0x25, 0x16, 0x19, 0x1B,
                         0x2C, 0x2B, 0x16, 0x15, 0x18, 0x1A, 0x19 };

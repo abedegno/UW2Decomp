@@ -5,6 +5,9 @@
    originals from the FM Towns symbol table; the source file's own name is not known. */
 
 #include <dos.h>
+#include "file.h"
+#include "gfx.h"
+#include "sys.h"
 
 /* This file's _DATA, DS:1A78..1A7D (ovr149's data ends at 1A77, odd); ovr151's starts at
    1A7E with scdBlockHasBeenModified, which only ovr151 uses, as only this file uses this. */
@@ -12,16 +15,10 @@ char DataDirectory[] = "DATA\\";
 extern char far Transparency;
 
 void far grfx_clear(void);
-void far grSoftPageFlip(void);
-void far grPageFlip(void);
-int far set_workspace(void);
 unsigned far get_workspace(void);
-void far release_workspace(void);
 void far grfx_quikpal(int pal);
-void far open_arc(int arc, char *dir);
 int far get_arc(int arc, int blk, char far *buf);
 void far close_arc(int arc);
-void far set_the_window(int x0, int y0, int x1, int y1);
 void far show(int x, int y, char far *buf, int h, int w, int a, int b);
 
 char far disk_to_vid(int blk, char far *buf);

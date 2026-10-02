@@ -24,80 +24,27 @@
    last_sr_file_num and "optbtns". It starts a new file after the word-alignment byte
    that follows "mobj.dat", and FM Towns keeps the same variables together in this order. */
 
-/* A button group: an init function, the art row for its pictures, and for each of its
-   seven buttons a handler, the handler's argument and a group to go to next. The five
-   groups and current_buttongroup are another file's data (DS:012F..0266). */
-struct buttongroup {
-    void (far *init)(void);             /* 0x00 */
-    int images;                         /* 0x04, index into the picture tables, or -1 */
-    void (far *fn[7])(int);             /* 0x06 */
-    int arg[7];                         /* 0x22 */
-    struct buttongroup *sub[7];         /* 0x30 */
-};
+#include "file.h"
+#include "gfx.h"
+#include "inv.h"
+#include "player.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
+#include "view3d.h"
 
-struct Player {
-    char pad0[0x302];
-    unsigned low:4;                     /* 0x302 */
-    unsigned detail:4;                  /* 0x302, bits 4..7: the detail level */
-};
-
-extern struct Player near *player;
-extern struct buttongroup *current_buttongroup;
-extern char current_hilit_button;
+/* The five groups and current_buttongroup are another file's data (DS:012F..0266). */
 extern struct buttongroup gameopts_buttongroup;
 extern struct buttongroup quit_buttongroup;
-extern int gameopts_done;
 /* This file's _BSS, DS:8178..817B, by name: save_rest 843, music_sound 925. Only this file
    uses them. (DS:8174..8177, after ovr134's ComObjData, is never referenced.) */
 int save_rest;
 int music_sound;
-extern int RightButtonThing;
-extern unsigned char mode_to_button[];
-extern unsigned char display_inventory_no_show;
-extern int LeftPanel;
 
-void far reload_gr_vpic(int id, char *name, int n);
-void far pic_to_screen(int pic, int x, int y, int w, int h);
-void far mouse_hide(void);
-void far mouse_show(void);
-void far mouse_getxy(int *x, int *y);
-int far mouse_get_input(void);
-void far loop_music_maybe(void);
 void far scroll_clear(int n);
-void far restore_sliding_panel(int how);
-void far new_IconSelect(int button);
-void far set_graphics_level(void);
-void far do_3d_view(void);
-void far grSoftPageFlip(void);
-void far render_FB(void);
-void far send_FB(void);
 void far editexit(int how);
-unsigned char far check_save(void);
-unsigned char far check_rest(void);
-void far ShowSaveRest(void);
-void far DoSaveRest(int restore, int slot);
 void far punt_fightmode(void);
-unsigned char far music_available(void);
-unsigned char far fx_available(void);
-void far turn_music(int on);
-void far turn_fx(int on);
-unsigned char far music_is_on(void);
-unsigned char far fx_is_on(void);
-/* FM Towns vcopy_ (four register and two stack arguments, the same six as here). */
-void far vcopy(int sx, int sy, int w, int h, int x, int y);
-void far set_the_color(int c);
 void far rectangle(int x0, int y0, int x1, int y1);
-
-int far get_buttonreg_button(void);
-void far new_hilit_button(int b);
-void far install_buttongroup(struct buttongroup *g);
-void far deal_with_button(int b);
-void far load_message(int row, int col, int how);
-void far detail_setting_message(int how);
-void far draw_button(int b, int hilit);
-void far copy_rectangle(int x, int y, int w, int h, int sx, int sy, int how);
-void far blit_panel_to_main(void);
-void far load_buttongroup_images(int n);
 
 unsigned char plyregen[2] = { 0, 0 };   /* used by ovr135 */
 int save_or_rest = 0;
@@ -129,8 +76,6 @@ int far better_mouse_release(void)
     }
     return button;
 }
-
-void far move_hilite(int dir);
 
 void far busywaiting_new_options(struct buttongroup *g)
 {

@@ -11,66 +11,21 @@
 #include <string.h>
 #include <stdlib.h>
 #include <dos.h>
+#include "combat.h"
+#include "critter.h"
+#include "gfx.h"
+#include "inv.h"
+#include "motion.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
+#include "view3d.h"
 
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x38];
-    unsigned char max_mana;             /* 0x38 */
-    char pad39[0x47 - 0x39];
-    unsigned char shelf[3];             /* 0x47 */
-    char pad4A[0x60 - 0x4A];
-    unsigned b60:1;                     /* 0x60 */
-    unsigned poison:4;
-    unsigned active_spells:4;
-    unsigned b60_9:7;
-    unsigned b62:16;                    /* 0x62 */
-    unsigned char b64;                  /* 0x64 */
-    unsigned lefty:1;                   /* 0x65 */
-    unsigned female:1;
-    unsigned body:3;
-    unsigned pclass:3;
-};
-
-/* The player's critter data, reached through the near pointer `playerdat`. */
-struct Critter {
-    char pad0[4];
-    unsigned char max_vit;              /* 0x04 */
-};
-
-struct Inplist {
-    char pad0[8];
-    int field8;
-};
-
-struct Motion {
-    char pad0[0x14];
-    int momentum;                       /* 0x14 */
-};
-
-extern struct Player near *player;
-extern struct Critter near *playerdat;
 extern struct Inplist near *inplist;
-extern struct Motion PN;
 extern unsigned long far *Time;
-extern unsigned char inv_refresh;
-extern unsigned char WizEye;
-extern char demo_mode;
-extern int far *wtop;                   /* DS:21DC */
-extern int far *wbot;                   /* DS:21E0 */
-extern int far *wright;                 /* DS:21E4 */
-extern int far *wleft;                  /* DS:21E8 */
 extern unsigned char far Transparency;
-extern unsigned char far ShowClip;
 extern unsigned char far stdat[];
 extern unsigned char Palettes[][16];
-/* No FM Towns counterpart (FM Towns has no EMS): the segment of the EMS page frame, set
-   by seg013 from INT 67h function 41h. Provisional name. */
-extern unsigned ems_frame;
-/* FM Towns names, at 4FAF:E4D0 and E4D1: the EMS page holding the screen graphics, and the
-   page last mapped for objects, which is spoiled by any other mapping. */
-extern unsigned char far scrgr_fpage;
-extern unsigned char far obj_inpage1;
-extern unsigned far EmsBuff;
 
 /* This file's _BSS, DS:33E8-349A. Turbo C lays it out by name: the static that FM Towns
    keeps just after `setting` (the low byte of *Time at the last redraw) has no original
@@ -84,55 +39,11 @@ unsigned char frmtot[3];
 unsigned char wframe[0x1F];
 unsigned char goal[9];
 
-/* The sprite library, seg000. create_sprite is called with one argument and with three,
-   so this file saw no prototype for it. */
-int far create_sprite();
-void far change_sprite(int spr, int x, int y, int w, int h);
-void far draw_sprite(int spr, int frame);
-void far draw_mask(int spr, int frame);
-void far erase_sprite(int spr);
-void far move_sprite(int spr, int x, int y);
-void far set_yoff(int spr, int yoff);
-void far update_sprites(void);
-
-void far pic_to_screen(int pic, int x, int y, int w, int h);
-void far pic_to_fbuf(int pic, int x, int y);
-unsigned char far * far grs_unpack(unsigned char far *p);
-void far grSoftPageFlip(void);
-void far grPageFlip(void);
-void far copy_visible_to_hidden(void);
 void far show(int x, int y, unsigned char far *buf, int h, int w, int a, int b);
-void far fbshow(unsigned char far *p, int x, int y, int w, int h);
-void far set_the_window(int l, int t, int r, int b);
-void far set_the_color(int c);
 void far rectangle(int x1, int y1, int x2, int y2);
-void far vcopy(int a, int b, int c, int d, int e, int f);
-void far grab(unsigned char far *buf, int x, int y, int w, int h);
-void far cFBtoScreen(void);
-unsigned char far read_gr_far(char *name, int n, unsigned char far *buf);
 char far gronk_gr(char *name, int start, int count, unsigned char far *(far *adr)(int size),
                   char (far *mv)(unsigned char far *p, int size, int n));
-void far pfatal_code(int code);
-void far mouse_hide(void);
-void far mouse_show(void);
-void far editchng(int what);
 void far MapMemory_seg013_1D3C_C7(int phys, int log);
-void far RedispInv(void);
-void far RedispRune(void);
-void far RedispStat(void);
-
-void far adjust_flasks(int which);
-void far adjust_compass(void);
-void far adjust_power(void);
-void far adjust_panel(void);
-void far adjust_eyes(void);
-void far adjust_weapon(void);
-void far set_runes(unsigned char *runes);
-void far init_panelflip(int panel);
-void far free_panelflip(void);
-char far do_panel_frame(void);
-int far get_wfr(int f);
-void far do_fbuf_bms(void);
 
 /* The panel showing on the right, an index into panel_dispatch (FM Towns _RightPanel).
    DS:79E, the first byte of this file's _DATA: seg035's data ends at 79E and this file's
@@ -277,7 +188,7 @@ void far set_screen_frame(char which, int val)
     switch (which) {
     case 0:
     case 1:
-        max = which == 1 ? player->max_mana : playerdat->max_vit;
+        max = which == 1 ? player->max_mana : playerdat->avghit;
         if (max)
             goal[which] = val * 12 / max;
         else
@@ -764,7 +675,7 @@ void far active_spells(unsigned char *spells)
     static int spr[3] = { 0, 0, 0 };
     int i;
 
-    if (inplist->field8 == 1) {
+    if (inplist->mode == 1) {
         if (spr[0] == 0) {
             Transparency = 1;
             for (i = 0; i < 3; i++) {
@@ -908,7 +819,7 @@ void far do_fbuf_bms(void)
     Transparency = 1;
     if (setting[8] != 6 && weap_frame < 0x1F && last_weap > -1 && ShowStupidFirstPersonWeapon
         && !WizEye) {
-        jig = PN.momentum ? PN.momentum * 2 / 0x31F + 1 : 0;
+        jig = PN.speed ? PN.speed * 2 / 0x31F + 1 : 0;
         jiggle_weapon(jig);
         n = get_wfr(weap_frame);
         f = wframe[n] & 0x1F;

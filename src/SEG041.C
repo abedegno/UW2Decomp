@@ -6,10 +6,9 @@
    it has them; the source file's own name is not known. */
 
 #include <stdlib.h>
+#include "sys.h"
 
 extern unsigned long far *Time;
-
-void far cFstSinCos(int angle, int *a, int *b);
 
 /* Steps *val by step in direction dir (-1 or 1) unless that passes limit; returns whether
    it moved. */

@@ -7,55 +7,13 @@
    from the FM Towns symbol table where it has them. */
 
 #include <stdlib.h>
-
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x21];
-    unsigned char skills[20];           /* 0x21: acrobat 0x11, swimming 0x13 */
-    char pad35[0x4A - 0x35];
-    unsigned weight;                    /* 0x4A, carried */
-    unsigned max_weight;                /* 0x4C */
-    char pad4E[0x60 - 0x4E];
-    unsigned b60:1;                     /* 0x60 */
-    unsigned poison:4;
-    unsigned active_spells:4;
-    unsigned b60_9:3;
-    unsigned shrooms:2;
-    unsigned drunk:6;                   /* word 0x61, bits 6..11 */
-    unsigned automap:1;                 /* word 0x62, bit 4 */
-    unsigned b62_5:1;
-    unsigned sleepbits:3;
-    unsigned in_void:1;
-    unsigned in_pits:1;
-    unsigned b63_3:5;
-    char pad64[0x303 - 0x64];
-    unsigned fps:3;                     /* 0x303, the motion state newFPS last set */
-    unsigned b303_3:5;
-    char pad304;
-    unsigned char paralyzed;            /* 0x305 */
-    unsigned char motion_state;         /* 0x306: 1 water, 4 ice */
-    unsigned char swim_count;           /* 0x307 */
-};
-
-/* A mobile object, 27 bytes. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* item 0-8 */
-    unsigned pos;                       /* z 0-6, heading 7-9, y fine 10-12, x fine 13-15 */
-    union {
-        unsigned word;
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    unsigned ol;
-    unsigned char hp;                   /* 0x08 */
-    char pad09[0x0B - 0x09];
-    unsigned goal_word;                 /* 0x0B, animation frame in bits 12-15 */
-    char pad0D[0x15 - 0x0D];
-    unsigned char b15;                  /* 0x15 */
-    unsigned home;                      /* 0x16, x in bits 10-15, y in bits 4-9 */
-    unsigned char b18;                  /* 0x18, fine heading in bits 0-4 */
-    char pad19[0x1B - 0x19];
-};
+#include "event.h"
+#include "gfx.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
 
 #define SET_Z(o, v)       ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
 #define SET_HEADING(o, v) ((o)->pos = (o)->pos & 0xFC7F | ((v) & 7) << 7)
@@ -66,100 +24,14 @@ struct Object {
 #define SET_FRAME(o, v)   ((o)->goal_word = (o)->goal_word & 0xFFF | ((v) & 0xF) << 12)
 #define SET_FINEHEAD(o, v) ((o)->b18 = (o)->b18 & 0xE0 | ((v) & 0x1F) << 0)
 
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    unsigned light:2;
-    unsigned floor:4;
-    unsigned b14:2;
-    unsigned objects;                   /* 0x02, head of the tile's object list */
-};
-
-/* The common object properties, one 11-byte record per item. */
-struct ComObj {
-    unsigned height:8;                  /* 0x00 */
-    unsigned radius:3;
-    unsigned c0_11:5;
-    char pad2[11 - 2];
-};
-
-/* The player's motion record. */
-struct Motion {
-    int x, y, z;                        /* 0x00 */
-    int vx, vy;                         /* 0x06 */
-    int pitch;                          /* 0x0A */
-    int dx, dy, dz;                     /* 0x0C */
-    int speed;                          /* 0x12 */
-    int momentum;                       /* 0x14 */
-    unsigned char b16;                  /* 0x16 */
-    unsigned char b17;                  /* 0x17 */
-    char pad18[0x1E - 0x18];
-    int heading;                        /* 0x1E */
-    int w20;                            /* 0x20 */
-    char pad22[0x24 - 0x22];
-    unsigned char b24;                  /* 0x24 */
-    unsigned char terr;                 /* 0x25 */
-    unsigned fall;                      /* 0x26 */
-};
-
-/* The player's motion handler record. */
-struct PhysThing {
-    int flags;                          /* 0x00 */
-    int w2;                             /* 0x02 */
-    char pad4[8 - 4];
-    char (far *handler)(unsigned *w);   /* 0x08 */
-};
-
-/* The motion calculation record, reached through `curP`. */
-struct MotionCalc {
-    int x, y, z;                        /* 0x00 */
-    char pad6[8 - 6];
-    unsigned char radius;               /* 0x08 */
-    unsigned char height;               /* 0x09 */
-    int index;                          /* 0x0A */
-    unsigned hits0, hits1;              /* 0x0C */
-    char pad10[0x15 - 0x10];
-    unsigned char count;                /* 0x15, collisions found */
-    signed char first;                  /* 0x16, the first of them in oCollisions */
-    char pad17;
-};
-
-/* One collision found by ObjectCheck, 6 bytes. */
-struct Collision {
-    unsigned char top;                  /* 0x00 */
-    unsigned char bottom;               /* 0x01 */
-    unsigned link;                      /* 0x02 */
-    int offset;                         /* 0x04 */
-};
-
-extern struct Player near *player;
-extern struct Object far *ThePlayer;
-extern struct Motion PN;
-extern struct PhysThing PT;
-extern struct MotionCalc near *curP;
-extern struct Collision oCollisions[];
-extern struct ComObj ComObjData[];
 extern struct Tile far *mapdata;
 extern unsigned TxmTerr[];
-extern int hgt_val[];
-extern unsigned char tile_walls[];
 extern unsigned char PlayersMap[];
 extern unsigned long far *Time;
-extern int PlayerFacing;
-extern int PlayerHeading;
-extern int PlayerLevel;
 extern int playerMod;
-extern int PlayerInput;
-extern int PlayerTurn;
-extern int ForwInpRate;
-extern int TurnInpRate;
-extern int nvokTerr;
-extern int nvokHgt;
 extern char light_mod;
 extern char light_act;
 extern char loc_lght;
-extern unsigned char light_hi;
-extern unsigned char last_light;
 
 /* Uninitialised data, DS:229A onwards. Turbo C lays _BSS out in an order set by the
    names, not by declaration. The publics are FM Towns names; the statics have none there
@@ -179,23 +51,14 @@ static long saved_dz;
 int lastTerr;                           /* the terrain bits parse_player_terr last saw */
 
 void far punt_fightmode(void);
-void far fill_FB(int colour);
 void far set_effect(int which, char amount);
 void far set_screen_frame(int which, int frame);
-void far move_along(int heading, int dist, int *x, int *y);
 unsigned char far can_place(int item, int index, int x, int y, int z, char b, int dist);
 void far ObjectCheck(int a, int b);
-void far process_objlist(void);
 struct Object far * far Obj_PtrTMem(unsigned far *link);
 void far UseTrigger(struct Object far *who, void far *a, struct Object far *trig, int how);
-void far cFstSinCos(int heading, int *x, int *y);
-int far cSqRt(long v);
-int far cAtan2(int x, int y);
-int far Obj_MemTPtr(struct Object far *obj);
 void far TerrainCheck(char a);
 unsigned char far set_resterr(int bits);
-void far parse_effect(void);
-int far skill_check(int value, int target);
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
                      unsigned char damage, unsigned char type);
 void far play_effect_here(int fx, int vol, char c);
@@ -205,17 +68,6 @@ char far check_pplate(struct Object far *obj, struct Tile far *tile, int z, int 
 void far set_light(int level);
 
 void far newFPS(char state);
-void far change_GrSq(int sq, int z);
-void far hgt_change(struct Object far *obj, struct Tile far *tile, int z);
-void far player_newsq(int sq);
-/* IDA's StopPlayerMotion. Named from FM Towns: player_sqhandler_ follows player_newsq_
-   there and is the same test (bit 0x1000, no pitch, slow, lastTerr & 0xA) clearing PN+6
-   and PN+8; player_setup stores it as PT's handler, as FM Towns does. */
-char far player_sqhandler(unsigned *w);
-/* IDA's CalculateMotionFromCommand. Named from FM Towns: do_player_input_ is next there,
-   is called by set_player_phys_params_ with PlayerInput as here, and has the same
-   14-entry switch on the input. */
-void far do_player_input(int input, int rate, int *speed);
 
 /* Initialised data, DS:C8 onwards. */
 int MaxPlayerAccel = 0x60;
@@ -283,23 +135,23 @@ void far parse_player_terr(int terr, char force)
     {
         if (motionbits & 0x14)
         {
-            PN.dz = 0;
-            if (abs(PN.pitch) > 10)
-                PN.pitch = (PN.pitch << 2) / 5;
+            PN.acc[2] = 0;
+            if (abs(PN.vel[2]) > 10)
+                PN.vel[2] = (PN.vel[2] << 2) / 5;
             else
-                PN.pitch = 0;
+                PN.vel[2] = 0;
         }
         else
         {
-            if (PN.dz == 0)
-                PN.dz = -4;
-            if (motionbits & 2 && PN.pitch <= -94)
+            if (PN.acc[2] == 0)
+                PN.acc[2] = -4;
+            if (motionbits & 2 && PN.vel[2] <= -94)
             {
-                PN.pitch = -94;
-                if (PN.momentum > 20)
-                    PN.momentum = PN.momentum / 2;
+                PN.vel[2] = -94;
+                if (PN.speed > 20)
+                    PN.speed = PN.speed / 2;
                 else
-                    PN.momentum = 0;
+                    PN.speed = 0;
             }
         }
     }
@@ -341,7 +193,7 @@ char far simple_fizix(int turn)
     register int i;
     register int dist;
 
-    if (PN.dz == 0 && PN.momentum < MaxPlayerAccel)
+    if (PN.acc[2] == 0 && PN.speed < MaxPlayerAccel)
     {
         backwards = 0;
         flying = 0;
@@ -394,8 +246,8 @@ char far simple_fizix(int turn)
                     SET_Z(ThePlayer, nvokHgt);
                     PN.z = nvokHgt << 3;
                 }
-                else if (PN.dz == 0 && !flying)
-                    PN.dz = -4;
+                else if (PN.acc[2] == 0 && !flying)
+                    PN.acc[2] = -4;
                 parse_player_terr(nvokTerr, 0);
                 SET_FRAME(ThePlayer, ((unsigned)*Time & 0xFF) >> 6);
                 oldP = curP;
@@ -410,7 +262,7 @@ char far simple_fizix(int turn)
                 process_objlist();
                 for (i = curP->first; i < curP->first + curP->count; i++)
                 {
-                    obj = Obj_PtrTMem(&oCollisions[i].link);
+                    obj = Obj_PtrTMem(&oCollisions[i].link.word);
                     if ((obj->id & 0x1FF) == 0x1A0)
                         UseTrigger(ThePlayer, 0L, obj, 0);
                 }
@@ -501,26 +353,26 @@ void far set_player_phys_params(int rate)
     register int d;
 
     speed = 0;
-    PN.b16 = 5;
-    PN.b17 = 0;
+    PN.bounce = 5;
+    PN.flags = 0;
     oldh = PN.heading;
-    olds = PN.momentum;
-    if (PN.dz == 0)
+    olds = PN.speed;
+    if (PN.acc[2] == 0)
     {
         do_player_input(PlayerInput, rate, &speed);
-        if (PN.dz == 0)
+        if (PN.acc[2] == 0)
         {
-            d = speed - PN.momentum;
+            d = speed - PN.speed;
             if (abs(d) > MaxPlayerAccel)
                 d = (d > 0 ? 1 : -1) * MaxPlayerAccel;
-            PN.momentum += d;
-            if (PN.momentum > pFPS[0])
-                PN.momentum = pFPS[0];
-            else if (PN.momentum < 0)
-                PN.momentum = 0;
+            PN.speed += d;
+            if (PN.speed > pFPS[0])
+                PN.speed = pFPS[0];
+            else if (PN.speed < 0)
+                PN.speed = 0;
         }
     }
-    if (PN.dz != 0)
+    if (PN.acc[2] != 0)
         PlayerFacing += rate * PlayerTurn * (TurnInpRate / 4) / 4;
     if (player->motion_state & 4)
     {
@@ -534,22 +386,22 @@ void far set_player_phys_params(int rate)
                 slide = t - 6;
                 angle = 0x2F;
             }
-            PN.b16 = 0xF - bits;
+            PN.bounce = 0xF - bits;
             bits = (bits << 3) + 8 - (olds / 0x2F << 2);
             if (olds < 0x2F)
                 bits += 0x10;
-            else if (PN.momentum > olds)
+            else if (PN.speed > olds)
             {
                 if (slide == -1)
                     bits += 8;
                 else
                     bits -= 4;
             }
-            munge_vectors(2, oldh, olds, PlayerHeading, PN.momentum, bits, &newh, &news);
+            munge_vectors(2, oldh, olds, PlayerHeading, PN.speed, bits, &newh, &news);
             PlayerHeading = newh;
-            PN.momentum = news;
-            if (olds + MaxPlayerAccel <= PN.momentum && !(rand() & 3)
-                || olds - MaxPlayerAccel >= PN.momentum)
+            PN.speed = news;
+            if (olds + MaxPlayerAccel <= PN.speed && !(rand() & 3)
+                || olds - MaxPlayerAccel >= PN.speed)
                 set_effect(0x80, 4);
         }
         else
@@ -581,34 +433,34 @@ void far set_player_phys_params(int rate)
         }
         newh = angle;
         oldh = PlayerHeading;
-        olds = PN.momentum;
-        munge_vectors(3, PlayerHeading, PN.momentum, t, newh, 0x20, &oldh, &olds);
+        olds = PN.speed;
+        munge_vectors(3, PlayerHeading, PN.speed, t, newh, 0x20, &oldh, &olds);
         if (angle != 0x2F)
         {
             lasth = PlayerHeading;
-            lasts = PN.momentum;
+            lasts = PN.speed;
         }
         if (olds > pFPS[0])
             olds = pFPS[0];
         PlayerHeading = oldh;
-        PN.momentum = olds;
+        PN.speed = olds;
     }
-    PN.speed = rate;
-    if (!(PN.dx | PN.dy | PN.dz) && (player->motion_state & 0x84) == 0)
-        PN.b17 = 0x80;
-    else if (PN.dz != 0 && (player->motion_state & 0x84))
-        PN.b16 = 5;
-    if (PN.momentum == 0)
+    PN.time = rate;
+    if (!(PN.acc[0] | PN.acc[1] | PN.acc[2]) && (player->motion_state & 0x84) == 0)
+        PN.flags = 0x80;
+    else if (PN.acc[2] != 0 && (player->motion_state & 0x84))
+        PN.bounce = 5;
+    if (PN.speed == 0)
         PlayerHeading = PlayerFacing;
     PN.heading = PlayerHeading;
-    PT.flags = 0;
+    PT.ignore = 0;
     if (motionbits & 0x14)
     {
-        PT.flags = 0x1000;
-        PN.b17 = 0x80;
+        PT.ignore = 0x1000;
+        PN.flags = 0x80;
     }
-    PN.fall = 0;
-    old_dz = PN.dz;
+    PN.impact = 0;
+    old_dz = PN.acc[2];
 }
 
 void far player_setup(int x, int y, int how)
@@ -617,16 +469,16 @@ void far player_setup(int x, int y, int how)
     struct MotionCalc calc;
 
     change_GrSq(-1, -1);
-    PT.handler = player_sqhandler;
-    PT.w2 = 0x1100;
-    PT.flags = 0;
-    PN.momentum = 0;
-    PN.dx = PN.dy = PN.dz = 0;
-    PN.vx = PN.vy = PN.pitch = 0;
+    PT.special = (unsigned char (far *)())player_sqhandler;
+    PT.mask = 0x1100;
+    PT.ignore = 0;
+    PN.speed = 0;
+    PN.acc[0] = PN.acc[1] = PN.acc[2] = 0;
+    PN.vel[0] = PN.vel[1] = PN.vel[2] = 0;
     PN.x = (x << 8) + 0x80;
     PN.y = (y << 8) + 0x80;
     PN.b24 = 8;
-    PN.w20 = 1;
+    PN.index = 1;
     GrSq = x + (y << 6);
     PN.z = hgt_val[mapdata[GrSq].height];
     if (tile_walls[mapdata[GrSq].type] & 0x20)
@@ -634,7 +486,7 @@ void far player_setup(int x, int y, int how)
     if (how != -1 && 1000 - ComObjData[0x7F].height > PN.z)
     {
         PN.z = 1000 - (ComObjData[0x7F].height << 3);
-        PN.dz = -4;
+        PN.acc[2] = -4;
     }
     SET_Z(ThePlayer, PN.z >> 3);
     SET_HOMEX(ThePlayer, x);
@@ -651,8 +503,8 @@ void far player_setup(int x, int y, int how)
     curP->y = (y << 3) + 3;
     curP->z = PN.z >> 3;
     TerrainCheck(PN.b24);
-    PN.terr = set_resterr(curP->hits0 | curP->hits1);
-    parse_player_terr(PN.terr, 0);
+    PN.terrain = set_resterr(curP->hits0 | curP->hits1);
+    parse_player_terr(PN.terrain, 0);
     playerMod = 0;
     parse_effect();
     fiz_update = 1;
@@ -673,7 +525,7 @@ void far phys_affect_player(void)
     if (lasts != -1)
     {
         PlayerHeading = lasth;
-        PN.momentum = lasts;
+        PN.speed = lasts;
     }
     SET_FINEX(ThePlayer, (PN.x >> 5) & 7);
     SET_FINEY(ThePlayer, (PN.y >> 5) & 7);
@@ -687,14 +539,14 @@ void far phys_affect_player(void)
     }
     else if (PN.z >> 3 != z)
         hgt_change(ThePlayer, mapdata + GrSq, PN.z >> 3);
-    if (PN.fall && PN.heading == PlayerHeading && PN.dz == 0
+    if (PN.impact && PN.heading == PlayerHeading && PN.acc[2] == 0
         && (player->motion_state & 4) == 0 && lasts == -1)
-        PN.momentum = 0;
+        PN.speed = 0;
     if (PN.heading != PlayerHeading)
     {
         PlayerHeading = PN.heading;
         h = PN.heading - (plyMoType << 14);
-        if ((PN.b17 & 0x80) && slide == -1)
+        if ((PN.flags & 0x80) && slide == -1)
         {
             if (abs(PlayerFacing - h) < 0x600)
                 PlayerFacing = h;
@@ -706,28 +558,28 @@ void far phys_affect_player(void)
     }
     SET_HEADING(ThePlayer, PlayerFacing >> 13);
     SET_FINEHEAD(ThePlayer, PlayerFacing >> 8);
-    if (PN.fall)
+    if (PN.impact)
     {
-        if (PN.b16 > 0)
+        if (PN.bounce > 0)
         {
-            dmg = PN.fall >> 8;
+            dmg = PN.impact >> 8;
             if ((PlayerLevel - 1) / 8 == 8)
                 dmg = 0;
-            if (PN.pitch != 0)
+            if (PN.vel[2] != 0)
                 dmg <<= 1;
             if (skill_check(player->skills[0x11], dmg << 1) > 0)
                 dmg = dmg * (30 - player->skills[0x11]) / 30;
             if (dmg > 3)
                 damage_item(ThePlayer, 0L, 0, 0, dmg, 0);
-            if (dmg > 1 || (PN.terr & 0x10))
+            if (dmg > 1 || (PN.terrain & 0x10))
             {
                 vol = (dmg << 2) - 60;
                 play_effect_here(0xF, 0x40, vol);
             }
         }
-        PN.fall = 0;
+        PN.impact = 0;
     }
-    parse_player_terr(PN.terr, 0);
+    parse_player_terr(PN.terrain, 0);
     if ((player->motion_state & 4) || (player->motion_state & 1) && slide != -1)
         fiz_update = 1;
     else
@@ -745,9 +597,9 @@ void far player_newsq(int sq)
 
 char far player_sqhandler(unsigned *w)
 {
-    if ((*w & 0x1000) && PN.pitch == 0 && PN.momentum * 10 < pFPS[0] * 3 && !(lastTerr & 0xA))
+    if ((*w & 0x1000) && PN.vel[2] == 0 && PN.speed * 10 < pFPS[0] * 3 && !(lastTerr & 0xA))
     {
-        PN.vx = PN.vy = 0;
+        PN.vel[0] = PN.vel[1] = 0;
         return 1;
     }
     return 0;
@@ -787,33 +639,33 @@ void far do_player_input(int input, int rate, register int *speed)
         plyMoType = -2;
         break;
     case 6:
-        if (PN.pitch != 0 || PN.dz != 0 || PN.momentum != 0)
+        if (PN.vel[2] != 0 || PN.acc[2] != 0 || PN.speed != 0)
             break;
         PlayerHeading = h = PlayerFacing;
-        PN.momentum = *speed = pFPS[0] / 2;
+        PN.speed = *speed = pFPS[0] / 2;
         plyMoType = 0;
     case 7:
-        PN.pitch = 0x263;
+        PN.vel[2] = 0x263;
         if (PN.z > 0x280)
         {
-            PN.pitch = PN.pitch * 5 / 6;
+            PN.vel[2] = PN.vel[2] * 5 / 6;
             if (PN.z > 0x2C0)
-                PN.pitch = (PN.pitch << 1) / 3;
+                PN.vel[2] = (PN.vel[2] << 1) / 3;
         }
         if (motionbits & 1)
-            PN.dz = -2;
+            PN.acc[2] = -2;
         else
-            PN.dz = -4;
+            PN.acc[2] = -4;
         return;
     case 12:
         plyMoType = 0;
-        PN.pitch = 0x8D;
-        PN.dz = 0;
+        PN.vel[2] = 0x8D;
+        PN.acc[2] = 0;
         break;
     case 13:
         plyMoType = 0;
-        PN.pitch = -0x8D;
-        PN.dz = 0;
+        PN.vel[2] = -0x8D;
+        PN.acc[2] = 0;
         break;
     case 0:
         *speed = 0;
@@ -828,15 +680,15 @@ void far phys_bounce_up(struct Object far *obj)
 {
     if (obj == ThePlayer)
     {
-        if ((PN.terr & 0x10) == 0)
-            PN.pitch = 0x8D;
-        PN.dz = 0;
+        if ((PN.terrain & 0x10) == 0)
+            PN.vel[2] = 0x8D;
+        PN.acc[2] = 0;
     }
 }
 
 void far fizix_update(void)
 {
-    parse_player_terr(PN.terr, 1);
+    parse_player_terr(PN.terrain, 1);
     fiz_update = 1;
 }
 
@@ -876,7 +728,7 @@ void far change_GrSq(int sq, register int z)
 
     if (GrSq >= 0)
     {
-        Obj_Rem(&(mapdata + GrSq)->objects, ThePlayer);
+        Obj_Rem(&(mapdata + GrSq)->objects.word, ThePlayer);
         check_pplate(ThePlayer, mapdata + GrSq, PN.z >> 3, 0xE);
     }
     GrSq = sq;
@@ -886,7 +738,7 @@ void far change_GrSq(int sq, register int z)
         SET_Z(ThePlayer, z);
     if (GrSq >= 0)
     {
-        Obj_Add(&(mapdata + GrSq)->objects, ThePlayer);
+        Obj_Add(&(mapdata + GrSq)->objects.word, ThePlayer);
         check_pplate(ThePlayer, mapdata + GrSq, z, 6);
         if (light_mod)
         {

@@ -7,49 +7,17 @@
    Function and global names are the originals from the FM Towns symbol table where it
    has them; the source file's own name is not known. */
 
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x21];
-    unsigned char skills[20];           /* 0x21: search is 0x0B */
-    char pad1[0x60 - 0x35];
-    unsigned b60:1;                     /* 0x60 */
-    unsigned poison:4;
-    unsigned active_spells:4;
-    unsigned b60_9:3;
-    unsigned shrooms:2;
-    unsigned drunk:6;                   /* word 0x61, bits 6..11 */
-    unsigned automap:1;                 /* word 0x62, bit 4 */
-    unsigned b62_5:11;
-};
-
-/* A critter type, 48 bytes. */
-struct Creature {
-    char pad0[4];
-    unsigned char avghit;               /* 0x04 */
-    char pad5[0x30 - 5];
-};
-
-/* A mobile object, 27 bytes. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* item 0-8 (index 0-5), bits 13-15 flags */
-    unsigned pos;                       /* z 0-6, heading 7-9, y fine 10-12, x fine 13-15 */
-    union {
-        unsigned word;
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-    unsigned char hp;                   /* 0x08 */
-    char pad09[0x11 - 0x09];
-    unsigned char b11;                  /* 0x11, damage taken */
-    char pad12[0x16 - 0x12];
-    unsigned home;                      /* 0x16, x in bits 10-15, y in bits 4-9 */
-    unsigned char b18;                  /* 0x18, fine heading in bits 0-4 */
-    char pad19;
-    unsigned char whoami;               /* 0x1A */
-};
+#include "combat.h"
+#include "conv.h"
+#include "critter.h"
+#include "file.h"
+#include "gfx.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
+#include "view3d.h"
 
 #define OBJ_INDEX(o)    (((o)->id & 0x3F) >> 0)
 #define OBJ_Z(o)        ((o)->pos & 0x7F)
@@ -58,28 +26,6 @@ struct Object {
 #define OBJ_FINEX(o)    (((o)->pos & 0xE000) >> 13)
 #define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
 #define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
-
-/* The player's motion record. */
-struct Motion {
-    int x, y, z;                        /* 0x00 */
-    char pad6[0x20 - 6];
-    int w20;                            /* 0x20 */
-    char pad22[0x24 - 0x22];
-    unsigned char b24;                  /* 0x24 */
-};
-
-/* The player's motion handler record. */
-struct PhysThing {
-    int flags;                          /* 0x00 */
-    int w2;                             /* 0x02 */
-    char pad4[8 - 4];
-    char (far *handler)(unsigned *w);   /* 0x08 */
-};
-
-/* The mouse and keyboard state handed to an input handler. */
-struct Inplist {
-    int x, y;                           /* the mouse position */
-};
 
 /* The file's _DATA starts with these, DS:19DC to DS:19E6, where ovr142's data ends: the
    string after them is at the odd DS:19E7, so this file's word-aligned _DATA starts earlier,
@@ -91,34 +37,10 @@ int PMsHndle = 0;                       /* input_addmouse's handle for the 3D vi
 unsigned long nextstep = 0;
 unsigned long watertime = 0;            /* *Time when seg035 last applied water_eff */
 
-extern struct Object far *critdata;
-extern struct Object far *ThePlayer;
-extern struct Object far *UsPtr;
-extern struct Object far *curelem;
-extern int GrSq;
-extern int PlayerHeading;
-extern int PlayerFacing;
 extern int PlayerPitch;
-extern int PlayerBank;
-extern int PlayerLevel;
-extern struct Motion PN;
-extern struct PhysThing PT;
-extern int far *cJoyInit;
-extern struct Player near *player;
-extern struct Creature near *playerdat;
-extern struct Creature Creature[];
-extern int player_name_handle;
-extern char mouse_hand;
-extern int campos[3];
-extern int camang[3];
 extern struct Inplist near *inplist;
-extern int TurnInpRate;
-extern int ForwInpRate;
-extern char MoveCamera;
-extern unsigned char vort_x, vort_y;
 extern unsigned vort_rad;
 extern unsigned vort_timer;
-extern int vort_theta;
 
 /* This file's _BSS, DS:8298..8631 (ovr142's ends at 8297, ovr147's starts at 8632), laid
    out by name (tools/bssorder.py): IsJoy 1, region_south 18, PHgt 136, PLeft 192, rgnh_ul 218,
@@ -145,45 +67,16 @@ static int rgnh_r;                      /* DS:8630, right */
 /* Elsewhere in the game. */
 void far _input_addkey(int key, int a, int b, void (far *handler)());
 int far input_addmouse(int x0, int y0, int x1, int y1, int buttons, int mode, void (far *handler)());
-void far input_del(int handle);
-int far defineMouseRegion(int x0, int y0, int x1, int y1, int id);
-void far undefineMouseRegion(int handle);
 void far set_light(int level);
-int far make_string(char far *s, int len);
-void far editchng(int bits);
-void far game_sprint(int id);
 void far scroll_print(char far *s);
 struct Object far * far Obj_IntTMem(int index);
-int far Obj_MemTPtr(struct Object far *obj);
-void far cSinCos(int angle, int *x, int *y);
-int far cSqRt(long v);
-int far cAtan2(int x, int y);
-void far establish_view(void);
-int far mvcheck(int *val, int amount, int step, int dir);
-void far cameras_fade(void);
-void far FixPlayerEquips(void);
-char far player_sqhandler(unsigned *w);
 
 /* Input handlers. */
-void far parse_playin(int how);
-void far player_simple_move(int how);
-void far pull_chain(int a);
-void far player_key_sleep(int bedroll);
-char far player_use_skill(int skill);
-void far try_cast(int how);
-void far do_option_shortcut(int keycode);
-void far deal_with_icons(int mode);
 void far player_attack(int how);
-void far keyboard_mouse(int key);
 void far do_escape_key(int a);
-void far conv_play_menu(int n);
 void far npc_barter(int a);
 void far play_barter(int a);
-void far flip_bool(char *b);
 void far mous_in_3d(int a);
-void far chg_plyp(int step);
-void far show_version(void);
-void far report_loc(void);
 
 /* Resets the player object. FM Towns calls it from init_player_structure; DOS from
    init_player, which holds that function's body. */
@@ -215,10 +108,10 @@ void far init_player(void)
     PlayerBank = 0;
     PlayerLevel = 1;
     PN.b24 = 8;
-    PN.w20 = 1;
-    PT.handler = player_sqhandler;
-    PT.w2 = 0x1100;
-    PT.flags = 0;
+    PN.index = 1;
+    PT.special = (unsigned char (far *)())player_sqhandler;
+    PT.mask = 0x1100;
+    PT.ignore = 0;
     set_light(0);
     PMsHndle = 0;
     IsJoy = (cJoyInit[0] | cJoyInit[1] | cJoyInit[2] | cJoyInit[3]) > 0;

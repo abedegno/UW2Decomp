@@ -16,6 +16,9 @@
    they take those names. The local variable and field names are Okumura's where the code
    is his. */
 
+#include "file.h"
+#include "sys.h"
+
 #define N         4096  /* size of the ring buffer */
 #define F         18    /* upper limit for match_length */
 #define THRESHOLD 2     /* encode a string as a position and length if longer than this */
@@ -43,10 +46,6 @@ struct LzwWork {
 
 /* ovr153 declares this char far *; here it is the work area. */
 extern struct LzwWork far *globals;
-
-int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
-int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n);
-void far pfatal_code(int code);
 
 /* Inserts the string of length F at text_buf[r] into the tree, and sets match_position
    and match_length to the longest match found. A match of F bytes replaces the old node

@@ -9,10 +9,9 @@
    rewrite of a far call into its own segment, where TCC alone emits a far call. */
 #pragma inline
 #include <dos.h>
-
-extern unsigned far seg052_519C_E4D4;    /* 4FAF:E4D4 */
-extern unsigned char far crit_inpage, far tmap_inpage, far obj_inpage1;
-extern char dseg_67d6_120;
+#include "sys.h"
+#include "ui.h"
+#include "view3d.h"
 
 /* the EMS handle name and the EMM driver's device name */
 static char ems_name[10] = "UW";            /* DS:10C */
@@ -25,8 +24,6 @@ static unsigned ems_avail;                  /* DS:22CC, pages free when checked 
 unsigned ems_frame;                         /* DS:22CE, segment of the EMS page frame */
 static unsigned ems_handle;                 /* DS:22D0 */
 static unsigned ems_page_map[8];         /* DS:22D2, logical and physical page pairs */
-
-void far seg013_1D3C_138(unsigned handle, char far *name);
 
 int far seg013_1D3C_A(unsigned min_pages, unsigned max_pages)
 {

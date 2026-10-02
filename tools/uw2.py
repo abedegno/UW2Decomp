@@ -7,8 +7,8 @@
 
 The gate, `check`:
 1. Every source with a `/* target: */` line is compiled, several to a DOS session and three
-   sessions at once, each with its own `/* opts: */`. A source is recompiled only when its text,
-   its object in build/, or the toolchain differs from the last check it passed (build/check/
+   sessions at once, each with its own `/* opts: */`. A source is recompiled only when its text
+   (with the src/include headers it includes), its object in build/, or the toolchain differs from the last check it passed (build/check/
    state.json); --all recompiles everything. Objects land in build/STEM as match.py leaves them.
    A source that fails from a batch is built again on its own by match.py before it counts.
 2. match.py (--no-build) must say WHOLE SEGMENT MATCHES and verify.py "fixups and data
@@ -43,6 +43,10 @@ def sha1(path):
 
 
 def rel(p): return os.path.relpath(p, root)
+
+
+sys.path.insert(0, here)
+from srcdeps import source_hash     # a source's text plus the src/include headers it includes
 
 
 def sources():
@@ -233,7 +237,7 @@ def cmd_check(force):
     for stem, src, opts in srcs:
         obj = os.path.join(root, 'build', stem, stem + '.OBJ')
         k = known.get(stem)
-        if force or not k or k['src'] != sha1(src) or k.get('opts') != opts or not os.path.exists(obj) or k['obj'] != sha1(obj):
+        if force or not k or k['src'] != source_hash(src) or k.get('opts') != opts or not os.path.exists(obj) or k['obj'] != sha1(obj):
             todo.append((stem, src, opts))
     t1 = time.time()
     built = compile_all(todo) if todo else {}
@@ -254,7 +258,7 @@ def cmd_check(force):
         per = list(pool.map(one, srcs))
     for (stem, ok, why), (_, src, opts) in zip(per, srcs):
         if ok:
-            known[stem] = {'src': sha1(src), 'opts': opts, 'obj': sha1(os.path.join(root, 'build', stem, stem + '.OBJ'))}
+            known[stem] = {'src': source_hash(src), 'opts': opts, 'obj': sha1(os.path.join(root, 'build', stem, stem + '.OBJ'))}
         else:
             known.pop(stem, None); fails.append(f'{rel(src)}: {why}')
     nok = sum(1 for _, ok, _ in per if ok)

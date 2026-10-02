@@ -10,31 +10,9 @@
 
 #include <dos.h>
 #include <string.h>
-
-/* The scroll's state. Field names beyond the ones the code clearly uses (coordinates,
-   cursor position, the font colour) are our own; FM Towns has no per-field names, only
-   the struct's three instances (_main_scroll, _npc_scroll, _menu_scroll). Byte-packed,
-   21 (0x15) bytes, matching the spacing between those three instances in the EXE. */
-struct Scroll {
-    int x0;                      /* 0x00 */
-    int y0;                      /* 0x02 */
-    int top;                     /* 0x04 */
-    int bottom;                  /* 0x06 */
-    int cur_x;                   /* 0x08 */
-    int cur_y;                   /* 0x0A */
-    int left;                    /* 0x0C */
-    int last_y;                  /* 0x0E */
-    unsigned char more_pending;  /* 0x10 */
-    int start_line;              /* 0x11 */
-    int font_color;              /* 0x13 */
-};
-
-/* DS:21CC, _cur_font in symbols.tsv (provisional). Only field +6 (line height) is used
-   here. */
-struct Font {
-    char pad0[6];
-    int height;                  /* 0x06 */
-};
+#include "gfx.h"
+#include "sys.h"
+#include "ui.h"
 
 /* This file's _BSS, DS:34B0..34B3 (seg044's starts at 34B4), by name: scroll 83,
    mouse_in_scroll 653. It cannot start any lower than 34AC: the bytes below run up from
@@ -58,37 +36,14 @@ static long click_time = 0;             /* DS:0984 */
 static int edge_phase = 0;              /* DS:0988 */
 static int conv_edge_phase = 0;         /* DS:098A */
 char scroll_esc = 1;                    /* DS:098C */
-extern int scrmode;                               /* DS:5D60, FM Towns _scrmode (IDA's
-                                                       label "InGameMode" here is wrong: a
-                                                       different global, DS:2506, exists
-                                                       under that name already). */
 extern unsigned char far *foreground_color;       /* DS:21C4, reused from SEG038.C */
-extern unsigned char far *background_color;       /* DS:21C8, reused from SEG038.C */
-extern struct Font far *cur_font;                 /* DS:21CC */
+/* DS:21CC, _cur_font in symbols.tsv (provisional); only its line height is used here. */
+extern struct FontInfo far *cur_font;
 extern long far *Time;                  /* DS:2158 */
 
-char far mouse_check_reg(int top, int y0, int bottom, int x0);
-void far mouse_hide(void);
-void far mouse_show(void);
 void far scroll_clear(int which);
-void far pic_to_screen(int pic, int x, int y, int w, int h);
-void far set_the_color(int color);
 void far rectangle(int top, int mid, int bottom, int count);
-unsigned far str_len(char far *s);
-int far string_width(char far *s);
-void far string_to_screen(char far *s, int x, int y);
 void far scroll_wait(int ticks, int also);
-void far scroll_more(void);
-/* A 6-int call in a different file; FM Towns vcopy_ matches the first four parameters
-   exactly (by position and value) but takes only four, so this probably is not it.
-   Unresolved; kept under its DOS label. */
-void far vcopy(int p1, int p2, int p3, int p4, int p5, int p6);
-
-void far scroll_up(int n);
-void far scroll_print1(char *s, int flag);
-void far scroll_print2(char *s, int flag);
-void far scroll_print3(char *s, int flag);
-void far scroll_wrap(char *s, int flag);
 
 /* Not anchored in the map; the target table keeps the IDA name. This is FM Towns
    set_mouse_in_ by exact correspondence (same four Scroll fields, same order, into the
@@ -376,7 +331,6 @@ void far draw_scroll(int x, int y, int w, int h, char flag)
    transparent, then two nested boxes and a filled rectangle. It belongs to this file: the
    EXE's relocations for it run in one descending sequence with this file's last record. */
 extern unsigned char far Transparency;          /* 370D:0DC5 */
-void far box(int x0, int y0, int x1, int y1);
 
 void far seg043_3619_669(int x, int y, int r, int b)
 {

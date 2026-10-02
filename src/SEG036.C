@@ -3,39 +3,13 @@
 /* Map_GetAddr and CreateObj: the whole of DOS segment seg036_32A9, in original order.
    Names are the originals from the FM Towns symbol table. */
 
-struct Object {
-    unsigned id;                        /* item 0-8, flags 9-12, door 13, invis 14, is_quant 15 */
-    unsigned pos;                       /* z 0-6, heading 7-9, y 10-12, x 13-15 */
-    union {
-        unsigned word;
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-};
-
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    char pad1;
-    unsigned objects;
-};
-
-/* One entry of the common object table, 11 bytes per item id. */
-struct ComObj {
-    char pad0[3];
-    unsigned b3:6;
-    unsigned stack:2;                   /* 0x03, bits 6-7 */
-    char pad4[0x0B - 0x04];
-};
+#include "critter.h"
+#include "map.h"
+#include "object.h"
 
 extern struct Tile far *mapdata;
-extern struct ComObj ComObjData[];
 
 struct Object far * far Obj_Alloc(char mobile);
-void far init_this_critter(struct Object far *obj);
 
 struct Tile far * far Map_GetAddr(int x, int y)
 {

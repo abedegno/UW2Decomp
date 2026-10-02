@@ -5,41 +5,15 @@
    DOS segment seg027_2856, in original order. Function and global names are the
    originals from the FM Towns symbol table; the source file's own name is not known. */
 
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x306];
-    unsigned char motion_state;         /* 0x306 */
-    unsigned char f307;                 /* 0x307 */
-};
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* item 0-8 (major class 6-8), flags 9-12, 13, is_quant 15 */
-    unsigned pos;                       /* z 0-6, heading 7-9, y fine 10-12, x fine 13-15 */
-    union {
-        unsigned word;
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-    unsigned char hp;                   /* 0x08 */
-    unsigned char heading;              /* 0x09 */
-    unsigned char b0A;                  /* 0x0A */
-    int proj_x;                         /* 0x0B, a missile's position in 1/256 tiles */
-    int proj_y;                         /* 0x0D */
-    int proj_z;                         /* 0x0F */
-    char pad11[0x12 - 0x11];
-    unsigned char last_hit;             /* 0x12 */
-    unsigned char b13;                  /* 0x13, missile type in bits 0-6 */
-    unsigned char b14;                  /* 0x14 */
-    unsigned char anim;                 /* 0x15 */
-    unsigned home;                      /* 0x16, x in bits 10-15, y in bits 4-9 */
-    unsigned char b18;                  /* 0x18, fine heading in bits 0-4 */
-    char pad19[0x1A - 0x19];
-    unsigned char whoami;               /* 0x1A */
-};
+#include "combat.h"
+#include "inv.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
 
 #define OBJ_ITEM(o)     ((o)->id & 0x1FF)
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
@@ -62,62 +36,10 @@ struct Object {
 #define SET_FINEX(o, v)   ((o)->pos = (o)->pos & 0x1FFF | ((unsigned)(v) & 7) << 13)
 #define SET_FINEY(o, v)   ((o)->pos = (o)->pos & 0xE3FF | (v) << 10)
 
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    char pad1;
-    unsigned objects;                   /* 0x02, head of the tile's object list */
-};
-
-struct Inplist {
-    char pad0[8];
-    int field8;
-};
-
-/* The common object properties, one 11-byte record per item. */
-struct ComObj {
-    unsigned height:8;                  /* 0x00 */
-    unsigned radius:3;
-    unsigned c0_11:5;
-    char pad2[6 - 2];
-    unsigned c6:15;                     /* 0x06 */
-    unsigned no_owner:1;
-    char pad8;
-    unsigned char c9:2;                 /* 0x09 */
-    unsigned char c9_2:6;
-    char padA;
-};
-
-/* A missile weapon: the ammunition it fires and the missile type. */
-struct MissileInfo {
-    char a;
-    unsigned char type;
-    signed char ammo;
-};
-
-/* The motion calculation record, reached through `curP`. */
-struct MotionCalc {
-    int x, y, z;                        /* 0x00 */
-    char pad6[8 - 6];
-    unsigned char radius;               /* 0x08 */
-    unsigned char height;               /* 0x09 */
-    int index;                          /* 0x0A */
-    unsigned hits0, hits1;              /* 0x0C */
-    char pad10[0x14 - 0x10];
-    unsigned char b14;                  /* 0x14 */
-    unsigned char b15;                  /* 0x15 */
-    char pad16[0x18 - 0x16];
-};
-
-extern struct Player near *player;
-extern struct Object far *ThePlayer;
 extern struct Object far *objdata;
 extern struct Inplist near *inplist;
-extern struct ComObj ComObjData[];
 extern struct MissileInfo Missile[];
-extern struct MotionCalc near *curP;
 extern int PlayerPitch;
-extern unsigned char inanmMapX, inanmMapY;
 
 /* This file's _DATA, DS:03B4..03B5: it starts the word after seg026's strings end. */
 unsigned char using_bow = 0;
@@ -136,32 +58,16 @@ static int missile_arc;                 /* DS:2514, always 1 */
 int missile_trx, missile_try;           /* DS:2516, 2518 */
 
 /* Elsewhere in the game. */
-void far mouse_getxy(int *x, int *y);
-int far check_ammo(int weapon);
 char far play_effect_here(int fx, int vol, int c);
-void far update_digi_playback(void);
-struct Object far * far RemoveOneFromSlot(int a, int b, int item, int slot);
-void far Obj_Free(struct Object far *obj);
-void far game_sprint(int id);
-void far play_effect_on_mobile_src(int fx, struct Object far *obj, int vol);
 void far play_effect_on_mobile(int fx, struct Object far *obj, int vol);
-void far move_along(int heading, int dist, int *x, int *y);
 unsigned char far can_place(int item, int a, int x, int y, int z, int b, char dist);
-struct Tile far * far Map_GetAddr(int x, int y);
 void far Obj_AddEnd(unsigned far *list, struct Object far *obj);
 struct Object far * far obj_deal(struct Object far *obj, int x, int y, int a);
 void far check_pplate(struct Object far *obj, struct Tile far *tile, int z, int how);
 struct Object far * far CreateObj(int id, int b);
-void far mob_init(struct Object far *obj, int x, int y);
-int far Obj_MemTPtr(struct Object far *obj);
 void far Obj_Add(unsigned far *list, struct Object far *obj);
 void far ObjectCheck(int a, int b);
 void far TerrainCheck(int a);
-void far process_objlist(void);
-
-/* Later in this file. */
-struct Object far * far missile_fire(void);
-unsigned char far push_missile(struct Object far *proj, struct Object far *src, char launch);
 
 char far player_settr(void)
 {
@@ -217,7 +123,7 @@ void far player_fire(int weapon)
             proj->hp = ammo_obj->qn.f.quality;
             proj->ol.f.owner = ammo_obj->ol.f.owner;
             SET_BIT13(proj, OBJ_BIT13(ammo_obj));
-            if (OBJ_MAJOR(ammo_obj) != 5 && ComObjData[OBJ_ITEM(ammo_obj)].c9 != 2)
+            if (OBJ_MAJOR(ammo_obj) != 5 && ComObjData[OBJ_ITEM(ammo_obj)].render != 2)
                 proj->whoami = OBJ_HEADING(ammo_obj);
             Obj_Free(ammo_obj);
         } else {
@@ -299,7 +205,7 @@ char far ReturnObject(struct Object far *obj, char message)
 
     missile_x = OBJ_HOMEX(ThePlayer);
     missile_y = OBJ_HOMEY(ThePlayer);
-    if (inplist->field8 == 1 && player_settr()) {
+    if (inplist->mode == 1 && player_settr()) {
         missile_arc = 1;
         missile_src = ThePlayer;
         missile_item = OBJ_ITEM(obj);
@@ -311,7 +217,7 @@ char far ReturnObject(struct Object far *obj, char message)
             thrown->hp = obj->qn.f.quality;
             thrown->ol.f.owner = obj->ol.f.owner;
             SET_BIT13(thrown, OBJ_BIT13(obj));
-            if (OBJ_MAJOR(obj) != 5 && ComObjData[OBJ_ITEM(obj)].c9 != 2)
+            if (OBJ_MAJOR(obj) != 5 && ComObjData[OBJ_ITEM(obj)].render != 2)
                 thrown->whoami = OBJ_HEADING(obj);
             Obj_Free(obj);
             obj = 0;
@@ -335,7 +241,7 @@ char far ReturnObject(struct Object far *obj, char message)
         if (!cannot) {
             SET_FINEX(obj, x & 7);
             SET_FINEY(obj, y & 7);
-            Obj_AddEnd(&tile->objects, obj);
+            Obj_AddEnd(&tile->objects.word, obj);
             if (OBJ_CLASS(obj) == 9 && OBJ_MINOR4(obj) >= 4 && OBJ_MINOR4(obj) <= 6)
                 obj->id = obj->id & 0xFFF0 | OBJ_MINOR4(obj) - 4 & 0xF;
             if ((hit = obj_deal(obj, tx, ty, 1)) != 0 && hit > objdata)
@@ -395,31 +301,31 @@ struct Object far * far missile_fire(void)
         if (ComObjData[OBJ_ITEM(missile_src)].height != 0) {
             z = OBJ_Z(proj);
             SET_Z(proj, z + ComObjData[OBJ_ITEM(missile_src)].height * 5 / 6 + missile_try * 2);
-            if (missile_src == ThePlayer && player->f307 > 0x50)
-                SET_Z(proj, z + missile_try * 2 + (ComObjData[OBJ_ITEM(missile_src)].height - (player->f307 >> 3)));
+            if (missile_src == ThePlayer && player->swim_count > 0x50)
+                SET_Z(proj, z + missile_try * 2 + (ComObjData[OBJ_ITEM(missile_src)].height - (player->swim_count >> 3)));
             if (!push_missile(proj, missile_src, 1))
                 goto failed;
         } else if (!push_missile(proj, missile_src, 1))
             goto failed;
         if (OBJ_MAJOR(proj) != 1) {
             launcher = 0;
-            proj->proj_x = (OBJ_HOMEX(proj) << 8) + (OBJ_FINEX(proj) << 5) + 0xF;
-            proj->proj_y = (OBJ_HOMEY(proj) << 8) + (OBJ_FINEY(proj) << 5) + 0xF;
-            proj->proj_z = OBJ_Z(proj) << 3;
+            proj->goal_word = (OBJ_HOMEX(proj) << 8) + (OBJ_FINEX(proj) << 5) + 0xF;
+            proj->attitude_word = (OBJ_HOMEY(proj) << 8) + (OBJ_FINEY(proj) << 5) + 0xF;
+            proj->b0F = OBJ_Z(proj) << 3;
             if (OBJ_MAJOR(missile_src) == 1) {
                 if ((launcher = Obj_MemTPtr(missile_src)) >= 0x100)
                     launcher = 0;
             }
             proj->last_hit = launcher;
-            proj->anim = proj->anim & 0x7F;
+            proj->b15 = proj->b15 & 0x7F;
             proj->b0A = proj->b0A & 0x7F;
         }
         proj->b14 = proj->b14 & 7 | ((unsigned char)missile_try + 0x10 & 0x1F) << 3;
         proj->b14 = proj->b14 & 0xF8 | 1;
         proj->b13 = proj->b13 & 0x80 | ((unsigned char)missile_class & 0x7F) << 0;
-        if (ComObjData[missile_item].no_owner)
+        if (ComObjData[missile_item].can_own)
             proj->ol.f.owner = 0;
-        Obj_Add(&Map_GetAddr(OBJ_HOMEX(proj), OBJ_HOMEY(proj))->objects, proj);
+        Obj_Add(&Map_GetAddr(OBJ_HOMEX(proj), OBJ_HOMEY(proj))->objects.word, proj);
         if (!using_bow && !magical_missile)
             play_effect_on_mobile(0x1C, proj, 0);
         return proj;
@@ -450,9 +356,9 @@ unsigned char far push_missile(struct Object far *proj, struct Object far *src, 
     TerrainCheck(0);
     if ((calc.hits0 | calc.hits1) & 0x300)
         return 0;
-    if (curP->b14) {
+    if (curP->found) {
         process_objlist();
-        if (curP->b15)
+        if (curP->count)
             return 0;
     }
     if (launch) {

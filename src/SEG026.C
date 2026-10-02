@@ -8,56 +8,20 @@
    except where noted; the source file's own name is not known. */
 
 #include <stdlib.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x21];
-    unsigned char skills[20];           /* 0x21: lore 8, traps 10, search 11 */
-    char pad1[0x37 - 0x35];
-    unsigned char play_mana;            /* 0x37 */
-    char pad2[0x5E - 0x38];
-    unsigned char moonstones[2];        /* 0x5E, the level each moonstone was dropped on */
-    unsigned b60:1;                     /* 0x60, weapon drawn */
-    unsigned poison:4;
-    unsigned active_spells:4;
-    unsigned b60_9:3;
-    unsigned shrooms:2;
-    unsigned drunk:6;                   /* word 0x61, bits 6..11 */
-    unsigned automap:1;                 /* word 0x62, bit 4 */
-    unsigned b62_5:1;
-    unsigned sleepbits:3;               /* word 0x62, bits 6..8 */
-    unsigned in_void:1;
-    unsigned in_pits:1;
-    unsigned b63_3:5;
-    char pad3[0xCE - 0x64];
-    unsigned long questsCE;             /* 0xCE */
-    char pad4[0x305 - 0xD2];
-    unsigned char b305;                 /* 0x305, paralysis time */
-    unsigned char motion_state;         /* 0x306, bit 0 swimming */
-    unsigned char drowning;             /* 0x307 */
-    char pad5[0x369 - 0x308];
-    unsigned long game_clock;           /* 0x369 */
-};
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* item 0-8, bit 13, is_quant 15 */
-    unsigned pos;                       /* z 0-6, heading 7-9, y fine 10-12, x fine 13-15 */
-    union {
-        unsigned word;
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-    unsigned char hp;                   /* 0x08 */
-    char pad9[0x11 - 0x09];
-    unsigned char b11;                  /* 0x11, damage taken this tick */
-    char pad12[0x16 - 0x12];
-    unsigned home;                      /* 0x16, x in bits 10-15, y in bits 4-9 */
-    unsigned char b18;                  /* 0x18, fine heading in bits 0-4 */
-};
+#include "combat.h"
+#include "conv.h"
+#include "critter.h"
+#include "event.h"
+#include "gfx.h"
+#include "inv.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
+#include "view3d.h"
 
 #define OBJ_ID(o)       ((o)->id & 0x1FF)
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
@@ -73,35 +37,7 @@ struct Object {
 
 #define SET_HEADING(o, v) ((o)->pos = (o)->pos & 0xFC7F | ((v) & 7) << 7)
 
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    unsigned b1:2;
-    unsigned floor:4;                   /* bits 10..13 */
-    unsigned b1_6:2;
-    unsigned objects;                   /* 0x02, head of the tile's object list */
-};
-
 #define TERRAIN(t)      ((TxmTerr[(t)->floor] & 0xC0) >> 6)
-
-struct Inplist {
-    int x, y;                           /* 0x00 */
-    char pad4[6 - 4];
-    int buttons;                        /* 0x06 */
-    int field8;                         /* 0x08 */
-};
-
-/* One object type's common properties, 11 bytes. */
-struct ComObj {
-    char pad0[6];
-    unsigned c6:13;                     /* 0x06 */
-    unsigned pickable:1;
-    unsigned c6_14:2;
-    char pad8;
-    unsigned char c9:2;                 /* 0x09 */
-    unsigned char c9_2:6;
-    char padA;
-};
 
 /* This file's data, in DS order from 0x37E. The six spell-effect flags lead it: they lie
    between seg024's data and this file's in link order, and FM Towns keeps them with this
@@ -121,25 +57,14 @@ unsigned char DurCount = 0;
 unsigned char realDScheck = 1;
 unsigned char releaseable = 0;
 
-extern struct Player near *player;
-extern struct Object far *ThePlayer;
 extern struct Inplist near *inplist;
-extern struct ComObj ComObjData[];
 extern unsigned long far *Time;
-extern int PlayerLevel;
 extern unsigned char RightPanel;
 extern unsigned char UsingPole;
 extern unsigned TxmTerr[];
-extern int TxmID[];
-extern struct Tile far *mlowptr;
-extern int xwid, xhgt;
 extern int PickUp;
 extern unsigned char far stdat[];
-extern struct Object far *CursorObjPtr;
-extern unsigned char button_to_mode[];
-extern unsigned char mode_to_button[];
 extern char gameopts_buttongroup[];
-extern int PWid, PHgt;
 
 /* This file's _BSS, DS:24E4..2507, laid out by name (tools/bssorder.py): the keys run
    pTxtId 56, current_button 91, ObjectActor 135, ObjectActing 191, RightButtonThing 194,
@@ -160,69 +85,24 @@ unsigned char CrownTmap;
 unsigned far *releasePtr;
 int GameInputMode;
 
-/* No FM Towns names: the pick tables, indexed by the byte under the cursor. */
-extern int color_to_obj[];
-extern int color_to_map[];
-
 void far player_attack(int swing);
 void far set_screen_frame(int frame, int how);
-void far cycle_colors(unsigned char t);
-void far player_is_dead(void);
-void far change_music_maybe(void);
-void far duration_check(void);
-void far load_inventory_pix(void);
-void far DisplayInvSpecial(void);
-void far DisplayInventory(void);
 struct Object far * far Obj_PtrTMem(unsigned far *link);
 struct Object far * far Obj_IntTMem(int index);
-struct Tile far * far Map_GetAddr(int x, int y);
-void far do_3d_grab(void);
 unsigned char far IsMobElem(struct Object far *obj);
 void far scroll_print(char far *s);
-char far * far get_string(int id);
-void far game_sprint(int id);
-void far checkTrap(struct Object far *who, struct Object far *obj, int how, int x, int y);
 char far Obj_Rem(unsigned far *head, struct Object far *obj);
 void far Obj_Add(unsigned far *head, struct Object far *obj);
-void far Obj_Free(struct Object far *obj);
-void far editchng(int bits);
-struct Object far * far AskHowMany(struct Object far *obj);
-unsigned char far EncumCheck(struct Object far *obj);
-void far player_did_bad(int owner);
 char far HasOrIsObj(struct Object far *obj, int id);
-void far player_grabbed(struct Object far *obj, int how);
 void far check_pplate(struct Object far *obj, struct Tile far *tile, int z, int how);
-void far DoInventoryDrag(struct Object far *obj);
-void far player_3dtalk(void);
-void far player_3duse(void);
 void far UseObj(struct Object far *who, struct Object far *obj, int how);
 void far mouse_release(int how);
 char far mouse_dragged(int how);
-void far TalkTo(struct Object far *obj);
-void far LookAt(struct Object far *obj, int how);
-int far DetectedTrap(struct Object far *obj, int skill);
 int far wyorn(int a, int id, char *answer);
 void far wd_bool(char yes);
 void far RemoveTrap(struct Object far *obj, int skill);
-void far player_mous_move(void);
-void far DoSpecialActions(int n);
-void far unforce_mouse_cursor(int n);
-void far force_mouse_cursor(int id);
-void far BlastFunction(void);
-struct Object far * far pick_inv(int how);
-int far skill_check(int value, int target);
-void far DoInventoryMouse(int how);
-int far FindInventoryHit(int x, int y);
-void far mous_in_rune(void);
-void far mous_in_stat(void);
-int far get_iconreg_button(void);
 void far busywaiting_new_options(char *group);
-void far clear_fight_state(void);
-void far new_IconUnselect(int button);
-void far new_IconSelect(int button);
-unsigned char far get_current_music(void);
 void far set_new_music(int n);
-void far set_random_walking_music(int which);
 
 void far display_scr(void)
 {
@@ -251,14 +131,14 @@ void far display_scr(void)
             DurCount -= 0x14;
             duration_check();
         }
-        if (player->b305 != 0)
-            player->b305--;
+        if (player->paralyzed != 0)
+            player->paralyzed--;
     }
 }
 
 void far RedispInv(void)
 {
-    if (RightPanel == 0 || inplist->field8 == 4) {
+    if (RightPanel == 0 || inplist->mode == 4) {
         load_inventory_pix();
         DisplayInvSpecial();
         DisplayInventory();
@@ -284,8 +164,8 @@ unsigned char far InPickRange(int dist, struct Object far *obj, struct Tile far 
         if (x * x + y * y > dist)
             return 0;
         dz = OBJ_Z(ThePlayer) - OBJ_Z(obj);
-        if (player->drowning > 0x50)
-            dz -= player->drowning >> 3;
+        if (player->swim_count > 0x50)
+            dz -= player->swim_count >> 3;
         if ((UsingPole + 1) * 12 < dz || (UsingPole + 1) * -24 > dz)
             return 0;
     }
@@ -297,7 +177,7 @@ int far BridgeHeight(struct Tile far *tile)
     struct Object far *obj;
     int h = -1;
 
-    for (obj = Obj_PtrTMem(&tile->objects); obj; obj = Obj_PtrTMem(&obj->qn.word))
+    for (obj = Obj_PtrTMem(&tile->objects.word); obj; obj = Obj_PtrTMem(&obj->qn.word))
         if (OBJ_ID(obj) == 0x164 && (int)OBJ_Z(obj) > h)
             h = OBJ_Z(obj);
     return h;
@@ -419,7 +299,7 @@ struct Object far * far pick_3d(int how)
         return 0;
     obj = Obj_IntTMem(idx);
     co = &ComObjData[OBJ_ID(obj)];
-    releasePtr = &PickMap->objects;
+    releasePtr = &PickMap->objects.word;
     releaseable = co->pickable && !IsMobElem(obj);
     return obj;
 }
@@ -478,7 +358,7 @@ void far player_3dget(void)
             game_sprint(0x6C);
         } else {
             if (OBJ_ID(newPlObj) == 0x138 && OBJ_BIT13(newPlObj)) {
-                player->questsCE = (player->questsCE & 0xFFFFFFFBL) + 4;
+                player->quests[26] = (player->quests[26] & 0xFFFFFFFBL) + 4;
                 player_did_bad(0x1C);
             }
             if (HasOrIsObj(newPlObj, 0x126))
@@ -573,12 +453,12 @@ void far mous_in_3d(void)
 {
     unsigned char how;
 
-    if (player->b305 > 0)
+    if (player->paralyzed > 0)
         return;
-    if (inplist->buttons & 1)
+    if (inplist->cmd & 1)
         player_mous_move();
     newPlObj = 0;
-    if (inplist->buttons & 2) {
+    if (inplist->cmd & 2) {
         switch (GameInputMode) {
         case 0:
             if (RightButtonThing == 0)
@@ -586,7 +466,7 @@ void far mous_in_3d(void)
             else
                 how = RightButtonThing - 1;
             if (how != 1) {
-                if (inplist->buttons & 1)
+                if (inplist->cmd & 1)
                     break;
                 newPlObj = pick_3d(2);
                 if (newPlObj == 0) {
@@ -632,7 +512,7 @@ void far inv_look(void)
     if (newPlObj == 0)
         newPlObj = pick_inv(2);
     ident = OBJ_MAJOR(newPlObj) != 5 && OBJ_MAJOR(newPlObj) != 6
-        && ComObjData[OBJ_ID(newPlObj)].c9 != 2;
+        && ComObjData[OBJ_ID(newPlObj)].render != 2;
     if (ident == 1) {
         head = OBJ_HEADING(newPlObj);
         if (head & 4)
@@ -677,10 +557,10 @@ void far mous_in_inv(void)
     case 0:
         n = 0;
         if (CursorObjPtr == 0) {
-            if (inplist->buttons & 1) {
+            if (inplist->cmd & 1) {
                 if (RightButtonThing == 3)
                     n = -2;
-            } else if (RightButtonThing != 1 || inplist->field8 != 1)
+            } else if (RightButtonThing != 1 || inplist->mode != 1)
                 n = -2;
         }
         DoInventoryMouse(n);
@@ -708,7 +588,7 @@ void far mous_in_inv(void)
 
 void far mous_in_panel(void)
 {
-    if (player->sleepbits && player->in_void || player->b305 > 0)
+    if (player->sleepbits && player->in_void || player->paralyzed > 0)
         return;
     switch (RightPanel) {
     case 0:
@@ -740,12 +620,12 @@ void far deal_with_icons(int mode)
         busywaiting_new_options(gameopts_buttongroup);
     else {
         set_screen_frame(8, 6);
-        if (player->b60) {
-            player->b60 = 0;
+        if (player->drawn) {
+            player->drawn = 0;
             clear_fight_state();
-            player->b60 = 0;
+            player->drawn = 0;
         }
-        player->b60 = 0;
+        player->drawn = 0;
         if (RightButtonThing == 1 || RightButtonThing == 3 || RightButtonThing == 4)
             unforce_mouse_cursor(3);
         if (++mode == RightButtonThing) {
@@ -756,10 +636,10 @@ void far deal_with_icons(int mode)
                 new_IconUnselect(mode_to_button[RightButtonThing - 1]);
             RightButtonThing = mode;
             if (RightButtonThing == 2) {
-                if (player->sleepbits && player->in_void || player->b305 > 0 || player->motion_state & 1)
+                if (player->sleepbits && player->in_void || player->paralyzed > 0 || player->motion_state & 1)
                     RightButtonThing = 0;
                 else {
-                    player->b60 = 1;
+                    player->drawn = 1;
                     set_screen_frame(8, 4);
                     new_IconSelect(mode_to_button[RightButtonThing - 1]);
                     if (get_current_music() < 2 || get_current_music() > 4)
@@ -768,7 +648,7 @@ void far deal_with_icons(int mode)
             } else
                 new_IconSelect(mode_to_button[RightButtonThing - 1]);
         }
-        if (!player->b60 && get_current_music() == 5)
+        if (!player->drawn && get_current_music() == 5)
             set_random_walking_music(-1);
         if (released)
             mouse_release(1);
@@ -779,7 +659,7 @@ void far deal_with_icons(int mode)
 
 void far pick_fightmode(void)
 {
-    if (player->b60 == 1)
+    if (player->drawn == 1)
         return;
     if (player->motion_state & 1)
         return;
@@ -788,7 +668,7 @@ void far pick_fightmode(void)
     if (RightButtonThing != 0)
         new_IconUnselect(mode_to_button[RightButtonThing - 1]);
     RightButtonThing = 2;
-    player->b60 = 1;
+    player->drawn = 1;
     set_screen_frame(8, 4);
     new_IconSelect(mode_to_button[RightButtonThing - 1]);
     if (get_current_music() < 2 || get_current_music() > 4)
@@ -797,9 +677,9 @@ void far pick_fightmode(void)
 
 void far punt_fightmode(void)
 {
-    if (player->b60) {
+    if (player->drawn) {
         set_screen_frame(8, 6);
-        player->b60 = 0;
+        player->drawn = 0;
         if (LeftPanel == 0)
             new_IconUnselect(mode_to_button[1]);
         RightButtonThing = 0;
@@ -810,8 +690,8 @@ void far punt_fightmode(void)
 
 void far toggle_fightmode(void)
 {
-    if (inplist->field8 == 1) {
-        if (player->b60)
+    if (inplist->mode == 1) {
+        if (player->drawn)
             punt_fightmode();
         else
             pick_fightmode();

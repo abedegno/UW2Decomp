@@ -1,17 +1,9 @@
 /* target: seg042_35ED */
 /* opts: -mm -1 -G -O -Y -d */
 #include <dos.h>
-
-extern unsigned far crit_fpage;
-extern unsigned far crit_nlpages;
-extern unsigned char far crit_inpage;
-extern unsigned char far tmap_inpage;
-extern unsigned char far obj_inpage1;
-extern unsigned char far scrgr_fpage;
-extern unsigned char far tmap_fpage;
-extern unsigned far EmsBuff;
-extern unsigned char far sound_fpage;
-extern unsigned ems_frame;
+#include "gfx.h"
+#include "sys.h"
+#include "view3d.h"
 
 /* This file's _DATA starts at DS:0920 (seg040's ends at 091F, odd) with these, then its
    string. Only this file uses all five; seg041, the other file between seg040's data and
@@ -23,17 +15,8 @@ unsigned char obj_inpage2 = 0;          /* DS:0924 */
 unsigned char saved_tmap_inpage = 0;    /* DS:0925 */
 
 int far rand(void);
-int far seg013_1D3C_A(int phys, int page);
-void far seg013_1D3C_B2(void);
 void far MapMemory_seg013_1D3C_C7(int phys, int page);
 unsigned char far seg013_1D3C_E4(int a, int b, int c);
-void far PrintStringToConsole_seg017_DE(char far *s);
-void far first_punt(int code);
-void far pfatal_code(int code);
-/* DOS A5 is FM Towns mem_setup: both initialise the page counts and invalidate mappings.
-   The IDA name is kept as the public symbol until its target-table entry is renamed. */
-void far mem_setup(int page);
-void far seg042_35ED_12B(void);
 
 void far init_mem(void)
 {

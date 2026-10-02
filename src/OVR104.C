@@ -1,13 +1,8 @@
 /* target: ovr104 */
 /* opts: -mm -1 -G -O -Y -d */
 
-struct Creature { unsigned char bytes[0x30]; };
-struct Object { unsigned id, pos;
-    union { unsigned word; struct { unsigned quality:6, next:10; } f; } qn;
-    union { unsigned word; struct { unsigned owner:6, link:10; } f; } ol;
-    unsigned char bytes[0x1B - 8]; };
-
-extern struct Object far *ActiveObj;
+#include "critter.h"
+#include "object.h"
 
 /* This file's _BSS, DS:492A..554D, laid out by name (tools/bssorder.py): cr_type 931, cst 955,
    cr_unused 971, Creature 979, cr_class 1019. cr_class and cr_type are the FM Towns names
@@ -23,7 +18,6 @@ unsigned cr_class;                      /* DS:554C, the creature's class */
 void far fread(void *address, int size, int count, int fd);
 void far fwrite(void *address, int size, int count, int fd);
 int far rand(void);
-char far init_this_critter(struct Object far *obj);
 
 void far creature_init(int fd)
 {
@@ -63,7 +57,7 @@ char far init_this_critter(struct Object far *obj)
     obj->qn.f.quality = x;
     obj->ol.f.owner = y;
     cst = (struct Creature *)((char *)Creature + (obj->id & 0x3f) * 0x30);
-    ((unsigned char far *)obj)[8] = (cst->bytes[4] * (rand() % 0x18 + 0x10)) / 0x20;
+    ((unsigned char far *)obj)[8] = (cst->avghit * (rand() % 0x18 + 0x10)) / 0x20;
     ((unsigned char far *)obj)[9] = ((obj->pos & 0x380) >> 7) << 5;
     *(unsigned far *)((unsigned char far *)obj+0xb) = (*(unsigned far *)((unsigned char far *)obj+0xb) & 0xfff0) | 8;
     *(unsigned far *)((unsigned char far *)obj+0xb) = *(unsigned far *)((unsigned char far *)obj+0xb) & 0xf00f;

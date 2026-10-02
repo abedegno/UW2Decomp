@@ -17,103 +17,37 @@
 #include <io.h>
 #include <fcntl.h>
 #include <stat.h>                       /* sys\stat.h; the build keeps it flat */
+#include "combat.h"
+#include "critter.h"
+#include "event.h"
+#include "file.h"
+#include "gfx.h"
+#include "inv.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
 
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x60];
-    unsigned b60:1;                     /* 0x60 */
-    unsigned b60_1:10;
-    unsigned b60_11:1;                  /* word 0x60, bit 11 */
-    unsigned b60_12:4;
-    unsigned b62_0:4;
-    unsigned automap:1;                 /* word 0x62, bit 4 */
-    unsigned b62_5:11;
-    char pad64[0x6A - 0x64];
-    unsigned long l6A;                  /* 0x6A */
-    char pad6E[0x96 - 0x6E];
-    unsigned long quests[2];            /* 0x96 */
-    char pad9E[0x2F9 - 0x9E];
-    int saved_automap;                  /* 0x2F9 */
-};
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;
-    unsigned pos;
-    unsigned qn;
-    unsigned ol;                        /* 0x06, the head of the contents list */
-    char pad08[0x12 - 0x08];
-    unsigned char last_hit;             /* 0x12 */
-};
-
-extern char HomeDir[];
-extern struct Player near *player;
-extern struct Object far *ThePlayer;
-extern int PlayerLevel;
-extern int GrSq;
-extern char scroll_esc;
-extern unsigned char realDScheck;
-extern unsigned char fiz_update;
-extern int GameInputMode;
-extern struct Object far *CursorObjPtr;
-extern int NewPlayerX, NewPlayerY;
-
-char far SavePlayerInv(char *dir);
-char far RestorePlayerInv(char *dir);
-void far FreePlayerInv(unsigned far *list);
-void far change_GrSq(int sq, int how);
-unsigned char far Map_Load(int arc, int level, int flags);
-char far Map_Save(int arc, int level, int flags);
 void far Txm_Load(int arc, int level, int flags);
 char far Txm_Save(int arc, int level, int flags);
-void far load_dl(void);
-void far ClearAutoMap(void);
-void far init_level_creature_stuff(void);
 void far GetAutoMapLevel(int arc, int level);
 char far SaveAutoMapLevel(int arc, int level);
 void far close_arc(int arc);
-void far game_sprint(int id);
 void far scroll_print(char far *s);
 void far scroll_clear(char redraw);
-void far pretty_panelagain(void);
 void far load_weapcm(void);
-void far display_scr(void);
-void far init_scrgr(void);
 void far newFPS(int n);
-void far parse_effect(void);
-void far editchng(int bits);
-void far reset_game(void);
-void far set_creatures_from_saved_game(void);
-void far set_creatures_to_saved_game(void);
 int far wdialog(char *prompt, char *initial, char *result, char anychar, int maxlen);
 unsigned char far blttodrive(char far *src, char *path, int len);
 unsigned far get_workspace(void);
-void far release_workspace(void);
-int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
-int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n);
-void far clear_fight_state(void);
-void far unforce_mouse_cursor(int n);
-void far restore_mana(struct Object far *who, char amount);
 void far Sched_SetAllClocks(int n);
-struct Object far * far Obj_FindInMapSquare(int major, int minor, int index, int x, int y);
-int far checkLock(struct Object far *who, struct Object far *obj, int key);
-void far OpenDoor(struct Object far *who, struct Object far *door);
 int far find_anim();
-void far toast_animobj(int idx, int how);
-void far punt_all_digi_fx(void);
 void far load_digi_fx(int which);
 void far clearobj(int n);
-void far set_random_walking_music(int which);
-void far update_all_critters_whilst_player_snoozes(void);
-void far prison_alarm_check(void);
-void far fire_trigger_at(int x, int y);
 void far Killorn_just_crashed(int how);
-void far remove_TK_wand(void);
-void far genocide(int n);
-
-unsigned char far clear_dir(char *dir);
-unsigned char far copy_dir(char *src, char *dst);
-void far do_level_hacks(int level, int mode);
 
 /* The tests in SaveLevel and copy_file have empty bodies: the bytes keep each test with no jump after it,
    as if a debugging message had been compiled out. */
@@ -177,7 +111,7 @@ char far SaveLevel(int level)
     int sq;
 
     SavePlayerInv(0);
-    FreePlayerInv(&ThePlayer->ol);
+    FreePlayerInv(&ThePlayer->ol.word);
     sq = GrSq;
     change_GrSq(-1, -1);
     ThePlayer->id = ThePlayer->id & 0xFE3F;
@@ -478,7 +412,7 @@ void far do_level_hacks(int level, int mode)
     }
     if (mode == 0) {
         init_level_creature_stuff();
-        if (!player->b60)
+        if (!player->drawn)
             set_random_walking_music(-2);
     } else if (mode == 1)
         update_all_critters_whilst_player_snoozes();
@@ -497,14 +431,14 @@ void far do_level_hacks(int level, int mode)
         }
         break;
     case 2:
-        if ((int)((player->quests[0] & 4) >> 2) && mode == 1 && (level - 1) % 8 + 1 == 1)
+        if ((int)((player->quests[12] & 4) >> 2) && mode == 1 && (level - 1) % 8 + 1 == 1)
             Killorn_just_crashed(1);
     case 5:
         if ((level - 1) % 8 + 1 == 3 && mode == 1)
             remove_TK_wand();
         break;
     case 6:
-        if (mode == 0 && (int)((player->l6A & 8) >> 3))
+        if (mode == 0 && (int)((player->quests[1] & 8) >> 3))
             genocide(0xFF);
         break;
     case 8:

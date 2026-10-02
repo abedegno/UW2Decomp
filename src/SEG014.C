@@ -5,52 +5,16 @@
    original order. Function and global names are the originals from the FM Towns symbol
    table where it has them. */
 
-extern int GameInputMode;              /* DS:2506, declared in PLAYER.C */
+#include "gfx.h"
+#include "ui.h"
+
 /* _BSS, by name (tools/bssorder.py): gameopts_done sorts before icon_button_handle */
 int gameopts_done;                     /* DS:67D6+22E2, also written by the options overlay */
 static int icon_button_handle;         /* DS:67D6+22E4, only ever used in this file */
 
-/* A button group (see OVR136.C): an init function, the art row for its pictures, and for
-   each of its seven buttons a handler, the handler's argument and a group to go to next. */
-struct buttongroup {
-    void (far *init)(void);
-    int images;
-    void (far *fn[7])(int);
-    int arg[7];
-    struct buttongroup *sub[7];
-};
-
 int far input_addmouse(int a, int b, int c, int d, int buttons, int mode, void far (*handler)(int));
-void far input_del(int handle);
-void far mouse_getxy(int *x, int *y);
-void far mouse_hide(void);
-void far mouse_show(void);
-void far grSoftPageFlip(void);
-void far pic_to_screen(int pic, int a, int b, int c, int d);
-void far set_the_color(int color);
-void far urectangle(int top, int left, int bottom, int right);
-void far game_sprint(int id);
-void far mouse_freereign(void);
 void far mouse_release(int flag);
-void far save_opt(int a);
-void far restore_opt(int a);
-void far music_opt(int a);
-void far sound_opt(int a);
 void far busywaiting_new_options(struct buttongroup *g);
-void far deal_with_icons(int button);
-
-/* the options panel's handlers, in ovr136 (FM Towns names) */
-void far game_group_fun(void);
-void far detail_group_fun(void);
-void far quit_group_fun(void);
-void far file_group_fun(void);
-void far musicsound_group_fun(void);
-void far donothing_opt(int arg);
-void far resume_play_opt(int arg);
-void far detail_set_opt(int level);
-void far quit_do_opt(int arg);
-void far do_saverest_opt(int slot);
-void far do_musicsound_opt(int on);
 
 /* This file's _DATA, DS:0120..0267, in definition order: the option panel's button groups.
    It starts a new file (word-aligned, after seg013's emm_id ends at DS:011F) and lies
@@ -61,7 +25,7 @@ char dseg_67d6_121 = 0;                /* DS:0121, never referenced */
 char current_hilit_button = -1;        /* DS:0122 */
 unsigned char button_to_mode[6] = { 1, 0, 3, 4, 2, 5 };    /* DS:0123 */
 unsigned char mode_to_button[6] = { 1, 0, 4, 2, 3, 5 };    /* DS:0129 */
-extern struct buttongroup detail_buttongroup, quit_buttongroup, file_buttongroup, musicsound_buttongroup;
+extern struct buttongroup quit_buttongroup;
 struct buttongroup gameopts_buttongroup = {                  /* DS:012F */
     game_group_fun, 0,
     { save_opt, restore_opt, music_opt, sound_opt, donothing_opt, donothing_opt, resume_play_opt },

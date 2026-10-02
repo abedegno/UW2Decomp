@@ -7,47 +7,16 @@
    FM Towns symbol table where it has them; the source file's own name is not known. */
 
 #include <stdlib.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x1F];
-    unsigned char dex;                  /* 0x1F */
-    char pad20;
-    unsigned char skills[20];           /* 0x21: attack 0, unarmed 2, casting 9 */
-    char pad35[0x60 - 0x35];
-    unsigned drawn:1;                   /* 0x60, weapon drawn */
-    unsigned poison:4;
-    unsigned b60_5:11;
-    char pad62[0x64 - 0x62];
-    unsigned b64:8;
-    unsigned hand:1;                    /* 0x65, left handed */
-    unsigned b65_1:7;
-    char pad66[0x301 - 0x66];
-    unsigned char easy;                 /* 0x301 */
-};
-
-/* The player's critter data, reached through the near pointer `playerdat`. */
-struct Critter {
-    char pad0[0x1D];
-    unsigned char noise:4;              /* 0x1D */
-    unsigned char b1D_4:4;
-};
-
-/* A mobile object, 27 bytes. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* item 0-8 (major class 6-8) */
-    unsigned pos;                       /* z 0-6, heading 7-9, y fine 10-12, x fine 13-15 */
-    unsigned qn;
-    unsigned ol;
-    unsigned char hp;                   /* 0x08 */
-    char pad09[0x0D - 0x09];
-    unsigned b0D;                       /* 0x0D, powerful in bit 10 */
-    char pad0F[0x16 - 0x0F];
-    unsigned home;                      /* 0x16, x in bits 10-15, y in bits 4-9 */
-    unsigned char b18;                  /* 0x18, fine heading in bits 0-4 */
-    unsigned char b19;                  /* 0x19, side in bit 6 */
-    unsigned char whoami;               /* 0x1A */
-};
+#include "combat.h"
+#include "critter.h"
+#include "gfx.h"
+#include "inv.h"
+#include "map.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
+#include "view3d.h"
 
 /* A static object: the first 8 bytes of every object. */
 struct SObject {
@@ -68,169 +37,42 @@ struct SObject {
 #define OBJ_FINEX(o)    (((o)->pos & 0xE000) >> 13)
 #define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
 #define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
-#define OBJ_POWERFUL(o) (((o)->b0D & 0x400) >> 10)
+#define OBJ_POWERFUL(o) (((o)->attitude_word & 0x400) >> 10)
 #define OBJ_SIDE(o)     (((o)->b19 & 0x40) >> 6)
 
 #define SET_Z(o, v)       ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
 #define SET_FINEX(o, v)   ((o)->pos = (o)->pos & 0x1FFF | ((unsigned)(v) & 7) << 13)
 #define SET_FINEY(o, v)   ((o)->pos = (o)->pos & 0xE3FF | (v) << 10)
 
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    char pad1;
-    unsigned objects;                   /* 0x02, head of the tile's object list */
-};
-
-/* The common object properties, one 11-byte record per item. */
-struct ComObj {
-    unsigned height:8;                  /* 0x00 */
-    unsigned radius:3;
-    unsigned c0_11:5;
-    char pad2[11 - 2];
-};
-
-/* A missile weapon: the ammunition it fires and the missile type. */
-struct MissileInfo {
-    char a;
-    unsigned char type;
-    signed char ammo;
-};
-
-/* A melee weapon, 8 bytes: damage by swing kind, charge and skill. */
-struct Weapon {
-    unsigned char damage[3];
-    unsigned char min_charge;           /* 0x03 */
-    unsigned char speed;                /* 0x04 */
-    unsigned char max_charge;           /* 0x05 */
-    unsigned char skill;                /* 0x06 */
-    char pad7;
-};
-
-/* A critter type, 48 bytes. */
-struct Creature {
-    unsigned char armour[4];            /* 0x00, by hit location */
-    unsigned char avghit;               /* 0x04 */
-    unsigned char str;                  /* 0x05 */
-    char pad6[2];
-    unsigned char b8_0:3;               /* 0x08 */
-    unsigned char blood:2;
-    unsigned char b8_5:3;
-    char pad9;
-    unsigned char passive:1;            /* 0x0A */
-    unsigned char bA_1:7;
-    char padB[0x10 - 0x0B];
-    unsigned char b10_0:4;              /* 0x10 */
-    unsigned char armour_kind:2;
-    unsigned char weapon_kind:2;
-    signed char equip;                  /* 0x11 */
-    signed char defence;                /* 0x12 */
-    struct {
-        signed char chance;
-        unsigned char damage;
-        char c;
-    } attacks[3];                       /* 0x13 */
-    char pad1C[0x28 - 0x1C];
-    int exp;                            /* 0x28 */
-    char pad2A[0x30 - 0x2A];
-};
-
-/* The motion calculation record, reached through `curP`. */
-struct MotionCalc {
-    int x, y, z;                        /* 0x00 */
-    char pad6[8 - 6];
-    unsigned char radius;               /* 0x08 */
-    unsigned char height;               /* 0x09 */
-    int index;                          /* 0x0A */
-    unsigned hits0, hits1;              /* 0x0C */
-    char pad10[0x14 - 0x10];
-    unsigned char b14;                  /* 0x14 */
-    unsigned char count;                /* 0x15, collisions found */
-    signed char first;                  /* 0x16, the first of them in oCollisions */
-    char pad17;
-};
-
-/* One collision found by ObjectCheck, 6 bytes. */
-struct Collision {
-    unsigned char top;                  /* 0x00 */
-    unsigned char bottom;               /* 0x01 */
-    unsigned c2:6;                      /* 0x02 */
-    unsigned index:10;
-    int offset;                         /* 0x04, tile offset, x in bits 0-5 */
-};
-
-extern struct Player near *player;
-extern struct Critter near *playerdat;
-extern struct Object far *ThePlayer;
-extern struct Object far *critdata;
-extern struct Object far *UsPtr;
-extern struct MotionCalc near *curP;
-extern struct Collision oCollisions[];
-extern struct ComObj ComObjData[];
-extern struct Creature Creature[];
 extern struct MissileInfo Missile[];
 extern struct Weapon Weapons[];
 extern int PlayerPitch;
-extern unsigned char PoisonWeap;
-extern unsigned char Valor;
-extern int GameInputMode;
 extern int ObjectActorArg;
 extern long far *Time;
-extern unsigned char far *key_on;
-extern int weap_frame;
-extern unsigned char wframe[];
 /* The player's own critter record. No FM Towns name: static there. */
 
 /* Elsewhere in the game. */
 struct Object far * far Obj_IntTMem(int index);
 char far IsMobElem(struct Object far *obj);
-int far Obj_MemTPtr(struct Object far *obj);
 int far add_animobj(int index, int len, int a, char x, char y);
-void far Obj_Free(struct Object far *obj);
 void far Obj_Add(unsigned far *list, struct Object far *obj);
 void far Obj_AddEnd(unsigned far *list, struct Object far *obj);
 struct Object far * far CreateObj(int id, int b);
-struct Tile far * far Map_GetAddr(int x, int y);
 void far TerrainCheck(int a);
 void far ObjectCheck(int a, int b);
-void far process_objlist(void);
-void far move_along(int heading, int dist, int *x, int *y);
 void far play_effect(char type, int x, int y, char vol);
 void far play_effect_here(int fx, int vol, char c);
 void far play_effect_on_mobile(char fx, struct Object far *obj, int vol);
-int far rollem(int n, int sides);
-void far DamageInventory(int slot, int damage, int type, int a, int b);
-struct Object far * far AskInventory(int slot);
-int far skill_check(int value, int target);
-void far fill_FB(int colour);
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
                      unsigned char damage, unsigned char type);
 void far set_effect(int which, int amount);
 void far set_screen_frame(int frame, int how);
 void far put_effect(struct Object far *obj, int type, int size, int a, int b, int x, int y);
 void far mouse_release(int n);
-struct Object far * far FindObj(int a, int b, int c, int d, int *where);
-void far game_sprint(int id);
 void far get_name(char far *buf, struct Object far *obj, int a, int b);
 void far scroll_print(char far *s);
 void far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
-void far unforce_mouse_cursor(int n);
-void far force_mouse_cursor(int id);
-int far mouse_getbut(int *b);
-int far get_wfr(int frame);
-char far mous_in_3d_p(void);
-void far player_fire(int weapon);
-void far get_hp_back(struct Object far *obj, char amount);
-void far sp_ward_undead(int x, int y, struct Object far *obj, struct Tile far *tile, int a);
-void far sp_hold(int x, int y, struct Object far *obj, struct Tile far *tile, int a);
-struct Object far * far build_new_obj(int id, struct Tile far *tile);
-void far fireball_effect(struct Object far *obj, int x, int y);
-void far damage_square(int x, int y, int a, int b);
-void far obj_spells(struct Object far *obj, int a, int b);
-void far OpenDoor(struct Object far *who, struct Object far *door);
-unsigned char far check_res(struct Object far *obj, unsigned char damage, unsigned char type);
 void far set_new_music(int n);
-void far player_get_exp(int n);
 
 /* Initialised data, DS:356 onwards. The statics have no FM Towns names; the names here
    are descriptive. */
@@ -325,7 +167,7 @@ int far set_hitobj(struct MotionCalc *c)
     ax = (OBJ_HOMEX(att) << 3) + OBJ_FINEX(att);
     ay = (OBJ_HOMEY(att) << 3) + OBJ_FINEY(att);
     for (; i < last; i++) {
-        idx = oCollisions[i].index;
+        idx = oCollisions[i].link.f.index;
         obj = Obj_IntTMem(idx);
         if (OBJ_MAJOR(obj) == 6)
             continue;
@@ -388,7 +230,7 @@ void far find_wall_coll(int heading, int dist, struct MotionCalc *c)
             if (add_animobj(Obj_MemTPtr(obj), 2, 0, tx, ty) == -1)
                 Obj_Free(obj);
             else
-                Obj_AddEnd(&Map_GetAddr(tx, ty)->objects, obj);
+                Obj_AddEnd(&Map_GetAddr(tx, ty)->objects.word, obj);
             return;
         }
         move_along(heading, 0x10, &fx, &fy);
@@ -418,7 +260,7 @@ unsigned char far resolve_attack(void)
     heading = (OBJ_HEADING(att) << 5) + (att->b18 & 0x1F);
     move_along(heading, wsize + 3, &curP->x, &curP->y);
     ObjectCheck(0, 1);
-    if (curP->b14) {
+    if (curP->found) {
         process_objlist();
         if (curP->count == 0)
             return 0;
@@ -427,7 +269,7 @@ unsigned char far resolve_attack(void)
             return 0;
         hitloc = pickloc(oCollisions[i].bottom, oCollisions[i].top,
                          curP->z, curP->height + curP->z);
-        hitobj = oCollisions[i].index;
+        hitobj = oCollisions[i].link.f.index;
         return 1;
     }
     TerrainCheck(0);
@@ -467,7 +309,7 @@ int far frp_check(int attacker, int defender)
     if (OBJ_MAJOR(def) != 1) {
         if (attacker == 1 && OBJ_CLASS(def) == 0x14
             && (int)(rand() * 12L / 0x8000L) < (def->id & 7) << 1) {
-            slot = 8 - player->hand;
+            slot = 8 - player->lefty;
             DamageInventory(slot, rollem(2, 4), 4, 0, 1);
         }
         return 0;
@@ -476,7 +318,7 @@ int far frp_check(int attacker, int defender)
     if (hitobj == 1)
         askill -= cmbModTH[hitloc];
     result = skill_check(askill + hitangle, cr->defence);
-    slot = 8 - player->hand;
+    slot = 8 - player->lefty;
     if (PoisonWeap) {
         weap = AskInventory(slot);
         if (is_sharp(weap) && cr->blood)
@@ -491,14 +333,14 @@ int far frp_check(int attacker, int defender)
             if ((slot = hitloc + 1 & 3) == 3)
                 slot += rand() % 5 == 0;
             else if (slot != 0 && slot <= 2)
-                slot = player->hand + 7;
+                slot = player->lefty + 7;
             DamageInventory(slot, rollem(2, 4), 4, 1, 1);
         }
         return 0;
     }
     if (result == -1 && attacker == 1
         && !Creature[Obj_IntTMem(hitobj)->id & 0x3F].passive) {
-        slot = 8 - player->hand;
+        slot = 8 - player->lefty;
         DamageInventory(slot, rollem(2, 3), 4, 0, 1);
     }
     return 1 - result;
@@ -701,7 +543,7 @@ int far GetPlayerWeapon(unsigned char **wd, struct Object far **weap)
     register int item;
 
     *wd = 0;
-    *weap = AskInventory(8 - player->hand);
+    *weap = AskInventory(8 - player->lefty);
     if (*weap != 0) {
         if (((item = OBJ_ITEM(*weap)) >> 4) == 1) {
             if (Missile[item & 0xF].ammo >= 0 && Missile[item & 0xF].ammo < 0x10) {
@@ -742,13 +584,13 @@ void far DoPlayerWeapon(register unsigned char *wd, struct Object far *weap, int
     if ((skill = wd[6]) >= 6 || skill < 2)
         skill = 2;
     askill = (player->skills[0] >> 1) + player->skills[skill] + Valor;
-    askill += player->dex / 7;
+    askill += player->dexterity / 7;
     if (player->easy)
         askill += 7;
     if (skill == 2)
-        damage = player->skills[2] * 2 / 5 + Creature[ThePlayer->id & 0x3F].str / 6 + 4;
+        damage = player->skills[2] * 2 / 5 + Creature[ThePlayer->id & 0x3F].attr[0] / 6 + 4;
     else
-        damage = wd[swing_kind[swing - 1]] + Creature[ThePlayer->id & 0x3F].str / 9;
+        damage = wd[swing_kind[swing - 1]] + Creature[ThePlayer->id & 0x3F].attr[0] / 9;
     fromwho = 1;
     towhere = swing;
     if (weap != 0) {
@@ -914,7 +756,7 @@ void far player_attack(int swing)
                     if (add_animobj(Obj_MemTPtr(obj), 4, 0, tx, ty) == -1)
                         Obj_Free(obj);
                     else {
-                        Obj_Add(&tile->objects, obj);
+                        Obj_Add(&tile->objects.word, obj);
                         fireball_effect(obj, tx, ty);
                     }
                     damage_square(tx, ty, 1, 1);
@@ -993,7 +835,7 @@ char far critter_attack(struct Object far *npc, int swing, unsigned char charge,
     power = charge;
     cr = &Creature[npc->id & 0x3F];
     damage = cr->attacks[type].damage;
-    damage += Creature[npc->id & 0x3F].str / 5;
+    damage += Creature[npc->id & 0x3F].attr[0] / 5;
     askill = cr->attacks[type].chance + (cr->equip >> 1);
     if (OBJ_POWERFUL(npc)) {
         askill += rand() % 6 + 7;

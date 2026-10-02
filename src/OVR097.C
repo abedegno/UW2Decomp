@@ -12,128 +12,37 @@
    The two sides of a trade are indexed 0 for the NPC and 1 for the player. */
 #include <stdlib.h>
 #include <time.h>
+#include "conv.h"
+#include "critter.h"
+#include "gfx.h"
+#include "inv.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
+#include "uw2.h"
 
-struct Link { unsigned low:6, index:10; };
-struct Object {
-    unsigned id, pos;
-    struct Link qn, ol;
-    unsigned char hp;                   /* 0x08 */
-    char pad9[4];
-    unsigned attitude;                  /* 0x0D */
-    char pad0F[0x19 - 0x0F];
-    unsigned char b19;                  /* 0x19 */
-};
-
-/* The common object properties, one 11-byte record per item. */
-struct ComObj {
-    char pad0[4];
-    unsigned short value;               /* 0x04 */
-    char pad6[5];
-};
-
-/* One critter type's record, 0x30 bytes: its trading temper is in 0x0D-0x0E. The
-   field names are mine; FM Towns reads the same nibbles. */
-struct Creature {
-    char pad00[4];
-    unsigned char max_vit;              /* 0x04 */
-    char pad05[0x0D - 0x05];
-    unsigned wit:4;                     /* 0x0D */
-    unsigned shrewd:4;
-    unsigned haggle:4;                  /* 0x0E */
-    unsigned patience:4;
-    char pad0F[0x30 - 0x0F];
-};
-
-struct Player {
-    char pad0[0x21];
-    unsigned char skills[20];           /* 0x21: lore is 8, charm 15, appraise 18 */
-    char pad35[0x36 - 0x35];
-    unsigned char max_vit;              /* 0x36 */
-    char pad37[0x3D - 0x37];
-    unsigned char level;                /* 0x3D */
-    char pad3E[0x60 - 0x3E];
-    unsigned in_combat:1;               /* 0x60 */
-};
-
-extern struct Player near *player;
-extern struct Creature near *playerdat;
-extern int PlayerLevel;
 /* A trade adjustment set by a conversation (ovr096), read when bartering. DS:BFE, the
    first byte of this file's _DATA: its string at DS:BFF follows ovr096's data, which ends
    at an even address, so this byte is ours. */
 char fudge = 0;
-extern struct Object far *talking_to;
-extern struct Object far *ThePlayer;
-extern struct Object far *CursorObjPtr;
-extern struct ComObj ComObjData[];
-extern struct Creature Creature[];
 extern unsigned char far Transparency;
 extern int *inplist;
-extern int GameInputMode;
 extern unsigned char far *foreground_color;
 
-void far generate_inventory(struct Object far *);
-struct Object far * far Obj_PtrTMem(struct Link far *);
+struct Object far * far Obj_PtrTMem(union Link far *);
 struct Object far * far Obj_IntTMem(int);
-int far Obj_MemTPtr(struct Object far *);
-unsigned char far Obj_Rem(struct Link far *, struct Object far *);
-void far Obj_Add(struct Link far *, struct Object far *);
-void far Obj_AddEnd(struct Link far *, struct Object far *);
-void far Obj_FreeLinkChain(struct Link far *, struct Object far *);
-struct Object far * far Obj_InList(struct Link far **, int, int, int, int);
-void far Obj_Free(struct Object far *);
+unsigned char far Obj_Rem(union Link far *, struct Object far *);
+void far Obj_Add(union Link far *, struct Object far *);
+void far Obj_AddEnd(union Link far *, struct Object far *);
+void far Obj_FreeLinkChain(union Link far *, struct Object far *);
+struct Object far * far Obj_InList(union Link far **, int, int, int, int);
 struct Object far * far CreateObj(int, char);
 char far near_mob_put_at(struct Object far *at, struct Object far *obj, int a, int b);
-int far set_workspace(void);
-struct Object far * far AskHowMany(struct Object far *obj);
-unsigned char far EncumCheck(struct Object far *obj);
-void far DoInventoryMouse(int how);
-void far LookAt(struct Object far *obj, int lore);
-void far game_sprint(int id);
-int far skill_check(int value, int target);
 char far mouse_dragged(int how);
 void far mouse_release(int how);
-void far unforce_mouse_cursor(int n);
-void far force_mouse_cursor(int id);
-void far grfx_quikfont(int size);
-void far string_to_screen(char far *s, int x, int y);
-void far pic_to_screen(int pic, int x, int y, int w, int h);
-int far valloc(int, int);
-void far vfree(int);
-void far save_rect(int, int, int, int, int);
-void far restore_rect(int);
-void far mouse_hide(void);
-void far mouse_show(void);
-void far mouse_getxy(int *, int *);
-void far set_the_color(int);
-void far uhline(int x1, int y, int x2);
-void far plot_pixel(int x, int y);
-void far uvline(int x, int y1, int y2);
-extern unsigned char far *pixel_color;
-int far getmem(int);
-int far * far getmem_addr(int);
-char far * far get_string(int);
-void far str_copy(char far *, char far *);
-void far str_cat(char far *, char far *);
-void far play_say(char far *);
-void far npc_say(char far *);
-void far bab_var(char *name, int *values, int count);
-void far bab_var_out(char *name, int *values, int count);
-void far change_critter_goal(struct Object far *npc, char goal, int gtarg);
 
-void far drawTradeSlot_ovr097_A91(int side, int slot);
-void far showSelection_ovr097_E83(int side, int slot);
 static void far ReturnTradeObjectsToNPC_ovr097_F76(int only_unselected);
-void far UseTradeSlot_ovr097_6E8(int side, int slot, int *content,
-                                                 unsigned char *active);
-void far PickUpFromSlot_ovr097_C39(int slot, int *content, unsigned char split);
-void far ovr097_CDB(int side, int slot, int *content);
-unsigned char far CombineToSlot_ovr097_D30(struct Object far *obj, int side, int slot, int *content);
-int far assess_value(int, int, int);
-int far does_npc_like(int);
-int far range(int, int, int);
-int far total_offering_ovr097_17CB(int, int *, unsigned char *, int *, int);
-void far npc_inv_add(struct Object far *);
 
 /* This file's uninitialised data. FM Towns names greed and npc_assess, which are public;
    the rest were static there and their names here were chosen so that Turbo C lays
@@ -158,7 +67,7 @@ void far setup_to_barter(void)
     struct Object far *obj;
     struct Object far *in_slot;
     struct Object far *next;
-    struct Link far *npc_link;
+    union Link far *npc_link;
     unsigned char skipped_weapon, all_filled;
     register int slot;
     register int count;
@@ -166,14 +75,14 @@ void far setup_to_barter(void)
     count = 0;
     skipped_weapon = 0;
     all_filled = 0;
-    if (((talking_to->attitude & 0x1000) >> 12) == 0)
+    if (((talking_to->attitude_word & 0x1000) >> 12) == 0)
         generate_inventory(talking_to);
-    npc_link = &talking_to->ol;
-    obj = Obj_PtrTMem(&talking_to->ol);
+    npc_link = &talking_to->ol.link;
+    obj = Obj_PtrTMem(&talking_to->ol.link);
     slot = 0;
     in_slot = 0;
     while (obj && obj != in_slot && count++ < 0x28) {
-        next = Obj_PtrTMem(&obj->qn);
+        next = Obj_PtrTMem(&obj->qn.link);
         /* Skip the first weapon, anything worthless and, once every slot has been
            filled, a random five in eight of the rest. */
         if ((((obj->id & 0x1F0) >> 4) == 0 && !skipped_weapon) ||
@@ -186,7 +95,7 @@ void far setup_to_barter(void)
             if (!Obj_Rem(npc_link, obj)) continue;
             if (barter_items[0][slot]) {
                 if (!in_slot) in_slot = Obj_IntTMem(barter_items[0][slot]);
-                Obj_Add(&talking_to->ol, Obj_IntTMem(barter_items[0][slot]));
+                Obj_Add(&talking_to->ol.link, Obj_IntTMem(barter_items[0][slot]));
             }
             barter_items[0][slot] = Obj_MemTPtr(obj);
             drawTradeSlot_ovr097_A91(0, slot);
@@ -228,7 +137,7 @@ void far barter_init(void)
     greed = range(crit->haggle * 6, -25, 25);
     patience = range(crit->patience, -20, 100);
     npc_assess = range((15 - crit->shrewd) * 6, -25, 50);
-    npc_wit = range(crit->wit, -20, 20);
+    npc_wit = range(crit->level, -20, 20);
     last_offer = 0;
     charm = player->skills[15];
     greed = greed - charm * 2;
@@ -382,14 +291,14 @@ void far UseTradeSlot_ovr097_6E8(int side, int slot, int *content,
     if (CursorObjPtr == 0 && mouse_dragged(1)) {
         if (side == 0 && barter_result == 0) return;
         found = Obj_IntTMem(content[slot]);
-        if (((found->id & 0x8000) >> 15) && !(found->ol.index & 0x200) && found->ol.index != 1) {
+        if (((found->id & 0x8000) >> 15) && !(found->ol.f.link & 0x200) && found->ol.f.link != 1) {
             if ((moved = AskHowMany(found)) == 0) return;
         }
-        if (moved && moved != found) Obj_Add(&found->qn, moved);
+        if (moved && moved != found) Obj_Add(&found->qn.link, moved);
         if (!EncumCheck(found)) {
             if (moved && moved != found) {
-                found->ol.index += moved->ol.index;
-                if (Obj_Rem(&found->qn, moved)) Obj_Free(moved);
+                found->ol.f.link += moved->ol.f.link;
+                if (Obj_Rem(&found->qn.link, moved)) Obj_Free(moved);
             }
             game_sprint(0x10C);
             return;
@@ -468,7 +377,7 @@ void far drawTradeSlot_ovr097_A91(int side, register int slot)
         if (index) pic_to_screen(item, (slot & 1) * 0x13 + 0x7C, 0xBA - slot / 2 * 0x12, 16, 16);
     } else if (index) pic_to_screen(item, (slot & 1) * 0x13 + 0x4B, 0xBA - slot / 2 * 0x12, 16, 16);
     if (index) {
-        if (((obj->id & 0x8000) >> 15) && !(obj->ol.index & 0x200)) qty = obj->ol.index;
+        if (((obj->id & 0x8000) >> 15) && !(obj->ol.f.link & 0x200)) qty = obj->ol.f.link;
         else qty = 0;
         Transparency = 0;
         if (qty > 1) {
@@ -494,7 +403,7 @@ void far PickUpFromSlot_ovr097_C39(register int slot, register int *content, uns
     CursorObjPtr = Obj_IntTMem(content[slot]);
     content[slot] = 0;
     if (CursorObjPtr) {
-        if (split) content[slot] = Obj_MemTPtr(Obj_PtrTMem(&CursorObjPtr->qn));
+        if (split) content[slot] = Obj_MemTPtr(Obj_PtrTMem(&CursorObjPtr->qn.link));
         mouse_hide();
         if (had_cursor) unforce_mouse_cursor(0);
         force_mouse_cursor(CursorObjPtr->id & 0x1FF);
@@ -527,10 +436,10 @@ unsigned char far CombineToSlot_ovr097_D30(struct Object far *obj, int side,
     if (((found->id & 0x1C0) >> 6) == 2 && ((found->id & 0x30) >> 4) == 0)
         return 0;
     if (((obj->id & 0x8000) >> 15) && ((found->id & 0x8000) >> 15) &&
-        !(obj->ol.index & 0x200) && !(found->ol.index & 0x200) &&
+        !(obj->ol.f.link & 0x200) && !(found->ol.f.link & 0x200) &&
         (obj->id & 0x1FF) == (found->id & 0x1FF) &&
-        obj->ol.index + found->ol.index < 0x3E7) {
-        found->ol.index += obj->ol.index;
+        obj->ol.f.link + found->ol.f.link < 0x3E7) {
+        found->ol.f.link += obj->ol.f.link;
         Obj_Free(obj);
         merged = 1;
     } else {
@@ -581,7 +490,7 @@ static void far ReturnTradeObjectsToNPC_ovr097_F76(int only_unselected)
         if (barter_items[0][slot] > 0) {
             if (!flag || barter_selected[0][slot] == 0) {
                 obj = Obj_IntTMem(barter_items[0][slot]);
-                Obj_Add(&talking_to->ol, obj);
+                Obj_Add(&talking_to->ol.link, obj);
                 restore_rect(barter_saves[0][slot]);
                 barter_selected[0][slot] = 0;
                 barter_items[0][slot] = 0;
@@ -606,20 +515,20 @@ static void far probablyTradeObjects_ovr097_100A(void)
         if (barter_items[1][slot] > 0 && barter_selected[1][slot] &&
             does_npc_like(barter_items[1][slot]) != -1) {
             obj = Obj_IntTMem(barter_items[1][slot]);
-            other = Obj_PtrTMem(&talking_to->ol);
+            other = Obj_PtrTMem(&talking_to->ol.link);
             if ((obj->id & 0x1FF) == 0xA0)
-                for (; other; other = Obj_PtrTMem(&other->qn)) {
+                for (; other; other = Obj_PtrTMem(&other->qn.link)) {
                     if (((obj->id & 0x8000) >> 15) && ((other->id & 0x8000) >> 15) &&
-                        !(obj->ol.index & 0x200) && !(other->ol.index & 0x200) &&
+                        !(obj->ol.f.link & 0x200) && !(other->ol.f.link & 0x200) &&
                         (obj->id & 0x1FF) == (other->id & 0x1FF) &&
-                        obj->ol.index + other->ol.index < 0x3E7) {
-                        other->ol.index += obj->ol.index;
+                        obj->ol.f.link + other->ol.f.link < 0x3E7) {
+                        other->ol.f.link += obj->ol.f.link;
                         Obj_Free(obj);
                         obj = 0;
                         break;
                     }
                 }
-            if (obj) Obj_AddEnd(&talking_to->ol, obj);
+            if (obj) Obj_AddEnd(&talking_to->ol.link, obj);
             restore_rect(barter_saves[1][slot]);
             barter_selected[1][slot] = 0;
             barter_items[1][slot] = 0;
@@ -725,22 +634,22 @@ int far do_demand(int far *args)
         return 0;
     }
     crit = &Creature[(talking_to->id & 0x3F) >> 0];
-    if (playerdat->max_vit > 0)
-        health = 2 - (player->max_vit - ThePlayer->hp) * 2 / playerdat->max_vit;
+    if (playerdat->avghit > 0)
+        health = 2 - (player->maxhealth - ThePlayer->hp) * 2 / playerdat->avghit;
     else health = 1;
-    armed = player->in_combat;
+    armed = player->drawn;
     player_score = player->level + armed + health + player->skills[15] / 6;
     demanded = total_offering_ovr097_17CB(0, barter_items[0], barter_selected[0],
                                                    barter_vals[0][1], npc_assess);
-    if (Creature[(talking_to->id & 0x3F) >> 0].max_vit > 0)
-        health = 2 - (Creature[(talking_to->id & 0x3F) >> 0].max_vit - talking_to->hp) * 2 /
-                     Creature[(talking_to->id & 0x3F) >> 0].max_vit;
+    if (Creature[(talking_to->id & 0x3F) >> 0].avghit > 0)
+        health = 2 - (Creature[(talking_to->id & 0x3F) >> 0].avghit - talking_to->hp) * 2 /
+                     Creature[(talking_to->id & 0x3F) >> 0].avghit;
     else health = 1;
     bab_var_out("npc_attitude", &attitude, 1);
     if ((talking_to->b19 & 0x40) >> 6) mood = -1;
     else if (attitude < 2) mood = 1;
     else mood = 0;
-    npc_score = crit->wit + mood + health + demanded / 10;
+    npc_score = crit->level + mood + health + demanded / 10;
     if (PlayerLevel == 9 || PlayerLevel == 0x11)
         npc_score = npc_score * 3 / 2;
     if (player_score > npc_score) {
@@ -837,11 +746,11 @@ int far assess_value(int use_likes, int item, int accuracy)
         value = ComObjData[obj->id & 0x1FF].value;
         if (disposition) value = value * 3 >> 1;
     } else value = ComObjData[obj->id & 0x1FF].value;
-    if (((obj->id & 0x8000) >> 15) && !(obj->ol.index & 0x200))
-        quantity = obj->ol.index;
+    if (((obj->id & 0x8000) >> 15) && !(obj->ol.f.link & 0x200))
+        quantity = obj->ol.f.link;
     else quantity = 1;
     value *= quantity;
-    quality = obj->qn.low;
+    quality = obj->qn.f.quality;
     if ((obj->id & 0x1FF) == 0xA0) quality = 0x3F;
     if (value > 0) {
         if (quality > 0) {
@@ -885,22 +794,22 @@ void far npc_inv_add(struct Object far *obj)
 {
     struct Object far *other;
     if ((obj->id & 0x1FF) == 0xA0) {
-        for (other = Obj_PtrTMem(&talking_to->ol); other;
-             other = Obj_PtrTMem(&other->qn)) {
+        for (other = Obj_PtrTMem(&talking_to->ol.link); other;
+             other = Obj_PtrTMem(&other->qn.link)) {
             if (((obj->id & 0x8000) >> 15) &&
                 ((other->id & 0x8000) >> 15) &&
-                !(obj->ol.index & 0x200) &&
-                !(other->ol.index & 0x200) &&
+                !(obj->ol.f.link & 0x200) &&
+                !(other->ol.f.link & 0x200) &&
                 (obj->id & 0x1FF) == (other->id & 0x1FF) &&
-                obj->ol.index + other->ol.index < 0x3E7) {
-                other->ol.index += obj->ol.index;
+                obj->ol.f.link + other->ol.f.link < 0x3E7) {
+                other->ol.f.link += obj->ol.f.link;
                 Obj_Free(obj);
                 obj = 0;
                 break;
             }
         }
     }
-    if (obj) Obj_Add(&talking_to->ol, obj);
+    if (obj) Obj_Add(&talking_to->ol.link, obj);
 }
 
 /* Conversation built-in: the player gives an object from the slots to the NPC. */
@@ -928,16 +837,16 @@ void far player_barter_give(int index)
 int far npc_barter_find(int item, int from_player)
 {
     struct Object far *found;
-    struct Link far *head;
+    union Link far *head;
     int major, minor;
     register int id;
     register int cls;
     id = item;
-    if (from_player) head = &ThePlayer->ol;
+    if (from_player) head = &ThePlayer->ol.link;
     else {
-        if (((talking_to->attitude & 0x1000) >> 12) == 0)
+        if (((talking_to->attitude_word & 0x1000) >> 12) == 0)
             generate_inventory(talking_to);
-        head = &talking_to->ol;
+        head = &talking_to->ol.link;
     }
     if (id > 0x3E7) {
         major = (id - 0x3E8) >> 2;
@@ -959,14 +868,14 @@ int far npc_barter_find(int item, int from_player)
 int far npc_barter_give(register int item)
 {
     struct Object far *obj;
-    struct Link far *head;
+    union Link far *head;
     register int slot;
 
     if (CursorObjPtr) return 0;
-    if (((talking_to->attitude & 0x1000) >> 12) == 0)
+    if (((talking_to->attitude_word & 0x1000) >> 12) == 0)
         generate_inventory(talking_to);
-    head = &talking_to->ol;
-    for (obj = Obj_PtrTMem(&talking_to->ol); obj; obj = Obj_PtrTMem(&obj->qn)) {
+    head = &talking_to->ol.link;
+    for (obj = Obj_PtrTMem(&talking_to->ol.link); obj; obj = Obj_PtrTMem(&obj->qn.link)) {
         if (item > 0x3E7) {
             if (((obj->id & 0x1F0) >> 4) != item - 1000) continue;
         } else if ((obj->id & 0x1FF) != item) continue;
@@ -999,12 +908,12 @@ int far npc_barter_give(register int item)
 int far npc_barter_give_id(register int index)
 {
     struct Object far *obj;
-    struct Link far *head;
+    union Link far *head;
     register int slot;
 
     if (CursorObjPtr) return 0;
-    head = &talking_to->ol;
-    for (obj = Obj_PtrTMem(&talking_to->ol); obj; obj = Obj_PtrTMem(&obj->qn)) {
+    head = &talking_to->ol.link;
+    for (obj = Obj_PtrTMem(&talking_to->ol.link); obj; obj = Obj_PtrTMem(&obj->qn.link)) {
         if (Obj_MemTPtr(obj) != index) continue;
         Obj_Rem(head, obj);
         if (EncumCheck(obj)) {
@@ -1037,19 +946,19 @@ int far npc_inv_create(int item)
     struct Object far *obj;
     obj = CreateObj(item, 0);
     if (!obj) return 0;
-    obj->qn.low = 0x3F;
-    if (obj) Obj_Add(&talking_to->ol, obj);
+    obj->qn.f.quality = 0x3F;
+    if (obj) Obj_Add(&talking_to->ol.link, obj);
     return Obj_MemTPtr(obj);
 }
 
 int far npc_inv_delete(int item)
 {
     struct Object far *obj;
-    struct Link far *head;
+    union Link far *head;
     register int id;
     id = item;
-    head = &talking_to->ol;
-    for (obj = Obj_PtrTMem(&talking_to->ol); obj; obj = Obj_PtrTMem(&obj->qn)) {
+    head = &talking_to->ol.link;
+    for (obj = Obj_PtrTMem(&talking_to->ol.link); obj; obj = Obj_PtrTMem(&obj->qn.link)) {
         if ((obj->id & 0x1FF) == id) {
             Obj_FreeLinkChain(head, obj);
             return 1;

@@ -4,20 +4,12 @@
 #include <io.h>
 #include <fcntl.h>
 #include <string.h>
+#include "file.h"
+#include "sys.h"
+#include "view3d.h"
 
-extern unsigned char far CmaptoPg[];   /* 4FAF:E0C9 */
-extern unsigned char far PgtoCmap[];   /* 4FAF:E1C9 */
-extern unsigned char far CmapFrm[];    /* 4FAF:E2C9 */
-extern unsigned char far CmapCache[];  /* 4FAF:E3C9 */
-extern unsigned far crit_fpage;
-extern unsigned far crit_nlpages;
-extern unsigned far EmsBuff;
-extern unsigned char far grs_3dinf[];
-void far seg042_35ED_12B(void);
 void far seg013_1D3C_E4(int a, int b, int c);
-int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
 void far bltfromdrive(char *name, void far *buf, unsigned n);
-void far map_crit_pages(void);
 
 unsigned char far preload_cr(unsigned char load_map)
 {

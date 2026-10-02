@@ -6,109 +6,26 @@
    them; the source file's own name is not known. */
 #include <stdlib.h>
 #include <string.h>
+#include "combat.h"
+#include "conv.h"
+#include "critter.h"
+#include "event.h"
+#include "file.h"
+#include "gfx.h"
+#include "inv.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
 
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x21];
-    unsigned char skills[20];           /* 0x21; skills[12] is track */
-    char pad35[0x4A - 0x35];
-    unsigned weight, max_weight;        /* 0x4A */
-    unsigned long exp;                  /* 0x4E */
-    char pad52[0x60 - 0x52];
-    union {
-        unsigned char raw;
-        struct { unsigned b0:1, poison:4, b5:3; } f;
-    } state60;                          /* 0x60 */
-    char pad61;
-    unsigned b62_0:6;                   /* 0x62 */
-    unsigned sleepbits:3;               /* word 0x62, bits 6..8 */
-    unsigned in_void:1;                 /* word 0x62, bit 9 */
-    unsigned in_pits:1;                 /* word 0x62, bit 10 */
-    unsigned b63_3:5;
-    char pad64;
-    unsigned lefty:1, b65_1:7;          /* 0x65 */
-    unsigned long quests[32];           /* 0x66, quests 0-127 (four to a long) */
-    char padE6;
-    unsigned char arena_wins;           /* 0xE7 */
-    unsigned char keygems;              /* 0xE8 */
-    char padE9[0xEB - 0xE9];
-    unsigned char jospur_debt;          /* 0xEB, quest 133: fights won in the pits, unpaid */
-    unsigned char killorn_countdown;    /* 0xEC */
-    unsigned char worms_killed;         /* 0xED */
-    char padEE[0xF3 - 0xEE];
-    unsigned char visited_worlds;       /* 0xF3 */
-    char padF4[0xF9 - 0xF4];
-    int vend_choice[6];                 /* 0xF9, each vending machine's selection */
-    int last_gem;                       /* 0x105 */
-    char pad107[0x1C1 - 0x107];
-    int qbert[7];                       /* 0x1C1, the pyramid's colour sequence, then
-                                           a done flag and the last trigger tile */
-    char pad1CF[0x360 - 0x1CF];
-    unsigned char pit_fighters[5];      /* 0x360 */
-    char pad365[0x369 - 0x365];
-    unsigned long game_clock;           /* 0x369 */
-    unsigned char xclock[16];           /* 0x36D; xclock[14] is the best arena record */
-};
-extern struct Player near *player;
 extern unsigned long lastDurCheck;
-
-/* The player's critter data, reached through the near pointer `playerdat`. */
-struct Critter {
-    char pad00[5];
-    unsigned char str;                  /* 0x05 */
-    char pad06[0x1D - 6];
-    unsigned char stealth:4;            /* 0x1D */
-    unsigned char b1D_4:4;
-};
-extern struct Critter near *playerdat;
 
 #define GET_QUEST(q)    ((int)((player->quests[(q) >> 2] & (1 << ((q) & 3))) >> ((q) & 3)))
 #define SET_QUEST(q, v) (player->quests[(q) >> 2] = \
             (player->quests[(q) >> 2] & ~(1 << ((q) & 3))) + ((v) << ((q) & 3)))
 
-/* An object. The first 8 bytes are shared by static and mobile objects. */
-struct Object {
-    unsigned id, pos;
-    union { unsigned word; struct { unsigned quality:6, next:10; } f; } qn;
-    union { unsigned word; struct { unsigned owner:6, link:10; } f; } ol;
-    unsigned char hp;                   /* 0x08 */
-    char pad9;
-    unsigned char b0A;                  /* 0x0A */
-    unsigned goal;                      /* 0x0B */
-    unsigned flags;                     /* 0x0D */
-    unsigned zcoord;                    /* 0x0F */
-    char pad11;
-    unsigned char damage_source;        /* 0x12 */
-    unsigned char state13;              /* 0x13 */
-    char pad14;
-    unsigned char animation;            /* 0x15 */
-    unsigned home;                      /* 0x16 */
-    char pad18[2];
-    unsigned char whoami;               /* 0x1A */
-};
-
-/* A creature type's properties, 0x30 bytes. */
-struct Creature {
-    char pad0[4];
-    unsigned char avg_hit;              /* 0x04 */
-    char pad5[8 - 5];
-    unsigned char death:3;              /* 0x08 */
-    unsigned char blood:2;
-    unsigned char corpse:3;
-    unsigned char race;                 /* 0x09 */
-    unsigned char bA_0:1;               /* 0x0A */
-    unsigned char bA_1:1;
-    unsigned char remains:3;
-    unsigned char bA_5:2;
-    unsigned char flier:1;
-    char padB[0x30 - 0x0B];
-};
-extern struct Creature Creature[];
-
-struct Tile {
-    unsigned type:4, height:4, b8:2, floor:4, door:2;
-    unsigned objects;
-};
 struct TileTextureView {
     unsigned type:4, height:4, low:2, floor_texture:4, high:2;
     unsigned wall_texture:6, links:10;
@@ -116,78 +33,32 @@ struct TileTextureView {
 /* The head of an object list: the object's index in the top ten bits. */
 struct ObjHeadBits { unsigned flags:6, index:10; };
 
-/* One object type's common properties, 11 bytes. */
-struct ComObjEntry {
-    unsigned height:8;
-    unsigned radius:3, b1_3:1, mass:12;
-    char pad3;
-    int value;                          /* 0x04 */
-    char pad6[3];
-    unsigned char render:2;             /* 0x09 */
-    unsigned char b9_2:6;
-    char padA;
-};
-extern struct ComObjEntry ComObjData[];
-
-struct MotionXY { int x, y, z; };
-extern struct MotionXY PN;
-
 typedef unsigned char (far *ObjectAction)(struct Object far *);
 
-/* The 8 bytes every object starts with. */
-struct StaticObj {
-    unsigned id;
-    unsigned pos;
-    union { unsigned word; struct { unsigned quality:6, next:10; } f; } qn;
-    union { unsigned word; struct { unsigned owner:6, link:10; } f; } ol;
-};
-
-extern struct Object far *ThePlayer;
 extern struct Tile far *mapdata;
-extern struct Tile far *TriggerChainTileData_dseg_67d6_1BB9;   /* FM Towns: map_sq */
-extern unsigned char tile_walls[];
-extern unsigned char TimeStop;
 extern char Weapons[], Armor[];
-extern int PlayerFacing;
 extern unsigned TxmTerr[];
-extern int PlayerLevel, NewPlayerX, NewPlayerY, NewPlayerLevel;
-extern int trap_teleport_data;
-extern unsigned char inanmMapX, inanmMapY;
-extern int MapObj_X, MapObj_Y;
 extern unsigned char using_altaras_dagger;
 extern unsigned Inventory[];
 extern unsigned char far *ActiveMob;
 extern unsigned char far *LastActiveMob;
-extern int XP, YP;
 
 unsigned char far Sched_SetAllClocks(unsigned char mode);
-void far fill_FB(int colour);
 unsigned char far play_effect(unsigned char fx, int x, int y, char vol);
 void far set_effect(int which, char amount);
-struct Tile far * far Map_GetAddr(int x, int y);
 void far Obj_FreeLinkChain(unsigned far *head, struct Object far *obj);
 void far Obj_FreeChain(unsigned far *head);
-void far clear_fight_state(void);
-void far TalkTo(struct Object far *obj);
-void far FixPlayerEquips(void);
-int far Obj_MemTPtr(struct Object far *obj);
 struct Object far * far Obj_IntTMem(int index);
 struct Object far * far Obj_PtrTMem(unsigned far *link);
-void far editchng(int bits);
 struct Object far * far CreateObj(int item, char mobile);
 void far Obj_Add(unsigned far *head, struct Object far *obj);
 unsigned char far Obj_Rem(unsigned far *head, struct Object far *obj);
-void far Obj_Free(struct Object far *obj);
 struct Object far * far Obj_Punt(unsigned far *head, struct Object far *obj, char force);
 unsigned char far IsMobElem(struct Object far *obj);
-struct Object far * far Obj_FindInMapSquare(int major, int minor, int index, int x, int y);
 struct Object far * far Obj_InList(unsigned far **head, int recurse, int major, int minor,
                                    int cls);
 unsigned char far Obj_Check(struct Object far *obj, ObjectAction action);
 char far HasOrIsObj(struct Object far *obj, int id);
-unsigned char far Obj_Elem_Fate(int range, struct Object far *obj);
-void far move_along(int heading, int dist, int *x, int *y);
-void far game_sprint(int id);
 void far get_name(char far *buf, struct Object far *obj, int article, int plural);
 void far scroll_print(char far *s);
 int far wyorn(int a, int id, char *answer);
@@ -200,65 +71,24 @@ unsigned char far put_at(int x, int y, int z, struct Object far *obj, int range,
 void far near_mob_put_at(struct Object far *where, struct Object far *obj,
                          int how, int flag);
 void far parse_player_terr(int terr, char force);
-unsigned char far player_looking(int x, int y);
 int far UseTrigger(struct Object far *who, struct Object far *start,
                    struct Object far *trig, int type);
-unsigned char far check_res(struct Object far *obj, unsigned char damage,
-                            unsigned char type);
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
                      unsigned char damage, unsigned char type);
-void far player_grabbed(struct Object far *obj, unsigned char owner);
-char far do_spell(unsigned char cls, unsigned char sub, struct Object far *who,
-                  struct Object far *target);
-void far cast(unsigned char spell, struct Object far *who, struct Object far *target);
 void far put_effect(struct Object far *obj, int type, int size, int a, int b, int x, int y);
 unsigned char far flip_switch(struct Object far *obj, int owner);
-void far checkTrap(struct Object far *a, struct Object far *b, int type, int x, int y);
-int far SetOffTrap(struct Object far *who, struct Object far *context,
-                   struct Object far *trap, int x, int y);
-int far skill_check(int skill, int difficulty);
-char far maybe_go_hang_out(struct Object far *npc);
 void far gronk_whoami(int whoami, unsigned char all, int arg, ObjectAction fn);
-void far gronk_race(int race, unsigned char loop, int param,
-                    char (far *code)(struct Object far *, int));
-char far gronkify_attitude(struct Object far *npc, int attitude);
 void far set_numbered_variable(int var, int how, int val);
-struct Object far * far AskInventory(int slot);
-char far InvRemoveOneObject(struct Object far *obj);
-void far player_get_exp(int exp);
-void far generate_inventory(struct Object far *obj);
-void far build_corpse(struct Object far *obj, char corpse, char remains);
-void far drop_some_objects(struct Object far *obj);
-void far crystal_ball(struct Object far *obj, int x, int y);
 extern unsigned char running_away;      /* DS:0BF8, another file's data */
-extern int GameInputMode;
-extern struct Object far *CursorObjPtr;
-void far unforce_mouse_cursor(int n);
-void far force_mouse_cursor(int id);
-int far FindSlot(struct Object far *obj);
-void far RedisplayInvSlot(int slot);
 unsigned char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
 struct Object far * far obj_deal(struct Object far *obj, int x, int y, char how);
 void far set_new_music(int n);
-void far FixBagArea(void);
 char far gronkify_change_goal(struct Object far *npc, char *row);
-void far update_all_critters_whilst_player_snoozes(void);
 char far teleport_critter(struct Object far *critter, int x, int y, int how);
 void far punt_fightmode(void);
-void far gruesome_door_hack(int x, int y);
-unsigned char far new_player_pos(void);
-void far fadeout3d(int speed);
 
 /* Defined later in this file. */
-unsigned char far in_arena(int x, int y);
-void far stop_and_talk(struct Object far *obj);
-void far call_out_the_guards(int home_x, int home_y);
-unsigned char far is_my_race(struct Object far *obj, int race);
 unsigned char far instant_kill(struct Object far *obj);
-void far fire_trigger_at(int x, int y);
-void far genocide(int race);
-void far arena_player_runs(void);
-unsigned char far vend_check_gold(char x, char y, unsigned char money, unsigned char check);
 
 /* 1: TeleportCharToTile_ovr110_0. A breadth-first search outward from (x, y), at most
    20 tiles a ring, for a tile within the 9x9 box around it where the object fits. */
@@ -311,11 +141,11 @@ unsigned char far find_good_x_and_y(struct Object far *obj, int x, int y,
             tile = Map_GetAddr(tx, ty);
             if (clear) {
                 o = 0L;
-                for (link = &tile->objects; ((struct ObjHeadBits far *)link)->index;
+                for (link = &tile->objects.word; ((struct ObjHeadBits far *)link)->index;
                      link = &o->qn.word) {
                     o = Obj_PtrTMem(link);
                     if (ComObjData[o->id & 0x1FF].height || IsMobElem(o))
-                        Obj_Punt(&tile->objects, o, 0);
+                        Obj_Punt(&tile->objects.word, o, 0);
                 }
             }
             if (can_place(obj->id & 0x1FF, Obj_MemTPtr(obj), tx * 8 + 3, ty * 8 + 3,
@@ -443,11 +273,11 @@ unsigned far * far raise_up(struct Tile far *tile, unsigned far *head,
     if ((obj->pos & 0x7F) < (height << 3)) {
         obj->pos = obj->pos & 0xFF80 | ((height << 3) & 0x7F);
         if (IsMobElem(obj) && ((obj->id & 0x1C0) >> 6) != 1)
-            obj->zcoord = height << 6;
+            obj->b0F = height << 6;
         else if (obj == ThePlayer)
             PN.z = height << 6;
         else if (!IsMobElem(obj) && solid)
-            removed = Obj_Punt(&tile->objects, obj, 0) == 0L;
+            removed = Obj_Punt(&tile->objects.word, obj, 0) == 0L;
     }
     if (removed)
         return head;
@@ -473,11 +303,11 @@ unsigned far * far put_down(struct Tile far *tile, unsigned far *head,
                 parse_player_terr(0x10, 1);
         } else if (IsMobElem(obj)) {
             if (((obj->id & 0x1C0) >> 6) != 1)
-                obj->zcoord = height << 6;
+                obj->b0F = height << 6;
             else
-                obj->state13 = obj->state13 & 0x7F | 0x80;
+                obj->b13 = obj->b13 & 0x7F | 0x80;
         } else if (remove_obj)
-            removed = Obj_Punt(&tile->objects, obj, 0) == 0L;
+            removed = Obj_Punt(&tile->objects.word, obj, 0) == 0L;
     }
     if (removed)
         return head;
@@ -572,7 +402,7 @@ int far change_terrain(int x, int y, int wall, int floor, int height,
                 for (ty = ymin; ty <= ymax; ty++) {
                     near_tile = Map_GetAddr(tx, ty);
                     if (raised) {
-                        for (head = &near_tile->objects;
+                        for (head = &near_tile->objects.word;
                              ((struct ObjHeadBits far *)head)->index != 0; ) {
                             if (filter(tx, ty, cx, cy, old_height, height, head))
                                 head = raise_up(near_tile, head, old_height, height,
@@ -581,7 +411,7 @@ int far change_terrain(int x, int y, int wall, int floor, int height,
                                 head = &Obj_PtrTMem(head)->qn.word;
                         }
                     } else {
-                        for (head = &near_tile->objects;
+                        for (head = &near_tile->objects.word;
                              ((struct ObjHeadBits far *)head)->index != 0; ) {
                             if (filter(tx, ty, cx, cy, old_height, height, head))
                                 head = put_down(near_tile, head, old_height, height,
@@ -658,9 +488,9 @@ int far whack_thing(int index, int damage, int how, int extra)
     target = Obj_IntTMem(index);
     if (damage < 0) {
         if (target == ThePlayer) {
-            if ((unsigned)(-damage) > player->state60.f.poison) {
+            if ((unsigned)(-damage) > player->poison) {
                 if (check_res(ThePlayer, 1, 0x10)) {
-                    player->state60.f.poison = -damage;
+                    player->poison = -damage;
                 }
             }
         } else {
@@ -732,13 +562,13 @@ void far talk_to_disembodied(char whoami)
     struct Tile far *tile;
     worm = CreateObj(0x40, 1);
     worm->whoami = whoami;
-    worm->flags = worm->flags & 0x3FFF | 0xC000;
-    worm->goal = worm->goal & 0xFFF0 | 0xA;
+    worm->attitude_word = worm->attitude_word & 0x3FFF | 0xC000;
+    worm->goal_word = worm->goal_word & 0xFFF0 | 0xA;
     tile = Map_GetAddr((ThePlayer->home & 0xFC00) >> 10,
                        (ThePlayer->home & 0x3F0) >> 4);
-    Obj_Add(&tile->objects, worm);
+    Obj_Add(&tile->objects.word, worm);
     TalkTo(worm);
-    Obj_Rem(&tile->objects, worm);
+    Obj_Rem(&tile->objects.word, worm);
     Obj_Free(worm);
 }
 
@@ -810,7 +640,7 @@ void far do_sfx(int type, int arg)
 unsigned char far remove_whoami(struct Object far *obj)
 {
     unsigned far *head;
-    head = &Map_GetAddr((obj->home & 0xFC00) >> 10, (obj->home & 0x3F0) >> 4)->objects;
+    head = &Map_GetAddr((obj->home & 0xFC00) >> 10, (obj->home & 0x3F0) >> 4)->objects.word;
     Obj_FreeLinkChain(head, obj);
     return 1;
 }
@@ -844,12 +674,12 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
     if (mode && is_my_race(obj, 0xB))
         gronk_race(0xB, 1, 0, gronkify_attitude);
     if (mode && (obj->id & 0x1FF) == 0x4E && PlayerLevel == 4
-        && player->worms_killed < 0xC8)
-        player->worms_killed++;
+        && player->quest_bytes[7] < 0xC8)
+        player->quest_bytes[7]++;
     if (player->in_pits && mode)
         pit = remove_opponent(obj);
     if (pit) {
-        player->arena_wins++;
+        player->quest_bytes[1]++;
         if (obj->whoami != 0x64)
             SET_QUEST(24, 1);
     }
@@ -859,7 +689,7 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
         int hp;
         if (obj->whoami == 0x8D && player->xclock[1] >= 8)
             return 1;
-        hp = Creature[obj->id & 0x3F].avg_hit / 3 - 1;
+        hp = Creature[obj->id & 0x3F].avghit / 3 - 1;
         obj->hp = hp;
         call_out_the_guards((obj->home & 0xFC00) >> 10, (obj->home & 0x3F0) >> 4);
         return 0;
@@ -891,7 +721,7 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
         if (!mode && (obj->id & 0x1FF) != 0x5E) {
             obj->id = obj->id & 0xFE00 | 0x5E;
             obj->hp = 0x5C;
-            obj->goal = obj->goal & 0xFFF0 | 5;
+            obj->goal_word = obj->goal_word & 0xFFF0 | 5;
             return 0;
         }
         break;
@@ -901,13 +731,13 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
     case 0x62:
         SET_QUEST(25, 1);
         if (pit)
-            player->arena_wins = player->arena_wins + 3;
+            player->quest_bytes[1] = player->quest_bytes[1] + 3;
         break;
     case 0x63:
         if (mode) {
             SET_QUEST(121, 1);
             if (!GET_QUEST(23))
-                player->arena_wins = player->arena_wins + 6;
+                player->quest_bytes[1] = player->quest_bytes[1] + 6;
         }
         break;
     case 0x65:
@@ -918,7 +748,7 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
                 && !GET_QUEST(23))
                 SET_QUEST(22, 0);
             if (GET_QUEST(23))
-                player->arena_wins = player->arena_wins + 6;
+                player->quest_bytes[1] = player->quest_bytes[1] + 6;
         }
         break;
     case 6:
@@ -950,7 +780,7 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
                 if (!GET_QUEST(54))
                     stop_and_talk(obj);
                 else
-                    Obj_Punt(&tile->objects, obj, 1);
+                    Obj_Punt(&tile->objects.word, obj, 1);
             } else {
                 stop_and_talk(obj);
                 SET_QUEST(64, 1);
@@ -965,7 +795,7 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
             struct Object far *dagger;
             if (!using_altaras_dagger) {
                 obj->hp = 1;
-                obj->goal = obj->goal & 0xFFF0 | 5;
+                obj->goal_word = obj->goal_word & 0xFFF0 | 5;
                 return 0;
             }
             dagger = AskInventory(8 - player->lefty);
@@ -978,7 +808,7 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
         break;
     case 0x64:
         if (pit)
-            player->arena_wins--;
+            player->quest_bytes[1]--;
         if (GET_QUEST(28))
             return 1;
     case 0x80:
@@ -1027,11 +857,11 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
         return 1;
     case 0x3A:
         if (mode) {
-            player->killorn_countdown++;
-            if (player->killorn_countdown >= 2) {
+            player->quest_bytes[6]++;
+            if (player->quest_bytes[6] >= 2) {
                 SET_QUEST(50, 1);
                 do_sfx(4, 0x2C);
-                player->killorn_countdown = 0x18;
+                player->quest_bytes[6] = 0x18;
                 return 1;
             }
         }
@@ -1039,24 +869,24 @@ unsigned char far death_check(struct Object far *obj, unsigned char mode)
     case 3:
         return 1;
     }
-    if (player->arena_wins > player->xclock[14])
-        player->xclock[14] = player->arena_wins;
+    if (player->quest_bytes[1] > player->xclock[14])
+        player->xclock[14] = player->quest_bytes[1];
     return 1;
 }
 
 /* 20: TalkToDyingNPC_ovr110_2212, target size 0x6C. */
 void far stop_and_talk(struct Object far *obj)
 {
-    obj->damage_source = 0;
+    obj->last_hit = 0;
     clear_fight_state();
-    obj->animation &= 0xC0;
-    obj->goal = obj->goal & 0x0FFF;
-    obj->flags = obj->flags & 0x3FFF | 0x8000;
-    obj->goal = obj->goal & 0xFFF0 | 8;
+    obj->b15 &= 0xC0;
+    obj->goal_word = obj->goal_word & 0x0FFF;
+    obj->attitude_word = obj->attitude_word & 0x3FFF | 0x8000;
+    obj->goal_word = obj->goal_word & 0xFFF0 | 8;
     TimeStop = 0;
     TalkTo(obj);
     FixPlayerEquips();
-    obj->flags = obj->flags & 0xFDFF;
+    obj->attitude_word = obj->attitude_word & 0xFDFF;
 }
 
 /* 21: RunScheduleTriggersInTile_15_29_ovr110_227E, target size 0x12D. */
@@ -1080,9 +910,9 @@ void far call_out_the_guards(int home_x, int home_y)
         if (linked) {
             linked->qn.f.quality = home_x;
             linked->ol.f.owner = home_y;
-            linked->goal = linked->goal & 0xFFF0 | 1;
-            linked->flags = linked->flags & 0xFEFF | 0x100;
-            linked->flags = linked->flags & 0xFBFF | 0x400;
+            linked->goal_word = linked->goal_word & 0xFFF0 | 1;
+            linked->attitude_word = linked->attitude_word & 0xFEFF | 0x100;
+            linked->attitude_word = linked->attitude_word & 0xFBFF | 0x400;
         }
         UseTrigger(0L, 0L, scheduled, -1);
         scheduled = Obj_PtrTMem(&scheduled->qn.word);
@@ -1199,7 +1029,7 @@ void far repair_item(struct Object far *obj, int skill, char who)
     }
     result = do_repair(obj, skill, &time);
     if (who) {
-        playerdat->stealth = 0xF;
+        playerdat->noise = 0xF;
         pass_time(time * 60L);
         if (result == -2) {
             if (Obj_Elem_Fate(10, obj)) {
@@ -1216,7 +1046,7 @@ void far repair_item(struct Object far *obj, int skill, char who)
         FixPlayerEquips();
         editchng(0x200);
     } else if (result == -2)
-        Obj_Punt(&Map_GetAddr(MapObj_X, MapObj_Y)->objects, obj, 0);
+        Obj_Punt(&Map_GetAddr(MapObj_X, MapObj_Y)->objects.word, obj, 0);
 }
 
 /* 26: ClearHeadingBit2ovr110_2799, target size 0x76. Named clear_loretry_ in FM Towns, at the same position
@@ -1239,7 +1069,7 @@ void far clear_all_loretries(void)
     tile = mapdata;
     for (y = 0; y < 64; y++) {
         for (x = 0; x < 64; x++, tile++) {
-            head = &tile->objects;
+            head = &tile->objects.word;
             if (((struct ObjHeadBits far *)head)->index > 0)
                 Obj_Check(Obj_PtrTMem(head), clear_loretry);
         }
@@ -1346,7 +1176,7 @@ void far courtyard_hacking(int x, int y, struct Object far *trap)
     for (i = x; i <= xmax; i++) {
         for (j = y; j <= ymax; j++) {
             tile = Map_GetAddr(i, j);
-            head = &tile->objects;
+            head = &tile->objects.word;
             if (((struct ObjHeadBits far *)head)->index > 0)
                 Obj_Check(Obj_PtrTMem(head), kill_plants);
             if (hour >= 13) {
@@ -1359,7 +1189,7 @@ void far courtyard_hacking(int x, int y, struct Object far *trap)
                         obj->pos = obj->pos & 0x1FFF | (nx & 7) << 13;
                         obj->pos = obj->pos & 0xE3FF | (ny & 7) << 10;
                         obj->pos = obj->pos & 0xFF80 | (tile->height << 3) & 0x7F;
-                        Obj_Add(&tile->objects, obj);
+                        Obj_Add(&tile->objects.word, obj);
                     }
                 }
             } else if (hour >= 3) {
@@ -1398,10 +1228,10 @@ void far skup_ductosnore(void)
         return;
     if (obj->qn.f.quality != 2 && obj->qn.f.quality != 6)
         return;
-    head = &Map_GetAddr(0x39, 4)->objects;
+    head = &Map_GetAddr(0x39, 4)->objects.word;
     if (Obj_Rem(head, crystal))
         put_at(0x1D3, 0x1B, Map_GetAddr(0x3A, 3)->height << 3, crystal, 3, 1);
-    head = &Map_GetAddr(0x3B, 4)->objects;
+    head = &Map_GetAddr(0x3B, 4)->objects.word;
     if (Obj_Rem(head, obj))
         put_at(0x1D3, 0x1B, Map_GetAddr(0x3A, 3)->height << 3, obj, 3, 1);
     fire_trigger_at(0x3A, 5);
@@ -1513,7 +1343,7 @@ void far reset_arrow_pillars(int x, int y, char owner)
                 j = 0x3F;
                 continue;
             }
-            head = &tile->objects;
+            head = &tile->objects.word;
             trig = Obj_InList(&head, 0, 6, 2, 4);
             if (trig == 0)
                 trig = Obj_InList(&head, 0, 6, 3, 4);
@@ -1611,7 +1441,7 @@ void far check_fraznium(int x, int y, unsigned char owner)
             gloves = obj != 0 && (obj->id & 0x1FF) == 0x34;
         }
     }
-    head = &Map_GetAddr(x, y)->objects;
+    head = &Map_GetAddr(x, y)->objects.word;
     field = Obj_InList(&head, 0, 5, 2, 0xD);
     if (field)
         field->pos = field->pos & 0xFF80 | (gloves ? 0x7F : 0) & 0x7F;
@@ -1645,7 +1475,7 @@ void far play_with_switches(int x, int y)
     register int dy, dx;
     for (dx = 0; dx < 5; dx++) {
         for (dy = 0; dy < 2; dy++) {
-            head = &Map_GetAddr(x + dx, y + dy)->objects;
+            head = &Map_GetAddr(x + dx, y + dy)->objects.word;
             if (((struct ObjHeadBits far *)head)->index > 0)
                 Obj_Check(Obj_PtrTMem(head), maybe_flip_a_switch);
         }
@@ -1671,7 +1501,7 @@ void far recharge_lightbulbs(int x, int y)
     struct Object far *obj;
     register int tx = x;
     register int ty = y;
-    head = &Map_GetAddr(tx, ty)->objects;
+    head = &Map_GetAddr(tx, ty)->objects.word;
     if (((struct ObjHeadBits far *)head)->index != 0) {
         obj = Obj_PtrTMem(head);
         Obj_Check(obj, recharge_a_lightbulb);
@@ -1698,7 +1528,7 @@ unsigned char far redeem_a_bottle(struct Object far *obj)
 void far redeem_all_bottles(int x, int y)
 {
     unsigned far *head;
-    head = &Map_GetAddr(x, y)->objects;
+    head = &Map_GetAddr(x, y)->objects.word;
     if (((struct ObjHeadBits far *)head)->index > 0)
         Obj_Check(Obj_PtrTMem(head), redeem_a_bottle);
 }
@@ -1716,7 +1546,7 @@ unsigned char far toggle_force_field(struct Object far *obj)
 /* 47: HackTrapForceField_ovr110_387E, target size 0x2F. */
 void far find_and_gronk_force_field(int x, int y)
 {
-    Obj_Check(Obj_PtrTMem(&Map_GetAddr(x, y)->objects), toggle_force_field);
+    Obj_Check(Obj_PtrTMem(&Map_GetAddr(x, y)->objects.word), toggle_force_field);
 }
 
 /* 48: SmiteUndead_ovr110_38AD, target size 0xB0. */
@@ -1744,7 +1574,7 @@ void far prison_alarm_check(void)
         npc = Obj_IntTMem(*p);
         if (((npc->id & 0x1C0) >> 6) != 1)
             continue;
-        if (((npc->flags & 0xC000) >> 14) == 0 && is_my_race(npc, 6)
+        if (((npc->attitude_word & 0xC000) >> 14) == 0 && is_my_race(npc, 6)
             && !((npc->b0A & 0x80) >> 7)) {
             SET_QUEST(60, 1);
             player->xclock[15]++;
@@ -1781,7 +1611,7 @@ unsigned char far instant_kill(struct Object far *obj)
     oldy = YP;
     XP = (obj->home & 0xFC00) >> 10;
     YP = (obj->home & 0x3F0) >> 4;
-    head = &Map_GetAddr(XP, YP)->objects;
+    head = &Map_GetAddr(XP, YP)->objects.word;
     if (Obj_Rem(head, obj)) {
         generate_inventory(obj);
         build_corpse(obj, cr->corpse, cr->remains);
@@ -1823,7 +1653,7 @@ void far fire_trigger_at(int x, int y)
 {
     struct Object far *trap;
     unsigned far *head;
-    head = &Map_GetAddr(x, y)->objects;
+    head = &Map_GetAddr(x, y)->objects.word;
     trap = Obj_InList(&head, 0, 6, -1, -1);
     if (trap) {
         if (((trap->id & 0x30) >> 4) & 2)
@@ -1852,7 +1682,7 @@ unsigned char far transform_creature(struct Object far *obj, int item, int whoam
     if (whoami != -1)
         obj->whoami = whoami;
     if (powerful != -1)
-        obj->flags = obj->flags & 0xFBFF | (powerful & 1) << 10;
+        obj->attitude_word = obj->attitude_word & 0xFBFF | (powerful & 1) << 10;
     if (attitude != -1)
         obj->b0A = obj->b0A & 0x8F | (attitude & 7) << 4;
     if (!crit->flier
@@ -1885,7 +1715,7 @@ int far black_gem_trip(void)
     if (rel_x < 0)
         facet = 7 - facet;
     facet_no = facet;
-    if ((1 << facet_no) & player->keygems || (player->last_gem & 7) == facet_no)
+    if ((1 << facet_no) & player->quest_bytes[2] || (player->vars[6] & 7) == facet_no)
         world = facet_no;
     if (world != -1 && worlds[world].map != 0) {
         rel_x = world;
@@ -1893,7 +1723,7 @@ int far black_gem_trip(void)
             rel_x = 6;
         else if (world == 6)
             rel_x = 5;
-        player->visited_worlds |= 1 << rel_x;
+        player->quest_bytes[13] |= 1 << rel_x;
         trap_teleport_data = worlds[world].flags;
         return do_teleport(ThePlayer, worlds[world].x, worlds[world].y, worlds[world].map);
     }
@@ -1908,7 +1738,7 @@ void far black_gem_rotate(void)
     int old_gem, gem;
     register int range;
     register int tries;
-    old_gem = player->last_gem;
+    old_gem = player->vars[6];
     range = 8;
     tries = 0;
     if (player->xclock[1] < 4)
@@ -1918,11 +1748,11 @@ void far black_gem_rotate(void)
     else if (player->xclock[1] < 0xD)
         range = 6;
     gem = rand() % range;
-    while ((gem == old_gem || (1 << gem) & player->keygems) && tries++ < 8)
+    while ((gem == old_gem || (1 << gem) & player->quest_bytes[2]) && tries++ < 8)
         gem = (gem + 1) % range;
     if (tries >= 8)
         gem = 8;
-    player->last_gem = gem;
+    player->vars[6] = gem;
     editchng(2);
 }
 
@@ -1939,7 +1769,7 @@ void far do_qbert(int owner)
     unsigned char complete;
     register int i;
     register int j;
-    seq = player->qbert;
+    seq = (int *)(player->vars + 100);
     done = seq + 7;
     trig = 0L;
     last_tile = seq + 8;
@@ -2062,12 +1892,12 @@ void far do_qbert(int owner)
                 tile = Map_GetAddr((ThePlayer->home & 0xFC00) >> 10,
                                    (ThePlayer->home & 0x3F0) >> 4);
                 obj = CreateObj(0x183, 0);
-                Obj_Add(&tile->objects, obj);
+                Obj_Add(&tile->objects.word, obj);
                 obj->pos = obj->pos & 0x1FFF | 0x6000;
                 obj->pos = obj->pos & 0xE3FF | 0xC00;
                 obj->pos = obj->pos & 0xFF80 | 0x74;
                 crystal_ball(obj, 0x20, level);
-                if (Obj_Rem(&tile->objects, obj))
+                if (Obj_Rem(&tile->objects.word, obj))
                     Obj_Free(obj);
             }
     }
@@ -2084,9 +1914,9 @@ void far arena_player_runs(void)
         for (i = 0; i < 5; i++) {
             warrior = Obj_IntTMem(player->pit_fighters[i]);
             if (warrior) {
-                warrior->flags = warrior->flags & 0x3FFF | 0x4000;
-                warrior->damage_source = 0;
-                warrior->goal = warrior->goal & 0xFFF0 | 1;
+                warrior->attitude_word = warrior->attitude_word & 0x3FFF | 0x4000;
+                warrior->last_hit = 0;
+                warrior->goal_word = warrior->goal_word & 0xFFF0 | 1;
                 if (first == -1)
                     first = i;
                 else
@@ -2098,8 +1928,8 @@ void far arena_player_runs(void)
             player->pit_fighters[first] = 0;
         }
         player->in_pits = 0;
-        player->arena_wins = 0;
-        player->jospur_debt = 0;
+        player->quest_bytes[1] = 0;
+        player->quest_bytes[5] = 0;
     }
 }
 
@@ -2142,7 +1972,7 @@ unsigned char far morpheus_ruin_potion(struct Object far *potion)
 /* 61: HackTrapTransformPotionToPoison_ovr110_48BD, target size 0x2F. */
 void far ruin_cure_potions(int x, int y)
 {
-    Obj_Check(Obj_PtrTMem(&Map_GetAddr(x, y)->objects), morpheus_ruin_potion);
+    Obj_Check(Obj_PtrTMem(&Map_GetAddr(x, y)->objects.word), morpheus_ruin_potion);
 }
 
 /* The telekinesis wand's object index, found by find_TK_wand_check. FM Towns keeps it as an
@@ -2198,7 +2028,7 @@ void far remove_TK_wand(void)
     }
     for (x = 0; x < 64; x++)
         for (y = 0; y < 64; y++) {
-            head = &Map_GetAddr(x, y)->objects;
+            head = &Map_GetAddr(x, y)->objects.word;
             if (Obj_Check(Obj_PtrTMem(head), find_TK_wand_check)) {
                 wand = Obj_IntTMem(TK_wand);
                 if (Obj_Rem(head, wand))
@@ -2220,11 +2050,11 @@ void far go_vend(int which, int machine, int x, int y, int choice)
     register int id;
     switch (which) {
     case 0x28:
-        player->vend_choice[machine] = choice;
+        player->vars[machine] = choice;
         break;
     case 0x29:
-        id = vend_items[player->vend_choice[machine]];
-        price = ((ComObjData[id].value + 1) >> 1) + 1;
+        id = vend_items[player->vars[machine]];
+        price = (((int)ComObjData[id].value + 1) >> 1) + 1;
         if (!vend_check_gold(x, y, price, 1))
             break;
         vend_check_gold(x, y, price, 0);
@@ -2232,13 +2062,13 @@ void far go_vend(int which, int machine, int x, int y, int choice)
             break;
         item->qn.f.quality = 0x3F;
         item->pos = item->pos & 0xFF80 | 0x76;
-        Obj_Add(&Map_GetAddr(x, y)->objects, item);
+        Obj_Add(&Map_GetAddr(x, y)->objects.word, item);
         item = obj_deal(item, x, y, 0);
         break;
     case 0x2A:
         sample.ol.f.link = 0;
-        sample.id = sample.id & 0xFE00 | vend_items[player->vend_choice[machine]] & 0x1FF;
-        price = ((ComObjData[sample.id & 0x1FF].value + 1) >> 1) + 1;
+        sample.id = sample.id & 0xFE00 | vend_items[player->vars[machine]] & 0x1FF;
+        price = (((int)ComObjData[sample.id & 0x1FF].value + 1) >> 1) + 1;
         sample.ol.f.owner = 0;
         get_name(text, (struct Object far *)&sample, 1, 0);
         if (text[0] >= 'a' && text[0] <= 'z')
@@ -2271,7 +2101,7 @@ unsigned char far vend_check_gold(char x, char y, unsigned char money, unsigned 
     struct Tile far *tile;
     int count;
     tile = Map_GetAddr(x, y);
-    head = &tile->objects;
+    head = &tile->objects.word;
     for (coins = Obj_PtrTMem(head); coins && money > 0; coins = next) {
         next = Obj_PtrTMem(&coins->qn.word);
         if ((coins->id & 0x1FF) == 0xA0) {
@@ -2285,7 +2115,7 @@ unsigned char far vend_check_gold(char x, char y, unsigned char money, unsigned 
                 else if (Obj_Rem(head, coins)) {
                     Obj_FreeLinkChain(0L, coins);
                     money -= count;
-                    head = &tile->objects;
+                    head = &tile->objects.word;
                 }
             } else {
                 if (!check)
@@ -2312,8 +2142,8 @@ void far put_player_in_jail(void)
     struct Object far *lb;
     long hour;
     char row[16];
-    ThePlayer->hp = playerdat->str;
-    ThePlayer->animation = ThePlayer->animation & 0xC0 | 1;
+    ThePlayer->hp = playerdat->attr[0];
+    ThePlayer->b15 = ThePlayer->b15 & 0xC0 | 1;
     set_new_music(10);
     player_get_exp(-(int)(player->exp / 9));
     hour = player->game_clock / 0x3C00L % 0x14L;
@@ -2332,7 +2162,7 @@ void far put_player_in_jail(void)
         teleport_critter(lb, 0x2A, 0x22, 0);
         lb->qn.f.quality = 0x28;
         lb->ol.f.owner = 0x27;
-        lb->goal = lb->goal & 0xFFF0 | 1;
+        lb->goal_word = lb->goal_word & 0xFFF0 | 1;
     }
     fire_trigger_at(0x27, 0x25);
     punt_fightmode();

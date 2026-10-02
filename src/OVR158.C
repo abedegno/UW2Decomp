@@ -8,43 +8,12 @@
 
 #include <string.h>
 #include <stdlib.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char name[0x21];                    /* 0x00 */
-    unsigned char skills[20];           /* 0x21 */
-    char pad35[0x37 - 0x35];
-    unsigned char play_mana;            /* 0x37 */
-    unsigned char max_mana;             /* 0x38 */
-    char pad39[0x3D - 0x39];
-    unsigned char level;                /* 0x3D */
-    char pad3E[0x4E - 0x3E];
-    unsigned long exp;                  /* 0x4E, in tenths */
-    unsigned char skill_points;         /* 0x52 */
-    char pad53[0x64 - 0x53];
-    unsigned lo64:13;                   /* 0x64 */
-    unsigned pclass:3;
-};
-
-/* The player's critter data, reached through the near pointer `playerdat`. */
-struct Critter {
-    char pad0[4];
-    unsigned char max_vit;              /* 0x04 */
-    unsigned char attr[3];              /* 0x05: STR, DEX, INT */
-};
-
-struct Object {
-    char pad0[8];
-    unsigned char hp;                   /* 0x08 */
-};
-
-/* The mouse and keyboard state. */
-struct Inplist {
-    int x, y;                           /* 0x00 */
-    char pad4[6 - 4];
-    unsigned buttons;                   /* 0x06 */
-    int mode;                           /* 0x08 */
-};
+#include "critter.h"
+#include "gfx.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
 
 /* The first skill shown in the list (DS:1B92). FM Towns has no name for it (it shows as
    _dtypes+0x1C there), so it was static; the name is ours. */
@@ -54,31 +23,10 @@ static char ordinals[4][3] = { "ST", "ND", "RD", "TH" };
 /* Saved screen areas, DS:1B9F. FM Towns has 12 bytes here, three pointers. */
 int spsave[3] = { 0, 0, 0 };
 
-extern struct Player near *player;
-extern struct Critter near *playerdat;
-extern struct Object far *ThePlayer;
 extern unsigned char far *foreground_color;
-extern unsigned char far *background_color;
 extern unsigned long far *Time;
 extern struct Inplist near *inplist;
 extern char RightPanel;
-
-void far string_to_screen(char far *s, int x, int y);
-int far string_width(char far *s);
-char far * far get_string(int id);
-/* 3265:0814, upper-cases a far string in place and returns it. FM Towns has no
-   counterpart (its build is Japanese), so the name is the segment and offset. */
-char far * far seg039_3452_814(char far *s);
-/* 0085:5025, puts back part of a saved area; no FM Towns counterpart is known. */
-void far seg003_0272_5025(int handle, int x, int y, int w, int h, int sx, int sy);
-int far valloc(int w, int h);
-void far save_rect(int handle, int x, int y, int w, int h);
-void far grfx_quikfont(int size);
-void far mouse_hide(void);
-void far mouse_show(void);
-int far mouse_get_input_sp(void);
-int far mvcheck(int *val, int amount, int step, int dir);
-void far pretty_panelagain(void);
 
 void far sp_hdr(void)
 {
@@ -115,7 +63,7 @@ void far sp_hp(void)
     n = strlen(buf);
     buf[n] = '/';
     n++;
-    itoa(playerdat->max_vit, buf + n, 10);
+    itoa(playerdat->avghit, buf + n, 10);
     string_to_screen(buf, 0x135 - string_width(buf), 0x9A);
 }
 
@@ -194,7 +142,7 @@ void far mous_in_stat(void)
 
     grfx_quikfont(4);
     *foreground_color = *background_color = 0xC9;
-    dir = (inplist->buttons & 1) ? -1 : 1;
+    dir = (inplist->cmd & 1) ? -1 : 1;
     if (inplist->y < 10) {
         v = skill_top;
         dir = inplist->x < 0x26 ? -1 : 1;

@@ -8,21 +8,9 @@
 
 #include <stdio.h>
 #include <string.h>
-
-struct Object {
-    unsigned id;
-};
+#include "object.h"
 
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-
-/* The common object properties, one 11-byte record per item, as in OVR107.C. */
-struct ComObj {
-    unsigned height:8;                  /* 0x00 */
-    char pad1[6 - 1];
-    unsigned c6_0:15;                   /* 0x06 */
-    unsigned owned:1;                   /* word 0x06, bit 15 */
-    char pad8[0x0B - 0x08];
-};
 
 /* This file's _BSS, DS:6B70..8173, by name: ActiveObj 145, ComObjData 355. This file loads
    ComObjData (0x1600 bytes, from comobj.dat) and finds the active object's class data. */
@@ -37,14 +25,11 @@ void far trap_init(FILE *fp);
 void far animobj_load(FILE *fp);
 
 /* Each major class's data for the active object. */
-char * far hack_class_data(void);
 char * far creature_class_data(void);
-char * far misc_class_data(void);
 char * far stuff_class_data(void);
 char * far spec_class_data(void);
 char * far rect_class_data(void);
 char * far trap_class_data(void);
-char * far animobj_class_data(void);
 
 int far init_objects(void)
 {

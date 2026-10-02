@@ -2,7 +2,7 @@
 // resulting .OBJ files back.   node tcc.mjs <outDir> "<options>" FILE.C|FILE.ASM [...]
 // .ASM files go to TASM with the options given (for example "/ml"), .C files to TCC -c.
 import { JsDosBackend } from "dos-mcp/dist/backend/jsdos.js";
-import { cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, readdirSync } from "node:fs";
+import { cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, readdirSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, basename } from "node:path";
 const [outDir, opts, ...files] = process.argv.slice(2);
@@ -30,6 +30,15 @@ cpSync(process.env.UW2DECOMP_TC || join(here, "..", "TC"), stage, { recursive: t
 // for C files with inline asm
 const tasmDir = process.env.UW2DECOMP_TASM || join(here, "..", "TASM");
 try { cpSync(join(tasmDir, "TASM.EXE"), join(stage, "TASM.EXE")); } catch { }
+// the shared headers in src/include sit beside the sources, where TCC finds #include "name.h"
+// (the current directory, and -IC:\); a name TC itself has would replace TC's header
+const incDir = process.env.UW2DECOMP_INCLUDE || join(here, "..", "src", "include");
+let incs = [];
+try { incs = readdirSync(incDir).filter(n => /\.h$/i.test(n)); } catch { }
+for (const n of incs) {
+  try { statSync(join(stage, n.toUpperCase())); console.error(`tcc.mjs: src/include/${n} has the name of a TC file`); process.exit(1); } catch { }
+  cpSync(join(incDir, n), join(stage, n.toUpperCase()));
+}
 for (const f of files) cpSync(f, join(stage, basename(f).toUpperCase()));
 const names = files.map(f => basename(f).toUpperCase());
 writeFileSync(join(stage, "BUILD.BAT"), [

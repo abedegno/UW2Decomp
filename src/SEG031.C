@@ -6,128 +6,14 @@
    name is not known. */
 
 #include <stdlib.h>
-
-/* The physics record of the thing being moved, reached through `CP`. */
-struct Phys {
-    int x, y, z;                        /* 0x00, x and y in 1/256 tiles, z in 1/8 */
-    int vel[3];                         /* 0x06 */
-    int acc[3];                         /* 0x0C, acc[2] is gravity */
-    int time;                           /* 0x12 */
-    int speed;                          /* 0x14 */
-    unsigned char bounce;               /* 0x16 */
-    unsigned char flags;                /* 0x17 */
-    int mass;                           /* 0x18 */
-    unsigned char light;                /* 0x1A */
-    unsigned char hp;                   /* 0x1B */
-    unsigned char resist;               /* 0x1C */
-    unsigned char b1D;                  /* 0x1D */
-    int heading;                        /* 0x1E */
-    int index;                          /* 0x20 */
-    unsigned char radius;               /* 0x22 */
-    unsigned char height;               /* 0x23 */
-    unsigned char b24;                  /* 0x24 */
-    unsigned char terrain;              /* 0x25, one bit per terrain type */
-    unsigned impact;                    /* 0x26 */
-};
-
-/* The motion calculation record, `Ppd`, reached through `curP` elsewhere. */
-struct MotionCalc {
-    int x, y, z;                        /* 0x00, in 1/8 tiles */
-    int heading;                        /* 0x06 */
-    unsigned char radius;               /* 0x08 */
-    unsigned char height;               /* 0x09 */
-    int index;                          /* 0x0A */
-    unsigned hits0, hits1;              /* 0x0C */
-    unsigned char floor;                /* 0x10 */
-    unsigned char ceil;                 /* 0x11 */
-    unsigned char b12;                  /* 0x12 */
-    unsigned char b13;                  /* 0x13 */
-    unsigned char count;                /* 0x14 */
-    unsigned char b15;                  /* 0x15 */
-    signed char hit;                    /* 0x16 */
-};
-
-/* An object: only the first word is read here. */
-struct Object {
-    unsigned id;                        /* item 0-8 (major class 6-8) */
-};
-
-/* The common object properties, one 11-byte record per item. */
-struct ComObj {
-    unsigned height:8;                  /* 0x00 */
-    unsigned radius:3;                  /* 0x01 */
-    unsigned c1_3:1;
-    unsigned mass:12;                   /* 0x01, bits 4-15 */
-    unsigned c3_0:1;                    /* 0x03 */
-    unsigned solid:1;
-    unsigned c3_2:1;
-    unsigned no_hit:1;
-    unsigned c3_4:4;
-    char pad4[6 - 4];
-    unsigned touch:1;                   /* 0x06 */
-    unsigned usable:1;
-    unsigned qclass:2;
-    unsigned light:1;
-    unsigned bounce:4;
-    unsigned fate:4;                    /* 0x07, bits 1-4 */
-    unsigned c7_5:3;
-    unsigned char resist;               /* 0x08 */
-    unsigned char render:2;             /* 0x09 */
-    unsigned char c9_2:6;
-    char padA;
-};
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
 
 #define OBJ_ITEM(o)     ((o)->id & 0x1FF)
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
-
-/* One object collision found by ObjectCheck. */
-struct Collision {
-    unsigned char z;                    /* 0x00 */
-    unsigned char top;                  /* 0x01 */
-    union {
-        unsigned word;                  /* 0x02, the colliding object */
-        struct { unsigned flags:6, index:10; } f;
-    } link;
-    int tile;                           /* 0x04 */
-};
-
-/* The stepping state: a Bresenham walk along the major axis of the velocity. FM Towns's
-   _MP, one initialised struct at DS:3FA (FM Towns reads DS:416 and DS:417 as _MP+0x20 and
-   _MP+0x21, so they are fields, not the separate globals SEG030 declares). */
-struct MotionParams {
-    int *vel;                           /* 0x00, CP->vel */
-    int *pos;                           /* 0x02, Ppd's x, y and z */
-    int frac[3];                        /* 0x04, the fraction of pos, 0x2000 to a unit */
-    int step[3];                        /* 0x0A */
-    int major;                          /* 0x10 */
-    int minor;                          /* 0x12 */
-    int steps;                          /* 0x14 */
-    int rem;                            /* 0x16 */
-    int dt;                             /* 0x18 */
-    int done;                           /* 0x1A */
-    signed char hit;                    /* 0x1C, DS:416, SEG030's _deal_hit */
-    int item;                           /* 0x1D, DS:417, SEG030's _deal_item */
-    int targz;                          /* 0x1F */
-    int f21;                            /* 0x21 */
-    int f23;                            /* 0x23 */
-    int zspeed;                         /* 0x25 */
-    unsigned headings[8];               /* 0x27 */
-};
-
-extern struct MotionCalc near *curP;
-/* The mover's handler, `TP`: which collision bits to ignore, which to pass to `special`,
-   and which stop it climbing onto objects. */
-struct Handler {
-    unsigned ignore;                    /* 0x00 */
-    unsigned mask;                      /* 0x02 */
-    unsigned noclimb;                   /* 0x04 */
-    char pad6[8 - 6];
-    unsigned char (far *special)(unsigned *state);  /* 0x08 */
-};
-
-extern struct Collision oCollisions[];
-extern struct ComObj ComObjData[];
-extern unsigned char motionbits;
 
 /* This file's _BSS, DS:25C4..26E9 (seg030's ends at 25C3, seg032's starts at 26EA), laid
    out by name (tools/bssorder.py): Ppd 144, bounce_flag 298, PN 336, CN1..CN4 371,
@@ -158,27 +44,15 @@ struct MotionParams MP = {
 };
 
 /* Elsewhere in the game. */
-void far cSinCos(int angle, int *s, int *c);
-void far process_objlist(void);
 void far TerrainCheck(char radius);
 void far ObjectCheck(char a, int b);
 struct Object far * far Obj_IntTMem(int index);
 struct Object far * far Obj_PtrTMem(unsigned far *link);
-int far GetSlopeHgt(int x, int y);
-unsigned char far get_home_tile(void);
-void far ComputeHeading(void);
 void far play_effect(char fx, int x, int y, char vol);
-int far do_objhit(int ci, int index);
 long far labs(long v);
 
 /* Later in this file. */
-unsigned char far space_to_motion(char pos, char check);
-unsigned char far grid_move(int dir);
-void far check_positions(void);
-int far get_pcoll(void);
 unsigned char far set_resterr(unsigned bits);
-void far back_to_space(void);
-void far set_targz(char how);
 
 void far do_physics(struct Phys *pp, struct Handler *tp)
 {
@@ -228,43 +102,43 @@ void far set_targz(char how)
     MP.hit = 0xFF;
     MP.f23 = 0x7F;
     if (CP->vel[2] > 0) {
-        if (Ppd.count > 0 && Ppd.hit + Ppd.b15 < Ppd.count && Ppd.hit >= 0) {
-            MP.targz = oCollisions[Ppd.hit + Ppd.b15].top - CP->height;
-            MP.hit = Ppd.hit + Ppd.b15;
+        if (Ppd.found > 0 && Ppd.first + Ppd.count < Ppd.found && Ppd.first >= 0) {
+            MP.targz = oCollisions[Ppd.first + Ppd.count].bottom - CP->height;
+            MP.hit = Ppd.first + Ppd.count;
         } else
             MP.targz = 0x80 - CP->height;
         targ_ceil = 0;
-        if (MP.pos[2] + CP->radius < Ppd.ceil) {
-            MP.targz = Ppd.ceil;
+        if (MP.pos[2] + CP->radius < Ppd.top) {
+            MP.targz = Ppd.top;
             targ_ceil = 1;
         }
     } else if (CP->vel[2] == 0) {
         MP.targz = Ppd.floor;
-        MP.targz = MP.pos[2] + CP->b24 >= Ppd.ceil ? Ppd.ceil : Ppd.floor;
-        solid = Ppd.b15 == 0 && Ppd.hit > 0 && Ppd.hit <= Ppd.count;
-        for (i = 0; i < Ppd.count; i++) {
+        MP.targz = MP.pos[2] + CP->b24 >= Ppd.top ? Ppd.top : Ppd.floor;
+        solid = Ppd.count == 0 && Ppd.first > 0 && Ppd.first <= Ppd.found;
+        for (i = 0; i < Ppd.found; i++) {
             if (ComObjData[OBJ_ITEM(Obj_IntTMem(oCollisions[i].link.f.index))].touch) {
-                if (Ppd.hit <= i) {
-                    if (oCollisions[i].top - 1 < MP.f23)
-                        MP.f23 = oCollisions[i].top - 1;
-                    if (Ppd.hit + Ppd.b15 > i && oCollisions[i].z > MP.targz
-                        && oCollisions[i].z < 0x80 - CP->height) {
+                if (Ppd.first <= i) {
+                    if (oCollisions[i].bottom - 1 < MP.f23)
+                        MP.f23 = oCollisions[i].bottom - 1;
+                    if (Ppd.first + Ppd.count > i && oCollisions[i].top > MP.targz
+                        && oCollisions[i].top < 0x80 - CP->height) {
                         MP.hit = i;
-                        MP.targz = oCollisions[i].z;
+                        MP.targz = oCollisions[i].top;
                     }
-                } else if (solid && oCollisions[i].z >= MP.targz
-                           && (MP.hit == -1 || !(oCollisions[MP.hit].link.f.flags & 0x10)
-                               || !(!oCollisions[i].link.f.flags & 0x10))) {
-                    MP.targz = oCollisions[i].z;
+                } else if (solid && oCollisions[i].top >= MP.targz
+                           && (MP.hit == -1 || !(oCollisions[MP.hit].link.f.low & 0x10)
+                               || !(!oCollisions[i].link.f.low & 0x10))) {
+                    MP.targz = oCollisions[i].top;
                     MP.hit = i;
                 }
             }
         }
     } else {
-        MP.targz = Ppd.ceil;
-        if (Ppd.hit > 0 && Ppd.hit <= Ppd.count && oCollisions[Ppd.hit - 1].z > MP.targz) {
-            MP.targz = oCollisions[Ppd.hit - 1].z;
-            MP.hit = Ppd.hit - 1;
+        MP.targz = Ppd.top;
+        if (Ppd.first > 0 && Ppd.first <= Ppd.found && oCollisions[Ppd.first - 1].top > MP.targz) {
+            MP.targz = oCollisions[Ppd.first - 1].top;
+            MP.hit = Ppd.first - 1;
         }
         targ_ceil = 0;
     }
@@ -424,7 +298,7 @@ unsigned char far flat_move(int crossed, int dir)
    rehead. Its whole body is a compare with no jump, an empty if. */
 static void seg031_2CFA_A3F(void)
 {
-    if (Ppd.b13 == 9)
+    if (Ppd.open == 9)
         ;
 }
 
@@ -507,7 +381,7 @@ void far do_2dbounce(char how)
     else {
         if (how) {
             ComputeHeading();
-            h = Ppd.b12;
+            h = Ppd.slope;
             if (h == 9)
                 h = MP.major * 2;
         } else
@@ -636,7 +510,7 @@ void far do_zbounce(void)
         recalc_vecs(0);
     } else {
         if (MP.hit != -1)
-            oCollisions[MP.hit] = oCollisions[--Ppd.count];
+            oCollisions[MP.hit] = oCollisions[--Ppd.found];
         recalc_vecs(0);
     }
 }
@@ -745,8 +619,8 @@ int far get_pcoll(void)
     ObjectCheck(0, 0);
     set_targz(0);
     step = !((state = Ppd.hits0 | Ppd.hits1) & TP->noclimb);
-    if (Ppd.count > 0) {
-        for (i = Ppd.hit; Ppd.hit + Ppd.b15 > i; i++) {
+    if (Ppd.found > 0) {
+        for (i = Ppd.first; Ppd.first + Ppd.count > i; i++) {
             r = do_objhit(i, Ppd.index);
             if (r & 4)
                 state |= 0x400;
@@ -766,7 +640,7 @@ int far get_pcoll(void)
         } else if (climb) {
             ok = ComObjData[MP.item].solid == 1;
             if (ok) {
-                ok = abs(MP.pos[2] - oCollisions[MP.hit].z) <= CP->b24;
+                ok = abs(MP.pos[2] - oCollisions[MP.hit].top) <= CP->b24;
                 if (ok)
                     state |= 0x80;
             }
@@ -774,7 +648,7 @@ int far get_pcoll(void)
         ok = ok && targ_ceil && !c6;
         if (ok && MP.targz >= MP.f23)
             state &= ~0x100;
-        else if (!ok && Ppd.ceil > MP.pos[2])
+        else if (!ok && Ppd.top > MP.pos[2])
             state |= 0x100;
         if (ok && MP.targz + CP->height > 0x7F) {
             ok = 0;
@@ -803,17 +677,17 @@ int far get_pcoll(void)
     if (hit_flag && ok) {
         process_objlist();
         state &= ~0x400;
-        for (i = 0; i < Ppd.b15; i++) {
+        for (i = 0; i < Ppd.count; i++) {
             r = do_objhit(i, Ppd.index);
             if (r & 4)
                 state |= 0x400;
         }
     }
-    if (state & 0x80 && climb && (oCollisions[MP.hit].link.f.flags & 0x10 || Ppd.hits0 & 4))
+    if (state & 0x80 && climb && (oCollisions[MP.hit].link.f.low & 0x10 || Ppd.hits0 & 4))
         state &= ~0x800;
-    if (Ppd.hits1 & 0x100 && step && CP->vel[2] == 0 && MP.pos[2] + CP->b24 >= Ppd.ceil) {
+    if (Ppd.hits1 & 0x100 && step && CP->vel[2] == 0 && MP.pos[2] + CP->b24 >= Ppd.top) {
         state &= ~0x100;
-        MP.pos[2] = Ppd.ceil;
+        MP.pos[2] = Ppd.top;
         if (MP.pos[2] == Ppd.floor)
             state |= 4;
         else
@@ -821,7 +695,7 @@ int far get_pcoll(void)
     }
     if (!(state & 0xFC))
         state |= 0x1000;
-    if (!(state & 0x80) && MP.pos[2] - CP->radius > Ppd.ceil)
+    if (!(state & 0x80) && MP.pos[2] - CP->radius > Ppd.top)
         state |= 0x1000;
     return state;
 }
@@ -886,14 +760,14 @@ struct Object far * far IsaDoor(unsigned char *x, unsigned char *y)
     int item;
     int t;
 
-    for (i = 0; i < Ppd.b15; i++) {
-        item = OBJ_ITEM(Obj_PtrTMem(&oCollisions[i + Ppd.hit].link.word));
-        t = oCollisions[i + Ppd.hit].tile & 0x3F;
+    for (i = 0; i < Ppd.count; i++) {
+        item = OBJ_ITEM(Obj_PtrTMem(&oCollisions[i + Ppd.first].link.word));
+        t = oCollisions[i + Ppd.first].offset & 0x3F;
         *x = (Ppd.x >> 3) + t & 0x3F;
         t = *x - (Ppd.x >> 3);
-        *y = (Ppd.y >> 3) + (oCollisions[i + Ppd.hit].tile - t) / 0x40 & 0x3F;
+        *y = (Ppd.y >> 3) + (oCollisions[i + Ppd.first].offset - t) / 0x40 & 0x3F;
         if (item >> 4 == 0x14 && (item & 0xF) < 8)
-            return Obj_PtrTMem(&oCollisions[i + Ppd.hit].link.word);
+            return Obj_PtrTMem(&oCollisions[i + Ppd.first].link.word);
     }
     return 0;
 }
@@ -901,7 +775,7 @@ struct Object far * far IsaDoor(unsigned char *x, unsigned char *y)
 /* IDA GetCollisionObject: FM Towns CollObject_. */
 struct Object far * far CollObject(void)
 {
-    if (Ppd.b15)
-        return Obj_PtrTMem(&oCollisions[Ppd.hit].link.word);
+    if (Ppd.count)
+        return Obj_PtrTMem(&oCollisions[Ppd.first].link.word);
     return 0;
 }

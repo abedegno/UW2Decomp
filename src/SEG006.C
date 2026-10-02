@@ -12,35 +12,20 @@
    (CheckIfAtOrNearTargetTile). */
 #include <stdlib.h>
 #include <dos.h>
+#include "critter.h"
+#include "event.h"
+#include "file.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
+#include "uw2.h"
 
-struct Object {
-    unsigned id, pos;
-    struct { unsigned char quality:6, nextlo:2; unsigned char nexthi; } qn;
-    struct { unsigned char owner:6, linklo:2; unsigned char linkhi; } ol;
-    unsigned char hp, heading, b0A;
-    unsigned goal_word, b0D, b0F;
-    unsigned char b11, last_hit, b13, b14, b15;
-    unsigned home;
-    unsigned char b18, b19, whoami;
-};
-struct Tile { unsigned type:4, height:4; unsigned b8:2, floor:4, b14:2; unsigned objects; };
-struct Link { unsigned b0:6, next:10; };
-struct PhysNode { int w[0x14]; };
-struct PhysTp { unsigned flags, w2; int w4; unsigned w6;
-    unsigned char (far *handler)(struct PhysNode *); };
-struct PathRec { unsigned char x,y; union { unsigned char raw; struct { unsigned char count:7, slope:1; } bits; } flag; unsigned char index,directions[16],slopes[8]; };
 struct PathOffset { signed char x,y; };
-struct PathSq { unsigned char x,y,unused,flag; };
 struct StaticTile { unsigned char pathx, pathy, height;
     unsigned char pathflag:1, dist:7; unsigned char step; };
-struct MotionCalc { int x,y,z; char pad6[2]; unsigned char radius,height;
-    int index; unsigned hits0,hits1; char pad10[8]; };
-struct ComObj { unsigned height:8; unsigned radius:3; unsigned other:5;
-    char pad2; unsigned b3_0:1, b3_1:1, b3_2:1, b3_3:1, b3_4:4;
-    char pad4[2]; unsigned b6_0:2, b6_2:2, b6_4:4; char pad7[4]; };
-struct Creature { char pad0[0x0A]; struct { unsigned char other:5, bA_5:1, swims:1, flier:1; } b0A;
-    unsigned char speed, run; char pad0D[0x14-0x0D];
-    unsigned char door_damage; char pad15[0x2E-0x15]; unsigned char locks; };
 /* Uninitialised data, DS:222C..227F: this file's _BSS. Turbo C lays it out by a hash of
    each name (tools/bssorder.py), so the definitions below are in that order. Names are
    the FM Towns ones; FM Towns keeps the six marked static as statics (at _tp_act+N), so
@@ -52,7 +37,7 @@ int tdx, tdy;                           /* 2230 */
 unsigned char control;                  /* 2234 */
 static int proj_ycoord;                 /* 2236, homing dart's fine y; name chosen for layout */
 struct Object far *collobject;          /* 2238 */
-struct PhysTp near *tp_act;             /* 223C */
+struct Handler near *tp_act;             /* 223C */
 unsigned char txpos;                    /* 223E */
 static int hdist;                       /* 2240, nearest homing target's distance; for layout */
 unsigned char aligned;                  /* 2242 */
@@ -78,7 +63,7 @@ unsigned char didhitobj;                /* 2269 */
 int myxpost, myypost;                   /* 226A */
 unsigned char didmove;                  /* 226E */
 unsigned char hitadoor;                 /* 226F */
-struct PhysNode near *pn_act;           /* 2270 */
+struct Phys near *pn_act;           /* 2270 */
 static unsigned char cur_danger;        /* 2272, danger a path may cross; for layout */
 unsigned char myoldspeed;               /* 2273 */
 signed char tzpos;                      /* 2274 */
@@ -87,16 +72,6 @@ unsigned char myoldfacing;              /* 2278 */
 int YP;                                 /* 227A */
 unsigned char myoldheading;             /* 227C */
 static int projxpos;                    /* 227E, homing dart's fine x; name chosen for layout */
-extern unsigned char seq_len;
-extern int MapObj_X, MapObj_Y;
-extern struct PhysNode CN2, CN4;
-extern struct PhysNode CN1, CN3;
-extern struct PhysTp CT1, CT2, CT3, CT4;
-extern struct MotionCalc near *curP;
-extern struct ComObj ComObjData[];
-extern int PlayerLevel;
-extern unsigned char tile_walls[];
-extern unsigned char seq_lframe;
 /* This file's far data. Turbo C gives each far variable a paragraph-aligned segment of
    its own (SEG006n_FAR), in definition order, and TLINK places the segments in the order
    it first sees them: so pathsq (6062:0000, 63 squares), paths (6072:0000, 16 paths),
@@ -108,21 +83,10 @@ extern struct StaticTile far stdat[64][64];
 /* The two flood fill frontiers (64 squares each); static in FM Towns, provisional names. */
 struct PathPt { unsigned char x, y; };
 static struct PathPt far flood_list0[64], far flood_list1[64];
-extern void far mem_set(void far *p, int value, int count);
-void far make_path_from_flood_data(unsigned char length, unsigned char x,
-    unsigned char y);
-extern struct Tile far * far Map_GetAddr(int x, int y);
 extern struct Object far * far CreateObj(int id, int owner);
-extern void far set_htx(int heading);
-extern void far do_physics(struct PhysNode *pn, struct PhysTp *tp);
-extern int far Obj_MemTPtr(struct Object far *obj);
 extern void far TerrainCheck(int flags);
 extern struct Object far * far Obj_Punt(unsigned far *head, struct Object far *obj, int mode);
-extern void far get_phys_data(struct Object far *obj, struct PhysNode *pn);
-extern unsigned char far set_phys_data(struct Object far *obj, struct PhysNode *pn);
-extern struct Object far * far CollObject(void);
 extern void far UseObj(struct Object far *user, struct Object far *target, int mode);
-extern int far checkLock(struct Object far *user, struct Object far *door, int skill);
 extern void far damage_item(struct Object far *target, struct Object far *source,
     int x, int y, int damage, int type);
 extern void far Obj_Add(unsigned far *head, struct Object far *obj);
@@ -131,14 +95,10 @@ extern int far near_mob_put_at(struct Object far *source, struct Object far *obj
     int mode, int flags);
 extern void far put_effect(struct Object far *obj, int type, int size,
     int a, int b, int x, int y);
-extern void far set_cur_seq_len(void);
-extern struct Object far * far IsaDoor(unsigned char *x, unsigned char *y);
 extern struct Object far * far Obj_IntTMem(int index);
 extern void far process_area(char count, unsigned char src,
     unsigned char (far *callback)(int, int, struct Object far *),
     unsigned char type, char x, char y, char w, char h);
-/* FM Towns get_theta_; OVR167.C defines it under the IDA name, which is what links. */
-extern int far get_theta(int x1, int y1, int x2, int y2);
 /* Initialised data, DS:00AC..00C2: the step for each of the four path directions, the
    free path slots (a bit per entry of paths), the direction from one square to the next
    by [dx + 1][dy + 1], and the slope tile type climbed in each direction. FM Towns keeps
@@ -149,23 +109,10 @@ static unsigned char path_turns[3][3] = {
     { 0xFF, 3, 0xFF }, { 2, 0xFF, 0 }, { 0xFF, 1, 0xFF } };
 static unsigned char slope_for_dir[4] = { 6, 8, 7, 9 };
 extern unsigned TxmTerr[];
-extern struct Object far * far Obj_PtrTMem(struct Link far *link);
+extern struct Object far * far Obj_PtrTMem(union Link far *link);
 extern void far critter_set_goal(unsigned char goal, int target);
-extern void far crit_drunkwalk(void);
-extern unsigned char far acceptable_danger(void);
-void far try_to_open_door(struct Object far *door);
-unsigned char far crit_hndlr_walk(struct PhysNode *pn);
-unsigned char far crit_hndlr_fly(struct PhysNode *pn);
-unsigned char far crit_hndlr_swim(struct PhysNode *pn);
-static unsigned char far crit_hndlr_obj(struct PhysNode *pn);
-void far check_homing(void);
-void far check_sat(void);
-unsigned char far do_crit_phys(struct PhysNode *pn, struct PhysTp *tp);
-void far do_that_jump_kinda_thing(struct PathRec far *path);
-unsigned char far deltatotheta(char x, char y);
-unsigned char far add_to_beeline_path(unsigned char x,
-    unsigned char y);
-void far adjust_height(unsigned char x, unsigned char y);
+static unsigned char far crit_hndlr_obj(struct Phys *pn);
+unsigned char far do_crit_phys(struct Phys *pn, struct Handler *tp);
 
 void far build_corpse(struct Object far *obj, char fluids, char corpse) {
     struct Object far *remains;
@@ -179,14 +126,14 @@ void far build_corpse(struct Object far *obj, char fluids, char corpse) {
     remains->pos = (remains->pos & 0xE3FF)
         | (((obj->pos & 0x1C00) >> 10) & 7) << 10;
     remains->pos = (remains->pos & 0xFF80) | (obj->pos & 0x7F);
-    remains->qn.quality = 0x28;
-    Obj_Add(&home->objects, remains);
+    remains->qn.f.quality = 0x28;
+    Obj_Add(&home->objects.word, remains);
     obj_deal(remains, XP, YP, 1);
 corpse_part:
     if (corpse) {
         if (rand() % 16 >= 7 && (PlayerLevel - 1) / 8 != 7) return;
         if ((remains = CreateObj(0xC0 + (unsigned char)corpse, 0)) != 0) {
-            remains->ol.owner = (obj->id & 0x3F) >> 0;
+            remains->ol.f.owner = (obj->id & 0x3F) >> 0;
             near_mob_put_at(obj, remains, 4, 0);
         }
     }
@@ -196,16 +143,16 @@ unsigned char far move_me_joe(void) {
     unsigned char result;
     unsigned char unused;
     if (meptr->hp == 0
-        && ComObjData[meptr->id & 0x1FF].b6_2 < 3) {
+        && ComObjData[meptr->id & 0x1FF].qualclass < 3) {
         if (Obj_Punt(&Map_GetAddr((meptr->home & 0xFC00) >> 10,
-                                  (meptr->home & 0x3F0) >> 4)->objects,
+                                  (meptr->home & 0x3F0) >> 4)->objects.word,
                      meptr, 0))
             meptr->hp = 1;
         else return 0;
     }
-    if (ComObjData[meptr->id & 0x1FF].b3_3)
-        CT3.flags = 0x1000;
-    else CT3.flags = 0;
+    if (ComObjData[meptr->id & 0x1FF].no_hit)
+        CT3.ignore = 0x1000;
+    else CT3.ignore = 0;
     get_phys_data(meptr, &CN3);
     do_crit_phys(&CN3, &CT3);
     XP = (meptr->home & 0xFC00) >> 10;
@@ -356,18 +303,18 @@ void far check_sat(void) {
     else if ((rand() & 0x1F) == 1 && meptr->hp > 0) meptr->hp = meptr->hp - 1;
 }
 void far init_ai(void) {
-    CN1.w[6] = 0; CN1.w[7] = 0; ((unsigned char *)&CN1)[0x17] = 0x80;
-    CN2.w[6] = 0; CN2.w[7] = 0; ((unsigned char *)&CN2)[0x17] = 0x80;
-    CN3.w[6] = 0; CN3.w[7] = 0; ((unsigned char *)&CN3)[0x17] = 0;
-    CN4.w[6] = 0; CN4.w[7] = 0; ((unsigned char *)&CN4)[0x17] = 0x80;
-    CT1.w2 = 0x1F30; CT1.w4 = 0x1010; CT1.w6 = 0x20;
-    CT1.flags = 0; CT1.handler = (unsigned char (far *)(struct PhysNode *))crit_hndlr_walk;
-    CT2.w2 = 0x700; CT2.w4 = 0x80; CT2.w6 = 0;
-    CT2.flags = 0x1000; CT2.handler = crit_hndlr_fly;
-    CT3.w2 = 0; CT3.w4 = 0; CT3.w6 = 0;
-    CT3.flags = 0; CT3.handler = crit_hndlr_obj;
-    CT4.w2 = 0x1728; CT4.w4 = 0x10A8; CT4.w6 = 0;
-    CT4.flags = 0x10; CT4.handler = crit_hndlr_swim;
+    CN1.acc[0] = 0; CN1.acc[1] = 0; ((unsigned char *)&CN1)[0x17] = 0x80;
+    CN2.acc[0] = 0; CN2.acc[1] = 0; ((unsigned char *)&CN2)[0x17] = 0x80;
+    CN3.acc[0] = 0; CN3.acc[1] = 0; ((unsigned char *)&CN3)[0x17] = 0;
+    CN4.acc[0] = 0; CN4.acc[1] = 0; ((unsigned char *)&CN4)[0x17] = 0x80;
+    CT1.mask = 0x1F30; CT1.noclimb = 0x1010; CT1.w6 = 0x20;
+    CT1.ignore = 0; CT1.special = (unsigned char (far *)())crit_hndlr_walk;
+    CT2.mask = 0x700; CT2.noclimb = 0x80; CT2.w6 = 0;
+    CT2.ignore = 0x1000; CT2.special = crit_hndlr_fly;
+    CT3.mask = 0; CT3.noclimb = 0; CT3.w6 = 0;
+    CT3.ignore = 0; CT3.special = crit_hndlr_obj;
+    CT4.mask = 0x1728; CT4.noclimb = 0x10A8; CT4.w6 = 0;
+    CT4.ignore = 0x10; CT4.special = crit_hndlr_swim;
 }
 int far get_terrain(struct Object far *obj) {
     struct MotionCalc calc;
@@ -381,21 +328,21 @@ int far get_terrain(struct Object far *obj) {
     TerrainCheck(8);
     return curP->hits0 | curP->hits1;
 }
-unsigned char far crit_hndlr_walk(struct PhysNode *pn) {
+unsigned char far crit_hndlr_walk(struct Phys *pn) {
     struct Object far *door;
-    register struct PhysNode *motion = pn;
-    if (motion->w[0] & 0x1000) {
-        if (CN1.w[8] == 0) CN1.w[8] = -4;
+    register struct Phys *motion = pn;
+    if (motion->x & 0x1000) {
+        if (CN1.acc[2] == 0) CN1.acc[2] = -4;
         meptr->b14 = meptr->b14 & 0xF8 | 1;
         failed = 1;
         control = 0;
         return 0;
     }
-    if (motion->w[0] & 0x10) {
-        if ((motion->w[0] & 0xF8) == 0x10) {
+    if (motion->x & 0x10) {
+        if ((motion->x & 0xF8) == 0x10) {
             failed = 1;
             control = 0;
-            put_effect(meptr, 6, 3, 0, 0, CN1.w[0] >> 8, CN1.w[1] >> 8);
+            put_effect(meptr, 6, 3, 0, 0, CN1.x >> 8, CN1.y >> 8);
             meptr->b15 = meptr->b15 & 0xC0 | 7;
             set_cur_seq_len();
             meptr->goal_word = meptr->goal_word & 0xFFF | ((seq_lframe & 0xF) << 12);
@@ -404,27 +351,27 @@ unsigned char far crit_hndlr_walk(struct PhysNode *pn) {
         }
         if (((meptr->b15 & 0x80) >> 7) == 0) {
             failed = 1;
-            CN1.w[3] = CN1.w[4] = 0;
+            CN1.vel[0] = CN1.vel[1] = 0;
             return 1;
         }
     }
-    if ((motion->w[0] & 0x800) && !(crit_terr & 0x800)) {
+    if ((motion->x & 0x800) && !(crit_terr & 0x800)) {
         if ((meptr->b15 & 0x80) >> 7) return 0;
         failed = 1;
-        CN1.w[3] = CN1.w[4] = 0;
+        CN1.vel[0] = CN1.vel[1] = 0;
         return 1;
     }
-    if ((motion->w[0] & 0x20) && !(crit_terr & 0x20)) {
+    if ((motion->x & 0x20) && !(crit_terr & 0x20)) {
         if ((meptr->b15 & 0x80) >> 7) return 0;
         failed = 1;
-        CN1.w[3] = CN1.w[4] = 0;
+        CN1.vel[0] = CN1.vel[1] = 0;
         return 1;
     }
-    if (motion->w[0] & 0x300) {
+    if (motion->x & 0x300) {
         failed = 1;
         return 0;
     }
-    if (motion->w[0] & 0x400) {
+    if (motion->x & 0x400) {
         if ((door = IsaDoor(&doorx, &doory)) != 0) {
             collobject = door;
             hitadoor = 1;
@@ -438,20 +385,20 @@ unsigned char far crit_hndlr_walk(struct PhysNode *pn) {
     }
     return failed && control;
 }
-static unsigned char far crit_hndlr_obj(struct PhysNode *pn) {
+static unsigned char far crit_hndlr_obj(struct Phys *pn) {
     (void)pn; return 0;
 }
-unsigned char far crit_hndlr_fly(struct PhysNode *pn) {
+unsigned char far crit_hndlr_fly(struct Phys *pn) {
     control = 1;
-    if (pn->w[0] & 0x200) {
+    if (pn->x & 0x200) {
         failed = 1;
         return 0;
     } else {
-        if (pn->w[0] & 0x100) {
-            CN2.w[5] = 0x80;
+        if (pn->x & 0x100) {
+            CN2.vel[2] = 0x80;
             hitwall = 1;
         }
-        if (pn->w[0] & 0x400) {
+        if (pn->x & 0x400) {
             failed = 1;
             didhitobj = 1;
             collobject = CollObject();
@@ -459,26 +406,26 @@ unsigned char far crit_hndlr_fly(struct PhysNode *pn) {
         return failed && control;
     }
 }
-unsigned char far crit_hndlr_swim(struct PhysNode *pn) {
-    if (pn->w[0] & 0x300) {
-        CN4.w[3] = CN4.w[4] = 0;
+unsigned char far crit_hndlr_swim(struct Phys *pn) {
+    if (pn->x & 0x300) {
+        CN4.vel[0] = CN4.vel[1] = 0;
         failed = 1;
         return 0;
     }
-    if (pn->w[0] & 0x400) {
-        CN4.w[3] = CN4.w[4] = 0;
+    if (pn->x & 0x400) {
+        CN4.vel[0] = CN4.vel[1] = 0;
         failed = 1;
         didhitobj = 1;
         collobject = CollObject();
     }
-    if (pn->w[0] & 8) {
-        CN4.w[3] = CN4.w[4] = 0;
+    if (pn->x & 8) {
+        CN4.vel[0] = CN4.vel[1] = 0;
         failed = 1;
     }
     return failed && control;
 }
-unsigned char far do_crit_phys(struct PhysNode *pn, struct PhysTp *tp) {
-    pn->w[9] = (meptr->b14 & 7) << 4;
+unsigned char far do_crit_phys(struct Phys *pn, struct Handler *tp) {
+    pn->time = (meptr->b14 & 7) << 4;
     do_physics(pn, tp);
     return 1;
 }
@@ -490,7 +437,7 @@ unsigned char far hyp_move(unsigned char x1, unsigned char y1,
     unsigned char type2, type3;
     int terr2, terr3;
     unsigned char h12, h23, h23b, objh, blocked, onobj;
-    struct Link far *link;
+    union Link far *link;
     struct Object far *obj;
     unsigned char tested, dhead, dxp, dyp;
     register int dir;
@@ -527,11 +474,11 @@ unsigned char far hyp_move(unsigned char x1, unsigned char y1,
         *out = height;
         if (!(0x1000 & flags)) return 1;
         objh = 0;
-        for (link = (struct Link far *)&tile2->objects; link->next && objh == 0;
-             link = (struct Link far *)&obj->qn) {
+        for (link = (union Link far *)&tile2->objects.word; link->f.index && objh == 0;
+             link = (union Link far *)&obj->qn) {
             obj = Obj_PtrTMem(link);
             com = &ComObjData[obj->id & 0x1FF];
-            if (com->b3_1)
+            if (com->solid)
                 objh = ((obj->pos & 0x7F) + com->height) >> 3;
         }
         h23 = tile2->height;
@@ -564,8 +511,8 @@ unsigned char far hyp_move(unsigned char x1, unsigned char y1,
         if ((tile_walls[type3] & 0x10) || (tile_walls[type2] & 8)) return 0;
     }
     objh = 0;
-    for (link = (struct Link far *)&tile2->objects; link->next && objh == 0;
-         link = (struct Link far *)&obj->qn) {
+    for (link = (union Link far *)&tile2->objects.word; link->f.index && objh == 0;
+         link = (union Link far *)&obj->qn) {
         obj = Obj_PtrTMem(link);
         com = &ComObjData[obj->id & 0x1FF];
         if (((obj->id & 0x1C0) >> 6) == 5 && ((obj->id & 0x30) >> 4) == 0
@@ -631,7 +578,7 @@ unsigned char far hyp_move(unsigned char x1, unsigned char y1,
                     break;
                 }
             }
-        } else if (com->b3_1)
+        } else if (com->solid)
             objh = ((obj->pos & 0x7F) + com->height) >> 3;
     }
     if (!(0x1000 & flags)) {
@@ -666,7 +613,7 @@ unsigned char far hyp_move(unsigned char x1, unsigned char y1,
         }
         if (h12 > objh + 1) {
             if ((*out = h12) >= h23) {
-                if (mycst->b0A.bA_5) {
+                if (mycst->bA_5) {
                     *dist = *dist + 1;
                     if (*dist >= cur_danger) return 0;
                     jump = 1;
@@ -683,7 +630,7 @@ unsigned char far hyp_move(unsigned char x1, unsigned char y1,
             *dist = *dist + 2;
             if (*dist > cur_danger) return 0;
         }
-        if (mycst->b0A.bA_5) {
+        if (mycst->bA_5) {
             *dist = *dist + 1;
             if (*dist >= cur_danger) return 0;
             jump = 1;
@@ -763,7 +710,7 @@ unsigned char far flood_path(char x, char y, unsigned char height0,
         np = &stdat[nx][ny];
         dist = 0;
         if (hyp_move(0, 0, x, y, nx, ny,
-                tp_act->w4, tp_act->w6, height0, &np->height, &dist)) {
+                tp_act->noclimb, tp_act->w6, height0, &np->height, &dist)) {
             if (nx == destx && ny == desty) {
                 pathlen = 1;
                 pathsq[0].x = x;
@@ -796,7 +743,7 @@ unsigned char far flood_path(char x, char y, unsigned char height0,
                 dist = rec->dist;
                 if (rec->pathx == nx && rec->pathy == ny) continue;
                 ok = hyp_move(rec->pathx, rec->pathy,
-                    tx, ty, nx, ny, tp_act->w4, tp_act->w6, rec->height,
+                    tx, ty, nx, ny, tp_act->noclimb, tp_act->w6, rec->height,
                     &height, &dist);
                 isnew = np->pathx == 0;
                 if (ok == 0) continue;
@@ -815,7 +762,7 @@ unsigned char far flood_path(char x, char y, unsigned char height0,
                     }
                     if (nx == destx && ny == desty
                         && hyp_move(tx, ty, nx, ny, 0, 0,
-                            tp_act->w4, tp_act->w6, np->height, &np->height, &dist)) {
+                            tp_act->noclimb, tp_act->w6, np->height, &np->height, &dist)) {
                         make_path_from_flood_data(step, destx, desty);
                         return 1;
                     }
@@ -906,7 +853,7 @@ int far beeline(int x1, int y1, int x2, int y2) {
     return result = hyp_move(
         pathsq[pathlen - 2].x, pathsq[pathlen - 2].y,
         pathsq[pathlen - 1].x, pathsq[pathlen - 1].y, 0, 0,
-        tp_act->w4, tp_act->w6, pathsq[pathlen - 2].unused,
+        tp_act->noclimb, tp_act->w6, pathsq[pathlen - 2].unused,
         (unsigned char far *)&pathsq[pathlen - 2].unused, &unused);
 }
 unsigned char far line_of_sight(int x1, int y1, int z1, int x2, int y2, int z2) {
@@ -1024,7 +971,7 @@ unsigned char far add_to_beeline_path(unsigned char x,
     if (pathlen == 2) {
         traversable = hyp_move(0, 0,
             pathsq[0].x, pathsq[0].y, pathsq[1].x, pathsq[1].y,
-            tp_act->w4, tp_act->w6, pathsq[0].unused,
+            tp_act->noclimb, tp_act->w6, pathsq[0].unused,
             (unsigned char far *)&pathsq[1].unused, &unused);
         return traversable && !jump;
     } else {
@@ -1032,7 +979,7 @@ unsigned char far add_to_beeline_path(unsigned char x,
             pathsq[pathlen - 3].x, pathsq[pathlen - 3].y,
             pathsq[pathlen - 2].x, pathsq[pathlen - 2].y,
             pathsq[pathlen - 1].x, pathsq[pathlen - 1].y,
-            tp_act->w4, tp_act->w6, pathsq[pathlen - 3].unused,
+            tp_act->noclimb, tp_act->w6, pathsq[pathlen - 3].unused,
             (unsigned char far *)&pathsq[pathlen - 2].unused, &unused);
         return traversable && !jump;
     }
@@ -1111,7 +1058,7 @@ unsigned char far move_along_path(struct PathRec far *path) {
     if (path->flag.bits.slope) {
         do_that_jump_kinda_thing(path);
     } else {
-        if (mycst->b0A.flier)
+        if (mycst->flier)
             adjust_height((meptr->b0F & 0x3F) >> 0,
                           (meptr->b0F & 0xFC0) >> 6);
         x = path->x << 3;
@@ -1167,10 +1114,10 @@ unsigned char far deltatotheta(char x, char y) {
 void far set_loc(unsigned char x, unsigned char y, unsigned char z) {
     if (((meptr->b0F & 0x3F) >> 0) != x
         || ((meptr->b0F & 0xFC0) >> 6) != y
-        || ((meptr->b0D & 0xF0) >> 4) != z) {
+        || ((meptr->attitude_word & 0xF0) >> 4) != z) {
         meptr->b0F = meptr->b0F & 0xFFC0 | (x & 0x3F) << 0;
         meptr->b0F = meptr->b0F & 0xF03F | (y & 0x3F) << 6;
-        meptr->b0D = meptr->b0D & 0xFF0F | (z & 0xF) << 4;
+        meptr->attitude_word = meptr->attitude_word & 0xFF0F | (z & 0xF) << 4;
         meptr->b18 = meptr->b18 & 0xDF | 0x20;
         meptr->b18 = meptr->b18 & 0xBF;
     }
@@ -1226,7 +1173,7 @@ void far crit_head_for_loc(unsigned char x, unsigned char y, char z) {
                 && ((meptr->goal_word & 0xF) >> 0) == 5
                 && ((collobject->goal_word & 0xF) >> 0) == 5) {
             } else if ((item >> 4) == 0x14 && (item & 0xF) >= 8
-                && mycst->b0A.flier) {
+                && mycst->flier) {
                 meptr->b14 = meptr->b14 & 7 | 0x70;
                 failed = 0;
                 dontchangedz = 1;
@@ -1251,7 +1198,7 @@ void far crit_head_for_loc(unsigned char x, unsigned char y, char z) {
     } else if (!((meptr->b18 & 0x20) >> 5) && ((meptr->b18 & 0x80) >> 7)) {
         heading = deltatotheta(dx, dy);
         set_htx(heading);
-        if (mycst->b0A.flier) adjust_height(x, y);
+        if (mycst->flier) adjust_height(x, y);
     } else if (!((meptr->b18 & 0x20) >> 5) && ((meptr->b18 & 0x40) >> 6)) {
         if (rand() % 8 == 0) meptr->b18 = meptr->b18 & 0xBF;
         crit_drunkwalk();
@@ -1334,5 +1281,5 @@ void far try_to_open_door(struct Object far *door) {
         return;
     }
     if (rand() % 4 == 0)
-        damage_item(door, meptr, doorx, doory, rand() % mycst->door_damage, 4);
+        damage_item(door, meptr, doorx, doory, rand() % mycst->attacks[0].damage, 4);
 }

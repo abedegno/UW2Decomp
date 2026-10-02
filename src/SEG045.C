@@ -14,10 +14,7 @@
    relative reference (lstpos, lstrel). */
 
 #include <stdlib.h>
-
-extern int far *cDbase;                 /* DS:216C, start of the bytecode buffer */
-extern int far *cEntryStrt;             /* DS:2170 */
-extern int far *cDbbase;                /* DS:2180, where gr_entry records dbptr */
+#include "sys.h"
 
 /* This file's _BSS, DS:86F8..8C84, laid out by name (tools/bssorder.py). */
 int lstrel;                             /* DS:86F8 */

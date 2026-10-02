@@ -1,13 +1,7 @@
 /* target: ovr102 */
 /* opts: -mm -1 -G -O -Y -d */
 
-struct Object {
-    unsigned id;
-    unsigned pos;
-    unsigned qn;
-    unsigned quantity_low:6;
-    unsigned quantity_count:10;
-};
+#include "object.h"
 
 struct Combination {
     unsigned first, second, output;
@@ -32,11 +26,11 @@ int far ObjsBeCombinable(struct Object far *a, struct Object far *b)
     register int i;
     unsigned first, second;
 
-    if (((a->id & 0x8000) >> 15) && a->quantity_count > 1 ||
-        !((a->id & 0x8000) >> 15) && a->quantity_count > 0)
+    if (((a->id & 0x8000) >> 15) && a->ol.f.link > 1 ||
+        !((a->id & 0x8000) >> 15) && a->ol.f.link > 0)
         return -1;
-    if (((b->id & 0x8000) >> 15) && b->quantity_count > 1 ||
-        !((b->id & 0x8000) >> 15) && b->quantity_count > 0)
+    if (((b->id & 0x8000) >> 15) && b->ol.f.link > 1 ||
+        !((b->id & 0x8000) >> 15) && b->ol.f.link > 0)
         return -1;
     ids[1] = a->id & 0x1FF;
     ids[0] = b->id & 0x1FF;

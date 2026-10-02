@@ -121,10 +121,12 @@ def build_fardata():
             sys.exit(f'{stem}: assembly failed\n{log}')
 
 def changed_sources():
-    """--mod: {stem: object} for each source whose text is not what the last exact run built,
-    compiled (unless the object there was built from this same text) into build/MODLINK/src/STEM
+    """--mod: {stem: object} for each source whose text (with the src/include headers it
+    includes) is not what the last exact run built, compiled (unless the object there was built
+    from this same text) into build/MODLINK/src/STEM
     with the source's own /* opts: */ (match.py's defaults otherwise)."""
-    import hashlib, glob
+    import glob
+    from srcdeps import source_hash
     lay = os.path.join(LINKDIR_EXACT, 'base', 'layout.json')
     if not os.path.exists(lay):
         sys.exit('no build/LINK/base: run the exact link (python3 tools/link.py) once while every source matches')
@@ -137,9 +139,10 @@ def changed_sources():
         stem = os.path.splitext(os.path.basename(src))[0].upper()
         if stem == 'SEG046': continue
         if stem not in known: sys.exit(f'{stem}: a source the exact run did not have; --mod links the existing files only')
-        if hashlib.sha1(text).hexdigest() == known[stem][1]: continue
+        sha = source_hash(src)          # the text and the src/include headers it includes
+        if sha == known[stem][1]: continue
         d = os.path.join(LINKDIR, 'src', stem); obj = os.path.join(d, stem + '.OBJ')
-        sha = hashlib.sha1(text).hexdigest(); shafile = os.path.join(d, 'SOURCE.SHA1')
+        shafile = os.path.join(d, 'SOURCE.SHA1')
         if not os.path.exists(obj) or not os.path.exists(shafile) or open(shafile).read() != sha:
             opts = re.search(r'/\*\s*opts:\s*([^*]+?)\s*\*/', head)
             opts = opts.group(1) if opts else ('/ml' if src.upper().endswith('.ASM') else '-mm -1 -G -O -Z')

@@ -1,8 +1,8 @@
 /* target: ovr130 */
 /* opts: -mm -1 -G -O -Y -d */
 
-struct Object { unsigned id; };
-extern struct Object far *ActiveObj;
+#include "object.h"
+
 /* This file's _BSS, DS:6B10..6B6F, by name: Containers 339, Lights 620, Food 958. It follows
    ovr125's run (to CursorObjPtr, 995) and ovr134's ActiveObj (145) starts another; of the
    files between, only this one uses all three. */

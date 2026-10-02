@@ -2,29 +2,23 @@
 /* opts: -mm -1 -G -O -Y -d */
 
 #include <dos.h>
+#include "file.h"
+#include "gfx.h"
+#include "map.h"
+#include "player.h"
+#include "sys.h"
+#include "view3d.h"
 
 /* The light level set_light last loaded, 5 for mono.dat; FM Towns _cur_light_level, which
    its set_light_ tests the same way. DS:1AAC, the first byte of this file's _DATA (which
    holds DS:1AAD and is word-aligned). */
 unsigned char cur_light_level = 0xFF;
-extern unsigned char far *cLightTabs;
 
-extern unsigned curvrad;
-extern unsigned distpoly;
-extern unsigned dist8;
-extern unsigned char far cXfer[];
-extern unsigned char far ModelData_seg052_519C_2600;
-extern unsigned far smooth_div;
 extern unsigned far smooth_base;
-extern unsigned far smooth_lowpass;
 
-int far our_open();
-int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
 void far close(int fd);
 long far lseek(int fd, long offset, int origin);
 int far read(int fd, void *buf, unsigned n);
-void far preset_grid(int shade);
-void far editchng(int bit);
 void far movedata(unsigned srcseg, unsigned srcoff,
                                          unsigned dstseg, unsigned dstoff,
                                          unsigned n);

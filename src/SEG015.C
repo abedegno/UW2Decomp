@@ -12,6 +12,9 @@
 
 #include <stdlib.h>
 #include <ctype.h>
+#include "gfx.h"
+#include "sys.h"
+#include "ui.h"
 
 /* Initialised data, DS:268..291, in definition order. FM Towns keeps the statics after
    _current_buttongroup (+4 onwards) and the four publics in its small-data group, in this
@@ -76,63 +79,18 @@ int m3dh;                               /* DS:23DE */
 int m3dt;                               /* DS:23E0, cursor against it: 0 outside, 1 across, 2 inside */
 
 extern unsigned char IsJoy;                     /* DS:8298 */
-extern unsigned char didMouseInput;             /* DS:983 */
 extern unsigned long far *Time;                 /* DS:2158 */
-extern unsigned char far *Shift;                /* DS:2128 */
-extern unsigned char far *CapsLock;             /* DS:212C */
-extern unsigned char far *Alt;                  /* DS:2130 */
-extern unsigned char far *Ctrl;                 /* DS:2134 */
-extern unsigned char far *key_on;               /* DS:2138 */
-extern unsigned char far *Asc;                  /* DS:2148, FM Towns _Asc */
-extern int far *MouseDx;                        /* DS:214C, FM Towns _MouseDx */
-extern int far *MouseDy;                        /* DS:2150, FM Towns _MouseDy */
-extern int far *MouseOn;                        /* DS:2154, FM Towns _MouseOn */
 /* The asm graphics module's pointer table. DS:21B8 points at seg048:434; its words 0x100
    and 0x101 are the save-under buffer FM Towns keeps at _Color_data_ptr+0x400 (4-byte
    entries there), so the name is provisional. The window edges are FM Towns wleft, wtop,
    wright and wbot, in the same order in memory (seg048:3DF4..3DFA); DS:21EC also points
    at wleft, so which of 21E8 and 21EC is "wleft" is not proven. */
-extern int far *Color_data_ptr;                 /* DS:21B8 */
-extern int far *wtop;                           /* DS:21DC */
-extern int far *wbot;                           /* DS:21E0 */
-extern int far *wright;                         /* DS:21E4 */
-extern int far *wleft;                          /* DS:21E8 */
-extern unsigned char far ShowClip;              /* 370D:0DC4, FM Towns _ShowClip */
 extern unsigned char far Transparency;          /* 370D:0DC5 */
 
-int far valloc(int w, int h);
-void far set_the_color(int c);
-void far set_the_window(int x0, int y0, int x1, int y1);
 void far rectangle(int x0, int y0, int x1, int y1);
-void far vcopyfb(int x, int y, int w, int h, int handle);   /* 0085:517B, FM Towns vcopyfb_ */
-void far fbuf_setcolor(int c);                  /* 0085:5239, FM Towns fbuf_setcolor_ */
-/* seg009 (1A6D): grs_which1 and pic_to_fbuf are FM Towns names, called the same way. FM
-   Towns reads _grs_off[n] directly where DOS calls seg009_7, which maps the EMS page
-   holding the cursor art first; it has no FM Towns name. */
-int far grs_which1(int id);
-unsigned char far * far seg009_7(int n);
-void far pic_to_screen(int pic, int x, int y, int h, int w);
-void far pic_to_fbuf(int pic, int x, int y);
 /* seg011 (1AFA): the joystick code, which FM Towns lacks, so IDA names. */
 void far seg011_6(int from3d);
 void far seg011_2C6(int *dx, int *dy, int from3d);
-void far do_changes(void);
-/* The asm input module (2110): FM Towns key_, mouse_ and mbuttons. */
-int far key(void);
-void far mouse(void);
-int far mbuttons(void);
-
-char far mouse_check_reg(int x0, int y0, int x1, int y1);
-void far set_mouse_data(int id);
-void far checkMouse(void);
-void far moveMouse(void);
-void far MousReSave(void);
-void far MousReSave3d(void);
-void far drawMouse(void);
-void far draw3dMouse(void);
-void far keyboard_mouse(int key);
-int far mouse_btns(void);
-int far mouse_get_input_sp(void);
 
 int far init_mouse(void)
 {

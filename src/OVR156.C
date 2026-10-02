@@ -6,60 +6,16 @@
    the source file's own name is not known. */
 
 #include <stdlib.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x21];
-    unsigned char skills[20];           /* 0x21 */
-    char pad0a[0x37 - 0x35];
-    unsigned char play_mana;            /* 0x37 */
-    unsigned char max_mana;             /* 0x38 */
-    char pad1[0x5E - 0x39];
-    unsigned char moonstones[2];        /* 0x5E, the level each moonstone is on */
-    unsigned b60:12;                    /* 0x60 */
-    unsigned shrooms:2;                 /* word 0x60, bits 12-13 */
-    unsigned b61_6:2;
-    unsigned b62:10;                    /* 0x62 */
-    unsigned in_pits:1;                 /* word 0x62, bit 10 */
-    unsigned b63_3:5;
-    char pad2[0x370 - 0x64];
-    unsigned char xclock3;              /* 0x370 */
-};
-
-/* The player's critter data, reached through the near pointer `playerdat`. */
-struct Critter {
-    char pad0[4];
-    unsigned char max_vit;              /* 0x04 */
-    unsigned char attr[3];              /* 0x05: STR, DEX, INT */
-};
-
-/* The player's motion record. */
-struct Motion {
-    int eye_x, eye_y, eye_z;            /* 0x00 */
-};
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* item 0-8 (major class 6-8), is_quant 15 */
-    unsigned pos;                       /* z 0-6, heading 7-9, y fine 10-12, x fine 13-15 */
-    union {
-        unsigned word;
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-    unsigned char hp;                   /* 0x08 */
-    char pad09[0x0B - 0x09];
-    unsigned goal_word;                 /* 0x0B, goal in bits 0-3 */
-    unsigned attitude_word;             /* 0x0D, attitude in bits 14-15 */
-    char pad0F[0x16 - 0x0F];
-    unsigned home;                      /* 0x16, x in bits 10-15, y in bits 4-9 */
-    unsigned char b18;                  /* 0x18, fine heading in bits 0-4 */
-    char pad19[0x1A - 0x19];
-    unsigned char whoami;               /* 0x1A */
-};
+#include "combat.h"
+#include "critter.h"
+#include "event.h"
+#include "gfx.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
 
 #define OBJ_ITEM(o)     ((o)->id & 0x1FF)
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
@@ -74,140 +30,44 @@ struct Object {
 #define SET_Z(o, v)     ((o)->pos = (o)->pos & 0xFF80 | (v) & 0x7F)
 #define SET_ATTITUDE(o, v) ((o)->attitude_word = (o)->attitude_word & 0x3FFF | ((v) & 3) << 14)
 
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    unsigned b8:6;
-    unsigned b14:2;                     /* bit 14: no magic here */
-    unsigned objects;                   /* 0x02, head of the tile's object list */
-};
-
-/* One critter type's record, 0x30 bytes. */
-struct Creature {
-    char pad00[4];
-    unsigned char avghit;               /* 0x04 */
-    char pad05[0x07 - 0x05];
-    unsigned char intel;                /* 0x07 */
-    unsigned char b8_0:3;               /* 0x08 */
-    unsigned char blood:2;
-    unsigned char b8_5:3;
-    unsigned char race;                 /* 0x09 */
-    char pad0A[0x30 - 0x0A];
-};
-
-/* A rune spell: its class in the top five bits of the first byte, its subclass in the
-   last byte. */
-struct Spell {
-    unsigned char cls;
-    char pad1[2];
-    unsigned char sub;
-};
-
 #define SPELL_CLASS(s)  (((s).cls & 0xF8) >> 3)
 
-/* One object type's common properties, 11 bytes. */
-struct ComObj {
-    char pad0[9];
-    unsigned char render:2;             /* 0x09 */
-    unsigned char c9_2:6;
-    char padA;
-};
-
-struct Inplist {
-    char pad0[8];
-    int field8;
-};
-
-extern struct Player near *player;
-extern struct Critter near *playerdat;
-extern struct Object far *ThePlayer;
 extern struct Object far *objdata;
-extern struct Object far *ObjectActing;
 extern int ObjectActorArg;
-extern int GameInputMode;
-extern int PlayerLevel;
 /* This file's _BSS, DS:8638..8639: after ovr151's SCD pointer (key 363) in a new run (41),
    before ovr163's LootCreature; of the files between, only this one uses them. */
 unsigned char inanmMapX, inanmMapY;
-extern struct Creature Creature[];
 extern struct Spell far spells[];
 extern struct Inplist near *inplist;
 extern unsigned char far *ActiveMob;
 extern unsigned char far *LastActiveMob;
 extern void (far *ObjectActor)();
-extern int MapObj_X, MapObj_Y;
-extern struct Tile far *PickMap;
-extern struct ComObj ComObjData[];
 extern void (far *npp_func)(void);
-extern struct Motion PN;
 
 int area_spell_state = 0;
 unsigned char mspell_mused = 0;
 
 /* Elsewhere in the game. */
-struct Tile far * far Map_GetAddr(int x, int y);
-void far phys_bounce_up(struct Object far *obj);
-void far game_sprint(int id);
 char far set_curmagic(char cls, char sub, char flags);
-void far force_mouse_cursor(int id);
-void far creat_spell(struct Object far *who, char sub);
-void far xt_spells(struct Object far *who, char flags, char sub);
 void far show_cutscene(int n);
-void far update_animobj(int n);
-void far panel_check_hpmp(void);
-int far rollem(int dice, int sides);
-void far fill_FB(int colour);
-unsigned char far spell_fire(struct Object far *who, int item);
 struct Object far * far CreateObj(int id, int b);
-int far Obj_MemTPtr(struct Object far *obj);
 struct Object far * far Obj_IntTMem(int index);
-void far Obj_Free(struct Object far *obj);
 void far Obj_Add(unsigned far *head, struct Object far *obj);
 int far add_animobj(int index, int len, char a, char x, char y);
-void far fireball_effect(struct Object far *obj, int x, int y);
 void far put_effect(struct Object far *obj, int type, int size, int a, int b, int x, int y);
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
                      unsigned char damage, unsigned char type);
-unsigned char far check_res(struct Object far *obj, unsigned char damage, unsigned char type);
-char far destroy_floatskull(struct Object far *obj);
-void far change_critter_goal(struct Object far *npc, char goal, int gtarg);
-char far * far get_string(int id);
 void far remove_opponent(struct Object far *npc);
 void far set_screen_frame(int which, int frame);
-void far move_along(int heading, int dist, int *x, int *y);
 struct Object far * far Obj_PtrTMem(unsigned far *link);
-void far unforce_mouse_cursor(int n);
 void far mouse_release(int n);
 void far Obj_Punt(unsigned far *head, struct Object far *obj, int how);
-char far mendable(struct Object far *obj);
-int far GetObjDesc(struct Object far *obj, int lore, char *s);
 void far scroll_print(char far *s);
-void far FixPlayerEquips(void);
-void far editchng(int bits);
-int far DetectedTrap(struct Object far *obj, int skill);
 void far RemoveTrap(struct Object far *obj, int skill);
-void far LookAt(struct Object far *obj, int how);
-int far checkLock(struct Object far *who, struct Object far *obj, int key);
-void far sp_enchant(struct Object far *obj, unsigned char how, int x, int y);
 struct Object far * far Obj_FindInMap(int major, int minor, int index, int *x, int *y);
 void far do_teleport(struct Object far *who, int x, int y, int level);
-void far player_setup(int a, int b, int c);
-void far do_mstone(void);
-void far thump_your_magic_twanger_froggie(void);
 void far set_effect(int which, char amount);
-void far chg_plyp(int how);
-int far skill_check(int value, int target);
 void far automap_area(int x0, int y0, int x1, int y1, int *circle, int (far *fn)());
-
-/* Later in this file. */
-void far restore_mana(struct Object far *who, char amount);
-void far healing(struct Object far *who, char sub);
-void far backfire(struct Object far *who, char sub);
-void far release_missile(struct Object far *who, char sub);
-void far nail_area(struct Object far *who, unsigned char sub);
-void far nail_1area(struct Object far *who, unsigned char sub);
-void far special_spells(struct Object far *who, struct Object far *target, char sub);
-void far damage_square(int x, int y, unsigned char kind, unsigned char src);
 
 void far spend_mana(int cost)
 {
@@ -217,11 +77,8 @@ void far spend_mana(int cost)
 
 char far anti_magic_p(int x, int y)
 {
-    return Map_GetAddr(x, y)->b14 & 1;
+    return Map_GetAddr(x, y)->door & 1;
 }
-
-char far do_spell(unsigned char cls, unsigned char sub, struct Object far *who,
-                  struct Object far *target);
 
 void far cast(unsigned char spell, struct Object far *who, struct Object far *target)
 {
@@ -250,9 +107,9 @@ char far do_spell(unsigned char cls, unsigned char sub, struct Object far *who,
             phys_bounce_up(who);
     case 0:
     case 2:
-        if (who == ThePlayer && (sub & ~0xC0) == 5 && cls == 2 && player->xclock3 == 4) {
+        if (who == ThePlayer && (sub & ~0xC0) == 5 && cls == 2 && player->xclock[3] == 4) {
             game_sprint(0x14F);
-            player->xclock3 = 5;
+            player->xclock[3] = 5;
         }
     case 3:
         if (who == ThePlayer && set_curmagic(cls, sub & 0x3F, sub & 0xC0))
@@ -329,13 +186,13 @@ void far restore_hp(struct Object far *who, char amount)
 
     if (who == ThePlayer) {
         if (amount > 0) {
-            hp = playerdat->max_vit * (amount + (rand() & 3));
+            hp = playerdat->avghit * (amount + (rand() & 3));
             hp >>= 4;
             hp += ThePlayer->hp + 1;
         } else
             hp = ThePlayer->hp - amount;
-        if (hp > playerdat->max_vit)
-            ThePlayer->hp = playerdat->max_vit;
+        if (hp > playerdat->avghit)
+            ThePlayer->hp = playerdat->avghit;
         else
             ThePlayer->hp = hp;
         panel_check_hpmp();
@@ -377,7 +234,7 @@ void far backfire(struct Object far *who, char sub)
     else
         who->hp = who->hp - damage;
     if (who == ThePlayer) {
-        if (inplist->field8 == 1)
+        if (inplist->mode == 1)
             fill_FB(0x30);
         else
             game_sprint(0x16A);
@@ -422,7 +279,7 @@ char far sp_sheet_light(int x, int y, struct Object far *target, struct Tile far
     if (add_animobj(Obj_MemTPtr(obj), 4, rand() % 4, x, y) == -1)
         Obj_Free(obj);
     else
-        Obj_Add(&tile->objects, obj);
+        Obj_Add(&tile->objects.word, obj);
     return 1;
 }
 
@@ -450,7 +307,7 @@ char far sp_meteor(int x, int y, struct Object far *target, struct Tile far *til
     if (add_animobj(Obj_MemTPtr(obj), 4, 0, x, y) == -1)
         Obj_Free(obj);
     else {
-        Obj_Add(&tile->objects, obj);
+        Obj_Add(&tile->objects.word, obj);
         fireball_effect(obj, x, y);
     }
     if (npc)
@@ -630,7 +487,7 @@ char far sp_frost(int x, int y, struct Object far *target, struct Tile far *tile
         if (add_animobj(Obj_MemTPtr(obj), 4 - r, r, x, y) == -1)
             Obj_Free(obj);
         else
-            Obj_Add(&tile->objects, obj);
+            Obj_Add(&tile->objects.word, obj);
         return 0;
     } else if (OBJ_MAJOR(target) == 1)
         return wound_foe(x, y, target, tile, src, damage, 0x23, 11, 0);
@@ -756,7 +613,7 @@ void far process_area(char count, unsigned char src, SpellFn fn, unsigned char t
                 }
                 if (type == 0x40)
                     continue;
-                link = &tile->objects;
+                link = &tile->objects.word;
                 while ((obj = Obj_PtrTMem(link)) != 0) {
                     next = *link >> 6 & 0x3FF;
                     if (type == 0x80
@@ -822,8 +679,6 @@ struct AreaSpell {
     unsigned char radius;
 };
 
-char far sp_true_sight(int x, int y, struct Object far *target, struct Tile far *tile,
-                       unsigned char src);
 char far sp_study_monster(int x, int y, struct Object far *target, struct Tile far *tile,
                           unsigned char src);
 
@@ -873,8 +728,6 @@ void far target_spells(struct Object far *target)
     mspell_mused = 0;
 }
 
-void far obj_spells(struct Object far *target, int how, unsigned char b);
-
 void far nail_1area(struct Object far *who, unsigned char sub)
 {
     if (who == ThePlayer) {
@@ -909,7 +762,7 @@ void far obj_spells(struct Object far *target, int how, unsigned char b)
             mspell_mused = 0;
         } else {
             tile = Map_GetAddr(MapObj_X, MapObj_Y);
-            link = &tile->objects;
+            link = &tile->objects.word;
             Obj_Punt(link, target, 1);
         }
         break;
@@ -1029,15 +882,15 @@ void far special_spells(struct Object far *who, struct Object far *target, char 
     int r;
     int py;
 
-    px = PN.eye_x >> 8;
-    py = PN.eye_y >> 8;
+    px = PN.x >> 8;
+    py = PN.y >> 8;
     shrooms = 3;
     switch (sub) {
     case 0:
         thump_your_magic_twanger_froggie();
         break;
     case 2:
-        cint = Creature[OBJ_INDEX(who)].intel;
+        cint = Creature[OBJ_INDEX(who)].attr[2];
         pint = playerdat->attr[2];
         result = cint - pint + (int)((long)rand() * 6 / 0x8000L)
                  - (int)((long)rand() * 6 / 0x8000L);
@@ -1055,7 +908,7 @@ void far special_spells(struct Object far *who, struct Object far *target, char 
     case 4:
         chg_plyp((int)((long)rand() * 2 / 0x8000L) * 6 - 3);
         if (player->shrooms || skill_check(playerdat->attr[2], 20) > 0) {
-            if (inplist->field8 == 1)
+            if (inplist->mode == 1)
                 fill_FB(0x5F);
             break;
         }
@@ -1105,29 +958,29 @@ static unsigned char sq_type[2] = { 11, 3 };
    straight after them), then two bytes of padding before OVR157's dtypes: so it was
    defined here, after them. */
 struct Spell far spells[69] = {
-    { 0x40, 0x97, 0x21, 0x01 }, { 0x18, 0xC8, 0x05, 0x01 }, { 0x29, 0x38, 0x39, 0x01 },   /* 0 */
-    { 0x10, 0x12, 0x05, 0x02 }, { 0x3A, 0x38, 0x59, 0x0D }, { 0x00, 0x78, 0x21, 0x83 },   /* 3 */
-    { 0x08, 0x6F, 0x50, 0x06 }, { 0x58, 0xC4, 0x06, 0x03 }, { 0x38, 0x58, 0x40, 0x01 },   /* 6 */
-    { 0x18, 0x02, 0x40, 0x0A }, { 0x28, 0xC9, 0x3A, 0x05 }, { 0x20, 0x2C, 0x20, 0x02 },   /* 9 */
-    { 0x40, 0xA9, 0x20, 0x02 }, { 0x08, 0x6F, 0x44, 0x02 }, { 0x08, 0xF8, 0x51, 0x01 },   /* 12 */
-    { 0x58, 0x97, 0x41, 0x0D }, { 0x38, 0x98, 0x25, 0x00 }, { 0x58, 0xB8, 0x01, 0x06 },   /* 15 */
-    { 0x38, 0x2E, 0x01, 0x08 }, { 0x29, 0xD8, 0x38, 0x02 }, { 0x00, 0x78, 0x41, 0x85 },   /* 18 */
-    { 0x30, 0x42, 0x01, 0x85 }, { 0x58, 0x6F, 0x46, 0x00 }, { 0x08, 0xF8, 0x5D, 0x44 },   /* 21 */
-    { 0x30, 0x05, 0x20, 0x87 }, { 0x20, 0x98, 0x21, 0x04 }, { 0x18, 0x37, 0x35, 0x0B },   /* 24 */
-    { 0x3A, 0x38, 0x01, 0x0A }, { 0x18, 0xB8, 0x48, 0x46 }, { 0x10, 0x58, 0x22, 0x43 },   /* 27 */
-    { 0x3A, 0x98, 0x59, 0x07 }, { 0x18, 0x4F, 0x1A, 0x05 }, { 0x08, 0xEF, 0x50, 0x03 },   /* 30 */
-    { 0x29, 0xB8, 0x3C, 0x03 }, { 0x3A, 0xD7, 0x3A, 0x0B }, { 0x3A, 0xF8, 0x12, 0x0C },   /* 33 */
-    { 0x38, 0x4C, 0x00, 0x02 }, { 0x40, 0x69, 0x22, 0x03 }, { 0x3A, 0x57, 0x46, 0x09 },   /* 36 */
-    { 0x5A, 0xF7, 0x39, 0x08 }, { 0x38, 0x36, 0x42, 0x03 }, { 0x30, 0xC6, 0x55, 0x42 },   /* 39 */
-    { 0x00, 0x0B, 0x55, 0x86 }, { 0x38, 0x2F, 0x56, 0x0F }, { 0x20, 0x0C, 0x55, 0x0F },   /* 42 */
-    { 0x18, 0x4B, 0x56, 0x44 }, { 0x68, 0x98, 0x58, 0x07 }, { 0x38, 0x8F, 0x00, 0x05 },   /* 45 */
-    { 0x30, 0x16, 0x54, 0x83 }, { 0x3A, 0xD7, 0x55, 0x0E }, { 0x30, 0x10, 0x38, 0x81 },   /* 48 */
-    { 0x30, 0xF8, 0x24, 0x86 }, { 0x40, 0x0C, 0x28, 0x05 }, { 0x58, 0xF7, 0x55, 0x09 },   /* 51 */
-    { 0x58, 0x97, 0x54, 0x01 }, { 0x40, 0xE6, 0x39, 0x06 }, { 0x30, 0xF8, 0x14, 0x84 },   /* 54 */
-    { 0x08, 0xEF, 0x54, 0x05 }, { 0x58, 0x78, 0x02, 0x0B }, { 0x10, 0xB2, 0x22, 0x45 },   /* 57 */
-    { 0x58, 0x98, 0x55, 0x02 }, { 0x58, 0xF6, 0x39, 0x07 }, { 0x38, 0x2C, 0x55, 0x06 },   /* 60 */
-    { 0x58, 0x42, 0x55, 0x0C }, { 0x30, 0x18, 0x63, 0x05 }, { 0x28, 0x18, 0x63, 0x04 },   /* 63 */
-    { 0x58, 0x18, 0x63, 0x0D }, { 0x50, 0x18, 0x63, 0x03 }, { 0x50, 0x18, 0x63, 0x09 }   /* 66 */
+    { 0x40, 0x2197, 0x01 }, { 0x18, 0x05C8, 0x01 }, { 0x29, 0x3938, 0x01 },   /* 0 */
+    { 0x10, 0x0512, 0x02 }, { 0x3A, 0x5938, 0x0D }, { 0x00, 0x2178, 0x83 },   /* 3 */
+    { 0x08, 0x506F, 0x06 }, { 0x58, 0x06C4, 0x03 }, { 0x38, 0x4058, 0x01 },   /* 6 */
+    { 0x18, 0x4002, 0x0A }, { 0x28, 0x3AC9, 0x05 }, { 0x20, 0x202C, 0x02 },   /* 9 */
+    { 0x40, 0x20A9, 0x02 }, { 0x08, 0x446F, 0x02 }, { 0x08, 0x51F8, 0x01 },   /* 12 */
+    { 0x58, 0x4197, 0x0D }, { 0x38, 0x2598, 0x00 }, { 0x58, 0x01B8, 0x06 },   /* 15 */
+    { 0x38, 0x012E, 0x08 }, { 0x29, 0x38D8, 0x02 }, { 0x00, 0x4178, 0x85 },   /* 18 */
+    { 0x30, 0x0142, 0x85 }, { 0x58, 0x466F, 0x00 }, { 0x08, 0x5DF8, 0x44 },   /* 21 */
+    { 0x30, 0x2005, 0x87 }, { 0x20, 0x2198, 0x04 }, { 0x18, 0x3537, 0x0B },   /* 24 */
+    { 0x3A, 0x0138, 0x0A }, { 0x18, 0x48B8, 0x46 }, { 0x10, 0x2258, 0x43 },   /* 27 */
+    { 0x3A, 0x5998, 0x07 }, { 0x18, 0x1A4F, 0x05 }, { 0x08, 0x50EF, 0x03 },   /* 30 */
+    { 0x29, 0x3CB8, 0x03 }, { 0x3A, 0x3AD7, 0x0B }, { 0x3A, 0x12F8, 0x0C },   /* 33 */
+    { 0x38, 0x004C, 0x02 }, { 0x40, 0x2269, 0x03 }, { 0x3A, 0x4657, 0x09 },   /* 36 */
+    { 0x5A, 0x39F7, 0x08 }, { 0x38, 0x4236, 0x03 }, { 0x30, 0x55C6, 0x42 },   /* 39 */
+    { 0x00, 0x550B, 0x86 }, { 0x38, 0x562F, 0x0F }, { 0x20, 0x550C, 0x0F },   /* 42 */
+    { 0x18, 0x564B, 0x44 }, { 0x68, 0x5898, 0x07 }, { 0x38, 0x008F, 0x05 },   /* 45 */
+    { 0x30, 0x5416, 0x83 }, { 0x3A, 0x55D7, 0x0E }, { 0x30, 0x3810, 0x81 },   /* 48 */
+    { 0x30, 0x24F8, 0x86 }, { 0x40, 0x280C, 0x05 }, { 0x58, 0x55F7, 0x09 },   /* 51 */
+    { 0x58, 0x5497, 0x01 }, { 0x40, 0x39E6, 0x06 }, { 0x30, 0x14F8, 0x84 },   /* 54 */
+    { 0x08, 0x54EF, 0x05 }, { 0x58, 0x0278, 0x0B }, { 0x10, 0x22B2, 0x45 },   /* 57 */
+    { 0x58, 0x5598, 0x02 }, { 0x58, 0x39F6, 0x07 }, { 0x38, 0x552C, 0x06 },   /* 60 */
+    { 0x58, 0x5542, 0x0C }, { 0x30, 0x6318, 0x05 }, { 0x28, 0x6318, 0x04 },   /* 63 */
+    { 0x58, 0x6318, 0x0D }, { 0x50, 0x6318, 0x03 }, { 0x50, 0x6318, 0x09 }   /* 66 */
 };
 
 void far damage_square(int x, int y, unsigned char kind, unsigned char src)
@@ -1140,7 +993,7 @@ void far damage_square(int x, int y, unsigned char kind, unsigned char src)
     if (kind-- == 0)
         return;
     kind &= 1;
-    obj = Obj_PtrTMem(&Map_GetAddr(tx, ty)->objects);
+    obj = Obj_PtrTMem(&Map_GetAddr(tx, ty)->objects.word);
     while (obj) {
         next = Obj_PtrTMem(&obj->qn.word);
         damage_item(obj, Obj_IntTMem(src), tx, ty, rollem(sq_dice[kind], sq_sides[kind]),

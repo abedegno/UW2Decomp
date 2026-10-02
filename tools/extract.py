@@ -868,16 +868,17 @@ if not MOD and ALL_VERIFIED:
     # source they were built from (so the modding build knows which sources changed) and the
     # places verify.py found
     import hashlib, shutil
+    from srcdeps import source_hash     # the text and the src/include headers it includes
     os.makedirs(BASE, exist_ok=True)
     lay = {'objects': {}, 'sources': {}}
     for stem, ob in OBJS.items():
         shutil.copyfile(ob['obj'], os.path.join(BASE, stem + '.OBJ'))
         lay['objects'][stem] = dict(data=ob['data'], bss=ob['bss'], refs=ob['refs'], far=ob['far'])
-        lay['sources'][stem] = [os.path.relpath(ob['src'], root), hashlib.sha1(open(ob['src'], 'rb').read()).hexdigest()]
+        lay['sources'][stem] = [os.path.relpath(ob['src'], root), source_hash(ob['src'])]
     for stem, p in FAROBJS.items():
         shutil.copyfile(p, os.path.join(BASE, stem + '.OBJ'))
         src = os.path.join(root, 'src', stem + '.ASM')
-        lay['sources'][stem] = [os.path.relpath(src, root), hashlib.sha1(open(src, 'rb').read()).hexdigest()]
+        lay['sources'][stem] = [os.path.relpath(src, root), source_hash(src)]
     json.dump(lay, open(os.path.join(BASE, 'layout.json'), 'w'), indent=1, sort_keys=True)
 json.dump(RENAMES, open(os.path.join(OUT, 'renames.json'), 'w'), indent=1, sort_keys=True)
 print(f'{len(modules)} modules in {os.path.relpath(OUT, root)}: {len(DPIECES)} _DATA gaps, {len(BPIECES)} _BSS gaps, '

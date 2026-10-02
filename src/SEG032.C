@@ -9,28 +9,17 @@
 
 #include <dos.h>
 #include <stdlib.h>
-
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    unsigned b8:8;
-    unsigned objects;                   /* 0x02 */
-};
-
-/* The camera, a copy of the player's position. */
-struct Eye {
-    char pad0[0x0A];
-    int x;                              /* 0x0A, in 1/256 tiles */
-    char pad1[0x12 - 0x0C];
-    int y;                              /* 0x12 */
-    char pad2[0x2C - 0x14];
-    unsigned heading;                   /* 0x2C */
-};
-
-struct Inplist {
-    char pad0[8];
-    int field8;
-};
+#include "conv.h"
+#include "critter.h"
+#include "event.h"
+#include "gfx.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
+#include "view3d.h"
 
 /* One cell of the vision grid, 33 cells to a row and 17 rows, the eye at row 0 column 16. */
 struct Gloc {
@@ -89,9 +78,6 @@ static int side_step[2] = { -1, 1 };
 
 extern struct Inplist near *inplist;
 extern unsigned long far *Time;
-extern struct Eye far *cPlayer;
-extern int far *dbptr;
-extern int lastXeye, lastYeye;
 /* This file's _BSS, DS:26EA..2C67 (seg031's ends at 26E9; seg019's starts at 2C68 with
    cWCol, key 27), laid out by name (tools/bssorder.py): lcldblen 148, xhgt 176, glocs 191,
    mxY 237, quad 377, strtime 411, mapptr 653, curZoom 667, gvecs 703, demo_mode 708,
@@ -110,45 +96,12 @@ struct Gloc glocs[17][33];
 struct Gvec gvecs[15];
 char gvechead;
 int far *DbEntry;
-extern unsigned char tile_walls[];
-extern unsigned char SpecShadeMode;     /* DOS only, no FM Towns name */
-/* in the graphics data segment */
-extern unsigned far bmsegoff;
 /* The 4 KB far buffer at 5DFD:0000 (segment table entry 60) that seg004's texture loader
    copies a bitmap into; seg032_2E9B_195 points the bitmap table's segments back at it.
    DOS only, no FM Towns name: IDA's segment name. */
-extern unsigned char far seg_5DFD[];
-extern int far _dblen;
-extern int far smooth_div;
 extern int far smooth_base;
-extern int far smooth_lowpass;
 
-void far cPlaceFB(int x, int y, int w, int h);
-void far mous_3d_set(int x, int y, int w, int h);
-void far mous_player(int x, int y, int w, int h);
-void far cZoom(unsigned zoom);
-void far cInit3d(void);
-void far grdb_blank(void);
-void far gr_tostrt(void);
-void far gr_entry(void);
-void far set_the_window(int x0, int y0, int x1, int y1);
-void far cRender(void);
-void far do_fbuf_bms(void);
-void far mous_3d_hide(void);
-void far cFBtoScreen(void);
-void far mous_3d_show(void);
-void far do_3d_pickup(void);
 void far gr_putlab(int lab);
-void far get_eye(void);
-struct Tile far * far Map_GetAddr(int x, int y);
-int far cSqRt(long v);
-void far cSinCos(int angle, int *s, int *c);
-void far MousQUp(int a);
-void far process_grid(void);
-
-char far setup_vars(void);
-void far preset_grid(int range);
-void far do_2dclip(void);
 
 void far place_3d_view(int x, int y, int w, int h)
 {
@@ -158,9 +111,9 @@ void far place_3d_view(int x, int y, int w, int h)
     cPlaceFB(x, y, w, h);
     mous_3d_set(x, y, w, h);
     mous_player(x, y - h + 1, w, h);
-    if (inplist->field8 & 8)
+    if (inplist->mode & 8)
         curZoom = 0x6062;
-    else if (inplist->field8 & 1) {
+    else if (inplist->mode & 1) {
         demo_mode = 1;
         curZoom = 0x61A8;
     }
@@ -314,7 +267,7 @@ char far setup_vars(void)
     lastXeye = cPlayer->x >> 8;
     lastYeye = cPlayer->y >> 8;
     mapptr = Map_GetAddr(lastXeye, lastYeye);
-    h = cPlayer->heading >> 13;
+    h = (unsigned)cPlayer->heading >> 13;
     q = ((h + 1) & 7) >> 1;
     trans = trans_grid[q];
     ok = 1;

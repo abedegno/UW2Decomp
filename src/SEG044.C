@@ -7,28 +7,14 @@
    names are the originals from the FM Towns symbol table where it has them. */
 
 #include <stdlib.h>
-
-/* The low 6 bits of a list word hold the quality or owner; the top 10 bits an object
-   index. */
-struct Link {
-    unsigned bits:6;
-    unsigned index:10;
-};
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* item 0-8, flags 9-12 */
-    unsigned pos;                       /* z 0-6, y fine 10-12, x fine 13-15 */
-    struct { unsigned quality:6, next:10; } qn;         /* 0x04 */
-    struct { unsigned owner:6, link:10; } ol;           /* 0x06 */
-    char pad8[0x16 - 0x08];
-    unsigned home;                      /* 0x16, x in bits 10-15, y in bits 4-9 */
-};
-
-/* A static object: the 8 bytes every object has. */
-struct StaticObj {
-    unsigned w[4];
-};
+#include "combat.h"
+#include "critter.h"
+#include "map.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
+#include "uw2.h"
 
 #define OBJ_ITEM(o)     ((o)->id & 0x1FF)
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
@@ -50,23 +36,10 @@ struct StaticObj {
 #define SET_FINEY(o, v)   ((o)->pos = (o)->pos & 0xE3FF | ((v) & 7) << 10)
 #define SET_FINEX(o, v)   ((o)->pos = (o)->pos & 0x1FFF | ((v) & 7) << 13)
 
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    char pad1;
-    struct Link objects;                /* 0x02, head of the tile's object list */
-};
-
-/* The common object properties, one 11-byte record per item. */
-struct ComObj {
-    unsigned height:8;                  /* 0x00 */
-    char pad1[0x0B - 0x01];
-};
-
 /* One running animation: the animated object, the frames it has left (-1 for ever),
    and its tile. */
 struct Anim {
-    struct Link link;
+    union Link link;
     int len;
     unsigned char x, y;
 };
@@ -91,35 +64,18 @@ char timercount;                        /* DS:3576 */
 struct Anim animlist[0x40];             /* DS:3578 */
 
 extern unsigned char AnimObjInPipe;
-extern unsigned char TimeStop;
-extern unsigned char quick_time;
-extern char door_type;
-extern int XP, YP;
-extern int lastXeye, lastYeye;
-extern struct Object far *ThePlayer;
-extern struct ComObj ComObjData[];
 
-struct Object far * far Obj_PtrTMem(struct Link far *link);
-int far Obj_MemTPtr(struct Object far *obj);
+struct Object far * far Obj_PtrTMem(union Link far *link);
 struct Object far * far Obj_IntTMem(int index);
 struct Object far * far Obj_Alloc(char mobile);
-void far Obj_Free(struct Object far *obj);
-void far Obj_Add(struct Link far *head, struct Object far *obj);
-void far Obj_AddEnd(struct Link far *head, struct Object far *obj);
-unsigned char far Obj_Rem(struct Link far *head, struct Object far *obj);
-struct Tile far * far Map_GetAddr(int x, int y);
+void far Obj_Add(union Link far *head, struct Object far *obj);
+void far Obj_AddEnd(union Link far *head, struct Object far *obj);
+unsigned char far Obj_Rem(union Link far *head, struct Object far *obj);
 struct Object far * far CreateObj(int item, char mobile);
 unsigned char far can_place(int item, int index, int x, int y, int z, int b, char dist);
-void far changeDoor(struct Object far *door);
 void far play_effect(char type, int x, int y, int a);
-void far editchng(int bits);
-void far checkTrap(struct Object far *who, struct Object far *obj, int how, int x, int y);
 void far UseTrigger(struct Object far *who, void far *a, struct Object far *trig, int how);
-void far damage_square(int x, int y, unsigned char kind, unsigned char src);
 int far rand(void);
-
-void far do_animobj(int n, int frames);
-unsigned char far check_door(int n, int frames);
 
 void far rem_anim_from_map(int n)
 {
@@ -137,7 +93,7 @@ void far rem_anim_from_list(int index)
     int i;
 
     for (i = 0; i < animcount; i++)
-        if (animlist[i].link.index == index)
+        if (animlist[i].link.f.index == index)
             break;
     if (i < animcount && --animcount > 0 && animcount != i)
         animlist[i] = animlist[animcount];
@@ -162,8 +118,8 @@ void far toast_animobj(int n, int frames)
     switch (cls) {
     case 0xF:
         major = 5;
-        minor = obj->ol.owner >> 4;
-        state = (obj->ol.owner >> 0) & 0xF;
+        minor = obj->ol.f.owner >> 4;
+        state = (obj->ol.f.owner >> 0) & 0xF;
         z = OBJ_Z(obj);
         if (OBJ_FLAGS(obj) & 8) {
             if (state >= 8)
@@ -174,7 +130,7 @@ void far toast_animobj(int n, int frames)
             YP = animlist[n].y;
             if (!can_place((major << 6) + (minor << 4) + state, Obj_MemTPtr(obj),
                            (XP << 3) + OBJ_FINEX(obj), (YP << 3) + OBJ_FINEY(obj), z, 1, 8)) {
-                obj->ol.owner = state;
+                obj->ol.f.owner = state;
                 changeDoor(obj);
                 return;
             }
@@ -191,7 +147,7 @@ void far toast_animobj(int n, int frames)
         SET_MAJOR(obj, major);
         SET_MINOR(obj, minor);
         SET_MINOR4(obj, state);
-        obj->ol.owner = 0;
+        obj->ol.f.owner = 0;
         if (OBJ_FLAGS(obj) & 8)
             SET_FLAGS(obj, OBJ_FLAGS(obj) & 7);
         else
@@ -208,7 +164,7 @@ void far seg044_368F_392(int index)
     int i;
 
     for (i = 0; i < animcount; i++)
-        if (animlist[i].link.index == index) {
+        if (animlist[i].link.f.index == index) {
             toast_animobj(i, 0);
             break;
         }
@@ -223,8 +179,8 @@ void far Change_AnimPtr(struct Object far *to, struct Object far *from)
     toidx = Obj_MemTPtr(to);
     fromidx = Obj_MemTPtr(from);
     for (i = 0; i < animcount; i++)
-        if (animlist[i].link.index == fromidx) {
-            animlist[i].link.index = toidx;
+        if (animlist[i].link.f.index == fromidx) {
+            animlist[i].link.f.index = toidx;
             break;
         }
 }
@@ -236,14 +192,14 @@ int far add_animobj(int index, int len, unsigned char a, unsigned char x, unsign
 
     if (animcount + 1 > 0x40)
         return -1;
-    animlist[animcount].link.index = index;
+    animlist[animcount].link.f.index = index;
     animlist[animcount].len = len;
     animlist[animcount].x = x;
     animlist[animcount].y = y;
     obj = Obj_PtrTMem(&animlist[animcount].link);
     frame = animclassd[OBJ_MINOR4(obj)].start;
     if (frame >= 0)
-        obj->ol.owner = animclassd[OBJ_MINOR4(obj)].count
+        obj->ol.f.owner = animclassd[OBJ_MINOR4(obj)].count
             ? animclassd[OBJ_MINOR4(obj)].start + a % animclassd[OBJ_MINOR4(obj)].count
             : animclassd[OBJ_MINOR4(obj)].start;
     AnimObjInPipe = 1;
@@ -266,19 +222,19 @@ void far do_animobj(int n, register int frames)
     for (mask = 1; type > 0; type &= ~mask, mask = mask << 1) {
         switch (type & mask) {
         case 1:
-            owner = obj->ol.owner;
+            owner = obj->ol.f.owner;
             if (animclassd[cls].start + animclassd[cls].count - 1 > owner)
-                obj->ol.owner++;
+                obj->ol.f.owner++;
             else
-                obj->ol.owner = animclassd[cls].start;
+                obj->ol.f.owner = animclassd[cls].start;
             break;
         case 2:
-            obj->ol.owner = animclassd[cls].start + rand() % animclassd[cls].count;
+            obj->ol.f.owner = animclassd[cls].start + rand() % animclassd[cls].count;
             break;
         case 4:
             if (OBJ_FLAGS(obj) & 8)
                 frames = -frames;
-            if (((obj->ol.owner >> 0) & 7) == 6)
+            if (((obj->ol.f.owner >> 0) & 7) == 6)
                 SET_Z(obj, OBJ_Z(obj) + frames * 6);
             SET_FLAGS(obj, (OBJ_FLAGS(obj) & 7) + frames + (OBJ_FLAGS(obj) & 8));
             if (OBJ_FLAGS(obj) & 8)
@@ -320,9 +276,9 @@ void far update_animobj(int frames)
             left = (timer_tick + frames) / (OBJ_Z(obj) + 1) - timer_tick / (OBJ_Z(obj) + 1);
             if (left <= 0)
                 continue;
-            if (abs(OBJ_HOMEX(ThePlayer) - obj->qn.quality) < 8
-                && abs(OBJ_HOMEY(ThePlayer) - obj->ol.owner) < 8
-                || abs(lastXeye - obj->qn.quality) < 8 && abs(lastYeye - obj->ol.owner) < 8)
+            if (abs(OBJ_HOMEX(ThePlayer) - obj->qn.f.quality) < 8
+                && abs(OBJ_HOMEY(ThePlayer) - obj->ol.f.owner) < 8
+                || abs(lastXeye - obj->qn.f.quality) < 8 && abs(lastYeye - obj->ol.f.owner) < 8)
                 while (left > 0) {
                     UseTrigger(ThePlayer, 0L, obj, 10);
                     left--;
@@ -450,7 +406,7 @@ int far find_anim(struct Object far *obj)
 
     index = Obj_MemTPtr(obj);
     for (i = 0; i < animcount; i++)
-        if (animlist[i].link.index == index)
+        if (animlist[i].link.f.index == index)
             break;
     if (i == animcount)
         return -1;
@@ -487,8 +443,8 @@ unsigned char far check_door(int n, int frames)
 
     limit = 5;
     obj = Obj_PtrTMem(&animlist[n].link);
-    minor = (obj->ol.owner >> 0) & 0xF;
-    item = (obj->ol.owner >> 4 << 4) + minor + 0x140;
+    minor = (obj->ol.f.owner >> 0) & 0xF;
+    item = (obj->ol.f.owner >> 4 << 4) + minor + 0x140;
     z = OBJ_Z(obj);
     if ((minor & 7) != 6)
         z -= 0x18;
@@ -497,7 +453,7 @@ unsigned char far check_door(int n, int frames)
     if (!can_place(item, Obj_MemTPtr(obj), (XP << 3) + OBJ_FINEX(obj),
                    (YP << 3) + OBJ_FINEY(obj), z, 1, 8)) {
         if (OBJ_MAJOR(obj) == 5 && (obj->id & 7) == 6
-            || OBJ_MAJOR(obj) == 7 && (obj->ol.owner & 7) == 6)
+            || OBJ_MAJOR(obj) == 7 && (obj->ol.f.owner & 7) == 6)
             limit = 4;
         SET_FLAGS(obj, OBJ_FLAGS(obj) & 7);
         checkTrap(0L, obj, 8, XP, YP);

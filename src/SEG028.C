@@ -8,25 +8,10 @@
 
 #include <mem.h>
 #include <stdlib.h>
-
-/* The low 6 bits of a list word hold the quality or owner; the top 10 bits an object
-   index. */
-struct Link {
-    unsigned bits:6;
-    unsigned index:10;
-};
-
-/* A mobile object, 0x1B bytes; a static one is its first 8 bytes. */
-struct Object {
-    unsigned id;                        /* item 0-8 (major class 6-8) */
-    unsigned pos;                       /* z 0-6, y fine 10-12, x fine 13-15 */
-    struct Link next;                   /* 0x04 */
-    struct Link link;                   /* 0x06 */
-    char pad8[0x15 - 0x08];
-    unsigned char b15;                  /* 0x15 */
-    unsigned home;                      /* 0x16, x in bits 10-15, y in bits 4-9 */
-    char pad18[0x1B - 0x18];
-};
+#include "event.h"
+#include "map.h"
+#include "object.h"
+#include "uw2.h"
 
 #define OBJ_ITEM(o)     ((o)->id & 0x1FF)
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
@@ -43,60 +28,9 @@ struct Object {
 #define SET_HOMEX(o, v)   ((o)->home = (o)->home & 0x3FF | ((v) & 0x3F) << 10)
 #define SET_HOMEY(o, v)   ((o)->home = (o)->home & 0xFC0F | ((v) & 0x3F) << 4)
 
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    unsigned b8:2;
-    unsigned floor:4;                   /* floor texture */
-    unsigned b14:2;
-    struct Link objects;                /* 0x02 */
-};
-
 /* A tile's terrain word: type 0-3, height 4-7, the floor texture's terrain bits 6-7
    in 8-9. */
 #define TILE_TERR(t)    (t)->type + ((t)->height << 4) + ((TxmTerr[(t)->floor] & 0xC0) << 2)
-
-/* The common object properties, one 11-byte record per item. */
-struct ComObj {
-    unsigned height:8;                  /* 0x00 */
-    unsigned radius:3;
-    unsigned c1_3:1;
-    unsigned mass:12;                   /* 0x01, bits 4-15 */
-    unsigned c3_0:1;                    /* 0x03 */
-    unsigned solid:1;
-    unsigned c3_2:1;
-    unsigned c3_3:5;
-    char pad4[2];
-    unsigned c6_0:1;                    /* 0x06 */
-    unsigned c6_1:7;
-    char pad7[4];
-};
-
-/* The motion calculation record, reached through `curP`. */
-struct MotionCalc {
-    int x, y, z;                        /* 0x00 */
-    unsigned w6;                        /* 0x06, heading in bits 13-15 */
-    unsigned char radius;               /* 0x08 */
-    unsigned char height;               /* 0x09 */
-    int index;                          /* 0x0A */
-    int hits0, hits1;                   /* 0x0C */
-    unsigned char floor;                /* 0x10, the height under the centre */
-    unsigned char top;                  /* 0x11, the highest under the footprint */
-    unsigned char slope;                /* 0x12 */
-    unsigned char open;                 /* 0x13 */
-    unsigned char found;                /* 0x14, collisions found */
-    unsigned char count;                /* 0x15, those in the way */
-    signed char first;                  /* 0x16, the first of them in oCollisions */
-    char pad17;
-};
-
-/* One collision found by ObjectCheck, 6 bytes. */
-struct Collision {
-    unsigned char top;                  /* 0x00 */
-    unsigned char bottom;               /* 0x01 */
-    struct Link link;                   /* 0x02 */
-    int offset;                         /* 0x04, tile offset, x in bits 0-5 */
-};
 
 /* A corner of the footprint, or (the fifth) its centre: which of the nine tiles around
    the centre tile it is in, and where in that tile. */
@@ -107,21 +41,16 @@ struct Pnt {
     unsigned flags;
 };
 
-extern struct ComObj ComObjData[];
 extern int TxmTerr[];
-extern unsigned char tile_walls[];
 extern struct Object far *objdata;
 
 /* Elsewhere in the game. */
-struct Tile far * far Map_GetAddr(int x, int y);
 struct Object far * far Obj_IntTMem(int index);
-struct Object far * far Obj_PtrTMem(struct Link far *link);
-int far Obj_MemTPtr(struct Object far *obj);
+struct Object far * far Obj_PtrTMem(union Link far *link);
 unsigned char far IsMobElem(struct Object far *obj);
-void far Obj_Add(struct Link far *head, struct Object far *obj);
-void far Obj_AddEnd(struct Link far *head, struct Object far *obj);
-unsigned char far Obj_Elem_Fate(int range, struct Object far *obj);
-void far Obj_FreeLinkChain(struct Link far *head, struct Object far *obj);
+void far Obj_Add(union Link far *head, struct Object far *obj);
+void far Obj_AddEnd(union Link far *head, struct Object far *obj);
+void far Obj_FreeLinkChain(union Link far *head, struct Object far *obj);
 struct Object far * far obj_deal(struct Object far *obj, int x, int y, int a);
 
 /* Uninitialised data, DS:251A..2587. Turbo C lays _BSS out by a hash of the names, ties
@@ -377,7 +306,7 @@ void far ComputeHeading(void)
         curP->slope = dirs[sx / nsteep + 1][sy / nsteep + 1];
         if (nsteep == 1 && curP->slope % 2 && firstsolve) {
             want = (9 - curP->slope) & 7;
-            head = curP->w6 >> 13;
+            head = curP->heading >> 13;
             switch ((head - want) & 7) {
             case 0:
             case 1:
@@ -477,17 +406,17 @@ void far obj_coll_check(struct Object far *obj, int link, char x, char y, char i
     c->top = c->bottom + com.height;
     if (com.height == 0)
         c->top = c->top + 1;
-    c->link.index = link;
-    c->link.bits = 9;
+    c->link.f.index = link;
+    c->link.f.low = 9;
     if (pos_x >= x0 && pos_x <= x1 && ypos >= y0 && ypos <= y1)
-        c->link.bits |= 0x10;
+        c->link.f.low |= 0x10;
     c->offset = x + (y << 6);
 }
 
 void far ObjectCheck(unsigned char flat, unsigned char useflag)
 {
     struct Tile far *tile;
-    struct Link far *link;
+    union Link far *link;
     struct Object far *obj;
     char x0;
     char y0;
@@ -527,9 +456,9 @@ void far ObjectCheck(unsigned char flat, unsigned char useflag)
         for (j = y0; j <= y1; j++) {
             n = 0;
             off = (j << 6) + i;
-            for (link = &tile[off].objects; link->index != 0 && n < 0x40;
-                 link = &Obj_PtrTMem(link)->next, n++) {
-                if (link->index == curP->index)
+            for (link = &tile[off].objects; link->f.index != 0 && n < 0x40;
+                 link = &Obj_PtrTMem(link)->qn.link, n++) {
+                if (link->f.index == curP->index)
                     continue;
                 obj = Obj_PtrTMem(link);
                 com = &ComObjData[OBJ_ITEM(obj)];
@@ -539,8 +468,8 @@ void far ObjectCheck(unsigned char flat, unsigned char useflag)
                     continue;
                 if (obj < (struct Object far *)objdata && OBJ_MAJOR(obj) != 1 && OBJ_B15_7(obj) != 0)
                     continue;
-                if (!useflag || com->c6_0)
-                    obj_coll_check(obj, link->index, i, j, isnpc);
+                if (!useflag || com->touch)
+                    obj_coll_check(obj, link->f.index, i, j, isnpc);
             }
             if (n == 0x40)
                 return;
@@ -649,8 +578,6 @@ out:
     curP = oldP;
     return ok;
 }
-
-unsigned char far drop_around_place(struct Object far *obj, int x, int y, int z, int range);
 
 unsigned char far put_at(int x, int y, int z, struct Object far *obj, int range, unsigned char nocull)
 {

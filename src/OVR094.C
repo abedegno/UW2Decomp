@@ -10,59 +10,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x60];
-    unsigned b60:1;                     /* word 0x60, bit 0 */
-    unsigned b60_1:15;
-    unsigned b62_0:4;
-    unsigned automap:1;                 /* word 0x62, bit 4 */
-    unsigned b62_5:11;
-    char pad1[0xF3 - 0x64];
-    unsigned char gems;                 /* 0xF3, one bit per gem part found */
-    char pad2[0xF8 - 0xF4];
-    unsigned char map_scrap;            /* 0xF8 */
-};
-
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    unsigned b8:2;
-    unsigned floor:4;                   /* bits 10-13 */
-    unsigned b14:2;
-    unsigned objects;                   /* 0x02, head of the tile's object list */
-};
-
-struct Object {
-    unsigned id;
-    unsigned pos;
-    union {
-        unsigned word;
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-    char pad8[0x16 - 8];
-    unsigned tilepos;                   /* 0x16, a mobile object's tile */
-};
+#include "event.h"
+#include "file.h"
+#include "gfx.h"
+#include "map.h"
+#include "object.h"
+#include "player.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
 
 #define OBJ_ID(o)       ((o)->id & 0x1FF)
 #define OBJ_TYPE(o)     ((o)->id & 0xF)
 #define OBJ_CLASS(o)    (((o)->id & 0x1F0) >> 4)
 #define DOOR_STATE(o)   (((o)->id & 0x1E00) >> 9)
 #define OBJ_OWNER(o)    ((o)->ol.f.owner)
-#define TILE_X(o)       (((o)->tilepos & 0xFC00) >> 10)
-#define TILE_Y(o)       (((o)->tilepos & 0x3F0) >> 4)
-
-/* The mouse and keyboard state handed to an input handler. */
-struct Inplist {
-    int x, y;
-    char pad4[2];
-    int cmd;                            /* 0x06 */
-};
+#define TILE_X(o)       (((o)->home & 0xFC00) >> 10)
+#define TILE_Y(o)       (((o)->home & 0x3F0) >> 4)
 
 /* One map note: its text and where it sits on the map, 0x36 bytes. */
 struct ATM {
@@ -71,68 +35,27 @@ struct ATM {
     int y;                              /* 0x34 */
 };
 
-extern struct Player near *player;
-extern struct Object far *ThePlayer;
 extern struct Inplist near *inplist;
-extern int PlayerLevel;
 extern unsigned TxmTerr[];
-extern unsigned char tile_walls[];
-extern char HomeDir[];
 extern unsigned char far *foreground_color;
-extern unsigned char far *background_color;
-extern unsigned char far *pixel_color;          /* provisional: DS:21F0 */
 extern unsigned char far Transparency;
 extern struct ATM far ATM_Strings[100];
 
 void far _input_addkey(int key, int a, int b, void (far *handler)(int));
 int far input_addmouse(int a, int b, int c, int d, int buttons, int mode, void (far *handler)(void));
-void far newscr(int n);
-void far kill_all_effects(void);
-unsigned char far get_current_music(void);
-void far set_random_walking_music(int n);
-void far change_music_maybe(void);
 void far set_new_music(int n);
-void far loop_music_maybe(void);
 void far fadeout(int a, int b, int c, int d);
-void far mouse_constrain(int left, int top, int right, int bottom);
-void far mouse_hide(void);
-void far mouse_show(void);
-void far mouse_freereign(void);
-void far force_mouse_cursor(int id);
-void far unforce_mouse_cursor(int n);
 void far mouse_release(int n);
-int far mouse_get_input_sp(void);
-void far keyboard_mouse(int key);
-void far mouse_getxy(int *x, int *y);
-void far mouse_putxy(int x, int y);
-int far mouse_getbut(int *b);
 int far do_keyboard_input(int n);
-unsigned char far open_arc(int arc, char *dir);
 unsigned far get_arc(int arc, int blk, char far *buf);
 unsigned char far put_arc(int arc, int blk, char far *buf, unsigned len);
 void far close_arc(int arc);
-struct Tile far * far Map_GetAddr(int x, int y);
 struct Object far * far Obj_PtrTMem(unsigned far *link);
 void far grfx_clear(void);
 void far grfx_quikpal(int pal);
-void far grfx_quikfont(int size);
-void far set_the_color(int c);
 void far rectangle(int x0, int y0, int x1, int y1);
-int far string_width(char far *s);
-void far string_to_screen(char far *s, int x, int y);
-char far * far str_copy(char far *dst, char far *src);
-unsigned char far gr_read_pixel(int x, int y);  /* provisional: 0085:475E */
-void far gr_pixel(int x, int y, int color);     /* provisional: 1F8C:0255 */
-int far octant(char x, char y);
-void far pic_to_screen(int pic, int x, int y, int w, int h);
 unsigned far get_workspace(void);
-int far set_workspace(void);
-void far release_workspace(void);
-void far grPageFlip(void);
-void far grSoftPageFlip(void);
-void far copy_hidden_to_visible(void);
 char far disk_to_vid(int blk, char far *buf);
-void far player_get_exp(int n);
 
 /* Initialised data, DS:09EE. None of it has an FM Towns name, so it was static. */
 
@@ -162,15 +85,8 @@ static int old_strings;
 static int num_words;
 static int map_mouse;
 
-void far ManageDungeonMap(void);
 unsigned char far SaveAutoMapLevel(int flags, int lev);
 unsigned char far GetAutoMapLevel(int flags, int lev);
-void far ShowDungeonMap(void);
-void far DoTile(int type, int x, int y);
-void far DoDoorTile(int x, int y, int px, int py);
-void far SaveTheWords(int lev);
-void far ShowAutoMapLevel(int lev);
-void far RedisplayStrings(void);
 
 void far AutoMap(void)
 {
@@ -234,7 +150,7 @@ void far automap_area(int x0, int y0, int x1, int y1, int *arg,
             tile = Map_GetAddr(x, y);
             terr = tile->type;
             terr |= TxmTerr[tile->floor] & 0xC0;
-            for (link = &tile->objects; (obj = Obj_PtrTMem(link)) != 0; link = &obj->qn.word) {
+            for (link = &tile->objects.word; (obj = Obj_PtrTMem(link)) != 0; link = &obj->qn.word) {
                 if (OBJ_ID(obj) == 0x164 && DOOR_STATE(obj) < 2)
                     terr = terr;
                 if (OBJ_CLASS(obj) == 0x14)
@@ -304,7 +220,7 @@ void far ExitAutoMap(void)
     player->map_scrap = level;
     if (level != PlayerLevel)
         GetAutoMapLevel(0, PlayerLevel);
-    if (player->b60) {
+    if (player->drawn) {
         set_new_music(5);
         change_music_maybe();
     }
@@ -318,9 +234,6 @@ void far ClearAutoMap(void)
 {
     memset(PlayersMap, 0, 0x1000);
 }
-
-void far PixelDarken(int x, register int y, int base, unsigned n);
-char far ShadeSide(int side, int x, int y);
 
 void far ShowDungeonMap(void)
 {
@@ -554,8 +467,6 @@ int far true_gem_region(int x, int y)
         region = 0;
     return region;
 }
-
-void far ChangeAutoMapLevel(int lev);
 
 void far ManageDungeonMap(void)
 {
@@ -793,7 +704,7 @@ void far show_gem_parts(int lev)
     old = Transparency;
     Transparency = 1;
     for (i = 0; i < 8; i++)
-        if (player->gems & (1 << i))
+        if (player->quest_bytes[13] & (1 << i))
             show_a_part(i, 1);
     k = (lev - 1) / 8;
     if (k == 0)

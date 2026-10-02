@@ -7,40 +7,15 @@
    is not known. */
 
 #include <alloc.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x5E];
-    unsigned char moonstones[2];        /* 0x5E, the level each moonstone was dropped on */
-    char pad1[0x65 - 0x60];
-    unsigned lefty:1;                   /* 0x65 */
-};
-
-/* The player's statistics block. */
-struct PlayerStats {
-    char pad0[0x4A];
-    int weight;                         /* 0x4A, weight carried */
-};
-
-/* A link word: the low six bits belong to the owner, the rest is an object index. */
-union Link {
-    unsigned word;
-    struct { unsigned low:6, link:10; } f;
-};
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;
-    unsigned pos;
-    union {
-        unsigned word;                  /* the next object in this list */
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;                  /* the head of the contents list, or the quantity */
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-};
+#include "combat.h"
+#include "conv.h"
+#include "gfx.h"
+#include "inv.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
+#include "uw2.h"
 
 #define OBJ_ID(o)       ((o)->id & 0x1FF)
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
@@ -49,98 +24,23 @@ struct Object {
 #define OBJ_INVIS(o)    (((o)->id & 0x4000) >> 14)
 #define OBJ_ISQUANT(o)  (((o)->id & 0x8000) >> 15)
 
-/* One open bag; the open bags form a chain from the outermost (OpenBagList) inwards. */
-struct Bag {
-    struct Bag far *next;               /* 0x00, the bag opened inside this one */
-    struct Bag far *prev;               /* 0x04, the bag this one was opened from */
-    union Link obj;                     /* 0x08 */
-    int weight;                         /* 0x0A */
-};
-
-/* One inventory slot's screen rectangle, 14 bytes. */
-struct InvRect {
-    char pad0[8];
-    int x, y;                           /* 0x08 */
-    unsigned char w, h;                 /* 0x0C */
-};
-
-/* One object type's common properties, 11 bytes. */
-struct ComObj {
-    unsigned char height;               /* 0x00 */
-    unsigned radius:4;                  /* 0x01 */
-    unsigned mass:12;
-    char pad3[0x0B - 0x03];
-};
-
-struct Inplist {
-    char pad0[8];
-    int field8;
-};
-
-extern struct Player near *player;
-extern struct PlayerStats PlayerDat;
-extern struct Object far *ThePlayer;
-extern struct Object far *CursorObjPtr;
-extern int PlayerLevel;
-extern int GameInputMode;
+extern struct Player PlayerDat;
 extern union Link Inventory[];
-extern char DisplayToSlot[];
-extern char SlotToDisplay[];
-extern struct Bag far *OpenBagList;
-extern struct Bag far *OpenBag;
-extern unsigned char InvUpArrow;
-extern unsigned char InvDownArrow;
-extern int SaveHandles[];
 /* This file's _BSS, DS:6A76..6A85 (ovr122's starts at 6A86): only this file uses it. */
 int BagSaveHandles[8];
-extern struct InvRect InvDisplay[];
 /* This file's _DATA, DS:15D0 (ovr119's strings end there; ovr122's data starts at 15D2):
    of ovr120 and ovr121, the two files between, only this one uses it. */
 unsigned char display_inventory_no_show = 0;
-extern int scrmode;
 extern char RightPanel;
 extern struct Inplist near *inplist;
-extern struct ComObj ComObjData[];
 
 struct Object far * far Obj_PtrTMem(unsigned far *link);
 struct Object far * far Obj_IntTMem(int index);
-int far Obj_MemTPtr(struct Object far *obj);
-void far Obj_Free(struct Object far *obj);
 void far Obj_Add(unsigned far *head, struct Object far *obj);
 void far Obj_AddEnd(unsigned far *head, struct Object far *obj);
-char far ReturnObject(struct Object far *obj, int how);
 char far HasOrIsObj(struct Object far *obj, int id);
-void far FixPlayerEquips(void);
-void far conv_inv_special(void);
-void far toggle_fightmode(void);
 void far UseObj(struct Object far *who, struct Object far *obj, int how);
-void far unforce_mouse_cursor(int n);
-void far force_mouse_cursor(int id);
-void far mouse_hide(void);
-void far mouse_show(void);
-void far restore_rect(int handle);
-void far DisplayInventory(void);
-void far DisplayInvObject(int slot);
-void far displayInventoryArray(int from, int to);
 void far set_screen_frame(int frame, int how);
-void far pic_to_screen(int pic, int x, int y, int w, int h);
-int far valloc(int w, int h);
-void far save_rect(int handle, int x, int y, int w, int h);
-char far add_rune(struct Object far *obj);
-void far game_sprint(int id);
-int far ItemWeight(struct Object far *obj);
-int far ItemFitsSlot(struct Object far *obj, int slot);
-char far AddTogether(struct Object far *obj, struct Object far *onto);
-char far displayEnc(int how);
-void far grfx_quikfont(int size);
-void far SetCursorObj(int slot, int how);
-
-void far CloseTheBag(void);
-void far FixOpenBag(void);
-void far DisplayOpenBag(void);
-void far ScrollItemsUp(void);
-void far ScrollItemsDown(void);
-void far BagWeight(unsigned far *head, int far *total);
 
 void far DoSpecialActions(int slot)
 {
@@ -204,7 +104,7 @@ void far MakeBagClose(struct Bag far *bag)
     struct Object far *obj;
     int cls;
 
-    obj = Obj_IntTMem(bag->obj.f.link);
+    obj = Obj_IntTMem(bag->obj.f.index);
     cls = obj->id & 0xF;
     if (cls < 12 && (cls & 1))
         obj->id = obj->id & 0xFFF0 | (cls - 1) & 0xF;
@@ -227,7 +127,7 @@ void far CloseAllBags(void)
     farfree(OpenBag);
     OpenBag = 0;
     for (i = 19; i <= 27; i++)
-        Inventory[i].f.link = 0;
+        Inventory[i].f.index = 0;
 }
 
 void far FixBagArea(void)
@@ -237,7 +137,7 @@ void far FixBagArea(void)
 
     if (OpenBag != 0) {
         CloseAllBags();
-        Inventory[19].f.link = 0;
+        Inventory[19].f.index = 0;
         for (i = 11; i <= 18; i++)
             DisplayToSlot[i + 1] = i;
         for (i = 12; i <= 19; i++) {
@@ -271,7 +171,7 @@ void far CloseTheBag(void)
             farfree(bag);
             OpenBag->next = 0;
             Inventory[19] = OpenBag->obj;
-            Inventory[20].f.link = Obj_PtrTMem(&OpenBag->obj.word)->ol.f.link;
+            Inventory[20].f.index = Obj_PtrTMem(&OpenBag->obj.word)->ol.f.link;
             FixOpenBag();
             DisplayOpenBag();
             displayInventoryArray(0x14, 0x14);
@@ -289,11 +189,11 @@ void far DisplayOpenBag(void)
     obj = Obj_PtrTMem(&Obj_PtrTMem(&Inventory[19].word)->ol.word);
     while (obj != 0 && OBJ_INVIS(obj))
         obj = Obj_PtrTMem(&obj->qn.word);
-    if (Obj_MemTPtr(obj) == Inventory[20].f.link)
+    if (Obj_MemTPtr(obj) == Inventory[20].f.index)
         InvDownArrow = 0;
     else
         InvDownArrow = 1;
-    if (Inventory[27].f.link == 0)
+    if (Inventory[27].f.index == 0)
         InvUpArrow = 0;
     else
         InvUpArrow = 1;
@@ -308,12 +208,12 @@ void far FixOpenBag(void)
     int i;
 
     for (i = 20; i <= 27; i++)
-        if (Inventory[i].f.link != 0)
+        if (Inventory[i].f.index != 0)
             break;
     obj = Obj_PtrTMem(&Obj_PtrTMem(&Inventory[19].word)->ol.word);
     if (i > 27) {
         for (i = 20; i <= 27; i++) {
-            Inventory[i].f.link = Obj_MemTPtr(obj);
+            Inventory[i].f.index = Obj_MemTPtr(obj);
             if (obj != 0) {
                 if (OBJ_INVIS(obj))
                     i--;
@@ -322,9 +222,9 @@ void far FixOpenBag(void)
         }
         while (obj != 0) {
             for (i = 20; i < 24; i++)
-                Inventory[i].f.link = Inventory[i + 4].f.link;
+                Inventory[i].f.index = Inventory[i + 4].f.index;
             for (; i <= 27; i++) {
-                Inventory[i].f.link = Obj_MemTPtr(obj);
+                Inventory[i].f.index = Obj_MemTPtr(obj);
                 if (obj != 0) {
                     if (OBJ_INVIS(obj))
                         i--;
@@ -339,7 +239,7 @@ void far FixOpenBag(void)
                 return;
         }
         for (i = 20; i <= 27; i++) {
-            Inventory[i].f.link = Obj_MemTPtr(obj);
+            Inventory[i].f.index = Obj_MemTPtr(obj);
             if (obj != 0) {
                 if (OBJ_INVIS(obj))
                     i--;
@@ -363,13 +263,13 @@ void far OpenTheBag(int slot)
     if (OBJ_MAJOR(obj) != 2 || OBJ_MINOR(obj) != 0)
         return;
     if ((obj->id & 0xF) == 0xF) {
-        if (inplist->field8 == 1)
+        if (inplist->mode == 1)
             set_screen_frame(6, 1);
         return;
     }
     if (OpenBagList != 0) {
         for (bag = OpenBagList; bag != 0; bag = bag->next) {
-            if (bag->obj.f.link == Inventory[slot].f.link) {
+            if (bag->obj.f.index == Inventory[slot].f.index) {
                 FixBagArea();
                 return;
             }
@@ -409,11 +309,11 @@ void far OpenTheBag(int slot)
     }
     OpenBag->next = 0;
     OpenBag->weight = 0;
-    Inventory[19].f.link = OpenBag->obj.f.link = Inventory[slot].f.link;
+    Inventory[19].f.index = OpenBag->obj.f.index = Inventory[slot].f.index;
     first = Obj_PtrTMem(&Obj_PtrTMem(&Inventory[19].word)->ol.word);
     BagWeight(&Obj_PtrTMem(&Inventory[19].word)->ol.word, &OpenBag->weight);
     for (i = 20; i <= 27; i++) {
-        Inventory[i].f.link = Obj_MemTPtr(first);
+        Inventory[i].f.index = Obj_MemTPtr(first);
         if (first != 0) {
             if (OBJ_INVIS(first))
                 i--;
@@ -460,7 +360,7 @@ void far ScrollItemsDown(void)
                 break;
         }
     }
-    Inventory[20].f.link = Obj_MemTPtr(first);
+    Inventory[20].f.index = Obj_MemTPtr(first);
     FixOpenBag();
     DisplayOpenBag();
 }
@@ -481,7 +381,7 @@ char far PutObjectInBag(struct Object far *obj, int slot)
         return 0;
     if (slot == 19 && OpenBag->prev == 0) {
         for (i = 11; i <= 18; i++) {
-            if (Inventory[i].f.link == 0) {
+            if (Inventory[i].f.index == 0) {
                 found = 1;
                 break;
             }
@@ -533,9 +433,9 @@ char far PutObjectInBag(struct Object far *obj, int slot)
     if (next == 0) {
         Obj_AddEnd(&cont->ol.word, obj);
         if (found)
-            Inventory[i].f.link = Obj_MemTPtr(obj);
+            Inventory[i].f.index = Obj_MemTPtr(obj);
     }
-    if (Obj_MemTPtr(cont) == OpenBag->obj.f.link) {
+    if (Obj_MemTPtr(cont) == OpenBag->obj.f.index) {
         FixOpenBag();
         displayInventoryArray(0xC, 0x13);
     } else if (displayEnc(1))
@@ -571,7 +471,7 @@ char far SwapItemsInBag(struct Object far *obj, int slot)
         obj = target;
     }
     Obj_Add(head, obj);
-    Inventory[slot].f.link = Obj_MemTPtr(obj);
+    Inventory[slot].f.index = Obj_MemTPtr(obj);
     diff = ItemWeight(obj) - ItemWeight(target);
     for (bag = OpenBag; bag != 0; bag = bag->prev)
         bag->weight += diff;

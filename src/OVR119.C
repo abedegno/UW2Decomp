@@ -13,6 +13,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <alloc.h>
+#include "file.h"
+#include "gfx.h"
+#include "map.h"
+#include "sys.h"
+#include "view3d.h"
 
 /* Graphics slot bookkeeping. These words start the file's _DATA, straight after
    ovr118's "pals.dat"; FM Towns keeps the first five as public globals. */
@@ -40,32 +45,12 @@ unsigned tmpcnt;                    /* pictures in the open file */
 unsigned char Palettes[32][16];
 FILE *grfp;
 unsigned *PalStore;
-extern unsigned far *grs_off;       /* EMS page and paragraph, or video address, per slot */
-extern unsigned far *obj_tab;       /* two words per object; only the first is set here */
-extern unsigned char TxmCol[];
-extern int TxmID[];
-extern unsigned char ActDoors[6];
-extern unsigned far first_anim;
-extern unsigned far EmsBuff;
-extern unsigned char far tmap_fpage;
 extern char far stdat;
 /* the 3D engine's buffers: gr_offs holds 570 offsets (FM Towns _gr_end follows it) */
-extern unsigned long far gr_offs[];
-extern unsigned char far cmpbuf1_start[];
 #define GR_OFFS_MAX 570
 
-int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
 void far MapMemory_seg013_1D3C_C7();
-int far valloc(int w, int h);
-void far DRAW_RELATED_seg017_2179_2A2();
-void far DRAW_RELATED_seg017_2179_361();
-void far seg042_35ED_12B(void);
-void far mem_set(void far *destination, int value, unsigned count);
-unsigned char far *far grs_scaledown();
 unsigned char far preload_cr();
-/* declared before load_gr_ems: the two names have the same public-order key (404), and
-   Turbo C lists such publics in reverse order of first sight, as the stub order needs */
-unsigned char far load_tr_ems(char *art);
 
 unsigned char far get_pals(void)
 {

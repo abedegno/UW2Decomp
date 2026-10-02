@@ -4,48 +4,19 @@
    and the special-purpose "hack" traps, quest and variable traps, removing triggers and
    traps, wandering monsters, closing doors, pressure plates and bridges. */
 #include <stdlib.h>
+#include "combat.h"
+#include "critter.h"
+#include "event.h"
+#include "file.h"
+#include "inv.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
+#include "uw2.h"
 
-union LinkBits { unsigned word; struct { unsigned owner:6, link:10; } f; };
-struct Object {
-    unsigned id;
-    unsigned pos;
-    union { unsigned word; struct { unsigned quality:6, next:10; } f; } qn;
-    union { unsigned word; struct { unsigned owner:6, link:10; } f; } ol;
-    char pad08[0x0A - 0x08];
-    unsigned char b0A;
-    unsigned goal_word;
-    unsigned flags0D;
-    char pad0F[0x16 - 0x0F];
-    unsigned home;
-};
-struct Player {
-    char pad0[0x21];
-    unsigned char skills[20];           /* 0x21; search is 11, acrobat 17 */
-    char pad35[0x3D - 0x35];
-    unsigned char b3D;                  /* 0x3D */
-    char pad3E[0x4A - 0x3E];
-    unsigned weight;                    /* 0x4A */
-    char pad4C[0x62 - 0x4C];
-    unsigned b62_0:4;                   /* word 0x62 */
-    unsigned b62_4:1;
-    unsigned b62_5:1;
-    unsigned b62_6:4;
-    unsigned in_pits:1;                 /* word 0x62, bit 10 */
-    unsigned b63_3:5;
-    char pad64[0x66 - 0x64];
-    unsigned long quest[32];            /* 0x66, quests 0-127, four to a long */
-    unsigned char special_quest[16];    /* 0xE6 */
-    char padF6[0xF8 - 0xF6];
-    unsigned char bF8;                  /* 0xF8 */
-    unsigned vars[256];                 /* 0xF9 */
-    char pad2F9[0x36D - 0x2F9];
-    unsigned char clocks[16];           /* 0x36D */
-};
-extern struct Player near *player;
-struct Tile {
-    unsigned type:4, height:4, b8:2, floor:4, door:2;
-    union { unsigned word; struct { unsigned wall:6, link:10; } f; } objects;
-};
 #define OBJ_ITEM(o)     ((o)->id & 0x1FF)
 #define OBJ_TYPE(o)     (((o)->id & 0x3F) >> 0)
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
@@ -61,8 +32,8 @@ struct Tile {
 #define SET_GOAL(o, v)    ((o)->goal_word = (o)->goal_word & 0xFFF0 | ((v) & 0xF) << 0)
 #define SET_ITEM(o, v)    ((o)->id = (o)->id & 0xFE00 | (v) & 0x1FF)
 #define SET_LONER(o, v)   ((o)->b0A = (o)->b0A & 0x7F | ((v) & 1) << 7)
-#define SET_TEMP(o, v)    ((o)->flags0D = (o)->flags0D & 0xFEFF | ((v) & 1) << 8)
-#define SET_ATTITUDE(o, v) ((o)->flags0D = (o)->flags0D & 0x3FFF | ((v) & 3) << 14)
+#define SET_TEMP(o, v)    ((o)->attitude_word = (o)->attitude_word & 0xFEFF | ((v) & 1) << 8)
+#define SET_ATTITUDE(o, v) ((o)->attitude_word = (o)->attitude_word & 0x3FFF | ((v) & 3) << 14)
 #define SET_MAJOR(o, v)   ((o)->id = (o)->id & 0xFE3F | ((v) & 7) << 6)
 #define SET_MINOR(o, v)   ((o)->id = (o)->id & 0xFFCF | ((v) & 3) << 4)
 #define SET_SUB(o, v)     ((o)->id = (o)->id & 0xFFF0 | (v) & 0xF)
@@ -82,8 +53,6 @@ static int RemoveTrapFlags;                             /* DS:863E */
 static struct Object far *ObjRunCodeAround;             /* DS:8640 */
 static struct Object far *CharacterThatTriggeredTrap;   /* DS:8644 */
 static struct Object far *TriggeringButton;             /* DS:8648 */
-extern struct Object far *ActiveObj;
-extern struct Object far *ThePlayer;
 void far fread(void near *dest, int count, int size, int handle);
 
 /* IDA: LoadTriggerObjDat. FM Towns' trap_init, first in this run of functions: the same
@@ -103,12 +72,6 @@ unsigned char near * far trap_class_data(void)
 }
 
 struct Object far * far Obj_PtrTMem(unsigned far *link);
-struct Tile far * far Map_GetAddr(int x, int y);
-int far skill_check(int skill, int difficulty);
-void far update_pplate(struct Object far *trig);
-void far delete_trap(unsigned far *head, struct Object far *trap);
-int far SetOffTrap(struct Object far *who, struct Object far *context,
-                    struct Object far *trap, int x, int y);
 int far UseTrigger(struct Object far *who, struct Object far *start,
                    struct Object far *trig, register int type)
 {
@@ -193,31 +156,31 @@ void far set_numbered_variable(int left, unsigned char op, register int right)
         if (left < 0x80) {
             switch (op) {
             case 5:
-                player->quest[(unsigned)left >> 2] =
-                    (player->quest[(unsigned)left >> 2] & ~(1 << (left & 3))) +
-                    (((int)((player->quest[(unsigned)left >> 2] & (1 << (left & 3))) >> (left & 3)) ^ 1) << (left & 3));
+                player->quests[(unsigned)left >> 2] =
+                    (player->quests[(unsigned)left >> 2] & ~(1 << (left & 3))) +
+                    (((int)((player->quests[(unsigned)left >> 2] & (1 << (left & 3))) >> (left & 3)) ^ 1) << (left & 3));
                 break;
             case 1:
-                player->quest[(unsigned)left >> 2] =
-                    (player->quest[(unsigned)left >> 2] & ~(1 << (left & 3))) +
-                    (((int)((player->quest[(unsigned)left >> 2] & (1 << (left & 3))) >> (left & 3)) & 1) << (left & 3));
+                player->quests[(unsigned)left >> 2] =
+                    (player->quests[(unsigned)left >> 2] & ~(1 << (left & 3))) +
+                    (((int)((player->quests[(unsigned)left >> 2] & (1 << (left & 3))) >> (left & 3)) & 1) << (left & 3));
                 break;
             default:
-                player->quest[(unsigned)left >> 2] =
-                    (player->quest[(unsigned)left >> 2] & ~(1 << (left & 3))) +
+                player->quests[(unsigned)left >> 2] =
+                    (player->quests[(unsigned)left >> 2] & ~(1 << (left & 3))) +
                     ((right > 0 ? 1 : 0) << (left & 3));
                 break;
             }
         } else {
             left -= 0x80;
             if (left < 0x10) {
-                register int value = player->special_quest[left];
-                player->special_quest[left] = do_math_op(value, op, right);
+                register int value = player->quest_bytes[left];
+                player->quest_bytes[left] = do_math_op(value, op, right);
             } else {
                 left -= 0x10;
                 if (left < 0x10) {
-                    register int value = player->clocks[left];
-                    player->clocks[left] = do_math_op(value, op, right);
+                    register int value = player->xclock[left];
+                    player->xclock[left] = do_math_op(value, op, right);
                 }
             }
         }
@@ -228,23 +191,13 @@ int far get_numbered_variable(int index)
     if (index < 0x100) return player->vars[index];
     index -= 0x100;
     if (index < 0x80)
-        return (int)((player->quest[(unsigned)index >> 2] & (long)(1 << (index & 3))) >> (index & 3));
+        return (int)((player->quests[(unsigned)index >> 2] & (long)(1 << (index & 3))) >> (index & 3));
     index -= 0x80;
-    if (index < 0x10) return player->special_quest[index];
+    if (index < 0x10) return player->quest_bytes[index];
     index -= 0x10;
-    if (index < 0x10) return player->clocks[index];
+    if (index < 0x10) return player->xclock[index];
     return 0;
 }
-/* Byte images of an object for struct copies: a static object is 8 bytes, a mobile 0x1B. */
-struct ObjStatic { char b[8]; };
-struct ObjMobile { char b[0x1B]; };
-struct Critter {
-    char pad0[5];
-    unsigned char attr[3];              /* 0x05: STR, DEX, INT */
-};
-extern struct Critter near *playerdat;
-extern int PlayerLevel;
-extern int MapObj_X, MapObj_Y;
 extern unsigned char stay_centered;
 /* This file's _DATA, DS:1BA6..1BBC, in definition order. ovr158's strings end at 1BA5
    (odd), ovr167's data starts at 1BBE. This file uses three of the four; FM Towns keeps
@@ -254,47 +207,21 @@ unsigned char tile_walls[16] = { 30, 0, 19, 21, 11, 13, 32, 32, 32, 32, 0, 0, 0,
 int trap_teleport_data = -1;                                    /* DS:1BB6 */
 unsigned char CreatedObjectFound_dseg_67d6_1BB8 = 0;            /* DS:1BB8 */
 struct Tile far *TriggerChainTileData_dseg_67d6_1BB9 = 0;       /* DS:1BB9, FM Towns map_sq */
-void far trap_fire(struct Object far *trap, int x, int y);
-void far do_sfx(int quality, int owner);
 int far do_teleport(struct Object far *who, int x, int y, int level);
 int far change_terrain(int x, int y, int wall, int floor, int height,
                               int type, int dx, int dy, int extra);
-void far set_jmp(int quality, int owner, int heading);
-void far do_change_grokking(struct Object far *trap, struct Object far *obj, int x, int y);
-struct Object far * far place_bridge(int x, int y, int zarg, int headingarg);
-void far destroy_bridge(int x, int y, int zarg, int headingarg);
-void far check_for_sunken_moongate(void);
-void far player_get_exp(int n);
-int far whack_thing(int index, int damage, int how, int extra);
-int far do_trap_hack(struct Object far *trap, register int x, register int y);
-int far inanimate_spell(int x, int y, struct Object far *obj, struct Object far *who,
-                        int spell, int power);
-char far dont_create_wandering_monster_here(struct Object far *obj);
-unsigned char far eligible_castle_monster(int npc);
-char far init_this_critter(struct Object far *obj);
 char far IsMobElem(struct Object far *obj);
 struct Object far * far Obj_Alloc(char mobile);
 unsigned char far put_at(int x, int y, int z, struct Object far *obj, int range, int nocull);
 int far add_animobj(int index, int len, int a, char x, char y);
 struct Object far * far Obj_IntTMem(int index);
-int far Obj_MemTPtr(struct Object far *obj);
 struct Object far * far Obj_InList(unsigned far **head, int recurse, int major, int minor,
                                    int index);
-void far OpenDoor(struct Object far *who, struct Object far *door);
-void far CloseDoor(struct Object far *who, struct Object far *door);
-void far ToggleDoor(struct Object far *who, struct Object far *door);
 char far Obj_Rem(unsigned far *head, struct Object far *obj);
-void far Obj_Free(struct Object far *obj);
 void far Obj_Add(unsigned far *head, struct Object far *obj);
 void far Obj_FreeLinkChain(unsigned far *head, struct Object far *obj);
 void far trap_obj_del(unsigned far *head, struct Object far *obj);
-void far rem_anim_from_list(int index);
-void far editchng(int what);
-struct Object far * far FindObj(int major, int minor, int cls, int how, int *where);
-unsigned char far ObjWorn(int id, int slot);
-char far * far get_string(int id);
 void far scroll_print(char far *s);
-void far print_path_to(char far *s, int fx, int fy, int fz, int tx, int ty, int tz, int how);
 
 /* Condition traps (variable, skill, proximity, inventory) branch by running the trap or
    trigger that follows the first object the trap links to, and return its result. */
@@ -349,9 +276,9 @@ int far UseTrap(struct Object far *trap, int x, int y)
             trap_teleport_data = trap_teleport_data | (OBJ_HEADING(trap) + 8) << 2;
         if (CharacterThatTriggeredTrap == ThePlayer &&
             ((OBJ_FINEX(trap) & 4) >> 2) == 1) {
-            if (player->b62_4)
-                player->bF8 = PlayerLevel;
-            player->b62_4 = 0;
+            if (player->automap)
+                player->map_scrap = PlayerLevel;
+            player->automap = 0;
         }
         result = do_teleport(CharacterThatTriggeredTrap, v, a, b);
         break;
@@ -375,7 +302,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
         b = OBJ_HEADING(trap);
         set_numbered_variable(i, b, c);
         if (OBJ_FINEY(trap))
-            player->clocks[15]++;
+            player->xclock[15]++;
         break;
     case 14:
         i = OBJ_Z(trap) | (OBJ_FINEX(trap) & 3) << 7;
@@ -465,7 +392,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
             now = floor = g + i;
             break;
         case 2:
-            g = tile->objects.f.wall;
+            g = tile->objects.f.low;
             now = wall = g + i;
             break;
         }
@@ -567,14 +494,14 @@ int far UseTrap(struct Object far *trap, int x, int y)
             break;
         if (OBJ_MAJOR(linked) == 1 && dont_create_wandering_monster_here(linked))
             break;
-        if ((int)((player->quest[1] & 8) >> 3) && (PlayerLevel - 1) / 8 == 6)
+        if ((int)((player->quests[1] & 8) >> 3) && (PlayerLevel - 1) / 8 == 6)
             break;
         if (OBJ_ITEM(linked) == 0x7F) {
             int lo;
             int range;
             int item;
-            lo = (((PlayerLevel - 1) % 8 + 1) * 3 + player->clocks[1]) / 9;
-            range = player->b3D + player->clocks[1] + 1;
+            lo = (((PlayerLevel - 1) % 8 + 1) * 3 + player->xclock[1]) / 9;
+            range = player->level + player->xclock[1] + 1;
             if (range > 16)
                 range = 16;
             if (lo < 1)
@@ -590,9 +517,9 @@ int far UseTrap(struct Object far *trap, int x, int y)
         obj = Obj_Alloc(IsMobElem(linked));
         if (obj != 0) {
             if (IsMobElem(linked))
-                *(struct ObjMobile far *)obj = *(struct ObjMobile far *)linked;
+                *(struct Object far *)obj = *(struct Object far *)linked;
             else
-                *(struct ObjStatic far *)obj = *(struct ObjStatic far *)linked;
+                *(struct StaticObj far *)obj = *(struct StaticObj far *)linked;
             if (random_critter) {
                 SET_ITEM(linked, 0x7F);
                 SET_ATTITUDE(obj, 0);
@@ -608,8 +535,8 @@ int far UseTrap(struct Object far *trap, int x, int y)
                 struct Object far *copy;
                 if (placed && !((obj->id & 0x8000) >> 15) && obj->ol.f.link > 0 &&
                     (copy = Obj_Alloc(0)) != 0) {
-                    *(struct ObjStatic far *)copy =
-                        *(struct ObjStatic far *)Obj_IntTMem(obj->ol.f.link);
+                    *(struct StaticObj far *)copy =
+                        *(struct StaticObj far *)Obj_IntTMem(obj->ol.f.link);
                     obj->ol.f.link = Obj_MemTPtr(copy);
                     while (copy->qn.f.next != 0)
                         copy->qn.f.next = 0;
@@ -673,7 +600,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
             if (!((trap->id & 0x8000) >> 15) && trap->ol.f.link != 0) {
                 lock = Obj_PtrTMem(&trap->ol.word);
                 if ((obj = Obj_Alloc(0)) != 0) {
-                    *(struct ObjStatic far *)obj = *(struct ObjStatic far *)lock;
+                    *(struct StaticObj far *)obj = *(struct StaticObj far *)lock;
                     Obj_Add(head, obj);
                 }
             }
@@ -745,10 +672,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
     }
     return result;
 }
-int far Obj_MemTPtr(struct Object far *obj);
-void far rem_timer_obj(int index);
 char far Obj_Rem(unsigned far *head, struct Object far *obj);
-void far Obj_Free(struct Object far *obj);
 void far kill_triggers(unsigned far *head)
 {
     struct Object far *obj;
@@ -767,7 +691,7 @@ void far kill_triggers(unsigned far *head)
             RemoveTrapFlags--;
         }
         if (!((obj->id & 0x8000) >> 15)) {
-            if (((union LinkBits far *)(link = &obj->ol.word))->f.link != 0)
+            if (((union Link far *)(link = &obj->ol.word))->f.index != 0)
                 kill_triggers(link);
         }
         obj = next;
@@ -788,48 +712,17 @@ void far delete_trap(unsigned far *head, struct Object far *trap)
         tile = mapdata;
         for (i = 0; RemoveTrapFlags > 0 && i < 0x1000; i++, tile++) {
             tilehead = &tile->objects.word;
-            if (((union LinkBits far *)tilehead)->f.link > 0)
+            if (((union Link far *)tilehead)->f.index > 0)
                 kill_triggers(tilehead);
         }
     }
     if ((trap = Obj_Find(head, 1, Obj_MemTPtr(trap))) != 0)
         Obj_FreeLinkChain(Obj_Find_Head, trap);
 }
-void far crystal_ball(struct Object far *trap, int x, int y);
-void far eight_pos_switch(int flags, struct Object far *trap, int x, int y);
-void far player_did_bad(int owner);
-void far change_weapon_playerbest(int x, int y, int owner);
-void far check_fraznium(int x, int y, int owner);
-void far standing_wave(int x, int y, int owner);
-void far cycle_floor(int x, int y, int finex, int finey, int owner, int z, int heading);
-void far do_ice_hack(struct Object far *trap);
-void far switch_flip_hack(int x, int y, int owner);
-void far reset_arrow_pillars(int x, int y, int owner);
-void far toggle_pillars_hack(int x, int y, int lo, int hi, int where);
-void far toggle_object_height(struct Object far *trap, char up);
-void far do_graffiti(int x, int y, int owner);
-void far skup_ductosnore(void);
-void far find_and_gronk_force_field(int x, int y);
 struct Object far * far Obj_IntTMem(int index);
-void far editchng(int what);
-void far play_with_switches(int x, int y);
-void far arena_player_runs(void);
-void far arena_opponent_runs(struct Object far *obj);
-void far maybe_cheat_arena_fire(void);
-void far do_qbert(int owner);
-void far redeem_all_bottles(int x, int y);
-void far courtyard_hacking(int x, int y, struct Object far *trap);
-void far recharge_lightbulbs(int x, int y);
-void far move_folks_around(void);
 void far Sched_SetAllClocks(int how);
-void far ruin_cure_potions(int x, int y);
-void far go_vend(int quality, int owner, int x, int y, int flags);
 void far gronkify_change_goal();
 void far gronk_whoami(int who, int how, unsigned char near *info, void (far *fn)());
-void far player_sleep(int owner);
-void far make_terrain_unseen(int x, int y, int from, int to);
-void far black_gem_rotate(void);
-int far black_gem_trip(void);
 int far do_trap_hack(struct Object far *trap, register int x, register int y)
 {
     int owner = 0;
@@ -1051,7 +944,7 @@ void far trap_obj_del(unsigned far *head, struct Object far *obj)
 char far is_this_wandering(int x, int y, struct Object far *obj)
 {
     struct Object far *p = obj;
-    if (((p->flags0D & 0x100) >> 8) &&
+    if (((p->attitude_word & 0x100) >> 8) &&
         obj != ObjRunCodeAround &&
         p != ThePlayer)
         CreatedObjectFound_dseg_67d6_1BB8 = 1;
@@ -1090,7 +983,7 @@ void far DoWanderingMonsters(unsigned char is_player)
         if (((obj->id & 0x1E00) >> 9) == 0) {
             newobj = Obj_PtrTMem(&obj->ol.word);
             if (IsMobElem(newobj)) {
-                newobj->flags0D = newobj->flags0D & 0xFEFF | 0x100;
+                newobj->attitude_word = newobj->attitude_word & 0xFEFF | 0x100;
                 if (check_alert(is_player, x, y))
                     UseTrap(obj, x, y);
             }
@@ -1098,12 +991,6 @@ void far DoWanderingMonsters(unsigned char is_player)
         x++;
     }
 }
-struct Tile far * far Map_GetAddr(int x, int y);
-extern unsigned char quick_time;
-extern unsigned char DoAnimO;
-extern int MapObj_X, MapObj_Y;
-void far CloseDoor(struct Object far *who, struct Object far *door);
-void far update_animobj(int n);
 void far DoClosingDoors(unsigned char is_player)
 {
     int x = 0;
@@ -1128,8 +1015,6 @@ void far DoClosingDoors(unsigned char is_player)
     }
     quick_time = 0;
 }
-extern struct Object far *CursorObjPtr;
-int far ItemWeight(struct Object far *obj);
 int far Ply_Weight(void)
 {
     int weight = player->weight;
@@ -1138,7 +1023,6 @@ int far Ply_Weight(void)
     return weight;
 }
 int far check_weight(unsigned far *head, int threshold, int z, int weight);
-int far Ply_Weight(void);
 char far check_pplate(struct Object far *who, struct Tile far *tile, int z, int how)
 {
     register int type = how;
@@ -1280,19 +1164,12 @@ void far destroy_bridge(int x, int y, int zarg, int headingarg)
         if (Obj_Rem(&Map_GetAddr(x, y)->objects.word, obj))
             Obj_Free(obj);
 }
-/* One critter type's record, 0x30 bytes. */
-struct Creature {
-    char pad00[5];
-    unsigned char strength;             /* 0x05 */
-    char pad06[0x30 - 0x06];
-};
-extern struct Creature Creature[];
 /* IDA: Critter_RNG_STR_CHECK. FM Towns' eligible_castle_monster, between destroy_bridge and
    check_for_sunken_moongate: a zero strength byte fails, otherwise one chance in strength. */
 unsigned char far eligible_castle_monster(int npc)
 {
-    if (Creature[npc & 0x3F].strength == 0) return 0;
-    return rand() % Creature[npc & 0x3F].strength == 0;
+    if (Creature[npc & 0x3F].attr[0] == 0) return 0;
+    return rand() % Creature[npc & 0x3F].attr[0] == 0;
 }
 void far check_for_sunken_moongate(void)
 {

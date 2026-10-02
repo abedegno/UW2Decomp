@@ -3,19 +3,15 @@
 /* The main loop and the per-screen change dispatcher. Names are the originals from the
    FM Towns symbol table. */
 
-extern int notdone;
+#include "motion.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
+
 extern void *inplist;
 unsigned char dsfx_playing = 0;      /* this file's _DATA: DS:010A */
-extern int changed;
-extern int scrnum;
-extern void (far *editor_dispatch[][16])(void);
-extern int change_state[];
-extern unsigned char pmouseHandled;
 
-void far update_digi_playback(void);
 void far input_dispatch(void *list);
-void far mouse_freereign(void);
-void far do_changes(void);
 
 void far mainloop(void)
 {

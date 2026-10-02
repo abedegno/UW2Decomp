@@ -15,6 +15,8 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include "file.h"
+#include "sys.h"
 
 /* The open archive. FM Towns keeps it at 7BDA0 with no symbol of its own, so it was a
    static; in DOS it is the far segment seg065 (load paragraph 637E), presumably this
@@ -29,7 +31,6 @@ struct ArcFile {
 /* The open archive: far, so its own segment (637E:0000, segment table entry 75). FM
    Towns' open_arc_ stores to it unnamed, so it was static; provisional name. */
 static struct ArcFile far arcfile;
-extern char HomeDir[];
 extern char far stdat[];
 
 /* The table copies, in the big shared buffer stdat. */
@@ -38,14 +39,6 @@ unsigned long far *flagtab = (unsigned long far *)(stdat + 0x2800);
 unsigned long far *lentab = (unsigned long far *)(stdat + 0x3000);
 unsigned long far *alloctab = (unsigned long far *)(stdat + 0x3800);
 char far *arcstr = stdat + 0x4000;
-
-int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
-int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n);
-unsigned far ac_unshrink_disk(char far *dst, int fd, unsigned n);
-unsigned far ac_shrink_disk(char far *src, int fd, unsigned n);
-char far * far str_copy(char far *dst, char far *src);
-void far mem_set(void far *p, int value, int count);
-void far pfatal_code(int code);
 
 /* Reads the four tables into offtab and the rest, leaving the file position alone. */
 void far arc_read_tables(register int fd)

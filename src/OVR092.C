@@ -1,7 +1,7 @@
 /* target: ovr092 */
 /* opts: -mm -1 -G -O -Y -d */
 
-void far newscr(int screen);
+#include "sys.h"
 
 /* No FM Towns counterparts. DoNothing_ovr092_22, ReturnFar_ovr092_0 and Nop_ovr092_18 (IDA's
    ovr092_22, ovr092_0, ovr092_18) are provisional names chosen so that their tools/bssorder.py

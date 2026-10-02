@@ -7,14 +7,8 @@
    table. */
 
 #include <stdlib.h>
-
-/* The mouse and keyboard state handed to a handler, 10 bytes. */
-struct Inplist {
-    int x, y;                           /* relative to the region that took the click */
-    int mouse;                          /* 0x04: 1 for a mouse event, 0 for a key */
-    int cmd;                            /* 0x06: the input code */
-    int mode;                           /* 0x08: mask of the screen modes */
-};
+#include "sys.h"
+#include "ui.h"
 
 /* A mouse region, 0x12 bytes. */
 struct MouseDispatch {
@@ -34,12 +28,6 @@ struct KeyDispatch {
     int mask;                           /* 0x06 */
     void (far *func)(int arg);          /* 0x08 */
 };
-
-void far first_punt(int code);
-void far pfatal_code(int code);
-int far mouse_get_input_sp(void);
-void far mouse_Qgetxy(int *x, int *y);
-void far dispatch_key(struct Inplist *in, int code);
 
 /* Uninitialised data, DS:22B6 to DS:22C9. */
 int mcurhndl;                           /* the next mouse handle, counting up from 1 */

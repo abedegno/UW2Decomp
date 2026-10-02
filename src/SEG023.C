@@ -3,12 +3,12 @@
 /* Palette colour cycling: DOS resident segment seg023, in original order. Function and
    global names are the originals from the FM Towns symbol table where it has them. */
 
-extern unsigned char far *palette;          /* DS:21AC, the 256 RGB triples */
+#include "gfx.h"
+#include "sys.h"
+
 static unsigned char last_phase = 0;            /* DS:354 */
 static unsigned char last_half = 0;            /* DS:355 */
 static unsigned char saved[3];              /* DS:24AC */
-
-void far local_do_palette(int count, unsigned char first);
 
 /* Rotate COUNT palette entries starting at FIRST by one place, upward when UP is set. */
 void far rotate_bank(unsigned char first, unsigned char count, unsigned char up)

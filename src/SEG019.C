@@ -13,40 +13,13 @@
    function outside the file. So it was a separate assembly module linked into this
    file's code segment, and this file starts at set_pix_xfer (1FCD:0041). */
 
-struct Player {
-    char pad0[0x3D];
-    unsigned char level;                /* 0x3D */
-    char pad3E[0x62 - 0x3E];
-    unsigned b62_0:4;                   /* 0x62 */
-    unsigned automap:1;                 /* bit 4: mark tiles seen on the automap */
-    unsigned b62_5:11;
-    char pad64[0x302 - 0x64];
-    unsigned b302:4;                    /* 0x302 */
-    unsigned detail:4;
-};
-
-/* The camera, a copy of the player's position. */
-struct Eye {
-    char pad0[0x0A];
-    int x;                              /* 0x0A, in 1/256 tiles */
-    char pad1[0x0E - 0x0C];
-    int z;                              /* 0x0E */
-    char pad2[0x12 - 0x10];
-    int y;                              /* 0x12 */
-    char pad3[0x28 - 0x14];
-    int pitch;                          /* 0x28 */
-    int roll;                           /* 0x2A */
-};
-
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    unsigned b1:2;
-    unsigned floor:4;                   /* bits 10..13 */
-    unsigned b1_6:2;
-    unsigned wall:6;                    /* 0x02, wall texture */
-    unsigned objects:10;                /* head of the tile's object list */
-};
+#include "conv.h"
+#include "event.h"
+#include "map.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "view3d.h"
 
 /* One square of the view's visibility grid: which faces of the tile to draw. */
 struct GLoc {
@@ -58,24 +31,10 @@ typedef void (far *FlrFn)(unsigned char *pts, unsigned char shade, unsigned char
 typedef void (far *WalFn)(unsigned char *pts, unsigned char shade, unsigned char height,
                           unsigned char tex);
 
-extern struct Player near *player;
-extern struct Eye far *cPlayer;
-extern int far *dbptr;
-extern int far *cPixXferStuff;
-extern unsigned char far *cLightTabs;
 extern unsigned TxmTerr[];
-extern unsigned char tile_walls[];
-extern int hgt_val[];
-extern int chgtable[4][3];
-extern unsigned char trans_grid[4][16];
 extern struct GLoc glocs[][33];
 extern unsigned char PlayersMap[64][64];
-extern struct Tile far *mapptr;
-extern int mxY;
 extern signed char quad;
-extern int PlayerLevel;
-extern unsigned far bmhgtoff;
-extern int sd_xmod, sd_ymod;           /* _sd_xmod and _sd_ymod in FM Towns */
 
 /* This file's _BSS, DS:2C68..2F95 (seg032's xwid ends at 2C67; seg033's ActDoors
    starts at 2F96), laid out by name (tools/bssorder.py): cWCol 27, loopx and loopy 44,
@@ -114,24 +73,6 @@ FlrFn gr_fcall, gr_ccall;               /* DS:2F86, 2F8A */
 WalFn gr_wcall;                         /* DS:2F8E */
 int cTmHg;                              /* DS:2F92 */
 char tCacheOK;                          /* DS:2F94 */
-
-int far SetPnt(char x, char y, char z);
-void far Ref(int n, int a);
-int far Clk(int n);
-void far player_get_exp(int n);
-void far map_crit_pages(void);
-struct Tile far *far Map_GetAddr(int x, int y);
-void far sort_setup(char mode);
-void far clear_objsort(void);
-void far do_objsort(void far *link);
-
-void far polyflr(unsigned char *pts, unsigned char shade, unsigned char tex);
-void far polycie(unsigned char *pts, unsigned char shade, unsigned char tex);
-void far polywal(unsigned char *pts, unsigned char shade, unsigned char height, unsigned char tex);
-void far txtflr(unsigned char *pts, unsigned char shade, unsigned char tex);
-void far txtwal(unsigned char *pts, unsigned char shade, unsigned char height, unsigned char tex);
-void far subprocess(void);
-void far grdb_elem(unsigned char *automap);
 
 int dist8 = 4;
 int distpoly = 7;                       /* shades from here on are drawn flat */
@@ -208,7 +149,7 @@ void far process_grid(void)
 
     oldlight = lighton;
     AnimObjInPipe = 0;
-    flat_case = cPlayer->pitch == 0 && cPlayer->roll == 0;
+    flat_case = cPlayer->pitch == 0 && cPlayer->bank == 0;
     PickUp = 0;
     gr_fcall = gftab[tmapson];
     gr_ccall = gctab[tmapson];
@@ -261,7 +202,7 @@ void far process_grid(void)
 void far do_3d_pickup(void)
 {
     PickUp = 1;
-    flat_case = cPlayer->pitch == 0 && cPlayer->roll == 0;
+    flat_case = cPlayer->pitch == 0 && cPlayer->bank == 0;
     *dbptr++ = 0x38;
     Ref(0xA0, 1);
     *dbptr++ = 0;
@@ -573,7 +514,7 @@ void far grdb_elem(unsigned char *automap)
             *p++ = SetPnt(loopx + wm[3], loopy + wm[4], h2);
             *p++ = SetPnt(loopx + wm[3], loopy + wm[4], ht + hm[wm[5]]);
             *p++ = SetPnt(loopx + wm[0], loopy + wm[1], ht + hm[wm[2]]);
-            (*gr_wcall)(pts, sqmod, sh, tmptr->wall);
+            (*gr_wcall)(pts, sqmod, sh, tmptr->objects.f.low);
         }
     } while (++w < 3);
     if ((flags & 0x44) == 0x44) {
@@ -585,7 +526,7 @@ void far grdb_elem(unsigned char *automap)
             *p++ = SetPnt(loopx + dxp[2], loopy + dxp[3], 0x10);
             *p++ = SetPnt(loopx + dxp[2], loopy + dxp[3], ht);
             *p++ = SetPnt(loopx + dxp[0], loopy + dxp[1], ht);
-            (*gr_wcall)(pts, sqmod, 0x10 - ht, tmptr->wall);
+            (*gr_wcall)(pts, sqmod, 0x10 - ht, tmptr->objects.f.low);
         }
     }
     link = (char far *)tmptr + 2;

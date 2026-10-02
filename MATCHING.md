@@ -63,6 +63,19 @@ The assembly modules (seg003, seg004, seg020 to seg022, seg045, seg046, SetPnt i
 - **`db N dup (x)` is emitted as an LIDATA record, which `tools/omf.py` ignores**, so a nonzero `dup` compares as zeros and shows as a false mismatch. Write nonzero runs out in full; zero `dup`s are fine. `align 16` in a TASM 2.0 code segment fills with `87 DB`/`90`, so zero runs between seg004's routines were written as data, not `align`.
 - `xlat cs:label` and `xlat byte ptr cs:[bx]` both give `2E D7`; writing `cs:label[bx]` gives a disp16 and the wrong instruction.
 
+## Shared headers
+
+What the move to `src/include` showed about Turbo C (each was found by the gate):
+
+- **An unused declaration costs nothing:** an `extern` or prototype the file never uses leaves no EXTDEF, so a header may declare far more than a file needs. The object does gain comment records naming each included file and its time stamp, which no tool reads.
+- **`struct X;` works** as an incomplete declaration, and a later definition completes the same tag. A tag declared and never defined draws "Undefined structure" at the end of the compile, a warning only.
+- **A header is the first sight.** Publics and uninitialised globals with equal hash keys are ordered by first sight, so declaring one of a tie group in a header and not the others reorders them (`missile_trx`/`missile_try` in seg027, `PlayerPitch`/`playerMod` in seg035, `check_arc`/`close_arc` in ovr093, and more): such names stay together, in headers or out.
+- **Struct sizes are evidence.** A definition by value lays out `_BSS` with the struct's size: seg031's `Ppd` shows `struct MotionCalc` is 23 bytes, although six files declared a 24-byte version with a trailing pad. Pointer arithmetic and struct copies show sizes too: files whose `struct Object` was the 8-byte static record copy and step 8 bytes, which the shared header expresses as `struct StaticObj` (ovr103, ovr122 to ovr125).
+- **`unsigned` against `int` fields:** `curP->hits1 |= x` is `or [bx+0Eh],ax` on an `unsigned` field and load, `or`, store on an `int` one (seg028 needs `int`; the six other users of `struct MotionCalc` compile the same either way). A comparison or `>>` on the field shows the signedness too; elsewhere a cast at the one use keeps a shared type (`(int)ComObjData[id].value` in ovr110, `(unsigned)cPlayer->heading >> 13` in seg032).
+- **A byte view of a word field:** `(unsigned char)ComObjData[i].value` compiles to the same `mov al,[bx+4]` as reading a `unsigned char` field at that offset (ovr163).
+- **Fields at the same offset compile alike whatever the name:** a scalar field and the matching element of an array field (`player->fatigue` against `fatigue[0]`, `PN.pitch` against `PN.vel[2]`), a bitfield and the same bits in another partition of its word, and `(&player->fatigue)[i]` against an array indexed by `i`, all give the same bytes. Only the bits a field covers, its unit (a `char` or an `int` bitfield) and its type matter.
+- **Turbo C 1.01 has no anonymous unions in C,** so a word read both whole and as bitfields is a named union (`union Link`, `struct Object`'s `qn` and `ol`), and every access names the view.
+
 ## Data
 
 - A file's `_DATA` holds its initialised data in definition order, including the initialisers of local arrays (emitted where the function is), and then the string-literal pool in order of first use. `verify.py` compares it with the EXE, so data the code reads by a fixed DS address may belong to the file itself: look at the bytes around it.

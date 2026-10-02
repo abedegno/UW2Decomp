@@ -5,33 +5,15 @@
    order. Function and global names are the originals from the FM Towns symbol table. */
 
 #include <stdlib.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0xCE];
-    unsigned long flagsCE;              /* 0xCE */
-    char pad1[0x36E - 0xD2];
-    unsigned char xclock1;              /* 0x36E */
-    char pad2[0x370 - 0x36F];
-    unsigned char xclock3;              /* 0x370 */
-};
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* item:9, ..., is_quant:1 */
-    unsigned pos;
-    union {
-        unsigned word;                  /* the next object in this list */
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;                  /* the head of the contents list */
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-    unsigned char hp;                   /* 0x08 */
-    char pad09[0x16 - 0x09];
-    unsigned home;                      /* 0x16, x in bits 10-15, y in bits 4-9 */
-};
+#include "combat.h"
+#include "critter.h"
+#include "event.h"
+#include "gfx.h"
+#include "map.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
 
 #define OBJ_ITEM(o)     ((o)->id & 0x1FF)
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
@@ -44,63 +26,19 @@ struct Object {
 
 #define ITEM_CLASS(i)   (((i) & 0x1F0) >> 4)
 
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    char pad1;
-    unsigned objects;                   /* 0x02, head of the tile's object list */
-};
-
-/* Weapon data, 8 bytes per weapon. */
-struct Weapon {
-    char pad0[6];
-    unsigned char skill;                /* 0x06 */
-    char pad7;
-};
-
-/* Data common to every object type, 11 bytes per item. */
-struct ComObj {
-    char pad0[6];
-    unsigned b6_0:2;
-    unsigned scale:2;                   /* 0x06, bits 2-3: damage is shifted down by this */
-    unsigned b6_4:11;
-    unsigned trespass:1;                /* 0x07, bit 7 */
-    unsigned char resist;               /* 0x08 */
-    char pad9[2];
-};
-
-extern struct Player near *player;
-extern struct Object far *ThePlayer;
-extern int PlayerLevel;
-extern int MapObj_X, MapObj_Y;
 extern struct Object far *objdata;
 extern struct Weapon Weapons[];
-extern struct ComObj ComObjData[];
 
 /* Elsewhere in the game. */
 struct Object far * far Obj_InList(unsigned far **head, int a, int major, int minor, int idx);
 char far Obj_Rem(unsigned far *head, struct Object far *obj);
-void far Obj_Free(struct Object far *obj);
 struct Object far * far Obj_Punt(unsigned far *head, struct Object far *obj, int a);
 void far Obj_FreeChain(unsigned far *head);
 char far IsMobElem(struct Object far *obj);
-unsigned char far Obj_Elem_Fate(int how, struct Object far *obj);
-struct Tile far * far Map_GetAddr(int x, int y);
 struct Object far * far obj_deal(struct Object far *obj, int x, int y, int a);
-void far OpenDoor(struct Object far *who, struct Object far *door);
-void far UseCont(struct Object far *who, struct Object far *obj, int a);
-void far DumpTheBag(struct Object far *obj, int a);
-void far game_sprint(int id);
-void far fill_FB(int colour);
-int far rollem(int n, int sides);
 void far put_effect(struct Object far *obj, int type, int size, int a, int b, int x, int y);
-char far damage_critter(struct Object far *obj, unsigned char damage, struct Object far *who);
-void far player_did_bad(int owner);
-void far checkTrap(struct Object far *who, struct Object far *obj, int how, int x, int y);
-int far debris_type(int item, char type);
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
                      unsigned char damage, unsigned char type);
-char far damage_object(struct Object far *obj, struct Object far *who, int damage, int x, int y);
 
 char far remove_lock(struct Object far *obj, char all)
 {
@@ -179,7 +117,7 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
     }
     else if (item == 0x116)
     {
-        if (player->xclock3 < 5)
+        if (player->xclock[3] < 5)
         {
             game_sprint(0x171);
             damage_item(ThePlayer, 0L, (ThePlayer->home & 0xFC00) >> 10,
@@ -188,12 +126,12 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
         else if (PlayerLevel == 0x45 && x >= 0x15 && x <= 0x16 && y >= 0x34 && y <= 0x35)
         {
             fill_FB(2);
-            player->xclock3 = 6;
+            player->xclock[3] = 6;
             game_sprint(0x150);
-            if (player->xclock1 == 0xD)
-                player->xclock1 = 0xE;
-            player->flagsCE = (player->flagsCE & 0xFFFFFFFDL) + 2;
-            if (try_remove(&Map_GetAddr(x, y)->objects, obj))
+            if (player->xclock[1] == 0xD)
+                player->xclock[1] = 0xE;
+            player->quests[26] = (player->quests[26] & 0xFFFFFFFDL) + 2;
+            if (try_remove(&Map_GetAddr(x, y)->objects.word, obj))
                 return 1;
             debris = -1;
         }
@@ -206,7 +144,7 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
         {
             if (OBJ_ITEM(obj) == 0xD6)
             {
-                if (try_remove(&Map_GetAddr(x, y)->objects, obj))
+                if (try_remove(&Map_GetAddr(x, y)->objects.word, obj))
                     return 1;
                 debris = -1;
             }
@@ -293,7 +231,7 @@ char far damage_object(struct Object far *obj, struct Object far *who, int damag
     int scale;
     int hp;
 
-    if ((OBJ_FLAG13(obj) && OBJ_CLASS(obj) != 0x14) || (scale = co->scale) == 3)
+    if ((OBJ_FLAG13(obj) && OBJ_CLASS(obj) != 0x14) || (scale = co->qualclass) == 3)
         return 0;
     damage >>= scale;
     if (damage <= 0)
@@ -326,7 +264,7 @@ char far damage_object(struct Object far *obj, struct Object far *who, int damag
             hp = 0;
         }
         obj->qn.f.quality = hp;
-        if (ComObjData[OBJ_ITEM(obj)].trespass)
+        if (ComObjData[OBJ_ITEM(obj)].can_own)
             player_did_bad(OBJ_OWNER(obj));
     }
     if (destroyed && !mobile && x > -1)

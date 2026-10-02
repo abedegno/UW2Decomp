@@ -1,20 +1,18 @@
 /* target: seg039_3452 */
 /* opts: -mm -1 -G -O -Y -d */
 #include <ctype.h>
+#include "conv.h"
+#include "file.h"
+#include "object.h"
+#include "sys.h"
+#include "ui.h"
 
 struct StringBlock {
     int block;
     char far *strings[512];
     int count;
 };
-struct Object { unsigned id; char pad[0x18]; unsigned char whoami; };
 
-extern int CutsceneOrConversationStringBlock;
-struct StringNode { unsigned char value, pad, left, right; };
-extern struct StringNode far *StringsPak_Address_Indices;
-extern int StringsPak_NoOfNodes;
-extern int StringsPak_FileHandle;
-extern int string_bits;
 /* The string decoder's buffer and the two cached string blocks: far, so a segment each
    (617D:0000 and 627D:0000, segment table entries 72 and 73), defined in this order. Only
    this file uses them. FM Towns names the buffer str_buff (read_string_); its blocks
@@ -29,28 +27,11 @@ char SPACE[] = " ";
 char aStrings_pak[] = "strings.pak";
 char aRb_4[] = "rb";
 
-int far LoadFileStringsPak_seg039_547(void);
-void far seg039_3452_5E1(void);
-void far free_strings(void);
-char far * far get_string(int id);
-int far make_string(char far *s, int block);
 int far replace_string(char far *s, int id);
-void far clear_dynamics(int block);
-char far * far fix_name_string(char far *s, unsigned char a, char plural);
-char far * far str_cat(char far *dst, char far *src);
-char far * far read_string(int block, int string);
-int far seg039_3452_781(int file);
-int far seg039_3452_7B2(int file, int index);
 
-void far first_punt(int code);
 void far scroll_print(char far *s);
-char far * far str_copy(char far *dst, char far *src);
-char far * far FindStringDelimiter(char far *s, int c);
-int far str_len(char far *s);
-int far our_open(char *name, int folder, int mode);
 int far read(int file, void *p, int count);
 void far * far farmalloc(unsigned long size);
-int far intoFarBuffer_ovr167_5DA(int file, void far *p, int count);
 int far close(int file);
 int far fclose(int file);
 void far farfree(void far *p);

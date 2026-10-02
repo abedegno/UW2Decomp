@@ -6,100 +6,23 @@
    names are the originals from the FM Towns symbol table where it has them. */
 
 #include <dos.h>
-
-struct Object {
-    unsigned id;                        /* item 0-8, flags 9-15 */
-    unsigned pos;                       /* z 0-6, heading 7-9, y fine 10-12, x fine 13-15 */
-    unsigned qn;                        /* 0x04 */
-    unsigned owner:6;                   /* 0x06 */
-    unsigned link:10;
-    char pad08[0x0B - 0x08];
-    unsigned w0B;                       /* 0x0B, x in bits 0-7, frame in bits 12-15 */
-    unsigned w0D;                       /* 0x0D, y in bits 0-7 */
-    char pad0F[0x14 - 0x0F];
-    unsigned char b14;                  /* 0x14 */
-    unsigned char b15;                  /* 0x15, animation in bits 0-5 */
-    char pad16[0x18 - 0x16];
-    unsigned char b18;                  /* 0x18 */
-};
-
-struct Player {
-    char pad0[0xE8];
-    unsigned char gems;                 /* 0xE8 */
-    char padE9[0x105 - 0xE9];
-    unsigned w105;                      /* 0x105 */
-    char pad107[0x302 - 0x107];
-    unsigned b302:4;                    /* 0x302 */
-    unsigned detail:4;
-};
-
-/* The common object properties, one 11-byte record per item. */
-struct ComObj {
-    char pad0[9];
-    unsigned char b9_0:2;               /* 0x09, how the object is drawn */
-    unsigned char b9_2:6;
-    char padA[0x0B - 0x0A];
-};
-
-/* The camera, a copy of the player's position. */
-struct Eye {
-    char pad0[0x0A];
-    int x;                              /* 0x0A, in 1/256 tiles */
-    char pad1[0x12 - 0x0C];
-    int y;                              /* 0x12 */
-    char pad2[0x2C - 0x14];
-    unsigned heading;                   /* 0x2C */
-};
-
-struct Grs3d {
-    unsigned char page;
-    char b1;
-};
-
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    unsigned b1:2;
-    unsigned floor:4;                   /* bits 10..13 */
-    unsigned b1_6:2;
-    unsigned wall:6;                    /* 0x02, wall texture */
-    unsigned objects:10;                /* head of the tile's object list */
-};
+#include "conv.h"
+#include "gfx.h"
+#include "map.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "view3d.h"
 
 /* tmapson, lighton, curautocode and the other scalars at DS:534-53F, and the tables
    after them up to DS:5F9, belong to the file before this one in the data segment
    (FM Towns puts them with process_grid and txtwal), so they are extern here. */
-extern struct Object far *ThePlayer;
 extern unsigned char PickUp;
-extern struct Tile far *mlowptr;
-extern struct Tile far *tmptr;
-extern int mptrmod;
-extern int color_to_map[];
-extern int color_to_obj[];
-extern int far *dbptr;
 extern char quad;
-extern int objxloc, objyloc, objzloc;
-extern struct ComObj ComObjData[];
 extern char AnimObjInPipe;
-extern struct Eye far *cPlayer;
-extern unsigned headmod[4];
-extern struct Grs3d far grs_3dinf[];
-extern unsigned far EmsBuff;
-extern unsigned char locsqmod;
-extern int lighton;
-extern int tmapson;
-extern unsigned first_tmobj;
-extern char tCacheOK;
-extern unsigned char sqmod;
-extern int cTmBm;
-extern int cTmDm;
 extern unsigned TxmTerr[];
-extern unsigned char curautocode;
-extern unsigned char TxmCol[];
 extern unsigned long far *Time;
-extern struct Player near *player;
 extern struct Object far *objdata;
-extern unsigned far bmhgtoff;
 
 /* This file's _BSS, DS:2F96..2F9B, though nothing here uses it: the level's door textures,
    which ovr119 and ovr140 use. It lies between seg019's _BSS (keys rising to tCacheOK's 1004)
@@ -163,15 +86,7 @@ unsigned char dirtab[32] = {
    (as dirtab+0x20), so the name is ours. */
 static int rect_flagcol[2] = { 0x8C, 0xC8 };
 
-int far Obj_MemTPtr(struct Object far *obj);
 unsigned char far IsMobElem(struct Object far *obj);
-int far Clk(int n);
-void far txtwal(int a, unsigned char shade, unsigned char b, int tex);
-void far txtflr(int a, char shade, char tex);
-void far Ref(char n, int a);
-
-void far do_rect(unsigned char model, struct Object far *o, char heading, int tex);
-void far do_door(unsigned char item, struct Object far *o);
 
 void far do_obj(struct Object far *o)
 {
@@ -202,8 +117,8 @@ void far do_obj(struct Object far *o)
             PickUp = 1;
     }
     if (IsMobElem(o) && ((o->id & 0x1C0) >> 6) != 1) {
-        fx = o->w0B & 0xFF;
-        fy = o->w0D & 0xFF;
+        fx = o->goal_word & 0xFF;
+        fy = o->attitude_word & 0xFF;
         switch (quad) {
         case 0:
             y = fy;
@@ -225,10 +140,10 @@ void far do_obj(struct Object far *o)
         objxloc = (objxloc & 0xFF00) + x;
         objzloc = (objzloc & 0xFF00) + y;
     }
-    type = ComObjData[o->id & 0x1FF].b9_0;
+    type = ComObjData[o->id & 0x1FF].render;
     if (((o->id & 0x1C0) >> 6) == 7) {
         AnimObjInPipe = 1;
-        item = o->owner;
+        item = o->ol.f.owner;
         if (type == 0) {
             if (item > 0)
                 item += 0x1C0;
@@ -262,9 +177,9 @@ void far do_obj(struct Object far *o)
         dir = dirtab[((((o->pos & 0x380) >> 7) << 2) + 0x20
                       - ((cPlayer->heading + headmod[quad]) >> 11)) % 0x20];
         crit = grs_3dinf[item & 0x3F].page;
-        frame = ((((crit << 3) + (o->b15 & 0x3F) << 3) + dir) << 3) + ((o->w0B & 0xF000) >> 12);
+        frame = ((((crit << 3) + (o->b15 & 0x3F) << 3) + dir) << 3) + ((o->goal_word & 0xF000) >> 12);
         pix = *(unsigned char far *)MK_FP(EmsBuff + 0xC00, frame);
-        is15 = ((o->w0B & 0xF) >> 0) == 0xF;
+        is15 = ((o->goal_word & 0xF) >> 0) == 0xF;
         if (pix == 0xFF)
             return;
         if (frame == 0xFF)
@@ -305,10 +220,10 @@ void far do_obj(struct Object far *o)
         }
         else {
             tCacheOK = 0xE0;
-            txtwal(0, sqmod, 4, o->owner);
+            txtwal(0, sqmod, 4, o->ol.f.owner);
             *dbptr++ = 0xB2;
             *dbptr++ = cTmBm;
-            tm = TxmTerr[o->owner] & 7;
+            tm = TxmTerr[o->ol.f.owner] & 7;
             if (tm == 3 || tm == 4) {
                 curautocode = 3;
                 tm = 1;
@@ -321,7 +236,7 @@ void far do_obj(struct Object far *o)
                 *dbptr++ = Clk(8);
                 *dbptr++ = 0;
             }
-            do_rect(0x16, o, -1, o->owner);
+            do_rect(0x16, o, -1, o->ol.f.owner);
             if (tm) {
                 *dbptr++ = 2;
                 *dbptr++ = Clk(8);
@@ -365,7 +280,7 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
         for (i = 0; i < (flags & 7); i++) {
             *dbptr++ = 2;
             *dbptr++ = Clk(i);
-            *dbptr++ = (o->link & 0x1FF) + anim + rect_cols[model][i + 1];
+            *dbptr++ = (o->ol.f.link & 0x1FF) + anim + rect_cols[model][i + 1];
         }
     }
     else
@@ -377,10 +292,10 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
     if (model == 0x1D) {
         *dbptr++ = 2;
         *dbptr++ = Clk(2);
-        *dbptr++ = (o->owner << 2) + 5;
+        *dbptr++ = (o->ol.f.owner << 2) + 5;
         *dbptr++ = 2;
         *dbptr++ = Clk(3);
-        *dbptr++ = o->owner << 2;
+        *dbptr++ = o->ol.f.owner << 2;
     }
     if (flags & 0x10) {
         unsigned char ntex;
@@ -434,11 +349,11 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
 
         blink = (unsigned char)((*Time >> 7) & 1);
         for (j = 0, face = 0; j <= 0x10; j++, face++) {
-            if (player->gems != 0xFF) {
+            if (player->quest_bytes[2] != 0xFF) {
                 colour = 0x52;
-                if ((1 << face) & player->gems)
+                if ((1 << face) & player->quest_bytes[2])
                     colour = 0x4D;
-                else if ((player->w105 & 7) == face)
+                else if ((player->vars[6] & 7) == face)
                     colour = 0x4F;
             }
             else
@@ -449,7 +364,7 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
             *dbptr++ = Clk(j);
             *dbptr++ = colour;
         }
-        if (player->gems != 0xFF) {
+        if (player->quest_bytes[2] != 0xFF) {
             j = (*Time >> 6) & 7;
             if (j > 3)
                 j = 7 - j;
@@ -616,7 +531,7 @@ void far do_door(unsigned char item, struct Object far *o)
     for (pass = first; pass <= 1 && pass >= 0; pass += step) {
         if (pass == 0) {
             if (tCacheOK < 1)
-                txtwal(0, locsqmod, objyloc >> 6, tmptr->wall);
+                txtwal(0, locsqmod, objyloc >> 6, tmptr->objects.f.low);
             *dbptr++ = 2;
             *dbptr++ = bmhgtoff + (cTmBm << 3);
             *dbptr++ = (cTmDm * cTmDm >> 8) * h - 1;
@@ -628,11 +543,11 @@ void far do_door(unsigned char item, struct Object far *o)
             *dbptr++ = bmhgtoff + (cTmBm << 3);
             if (PickUp) {
                 *dbptr++ = 0xAE;
-                *dbptr++ = tmptr->wall + 0xAC;
+                *dbptr++ = tmptr->objects.f.low + 0xAC;
             }
             *dbptr++ = 0xB2;
             *dbptr++ = cTmBm;
-            do_rect(1, o, ((o->pos & 0x380) >> 7) << 1, tmptr->wall);
+            do_rect(1, o, ((o->pos & 0x380) >> 7) << 1, tmptr->objects.f.low);
         }
         else {
             if (PickUp) {
@@ -650,13 +565,13 @@ void far do_door(unsigned char item, struct Object far *o)
                 k = item & 7;
                 if (k == 7) {
                     if (tCacheOK < 1)
-                        txtwal(0, locsqmod, objyloc >> 6, tmptr->wall);
+                        txtwal(0, locsqmod, objyloc >> 6, tmptr->objects.f.low);
                     *dbptr++ = 0xB2;
                     *dbptr++ = cTmBm;
                     *dbptr++ = 2;
                     *dbptr++ = bmhgtoff + (cTmBm << 3);
                     *dbptr++ = cTmDm * cTmDm - 1;
-                    do_rect(0xF, o, ((o->pos & 0x380) >> 7) << 1, tmptr->wall);
+                    do_rect(0xF, o, ((o->pos & 0x380) >> 7) << 1, tmptr->objects.f.low);
                 }
                 else
                     do_rect(0xE, o, ((o->pos & 0x380) >> 7) << 1, first_tmobj + k + 0x40);

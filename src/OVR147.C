@@ -15,82 +15,38 @@
 #include <dos.h>
 #include <stdlib.h>
 #include <string.h>
-
-/* One menu button, 16 bytes: the picture when not selected and when selected, and the
-   button's bottom left corner and size. */
-struct Button {
-    unsigned char far *img[2];          /* 0x00 */
-    int x;                              /* 0x08 */
-    int y;                              /* 0x0A, the bottom row */
-    int w;                              /* 0x0C */
-    int h;                              /* 0x0E */
-};
-
-struct FontInfo {
-    char pad0[6];
-    int height;                         /* 0x06 */
-};
+#include "conv.h"
+#include "critter.h"
+#include "file.h"
+#include "gfx.h"
+#include "player.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
 
 extern unsigned char far *foreground_color;
-extern unsigned char far *background_color;
 extern struct FontInfo far *cur_font;
-extern char HomeDir[];
-extern int LeftPanel;
 
 /* FM Towns keeps these as statics, so their names are not known. */
 static unsigned char far *opbuf = 0;    /* where gronk_gr puts the next button picture */
 static struct Button *buttons;          /* the menu's buttons, on real_start's stack */
 
-void far get_save_descs(char descs[][40], int *found);
 void far show_cutscene(int n);
-void far mouse_hide(void);
-void far mouse_show(void);
 void far show(int x, int y, unsigned char far *buf, int h, int w, int a, int b);
-int far string_width(char far *s);
-void far string_to_screen(char far *s, int x, int y);
-void far force_mouse_cursor(int id);
-void far unforce_mouse_cursor(int n);
 void far set_new_music(int n);
-void far change_music_maybe(void);
-void far loop_music_maybe(void);
-void far set_random_walking_music(int which);
 unsigned far get_workspace(void);
-int far set_workspace(void);
-void far release_workspace(void);
 char far disk_to_vid(int blk, unsigned char far *buf);
 char far display_screen(int pal, int blk);
 unsigned char far gronk_gr(char *name, int a, int b, unsigned char far *(far *adr)(int),
                            int (far *move)(unsigned char far *, int, int));
-void far pfatal_code(int code);
 unsigned char far read_quikpal(int which, unsigned char far *pal);
-void far fadein(unsigned char far *pal, int steps, int x);
 void far fadeout(unsigned char far *pal, int steps, int x);
-void far show_credits(void);
-char far * far get_string(int id);
-void far grfx_quikfont(int which);
-int far mouse_get_input(void);
-void far mouse_getxy(int *x, int *y);
 void far punt_fightmode(void);
-char far create_player(void);
-unsigned char far clear_dir(char *dir);
-void far move_initial_files(void);
-int far init_babl(void);
-int far GetLevel(int level);
-void far load_dl(void);
-void far player_setup(int x, int y, int how);
-void far do_level_hacks(int level, int mode);
 void far preload_cr(int n);
-void far PreLoadCritPages(void);
-void far change_screen(int n);
-void far editchng(int bits);
 void far free_world(int n);
 char far RestoreGame();                 /* no prototype: the slot is pushed as an int */
 void far load_weapcm(void);
 void far automap_area(int x0, int y0, int x1, int y1, int *arg, char (far *fn)());
-
-int far parse_start_input(int n, struct Button far *b, int text, int sel);
-int far do_journey(void);
-char far Region_ovr147_A73(int x, int y);
 
 /* gronk_gr's callbacks while loading the menu buttons: where to put the next picture, and
    recording it. Pictures alternate: a button's normal picture, then its selected one. */

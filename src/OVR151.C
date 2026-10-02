@@ -2,13 +2,16 @@
 /* opts: -mm -1 -G -O -Y -d */
 #include <dos.h>
 #include <string.h>
+#include "event.h"
+#include "file.h"
+#include "player.h"
+#include "sys.h"
 
 /* FM Towns names of the six IDA-labelled entry points. Keep the DOS public
    spellings through aliases until targets/ovr151.tsv is updated. The routines
    occur between the same neighbours and have the same behaviour in both builds. */
 
 struct SCDClock { unsigned time, next; };
-struct SCDRow { unsigned time; char data[14]; };
 struct SCDWork {
     int migrations;
     struct SCDRow migrationRecord[16];
@@ -21,23 +24,15 @@ struct SCDWork {
 /* This file's _BSS, DS:8634..8637 (ovr147's ends at 8634): the schedule work area, which
    Sched_SetBuf sets; ovr113 reads it too. inanmMapX (key 41) after it starts another run. */
 struct SCDWork far *SCD_dseg_67d6_8634;
-extern int PlayerLevel;
 /* This file's _DATA, DS:1A7E..1AAA: scdBlockHasBeenModified, then the string pool, which
    holds only two debugging formats that no code reads. ovr150's DataDirectory ends at 1A7D,
    so this file starts at 1A7E; ovr152's data starts at 1AAC. */
 unsigned char scdBlockHasBeenModified_dseg_67d6_1A7E = 0;
 int far printf(const char *format, ...);
-extern char HomeDir[];
-struct PlayerClock { char pad[0x36d]; unsigned char clock[16]; };
-extern struct PlayerClock *player;
-unsigned char far Sched_DoEvent(unsigned char far *row);
-unsigned char far open_arc(int, char *);
 unsigned far get_arc(int, unsigned, char far *);
 unsigned char far put_arc(int, unsigned, char far *, unsigned);
 void far close_arc(int);
-int far set_workspace(void);
 unsigned far get_workspace(void);
-void far release_workspace(void);
 void far movedata(unsigned, unsigned, unsigned, unsigned, unsigned);
 
 static unsigned char far FindSCDRowsToExecute_ovr151_0(unsigned char mode)
@@ -77,10 +72,6 @@ static unsigned char far SetSomeValuesInSCDRows_ovr151_D3(unsigned char mode)
     SCD_dseg_67d6_8634->clocks[PlayerLevel].next = i;
     return 0;
 }
-
-unsigned char far Sched_Insert(struct SCDRow far *, unsigned char);
-unsigned char far Sched_Load(unsigned char);
-unsigned char far Sched_Save(unsigned char);
 
 unsigned char far do_migrations(void)
 {
@@ -163,11 +154,6 @@ done:
     return result;
 }
 
-/* Declared here because TLINK numbers the overlay's stub entries in the order Turbo C lists
-   the publics, which for names with the same hash key is the order they were first seen:
-   the EXE's stub has Sched_IncrTime before Sched_WrapTime. */
-unsigned char far Sched_IncrTime(unsigned n, unsigned char mode);
-
 unsigned char far Sched_WrapTime(register unsigned time, unsigned span, unsigned char mode)
 {
     unsigned char result;
@@ -190,9 +176,9 @@ unsigned char far Sched_SetAllClocks(unsigned char mode)
     if (!get_workspace()) return 3;
     Sched_SetBuf(0, set_workspace());
     for (block = 0; block < 16 && error == 0; block++) {
-        clock = player->clock[block];
+        clock = player->xclock[block];
         if ((error = Sched_Load(block)) != 0) break;
-        if (block == 0) error = Sched_WrapTime(player->clock[0], 72, mode);
+        if (block == 0) error = Sched_WrapTime(player->xclock[0], 72, mode);
         else error = Sched_SetTime(clock, mode);
         if (error) break;
         error = Sched_Save(block);

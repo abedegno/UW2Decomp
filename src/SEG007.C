@@ -10,38 +10,17 @@
 
 #include <dos.h>
 #include <stdlib.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x60];
-    unsigned b60_0:1;                   /* 0x60 */
-    unsigned b60_1:15;
-    char pad62[0x369 - 0x62];
-    unsigned long hittime;              /* 0x369 */
-};
-
-/* A mobile object, 27 bytes. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* item 0-8 (major class 6-8) */
-    unsigned pos;                       /* z 0-6, heading 7-9, y fine 10-12, x fine 13-15 */
-    struct { unsigned quality:6, next:10; } qn;     /* 0x04: a critter's home x */
-    struct { unsigned owner:6, link:10; } ol;       /* 0x06: a critter's home y */
-    unsigned char hp;                   /* 0x08 */
-    unsigned char heading;              /* 0x09, 0..255 */
-    unsigned char b0A;                  /* 0x0A, time bin in bits 0-3 */
-    unsigned goal_word;                 /* 0x0B: goal 0-3, target 4-11, frame 12-15 */
-    unsigned b0D;                       /* 0x0D: old goal 0-3, attitude 14-15 */
-    unsigned b0F;                       /* 0x0F, attack frame in bits 12-15 */
-    unsigned char b11;                  /* 0x11, damage taken */
-    unsigned char last_hit;             /* 0x12 */
-    unsigned char b13;                  /* 0x13, speed in bits 0-6 */
-    unsigned char b14;                  /* 0x14: time rate 0-2, pitch 3-7 */
-    unsigned char b15;                  /* 0x15: sequence 0-5, bits 6 and 7 */
-    unsigned home;                      /* 0x16: path 0-3, y 4-9, x 10-15 */
-    unsigned char b18;                  /* 0x18, fine heading in bits 0-4 */
-    unsigned char b19;                  /* 0x19 */
-    unsigned char whoami;               /* 0x1A */
-};
+#include "combat.h"
+#include "conv.h"
+#include "critter.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
+#include "view3d.h"
 
 #define OBJ_ITEM(o)      ((o)->id & 0x1FF)
 #define OBJ_MAJOR(o)     (((o)->id & 0x1C0) >> 6)
@@ -69,8 +48,8 @@ struct Object {
 #define GOAL(o)          (((o)->goal_word & 0xF) >> 0)
 #define GTARG(o)         (((o)->goal_word & 0xFF0) >> 4)
 #define FRAME(o)         (((o)->goal_word & 0xF000) >> 12)
-#define OLDGOAL(o)       (((o)->b0D & 0xF) >> 0)
-#define ATTITUDE(o)      (((o)->b0D & 0xC000) >> 14)
+#define OLDGOAL(o)       (((o)->attitude_word & 0xF) >> 0)
+#define ATTITUDE(o)      (((o)->attitude_word & 0xC000) >> 14)
 #define ATKFRAME(o)      (((o)->b0F & 0xF000) >> 12)
 #define SEQ(o)           ((o)->b15 & 0x3F)
 #define B15_6(o)         (((o)->b15 & 0x40) >> 6)
@@ -88,8 +67,8 @@ struct Object {
 #define SET_GOAL(o, v)     ((o)->goal_word = (o)->goal_word & 0xFFF0 | ((v) & 0xF) << 0)
 #define SET_GTARG(o, v)    ((o)->goal_word = (o)->goal_word & 0xF00F | ((v) & 0xFF) << 4)
 #define SET_FRAME(o, v)    ((o)->goal_word = (o)->goal_word & 0xFFF | ((v) & 0xF) << 12)
-#define SET_OLDGOAL(o, v)  ((o)->b0D = (o)->b0D & 0xFFF0 | ((v) & 0xF) << 0)
-#define SET_ATTITUDE(o, v) ((o)->b0D = (o)->b0D & 0x3FFF | ((v) & 3) << 14)
+#define SET_OLDGOAL(o, v)  ((o)->attitude_word = (o)->attitude_word & 0xFFF0 | ((v) & 0xF) << 0)
+#define SET_ATTITUDE(o, v) ((o)->attitude_word = (o)->attitude_word & 0x3FFF | ((v) & 3) << 14)
 #define SET_ATKFRAME(o, v) ((o)->b0F = (o)->b0F & 0xFFF | ((v) & 0xF) << 12)
 #define SET_SPEED(o, v)    ((o)->b13 = (o)->b13 & 0x80 | ((v) & 0x7F) << 0)
 #define SET_RATE(o, v)     ((o)->b14 = (o)->b14 & 0xF8 | (v))
@@ -105,81 +84,15 @@ struct Object {
 #define SET_B18_5(o, v)    ((o)->b18 = (o)->b18 & 0xDF | (v) << 5)
 #define SET_CAST(o, v)     ((o)->b19 = (o)->b19 & 0xF3 | ((v) & 3) << 2)
 
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    char pad1;
-    unsigned objects;                   /* 0x02, head of the tile's object list */
-};
-
-/* A critter type, 48 bytes. */
-struct Creature {
-    char pad0[4];
-    unsigned char maxhp;                /* 0x04 */
-    char pad5;
-    unsigned char b06;                  /* 0x06 */
-    char pad7;
-    unsigned char death:3;              /* 0x08 */
-    unsigned char blood:2;
-    unsigned char corpse:3;
-    unsigned char type;                 /* 0x09 */
-    unsigned char bA_0:1;               /* 0x0A */
-    unsigned char bA_1:1;
-    unsigned char remains:3;
-    unsigned char bA_5:1;
-    unsigned char swims:1;
-    unsigned char flies:1;
-    unsigned char speed;                /* 0x0B */
-    unsigned char run;                  /* 0x0C */
-    char padD[0x0F - 0x0D];
-    unsigned char b0F;                  /* 0x0F */
-    unsigned char sound:4;              /* 0x10 */
-    unsigned char b10_4:4;
-    char pad11[0x13 - 0x11];
-    struct {
-        signed char chance;
-        unsigned char damage;
-        unsigned char prob;
-    } attacks[3];                       /* 0x13 */
-    unsigned char b1C_0:4;              /* 0x1C */
-    unsigned char range:4;
-    unsigned char noise:4;              /* 0x1D */
-    unsigned char visibility:4;
-    unsigned char hearing:4;            /* 0x1E */
-    unsigned char sight:4;
-    unsigned char lazy:4;               /* 0x1F */
-    unsigned char alert:4;
-    unsigned char b20_0:1;              /* 0x20 */
-    unsigned char missile:7;
-    char pad21[0x28 - 0x21];
-    int exp;                            /* 0x28 */
-    unsigned char spells[3];            /* 0x2A */
-    unsigned char b2D_0:1;              /* 0x2D */
-    unsigned char caster:7;
-    char pad2E[0x30 - 0x2E];
-};
-
-extern struct Player near *player;
-extern struct Creature near *playerdat;
 extern struct Object far *objdata;
-extern struct Object far *ThePlayer;
-extern struct Object far *critdata;
-extern struct Creature Creature[];
 extern unsigned char far *ActiveMob;
 extern unsigned char far *LastActiveMob;
 extern unsigned long far *Time;
 extern int freepaths;
 int lastXeye, lastYeye;                 /* DS:2294, this file's _BSS (see below) */
-extern int XP, YP;
 extern int missile_try;
 long lastcombattime;                    /* DS:2280, this file's _BSS (see below) */
 
-/* A missile weapon: the ammunition it fires and the missile type. */
-struct MissileInfo {
-    char a;
-    unsigned char type;
-    signed char ammo;
-};
 extern struct MissileInfo Missile[];
 /* The charge of a critter's blow, by attack frame. Static in FM Towns: provisional name.
    A far variable, so its own segment (SEG0075_FAR, 609E:0000, segment table entry 69,
@@ -199,18 +112,7 @@ static struct AtkCharge far atk_charge[16] = {
    names are the FM Towns ones. */
 
 /* The current critter, set up by set_critter_vars and critter_ai. */
-extern struct Object far *meptr;
-extern struct Creature near *mycst;
-extern unsigned char myid;
-extern unsigned char myxpos, myypos, myzpos;
 extern unsigned myxpost, myypost;
-extern unsigned char myxhome, myyhome;
-extern unsigned char myoldheading, myoldfacing, myoldspeed, myheight;
-extern unsigned char control;
-extern int crit_terr;
-extern unsigned char failed, aligned;
-extern unsigned char hitwall, didhitobj, hitadoor, dontchangedz;
-extern unsigned char didmove;
 /* This file's _BSS, DS:2280..2299, laid out by name (tools/bssorder.py): lastcombattime 84,
    crithittime 139, hitx and hity 520, hitpz 552, curBin 555, victim 574, seq_len 603,
    seqptr 659, lastXeye and lastYeye 820, seq_lframe 859 (Turbo C puts anything wider than
@@ -224,14 +126,6 @@ unsigned char hitx, hity;
 static unsigned char hitpz;
 signed char curBin;
 struct Creature near *victim;
-/* Its target, set up by set_up_target. */
-extern struct Object far *mytarget;
-extern unsigned char txpos, typos;
-extern signed char tzpos;
-extern unsigned txpost, typost;
-extern int tdx, tdy;
-extern unsigned tdistsqr;
-extern unsigned long tdisttsqr;
 unsigned char seq_len;
 unsigned char seq_lframe;
 
@@ -242,105 +136,19 @@ struct Seq {
     char pad8[0x40 - 8];
 };
 struct Seq far *seqptr;
-/* The segment of the EMS page frame, provisional name. */
-extern unsigned far EmsBuff;
-extern unsigned char pmouseHandled;
-/* Per critter type: the page of its animations. */
-struct Grs3d {
-    unsigned char page;
-    char b1;
-};
-extern struct Grs3d far grs_3dinf[];
 
-/* The motion records for walkers, fliers and swimmers. */
-struct PhysNode {
-    int w[0x14];
-};
-struct PhysTp {
-    unsigned flags;
-    unsigned w2;
-    int w4;
-    unsigned w6;
-    char pad8[0x0C - 8];
-};
-extern struct PhysNode near *pn_act;
-extern struct PhysTp near *tp_act;
-extern struct PhysNode CN1, CN2, CN4;
-extern struct PhysTp CT1, CT2, CT4;
-
-/* The common object properties, one 11-byte record per item. */
-struct ComObj {
-    unsigned height:8;                  /* 0x00 */
-    unsigned radius:3;
-    unsigned c0_11:5;
-    char pad2[8 - 2];
-    unsigned char b8;                   /* 0x08 */
-    char pad9[11 - 9];
-};
-extern struct ComObj ComObjData[];
-
-struct Tile far * far Map_GetAddr(int x, int y);
 struct Object far * far Obj_IntTMem(int index);
-int far Obj_MemTPtr(struct Object far *obj);
-void far crit_head_for_loc(unsigned char x, unsigned char y, char z);
 void far set_loc(unsigned char x, unsigned char y, char z);
-unsigned char far deltatotheta(char dx, char dy);
 unsigned char far anti_magic_p(int x, int y);
-void far mouse_freereign(void);
-void far TalkTo(struct Object far *who);
-/* DOS only: maps the critter animation pages into the EMS frame. Provisional name. */
-void far map_crit_pages(void);
-int far cSqRt(long v);
-void far get_phys_data(struct Object far *obj, struct PhysNode *pn);
-int far get_terrain(struct Object far *obj);
-void far do_crit_phys(struct PhysNode *pn, struct PhysTp *tp);
-unsigned char far set_phys_data(struct Object far *obj, struct PhysNode *pn);
+void far do_crit_phys(struct Phys *pn, struct Handler *tp);
 char far death_check(struct Object far *obj, char how);
 unsigned char far Obj_Rem(unsigned far *head, struct Object far *obj);
-void far generate_inventory(struct Object far *obj);
-void far build_corpse(struct Object far *obj, char corpse, char remains);
-void far drop_some_objects(struct Object far *obj);
-void far Obj_Free(struct Object far *obj);
-unsigned char far get_current_music(void);
 void far player_killed_a(struct Object far *npc);
-void far panel_check_hpmp(void);
-unsigned char far move_me_joe(void);
-void far editchng(int bits);
 void far play_effect(char type, int x, int y, char vol);
 void far set_new_music(int n);
-char far critter_attack(struct Object far *npc, int swing, unsigned char charge, int type,
-                        int poison);
-void far cast(unsigned char spell, struct Object far *who, struct Object far *target);
-void far critter_fire(struct Object far *who, int item, int type);
-int far cAtan2(int x, int y);
 unsigned char far line_of_sight(int x1, int y1, int z1, int x2, int y2, int z2);
 
-void far change_or_inc_seq(int seq, char force);
-void far set_htx(int heading);
-void far crit_drunkwalk(void);
-void far crit_mill(void);
-void far crit_guard(void);
-unsigned char far crit_attack(unsigned dist);
-void far crit_offense_find_target(unsigned char x, unsigned char y, unsigned char how);
-unsigned char far maybe_cast_defensive_spell(void);
-unsigned char far crit_magik_attack(void);
-unsigned char far crit_missile_attack(void);
-void far crit_flee(void);
-unsigned char far crit_avoid_player(unsigned char heading, int how);
-void far check_out_player(void);
-unsigned char far target_found(unsigned char *x, unsigned char *y);
-unsigned char far look_for_target(char how);
-unsigned char far turn_real_fine(signed char dx, signed char dy);
-void far set_cur_seq_len(void);
-void far critter_mv(void);
-unsigned char far go_into_dying_sequence(struct Object far *obj);
-unsigned char far crit_die(struct Object far *obj);
-unsigned char far timetodo(int bin, int rate);
-unsigned char far should_i_flee(unsigned char maxhp, unsigned char hp, unsigned char nerve,
-                                unsigned char damage);
-unsigned char far set_up_target(void);
 void far critter_set_goal(unsigned char goal, int target);
-void far critter_discard_goal(void);
 
 /* Initialised data, DS:C4: the time bin of the last pass over the mobile objects, and the
    critter the player last hit and its type. */
@@ -387,7 +195,7 @@ void far crit_drunkwalk(void)
         crit_guard();
         return;
     }
-    if (mycst->flies) {
+    if (mycst->flier) {
         pitch = 0xE;
         range = 3;
         if (myzpos <= 0xE) {
@@ -544,14 +352,14 @@ void far crit_offense(void)
     if (GTARG(meptr) == 1)
         SET_ATTITUDE(meptr, 0);
     if ((dist < 0x64 || myxpos == txpos && myypos == typos)
-        && (abs((signed char)myzpos - tzpos) < 4 || mycst->flies)) {
+        && (abs((signed char)myzpos - tzpos) < 4 || mycst->flier)) {
         crit_attack(dist);
         return;
     }
     if (mycst->caster > 0) {
         if (!maybe_cast_defensive_spell() && mycst->b2D_0)
             attacked = crit_magik_attack();
-    } else if (mycst->missile >> 4 == 1)
+    } else if (mycst->arms[0].item >> 4 == 1)
         attacked = crit_missile_attack();
     if (attacked) {
         if (SEQ(meptr) == 6 || SEQ(meptr) == 6 || SEQ(meptr) == 3)
@@ -597,7 +405,7 @@ unsigned char far crit_attack(unsigned dist)
     } else if (dist > 0x51) {
         seq = 1;
         speed = 2;
-    } else if (rand() % 0x40 < mycst->b06) {
+    } else if (rand() % 0x40 < mycst->attr[1]) {
         head = rand() % 8;
         seq = 2;
         speed = 1;
@@ -612,7 +420,7 @@ unsigned char far crit_attack(unsigned dist)
         SET_FRAME(meptr, 0);
     } else
         SET_FRAME(meptr, (FRAME(meptr) + 1) % seq_len);
-    if (mycst->flies) {
+    if (mycst->flier) {
         dz = OBJ_Z(mytarget) + 0xE - OBJ_Z(meptr);
         if (dz > 1)
             SET_PITCH(meptr, 0x12);
@@ -700,7 +508,7 @@ unsigned char far crit_missile_attack(void)
         && line_of_sight(myxpost, myypost, OBJ_Z(meptr) + ComObjData[OBJ_ITEM(meptr)].height,
                          txpost, typost, OBJ_Z(mytarget) + ComObjData[OBJ_ITEM(mytarget)].height)
         && look_for_target(1)) {
-        if (rand() % 0xC0 <= mycst->b06) {
+        if (rand() % 0xC0 <= mycst->attr[1]) {
             SET_SPEED(meptr, 0);
             SET_SEQ(meptr, 6);
             SET_FRAME(meptr, 0);
@@ -727,7 +535,7 @@ void far crit_defense(void)
             return;
         if (mycst->caster > 0)
             crit_magik_attack();
-        else if (mycst->missile >> 4 == 1)
+        else if (mycst->arms[0].item >> 4 == 1)
             crit_missile_attack();
         else
             crit_flee();
@@ -752,7 +560,7 @@ void far crit_flee(void)
         return;
     head = deltatotheta(tdx, tdy);
     dz = OBJ_Z(mytarget) - OBJ_Z(meptr);
-    if (mycst->flies) {
+    if (mycst->flier) {
         pitch = 0;
         if (OBJ_Z(meptr) <= 0x6E)
             pitch = 2;
@@ -891,7 +699,7 @@ void far check_out_player(void)
     unsigned char head;
     unsigned dist;
 
-    if ((meptr->b13 & 0x7F) <= 0 || player->b60_0) {
+    if ((meptr->b13 & 0x7F) <= 0 || player->drawn) {
         SET_GTARG(meptr, 1);
         set_up_target();
         dist = tdx * tdx + tdy * tdy;
@@ -1110,13 +918,13 @@ void far set_critter_vars(struct Object far *obj)
     myzpos = OBJ_Z(meptr) >> 3;
     myxpost = (myxpos << 3) + OBJ_FINEX(meptr);
     myypost = (myypos << 3) + OBJ_FINEY(meptr);
-    myxhome = meptr->qn.quality;
-    myyhome = meptr->ol.owner;
+    myxhome = meptr->qn.f.quality;
+    myyhome = meptr->ol.f.owner;
     myoldheading = meptr->heading;
     myoldfacing = (OBJ_HEADING(meptr) << 5) + FINEHEAD(meptr);
     myoldspeed = meptr->b13 & 0x7F;
     myheight = ComObjData[OBJ_ITEM(meptr)].height;
-    if (mycst->flies) {
+    if (mycst->flier) {
         pn_act = &CN2;
         tp_act = &CT2;
     } else if (mycst->swims) {
@@ -1162,7 +970,7 @@ unsigned char far critter_ai(void)
         SET_BIN(meptr, (BIN(meptr) + 8) % 16);
         return 1;
     }
-    if (mycst->flies) {
+    if (mycst->flier) {
         pn_act = &CN2;
         tp_act = &CT2;
     } else if (mycst->swims) {
@@ -1172,10 +980,10 @@ unsigned char far critter_ai(void)
         pn_act = &CN1;
         tp_act = &CT1;
     }
-    if (ComObjData[OBJ_ITEM(meptr)].b8 & 8) {
-        tp_act->w2 &= ~0x20;
+    if (ComObjData[OBJ_ITEM(meptr)].resist & 8) {
+        tp_act->mask &= ~0x20;
         tp_act->w6 &= ~0x20;
-        tp_act->flags |= 0x20;
+        tp_act->ignore |= 0x20;
     }
     failed = 0;
     control = 1;
@@ -1199,18 +1007,18 @@ unsigned char far critter_ai(void)
         if (meptr->heading != oldh)
             aligned = 1;
     }
-    if (ComObjData[OBJ_ITEM(meptr)].b8 & 8) {
-        tp_act->w2 |= 0x20;
+    if (ComObjData[OBJ_ITEM(meptr)].resist & 8) {
+        tp_act->mask |= 0x20;
         tp_act->w6 |= 0x20;
-        tp_act->flags &= ~0x20;
+        tp_act->ignore &= ~0x20;
     }
     myxpos = OBJ_HOMEX(meptr);
     myypos = OBJ_HOMEY(meptr);
     myzpos = OBJ_Z(meptr) >> 3;
     myxpost = (myxpos << 3) + OBJ_FINEX(meptr);
     myypost = (myypos << 3) + OBJ_FINEY(meptr);
-    myxhome = meptr->qn.quality;
-    myyhome = meptr->ol.owner;
+    myxhome = meptr->qn.f.quality;
+    myyhome = meptr->ol.f.owner;
     myoldheading = meptr->heading;
     myoldfacing = (OBJ_HEADING(meptr) << 5) + FINEHEAD(meptr);
     myoldspeed = meptr->b13 & 0x7F;
@@ -1223,7 +1031,7 @@ unsigned char far critter_ai(void)
             death_check(meptr, 1);
             XP = OBJ_HOMEX(meptr);
             YP = OBJ_HOMEY(meptr);
-            if (Obj_Rem(&Map_GetAddr(XP, YP)->objects, meptr)) {
+            if (Obj_Rem(&Map_GetAddr(XP, YP)->objects.word, meptr)) {
                 generate_inventory(meptr);
                 build_corpse(meptr, mycst->corpse, mycst->remains);
                 drop_some_objects(meptr);
@@ -1253,7 +1061,7 @@ unsigned char far critter_ai(void)
                 missile_try = compute_trz_or_try_rather(0x1E, 0);
                 cast(mycst->spells[CAST(meptr) - 1], meptr, 0L);
             } else {
-                type = mycst->missile & 0xF;
+                type = mycst->arms[0].item & 0xF;
                 missile_try = compute_trz_or_try_rather(Missile[type].type, 1);
                 critter_fire(meptr, type, Missile[type].type);
             }
@@ -1322,8 +1130,8 @@ void far critter_mv(void)
         }
     if (mycst->bA_1)
         goto do_goal;
-    if ((!B19_6(meptr) && crithit != myid && mycst->type == typehit && !B0A_7(meptr) || B19_6(meptr))
-        && crithittime + 0x200 > player->hittime
+    if ((!B19_6(meptr) && crithit != myid && mycst->race == typehit && !B0A_7(meptr) || B19_6(meptr))
+        && crithittime + 0x200 > player->game_clock
         && abs(myxpos - hitx) + abs(myypos - hity) < mycst->hearing) {
         SET_ATTITUDE(meptr, 0);
         SET_B19_0(meptr, 1);
@@ -1350,7 +1158,7 @@ void far critter_mv(void)
             critter_set_goal(5, meptr->last_hit);
         } else if (B19_5(meptr))
             critter_set_goal(5, meptr->last_hit);
-        else if (!B19_4(meptr) && should_i_flee(mycst->maxhp, meptr->hp, mycst->b1C_0, DAMAGE(meptr)))
+        else if (!B19_4(meptr) && should_i_flee(mycst->avghit, meptr->hp, mycst->b1C_0, DAMAGE(meptr)))
             critter_set_goal(6, meptr->last_hit);
         else if (B19_4(meptr)) {
             SET_B19_4(meptr, 1);
@@ -1476,9 +1284,9 @@ unsigned char far acceptable_danger(void)
 {
     register unsigned char d;
 
-    if (ATTITUDE(meptr) != 0 || mycst->maxhp == 0 || ID_B13(meptr))
+    if (ATTITUDE(meptr) != 0 || mycst->avghit == 0 || ID_B13(meptr))
         return 0;
-    d = (meptr->hp << 2) / mycst->maxhp + mycst->b1C_0 / 4;
+    d = (meptr->hp << 2) / mycst->avghit + mycst->b1C_0 / 4;
     return d;
 }
 
@@ -1570,12 +1378,12 @@ unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
     if (who)
         obj->last_hit = who;
     if (who == 1 && !B0A_7(obj)) {
-        typehit = cr->type;
+        typehit = cr->race;
         crithit = Obj_MemTPtr(obj);
         hitx = OBJ_HOMEX(obj);
         hity = OBJ_HOMEY(obj);
         hitpz = OBJ_Z(obj) >> 3;
-        crithittime = player->hittime;
+        crithittime = player->game_clock;
     }
     if (obj->hp <= damage) {
         obj->hp = 0;
@@ -1590,14 +1398,14 @@ unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
             panel_check_hpmp();
     }
     if (who == 1 && obj != ThePlayer) {
-        ratio = (obj->hp << 6) / (cr->maxhp + 1);
+        ratio = (obj->hp << 6) / (cr->avghit + 1);
         if (ratio < 0x10)
             set_new_music(2);
         else
             set_new_music(3);
         lastcombattime = *Time;
     } else if (obj == ThePlayer && who) {
-        ratio = (ThePlayer->hp << 6) / (playerdat->maxhp + 1);
+        ratio = (ThePlayer->hp << 6) / (playerdat->avghit + 1);
         if (ratio < 0x10)
             set_new_music(4);
         else

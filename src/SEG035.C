@@ -8,36 +8,14 @@
    name is ours; the source file's own name is not known. */
 
 #include <stdlib.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x60];
-    unsigned b60:1;                     /* 0x60 */
-    char pad1[0x306 - 0x61];
-    unsigned char motion_state;         /* 0x306: water, lava, ice, bridge, shakes */
-    unsigned char depth;                /* 0x307 */
-    char pad2[0x369 - 0x308];
-    unsigned long game_clock;           /* 0x369 */
-    char pad3[0x370 - 0x36D];
-    unsigned char xclock3;              /* 0x370 */
-};
-
-/* The player's critter data, reached through the near pointer `playerdat`. */
-struct Critter {
-    char pad0[0x1D];
-    unsigned char noise:4;              /* 0x1D */
-    unsigned char visibility:4;
-};
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;
-    unsigned pos;                       /* z 0-6, heading 7-9, y fine 10-12, x fine 13-15 */
-    char pad04[0x16 - 0x04];
-    unsigned home;                      /* 0x16, x in bits 10-15, y in bits 4-9 */
-    unsigned char b18;                  /* 0x18, fine heading in bits 0-4 */
-    char pad19[0x1B - 0x19];
-};
+#include "critter.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
+#include "view3d.h"
 
 #define OBJ_ITEM(o)     ((o)->id & 0x1FF)
 #define OBJ_Z(o)        ((o)->pos & 0x7F)
@@ -46,53 +24,6 @@ struct Object {
 #define OBJ_FINEX(o)    (((o)->pos & 0xE000) >> 13)
 #define OBJ_HOMEX(o)    (((o)->home & 0xFC00) >> 10)
 #define OBJ_HOMEY(o)    (((o)->home & 0x3F0) >> 4)
-
-/* Data common to every object type, 11 bytes per item. */
-struct ComObj {
-    unsigned height:8;                  /* 0x00 */
-    unsigned radius:3;                  /* 0x01 */
-    unsigned b1_3:5;
-    char pad2[0x0B - 0x02];
-};
-
-/* The player's motion record. */
-struct Motion {
-    int eye_x, eye_y, eye_z;            /* 0x00 */
-    int x, y, pitch;                    /* 0x06 */
-    int dx, dy, dz;                     /* 0x0C */
-    char pad12[0x14 - 0x12];
-    int momentum;                       /* 0x14 */
-    char pad16[0x22 - 0x16];
-    unsigned char radius;               /* 0x22 */
-    unsigned char height;               /* 0x23 */
-    char pad24;
-    unsigned char tilestate;            /* 0x25, bit 4 set while in the air */
-};
-
-/* The 3D view's camera. */
-struct Camera {
-    char pad0[0x0A];
-    int x;                              /* 0x0A */
-    char pad0c[2];
-    int z;                              /* 0x0E */
-    char pad10[2];
-    int y;                              /* 0x12 */
-    char pad14[0x28 - 0x14];
-    int pitch;                          /* 0x28 */
-    int bank;                           /* 0x2A */
-    int heading;                        /* 0x2C */
-};
-
-struct Inplist {
-    int x, y;                           /* the mouse position */
-    char pad4[8 - 4];
-    int field8;
-};
-
-/* The physics parameters; this file only takes its address. */
-struct PhysTable {
-    char pad0[1];
-};
 
 /* This file's data, DS:073E to DS:079D. */
 unsigned char pmouseHandled = 0;
@@ -127,39 +58,11 @@ static unsigned char swim_pan = 0;
 static unsigned char swim_count = 0;
 static unsigned char noise_count = 0;
 
-extern struct Player near *player;
-extern struct Critter near *playerdat;
-extern struct Object far *ThePlayer;
-extern struct Object far *UsPtr;
-extern struct Object far *critdata;
 extern struct Inplist near *inplist;
-extern struct ComObj ComObjData[];
-extern struct Motion PN;
-extern struct PhysTable PT;
-extern struct Camera far *cPlayer;
 extern unsigned long far *Time;
-extern unsigned char far *key_on;
-extern unsigned char far *Shift;
-extern unsigned char far *Alt;
-extern unsigned char far *Ctrl;
-/* DS:212C, a far pointer to the keyboard handler's caps lock state (it sets the LEDs from
-   it). FM Towns has no counterpart, so the name is ours. */
-extern unsigned char far *CapsLock;
-extern unsigned char WizEye;
-extern unsigned char Hasted;
-extern unsigned char TimeStop;
-extern unsigned char motionbits;
-extern unsigned char fiz_update;
-extern unsigned char DoAnimO;
-extern unsigned char MoveCrits;
-extern unsigned char frictionless;
-extern int PLeft, PBot, PWid, PHgt;
 extern int pFPS;
-extern unsigned long nextstep;
-extern unsigned long watertime;
 /* DS:19B2, the noise and visibility the player's actions add up to. */
 extern char plyNotice[2];
-extern int PlayerFacing;
 /* This file's _BSS, DS:33C6..33E7 (seg034's ends at 33C5; seg037's starts at 33E8), laid
    out by name (tools/bssorder.py): doMod 28, vort_rad 126, vort_timer 286, vort_theta 406,
    playerMod and PlayerPitch 552, PlayerBank 576, camang 595, campos 603, vort_x and
@@ -175,31 +78,10 @@ int vort_timer;
 int vort_theta;
 unsigned char vort_x, vort_y;
 
-void far move_cam(int input);
-void far mouse_constrain(int left, int top, int right, int bottom);
-int far mouse_getbut(int *b);
-void far mouse_clearQ(void);
-char far simple_fizix(int dir);
-void far update_animobj(int n);
-void far editchng(int bits);
 void far move_mobile(int frames);
-void far set_player_phys_params(int incr);
-void far do_physics(struct Motion *m, struct PhysTable *t);
-void far phys_affect_player(void);
-void far kill_effect(unsigned char eff);
 unsigned char far play_effect_here(unsigned char fx, unsigned char pan, char vol);
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
                      unsigned char damage, unsigned char type);
-void far game_sprint(int id);
-void far cSinCos(int angle, int *x, int *y);
-
-void far parse_playin(int command);
-void far do_player_keyboard(void);
-void far move_physics(int incr, int frames, unsigned char easy);
-void far move_player(int incr);
-void far make_noise(char easy);
-void far set_sound(char easy);
-void far parse_effect(void);
 
 void far player_mous_move(void)
 {
@@ -221,7 +103,7 @@ void far parse_playin(int command)
     if (!(KeybUsed = command >= 0))
     {
         mouse_getbut(&buttons);
-        if (buttons == 1 || (buttons & 1) && player->b60)
+        if (buttons == 1 || (buttons & 1) && player->drawn)
         {
             ForwInpRate = TurnInpRate = 0;
             if (inplist->y < PHgt / 5)
@@ -242,7 +124,7 @@ void far parse_playin(int command)
         else if (buttons == 3)
         {
             PlayerInput = 1;
-            if ((PN.tilestate & 0x10) == 0 && player->motion_state != 1)
+            if ((PN.terrain & 0x10) == 0 && player->motion_state != 1)
                 PlayerInput = 7;
         }
     }
@@ -258,7 +140,7 @@ void far parse_playin(int command)
         {
         case 6:
         case 7:
-            if ((PN.tilestate & 0x10) == 0 && player->motion_state != 1)
+            if ((PN.terrain & 0x10) == 0 && player->motion_state != 1)
                 PlayerInput = command;
             else
                 PlayerInput = 1;
@@ -341,7 +223,7 @@ void far player_simple_move(int dir)
     {
         last_time = *Time;
         frame_inc = frame_inc + 4;
-        PN.momentum = 0;
+        PN.speed = 0;
         if (DoAnimO)
             update_animobj(1);
         player->game_clock += 0x40;
@@ -404,8 +286,8 @@ void far move_physics(int incr, int frames, unsigned char easy)
     tsteps += incr;
     if (PlayerInput == 0 && !WizEye)
         do_player_keyboard();
-    if ((PlayerInput != 0 || PN.momentum != 0 || PN.pitch != 0 || PN.dz != 0 || PN.dy != 0
-         || PN.dx != 0 || fiz_update) && !easy)
+    if ((PlayerInput != 0 || PN.speed != 0 || PN.vel[2] != 0 || PN.acc[2] != 0 || PN.acc[1] != 0
+         || PN.acc[0] != 0 || fiz_update) && !easy)
         move_player(incr);
     if (MoveCrits && !TimeStop && frames != 0)
         move_mobile(frames);
@@ -418,7 +300,7 @@ void far move_physics(int incr, int frames, unsigned char easy)
 void far finish_player(void)
 {
     PlayerInput = 0;
-    while (PN.momentum != 0 || PN.pitch != 0 || PN.dz != 0 || PN.dy != 0 || PN.dx != 0
+    while (PN.speed != 0 || PN.vel[2] != 0 || PN.acc[2] != 0 || PN.acc[1] != 0 || PN.acc[0] != 0
            || fiz_update)
         move_player(0x40);
 }
@@ -432,13 +314,13 @@ void far move_player(int incr)
     do_physics(&PN, &PT);
     phys_affect_player();
     editchng(10);
-    if ((PN.tilestate & 0x10) == 0)
+    if ((PN.terrain & 0x10) == 0)
     {
-        if (PN.momentum > pFPS >> 2 && PlayerInput == 1)
+        if (PN.speed > pFPS >> 2 && PlayerInput == 1)
         {
             char bob;
 
-            if ((bob = PN.momentum * 4 / (pFPS >> 1) - 1) < 2)
+            if ((bob = PN.speed * 4 / (pFPS >> 1) - 1) < 2)
                 bob = 2;
             doMod = 1;
             playerMod[0] = bobEffect[tsteps >> 4] * bob;
@@ -481,8 +363,8 @@ void far make_noise(char easy)
         if (!swim_count)
         {
             swim_pan = !swim_pan;
-            if (PN.momentum != 0 && *Time > nextstep)
-                play_effect_here(0x1A, step_pan[swim_pan], (PN.momentum >> 5) - 0x10);
+            if (PN.speed != 0 && *Time > nextstep)
+                play_effect_here(0x1A, step_pan[swim_pan], (PN.speed >> 5) - 0x10);
         }
     }
     else
@@ -503,21 +385,21 @@ void far make_noise(char easy)
         }
         else
             ice = 0;
-        if ((PN.tilestate & 0x10) == 0)
+        if ((PN.terrain & 0x10) == 0)
         {
             if (easy != 0)
             {
                 play_effect_here(step_sfx[ice * 2 + step_foot], step_pan[step_foot],
-                                 (PN.momentum >> 5) - 0x10);
+                                 (PN.speed >> 5) - 0x10);
                 step_foot = !step_foot;
                 nextstep = *Time + 100;
             }
-            else if (PN.momentum > 0x2F && *Time > nextstep)
+            else if (PN.speed > 0x2F && *Time > nextstep)
             {
                 play_effect_here(step_sfx[ice * 2 + step_foot], step_pan[step_foot],
-                                 (PN.momentum >> 5) - 0x10);
+                                 (PN.speed >> 5) - 0x10);
                 step_foot = !step_foot;
-                delay = 6000 / ((PN.momentum >> 2) + 1) + 0x40;
+                delay = 6000 / ((PN.speed >> 2) + 1) + 0x40;
                 if (delay > 200)
                     delay = 200;
                 nextstep = *Time + delay;
@@ -536,10 +418,10 @@ void far set_sound(char easy)
     n = plyNotice[0];
     if (easy != 0)
         n = n + 4;
-    else if (PN.momentum == 0)
+    else if (PN.speed == 0)
         n = 0;
     else
-        n = PN.momentum * 10 / pFPS + n - 5;
+        n = PN.speed * 10 / pFPS + n - 5;
     if (player->motion_state)
         n = n + 4;
     if (n < 0)
@@ -573,14 +455,14 @@ void far parse_effect(void)
     playerMod[1] = playerMod[2] = playerMod[3] = 0;
     if (player->motion_state & 0x11)
     {
-        playerMod[0] = -player->depth;
-        if (player->depth > 0x50)
+        playerMod[0] = -player->swim_count;
+        if (player->swim_count > 0x50)
         {
-            amp = PN.momentum * 4 / (pFPS >> 1) - 3;
+            amp = PN.speed * 4 / (pFPS >> 1) - 3;
             if (amp < 1)
                 amp = 1;
             phase = tsteps >> 4;
-            if (PN.momentum == 0)
+            if (PN.speed == 0)
                 playerMod[3] = (rand() & 0x1FF) - 0x100;
             else
                 playerMod[3] = amp * rorEffect[phase] << 6;
@@ -594,9 +476,9 @@ void far parse_effect(void)
         if (rand() % 5 == 0)
         {
             damage_item(ThePlayer, 0L, 0, 0, 1, 8);
-            if (player->xclock3 == 3)
+            if (player->xclock[3] == 3)
             {
-                player->xclock3 = 4;
+                player->xclock[3] = 4;
                 game_sprint(0x14E);
             }
         }
@@ -672,9 +554,9 @@ void far get_eye(void)
 
     if (UsPtr == ThePlayer)
     {
-        cPlayer->x = PN.eye_x;
-        cPlayer->y = PN.eye_y;
-        cPlayer->z = PN.eye_z + 0xA4;
+        cPlayer->x = PN.x;
+        cPlayer->y = PN.y;
+        cPlayer->z = PN.z + 0xA4;
         cPlayer->heading = PlayerFacing;
         cPlayer->pitch = PlayerPitch;
         cPlayer->bank = PlayerBank;
@@ -707,9 +589,9 @@ void far get_eye(void)
     else if (UsPtr == critdata - 1)
     {
         cSinCos(PlayerFacing, &x, &y);
-        cPlayer->x = PN.eye_x - (x >> 7);
-        cPlayer->y = PN.eye_y - (y >> 7);
-        cPlayer->z = PN.eye_z + 0x148;
+        cPlayer->x = PN.x - (x >> 7);
+        cPlayer->y = PN.y - (y >> 7);
+        cPlayer->z = PN.z + 0x148;
         cPlayer->heading = PlayerFacing;
         cPlayer->pitch = PlayerPitch;
         cPlayer->bank = PlayerBank;
@@ -723,7 +605,7 @@ void far get_eye(void)
         y = y * (0x40 - vort_timer) / 0x40;
         cPlayer->x = (vort_x << 8) + x * vort_rad / 2 + 0x80;
         cPlayer->y = (vort_y << 8) + y * vort_rad / 2 + 0x80;
-        cPlayer->z = PN.eye_z + 0xA4 - vort_timer * 2;
+        cPlayer->z = PN.z + 0xA4 - vort_timer * 2;
         cPlayer->heading = vort_theta + 0x7FFF;
         cPlayer->pitch = 0;
         cPlayer->bank = vort_timer << 11;

@@ -2,8 +2,9 @@
 /* opts: -mm -1 -G -O -Y -d */
 /* The credits: the end-credits cutscene, then back to the game screen. */
 
+#include "sys.h"
+
 void far show_cutscene(int n);
-void far editchng(int bits);
 
 void far show_credits(void)
 {

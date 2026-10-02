@@ -5,28 +5,14 @@
    originals from the FM Towns symbol table. */
 
 #include <stdlib.h>
+#include "gfx.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
 
-struct Player {
-    char pad0[0x3D];
-    unsigned char level;                /* 0x3D */
-    char pad1[0x4E - 0x3E];
-    unsigned long exp;                  /* 0x4E, in tenths */
-    unsigned char skill_points;         /* 0x52 */
-    unsigned char skill_points_earned;  /* 0x53, exp / 1500 already paid out; our name */
-};
-
-struct Inplist {
-    char pad0[8];
-    int field8;
-};
-
-extern struct Player near *player;
-extern int PlayerLevel;
 extern unsigned char RightPanel;
 extern struct Inplist near *inplist;
-extern unsigned char far *background_color;
 extern unsigned char far *foreground_color;
-extern int spsave[];                    /* DS:1B9F; FM Towns reads _spsave+4 */
 /* DS:8E1, levels by experience / 500. No FM Towns name (it sits just past
    _ShowStupidFirstPersonWeapon there), so this name is ours. */
 /* This file's _DATA, DS:08E2..08F1 (seg037's ends at 08E1, odd, so this starts a file): the
@@ -34,19 +20,9 @@ extern int spsave[];                    /* DS:1B9F; FM Towns reads _spsave+4 */
    unnamed (static), read the same way, one byte before the table. */
 static unsigned char level_table[16] = { 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128, 192, 0 };
 
-void far panel_check(void);
 /* PLAYER.C defines advance(char); this file's caller pushes SI unconverted, so the
    declaration it saw took an int. */
 void far advance(int levels);
-void far mouse_hide(void);
-void far mouse_show(void);
-void far grfx_quikfont(int size);
-void far restore_rect(int which);
-void far sp_hp(void);
-void far sp_mp(void);
-void far sp_xp(void);
-
-void far panel_check_hpmp(void);
 
 int far skill_check(int value, int target)
 {
@@ -107,7 +83,7 @@ void far player_get_exp(int n)
 
 void far panel_check_hpmp(void)
 {
-    if (RightPanel == 2 && inplist->field8 == 1)
+    if (RightPanel == 2 && inplist->mode == 1)
     {
         *foreground_color = *background_color = 0xC4;
         mouse_hide();

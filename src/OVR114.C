@@ -6,18 +6,10 @@
 
 #include <dos.h>
 #include <string.h>
+#include "sound.h"
+#include "sys.h"
 
-extern int far *cPerror;
-extern char far *cExitMessage;
-
-void far PrintStringToConsole_seg017_DE(char far *text);
 void far exit(int code);
-void far free_mem(void);
-void far free_timers(void);
-void far free_sounds(void);
-void far free_timers(void);
-void far free_sounds(void);
-void far stub112_25(int code);
 void far free_world(char flag);
 
 void far error_code(int code)

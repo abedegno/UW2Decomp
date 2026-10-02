@@ -8,26 +8,15 @@
 
 #include <string.h>
 #include <stdlib.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x369];
-    unsigned long game_clock;           /* 0x369 */
-};
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* item 0-8 (major 6-8, minor 4-5, type 0-3), flags 9-12, is_quant 15 */
-    unsigned pos;                       /* z 0-6 */
-    union {
-        unsigned word;                  /* the next object in this list */
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;                  /* the head of the contents list, or the quantity */
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-};
+#include "combat.h"
+#include "event.h"
+#include "inv.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
 
 #define OBJ_ID(o)       ((o)->id & 0x1FF)
 #define OBJ_INDEX(o)    (((o)->id & 0x3F) >> 0)
@@ -39,25 +28,9 @@ struct Object {
 #define OBJ_ISQUANT(o)  (((o)->id & 0x8000) >> 15)
 #define OBJ_Z(o)        ((o)->pos & 0x7F)
 
-struct Tile {
-    char pad0[2];
-    unsigned objects;                   /* 0x02, head of the tile's object list */
-};
-
-struct Inplist {
-    char pad0[8];
-    int field8;
-};
-
-extern struct Player near *player;
 extern struct Inplist near *inplist;
-extern struct Object far *ThePlayer;
-extern struct Object far *CursorObjPtr;
-extern struct Object far *ObjectActing;
 extern void (far *ObjectActor)();
 extern char ObjectActorArg;
-extern int GameInputMode;
-extern int MapObj_X, MapObj_Y;
 extern unsigned far *Obj_Find_Head;
 
 /* The next time the player may cast from an object, and a flag that makes
@@ -65,59 +38,23 @@ extern unsigned far *Obj_Find_Head;
 long nextSpellTime = 0;
 unsigned char always_decode = 0;
 
-void far missile_newhit(struct Object far *proj, struct Object far *hit);
-void far UseCont(struct Object far *who, struct Object far *obj, char how);
-void far UseLight(struct Object far *obj, char how);
-void far UseWatch(void);
-void far UseCrystal(int quality);
-int far UseFood(struct Object far *who, struct Object far *food, char how);
-void far UseUtil(struct Object far *obj, char how);
-void far UseUnique(struct Object far *who, struct Object far *obj, char how);
-void far UseMagic(struct Object far *who, struct Object far *obj, char how);
-void far UseBook(struct Object far *obj, char how);
-void far UseRect(struct Object far *who, struct Object far *obj);
-void far UseRune(struct Object far *who, struct Object far *rune);
-void far CloseDoor(struct Object far *who, struct Object far *door);
-void far OpenDoor(struct Object far *who, struct Object far *door);
-void far UseLockpickOn(struct Object far *obj, unsigned char how);
 void far UseKeyOn(struct Object far *obj, unsigned char how);
 struct Object far * far Obj_PtrTMem(unsigned far *link);
-int far Obj_MemTPtr(struct Object far *obj);
 void far Obj_FreeLinkChain(unsigned far *head, struct Object far *obj);
-void far InvRemoveOneObject(struct Object far *obj);
 struct Object far * far Obj_Punt(unsigned far *head, struct Object far *obj, char how);
-struct Tile far * far Map_GetAddr(int x, int y);
 struct Object far * far Obj_Find(unsigned far *head, int a, int index);
 void far Obj_FreeChain(unsigned far *head);
 struct Object far * far Obj_InList(unsigned far **head, int a, int major, int minor, int idx);
 char far Obj_Rem(unsigned far *head, struct Object far *obj);
-void far Obj_Free(struct Object far *obj);
 struct Object far * far CreateObj(int item, char mobile);
-void far editchng(int bits);
-void far force_mouse_cursor(int id);
-void far unforce_mouse_cursor(int n);
 void far mouse_release(int n);
 void far get_name(char far *buf, struct Object far *obj, int article, char plural);
 void far scroll_print(char far *s);
-void far game_sprint(int id);
-int far FindSlot(struct Object far *obj);
-void far RedisplayInvSlot(int slot);
 void far play_effect(char type, int x, int y, int a);
 char far play_effect_here(int fx, int vol, int c);
-int far skill_check(int value, int target);
-void far inanimate_spell(int x, int y, struct Object far *src, struct Object far *who,
-                         int major, int effect);
 void far UseTrigger(struct Object far *who, struct Object far *obj, struct Object far *trigger, int how);
-void far SetOffTrap(struct Object far *who, struct Object far *obj, struct Object far *trap, int x, int y);
-void far delete_trap(unsigned far *head, struct Object far *trap);
-void far release_missile(struct Object far *obj, char arg);
 
 /* Later in this file. */
-void far UseKey(struct Object far *obj, unsigned char how);
-void far UseWand(struct Object far *wand, unsigned char how);
-char far UseReag(struct Object far *who, struct Object far *obj, char how);
-char far checkSpell(int x, int y, struct Object far *who, struct Object far *obj, char how);
-void far checkTrap(struct Object far *who, struct Object far *obj, int how, int x, int y);
 char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
 int far useNSpellCharges(struct Object far *obj, char n);
 
@@ -129,7 +66,7 @@ struct Object far * far UseObj(struct Object far *who, struct Object far *obj, u
 
     minor = OBJ_MINOR(obj);
     trap = 1;
-    if (inplist->field8 == 4 && (OBJ_MAJOR(obj) != 2 || OBJ_MINOR(obj) != 0))
+    if (inplist->mode == 4 && (OBJ_MAJOR(obj) != 2 || OBJ_MINOR(obj) != 0))
         return obj;
     switch (OBJ_MAJOR(obj)) {
     case 0:
@@ -239,7 +176,7 @@ int far using_punt(struct Object far *obj, char inv, char how)
         obj = Obj_Punt(0L, obj, how);
     } else {
         tile = Map_GetAddr(MapObj_X, MapObj_Y);
-        if (Obj_Find(&tile->objects, 1, Obj_MemTPtr(obj)) != 0) {
+        if (Obj_Find(&tile->objects.word, 1, Obj_MemTPtr(obj)) != 0) {
             obj = Obj_Punt(Obj_Find_Head, obj, how);
             editchng(2);
         } else {
@@ -264,8 +201,6 @@ struct Object far * far place_new(struct Object far *obj, int item)
     force_mouse_cursor(item);
     return obj;
 }
-
-void far UseThing(struct Object far *obj, void (far *fn)());
 
 void far UseKey(struct Object far *obj, unsigned char how)
 {

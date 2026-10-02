@@ -5,10 +5,9 @@
 #include <fcntl.h>
 #include <stat.h>
 #include <string.h>
-
-extern unsigned char far *palette;
-int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n);
-void far grab(void far *dst, int x, int y, int w, int h);
+#include "file.h"
+#include "gfx.h"
+#include "sys.h"
 
 static unsigned char gif_header[13] = {
     'G','I','F','8','7','a', 0x40,0x01,0xC8,0,0xF7,0,0
@@ -31,10 +30,7 @@ static struct {
 } gif;
 
 static void far ovr116_149(int bits);
-void far ovr116_194(int fd, char size);
 static void far ovr116_1C3(int fd, int code);
-void far ovr116_2A3(int fd, int bits);
-int far GifPixel_ovr116_420(void);
 
 void far save_screenshot(int seg)
 {

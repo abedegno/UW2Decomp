@@ -2,12 +2,13 @@
 /* opts: -mm -1 -G -O -Y -d */
 /* Joystick motion, button sampling, calibration and filtered cursor input. */
 
-extern int far *joy_position, far *joy_buttons;
+#include "motion.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
+
 extern long far *Time;
 extern unsigned char IsJoy;
-extern int PlayerInput;
-extern int ForwInpRate, TurnInpRate;
-extern int joymovecur, fauxright;
 
 /* this file's _DATA, DS:00E8 to DS:0106, in definition order */
 int joy_center_x = 0, joy_center_y = 0;
@@ -16,11 +17,7 @@ int joy_divisor = 16, joy_interval = 5, joy_clamp = 16, joy_gain = 20, joy_limit
 int joy_filter_x = 0, joy_filter_y = 0;
 long joy_last_tick = 0;
 
-void far seg021_22FD_7CD(void);
-void far seg021_22FD_809(void);
-void far loop_music_maybe(void);
 int far do_keyboard_input(int mode);
-void far game_sprint(int string);
 void far scroll_print(char far *string);
 void far scroll_clear(int value);
 

@@ -1,19 +1,14 @@
 /* target: seg034_310D */
 /* opts: -mm -1 -G -O -Y -d */
-
 /* FM Towns identifies the formerly anonymous helpers by their matching
    positions and operations: sort_setup, sort_obj, build_sort, set_sds,
    set_osum and clear_objsort. */
-struct Object { unsigned item; unsigned pos; char pad[0x20]; };
+
+#include "object.h"
+#include "sys.h"
+#include "view3d.h"
+
 struct ObjectIndex { unsigned low:6; unsigned index:10; };
-struct Camera { char pad[10]; int x; char gap[2]; int z; char gap2[2]; int y; };
-struct ComObj {
-    unsigned height:8;
-    unsigned radius:3;
-    unsigned animated:1;
-    unsigned flags_rest:4;
-    char rest[9];
-};
 
 /* This file's _BSS, DS:2F9C..33C5 (seg033's ActDoors ends at 2F9B; seg035's starts at 33C6),
    laid out by name (tools/bssorder.py): holdmid 112, holdtmp 144, locsqmod 228,
@@ -38,19 +33,12 @@ signed char trans_pos_x[64] = {
     7, 0, 6, 0, 5, 0, 4, 0, 3, 0, 2, 0, 1, 0, 0, 0,
     0, 7, 0, 6, 0, 5, 0, 4, 0, 3, 0, 2, 0, 1, 0, 0 };
 extern signed char quad;
-extern int loopx, loopy;
-extern struct Camera far *cPlayer;
-extern struct ComObj ComObjData[];
 extern unsigned char PickUp;
-extern int far smooth_div;
-extern int far smooth_lowpass;
 extern unsigned char far smooth_base;
 
 void far *far Obj_IntTMem(unsigned index);
 struct Object far *far Obj_PtrTMem(struct Object far *object);
 unsigned char far IsMobElem(struct Object far *object);
-unsigned long far cSqRt(long value);
-void far do_obj(struct Object far *object);
 void far memset(void near *dest, int value, unsigned count);
 void far memcpy(void near *dest, void near *src, unsigned count);
 
@@ -145,8 +133,8 @@ void far z_part(int index, int *point, int count)
     int z;
     object = Obj_IntTMem(objptrs[index]);
     z = object->pos & 0x7f;
-    if ((object->item & 0x1ff) == 0x158)
-        z = z + ComObjData[object->item & 0x1ff].height;
+    if ((object->id & 0x1ff) == 0x158)
+        z = z + ComObjData[object->id & 0x1ff].height;
     do_partition(z * 8 > cPlayer->z, point, index, count, z, 0);
 }
 
@@ -186,8 +174,6 @@ void far set_osum(signed char *data)
     }
 }
 
-void far do_objsort(struct Object far *object);
-
 void far clear_objsort(void)
 {
     if (refugees[loopx][0] > 0) do_objsort(0L);
@@ -221,7 +207,7 @@ void far do_objsort(struct Object far *object)
         if (word & 0x4000) data[2] += 8;
         set_osum(data);
         if (word & 0x8000) data[0]--;
-        word = next->item & 0x1ff;
+        word = next->id & 0x1ff;
         n++;
     }
     if (holdtmp[0])
@@ -234,7 +220,7 @@ void far do_objsort(struct Object far *object)
     while (next && visited < 60) {
         register signed char *data;
         candidate = held = 0;
-        item = next->item & 0x1ff;
+        item = next->id & 0x1ff;
         if (item == 0x164 || (item >> 4) == 0x14 || item == 0x1cf) {
             partition = n + (item << 6);
         } else if (ComObjData[item].animated) {
@@ -251,7 +237,7 @@ void far do_objsort(struct Object far *object)
             }
             if (word) {
                 candidate = 1;
-                word |= (object->item >> 6) & 0x3ff;
+                word |= (object->id >> 6) & 0x3ff;
                 if ((item & 0x1c0) == 0x1c0) word |= 0x8000;
                 if ((word & 0x5000) == 0x5000) dest = holdtmp;
                 else if (word & 0x4000) dest = refugees[loopx];
@@ -296,7 +282,7 @@ void far do_objsort(struct Object far *object)
         next = Obj_IntTMem(objptrs[word]);
         objxloc = ((loopx - 16) << 8) + ((int)sortdata[word][1] << 5) + 16;
         objzloc = (loopy << 8) + ((int)sortdata[word][2] << 5) + 16;
-        if (((next->item & 0x1c0) >> 6) == 1 || !IsMobElem(next))
+        if (((next->id & 0x1c0) >> 6) == 1 || !IsMobElem(next))
             objyloc = (next->pos & 0x7f) << 3;
         else
             objyloc = *(int far *)((char far *)next + 15);

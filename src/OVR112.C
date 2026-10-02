@@ -28,34 +28,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x62];
-    unsigned b62_0:4;
-    unsigned automap:1;                 /* word 0x62, bit 4 */
-    unsigned b62_5:11;
-    char pad64[0x306 - 0x64];
-    unsigned char b306;                 /* 0x306 */
-};
-
-/* A mobile object. */
-struct Object {
-    unsigned id;
-    unsigned pos;                       /* z 0-6, heading 7-9, y fine 10-12, x fine 13-15 */
-    unsigned qn;
-    unsigned ol;
-    unsigned char hp;                   /* 0x08 */
-    char pad09[0x18 - 0x09];
-    unsigned char b18;                  /* 0x18, fine heading in bits 0-4 */
-};
-
-/* The mouse and keyboard state. */
-struct Inplist {
-    int x, y;
-    char pad4[8 - 4];
-    int mode;                           /* 0x08, the screen mode */
-};
+#include "combat.h"
+#include "conv.h"
+#include "critter.h"
+#include "event.h"
+#include "file.h"
+#include "gfx.h"
+#include "inv.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
+#include "view3d.h"
 
 /* This file's uninitialised data, DS:5D1E to DS:5E0B. Turbo C lays _BSS out by its
    symbol table's order, not by declaration; with these names it gives exactly the EXE's
@@ -75,38 +62,13 @@ int lastscrmode;
 int NewPlayerX, NewPlayerY;
 int NewPlayerLevel;
 
-extern struct Player near *player;
-extern struct Object far *ThePlayer;
 extern struct Inplist near *inplist;
-extern int GrSq;
-extern int PlayerLevel;
-extern int PlayerFacing, PlayerHeading, PlayerBank, PlayerPitch;
-extern unsigned char combEfflen, tremEfflen, slidEfflen;
-extern unsigned char pmouseHandled;
-extern int LeftPanel;
-extern int RightButtonThing;
-extern int GameInputMode;
-extern struct Object far *CursorObjPtr;
+extern int PlayerPitch;
 extern unsigned long nextSpellTime;
-extern unsigned long lstime;
-extern unsigned long watertime;
-extern unsigned long nextstep;
-extern int trap_teleport_data;
-extern int curvrad;
-extern unsigned char far *palette;
 extern char quit_buttongroup[];
 /* The shared work buffer. init_edit passes the paragraph after its start, which only
    references its segment; FM Towns has _grbuf and _panelbuf at the same address. */
 extern char far stdat[];
-/* The fatal-exit message: cPerror gets the offset of cExitMessage. */
-extern int far *cPerror;
-extern char far *cExitMessage;
-
-/* The divide-by-zero trap in seg018 (assembly), and the two words in its code segment
-   where it finds the stack to return to. DOS only; the names are ours. */
-extern void interrupt far int0_trap();
-extern unsigned far int0_ss;
-extern unsigned far int0_sp;
 
 /* Elsewhere in the game. Names not confirmed by the map come from FM Towns init_world,
    whose calls run in the same order where DOS has them: init_mem (DOS seg042's first
@@ -115,118 +77,39 @@ extern unsigned far int0_sp;
    init_debug (empty in FM Towns), init_ai, and init_cutscene (empty in both). grfx_init is
    ovr118_0, the FM Towns function before grfx_load_font. pfatal is FM pfatal_, which sets
    *cPerror from cExitMessage as ovr114_15D does. */
-void far real_start(int how);
-void far mainloop(void);
-void far init_mem(void);
-void far check_dirs(void);
-void far check_fds(void);
 void far init_strings(void);
 void far Map_Init(void);
-void far init_input(void);
-void far init_debug(void);
 void far init_sounds(void);
 void far init_timers(void);
-void far init_cutscene(void);
 unsigned char far OkEnoughMem_ovr167_463(void);    /* enough memory free; DOS only */
 void far punt_sound_stuff(int quiet);
-void far first_punt(int code);
 unsigned char far grfx_init(void);
 unsigned char far display_screen(int pal, int blk);
 void far load_new_music(int a, int b);
-void far seg001_023B_C(void);          /* assembly, DOS only */
-int far load_all_gr(void);
-void far pfatal_code(int code);
-int far init_mouse(void);
-int far init_objects(void);
 void far init_txtlib(void);
-void far init_3d(void);
-void far init_player(void);
-void far init_ai(void);
-void far init_lighting(void);
-void far init_combinables(void);
 unsigned char far init_save(void);
-void far pfatal(char *msg);
-int far init_babl(void);
 void far grfx_clear(void);
 void far grfx_quikpal(int pal);
-void far grfx_close(void);
-void far free_input(void);
-void far free_mem(void);
-void far free_scrgr(void);
-void far free_timers(void);
-void far free_sounds(void);
-void far free_strings(void);
-unsigned char far clear_dir(char *dir);
-int far mouse_get_input(void);
 void far show_cutscene(int n);
 void far _input_addkey(int key, int a, int b, void (far *handler)());
-void far save_screenshot(int seg);
 void far busywaiting_new_options(char *group);
-void far Map_ObjFix(void);
-void far editchng(int bits);
-void far mouse_hide(void);
-void far mouse_show(void);
-void far demous_player(void);
-void far place_3d_view(int x, int y, int w, int h);
 void far fadeout(unsigned char far *pal, int steps, int x);
-void far fadein(unsigned char far *pal, int steps, int x);
-void far init_gamedisp(void);
-void far FixPlayerEquips(void);
-void far render_FB(void);
-void far send_FB(void);
 unsigned char far read_quikpal(int which, unsigned char far *pal);
-void far clear_gamedisp(void);
-void far hold_scrgr(void);
-void far punt_all_digi_fx(void);
 void far load_digi_fx(int n);
-void far Punt_player_inv(void);
 void far set_drugged(int on);
-void far reset_scrgr(void);
 void far punt_fightmode(void);
-void far unforce_mouse_cursor(int n);
-void far attach_eye(int n);
-void far mouse_freereign(void);
 void far set_screen_frame(int which, int frame);
-void far set_compass(void);
-void far set_flask(int n);
 void far scroll_clear(int n);
-void far establish_view(void);
-void far fadeout3d(int speed);
-void far fadein3d(int speed);
 unsigned char far ChangeLevel(int from, int to);
 unsigned char far find_good_x_and_y(struct Object far *obj, int x, int y, int *nx, int *ny,
                                     int how);
-void far player_setup(int x, int y, int how);
-void far player_newsq(int sq);
 void far seg016_1E73_2FCB(FILE *fp);   /* reads UW.CFG; DOS only */
-unsigned char far copy_file(char *srcdir, char *dstdir, char *name);
 
 /* The other screens' handlers, in other files. */
-void far RedispInv(void);
-void far check_physics(void);
-void far display_scr(void);
-void far update_screen(void);
-void far AutoMap(void);
-void far automap_scr(void);
-void far ExitAutoMap(void);
 void far strt_converse(void);
-void far free_converse(void);
 
 /* This file. */
-void far init_world(int argc, char *argv[]);
 void far free_world(char flag);
-void far titlescr(void);
-void far init_edit(int argc, char *argv[]);
-void far graceful_exit(void);
-void far change_screen(int mode);
-void far strt_demscr(void);
-void far free_demscr(void);
-void far reset_times(void);
-void far reset_game(void);
-void far do_3d_view(void);
-unsigned char far new_player_pos(void);
-void far ReadCfg_ovr112_839(void);
-void far move_initial_files(void);
 
 /* This file's data, DS:11F4 to DS:12C5, then its strings. */
 
@@ -452,7 +335,7 @@ void far reset_game(void)
     ThePlayer->b18 = ThePlayer->b18 & 0xE0;
     PlayerPitch = PlayerBank = PlayerHeading = PlayerFacing = 0;
     combEfflen = tremEfflen = slidEfflen = 0;
-    player->b306 = 0;
+    player->motion_state = 0;
     player->automap = 1;
     set_drugged(0);
     reset_scrgr();

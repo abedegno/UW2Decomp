@@ -7,102 +7,17 @@
 
 #include <string.h>
 #include <stdlib.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x1F];
-    unsigned char b1F;                  /* 0x1F */
-    char pad0a[0x21 - 0x20];
-    unsigned char skills[20];           /* 0x21 */
-    char pad1[0x39 - 0x35];
-    unsigned char hunger;               /* 0x39 */
-    char pad2[0x60 - 0x3A];
-    unsigned b60:1;                     /* 0x60 */
-    unsigned poison:4;
-    unsigned active_spells:4;
-    unsigned b60_9:3;
-    unsigned shrooms:2;
-    unsigned drunk:6;                   /* word 0x61, bits 6..11 */
-    unsigned automap:1;                 /* word 0x62, bit 4 */
-    unsigned b62_5:1;
-    unsigned sleepbits:3;               /* word 0x62, bits 6..8 */
-    unsigned in_void:1;
-    unsigned in_pits:1;
-    unsigned b63_3:5;
-    char pad3[0xCE - 0x64];
-    unsigned long questsCE;             /* 0xCE */
-    char pad3a[0xE8 - 0xD2];
-    unsigned char keygems;              /* 0xE8 */
-    char pad4[0xF8 - 0xE9];
-    unsigned char map_scrap;            /* 0xF8 */
-    char pad4a[0x105 - 0xF9];
-    int last_gem;                       /* 0x105 */
-    char pad5[0x305 - 0x107];
-    unsigned char b305;                 /* 0x305 */
-    char pad5a[0x369 - 0x306];
-    unsigned long game_clock;           /* 0x369 */
-    char pad6[0x36E - 0x36D];
-    unsigned char xclock1;              /* 0x36E */
-    unsigned char xclock2;              /* 0x36F */
-    unsigned char b370;                 /* 0x370 */
-};
-
-/* The player's critter data, reached through the near pointer `playerdat`. */
-struct Critter {
-    char pad0[5];
-    unsigned char attr[3];              /* 0x05: STR, DEX, INT */
-};
-
-/* The player's statistics block. */
-struct PlayerStats {
-    char pad0[0x4A];
-    unsigned weight;                    /* 0x4A, weight carried */
-};
-
-/* One object type's common properties, 11 bytes. */
-struct ComObj {
-    unsigned char height;               /* 0x00 */
-    unsigned radius:4;                  /* 0x01 */
-    unsigned mass:12;
-    char pad3[7 - 3];
-    unsigned b7:7;                      /* 0x07 */
-    unsigned can_own:1;
-    unsigned b8:8;                      /* 0x08 */
-    char pad9[0x0B - 0x09];
-};
-
-struct Tile {
-    char pad0[2];
-    unsigned objects;                   /* 0x02, head of the tile's object list */
-};
-
-struct Motion {
-    char pad0[6];
-    int x, y, pitch;
-    int dx, dy, dz;
-    char pad1[0x14 - 0x12];
-    int momentum;
-};
-
-struct Inplist {
-    char pad0[8];
-    int field8;
-};
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;
-    unsigned pos;
-    union {
-        unsigned word;
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-    unsigned char hp;                   /* 0x08 */
-};
+#include "combat.h"
+#include "critter.h"
+#include "event.h"
+#include "inv.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
 
 #define OBJ_ID(o)       ((o)->id & 0x1FF)
 #define OBJ_INDEX(o)    (((o)->id & 0x3F) >> 0)
@@ -117,93 +32,37 @@ struct Object {
 #define OBJ_QUALITY(o)  ((o)->qn.f.quality)
 #define OBJ_OWNER(o)    ((o)->ol.f.owner)
 
-extern struct Player near *player;
-extern struct Object far *ThePlayer;
-extern struct Object far *ObjectActing;
-extern struct Object far *CursorObjPtr;
-extern int GameInputMode;
 extern char UsingPole;
-extern struct Critter near *playerdat;
-extern struct PlayerStats PlayerDat;
-extern struct ComObj ComObjData[];
+extern struct Player PlayerDat;
 extern struct Inplist near *inplist;
 extern signed char Food[];
 extern long nextSpellTime;
-extern int MapObj_X, MapObj_Y;
 extern char ValidLightSlots[];
-extern int XP, YP;
 /* This file's _BSS, DS:8184 (ovr137's ends there): of the files before ovr140's TxmTerr,
    only this one uses it (seg044 does too). */
 char door_type;
-extern unsigned char quick_time;
-extern struct Motion PN;
 
-void far unforce_mouse_cursor(int n);
-void far game_sprint(int id);
-char far * far get_string(int id);
 void far scroll_print(char far *s);
-char far * far str_copy(char far *dst, char far *src);
 char far using_punt(struct Object far *obj, char a, int b);
-int far skill_check(int value, int target);
-void far restore_mana(struct Object far *who, char amount);
-void far restore_hp(struct Object far *who, char amount);
 unsigned char far player_eat(int nutrition);
-void far player_sleep(int how);
 void far set_effect(int which, char amount);
 void far get_name(char far *buf, struct Object far *obj, int a, int b);
-char far checkSpell(int x, int y, struct Object far *who, struct Object far *obj, char how);
-void far checkTrap(struct Object far *who, struct Object far *obj, int how, int x, int y);
-int far FindSlot(struct Object far *obj);
-void far displayEnc(int how);
-void far RedisplayInvSlot(int slot);
 struct Object far * far CreateObj(int id, int b);
-void far force_mouse_cursor(int id);
-void far InvRemoveOneObject(struct Object far *obj);
-void far newscr(int n);
-void far *far FindObj(int a, int b, int c, int d, int *where);
 void far update_map_scraps(int scrap, int owner, char link);
 void far show_cutscene(int n);
-void far make_stew(void);
-int far checkLock(struct Object far *who, struct Object far *obj, int key);
-void far OpenTheBag(int slot);
-struct Object far * far AskInventory(int slot);
-void far AddToInventory(struct Object far *obj, int slot);
-void far DisplayInventory(void);
-void far play_instrument(int n);
-int far Obj_MemTPtr(struct Object far *obj);
 int far add_animobj(int index, int len, int a, char x, char y);
-int far get_animlen(struct Object far *obj);
-void far set_animlen(struct Object far *obj, int len);
 void far play_effect(char type, int x, int y, int a);
-char far drop_link_chain(struct Object far *cont, int owner);
-void far player_did_bad(int owner);
-void far editchng(int bits);
 void far damage_item(struct Object far *who, void far *source, int a, int b,
                      unsigned char damage, int type);
-int far rollem(int dice, int sides);
-void far fireball_effect(struct Object far *obj, int x, int y);
-void far hit_critter_goal(int a, int b, int c, struct Object far *who, int x, int y);
-void far RectLook(struct Object far *obj, int how);
 void far flip_switch(struct Object far *obj, int how);
-void far backfire(struct Object far *who, int how);
-char far go_fish(void);
-struct Object far * far place_new(void far *where, int id);
 void far mouse_release(int n);
 char far decode_obj_spell(struct Object far *obj, int *spell, int *power, char *flag);
-void far inanimate_spell(int x, int y, struct Object far *obj, struct Object far *who,
-                         int spell, int power);
 struct Object far * far Obj_Find(unsigned far *head, int a, int index);
-struct Tile far * far Map_GetAddr(int x, int y);
 void far Obj_Punt(unsigned far *head, struct Object far *obj, int how);
 unsigned char far put_at(int x, int y, int z, struct Object far *obj, int a, int b);
-void far UseThing(struct Object far *obj, void (far *fn)());
 
 /* Later in this file. */
-void far DumpTheBag(struct Object far *bag, char to_player);
-void far UseRockHammerOn(struct Object far *obj, unsigned char how, char other);
-void far do_sfx(int which, int arg);
 void far play_effect_here(unsigned char a, int b, int c);
-void far FixPlayerEquips(void);
 void far UseObj(struct Object far *who, struct Object far *obj, int how);
 void far repair_item(struct Object far *obj, int skill, int how);
 
@@ -279,18 +138,18 @@ void far UseKeyGem(struct Object far *obj, char how, unsigned char other)
     if (how != 0 && !other && OBJ_ID(obj) == 0x168 && OBJ_OWNER(ObjectActing))
     {
         if (gem == 4)
-            player->xclock1++;
-        do_sfx(4, player->xclock2 << 2);
+            player->xclock[1]++;
+        do_sfx(4, player->xclock[2] << 2);
         game_sprint(0x152);
-        player->xclock2++;
-        game_sprint(player->xclock2 + 0x152);
+        player->xclock[2]++;
+        game_sprint(player->xclock[2] + 0x152);
         if ((gem & 6) == 6)
             gem = 13 - gem;
-        player->keygems |= 1 << (gem - 1);
-        player->last_gem = gem - 1;
+        player->quest_bytes[2] |= 1 << (gem - 1);
+        player->vars[6] = gem - 1;
         using_punt(ObjectActing, how, 1);
         play_effect_here(0x12, 0x40, 0x28);
-        if (player->keygems != 0xFF)
+        if (player->quest_bytes[2] != 0xFF)
             play_effect_here(0x2A, 0x40, 0x14);
         else
             play_effect_here(0x2C, 0x40, 0x14);
@@ -322,11 +181,6 @@ void far UseAnvilOn(struct Object far *obj, unsigned char how, unsigned char oth
     repair_item(obj, player->skills[14], 1);
 }
 
-/* Declared here because TLINK numbers the overlay's stub entries in the order Turbo C lists
-   the publics, which for names with the same hash key is the order they were first seen:
-   the EXE's stub has UseBook before UseFood. */
-void far UseBook(struct Object far *obj, unsigned char how);
-
 int far UseFood(struct Object far *who, struct Object far *food, unsigned char how)
 {
     int qty;
@@ -351,7 +205,7 @@ int far UseFood(struct Object far *who, struct Object far *food, unsigned char h
         msg = -1;
         if (qty > 1)
             msg = 0x84;
-        else if (inplist->field8 != 1)
+        else if (inplist->mode != 1)
             msg = 0x16B;
         if (msg != -1)
             return -2;
@@ -597,7 +451,7 @@ void far UseBook(struct Object far *obj, unsigned char how)
     if (OBJ_ID(obj) == 0x13A)
     {
         game_sprint(0x8E);
-        if (inplist->field8 == 1)
+        if (inplist->mode == 1)
             newscr(2);
     }
     else if (OBJ_ID(obj) == 0x139)
@@ -609,7 +463,7 @@ void far UseBook(struct Object far *obj, unsigned char how)
             link = OBJ_LINK(obj) & 0xFF;
             if (link == 0)
             {
-                if (inplist->field8 == 1)
+                if (inplist->mode == 1)
                 {
                     player->map_scrap = ~owner;
                     newscr(2);
@@ -636,7 +490,7 @@ void far UseBook(struct Object far *obj, unsigned char how)
             strcat(text, "...\n");
             scroll_print(text);
             if ((OBJ_LINK(obj) & 0x1FF) == 6)
-                player->questsCE = (player->questsCE & 0xFFFFFFFBL) + 4;
+                player->quests[26] = (player->quests[26] & 0xFFFFFFFBL) + 4;
             str = get_string((OBJ_LINK(obj) & 0x1FF) | 0x600);
             scroll_print(str);
             scroll_print("\n");
@@ -664,7 +518,7 @@ void far UseLockpickOn(struct Object far *obj, unsigned char how)
     GameInputMode = 0;
     skill = -(player->skills[16] + 1);
     result = checkLock(ThePlayer, obj, skill);
-    if (result == 5 && skill_check(player->b1F, 20) > 0 || result == 4 && skill == -1)
+    if (result == 5 && skill_check(player->dexterity, 20) > 0 || result == 4 && skill == -1)
         result = 0;
     switch (result)
     {
@@ -797,7 +651,7 @@ void far UseUnique(struct Object far *who, struct Object far *obj, unsigned char
         game_sprint(0x8D);
         break;
     case 0x111:
-        if (player->b370 >= 6)
+        if (player->xclock[3] >= 6)
             n++;
         if (n)
             play_instrument(2);
@@ -955,8 +809,8 @@ void far UseRune(struct Object far *who, struct Object far *rune)
     {
         if (who == ThePlayer)
         {
-            player->b305 = (rand() & 0xF) + 4;
-            PN.x = PN.y = PN.momentum = 0;
+            player->paralyzed = (rand() & 0xF) + 4;
+            PN.vel[0] = PN.vel[1] = PN.speed = 0;
             game_sprint(0x163);
         }
         else
@@ -1030,7 +884,7 @@ void far UseMagic(struct Object far *who, struct Object far *obj, char how)
         switch (OBJ_ID(obj))
         {
         case 0x121:
-            if (inplist->field8 == 1)
+            if (inplist->mode == 1)
                 player_sleep(1);
             break;
         case 0x123:
@@ -1108,7 +962,7 @@ void far UseRockHammerOn(struct Object far *obj, unsigned char how, char other)
         xoff = (obj->pos & 0xE000) >> 13;
         yoff = (obj->pos & 0x1C00) >> 10;
         z = obj->pos & 0x7F;
-        Obj_Punt(&tile->objects, obj, 1);
+        Obj_Punt(&tile->objects.word, obj, 1);
         for (count = (int)(rand() * 2L / 0x8000L) + (0x155 - id) + 1; count > 0; count--)
         {
             rock = CreateObj(1, 0);

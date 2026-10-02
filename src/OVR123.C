@@ -10,86 +10,24 @@
    and ShowRune_, and empties the bag the same way. */
 
 #include <string.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x21];
-    unsigned char skills[20];           /* 0x21, casting at 0x2A */
-    char pad1[0x37 - 0x35];
-    unsigned char play_mana;            /* 0x37 */
-    char pad2[0x3D - 0x38];
-    unsigned char level;                /* 0x3D */
-    unsigned spells[3];                 /* 0x3E, class 0-3, subclass 4-7, stability 8-15 */
-    unsigned char runebag[3];           /* 0x44, one bit per rune, high bit first */
-    unsigned char shelf[3];             /* 0x47, the runes chosen for casting */
-    char pad4[0x60 - 0x4A];
-    unsigned b60:1;                     /* 0x60 */
-    unsigned poison:4;
-    unsigned active_spells:4;
-    unsigned nrunes:2;                  /* word 0x61, bits 1..2 */
-    unsigned b61_3:1;
-    char pad62[0x305 - 0x62];
-    unsigned char b305;                 /* 0x305 */
-    char pad306[0x369 - 0x306];
-    unsigned long game_clock;           /* 0x369 */
-};
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* item id in bits 0-8 */
-    unsigned pos;
-    unsigned qn;
-    union {
-        unsigned word;                  /* the head of the contents list */
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-};
+#include "combat.h"
+#include "gfx.h"
+#include "object.h"
+#include "player.h"
+#include "ui.h"
 
 #define OBJ_ID(o)       ((o)->id & 0x1FF)
 
-struct Inplist {
-    int x;
-    int y;
-    char pad4[6 - 4];
-    unsigned buttons;                   /* 0x06 */
-};
-
-/* One spell's runes, 4 bytes. */
-struct Spell {
-    unsigned char cls;                  /* class in bits 3-7 */
-    int runes;                          /* the three runes, 5 bits each */
-    unsigned char sub;
-};
-
-extern struct Player near *player;
-extern struct Object far *ThePlayer;
 extern struct Inplist near *inplist;
-extern int GameInputMode;
-extern int PlayerLevel;
 extern char far Transparency;
 extern struct Spell far spells[];
-extern char mspell_mused;
 /* This file's _BSS, DS:6A96 (ovr122's ends at 6A95): only this file uses it, and FM Towns
    keeps it unnamed, so it was static. */
 static char dseg_67d6_6A96;     /* provisional */
 
-void far Obj_Free(struct Object far *obj);
-void far pic_to_screen(int pic, int x, int y, int w, int h);
-void far mouse_hide(void);
-void far mouse_show(void);
 void far mouse_release(int n);
-void far set_runes(unsigned char *shelf);
-void far LookAt(struct Object far *obj, int lore);
 void far scroll_print(char far *s);
-void far game_sprint(int id);
-char far * far get_string(int id);
-void far parse_aspells(unsigned char *spells);
-char far dispel_spell(int *which);
-void far FixPlayerEquips(void);
 unsigned char far play_effect_here(unsigned char fx, unsigned char pan, char vol);
-int far skill_check(int value, int target);
-char far do_spell(unsigned char cls, unsigned char sub, struct Object far *who,
-                  struct Object far *target);
 
 unsigned char spell_delay = 0;
 unsigned long lstime = 0;
@@ -144,7 +82,7 @@ void far clear_shelf(void)
 void far mous_in_rune(void)
 {
     int rune;
-    struct Object obj;
+    struct StaticObj obj;
 
     if (GameInputMode != 0)
         return;
@@ -153,11 +91,11 @@ void far mous_in_rune(void)
     else {
         rune = 0x14 - ((inplist->y - 0x12) / 0xF << 2) + inplist->x / 0x12;
         if (player->runebag[rune >> 3] >> 7 - (rune & 7) & 1) {
-            if (inplist->buttons & 2) {
+            if (inplist->cmd & 2) {
                 obj.ol.f.link = 0;
                 obj.id = obj.id & 0xFE00 | (rune + 0xE8) & 0x1FF;
                 obj.ol.f.owner = 0;
-                LookAt(&obj, 0);
+                LookAt((struct Object far *)&obj, 0);
             } else {
                 if (dseg_67d6_6A96)
                     clear_shelf();
@@ -190,7 +128,7 @@ void far try_clear(void)
         return;
     idx = 2 - (inplist->x >> 4);
     if (player->active_spells > idx) {
-        if (inplist->buttons & 2) {
+        if (inplist->cmd & 2) {
             parse_aspells(active);
             scroll_print(get_string(active[idx] + 0x180 | 0xC00));
             stab = player->spells[idx] >> 8;
@@ -207,8 +145,6 @@ void far try_clear(void)
     }
 }
 
-char far player_cast(unsigned char idx);
-
 void far try_cast(int how)
 {
     char i;
@@ -216,9 +152,9 @@ void far try_cast(int how)
 
     if (GameInputMode != 0)
         return;
-    if (player->b305 != 0)
+    if (player->paralyzed != 0)
         return;
-    if ((inplist->buttons & 2) && how == 0) {
+    if ((inplist->cmd & 2) && how == 0) {
         mouse_release(1);
         return;
     }

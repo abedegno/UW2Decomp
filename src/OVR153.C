@@ -5,20 +5,12 @@
    global names are the originals from the FM Towns symbol table; the source file's own
    name is not known. */
 
+#include "file.h"
+
 extern char far stdat[];
 /* This file's _DATA, DS:1AD4 (ovr152's strings end there; PLAYER.C's data starts at 1AD8):
    the LZSS work area, set up here and used by ovr127. */
 char far *globals = 0;
-
-/* Far-buffer file reads and writes in ovr167. FM Towns, being flat, calls the library's
-   read() and write() here; DOS cannot (_read is the near-buffer library call at 0E72:1FCD),
-   and the DOS helpers' original names are not known, so these are the IDA names. */
-int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
-int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n);
-unsigned far DecompressLZW_disk(char far *dst, int fd, char far *work, unsigned worksize,
-                                unsigned n);
-unsigned far CompressLZW_disk(char far *src, int fd, char far *work, unsigned worksize,
-                              unsigned n);
 
 void far ac_setup_lzw(char far **work, unsigned *worksize)
 {

@@ -2,6 +2,10 @@
 /* opts: -mm -1 -G -O -Y -d */
 
 #include <dos.h>
+#include "file.h"
+#include "map.h"
+#include "object.h"
+#include "sys.h"
 
 /* This file's _DATA starts at DS:1874 (ovr126's strings end at 1873, odd). hgt_val and
    mapdata lie between ovr126's data and MapDirty; of the two files there, ovr127 is
@@ -24,24 +28,14 @@ extern char timercount;
 extern unsigned char animlist[];
 struct OverlayWord { unsigned pad:6; unsigned id:10; };
 
-extern char HomeDir[];
-
 extern void far * far farmalloc(unsigned long size);
-extern void far first_punt(int code);
-extern void far Map_ObjFix(void);
-extern unsigned char far open_arc(int type, char *folder);
 extern int far get_arc(int type, int block, void far *dst);
 extern unsigned char far put_arc(int type, int block, void far *src, unsigned size);
 extern void far close_arc(int close);
-extern void far pfatal_code(int code);
 extern unsigned char far ObjCrunch(char n);
 extern int far wyorn(int a, int b, char *answer);
-extern void far mem_set(void far *dst, char value, int size);
 extern void far movedata(unsigned srcseg, unsigned srcoff,
                                                 unsigned dstseg, unsigned dstoff, unsigned size);
-
-char far Anim_Load(char far *source);
-char far Anim_Save(char far *destination);
 
 char far Map_Init(void)
 {

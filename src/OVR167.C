@@ -6,6 +6,10 @@
 #include <stat.h>
 #include <string.h>
 #include <stdlib.h>
+#include "file.h"
+#include "gfx.h"
+#include "sys.h"
+#include "ui.h"
 
 /* FM Towns names are used where the same operation is clear in its code:
    flip_bool toggles a byte; check_dirs checks the data directories; check_fds
@@ -68,7 +72,6 @@ char x1, y1, x2, y2;
 { return mpos(x2 - x1, y2 - y1); }
 
 void far scroll_print(char far *s);
-void far game_sprint(int n);
 void far print_path_to(char far *s, int px, int py, int ignored,
                                                    int ox, int oy, int previous, int radius)
 {
@@ -91,8 +94,6 @@ void far print_path_to(char far *s, int px, int py, int ignored,
     scroll_print(".\n");
 }
 
-void far set_the_color(int a);
-void far box(int a, int b, int c, int d);
 void far unsolve_compass(int x, int y, int t, int cx, int cy, int n)
 {
     register int xx = cx + x / 2;
@@ -107,8 +108,6 @@ void far unsolve_compass(int x, int y, int t, int cx, int cy, int n)
     box(xx - 1, yy - 1, xx + 1, yy + 1);
 }
 
-long far cSqRt(long n);
-int far cAtan2(int x, int y);
 int far get_theta(int sx, int sy, int x, int y)
 {
     int dx = x - sx;
@@ -142,7 +141,6 @@ char far dir_exist(char *name)
     return 0;
 }
 
-void far first_punt(int code);
 void far check_dirs(void)
 {
     unsigned char ok = 1;
@@ -181,7 +179,6 @@ void far check_fds(void)
     if (!ok) first_punt(6);
 }
 
-int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n);
 char far blttodrive(void far *buf, char *name, unsigned n)
 {
     unsigned char ok = 1;
@@ -193,7 +190,6 @@ char far blttodrive(void far *buf, char *name, unsigned n)
     return ok;
 }
 
-int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
 char far bltfromdrive(char *name, void far *buf, unsigned n)
 {
     unsigned char ok = 1;
@@ -245,7 +241,6 @@ void far build_xor_table(unsigned char key, unsigned char *tab)
     for (i = 0; i < 11; i++) tab[i * 7] = key += 0x49;
 }
 
-void far pfatal_code(int n);
 void far xor_xor_table(unsigned char far *dst, unsigned char far *src, unsigned char far *key, int n)
 {
     register int i;
@@ -302,7 +297,6 @@ void far data_fopen(char *name, int mode)
     strcat(path, name);
     fopen(path, mode);
 }
-extern char HomeDir[];
 int far our_open(char *name, int directory, int mode)
 {
     char path[0x50];

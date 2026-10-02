@@ -7,24 +7,14 @@
    the FM Towns names. */
 #include <dos.h>
 #include <stdlib.h>
-
-struct Object {
-    unsigned id, pos;
-    unsigned qn:6, qn_hi:2;
-    unsigned char b05;
-    unsigned ol:6, ol_hi:2;
-    unsigned char b07;
-    unsigned char hp, b09, b0A;
-    unsigned goal_word, attitude_word;
-    char pad0F[6];
-    unsigned char b15;
-    unsigned home;
-    unsigned char b18, b19, whoami;
-};
+#include "conv.h"
+#include "critter.h"
+#include "event.h"
+#include "map.h"
+#include "object.h"
+#include "player.h"
 
 extern unsigned LastActiveMob;
-/* The creature table (ovr104's Creature, 0x30 bytes a type); only the race byte, +9, is read. */
-extern unsigned char Creature[][0x30];
 extern unsigned char far *ActiveMob;
 struct Object far * far Obj_IntTMem(int index);
 
@@ -38,7 +28,7 @@ void far gronk_race(int race, unsigned char loop, int param,
     while ((unsigned)list < LastActiveMob) {
         npc = Obj_IntTMem(*list);
         if (((npc->id & 0x1C0) >> 6) == 1 &&
-            Creature[npc->id & 0x3F][9] == race &&
+            Creature[npc->id & 0x3F].race == race &&
             !((npc->b0A & 0x80) >> 7)) {
             if (code(npc, param))
                 list--;
@@ -70,7 +60,6 @@ void far gronk_all_critters(unsigned char loop, int param,
 
 void far gronk_whoami(int whoami, unsigned char all, int arg,
                      char (far *fn)(struct Object far *, int));
-void far change_critter_goal(struct Object far *npc, char goal, int gtarg);
 
 void far gronk_critid(int params, unsigned char all, int row,
                       char (far *fn)(struct Object far *, int))
@@ -102,10 +91,7 @@ char far ev_change_goal(char far *row)
     return 0;
 }
 
-extern struct Object far *ThePlayer;
-extern int PlayerFacing;
 char far check_alert(int mode, int x, int y);
-unsigned char far deltatotheta(char dx, char dy);
 
 unsigned char far player_looking(int x, int y)
 {
@@ -124,8 +110,6 @@ unsigned char far player_looking(int x, int y)
 }
 
 struct EventRow { unsigned char b[16]; };
-struct Player { unsigned char pad[0x36D], day, pad2[14], xclock15; };
-extern struct Player near *player;
 unsigned char far teleport_critter(struct Object far *npc, int x, int y, int mode);
 void far Sched_Migrate(struct EventRow far *row);
 
@@ -139,15 +123,15 @@ char far gronkify_teleport(struct Object far *npc, unsigned char *row)
                                     ((npc->pos & 0x1C00) >> 10)) == 0)) {
         if (teleport_critter(npc, row[5], row[6], row[9])) {
             if (row[11]) {
-                npc->qn = row[5];
-                npc->ol = row[6];
+                npc->qn.f.quality = row[5];
+                npc->ol.f.owner = row[6];
             }
             return 0;
         }
     }
     if (row[12] > 0) {
         copy = *(struct EventRow *)row;
-        *(unsigned *)copy.b = (unsigned)(player->day + row[12]) % 0x48;
+        *(unsigned *)copy.b = (unsigned)(player->xclock[0] + row[12]) % 0x48;
         copy.b[3] = 1;
         Sched_Migrate(&copy);
     }
@@ -163,18 +147,15 @@ char far ev_teleport(char far *row)
     return 0;
 }
 
-struct Tile { unsigned pad, head; };
-struct Tile far * far Map_GetAddr(int x, int y);
 struct Object far * far Obj_Punt(unsigned far *head, struct Object far *obj, int how);
 
 int far gronkify_remove(struct Object far *obj)
 {
     struct Tile far *tile = Map_GetAddr((obj->home & 0xFC00) >> 10,
                                         (obj->home & 0x3F0) >> 4);
-    return Obj_Punt(&tile->head, obj, 1) == 0;
+    return Obj_Punt(&tile->objects.word, obj, 1) == 0;
 }
 
-extern struct Object far *talking_to;
 extern unsigned char far *SCD_dseg_67d6_8634;
 void far instant_kill(struct Object far *npc);
 
@@ -182,7 +163,7 @@ char far gronkify_slay(struct Object far *npc, unsigned char *row)
 {
     if (!row[7] && npc == talking_to) {
         if (row[8] > 0 && SCD_dseg_67d6_8634[6] == 15 && !row[3])
-            player->xclock15++;
+            player->xclock[15]++;
         return 0;
     }
     instant_kill(npc);
@@ -224,7 +205,7 @@ char far ev_trigger(unsigned char far *row)
 {
     unsigned char far *params = row;
     struct Tile far *tile = Map_GetAddr((char)row[5], (char)row[6]);
-    unsigned far *head = &tile->head;
+    unsigned far *head = &tile->objects.word;
     struct Object far *obj;
     struct Object far *next = 0;
     if (params == row) ;
@@ -249,7 +230,7 @@ char far gronkify_nystul(struct Object far *npc, unsigned char *row)
     register unsigned char heading;
     p = r + 6;
     heading = p[2];
-    npc->b09 = heading << 5;
+    npc->heading = heading << 5;
     npc->pos = npc->pos & 0xFC7F | ((heading & 7) << 7);
     npc->b18 &= 0xE0;
     return 0;
@@ -278,8 +259,8 @@ char far gronkify_gotha(struct Object far *npc, unsigned char *row)
                 break;
         }
     }
-    npc->qn = x;
-    npc->ol = y;
+    npc->qn.f.quality = x;
+    npc->ol.f.owner = y;
     return 0;
 }
 
@@ -319,8 +300,6 @@ char far ev_garg_hack(char far *row)
     return 0;
 }
 
-extern int PlayerLevel;
-
 char far gronkify_soldier(struct Object far *npc, unsigned char *row)
 {
     unsigned char *eventRow = row;
@@ -340,8 +319,8 @@ move:
         x = p[4] + (int)(((long)rand() * (p[6] - p[4] + 1)) / 0x8000L);
         y = p[5] + (int)(((long)rand() * (p[7] - p[5] + 1)) / 0x8000L);
         if (teleport_critter(npc, x, y, PlayerLevel)) {
-            npc->qn = x;
-            npc->ol = y;
+            npc->qn.f.quality = x;
+            npc->ol.f.owner = y;
             break;
         }
     }
@@ -383,7 +362,6 @@ char far ev_freeze_hack(unsigned char far *row)
     return 0;
 }
 
-void far DoClosingDoors(unsigned char x);
 char far ev_door_hack(unsigned char far *row)
 {
     unsigned char far *params = row;
@@ -416,10 +394,6 @@ char far ev_attitude(char far *row)
                  (char (far *)(struct Object far *, int))gronkify_attitude);
     return 0;
 }
-
-int far get_numbered_variable(int index);
-int far do_math_op(int value, int op, int right);
-char far Sched_DoEvent(unsigned char far *row);
 
 char far ev_checkvar(unsigned char far *row)
 {

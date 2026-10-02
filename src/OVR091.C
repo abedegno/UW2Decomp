@@ -1,8 +1,8 @@
 /* target: ovr091 */
 /* opts: -mm -1 -G -O -Y -d */
 
-struct Object { unsigned id; };
-extern struct Object far *ActiveObj;
+#include "object.h"
+
 extern char animclassd[];
 void far fread(void *address, int size, int count, int fd);
 

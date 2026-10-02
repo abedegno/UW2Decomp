@@ -7,46 +7,12 @@
    name is not known. */
 
 #include <stdlib.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x62];
-    unsigned b62:6;                     /* 0x62 */
-    unsigned sleepbits:3;               /* word 0x62, bits 6..8 */
-    unsigned in_void:1;
-    unsigned b63:6;
-    char pad64;
-    unsigned lefty:1;                   /* 0x65 */
-    unsigned female:1;
-    unsigned body:3;
-};
-
-/* The player's statistics block. */
-struct PlayerStats {
-    char pad0[0x4A];
-    unsigned weight;                    /* 0x4A, weight carried */
-    unsigned capacity;                  /* 0x4C, weight that can be carried */
-};
-
-/* A link word: the low six bits belong to the owner, the rest is an object index. */
-union Link {
-    unsigned word;
-    struct { unsigned low:6, link:10; } f;
-};
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;
-    unsigned pos;
-    union {
-        unsigned word;                  /* the next object in this list */
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;                  /* the head of the contents list, or the quantity */
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-};
+#include "gfx.h"
+#include "inv.h"
+#include "object.h"
+#include "player.h"
+#include "ui.h"
+#include "uw2.h"
 
 #define OBJ_ID(o)       ((o)->id & 0x1FF)
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
@@ -56,54 +22,15 @@ struct Object {
 #define OBJ_INVIS(o)    (((o)->id & 0x4000) >> 14)
 #define OBJ_ISQUANT(o)  (((o)->id & 0x8000) >> 15)
 
-/* One object type's common properties, 11 bytes. */
-struct ComObj {
-    unsigned char height;               /* 0x00 */
-    unsigned radius:4;                  /* 0x01 */
-    unsigned mass:12;
-    unsigned b3:5;                      /* 0x03 */
-    unsigned pickup:1;
-    unsigned stack:2;
-    unsigned b4:8;
-    char pad5[0x0B - 0x05];
-};
-
 /* One container type, 3 bytes. */
 struct Container {
     unsigned char capacity;             /* 0x00, 0 for no limit */
     int mask;                           /* 0x01, what it accepts: an item id, 0x200.. a kind, or -1 */
 };
 
-/* One open bag (see ovr121). */
-struct Bag {
-    struct Bag far *next;
-    struct Bag far *prev;
-    union Link obj;
-    int weight;
-};
-
-/* One inventory slot on screen, 14 bytes: the rectangle the mouse hits (y counts up from
-   the bottom of the screen, so top >= bottom) and where its picture goes. */
-struct InvRect {
-    int left, top, right, bottom;       /* 0x00 */
-    int x, y;                           /* 0x08 */
-    unsigned char w, h;                 /* 0x0C */
-};
-
-struct Inplist {
-    int x, y;                           /* 0x00 */
-    char pad4[6 - 4];
-    int buttons;                        /* 0x06 */
-    int field8;                         /* 0x08 */
-};
-
-extern struct Player near *player;
-extern struct PlayerStats PlayerDat;
-extern struct Object far *ThePlayer;
+extern struct Player PlayerDat;
 extern union Link Inventory[];
-extern struct ComObj ComObjData[];
 extern struct Container Containers[];
-extern struct Object far *ActiveObj;
 /* This file's _BSS, DS:6AD0..6B0F, laid out by name (tools/bssorder.py): invArmorObj and
    invArmorQ 57, SaveHandles 827, panel_mouse 968, CursorObjPtr 995; ovr130's Containers
    (339) starts the next run. panel_mouse (DS:6B0A) has no FM Towns name and only this file
@@ -119,63 +46,19 @@ extern char far Transparency;
 extern char RightPanel;
 extern char far *foreground_color;
 extern struct Inplist near *inplist;
-extern int GameInputMode;
-extern int PLeft, PBot, PWid, PHgt;
 
-void far reload_gr_vpic(int id, char *name, int n);
-int far valloc(int w, int h);
-void far save_rect(int handle, int x, int y, int w, int h);
-void far restore_rect(int handle);
 /* Every call here passes an InvRect's h before its w. */
-void far pic_to_screen(int pic, int x, int y, int h, int w);
-int far defineMouseRegion(int x0, int y0, int x1, int y1, int id);
 int far input_addmouse(int a, int b, int c, int d, int buttons, int mode, void far (*handler)(void));
-void far mous_in_panel(void);
-void far mouse_hide(void);
-void far grSoftPageFlip(void);
-void far set_the_color(int c);
 void far rectangle(int x0, int y0, int x1, int y1);
-void far mouse_show(void);
-void far grfx_quikfont(int size);
-void far string_to_screen(char far *s, int x, int y);
-int far string_width(char far *s);
 struct Object far * far Obj_PtrTMem(unsigned far *link);
-int far Obj_MemTPtr(struct Object far *obj);
-struct Object far * far AskInventory(int slot);
-struct Object far * far takeFromSlot(int a, int b, int c, int slot, int d);
-void far FixPlayerEquips(void);
 struct Object far * far Obj_Alloc(char mobile);
 int far wdialog(char *prompt, char *initial, char *result, char anychar, int maxlen);
-void far wd_replace(int n);
 void far scroll_print(char far *s);
-char * far get_class_data(void);
-int far UseFood(struct Object far *who, struct Object far *food, char how);
-void far BagWeight(unsigned far *head, int far *total);
 void far get_name(char far *buf, struct Object far *obj, int article, char plural);
-unsigned char far AddToInventory(struct Object far *obj, int slot);
-void far Obj_Free(struct Object far *obj);
 void far Obj_Punt(unsigned far *head, struct Object far *obj, int how);
-char far PutObjectInBag(struct Object far *obj, int slot);
-char far SwapItemsInBag(struct Object far *obj, int slot);
-char far InvRemoveObject(struct Object far *obj);
-struct Object far * far removeFromSlot(int major, int minor, int cls, int slot, int qty);
-int far ObjsBeCombinable(struct Object far *obj, struct Object far *with);
-struct Object far * far CombineObjs(int combo);
-char far RemoveAfterCombine(struct Object far *obj, int combo);
 void far Obj_Add(unsigned far *head, struct Object far *obj);
-int far ItemWeight(struct Object far *obj);
-void far FixOpenBag(void);
-void far DisplayOpenBag(void);
-void far DoSpecialActions(int slot);
-void far toggle_fightmode(void);
-void far inv_look(void);
-void far game_sprint(int id);
 void far mouse_release(int how);
 char far mouse_dragged(int how);
-void far mouse_getxy(int *x, int *y);
-void far mouse_getbut(int *buttons);
-void far unforce_mouse_cursor(int n);
-void far force_mouse_cursor(int id);
 
 char ValidLightSlots[4] = { 5, 6, 7, 8 };
 struct Bag far *OpenBagList = 0;
@@ -275,7 +158,7 @@ void far ClearInventory(void)
     register int i;
 
     for (i = 0; i < 28; i++)
-        Inventory[i].f.link = 0;
+        Inventory[i].f.index = 0;
     for (i = 1; i <= 5; i++)
         invArmorObj[i] = 0;
     OpenBag = OpenBagList = 0;
@@ -283,21 +166,6 @@ void far ClearInventory(void)
     CursorObjPtr = 0;
     shown_capacity = -1;
 }
-
-/* Later in this file. */
-void far DisplayInvObject(int slot);
-void far SetCursorObj(int slot, char keep);
-struct Object far * far AskHowMany(struct Object far *obj);
-int far ItemFitsSlot(struct Object far *obj, int slot);
-void far RearrangeInventory(int slot);
-unsigned char far AddToEmptySlot(struct Object far *obj, int slot);
-char far AddTogether(struct Object far *obj, struct Object far *onto);
-char far AddToOccupiedSlot(struct Object far *obj, int slot);
-void far displayInventoryArray(int from, int to);
-char far displayEnc(char show);
-int far FindInventoryHit(int x, int y);
-
-void far DisplayInvSpecial(void);
 
 void far DoInventoryMouse(int how)
 {
@@ -323,7 +191,7 @@ void far DoInventoryMouse(int how)
     hit = FindInventoryHit(x0, y0);
     if (hit > 0 && hit < 21) {
         slot = DisplayToSlot[hit];
-        if (CursorObjPtr == 0 && Inventory[slot].f.link == 0) {
+        if (CursorObjPtr == 0 && Inventory[slot].f.index == 0) {
             if (8 - player->lefty == slot)
                 toggle_fightmode();
             mouse_release(1);
@@ -331,7 +199,7 @@ void far DoInventoryMouse(int how)
         }
         if (CursorObjPtr == 0 && slot != -1 && slot != 19)
             pick = 1;
-        if (inplist->buttons != 1 && pick && mouse_dragged(1)) {
+        if (inplist->cmd != 1 && pick && mouse_dragged(1)) {
             obj = Obj_PtrTMem(&Inventory[slot].word);
             if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & 0x200)) {
                 if (obj->ol.f.link != 1) {
@@ -341,7 +209,7 @@ void far DoInventoryMouse(int how)
                         Obj_Add(&obj->qn.word, split);
                 }
             } else if (OBJ_MAJOR(obj) == 2 && OBJ_MINOR(obj) == 0) {
-                if (inplist->field8 == 4 && (obj->id & 0xF) != 0xF) {
+                if (inplist->mode == 4 && (obj->id & 0xF) != 0xF) {
                     game_sprint(0xC9);
                     return;
                 }
@@ -368,7 +236,7 @@ void far DoInventoryMouse(int how)
         mouse_release(1);
         mouse_getxy(&x, &y);
         newhit = FindInventoryHit(x, y);
-        if (inplist->buttons == 1 && newhit != hit)
+        if (inplist->cmd == 1 && newhit != hit)
             hit = -1;
         else
             hit = newhit;
@@ -466,7 +334,7 @@ void far DisplayInvSpecial(void)
         Transparency = 1;
         for (i = 0; i < 5; i++) {
             slot = ArmorSlots[i];
-            if (Inventory[DisplayToSlot[slot]].f.link != 0) {
+            if (Inventory[DisplayToSlot[slot]].f.index != 0) {
                 obj = Obj_PtrTMem(&Inventory[DisplayToSlot[slot]].word);
                 type = OBJ_TYPE(obj) & 0x1F;
                 if (type > 14)
@@ -489,7 +357,7 @@ void far DisplayInvSpecial(void)
                   InvDisplay[11].h);
         save_rect(SaveHandles[10], InvDisplay[10].x + 5, InvDisplay[10].y, InvDisplay[10].w - 5,
                   InvDisplay[10].h);
-        if (Inventory[9].f.link != 0 || Inventory[10].f.link != 0)
+        if (Inventory[9].f.index != 0 || Inventory[10].f.index != 0)
             displayInventoryArray(10, 11);
         if (inv_refresh) {
             grSoftPageFlip();
@@ -540,7 +408,7 @@ void far SetCursorObj(int slot, char keep)
     CursorObjPtr = takeFromSlot(-1, -1, -1, slot, 0);
     if (CursorObjPtr != 0) {
         if (keep) {
-            Inventory[slot].f.link = link;
+            Inventory[slot].f.index = link;
             FixPlayerEquips();
         }
         mouse_hide();
@@ -590,7 +458,7 @@ struct Object far * far AskHowMany(struct Object far *obj)
     if (n != 0) {
         if (obj->ol.f.link != n) {
             split = Obj_Alloc(0);
-            *split = *obj;
+            *(struct StaticObj far *)split = *(struct StaticObj far *)obj;
             split->ol.f.link -= n;
             obj->ol.f.link = n;
         } else
@@ -626,7 +494,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
             return 0;
         if (OpenBag->prev == 0) {
             for (j = 11; j <= 18; j++)
-                if (Inventory[j].f.link == 0)
+                if (Inventory[j].f.index == 0)
                     break;
             if (j > 18)
                 game_sprint(0x112);
@@ -757,7 +625,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
 
 void far RearrangeInventory(int slot)
 {
-    if (Inventory[slot].f.link == 0) {
+    if (Inventory[slot].f.index == 0) {
         if (AddToEmptySlot(CursorObjPtr, slot))
             CursorObjPtr = 0;
     } else if (AddToOccupiedSlot(CursorObjPtr, slot))
@@ -921,7 +789,7 @@ void far displayInventoryArray(int from, int to)
         qty[i] = 1;
         if (i <= 20) {
             slot = DisplayToSlot[i];
-            if (Inventory[slot].f.link != 0) {
+            if (Inventory[slot].f.index != 0) {
                 obj = Obj_PtrTMem(&Inventory[slot].word);
                 id = OBJ_ID(obj);
                 pic_to_screen(id, InvDisplay[i].x, InvDisplay[i].y, InvDisplay[i].h, InvDisplay[i].w);
@@ -958,7 +826,7 @@ char far displayEnc(char show)
     register int left;
 
     drawn = 0;
-    left = PlayerDat.capacity - PlayerDat.weight;
+    left = PlayerDat.max_weight - PlayerDat.weight;
     if (shown_capacity != left) {
         restore_rect(SaveHandles[0]);
         shown_capacity = left;
@@ -976,7 +844,7 @@ int far FindInventoryHit(int x, int y)
     register struct InvRect *r;
     register int i;
 
-    if (inplist->field8 != 4) {
+    if (inplist->mode != 4) {
         if (x > PLeft && PLeft + PWid > x && y > PBot && PBot + PHgt > y)
             return 0x17;
     } else if (x > 0x77 && x < 0xA3 && y > 0x87 && y < 0xBC)

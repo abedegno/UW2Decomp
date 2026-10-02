@@ -6,96 +6,19 @@
 
 #include <string.h>
 #include <stdlib.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x21];
-    unsigned char skills[20];           /* 0x21 */
-    char pad1[0x37 - 0x35];
-    unsigned char play_mana;            /* 0x37 */
-    unsigned char max_mana;             /* 0x38 */
-    unsigned char hunger;               /* 0x39 */
-    unsigned char fatigue;              /* 0x3A */
-    unsigned char food_heal;            /* 0x3B */
-    char pad2[0x3D - 0x3C];
-    unsigned char level;                /* 0x3D */
-    char pad3[0x4C - 0x3E];
-    unsigned max_weight;                /* 0x4C */
-    unsigned long exp;                  /* 0x4E, in tenths */
-    unsigned char skill_points;         /* 0x52 */
-    char pad4[0x60 - 0x53];
-    unsigned b60:1;                     /* 0x60 */
-    unsigned poison:4;
-    unsigned active_spells:4;
-    unsigned b60_9:3;
-    unsigned shrooms:2;
-    unsigned drunk:6;                   /* word 0x61, bits 6..11 */
-    unsigned automap:1;                 /* word 0x62, bit 4 */
-    unsigned b62_5:1;
-    unsigned sleepbits:3;               /* word 0x62, bits 6..8 */
-    unsigned in_void:1;
-    unsigned in_pits:1;
-    unsigned b63_3:5;
-    unsigned lo64:13;                   /* 0x64 */
-    unsigned pclass:3;
-    char pad5[0x96 - 0x66];
-    unsigned long quests[2];            /* 0x96 */
-    char pad6[0xE7 - 0x9E];
-    unsigned char arena_fights;         /* 0xE7 */
-    char pad7[0xEB - 0xE8];
-    unsigned char jospur_debt;          /* 0xEB */
-    char pad8[0xF5 - 0xEC];
-    unsigned char cutscene;             /* 0xF5, pending cutscene plus one */
-    char pad9[0xF7 - 0xF6];
-    unsigned char dreamflags;           /* 0xF7 */
-    char pad10[0x2FB - 0xF8];
-    int dream_x;                        /* 0x2FB */
-    int dream_y;                        /* 0x2FD */
-    unsigned dream_pos;                 /* 0x2FF, level << 8 plus heading */
-    char pad11[0x306 - 0x301];
-    unsigned char motion_state;         /* 0x306 */
-    char pad12[0x310 - 0x307];
-    unsigned char lore_by_level[16];    /* 0x310 */
-    char pad13[0x360 - 0x320];
-    unsigned char pit_fighters[5];      /* 0x360 */
-    char pad14[0x369 - 0x365];
-    unsigned long game_clock;           /* 0x369 */
-    char pad15[0x36E - 0x36D];
-    unsigned char xclock1;              /* 0x36E */
-};
-
-/* The player's critter data, reached through the near pointer `playerdat`. */
-struct Critter {
-    char pad0[4];
-    unsigned char max_vit;              /* 0x04 */
-    unsigned char attr[3];              /* 0x05: STR, DEX, INT */
-};
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* index:6 (minor:2 at bit 4), ..., is_quant:1 */
-    unsigned pos;                       /* z 0-6, heading 7-9, x 10-12, y 13-15 */
-    union {
-        unsigned word;                  /* the next object in this list */
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;                  /* the head of the contents list */
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-    unsigned char hp;                   /* 0x08 */
-    char pad09[0x0A - 0x09];
-    unsigned char b0A;                  /* 0x0A */
-    unsigned goal_word;                 /* 0x0B, goal in bits 0-3 */
-    unsigned attitude_word;             /* 0x0D, attitude in bits 14-15 */
-    char pad0F[0x12 - 0x0F];
-    unsigned char last_hit;             /* 0x12 */
-    char pad13[0x15 - 0x13];
-    unsigned char anim;                 /* 0x15, animation in bits 0-5 */
-    unsigned home;                      /* 0x16, x in bits 10-15, y in bits 4-9 */
-    char pad18[0x1A - 0x18];
-    unsigned char whoami;               /* 0x1A */
-};
+#include "combat.h"
+#include "critter.h"
+#include "event.h"
+#include "gfx.h"
+#include "inv.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
+#include "view3d.h"
 
 #define OBJ_INDEX(o)    (((o)->id & 0x3F) >> 0)
 #define OBJ_MINOR(o)    (((o)->id & 0x30) >> 4)
@@ -104,140 +27,40 @@ struct Object {
 #define OBJ_OWNER(o)    ((o)->ol.f.owner)
 #define OBJ_LINK(o)     ((o)->ol.f.link)
 
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    char pad1;
-    unsigned objects;                   /* 0x02, head of the tile's object list */
-};
-
-struct Motion {
-    char pad0[6];
-    int x, y, pitch;
-    int dx, dy, dz;
-    char pad1[0x14 - 0x12];
-    int momentum;
-};
-
-struct FontInfo {
-    char pad0[6];
-    int height;
-};
-
-struct Inplist {
-    char pad0[8];
-    int field8;
-};
-
 struct VoidTile { unsigned char x, y; };
 
-extern struct Player near *player;
-extern struct Critter near *playerdat;
-extern struct Object far *ThePlayer;
-extern int PlayerLevel;
-extern int PlayerHeading;
-extern struct Motion PN;
-extern unsigned char motionbits;
 extern unsigned long far *Time;
-extern int player_name_handle;
-extern unsigned char far *background_color;
 extern unsigned char far *foreground_color;
 extern struct FontInfo far *cur_font;
 extern struct Inplist near *inplist;
-extern int LeftPanel;
 extern void (far *npp_func)(void);
-extern int NewPlayerX, NewPlayerY;
-extern int trap_teleport_data;
-extern int area_spell_state;
-extern struct Object far *CursorObjPtr;
-extern int GameInputMode;
-extern char NewPlyFade;
-extern int MapObj_X, MapObj_Y;
 
 /* Elsewhere in the game. */
-void far mdetect(int kind, int skill);
-char far * far get_string(int id);
 void far scroll_print(char far *s);
-void far game_sprint(int id);
-void far restore_hp(struct Object far *who, char amount);
-void far restore_mana(struct Object far *who, char amount);
-void far panel_check(void);
-int far skill_check(int value, int target);
-void far clear_all_loretries(void);
-/* IDA OpenFont, ovr118. FM Towns game_stats calls a set_font_size_ wrapper here, but every
-   other FM Towns call site, and the map's call-graph pairing, give grfx_quikfont_. */
-void far grfx_quikfont(int size);
-int far string_width(char far *s);
-void far string_to_screen(char far *s, int x, int y);
-char far * far str_copy(char far *dst, char far *src);
-char far * far str_cat(char far *dst, char far *src);
 void far damage_item(struct Object far *who, void far *source, int a, int b,
                      unsigned char damage, int type);
-void far FixPlayerEquips(void);
-void far finish_player(void);
-char far hostile_creatures_near(void);
-void far render_FB(void);
-void far set_random_walking_music(int which);
-void far change_music_maybe(void);
-void far fadeout3d(int speed);
-void far fadein3d(int speed);
-void far send_FB(void);
-void far punt_all_digi_fx(void);
 void far load_digi_fx(int which);
-void far DoClosingDoors(int which);
-void far Obj_GarbageCollect(int how, int count);
-void far pass_time(long seconds);
 void far Killorn_just_crashed(int how);
-void far DegradeLights(int amount, int how);
-char far wandering_monster_check(void);
-void far update_all_critters_whilst_player_snoozes(void);
-void far DoWanderingMonsters(int how);
-void far NightCleanCritPages(void);
-void far *far FindObj(int a, int b, int c, int d, int *where);
-void far get_hp_back(struct Object far *obj, char amount);
 void far show_cutscene(int n);
-void far mouse_hide(void);
 void far grfx_clear(void);
 void far display_screen(int a, int b);
-int far mouse_get_input(void);
-void far grSoftPageFlip(void);
-void far copy_visible_to_hidden(void);
-void far real_death(int n);
-void far change_screen(int n);
-void far strt_demscr(void);
 void far Obj_FindInMap(int major, int minor, int type, int *x, int *y);
-void far move_along(int heading, int dist, int *x, int *y);
 void far set_new_music(int n);
-struct Tile far * far Map_GetAddr(int x, int y);
 struct Object far * far CreateObj(int id, int b);
 char far put_at(int x, int y, int z, struct Object far *obj, int a, int b);
 struct Object far * far obj_deal(struct Object far *obj, int x, int y, int a);
 int far near_mob_put_at(struct Object far *at, struct Object far *obj, int a, int b);
-void far unforce_mouse_cursor(int n);
 void far do_teleport(struct Object far *who, int x, int y, int level);
-void far player_setup(int a, int b, int c);
-void far editchng(int bits);
 struct Object far * far Obj_IntTMem(int index);
-void far put_player_in_jail(void);
-void far kill_all_effects(void);
 void far load_new_music(int n, int m);
-void far player_get_exp(int n);
-void far clear_fight_state(void);
-char far new_player_pos(void);
-void far cFillFB(int c);
 void far scroll_clear(int n);
 struct Object far * far Obj_InList(unsigned far **head, int a, int major, int minor, int idx);
 struct Object far * far Obj_PtrTMem(unsigned far *link);
 void far get_name(char far *buf, struct Object far *obj, int a, int b);
-void far delete_trap(unsigned far *head, struct Object far *trap);
 void far UseTrigger(struct Object far *user, struct Object far *obj, struct Object far *trigger, int a);
-void far SetOffTrap(struct Object far *user, struct Object far *obj, struct Object far *trap, int x, int y);
 
 /* Later in this file. */
 char far player_eat(int nutrition);
-void far punt_void(void);
-void far go_void(void);
-void far do_gem(void);
 
 char far use_skill(struct Object far *who, unsigned char skill, unsigned char value)
 {
@@ -268,7 +91,7 @@ void far player_compute(char restore)
 {
     int mana;
 
-    playerdat->max_vit = 30 + player->level * playerdat->attr[0] / 5;
+    playerdat->avghit = 30 + player->level * playerdat->attr[0] / 5;
     mana = (player->skills[7] + 1) * playerdat->attr[2] >> 3;
     player->max_mana = mana;
     player->max_weight = playerdat->attr[0] * 13 + 300;
@@ -361,7 +184,7 @@ char far get_skill(char skill)
     if (skill == 8)
     {
         clear_all_loretries();
-        player->lore_by_level[PlayerLevel] = player->skills[8];
+        player->lore[PlayerLevel] = player->skills[8];
     }
     return result;
 }
@@ -455,7 +278,7 @@ void far game_stats(void)
             itoa(playerdat->attr[i], text, 10);
             break;
         case 3:
-            itoa(playerdat->max_vit, text, 10);
+            itoa(playerdat->avghit, text, 10);
             break;
         case 4:
             itoa(player->max_mana, text, 10);
@@ -506,14 +329,14 @@ unsigned char far dream(int sleepfactor)
     if (player->sleepbits != 0)
     {
         game_sprint(0x18);
-        player->quests[0] = (player->quests[0] & 0xFFFFFFFEL) + 1;
+        player->quests[12] = (player->quests[12] & 0xFFFFFFFEL) + 1;
         go_void();
         return 0;
     }
     dreamflags = player->dreamflags;
     for (counter = 0; counter < 4; counter++)
     {
-        if (player->xclock1 >= xclocks[counter])
+        if (player->xclock[1] >= xclocks[counter])
         {
             if ((dreamflags & (1 << counter)) != (1 << counter))
                 found = counter;
@@ -572,7 +395,7 @@ void far player_sleep(int how)
 
     if (how >= 0)
     {
-        if ((player->motion_state & 0x1B) || PN.dz != 0)
+        if ((player->motion_state & 0x1B) || PN.acc[2] != 0)
         {
             game_sprint(0x14);
             return;
@@ -608,7 +431,7 @@ void far player_sleep(int how)
     player->active_spells = 0;
     player->shrooms = 0;
     pass_time(hours * 3600L);
-    if ((int)((player->quests[0] & 4) >> 2) && !(int)((player->quests[1] & 4) >> 2))
+    if ((int)((player->quests[12] & 4) >> 2) && !(int)((player->quests[13] & 4) >> 2))
     {
         Killorn_just_crashed(0);
         damage_item(ThePlayer, 0L, 0, 0, 0xFF, 0);
@@ -691,9 +514,9 @@ void far player_sleep(int how)
     }
     FixPlayerEquips();
     NightCleanCritPages();
-    PN.momentum = 0;
-    PN.dx = PN.dy = PN.dz = 0;
-    PN.x = PN.y = PN.pitch = 0;
+    PN.speed = 0;
+    PN.acc[0] = PN.acc[1] = PN.acc[2] = 0;
+    PN.vel[0] = PN.vel[1] = PN.vel[2] = 0;
     panel_check();
     render_FB();
     set_random_walking_music(-1);
@@ -739,7 +562,7 @@ char far player_eat(int nutrition)
 
 void far player_won_game(void)
 {
-    inplist->field8 = 0;
+    inplist->mode = 0;
     LeftPanel = 2;
     show_cutscene(2);
     mouse_hide();
@@ -760,7 +583,7 @@ void far player_won_game(void)
 
 void far cs_check(void)
 {
-    unsigned char *cs = &player->cutscene;
+    unsigned char *cs = &player->quest_bytes[15];
 
     if (*cs > 0)
     {
@@ -811,14 +634,14 @@ void far do_gem(void)
     move_along(rand(), 8, &x, &y);
     NewPlayerX = x;
     NewPlayerY = y;
-    if (playerdat->max_vit > 8)
-        ThePlayer->hp = playerdat->max_vit - 2 - rand() * 3L / 0x8000L;
+    if (playerdat->avghit > 8)
+        ThePlayer->hp = playerdat->avghit - 2 - rand() * 3L / 0x8000L;
     else
-        ThePlayer->hp = playerdat->max_vit;
+        ThePlayer->hp = playerdat->avghit;
     player->play_mana = player->max_mana;
     if (player->max_mana > 8)
         player->play_mana -= player->max_mana / 8 + 2;
-    ThePlayer->anim = (ThePlayer->anim & 0xC0) | 1;
+    ThePlayer->b15 = (ThePlayer->b15 & 0xC0) | 1;
     player->poison = 0;
     player->active_spells = 0;
     FixPlayerEquips();
@@ -945,8 +768,8 @@ void far player_is_dead(void)
             }
             player->pit_fighters[i] = 0;
         }
-        player->arena_fights = 0;
-        player->jospur_debt = 0;
+        player->quest_bytes[1] = 0;
+        player->quest_bytes[5] = 0;
     }
     kill_all_effects();
     load_new_music(7, 1);
@@ -1039,7 +862,7 @@ int far RemoveTrap(struct Object far *obj, int skill)
             {
                 quality = OBJ_QUALITY(trig);
                 owner = OBJ_OWNER(trig);
-                delete_trap(&Map_GetAddr(quality, owner)->objects, trap);
+                delete_trap(&Map_GetAddr(quality, owner)->objects.word, trap);
             }
         }
         else if (result < 0)

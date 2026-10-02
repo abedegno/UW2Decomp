@@ -11,84 +11,17 @@
 #include <ctype.h>
 #include <io.h>
 #include <fcntl.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char name[0x21];                    /* 0x00 */
-    unsigned char skills[20];           /* 0x21 */
-    char pad35[0x39 - 0x35];
-    unsigned char hunger;               /* 0x39 */
-    unsigned char fatigue;              /* 0x3A */
-    unsigned char b3B;                  /* 0x3B */
-    unsigned char b3C;                  /* 0x3C */
-    unsigned char level;                /* 0x3D */
-    char pad3E[0x44 - 0x3E];
-    unsigned char runebag[3];           /* 0x44 */
-    unsigned char shelf[3];             /* 0x47 */
-    unsigned weight;                    /* 0x4A */
-    char pad4C[0x4E - 0x4C];
-    unsigned long exp;                  /* 0x4E */
-    unsigned char skill_points;         /* 0x52 */
-    unsigned char skill_points_earned;  /* 0x53 */
-    char pad54[0x5E - 0x54];
-    unsigned char moonstones[2];        /* 0x5E */
-    unsigned b60:1;                     /* 0x60 */
-    unsigned poison:4;
-    unsigned active_spells:4;
-    unsigned b60_9:2;
-    unsigned b60_11:1;
-    unsigned shrooms:2;
-    unsigned drunk:6;                   /* word 0x61, bits 6..11 */
-    unsigned automap:1;                 /* word 0x62, bit 4 */
-    unsigned b62_5:1;
-    unsigned sleepbits:3;
-    unsigned in_void:1;
-    unsigned b63_2:6;
-    unsigned b64:8;                     /* 0x64 */
-    unsigned lefty:1;                   /* 0x65 */
-    unsigned female:1;
-    unsigned body:3;
-    unsigned pclass:3;
-    unsigned char b66[16];              /* 0x66 */
-    char pad76[0xE6 - 0x76];
-    unsigned char lines_cut[16];        /* 0xE6 */
-    unsigned char bF6;                  /* 0xF6 */
-    unsigned char dreamflags;           /* 0xF7 */
-    unsigned char map_scrap;            /* 0xF8 */
-    unsigned char bF9[0x100];           /* 0xF9 */
-    char pad1F9[0x301 - 0x1F9];
-    unsigned char easy;                 /* 0x301 */
-    unsigned b302:4;                    /* 0x302 */
-    unsigned detail:4;
-    unsigned fps:3;                     /* 0x303 */
-    unsigned b303_3:5;
-    char pad304;
-    unsigned char paralyzed;            /* 0x305 */
-    unsigned char motion_state;         /* 0x306 */
-    unsigned char swim_count;           /* 0x307 */
-    char pad308[0x310 - 0x308];
-    unsigned char lore[0x50];           /* 0x310 */
-    char pad360[0x369 - 0x360];
-    unsigned long game_clock;           /* 0x369 */
-    unsigned char sched_hour[16];       /* 0x36D */
-};
-
-/* The player's critter data, reached through the near pointer `playerdat`. */
-struct Critter {
-    char pad0[4];
-    unsigned char max_vit;              /* 0x04 */
-    unsigned char attr[3];              /* 0x05: STR, DEX, INT */
-};
-
-struct Object {
-    char pad0[8];
-    unsigned char hp;                   /* 0x08 */
-};
-
-struct FontInfo {
-    char pad0[6];
-    int height;                         /* 0x06 */
-};
+#include "critter.h"
+#include "file.h"
+#include "gfx.h"
+#include "inv.h"
+#include "map.h"
+#include "object.h"
+#include "player.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
+#include "view3d.h"
 
 /* One chargen question from DATA\chrgen.dat, 0x12 bytes. */
 struct ChrOpt {
@@ -102,14 +35,9 @@ struct ChrOpt {
     int spacing;                        /* 0x10 */
 };
 
-extern struct Player near *player;
-extern struct Critter near *playerdat;
-extern struct Object far *ThePlayer;
-extern int PlayerLevel;
 extern unsigned long far *Time;
 extern long lastDurCheck;
 extern unsigned char far *foreground_color;
-extern unsigned char far *background_color;
 extern struct FontInfo far *cur_font;
 extern char in_game;
 extern unsigned char far Transparency;
@@ -120,42 +48,15 @@ int sknow;
 int *chroff;                            /* offsets of the button pictures in chrbuf */
 unsigned char far *chrbuf;
 
-void far set_graphics_level(void);
-int far rollem(int dice, int sides);
-void far player_compute(char restore);
-void far add_to_skill(int skill);
-void far FixPlayerEquips(void);
-void far set_the_color(int c);
 void far rectangle(int x0, int y0, int x1, int y1);
-void far string_to_screen(char far *s, int x, int y);
-int far string_width(char far *s);
-char far * far get_string(int id);
 void far show(int x, int y, unsigned char far *buf, int h, int w, int a, int b);
-unsigned char far * far set_cuts_ems(int which);
-int far get_cuts_ems(void);
-void far free_cuts_ems(void);
-void far mouse_hide(void);
-void far mouse_show(void);
-void far mouse_getxy(int *x, int *y);
-int far mouse_get_input(void);
-void far loop_music_maybe(void);
-void far grSoftPageFlip(void);
-void far grPageFlip(void);
-void far copy_hidden_to_visible(void);
-void far copy_visible_to_hidden(void);
 char far disk_to_vid(int blk, unsigned char far *buf);
 unsigned char far read_quikpal(int which, unsigned char far *pal);
 unsigned char far gronk_gr(char *name, int a, int b, unsigned char far *(far *adr)(int),
                            int (far *move)(unsigned char far *, int, int));
-int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
-void far grfx_quikfont(int which);
-void far fadein(unsigned char far *pal, int steps, int x);
 void far fadeout(unsigned char far *pal, int steps, int x);
-void far load_txtmaps(void);
 void far grfx_clear(void);
-void far pfatal_code(int code);
 void far load_weapcm(void);
-unsigned char far AddToInventory(struct Object far *obj, int slot);
 
 void far init_char(char blank)
 {
@@ -170,14 +71,14 @@ void far init_char(char blank)
     player->map_scrap = 1;
     player->game_clock = 0x465000L;
     lastDurCheck = player->game_clock >> 8;
-    player->sched_hour[0] = 0xF;
+    player->xclock[0] = 0xF;
     player->moonstones[0] = 3;
     player->moonstones[1] = 0x2D;
     player->automap = 1;
     player->b62_5 = 0;
     player->poison = 0;
     player->active_spells = 0;
-    player->b60_9 = 0;
+    player->nrunes = 0;
     player->b60_11 = 0;
     player->drunk = 0;
     player->shrooms = 0;
@@ -190,17 +91,17 @@ void far init_char(char blank)
     player->swim_count = 0;
     player->paralyzed = 0;
     player->fatigue = 0x30;
-    player->b3B = 0x30;
+    player->food_heal = 0x30;
     player->b3C = 0;
     player->bF6 = 8;
     player->dreamflags = 0;
-    memset(player->b66, 0, 0x10);
-    memset(player->lines_cut, 0, 0x10);
+    memset(player->quests, 0, 0x10);
+    memset(player->quest_bytes, 0, 0x10);
     memset(player->shelf, 0x18, 3);
     memset(player->runebag, 0, 3);
-    memset(player->bF9, 0, 0x100);
+    memset(player->vars, 0, 0x100);
     memset(player->lore, 0, 0x50);
-    memset(player->sched_hour, 0, 0x10);
+    memset(player->xclock, 0, 0x10);
     player->hunger = 0xC0;
     player->body = rand() % 5;
     player->female = rand() & 1;
@@ -210,7 +111,7 @@ void far init_char(char blank)
         playerdat->attr[i] = blank ? 0 : rollem(2, 10) + 10;
     player_compute(1);
     player->weight = 0;
-    ThePlayer->hp = playerdat->max_vit - 6 - rand() % 6;
+    ThePlayer->hp = playerdat->avghit - 6 - rand() % 6;
     PlayerLevel = 1;
     FixPlayerEquips();
 }
@@ -258,7 +159,7 @@ void far show_atts(void)
     itoa(playerdat->attr[2], buf, 10);
     string_to_screen("Int:", 0x5D, 0x72);
     string_to_screen(buf, 0x8C - string_width(buf), 0x72);
-    itoa(playerdat->max_vit, buf, 10);
+    itoa(playerdat->avghit, buf, 10);
     string_to_screen("Vit:", 0x5D, 0x60);
     string_to_screen(buf, 0x8C - string_width(buf), 0x60);
 }
@@ -318,7 +219,7 @@ void far roll_stats(void)
         i -= pts;
     }
     player_compute(1);
-    ThePlayer->hp = playerdat->max_vit;
+    ThePlayer->hp = playerdat->avghit;
 }
 
 void far drawopt(struct ChrOpt far *opt)

@@ -26,38 +26,20 @@
 #include <fcntl.h>
 #include <stat.h>
 #include <alloc.h>
-
-/* AIL's sound buffer, 12 bytes. */
-struct SoundBuff {
-    unsigned pack_type;
-    unsigned sample_rate;
-    char far *data;                     /* 0x04 */
-    unsigned long len;                  /* 0x08 */
-};
-
-/* AIL's description of a driver. */
-struct DrvrDesc {
-    unsigned min_api;
-    unsigned drvr_type;                 /* 0x02: 2 digital, 3 XMIDI */
-    char data_suffix[4];                /* 0x04 */
-    char far *dev_names;                /* 0x08 */
-    int io, irq, dma, drq;              /* 0x0C */
-};
+#include "file.h"
+#include "gfx.h"
+#include "object.h"
+#include "player.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
+#include "view3d.h"
 
 /* An entry of a global timbre library's directory, 6 bytes. */
 struct GtlHdr {
     unsigned char patch;
     unsigned char bank;                 /* 0xFF ends the directory */
     unsigned long offset;
-};
-
-/* A mobile object, 27 bytes. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;
-    unsigned pos;                       /* z 0-6, heading 7-9, y fine 10-12, x fine 13-15 */
-    char pad4[0x16 - 4];
-    unsigned home;                      /* 0x16, x in bits 10-15, y in bits 4-9 */
-    unsigned char b18;                  /* 0x18, fine heading in bits 0-4 */
 };
 
 /* A digital channel's playback state, 13 bytes. */
@@ -97,82 +79,17 @@ struct Effect {
     unsigned priority;                  /* 0x06 */
 };
 
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x60];
-    unsigned b60_0:1;                   /* 0x60 */
-    unsigned b60_1:15;
-};
-
-/* AIL, the Audio Interface Library (seg022). Its entry points are stubs in the order of the
-   FM Towns build's _AIL_ symbols, which name them; the timer and driver calls are confirmed
-   by the FM Towns callers of each. */
-void far AIL_startup(void);
-void far AIL_shutdown(char far *msg);
-int far AIL_register_timer(void (far *fn)(void));
-void far AIL_release_timer_handle(int timer);
-void far AIL_start_timer(int timer);
-void far AIL_stop_timer(int timer);
-void far AIL_set_timer_frequency(int timer, unsigned long hertz);
-int far AIL_register_driver(void far *driver);
-struct DrvrDesc far * far AIL_describe_driver(int drv);
-int far AIL_detect_device(int drv, int io, int irq, int dma, int drq);
-void far AIL_init_driver(int drv, int io, int irq, int dma, int drq);
-void far AIL_shutdown_driver(int drv, char far *msg);
-int far AIL_index_VOC_block(int drv, void far *voc, int block, struct SoundBuff far *buf);
-void far AIL_register_sound_buffer(int drv, int n, struct SoundBuff far *buf);
-unsigned far AIL_sound_buffer_status(int drv, int n);
-void far AIL_start_digital_playback(int drv);
-void far AIL_stop_digital_playback(int drv);
-void far AIL_pause_digital_playback(int drv);
-void far AIL_resume_digital_playback(int drv);
-void far AIL_set_digital_playback_volume(int drv, int vol);
-void far AIL_set_digital_playback_panpot(int drv, int pan);
-unsigned far AIL_state_table_size(int drv);
-int far AIL_register_sequence(int drv, void far *xmid, int n, void far *state, void far *ctrl);
-void far AIL_release_sequence_handle(int drv, int seq);
-unsigned far AIL_default_timbre_cache_size(int drv);
-void far AIL_define_timbre_cache(int drv, void far *cache, unsigned size);
-unsigned far AIL_timbre_request(int drv, int seq);
-void far AIL_install_timbre(int drv, int bank, int patch, void far *src);
-int far AIL_timbre_status(int drv, int bank, int patch);
-void far AIL_start_sequence(int drv, int seq);
-void far AIL_stop_sequence(int drv, int seq);
-unsigned far AIL_sequence_status(int drv, int seq);
-void far AIL_set_relative_volume(int drv, int seq, int percent, int ms);
-void far AIL_set_relative_tempo(int drv, int seq, int percent, int ms);
-void far AIL_send_channel_voice_message(int drv, int status, int d1, int d2);
-int far AIL_lock_channel(int drv);
-void far AIL_release_channel(int drv, int ch);
-
 /* EMS and the workspace (seg013 and seg042). Names provisional. */
 void far MapMemory_seg013_1D3C_C7(int phys, int page);
 char far seg013_1D3C_E4(int a, int b, int c);
-void far seg042_35ED_12B(void);
 extern char ws_active;                  /* DS:0922, set while the workspace is mapped */
-extern unsigned char far obj_inpage1;   /* the EMS page mapped into frame page 2 */
-extern unsigned far EmsBuff;            /* 4FAF:E4D2 */
-extern unsigned char far sound_fpage;   /* the first EMS page of the sounds */
-extern char far dfx_buffer[];           /* the digital buffers; name provisional */
 /* The effects table, 49 entries: far, so its own segment (60A0:0000, segment table entry
    70, after SEG007's); SEG044.C and OVR108.C, its other users, are linked too late. */
 struct Effect far effects[49];
 
-extern unsigned char dsfx_playing;
-extern struct Object far *ThePlayer;
-extern struct Player near *player;
 extern unsigned long far *Time;
-extern int PlayerLevel;
-extern int scrmode;
 extern unsigned long lastcombattime;
 
-void far first_punt(int code);
-void far game_sprint(int id);
-int far mouse_get_input(void);
-void far cFstSinCos(int angle, int *a, int *b);
-int far cSqRt(long v);
-int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
-char far * far str_cat(char far *dst, char far *src);
 /* FM Towns calls this bltfromdrive_ (read_file_to_mbuf_ and load_sound_driver_ call it
    where DOS calls 65E0:007A), and OVR167 defines it under that name. */
 unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
@@ -255,23 +172,7 @@ unsigned char channel_sem = 0;
 unsigned char load_only = 0;
 static unsigned char sound_started = 0;
 
-unsigned char far digi_fx_play(unsigned char fx, unsigned char vol, unsigned char pan);
-void far stop_digi_file(unsigned char chan);
 void far kill_all_digi_effects(void);
-void far free_s_mem(void);
-unsigned char far init_speech(void);
-unsigned char far init_fx(void);
-void far do_settings(struct DrvrDesc far *desc, int *settings);
-void far set_random_walking_music(int pick);
-unsigned char far read_fx_data(void);
-void far kill_all_effects(void);
-void far * far load_sound_driver(char *name, int n);
-unsigned char far init_timbres(void);
-unsigned char far install_timbre(unsigned char bank, unsigned char patch);
-unsigned char far read_file_to_mbuf(char *name);
-unsigned char far fx_play(unsigned char fx, unsigned char patch, unsigned char note,
-                          unsigned char vel, unsigned char pan, int length);
-unsigned char far music_over(void);
 
 void far digi_fx_timer(void)
 {
@@ -1576,7 +1477,7 @@ void far change_music_maybe(void)
     if (curmusic == 6 && !music_over())
         return;
     if (COMBAT(curmusic) && *Time > lastcombattime + 0xA00) {
-        if (player->b60_0)
+        if (player->drawn)
             newmusic = 5;
         else
             set_random_walking_music(-1);
@@ -1596,7 +1497,7 @@ void far change_music_maybe(void)
         if ((!(WALKING(curmusic) || COMBAT(curmusic) || curmusic == 0x18) || WALKING(curmusic))
                 && scrmode == 1)
             set_random_walking_music(-1);
-        if (player->b60_0 && !COMBAT(curmusic))
+        if (player->drawn && !COMBAT(curmusic))
             newmusic = 5;
         else if ((WALKING(curmusic) || COMBAT(curmusic) || curmusic == 0x18) && newmusic == 0)
             newmusic = curmusic;

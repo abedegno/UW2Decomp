@@ -17,39 +17,11 @@
    round. FindEmptySlot (1022) must sort above takeFromSlot (1004). */
 
 #include <string.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x65];
-    unsigned lefty:1;                   /* 0x65 */
-};
-
-/* The player's statistics block. */
-struct PlayerStats {
-    char pad0[0x4A];
-    unsigned weight;                    /* 0x4A, weight carried */
-    unsigned capacity;                  /* 0x4C, weight that can be carried */
-};
-
-/* A link word: the low six bits belong to the owner, the rest is an object index. */
-union Link {
-    unsigned word;
-    struct { unsigned low:6, link:10; } f;
-};
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;
-    unsigned pos;
-    union {
-        unsigned word;                  /* the next object in this list */
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;                  /* the head of the contents list, or the quantity */
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-};
+#include "inv.h"
+#include "object.h"
+#include "player.h"
+#include "ui.h"
+#include "uw2.h"
 
 #define OBJ_ID(o)       ((o)->id & 0x1FF)
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
@@ -58,67 +30,26 @@ struct Object {
 #define OBJ_CLASS(o)    (((o)->id & 0x1F0) >> 4)
 #define OBJ_ISQUANT(o)  (((o)->id & 0x8000) >> 15)
 
-/* One open bag (see ovr121). */
-struct Bag {
-    struct Bag far *next;
-    struct Bag far *prev;               /* 0x04, the bag this one was opened from */
-    union Link obj;                     /* 0x08 */
-    int weight;                         /* 0x0A */
-};
-
-/* One object type's common properties, 11 bytes. */
-struct ComObj {
-    unsigned char height;               /* 0x00 */
-    unsigned radius:4;                  /* 0x01 */
-    unsigned mass:12;
-    char pad3[0x0B - 0x03];
-};
-
-struct Inplist {
-    int x, y;                           /* 0x00 */
-};
-
-extern struct Player near *player;
-extern struct PlayerStats PlayerDat;
-extern struct Object far *ThePlayer;
+extern struct Player PlayerDat;
 extern union Link Inventory[];
-extern char SlotToDisplay[];
-extern char DisplayToSlot[];
-extern struct Bag far *OpenBag;
 extern struct Inplist near *inplist;
-extern struct ComObj ComObjData[];
 extern unsigned far *Obj_Find_Head;
 
 struct Object far * far Obj_PtrTMem(unsigned far *link);
-int far Obj_MemTPtr(struct Object far *obj);
 struct Object far * far Obj_Find(unsigned far *head, int recurse, int index);
 struct Object far * far Obj_Alloc(int mobile);
 void far Obj_Add(unsigned far *head, struct Object far *obj);
 void far Obj_AddEnd(unsigned far *head, struct Object far *obj);
 unsigned char far Obj_Rem(unsigned far *head, struct Object far *obj);
 void far Obj_Punt(unsigned far *head, struct Object far *obj, int how);
-void far DisplayInvObject(int slot);
-int far ItemFitsSlot(struct Object far *obj, int slot);
-int far FindInventoryHit(int x, int y);
-void far FixPlayerEquips(void);
-void far FixOpenBag(void);
-void far DisplayOpenBag(void);
-void far BagWeight(unsigned far *head, int far *total);
 char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
                      unsigned char damage, unsigned char type);
-int far debris_type(int item, char type);
 struct Object far * far CreateObj(int item, char mobile);
 int far near_mob_put_at(struct Object far *at, struct Object far *obj, int a, int b);
 void far get_name(char far *buf, struct Object far *obj, int article, char plural);
 void far scroll_print(char far *s);
 
-int far ItemWeight(struct Object far *obj);
-struct Object far * far find_obj(int major, int minor, int cls, struct Object far **list);
-struct Object far * far WhatsInSlot(int slot);
-struct Object far * far RemoveAllFromSlot(int major, int minor, int cls, int slot);
 char far invRemoveObject(struct Object far *obj, int qty);
-struct Object far * far removeFromSlot(int major, int minor, int cls, int slot, int qty);
-struct Object far * far takeFromSlot(int major, int minor, int cls, int slot, int qty);
 
 void far RedisplayInvSlot(int slot)
 {
@@ -137,7 +68,7 @@ int far FindEmptySlot(void)
     register int slot;
 
     for (slot = 5; slot <= 18; slot++)
-        if (Inventory[slot].f.link == 0)
+        if (Inventory[slot].f.index == 0)
             return slot;
     return -1;
 }
@@ -164,7 +95,7 @@ unsigned char far AddToInventory(struct Object far *obj, int slot)
                 for (bag = OpenBag; bag; bag = bag->prev)
                     bag->weight += mass;
             }
-            Inventory[slot].f.link = Obj_MemTPtr(obj);
+            Inventory[slot].f.index = Obj_MemTPtr(obj);
         }
         Obj_AddEnd(&owner->ol.word, obj);
         PlayerDat.weight += mass;
@@ -186,11 +117,11 @@ int far FindSlot(struct Object far *obj)
     index = Obj_MemTPtr(obj);
     for (i = 0; i < 20; i++) {
         slot = DisplayToSlot[i];
-        if (Inventory[slot].f.link != 0) {
-            if (Inventory[slot].f.link == index)
+        if (Inventory[slot].f.index != 0) {
+            if (Inventory[slot].f.index == index)
                 return slot;
             inslot = Obj_PtrTMem(&Inventory[slot].word);
-            if (!OBJ_ISQUANT(inslot) && Inventory[slot].f.link != OpenBag->obj.f.link
+            if (!OBJ_ISQUANT(inslot) && Inventory[slot].f.index != OpenBag->obj.f.index
                 && inslot != 0 && Obj_Find(&inslot->ol.word, 1, index) != 0)
                 return -slot;
         }
@@ -309,7 +240,7 @@ char far invRemoveObject(struct Object far *obj, int qty)
     mass = ItemWeight(obj);
     index = Obj_MemTPtr(obj);
     for (i = 0; i < 28; i++)
-        if (Inventory[i].f.link == index)
+        if (Inventory[i].f.index == index)
             break;
     if (i < 28) {
         removeFromSlot(-1, -1, -1, i, qty);
@@ -327,7 +258,7 @@ char far invRemoveObject(struct Object far *obj, int qty)
         if (qty > 0 && OBJ_ISQUANT(obj) && !(obj->ol.f.link & 0x200)
             && (have = obj->ol.f.link) > 1 && qty < have) {
             copy = Obj_Alloc(0);
-            *copy = *obj;
+            *(struct StaticObj far *)copy = *(struct StaticObj far *)obj;
             copy->ol.f.link = have - qty;
             obj->ol.f.link = qty;
             Obj_Add(&obj->qn.word, copy);
@@ -409,26 +340,26 @@ struct Object far * far takeFromSlot(int major, int minor, int cls, int slot, in
     if (qty != 0 && OBJ_ISQUANT(obj) && !(obj->ol.f.link & 0x200)
         && (have = obj->ol.f.link) > 1 && qty < have) {
         copy = Obj_Alloc(0);
-        *copy = *obj;
+        *(struct StaticObj far *)copy = *(struct StaticObj far *)obj;
         copy->ol.f.link = have - qty;
         obj->ol.f.link = qty;
         Obj_Add(&obj->qn.word, copy);
     }
     if (owner == ThePlayer || slot >= 20) {
         if (copy != 0)
-            Inventory[slot].f.link = Obj_MemTPtr(copy);
+            Inventory[slot].f.index = Obj_MemTPtr(copy);
         else
-            Inventory[slot].f.link = 0;
+            Inventory[slot].f.index = 0;
     }
     if (!Obj_Rem(&owner->ol.word, obj))
         return 0;
     mass = ItemWeight(obj);
     PlayerDat.weight -= mass;
-    if (OpenBag != 0 && Obj_MemTPtr(owner) == OpenBag->obj.f.link) {
+    if (OpenBag != 0 && Obj_MemTPtr(owner) == OpenBag->obj.f.index) {
         index = Obj_MemTPtr(obj);
         for (i = 20; i <= 27; i++) {
-            if (Inventory[i].f.link == index) {
-                Inventory[i].f.link = copy == 0 ? 0 : Obj_MemTPtr(copy);
+            if (Inventory[i].f.index == index) {
+                Inventory[i].f.index = copy == 0 ? 0 : Obj_MemTPtr(copy);
                 for (bag = OpenBag; bag; bag = bag->prev)
                     bag->weight -= mass;
                 break;
@@ -520,7 +451,7 @@ int far ItemWeight(struct Object far *obj)
 
 unsigned char far EncumCheck(struct Object far *obj)
 {
-    if (ItemWeight(obj) + PlayerDat.weight > PlayerDat.capacity)
+    if (ItemWeight(obj) + PlayerDat.weight > PlayerDat.max_weight)
         return 0;
     return 1;
 }

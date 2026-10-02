@@ -1,8 +1,8 @@
 /* target: ovr120 */
 /* opts: -mm -1 -G -O -Y -d */
 
-struct Object { unsigned id; };
-extern struct Object far *ActiveObj;
+#include "object.h"
+
 /* This file's _BSS, DS:6946..6A75, by name: Missile 621, Weapons 647, Armor 761 (ovr119's
    run ends at 736 and ovr121's BagSaveHandles, which only ovr121 uses, follows). */
 char Missile[0x30], Weapons[0x80], Armor[0x80];

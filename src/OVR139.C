@@ -9,43 +9,12 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include "gfx.h"
+#include "sound.h"
+#include "ui.h"
 
-/* The scroll's state, as in SEG043.C. 21 (0x15) bytes, byte-packed. */
-struct Scroll {
-    int x0;                      /* 0x00 */
-    int y0;                      /* 0x02 */
-    int top;                     /* 0x04 */
-    int bottom;                  /* 0x06 */
-    int cur_x;                   /* 0x08 */
-    int cur_y;                   /* 0x0A */
-    int left;                    /* 0x0C */
-    int last_y;                  /* 0x0E */
-    unsigned char more_pending;  /* 0x10 */
-    int start_line;              /* 0x11 */
-    int font_color;              /* 0x13 */
-};
-
-/* The current font; only the line height is used here. */
-struct Font {
-    char pad0[6];
-    int height;                  /* 0x06 */
-};
-
-struct Inplist {
-    char pad0[8];
-    int field8;                  /* 0x08, 4 while the play menu owns the scroll */
-};
-
-extern struct Scroll near *scroll;              /* DS:34B0 */
-extern struct Scroll main_scroll;                /* DS:938 */
-extern struct Scroll npc_scroll;                 /* DS:94D */
-extern unsigned char mouse_in_scroll;            /* DS:34B2 */
-extern int scroll_mode;                          /* DS:97E */
-extern int start_line;                           /* DS:980 */
-extern char scroll_esc;                          /* DS:98C; SEG043.C calls it
-                                                    embed_codes_enabled */
 extern unsigned char far *foreground_color;      /* DS:21C4 */
-extern struct Font far *cur_font;                /* DS:21CC, provisional */
+extern struct FontInfo far *cur_font;                /* DS:21CC, provisional */
 extern unsigned long far *Time;                  /* DS:2158; SEG043.C calls it
                                                     PITTimerGlobal */
 extern struct Inplist near *inplist;             /* DS:E4 */
@@ -53,24 +22,9 @@ extern struct Inplist near *inplist;             /* DS:E4 */
    provisional name. Only this file uses it. */
 static int answer_x;
 
-void far draw_scroll(int x, int y, int w, int h, char flag);
-void far draw_edges(void);
-void far draw_conv_edges(void);
-void far set_mouse_in(void);
-void far do_main_scroll(void);
-void far do_play_scroll(void);
-void far scroll_up(int y);
 int far scroll_print(char far *s);
-void far game_sprint(int id);
 void far mouse_release(int how);
-int far mouse_get_input(void);
-void far mouse_show(void);
-void far mouse_hide(void);
-void far change_music_maybe(void);
-void far set_the_color(int color);
 void far rectangle(int x0, int y0, int x1, int y1);
-void far string_to_screen(char far *s, int x, int y);
-int far string_width(char far *s);
 
 void far init_scroll(void)
 {
@@ -128,7 +82,7 @@ void far scroll_more(void)
 
 void far pick_scroll(void)
 {
-    if (inplist->field8 == 4)
+    if (inplist->mode == 4)
         do_play_scroll();
     else
         do_main_scroll();

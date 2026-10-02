@@ -2,13 +2,17 @@
 /* opts: -mm -1 -G -O -Y -d */
 #include <dos.h>
 #include <string.h>
+#include "file.h"
+#include "gfx.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
+#include "view3d.h"
 
 /* FM Towns names; the target table still identifies these DOS entries by IDA name. */
 
 struct FontHead { unsigned width, height; };
 extern struct FontHead far *cur_font;
-extern unsigned char far *palette;
-extern unsigned char far *bytefont;
 extern unsigned long far *Time;
 /* This file's _BSS, DS:5E34..6733 (ovr116's ends at 5E33; ovr119's starts at 6734, its
    keys starting again from gsize's 119): only this file uses it. */
@@ -25,37 +29,12 @@ unsigned char font_name[13] = "font????.sys";
 char font_suffixes[6][5] = { "4x5p", "5x6p", "char", "big", "5x6i", "butn" };
 char sys_suffix[] = ".sys";
 char pals_name[] = "pals.dat";
-void far seg021_22FD_755(void);
-void far init_graphics(void);
-void far set_the_window(int, int, int, int);
-void far grSoftPageFlip(void);
-void far init_colors(void);
-void far setup_font(void);
-void far mouse_hide(void);
-void far seg021_22FD_791(void);
-void far set_the_color(int);
-void far clear_window(void);
-void far mouse_show(void);
-int far our_open(char *, int, int);
-int far intoFarBuffer_ovr167_5DA(int, void far *, unsigned);
 void far close(int);
 void far lseek(int, long, int);
 void far movedata(unsigned, unsigned, unsigned, unsigned, unsigned);
-void far local_do_palette(int, char);
-void far anm_sound_callback(void);
-void far send_FB(void);
-void far cFillFB(int);
 unsigned far get_workspace(void);
-void far set_workspace(void);
-void far release_workspace(void);
-void far CallbackFunctionSleepRelated_seg021_22FD_CB7(int);
-void far Callback_seg021_22FD_CEA(int);
-void far editchng(int);
-void far render_FB(void);
-void far attach_eye(int);
 void far mouse_release(int);
 
-void far grfx_quikfont(int n);
 void far grfx_init(void)
 {
     seg021_22FD_755();

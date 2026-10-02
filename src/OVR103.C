@@ -17,42 +17,15 @@
 #include <string.h>
 #include <stdlib.h>
 #include <dos.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x64];
-    unsigned b64:8;                     /* 0x64 */
-    unsigned lefty:1;                   /* 0x65 */
-    unsigned female:1;
-    unsigned body:3;
-    unsigned pclass:3;
-};
-
-/* An object: these 8 bytes are all a static object has. */
-struct Object {
-    unsigned id;                        /* item id 0-8 (major 6-8), quantity flag 15 */
-    unsigned pos;
-    union {
-        unsigned word;
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;                  /* the head of the contents list, or the quantity */
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-};
-
-/* A mobile object (a critter), 0x1B bytes, starting with the same 8. */
-struct Mobile {
-    unsigned id, pos, qn, ol;
-    char pad08[0x0B - 0x08];
-    unsigned goal_word;                 /* 0x0B, goal 0-3, goal target 4-11 */
-    unsigned attitude_word;             /* 0x0D, attitude 14-15, inventory made 12 */
-    unsigned w0F;                       /* 0x0F */
-    char pad11[0x19 - 0x11];
-    unsigned char b19;                  /* 0x19, bit 6 */
-    unsigned char whoami;               /* 0x1A, who this is, for the conversation */
-};
+#include "conv.h"
+#include "gfx.h"
+#include "inv.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
 
 #define OBJ_ITEM(o)     ((o)->id & 0x1FF)
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
@@ -64,17 +37,10 @@ struct Mobile {
 #define OBJ_HAS_INV(o)  (((o)->attitude_word & 0x1000) >> 12)
 #define OBJ_B19_6(o)    (((o)->b19 & 0x40) >> 6)
 
-extern struct Player near *player;
-extern unsigned char TimeStop;
-extern unsigned char RightPanel, inv_refresh;
-extern unsigned char far *foreground_color, far *background_color;
-extern int player_name_handle;
-extern unsigned char pmouseHandled;
-extern unsigned char quick_time, DoAnimO;
-extern unsigned char menus_active;
+extern unsigned char RightPanel;
+extern unsigned char far *foreground_color;
 extern void *inplist;
 extern unsigned char far *cur_font;
-extern int npc_assess;
 
 /* This file's own uninitialised data, DS:47FC..4927, in its _BSS with talking_to. The FM
    Towns build keeps all of it static, so none of it has an original name and it is static
@@ -98,7 +64,7 @@ static int convo_line_option[10];               /* DS:4858 */
 static int babl_choice;                         /* DS:486C, the selected option */
 static char far *babl_opts[20];                 /* DS:486E */
 static char far *babl_display[20];              /* DS:48BE */
-struct Mobile far *talking_to;                  /* DS:490E, FM Towns name */
+struct Object far *talking_to;                  /* DS:490E, FM Towns name */
 static int bablOptionIds[10];                   /* DS:4912 */
 static int bablOptCount;                        /* DS:4926 */
 
@@ -110,83 +76,29 @@ static char cnv_file[] = "DATA\\cnv.ark";
 unsigned cnv_id = 0;
 
 void far talk_to_disembodied(int);
-char far * far get_string(int);
 int far scroll_print(char far *);
 int far check_arc(int, char *, int);
-void far kill_all_effects(void);
-void far newscr(int);
-void far update_sprites(void);
 int far get_workspace(void);
-void far release_workspace(void);
-int far set_workspace(void);
-void far set_random_walking_music(int);
-void far change_music_maybe(void);
-void far loop_music_maybe(void);
-void far mouse_hide(void);
-void far mouse_show(void);
-void far mouse_freereign(void);
 void far mouse_release(int);
-void far grSoftPageFlip(void);
-void far grPageFlip(void);
 void far disk_to_vid(int, void far *);
-void far BeginInventory(void);
-void far RedispInv(void);
-void far do_play_scroll(void);
-void far do_npc_scroll(void);
-void far do_main_scroll(void);
 void far scroll_clear(int);
 void far scroll_wait(int, int);
-void far grfx_quikfont(int);
 unsigned char far gronk_gr(char *, int, int, char far *(far *)(int),
                            int (far *)(char far *, int, int));
-void far pfatal_code(int);
 void far show(int, int, char far *, int, int, int, int);
-char far * far str_copy(char far *, char far *);
-char far * far str_cat(char far *, char far *);
-int far str_len(char far *);
-int far string_width(char far *);
-void far string_to_screen(char far *, int, int);
 int far get_name(char far *, struct Object far *, char, char);
-void far set_the_color(int);
 void far rectangle(int, int, int, int);
-void far urectangle(int, int, int, int);
-void far barter_init(void);
-void far end_barter(void);
 void far Sched_SetAllClocks(int);
-void far update_animobj(int);
-void far do_babl_teleport(void);
-void far cs_check(void);
-void far do_changes(void);
 void far input_dispatch(void *);
 int far load_script(char *, void far *);
 void far bab_fun();                 /* (char *name, the built-in) */
-void far setup_converse_data(struct Mobile far *);
-char far * far bab_malloc(long);
-void far bab_free(char far *);
-void far generate_inventory(struct Mobile far *);
 void far babl_run(void);
-unsigned char far update_converse_data(struct Mobile far *);
-char far * far convert_string(char far *);
-int far getmem(int);
-void far babl_setmem(int, int);
+unsigned char far update_converse_data(struct Object far *);
 void far wdialog(char *, char *, char *, char, int);
-int far make_string(char far *, int);
 void far replace_string(char far *, int);
 struct Object far * far Obj_IntTMem(int);
 struct Object far * far Obj_Alloc(int);
-int far player_barter_items(int *, int *);
-void far player_barter_give(int);
-int far npc_barter_find(int, int);
-int far npc_barter_give(int);
-int far npc_barter_give_id(int);
-int far npc_inv_create(int);
-int far npc_inv_delete(int);
-void far npc_inv_add(struct Object far *);
-void far RedisplayBarterSlots(int);
 unsigned char far invRemoveObject(struct Object far *, int);
-int far assess_value(int, int, int);
-char far do_mods(struct Object far *, int, char *);
-char far do_of(struct Object far *, int, char *);
 
 /* the built-ins of other files, all registered by Converse */
 int far get_quest(), far set_quest(), far sex();
@@ -199,37 +111,9 @@ int far remove_talker(), far x_skills(), far x_traps(), far x_obj_stuff();
 int far x_obj_pos(), far x_clock(), far x_exp(), far teleport_player();
 int far teleport_talker();
 
-char far * far adr_convpic(int);
-int far move_convpic(char far *, int, int);
-void far Converse(unsigned char, int);
-int far conv_choice_ovr103_A13(int far *);
-int far conv_fmenu_ovr103_BF2(int far *);
-/* declared here, before conv_check_inv, because Turbo C lists publics of equal key
-   (595 for both) in reverse order of first sight, and the stub order needs this one last */
-void far conv_play_menu(int);
-void far npc_say(char far *);
-void far play_respond(char far *);
-void far play_say(char far *);
-void far conv_print(int far *);
-int far conv_pause_ovr103_10DD(int far *);
-int far getInputText_ovr103_1117(void);
-int far conv_check_inv(int far *);
-int far conv_give_inv(int far *);
-int far conv_find_inv(int far *);
-int far conv_take_inv(int far *);
-int far conv_take_inv_id(int far *);
-int far conv_inv_name(int far *);
-int far conv_inv_create(int far *);
-int far conv_inv_delete(int far *);
-int far check_inv_quality(int far *);
 int far set_inv_quality(int far *);
-int far count_inv(int far *);
-int far find_barter(int far *);
-int far find_barter_total(int far *);
-int far give_ptr_npc(int far *);
-int far switch_pic(int far *);
 
-void far TalkTo(struct Mobile far *thing)
+void far TalkTo(struct Object far *thing)
 {
     unsigned char who, subclass;
     if (OBJ_ITEM(thing) == 0x1cd) {
@@ -796,7 +680,7 @@ int far give_ptr_npc(int far *stack)
         else {
             copy = Obj_Alloc(0);
             if (copy != 0) {
-                *copy = *obj;
+                *(struct StaticObj far *)copy = *(struct StaticObj far *)obj;
                 copy->ol.f.link = qty;
                 obj->ol.f.link = obj->ol.f.link - qty;
                 npc_inv_add(copy);
@@ -916,7 +800,7 @@ int far switch_pic(int far *stack)
     char far *saved;
     unsigned char loaded;
     char name[0x28];
-    struct Mobile who;
+    struct Object who;
     which = getmem(stack[-1]);
     loaded = 0;
     set_workspace();
@@ -932,7 +816,7 @@ int far switch_pic(int far *stack)
         loaded = gronk_gr("ghed", 0, 1, adr_convpic, move_convpic);
     }
     if (loaded) {
-        who.w0F = 2;
+        who.b0F = 2;
         who.id = who.id & 0xFE3F | (1 & 7) << 6;
         if (which < 0x100) who.whoami = which;
         else who.id = who.id & 0xFFC0 | ((which - 0x100) & 0x3F) << 0;

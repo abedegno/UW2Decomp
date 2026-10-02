@@ -14,59 +14,19 @@
 
 #include <stdlib.h>
 #include <time.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0x21];
-    unsigned char skills[20];           /* 0x21 */
-    char pad35[0x4E - 0x35];
-    unsigned long exp;                  /* 0x4E */
-    unsigned char skill_points;         /* 0x52 */
-    char pad53[0x62 - 0x53];
-    unsigned b62:10;                    /* 0x62 */
-    unsigned in_pits:1;                 /* word 0x62, bit 10 */
-    unsigned b63_3:5;
-    unsigned b64:8;                     /* 0x64 */
-    unsigned lefty:1;                   /* 0x65 */
-    unsigned female:1;
-    unsigned b65_2:6;
-    unsigned long quests[32];           /* 0x66, quests 0-127 (four to a long) */
-    unsigned char quest_bytes[16];      /* 0xE6, quests 128-143 */
-    unsigned char bF6;                  /* 0xF6 */
-    char padF7[0x360 - 0xF7];
-    unsigned char pit_fighters[5];      /* 0x360 */
-    char pad365[0x369 - 0x365];
-    unsigned long game_clock;           /* 0x369 */
-    unsigned char sched_hour[16];       /* 0x36D, the x-clocks */
-};
+#include "conv.h"
+#include "critter.h"
+#include "event.h"
+#include "map.h"
+#include "object.h"
+#include "player.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
+#include "uw2.h"
 
 /* Jospur's debt to the player for fights won in the pits: quest 133. */
 #define JOSPUR_DEBT     quest_bytes[0x85 - 0x80]
-
-/* A link to an object, with six bits of something else below it. */
-union Link {
-    unsigned word;
-    struct { unsigned low:6, index:10; } f;
-};
-
-/* A mobile object, 0x1B bytes. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* item 0-8 (major class 6-8), flags 9-12 */
-    unsigned pos;                       /* z 0-6, heading 7-9, y fine 10-12, x fine 13-15 */
-    union Link qn;                      /* quality 0-5, the next object 6-15 */
-    union Link ol;                      /* owner 0-5, the contents or a link 6-15 */
-    unsigned char hp;                   /* 0x08 */
-    unsigned char b09;                  /* 0x09 */
-    unsigned char b0A;                  /* 0x0A */
-    unsigned goal_word;                 /* 0x0B, goal 0-3, goal target 4-11, frame 12-15 */
-    unsigned attitude_word;             /* 0x0D, attitude in bits 14-15 */
-    char pad0F[0x15 - 0x0F];
-    unsigned char b15;                  /* 0x15, animation in bits 0-5 */
-    unsigned home;                      /* 0x16, x in bits 10-15, y in bits 4-9 */
-    unsigned char b18;                  /* 0x18 */
-    unsigned char b19;                  /* 0x19 */
-    unsigned char whoami;               /* 0x1A */
-};
 
 #define OBJ_ITEM(o)     ((o)->id & 0x1FF)
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
@@ -98,53 +58,12 @@ struct Object {
 #define SET_SEQ(o, v)     ((o)->b15 = (o)->b15 & 0xC0 | ((v) & 0x3F) << 0)
 #define SET_LONER(o, v)   ((o)->b0A = (o)->b0A & 0x7F | ((v) & 1) << 7)
 
-struct Tile {
-    unsigned type:4;
-    unsigned height:4;
-    unsigned b8:2;
-    unsigned floor:4;                   /* bits 10-13 */
-    unsigned b14:2;
-    union Link objects;                 /* 0x02, head of the tile's object list */
-};
-
-/* One critter type's record, 0x30 bytes. */
-struct Creature {
-    char pad00[0x09];
-    unsigned char race;                 /* 0x09 */
-    char pad0A[0x30 - 0x0A];
-};
-
-/* The common object properties, one 11-byte record per item. */
-struct ComObj {
-    unsigned height:8;                  /* 0x00 */
-    unsigned radius:3;                  /* 0x01, bits 0-2 */
-    unsigned b1_3:5;
-    char pad2[9 - 2];
-    unsigned char b9_0:2;               /* 0x09 */
-    unsigned char b9_2:6;
-    char padA[0x0B - 0x0A];
-};
-
-extern struct Player near *player;
-extern struct Object far *ThePlayer;
-extern struct Object far *talking_to;
-extern struct Object far *ActiveObj;
 extern union Link Inventory[];
-extern struct Creature Creature[];
-extern struct ComObj ComObjData[];
 extern void (far *npp_func)();
-extern int PlayerLevel;
-extern char NewPlyFade;
 extern unsigned char stay_centered;
-extern int MapObj_X, MapObj_Y;
 extern long lastDurCheck;
-extern int greed;
 
-int far getmem(int addr);
-int far * far getmem_addr(int addr);
-struct Tile far * far Map_GetAddr(int x, int y);
 struct Object far * far Obj_PtrTMem(union Link far *link);
-int far Obj_MemTPtr(struct Object far *obj);
 struct Object far * far Obj_IntTMem(int index);
 void far Obj_Add(union Link far *head, struct Object far *obj);
 void far Obj_AddEnd(union Link far *head, struct Object far *obj);
@@ -157,27 +76,12 @@ unsigned char far can_place(int item, int index, int x, int y, int z, char flier
 unsigned char far put_at(int x, int y, int z, struct Object far *obj, int range,
                          unsigned char nocull);
 struct Object far * far obj_deal(struct Object far *obj, int x, int y, char how);
-void far creature_obj_init(void);
-void far editchng(int bits);
 int far useNSpellCharges(struct Object far *obj, int n);
 void far gronk_whoami(int whoami, unsigned char all, int arg,
                       char (far *fn)());
-unsigned char far speech_available(void);
-void far player_get_exp(int n);
-int far set_workspace(void);
 void far do_teleport(struct Object far *who, int x, int y, int level);
-unsigned char far new_player_pos(void);
 char far teleport_critter(struct Object far *critter, int x, int y, int how);
-void far transform_creature(struct Object far *critter, int a, int b, int c, int d);
-char far grant_skill_advance(int which);
-char far get_skill(char skill);
 void far set_numbered_variable(int var, int how, int val);
-int far get_numbered_variable(int var);
-void far OpenDoor(struct Object far *who, struct Object far *door);
-void far CloseDoor(struct Object far *who, struct Object far *door);
-void far ToggleDoor(struct Object far *who, struct Object far *door);
-
-struct Object far * far place_pitfighter(int power, int x, int y);
 
 /* Set when the player runs from a pit fight, read and cleared by babl_hack. */
 char running_away = 0;
@@ -185,9 +89,6 @@ char running_away = 0;
    the conversation is over; -1 for nothing pending. */
 static char tele_level = -1, tele_x = 0, tele_y = 0;
 static char talker_x = -1, talker_y = -1;
-/* A trade adjustment set by a conversation, read when bartering. Defined in ovr097: it is
-   the byte at DS:BFE, and ovr097's word-aligned _DATA starts there. */
-extern char fudge;
 
 /* Run on the next level change: the player is now in the arena. */
 void far set_me_inarena(void)
@@ -337,9 +238,9 @@ struct Object far * far place_pitfighter(int power, int x, int y)
         creature_obj_init();
         ActiveObj = save;
         SET_HOMEX(obj, x);
-        obj->qn.f.low = x;
+        obj->qn.f.quality = x;
         SET_HOMEY(obj, y);
-        obj->ol.f.low = y;
+        obj->ol.f.owner = y;
         SET_Z(obj, tile->height << 3);
         obj->whoami = 0x66;
         SET_POWER(obj, strong);
@@ -467,7 +368,7 @@ void far set_race_attitude(int far *args)
     for (y = y0; y <= y1; y++)
         for (x = x0; x <= x1; x++) {
             head = &Map_GetAddr(x, y)->objects;
-            for (obj = Obj_PtrTMem(head); obj; obj = Obj_PtrTMem(&obj->qn))
+            for (obj = Obj_PtrTMem(head); obj; obj = Obj_PtrTMem(&obj->qn.link))
                 if (OBJ_ITEM(obj) == item && !OBJ_B0A_7(obj)
                     && Creature[OBJ_TYPE(obj)].race == race)
                     SET_ATTITUDE(obj, att);
@@ -519,10 +420,10 @@ int far place_object(int far *args)
     obj = Obj_IntTMem(index);
     x = getmem(args[-2]);
     y = getmem(args[-1]);
-    for (link = &talking_to->ol; link->f.index && link->f.index != index;
-         link = &Obj_PtrTMem(link)->qn)
+    for (link = &talking_to->ol.link; link->f.index && link->f.index != index;
+         link = &Obj_PtrTMem(link)->qn.link)
         ;
-    if (link->f.index && !Obj_Rem(&talking_to->ol, obj))
+    if (link->f.index && !Obj_Rem(&talking_to->ol.link, obj))
         return 1;
     if (x < 0) {
         stay_centered = 1;
@@ -549,9 +450,9 @@ int far take_from_npc_inv(int far *args)
     int i, n;
 
     n = getmem(args[-1]);
-    link = &talking_to->ol;
+    link = &talking_to->ol.link;
     for (i = 0; i < n && link->f.index; i++)
-        link = &Obj_PtrTMem(link)->qn;
+        link = &Obj_PtrTMem(link)->qn.link;
     return link->f.index;
 }
 
@@ -560,7 +461,7 @@ void far add_to_npc_inv(int far *args)
     int index;
 
     index = getmem(args[-1]);
-    Obj_AddEnd(&talking_to->ol, Obj_IntTMem(index));
+    Obj_AddEnd(&talking_to->ol.link, Obj_IntTMem(index));
 }
 
 void far transform_talker(int far *args)
@@ -615,12 +516,12 @@ int far x_clock(int far *args)
     clock = getmem(args[-2]);
     val = getmem(args[-1]);
     if (val > 0x100)
-        return player->sched_hour[clock];
+        return player->xclock[clock];
     if (clock == 0) {
-        player->game_clock += (long)(val - player->sched_hour[clock]) * 0x4B000L;
+        player->game_clock += (long)(val - player->xclock[clock]) * 0x4B000L;
         lastDurCheck = player->game_clock >> 8;
     }
-    player->sched_hour[clock] = val;
+    player->xclock[clock] = val;
     return 0;
 }
 
@@ -682,35 +583,35 @@ void far x_obj_stuff(int far *args)
     quality = getmem_addr(args[-1]);
     obj = Obj_IntTMem(getmem(args[-9]));
     if (getmem(args[-8])) {
-        if (*heading != -1 && OBJ_MAJOR(obj) != 5 && ComObjData[OBJ_ITEM(obj)].b9_0 != 2)
+        if (*heading != -1 && OBJ_MAJOR(obj) != 5 && ComObjData[OBJ_ITEM(obj)].render != 2)
             SET_HEADING(obj, *heading);
         if (*owner != -1)
-            obj->ol.f.low = *owner;
+            obj->ol.f.owner = *owner;
         if (*flags != -1)
             SET_FLAGS(obj, *flags);
         if (*link != -1)
-            obj->ol.f.index = *link;
+            obj->ol.f.link = *link;
         if (*flag10 != -1)
             SET_ID_10(obj, *flag10);
         if (*flag9 != -1)
             SET_ID_9(obj, *flag9);
         if (*quality != -1)
-            obj->qn.f.low = *quality;
+            obj->qn.f.quality = *quality;
     } else {
-        if (*heading != -1 && OBJ_MAJOR(obj) != 5 && ComObjData[OBJ_ITEM(obj)].b9_0 != 2)
+        if (*heading != -1 && OBJ_MAJOR(obj) != 5 && ComObjData[OBJ_ITEM(obj)].render != 2)
             *heading = OBJ_HEADING(obj);
         if (*owner != -1)
-            *owner = obj->ol.f.low;
+            *owner = obj->ol.f.owner;
         if (*flags != -1)
             *flags = OBJ_FLAGS(obj);
         if (*link != -1)
-            *link = obj->ol.f.index;
+            *link = obj->ol.f.link;
         if (*flag10 != -1)
             *flag10 = obj->id & 0x400;
         if (*flag9 != -1)
             *flag9 = obj->id & 0x200;
         if (*quality != -1)
-            *quality = obj->qn.f.low;
+            *quality = obj->qn.f.quality;
     }
 }
 

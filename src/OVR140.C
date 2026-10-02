@@ -8,28 +8,21 @@
 
 #include <stdio.h>
 #include <dos.h>
+#include "file.h"
+#include "gfx.h"
+#include "map.h"
+#include "sys.h"
+#include "view3d.h"
 
 /* This file's _BSS, DS:8188..8287, by name: TxmTerr 420, TxmID 988. They follow ovr139's
    answer_x (857) in a new run; this file loads them, with ActDoors, from the level. */
 int TxmID[0x40];                        /* the level's texture numbers */
 int TxmTerr[0x40];                      /* each texture's terrain type */
-extern unsigned char ActDoors[6];       /* the level's door textures */
-extern char HomeDir[];
 
-unsigned char far open_arc(int arc, char *dir);
 unsigned far get_arc(int arc, int blk, char far *buf);
 unsigned char far put_arc(int arc, int blk, char far *buf, unsigned len);
 void far close_arc(int arc);
-void far load_tr_ems(char *name);
-void far load_doors(void);
-/* seg009, no FM Towns counterpart known: the first returns a segment for a picture
-   number, the second takes a far pointer, two sizes and a count and returns one. */
-unsigned far seg009_392(int n);
-unsigned char far * far grs_scaledown(unsigned char far *p, int w, int h, int n);
 void far show(int x, int y, unsigned char far *buf, int h, int w, int a, int b);
-
-void far load_txtmaps(void);
-void far Load_Terrains(int *ids);
 
 char far init_txtlib(void)
 {

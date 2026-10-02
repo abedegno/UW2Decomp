@@ -21,35 +21,17 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stat.h>
-
-/* AIL's sound buffer, 12 bytes (SEG016.C). */
-struct SoundBuff { unsigned pack_type, sample_rate; char far *data; unsigned long len; };
+#include "conv.h"
+#include "file.h"
+#include "gfx.h"
+#include "map.h"
+#include "sound.h"
+#include "sys.h"
+#include "ui.h"
+#include "view3d.h"
 
 /* A colour cycle of the LPF header, 8 bytes, 16 of them at +0x80. */
 struct Cycle { unsigned started, period; char pad4[2]; unsigned char first, last; };
-
-/* The state of a cutscene, on show_anm's stack, 0x5C bytes. */
-struct CutsState {
-    char name[0x13];                    /* CUTS\csXXX.nXX */
-    int x, y, w, h;                     /* 0x13, the window; w and h are 320 and 200 for full screen */
-    unsigned char windowed;             /* 0x1B */
-    unsigned char far *palette;         /* 0x1C */
-    char far *text_lines[6];            /* 0x20 */
-    unsigned char color38;              /* 0x38 */
-    int flag39;                         /* 0x39, subtitle lines to draw */
-    int frame3B, frame3D;               /* 0x3B */
-    unsigned frame3F;                   /* 0x3F, pause length */
-    unsigned repeat41;                  /* 0x41, loops left */
-    int repeat43;                       /* 0x43 */
-    int fade45, fade47, fade49;         /* 0x45, speech playing, fade in, fade out */
-    int file4B, file4D;                 /* 0x4B */
-    int vscr4F;                         /* 0x4F */
-    int panx51, pany53, dir55, step57, remaining59; /* 0x51 */
-    union {
-        unsigned char value;
-        struct { unsigned b0:1, b1:1, b2:1, b3:1, b4:1, b5:1, b6:1, b7:1; } bit;
-    } flags;                            /* 0x5B */
-};
 
 /* The cutscene player's far work area (seg049). */
 struct Stdat {
@@ -83,150 +65,50 @@ struct AnmHdr {
 /* Large page n's descriptor: its first record, its records and its bytes. */
 #define LPDESC(anm, n) ((unsigned far *)((unsigned char far *)(anm) + 0x500 + (n) * 6))
 
-struct FontInfo { char pad0[6]; int height; };
-struct Inplist { char pad0[8]; int cmd; };
-
 typedef int (far *CutsOp)(unsigned far *code, struct CutsState *st);
 typedef void (far *Task)(int task, int done);
 
 extern struct Stdat far stdat;
 
 /* Sound (SEG016.C) and AIL. */
-extern unsigned char speechok;
-extern int sphdriver;
-extern char far *dsdata[2];
-extern struct SoundBuff dsbuf[2];
 void far kill_all_digi_effects(void);
-void far punt_all_digi_fx(void);
-void far free_speech_stuff(void);
-void far stop_music(void);
 void far set_new_music(unsigned char);
 void far load_new_music(int, int);
-void far change_music_maybe(void);
-unsigned char far speech_available(void);
-unsigned far AIL_sound_buffer_status(int driver, int buffer);
-void far AIL_start_digital_playback(int driver);
-void far AIL_stop_digital_playback(int driver);
-int far AIL_index_VOC_block(int drv, void far *voc, int block, struct SoundBuff far *buf);
-void far AIL_register_sound_buffer(int drv, int n, struct SoundBuff far *buf);
-void far AIL_set_digital_playback_volume(int drv, int v);
-void far AIL_set_digital_playback_panpot(int drv, int p);
 
 /* EMS and files. */
 extern char ws_active;
-extern unsigned char far obj_inpage1;
-extern unsigned char far tmap_fpage;
-extern unsigned far EmsBuff;
-extern unsigned ems_frame;
-extern unsigned char far sound_fpage;     /* DS:34AA: the first EMS page of the sounds */
 /* The first EMS page of the speech being streamed: the one-byte far variable at 6388:0000.
    FM Towns has it as a static (_task_sofar+0x22, beside sp_npages and audio_inpage at +0x20
    and +0x21), so the name is provisional. cutsop_say passes sound_fpage instead, as FM
    Towns' cutsop_say_ does (_sound_fpage). Far, so its own segment (segment table entry 77). */
 static unsigned char far speech_fpage;
-extern char far dfx_buffer[];         /* the digital effects' buffer (SEG016.C) */
 void far MapMemory_seg013_1D3C_C7(int phys, int page);
 unsigned char far seg013_1D3C_E4(int bank, int page, int count);
-void far seg042_35ED_12B(void);
-int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
 unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
 
 /* Graphics. */
 extern unsigned long far *Time;
-extern unsigned char far *palette;
 extern unsigned char far *foreground_color;
-extern unsigned char far *background_color;
 extern struct FontInfo far *cur_font;
-extern unsigned far *Ytab;
-extern unsigned char far ShowClip;
 extern unsigned char far Transparency;
-void far rotate_bank(unsigned char first, unsigned char count, int unused);
-void far local_do_palette(int count, unsigned char first);
-void far set_the_color(int);
-void far urectangle(int, int, int, int);
 void far rectangle(int, int, int, int);
-void far set_the_window(int, int, int, int);
 void far show(int x, int y, unsigned char far *buf, int h, int w, int skipx, int skipy);
-void far grSoftPageFlip(void);
-void far grPageFlip(void);
-void far copy_visible_to_hidden(void);
-void far vscreen_focus(int, int);
-void far seg003_0272_4A3A(int, int, int);
-int far string_width(char far *);
-void far string_to_screen(char far *, int, int);
-void far mem_set(void far *p, int value, int count);
-void far fadein(unsigned char far *, int, int);
 void far fadeout(unsigned char far *, int, int);
-void far grfx_setpal(unsigned char far *);
 void far grfx_clear(void);
 void far grfx_quikpal(int);
-void far grfx_quikfont(int);
 unsigned char far read_quikpal(int which, unsigned char far *pal);
 void far grfx_palrange(unsigned char far *pal, int first, int count);
 
 /* Elsewhere. */
 extern unsigned char in_game;
-extern int CutsceneOrConversationStringBlock;
 extern struct Inplist *inplist;
-char far * far get_string(int);
-char far * far FindStringDelimiter(char far *, int);
-int far mouse_get_input(void);
-void far mouse_hide(void);
-void far mouse_show(void);
-void far editchng(int);
-void far newscr(int);
-void far load_txtmaps(void);
 
 #define SPEECH_BUF(o) MK_FP(EmsBuff + 0x800, (o))
 #define RESTORE_EMS() \
     if (ws_active) seg013_1D3C_E4(0, 0, 4); \
     else if (obj_inpage1 != 0xFF) MapMemory_seg013_1D3C_C7(2, obj_inpage1)
 
-/* This file's functions referenced before their definitions. */
-int far cutsop_txt(unsigned far *, struct CutsState *);
-int far cutsop_erase(unsigned far *, struct CutsState *);
-int far cutsop_func(unsigned far *, struct CutsState *);
-int far cutsop_pause(unsigned far *, struct CutsState *);
-int far cutsop_next(unsigned far *, struct CutsState *);
-int far cutsop_end(unsigned far *, struct CutsState *);
-int far cutsop_loop(unsigned far *, struct CutsState *);
-int far cutsop_data(unsigned far *, struct CutsState *);
-int far cutsop_fadeout(unsigned far *, struct CutsState *);
-int far cutsop_fadein(unsigned far *, struct CutsState *);
-int far cutsop_jump(unsigned far *, struct CutsState *);
-int far cutsop_punt(unsigned far *, struct CutsState *);
-int far cutsop_say(unsigned far *, struct CutsState *);
-int far cutsop_wait(unsigned far *, struct CutsState *);
-/* cutsop_skip and cutsop_wait share a public-order key (875); Turbo C lists such publics in
-   reverse order of first sight, and the stub order puts cutsop_skip first, so it is declared later */
-int far cutsop_skip(unsigned far *, struct CutsState *);
-int far cutsop_clang(unsigned far *, struct CutsState *);
-int far cutsop_palrange(unsigned far *, struct CutsState *);
-int far cutsop_palfade(unsigned far *, struct CutsState *);
-int far cutsop_palset(unsigned far *, struct CutsState *);
-int far cutsop_palsimplefade(unsigned far *, struct CutsState *);
-int far cutsop_vscreen(unsigned far *, struct CutsState *);
-int far cutsop_focus(unsigned far *, struct CutsState *);
-int far cutsop_lback(unsigned far *, struct CutsState *);
-int far cutsop_pan(unsigned far *, struct CutsState *);
-int far cutsop_splity(unsigned far *, struct CutsState *);
-int far cutsop_music(unsigned far *, struct CutsState *);
-int far cutsop_test(unsigned far *, struct CutsState *);
-int far cutsop_wait_for_sound(unsigned far *, struct CutsState *);
-int far gobble_input_events(struct CutsState *);
-void far run_timebased_tasks(int reset);
-void far punt_tasks(void);
-void far punt_single_task(int task);
 int far install_timebased_task(Task fn, int period, int total);
-void far task_palfade(int task, int done);
-void far remove_task(int task);
-/* not referenced before its definition, but declared here so that it is seen before
-   record_task: both names have the public-order key 970, and the stub order lists record_task first */
-char far * far bufferPointer(void);
-void far palette_fade(int step, int total, int first, int last, unsigned char far *pal);
-int far virtual_screen(int w, int h, int split);
-int far lback_vscreen(int x, int y, unsigned n);
-void far show_anm(int cuts, int x, int y, int w, int h);
 
 /* Initialised data, DS:1064 to DS:1141. */
 static int lp_page = -1;                /* the LPF page readlpinc is reading */
@@ -1504,8 +1386,8 @@ void far show_cutscene(register unsigned n)
     grfx_quikfont(1);
     if (in_game) load_txtmaps();
     if (n < 0x100) {
-        if (inplist->cmd == 1) newscr(1);
-        else if (inplist->cmd != 0) {
+        if (inplist->mode == 1) newscr(1);
+        else if (inplist->mode != 0) {
             grfx_quikpal(0);
             editchng(0x7FFE);
         }

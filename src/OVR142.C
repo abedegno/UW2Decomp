@@ -1,33 +1,22 @@
 /* target: ovr142 */
 /* opts: -mm -1 -G -O -Y -d */
 
-struct Player {
-    unsigned char key;
-    char pad01[0x1e - 1];
-    unsigned char strength, dexterity, intelligence;
-    unsigned char attack, defence;
-    char pad23[0x2e - 0x23];
-    unsigned char sneak;
-    char pad2f[0x35 - 0x2f];
-    unsigned char health, maxhealth;
-    char pad37[0x3e - 0x37];
-    unsigned spells[17];
-    union { unsigned word; struct { unsigned low:5, count:4, rest:3, shrooms:2, high:2; } bits; } spell_count;
-    char pad62[2];
-    unsigned char light;
-    union { unsigned char handedness; struct { unsigned char hand:1, hand_rest:7; } bits; } handopts;
-    char pad66[0x302 - 0x66];
-    union { unsigned options; struct { unsigned sound:2, music:2, padopts:12; } opt; } opts;
-    char pad304[0x369 - 0x304];
-    unsigned long clock;
-};
+#include "combat.h"
+#include "critter.h"
+#include "file.h"
+#include "gfx.h"
+#include "inv.h"
+#include "map.h"
+#include "motion.h"
+#include "object.h"
+#include "player.h"
+#include "sound.h"
+#include "ui.h"
+#include "view3d.h"
+
 struct MotionOpts { unsigned low:3, state:8, high:5; };
 struct HandBits { unsigned hand:1, high:15; };
 struct DreamOpts { unsigned low:6, dream:3, active:1, high:6; };
-struct Creature { unsigned char armour[4]; unsigned char vitality, strength, dexterity, intelligence; char pad08[0x12-8]; unsigned char defence; };
-struct Object { unsigned id, pos; union { unsigned word; struct { unsigned quality:6, next:10; } f; } qn; unsigned owner; unsigned char hp; };
-struct Motion { int x,y,z; char pad06[0x25-6]; unsigned char state; };
-extern struct Motion PN;
 
 /* This file's _BSS, DS:8288..8297, laid out by name (tools/bssorder.py): player_name_handle
    80, player 280, playerdat 440, ThePlayer 444, PlayerLevel 568, PlayerFacing 704,
@@ -42,14 +31,8 @@ int PlayerLevel;
 int PlayerFacing;
 int PlayerHeading;
 extern unsigned long lastDurCheck;
-extern unsigned char motionbits, TimeStop, Hasted, WizEye, PoisonWeap;
-extern unsigned char Blessed;
-/* The common object properties, 11 bytes per item (ovr134 loads them). Only the
-   resistance byte of item 127, the player's own object type, is used here. */
-struct ComObj { char pad0[8]; unsigned char resist; char pad9[2]; };
-extern struct ComObj ComObjData[];
 extern unsigned char cmbModTH[4];
-extern unsigned char Valor, plyregen;
+extern unsigned char plyregen;
 extern unsigned PickDist;
 
 /* This file's _DATA runs from DS:19AC to the end of "dl.dat" at DS:19DB. */
@@ -73,18 +56,10 @@ void far write(int fd, void *p, int n);
 void far read(int fd, void *p, int n);
 void far xorwrite(int fd, unsigned char key, void far *p, unsigned n);
 void far xorread(int fd, unsigned char key, void far *p, unsigned n);
-unsigned char far fx_is_on(void);
-unsigned char far music_is_on(void);
-void far turn_fx(int n);
-void far turn_music(int n);
-void far set_graphics_level(void);
 void far newFPS(int n);
 void far memset(void *p, int value, int count);
 int far rand(void);
-void far set_cyb(int n);
 void far grfx_quikpal(int n);
-void far random_light(int n);
-int far our_open(char *name, int mode, int flags);
 long far lseek(int fd, long pos, int whence);
 void far close(int fd);
 
@@ -94,20 +69,20 @@ void far MaybePlayerDayLoadrelated_ovr142_0(void) {}
 void far save_player_data(int fd)
 {
     unsigned char key;
-    key = player->key ^ 0xAA;
-    player->strength = playerdat->strength;
-    player->dexterity = playerdat->dexterity;
-    player->intelligence = playerdat->intelligence;
+    key = player->name[0] ^ 0xAA;
+    player->strength = playerdat->attr[0];
+    player->dexterity = playerdat->attr[1];
+    player->intelligence = playerdat->attr[2];
     player->health = ThePlayer->hp;
-    player->maxhealth = playerdat->vitality;
+    player->maxhealth = playerdat->avghit;
     *(int *)((char *)player + 0x54) = PN.x;
     *(int *)((char *)player + 0x56) = PN.y;
     *(int *)((char *)player + 0x58) = PN.z;
     *(int *)((char *)player + 0x5A) = PlayerFacing;
     *(int *)((char *)player + 0x5C) = PlayerLevel;
-    player->opts.opt.sound = (unsigned)fx_is_on();
-    player->opts.opt.music = (unsigned)music_is_on();
-    ((struct MotionOpts *)((char *)player + 0x303))->state = PN.state;
+    player->sound = (unsigned)fx_is_on();
+    player->music = (unsigned)music_is_on();
+    ((struct MotionOpts *)((char *)player + 0x303))->state = PN.terrain;
     write(fd, &key, 1);
     xorwrite(fd, key, player, 0x37D);
 }
@@ -117,29 +92,29 @@ void far read_player_data(int fd)
     unsigned char key;
     read(fd, &key, 1);
     xorread(fd, key, player, 0x37D);
-    playerdat->strength = player->strength;
-    playerdat->dexterity = player->dexterity;
-    playerdat->intelligence = player->intelligence;
+    playerdat->attr[0] = player->strength;
+    playerdat->attr[1] = player->dexterity;
+    playerdat->attr[2] = player->intelligence;
     ThePlayer->hp = player->health;
-    playerdat->vitality = player->maxhealth;
+    playerdat->avghit = player->maxhealth;
     PN.x = *(int *)((char *)player + 0x54);
     PN.y = *(int *)((char *)player + 0x56);
     PN.z = *(int *)((char *)player + 0x58);
     PlayerFacing = *(int *)((char *)player + 0x5A);
     PlayerLevel = *(int *)((char *)player + 0x5C);
-    PN.state = ((struct MotionOpts *)((char *)player + 0x303))->state;
-    lastDurCheck = player->clock >> 8;
-    turn_fx(player->opts.opt.sound);
-    turn_music(player->opts.opt.music);
+    PN.terrain = ((struct MotionOpts *)((char *)player + 0x303))->state;
+    lastDurCheck = player->game_clock >> 8;
+    turn_fx(player->sound);
+    turn_music(player->music);
     set_graphics_level();
     newFPS(((struct MotionOpts *)((char *)player + 0x303))->low);
 }
 
 void far init_spells(void)
 {
-    ComObjData[127].resist = 0;
-    plyNotice[0] = 13 - player->sneak / 3;
-    plyNotice[1] = 15 - player->sneak / 5;
+    ComObjData[127].resist = 0;         /* item 127 is the player's own object type */
+    plyNotice[0] = 13 - player->skills[13] / 3;
+    plyNotice[1] = 15 - player->skills[13] / 5;
     motionbits = 0;
     memset(cmbModTH, 0, 4);
     PoisonWeap = Hasted = WizEye = Blessed = TimeStop = 0;
@@ -175,8 +150,6 @@ void far set_drugged(char on)
         ShroomsEnabled = -1;
     }
 }
-
-void far backfire(struct Object far *obj, char strength);
 
 /* FM Towns player_affected_by_ is between set_drugged_ and parse_aspells_ and
    applies the same spell classes; IDA left its DOS name descriptive. */
@@ -262,13 +235,12 @@ static unsigned char spell_class_values[16] = {
     0x80, 0x80, 0x80, 0x11, 0x80, 0x80, 0x80, 0x80
 };
 extern unsigned char Armor[];
-void far active_spells(unsigned char *p);
 
 void far parse_aspells(unsigned char *out)
 {
     unsigned char i;
     memset(out, 0x1E, 3);
-    for (i = 0; i < player->spell_count.bits.count; i++) {
+    for (i = 0; i < player->active_spells; i++) {
         out[i] = spell_class_values[player->spells[i] & 0xF];
         out[i] = out[i] + ((player->spells[i] & 0xF0) >> 4);
     }
@@ -312,20 +284,11 @@ int far armor_val(struct Object far *obj)
     return protection;
 }
 
-extern struct Object far *ActiveObj;
-extern struct Object far *CursorObjPtr;
 extern signed char ValidLightSlots[];
 extern unsigned char Weapons[];
-struct Object far * far AskInventory(int slot);
-char far ObjWorn(int item, int slot);
 char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
-void far remove_spell(struct Object far *obj);
-char far GetItemEnchantment(struct Object far *obj, int *major, int *effect, unsigned char *flag);
-void far load_weapon(char n);
 void far set_light(signed char n);
-void far fizix_update(void);
 void far newFPS(int n);
-unsigned char * far get_class_data(void);
 
 void far FixPlayerEquips(void)
 {
@@ -350,7 +313,7 @@ void far FixPlayerEquips(void)
         playerdat->armour[0] += armour;
         playerdat->armour[1] += armour;
     }
-    playerdat->defence = player->defence;
+    playerdat->defence = player->skills[1];
     ActiveObj = AskInventory(8 - (((struct HandBits *)((char *)player + 0x65))->hand));
     armour = 2;
     if (ActiveObj && ((ActiveObj->id & 0x1C0) >> 6) == 0 &&
@@ -382,7 +345,7 @@ void far FixPlayerEquips(void)
         }
     }
     player->light = (brightness << 4) + best_slot;
-    for (slot = 0; slot < player->spell_count.bits.count; slot++)
+    for (slot = 0; slot < player->active_spells; slot++)
         player_affected_by(player->spells[slot] & 0xF,
                            (player->spells[slot] & 0xF0) >> 4, &bonuses, -1);
     for (slot = 0; slot <= 10; slot++) {
@@ -397,7 +360,7 @@ void far FixPlayerEquips(void)
     else light_act = (player->light & 0xF0) >> 4;
     if (light_act > loc_lght) set_light(light_act);
     else set_light(loc_lght);
-    set_drugged(player->spell_count.bits.shrooms > 0);
+    set_drugged(player->shrooms > 0);
     if (((struct DreamOpts *)((char *)player + 0x62))->dream &&
         ((struct DreamOpts *)((char *)player + 0x62))->active)
         motionbits |= 0x10;

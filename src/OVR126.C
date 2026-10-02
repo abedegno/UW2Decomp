@@ -12,33 +12,12 @@
 #include <dos.h>
 #include <io.h>
 #include <fcntl.h>
-
-/* The player's record, reached through the near pointer `player`. */
-struct Player {
-    char pad0[0xCE];
-    unsigned long flagsCE;              /* 0xCE */
-};
-
-/* A mobile object. The first 8 bytes are shared with static objects. */
-struct Object {
-    unsigned id;                        /* item id 0-8 (major 6-8, minor 4-5, index 0-3) */
-    unsigned pos;                       /* z 0-6, heading 7-9, x 10-12, y 13-15 */
-    union {
-        unsigned word;                  /* the next object in this list */
-        struct { unsigned quality:6, next:10; } f;
-    } qn;
-    union {
-        unsigned word;                  /* the head of the contents list, or the quantity */
-        struct { unsigned owner:6, link:10; } f;
-    } ol;
-    char pad08[0x0B - 0x08];
-    unsigned goal_word;                 /* 0x0B, goal in bits 0-3 */
-    unsigned attitude_word;             /* 0x0D, attitude in bits 14-15 */
-    char pad0F[0x15 - 0x0F];
-    unsigned char anim;                 /* 0x15, animation in bits 0-5 */
-    char pad16[0x1A - 0x16];
-    unsigned char whoami;               /* 0x1A */
-};
+#include "gfx.h"
+#include "inv.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
 
 #define OBJ_ID(o)       ((o)->id & 0x1FF)
 #define OBJ_MAJOR(o)    (((o)->id & 0x1C0) >> 6)
@@ -49,51 +28,19 @@ struct Object {
 #define OBJ_GOAL(o)     (((o)->goal_word & 0xF) >> 0)
 #define OBJ_ATTITUDE(o) (((o)->attitude_word & 0xC000) >> 14)
 
-/* One object type's common properties, 11 bytes. */
-struct ComObj {
-    char pad0[6];
-    unsigned b6:2;                      /* 0x06 */
-    unsigned qualclass:2;
-    unsigned b6_4:4;
-    unsigned b7:7;                      /* 0x07 */
-    unsigned can_own:1;
-    char pad8[0x0A - 0x08];
-    unsigned qualtype:4;                /* 0x0A */
-    unsigned lookable:1;
-    unsigned bA_5:3;
-};
-
 /* Copy a far string, terminator included, to any address. */
 #define far_strcpy(d, s) movedata(FP_SEG(s), FP_OFF(s), FP_SEG(d), FP_OFF(d), str_len(s) + 1)
 
-extern struct Player near *player;
-extern struct ComObj ComObjData[];
 extern char always_decode;
 extern unsigned TxmTerr[];
 
-char far * far get_string(int id);
 void far scroll_print(char far *s);
-void far game_sprint(int id);
 void far scroll_clear(int n);
-char far * far str_cat(char far *dst, char far *src);
-char far * far str_copy(char far *dst, char far *src);
-int far str_len(char far *s);
 void far get_name(char far *buf, struct Object far *obj, int article, char plural);
-char far * far fix_name_string(char far *s, int article, int b);
 char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
 struct Object far * far Obj_InList(unsigned far **head, int a, int major, int minor, int idx);
-struct Object far * far find_obj(int major, int minor, int index, struct Object far **where);
-void far look_nothing(int how, int what);
-void far player_look_shaft(void);
 void far player_look_grave(int n);
 void far show_cutscene(int n);
-
-/* Later in this file. */
-char far do_mods(struct Object far *obj, int lore, char *s);
-char far do_of(struct Object far *obj, int lore, char *s);
-void far RectLook(struct Object far *obj, int look);
-void far CritterLook(struct Object far *obj, char *s);
-void far SpecialLook(struct Object far *obj, int print);
 
 void far LookAt(struct Object far *obj, int lore)
 {
@@ -291,7 +238,7 @@ void far BookLook(struct Object far *obj, int print)
         strcat(text, "...\n");
         scroll_print(text);
         if ((obj->ol.f.link & 0x1FF) == 6)
-            player->flagsCE = (player->flagsCE & 0xFFFFFFFBL) + 4;
+            player->quests[26] = (player->quests[26] & 0xFFFFFFFBL) + 4;
         str = get_string((obj->ol.f.link & 0x1FF) | 0x600);
         scroll_print(str);
         scroll_print("\n");
@@ -407,7 +354,7 @@ void far CritterLook(struct Object far *obj, char *s)
     desc = get_string(OBJ_ID(obj) | 0x800);
     if (*desc == 0) {
         if (OBJ_GOAL(obj) == 11)
-            desc = get_string(((obj->anim & 0x3F) + 0x115) | 0x200);
+            desc = get_string(((obj->b15 & 0x3F) + 0x115) | 0x200);
         else
             desc = 0;
     }
