@@ -32,15 +32,6 @@
 #include "ui.h"
 #include "uw2.h"
 
-/* One container type, 3 bytes: OBJECTS.DAT's container table (Guide, "Containers table"). */
-struct Container {
-    unsigned char capacity;             /* 0x00, 0 for no limit */
-    int mask;                           /* 0x01, what it accepts: an item id, 0x200.. a kind, or -1 */
-};
-
-extern struct Player PlayerDat;
-extern union Link Inventory[];
-extern struct Container Containers[];
 /* This file's _BSS, DS:6AD0..6B0F. */
 /* match: laid out by name (tools/bssorder.py): invArmorObj and
    invArmorQ 57, SaveHandles 827, panel_mouse 968, CursorObjPtr 995; ovr130's Containers
@@ -53,19 +44,6 @@ char invArmorQ[6];
 int SaveHandles[23];
 static int panel_mouse;                 /* DS:6B0A */
 struct Object far *CursorObjPtr;
-extern char far Transparency;
-extern char RightPanel;
-extern char far *foreground_color;
-extern struct Inplist near *inplist;
-
-/* Every call here passes an InvRect's h before its w. */
-int far input_addmouse(int a, int b, int c, int d, int buttons, int mode, void far (*handler)(void));
-void far rectangle(int x0, int y0, int x1, int y1);
-int far wdialog(char *prompt, char *initial, char *result, char anychar, int maxlen);
-void far scroll_print(char far *s);
-void far get_name(char far *buf, struct Object far *obj, int article, char plural);
-void far mouse_release(int how);
-char far mouse_dragged(int how);
 
 char ValidLightSlots[4] = { 5, 6, 7, 8 };
 struct Bag far *OpenBagList = 0;
@@ -155,7 +133,7 @@ void far BeginInventory(void)
         save_rect(SaveHandles[1], 0xEE, 0x7A, 0x4C, 0x2B);
         save_rect(SaveHandles[0], 0x12B, 0x90, 0x10, 0x0A);
         panel_mouse = defineMouseRegion(0xF0, 0x51, 0x13B, 0xBE, 0x106C);
-        panel_input = input_addmouse(0xF0, 0x51, 0x13B, 0xBE, 0, 5, mous_in_panel);
+        panel_input = input_addmouse(0xF0, 0x51, 0x13B, 0xBE, 0, 5, (InputFn)mous_in_panel);
     }
 }
 
@@ -228,7 +206,7 @@ void far DoInventoryMouse(int how)
                     if (split != obj)
                         Obj_Add(&obj->qn.link, split);
                 }
-            } else if (OBJ_MAJOR(obj) == MAJOR_MISC && OBJ_MINOR(obj) == 0) {
+            } else if (OBJ_MAJOR(obj) == MAJOR_MISC && OBJ_MINOR(obj) == MINOR_CONTAINER) {
                 if (inplist->mode == 4 && OBJ_INCLASS(obj) != 0xF) {
                     game_sprint(0xC9);  /* 'You cannot barter a container. Instead, remove the contents ...' */
                     return;
@@ -581,7 +559,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
         return 0;
     }
     if (slot == 9 || slot == 10) {
-        if (major != MAJOR_HACK || OBJ_MINOR(obj) < 2)
+        if (major != MAJOR_HACK || OBJ_MINOR(obj) < MINOR_ARMOR)
             return 0;
         cls = get_class_data();
         return cls[3] == 9;
@@ -591,14 +569,14 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
             || OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL) && obj->ol.f.link > 1)
             return 0;
     } else if (major == MAJOR_MISC && minor == 1 && sub >= 4 && sub < 8) {
-        obj->id = obj->id & 0xFFF0 | (sub - 4) & 0xF;
+        SET_INCLASS(obj, sub - 4);
         if (!ItemFitsSlot(obj, slot)) {
-            obj->id = obj->id & 0xFFF0 | sub & 0xF;
+            SET_INCLASS(obj, sub);
             return 0;
         }
         for (i = 0; i < 4; i++)
             if (ValidLightSlots[i] == slot)
-                obj->id = obj->id & 0xFFF0 | sub & 0xF;
+                SET_INCLASS(obj, sub);
         return 1;
     }
     if (cont != 0 && OBJ_CLASS(cont) == CLASS_CONTAINER) {
@@ -631,29 +609,29 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
         if (cap >= 0) {
             unsigned char res;
 
-            if (cap < 0x200) {
+            if (cap < CONT_RUNES) {
                 if (id != cap)
-                    game_sprint(0x107);
+                    game_sprint(0x107);  /* 'That item does not fit.' */
                 return id == cap;
             }
             switch (cap) {
-            case 0x200:
+            case CONT_RUNES:
                 if (!(res = major == MAJOR_STUFF && (minor == 3 || minor == 2 && sub > 7))) {
                     game_sprint(0x106);  /* 'You can only put runes in the rune bag.' */
                     return 0;
                 }
                 break;
-            case 0x204:
+            case CONT_KEYS:
                 if (!(res = major == MAJOR_SPEC && minor == 0 && sub != 0))
-                    res = OBJ_CLASS(obj) == CLASS_CONTAINER && Containers[obj->id & ID_INCLASS].mask == 0x204;
+                    res = OBJ_CLASS(obj) == CLASS_CONTAINER && Containers[obj->id & ID_INCLASS].mask == CONT_KEYS;
                 break;
-            case 0x201:
+            case CONT_MISSILES:
                 res = major == MAJOR_HACK && minor == 1 && sub < 3 || major == MAJOR_MISC && minor == 1 && sub >= 8;
                 break;
-            case 0x202:
+            case CONT_SCROLLS:
                 res = major == MAJOR_SPEC && minor == 3 && (sub >= 4 && sub < 8 || sub == 9 || sub == 10);
                 break;
-            case 0x203:
+            case CONT_FOOD:
                 res = major == MAJOR_MISC && minor == 3 && id != ITEM_BOTTLE_OF_ALE
                     && id != ITEM_BOTTLE_OF_WATER && id != ITEM_BOTTLE_OF_WINE
                     || id == ITEM_PLANT_CE || id == ITEM_PLANT_CF || id == ITEM_PLANT_114
@@ -663,7 +641,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
                 res = 0;
             }
             if (!res)
-                game_sprint(0x107);
+                game_sprint(0x107);  /* 'That item does not fit.' */
             return res;
         }
     }
@@ -745,7 +723,7 @@ char far AddToOccupiedSlot(struct Object far *obj, register int slot)
 
     ok = 0;
     target = Obj_PtrTMem(&Inventory[slot]);
-    if (OBJ_MAJOR(target) == MAJOR_MISC && OBJ_MINOR(target) == 0) {
+    if (OBJ_MAJOR(target) == MAJOR_MISC && OBJ_MINOR(target) == MINOR_CONTAINER) {
         char r;
 
         r = PutObjectInBag(obj, slot);
@@ -762,14 +740,14 @@ char far AddToOccupiedSlot(struct Object far *obj, register int slot)
         else
             qty = 1;
         if (!OBJ_ISQUANT(target)) {
-            target->id = target->id & 0x7FFF | ID_ISQUANT;
+            SET_ISQUANT(target, 1);
             target->ol.f.link = 1;
         }
         weight = ComObjData[OBJ_ITEM(obj)].mass * qty;
         if (slot > 19)
             for (bag = OpenBag; bag != 0; bag = bag->prev)
                 bag->weight += weight;
-        PlayerDat.weight += weight;
+        PlayerDat.rec.weight += weight;
         FixPlayerEquips();
         target->ol.f.link = target->ol.f.link + qty;
         target->qn.f.quality = (target->qn.f.quality + obj->qn.f.quality) >> 1;
@@ -887,7 +865,7 @@ char far displayEnc(char show)
     register int left;
 
     drawn = 0;
-    left = PlayerDat.max_weight - PlayerDat.weight;
+    left = PlayerDat.rec.max_weight - PlayerDat.rec.weight;
     if (shown_capacity != left) {
         restore_rect(SaveHandles[0]);
         shown_capacity = left;

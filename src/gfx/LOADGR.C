@@ -38,6 +38,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <alloc.h>
+#include "critter.h"
 #include "file.h"
 #include "gfx.h"
 #include "map.h"
@@ -71,12 +72,9 @@ unsigned tmpcnt;                    /* pictures in the open file */
 unsigned char Palettes[32][16];
 FILE *grfp;
 unsigned *PalStore;
-extern char far stdat;
 /* the 3D engine's buffers: gr_offs holds 570 offsets (FM Towns _gr_end follows it) */
 #define GR_OFFS_MAX 570
 
-void far MapMemory_seg013_1D3C_C7();
-unsigned char far preload_cr();
 
 /* Reads a .CR file's palette count and palettes (32 bytes each). They are kept in a
    malloc'd block whose near address goes to *PalStore when *PalStore is nonzero, and
@@ -224,7 +222,7 @@ unsigned char far move_reload_obj_ems(void far *image, int size, int index)
 /* gronk_gr callbacks for pictures kept in video memory, read through stdat. */
 void far *far adrnew_vram(void)
 {
-    return &stdat;
+    return stdat;
 }
 
 void far *far adr_const(void)
@@ -382,7 +380,7 @@ int far LoadScaled_ovr119_804(char *art, void far *destination, int unused)
 unsigned char far load_gr_video(char *art)
 {
     unsigned char ok = gronk_gr(art, 0, -1, (void far *(far *)(int))adrnew_vram,
-                                 movenew_vram);
+                                 (ArtMoveFn)movenew_vram);
     gr_index += tmpcnt;
     return ok;
 }
@@ -395,7 +393,7 @@ unsigned char far GrLoadAt_ovr119_949(int offset, char *art, int start, int coun
     unsigned char ok;
     gr_index = (offset - 0x2000) + first_vram;
     ok = gronk_gr(art, start, count, (void far *(far *)(int))adrnew_vram,
-                   move_vram);
+                   (ArtMoveFn)move_vram);
     gr_index = old;
     return ok;
 }
@@ -406,7 +404,7 @@ void far reload_gr_vpic(int offset, char *art, int image)
     register int old = gr_index;
     gr_index = (offset - 0x2000) + first_vram;
     gronk_gr(art, image, 1, (void far *(far *)(int))adrnew_vram,
-                   move_vram);
+                   (ArtMoveFn)move_vram);
     gr_index = old;
 }
 

@@ -23,19 +23,11 @@
 #include "event.h"
 #include "gfx.h"
 #include "map.h"
+#include "motion.h"
 #include "object.h"
 #include "player.h"
 #include "sys.h"
 #include "ui.h"
-
-extern struct Object far *objdata;
-extern struct Weapon Weapons[];
-
-/* Elsewhere in the game. */
-struct Object far * far obj_deal(struct Object far *obj, int x, int y, int a);
-void far put_effect(struct Object far *obj, int type, int size, int a, int b, int x, int y);
-char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
-                     unsigned char damage, unsigned char type);
 
 /* Removes the lock object (a MAJOR_SPEC object of minor class 0) from obj's contents:
    the first one, or every one if all is set. Returns 1 only when all was set and a lock
@@ -67,7 +59,7 @@ char far remove_lock(struct Object far *obj, char all)
    0 is returned. Otherwise returns 1 when Obj_Punt removed it. */
 char far try_remove(union Link far *head, struct Object far *obj)
 {
-    if (obj >= objdata)
+    if (obj >= (struct Object far *)objdata)
         return Obj_Punt(head, obj, 0) == 0;
     obj->hp = 0;
     return 0;
@@ -182,11 +174,11 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
         debris = debris_type(item, type);
     if (debris >= 0)
     {
-        obj->id = obj->id & 0xFE00 | debris & ID_ITEM;
+        SET_ITEM(obj, debris);
         if (IsMobElem(obj))
             obj->hp = 0x28;
         obj->qn.f.quality = 0x28;
-        if (obj >= objdata && !obj_deal(obj, x, y, 1))
+        if (obj >= (struct Object far *)objdata && !obj_deal(obj, x, y, 1))
             return 1;
     }
     return debris < -1;

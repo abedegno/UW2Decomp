@@ -85,7 +85,7 @@ Most of UW2's C code is in overlays: one buffer in conventional memory holds the
 
 - FD71 (`dseg062_62a6`), seg021's data: the map is in SYSENTRY.ASM's header.
 - `struct Camera` (`cPlayer`, view3d.h), which lives in FD71.
-- `struct ArcFile` and the archive tables (ARC.C), `struct LzwWork` (LZSS.C).
+- `struct ArcFile` and the archive tables (ARC.C), `struct LzwWork` (LZSS.C's, in `file.h`).
 - The EMS page variables `crit_fpage`, `tmap_fpage`, `EmsBuff` ... (view3d.h; defined in the renderer's far data by TMAPOPS.ASM).
 
 ## Open questions

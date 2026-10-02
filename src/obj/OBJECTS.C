@@ -30,6 +30,7 @@
    give push cs; nothing else in the file changes with it. */
 
 #include <stdlib.h>
+#include "event.h"
 #include "file.h"
 #include "inv.h"
 #include "map.h"
@@ -66,13 +67,6 @@ unsigned far *critbot;
 unsigned far *critptr;
 struct StaticObj far *objdata;          /* the static objects */
 static int objcount;
-
-extern struct Tile far *mapdata;
-extern unsigned char animcount;
-extern unsigned char timercount;
-
-/* Elsewhere in the game. */
-void far trap_obj_del(union Link far *head, struct Object far *obj);
 
 /* Empties the object store: clears every tile's object list, points critdata, objdata and
    the free stacks into the level block, fills the free stacks with every index from 2 to

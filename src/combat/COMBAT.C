@@ -31,37 +31,15 @@
 #include "gfx.h"
 #include "inv.h"
 #include "map.h"
+#include "motion.h"
 #include "object.h"
 #include "player.h"
+#include "sound.h"
 #include "sys.h"
 #include "ui.h"
 #include "view3d.h"
 
-extern struct MissileInfo Missile[];
-extern struct Weapon Weapons[];
-extern int PlayerPitch;
-extern int ObjectActorArg;
-extern long far *Time;
 /* name: the player's own critter record. No FM Towns name: static there. */
-
-/* Elsewhere in the game. */
-int far add_animobj(int index, int len, int a, char x, char y);
-struct Object far * far CreateObj(int id, int b);
-void far TerrainCheck(int a);
-void far ObjectCheck(int a, int b);
-void far play_effect(char type, int x, int y, char vol);
-void far play_effect_here(int fx, int vol, char c);
-void far play_effect_on_mobile(char fx, struct Object far *obj, int vol);
-char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
-                     unsigned char damage, unsigned char type);
-void far set_effect(int which, int amount);
-void far set_screen_frame(int frame, int how);
-void far put_effect(struct Object far *obj, int type, int size, int a, int b, int x, int y);
-void far mouse_release(int n);
-void far get_name(char far *buf, struct Object far *obj, int a, int b);
-void far scroll_print(char far *s);
-void far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
-void far set_new_music(int n);
 
 /* Initialised data, DS:356 onwards. */
 /* name: the statics have no FM Towns names; the names here are descriptive. */
@@ -108,7 +86,7 @@ unsigned char player_weapon;
 char criti;
 int fromwho;
 static struct Object far *curr_weapon;
-char using_altaras_dagger;
+unsigned char using_altaras_dagger;
 static unsigned char *weapon_data;
 unsigned char power;
 
@@ -175,10 +153,10 @@ int far set_hitobj(struct MotionCalc *c)
             continue;
         if (fromwho == 1 && IsMobElem(obj) && OBJ_ALLY(obj) && (last - 1 != i || best != 100000L))
             continue;
-        t = oCollisions[i].offset & 0x3F;
-        targx = ((c->x >> 3) + t) & 0x3F;
+        t = oCollisions[i].offset & MAP_MASK;
+        targx = ((c->x >> 3) + t) & MAP_MASK;
         t = targx - (c->x >> 3);
-        targy = ((c->y >> 3) + (oCollisions[i].offset - t) / MAP_SIZE) & 0x3F;
+        targy = ((c->y >> 3) + (oCollisions[i].offset - t) / MAP_SIZE) & MAP_MASK;
         dx = ax - ((targx << 3) + OBJ_FINEX(obj));
         dy = ay - ((targy << 3) + OBJ_FINEY(obj));
         dist = dx * dx + dy * dy;
@@ -188,10 +166,10 @@ int far set_hitobj(struct MotionCalc *c)
         }
     }
     if (found >= 0) {
-        t = oCollisions[found].offset & 0x3F;
-        targx = ((c->x >> 3) + t) & 0x3F;
+        t = oCollisions[found].offset & MAP_MASK;
+        targx = ((c->x >> 3) + t) & MAP_MASK;
         t = targx - (c->x >> 3);
-        targy = ((c->y >> 3) + (oCollisions[found].offset - t) / MAP_SIZE) & 0x3F;
+        targy = ((c->y >> 3) + (oCollisions[found].offset - t) / MAP_SIZE) & MAP_MASK;
     }
     return found;
 }
@@ -301,7 +279,7 @@ char far is_sharp(struct Object far *weap)
     item = OBJ_ITEM(weap);
     if (OBJ_MAJOR(weap) != MAJOR_HACK)
         return 0;
-    if (OBJ_MINOR(weap) != 0 && OBJ_MINOR(weap) != 1)
+    if (OBJ_MINOR(weap) != MINOR_WEAPON && OBJ_MINOR(weap) != MINOR_MISSILE)
         return 0;
     if (item >= ITEM_CUDGEL && item < 10)
         return 0;
@@ -954,7 +932,7 @@ void far player_killed_a(struct Object far *npc)
     int exp;
 
     if (OBJ_MAJOR(npc) == MAJOR_CREATURE) {
-        set_new_music(6);
+        set_new_music(MUSIC_VICTORY);
         exp = Creature[npc->id & ID_INMAJOR].exp;
         exp = exp * 4 + rollem(2, exp);
         if (OBJ_POWERFUL(npc))

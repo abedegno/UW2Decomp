@@ -34,6 +34,21 @@ struct DrvrDesc {
     int io, irq, dma, drq;              /* 0x0C */
 };
 
+/* Music themes, for set_new_music and load_new_music: theme n is SOUND\UWAnn.XMI (UWRnn.XMI
+   for the Roland card) with nn the number in octal (load_new_music builds the name). The
+   names say when the game asks for each; UW-Formats' song list ("Enemy wounded", "Combat",
+   "Dangerous Situation", "Armed", "Victory") agrees for 2 to 6. */
+#define MUSIC_THEME     1               /* the main menu and start-up */
+#define MUSIC_FOE_HURT  2               /* the player's foe is nearly dead (AI.C) */
+#define MUSIC_COMBAT    3
+#define MUSIC_DANGER    4               /* the player is badly hurt */
+#define MUSIC_ARMED     5               /* the weapon is drawn */
+#define MUSIC_VICTORY   6               /* a creature is killed (COMBAT.C) */
+#define MUSIC_DEATH     7               /* the player dies (SKILLS.C) */
+#define MUSIC_WALK_FIRST 8              /* the walking themes, 8 to 15 (UWA10..UWA17), chosen */
+#define MUSIC_WALK_LAST 15              /* by world (SOUND.C's walking_music) */
+#define MUSIC_INTRO     0x18            /* UWA30 */
+
 /* SOUND.C: sound and music */
 extern struct SoundBuff dsbuf[2];
 extern unsigned char speechok;
@@ -75,6 +90,17 @@ void far loop_music_maybe(void);
 void far change_music_maybe(void);
 unsigned char far speech_available(void);
 void far free_speech_stuff(void);
+void far load_digi_fx(unsigned char fx);
+void far kill_all_digi_effects(void);
+unsigned char far init_timers(void);
+void far punt_sound_stuff(unsigned char failed);
+unsigned char far init_sounds(void);
+unsigned char far load_new_music(unsigned char music, char start);
+unsigned char far play_effect(unsigned char fx, int x, int y, char vol);
+unsigned char far play_effect_here(unsigned char fx, unsigned char pan, char vol);
+unsigned char far play_effect_on_mobile(unsigned char fx, struct Object far *obj, char vol);
+void far set_new_music(unsigned char m);
+void far seg016_1E73_2FCB(FILE *fp);
 
 /* AIL.ASM */
 unsigned far AIL_default_timbre_cache_size(int drv);

@@ -41,35 +41,6 @@
 
 struct VoidTile { unsigned char x, y; };
 
-extern unsigned long far *Time;
-extern unsigned char far *foreground_color;
-extern struct FontInfo far *cur_font;
-extern struct Inplist near *inplist;
-extern void (far *npp_func)(void);
-
-/* Elsewhere in the game. */
-void far scroll_print(char far *s);
-void far damage_item(struct Object far *who, void far *source, int a, int b,
-                     unsigned char damage, int type);
-void far load_digi_fx(int which);
-void far Killorn_just_crashed(int how);
-void far show_cutscene(int n);
-void far grfx_clear(void);
-void far display_screen(int a, int b);
-void far set_new_music(int n);
-struct Object far * far CreateObj(int id, int b);
-char far put_at(int x, int y, int z, struct Object far *obj, int a, int b);
-struct Object far * far obj_deal(struct Object far *obj, int x, int y, int a);
-int far near_mob_put_at(struct Object far *at, struct Object far *obj, int a, int b);
-void far do_teleport(struct Object far *who, int x, int y, int level);
-void far load_new_music(int n, int m);
-void far scroll_clear(int n);
-void far get_name(char far *buf, struct Object far *obj, int a, int b);
-void far UseTrigger(struct Object far *user, struct Object far *obj, struct Object far *trigger, int a);
-
-/* Later in this file. */
-char far player_eat(int nutrition);
-
 /* The use-skill key: only track (12) does anything, running mdetect(8, value) to
    report nearby creatures. Traps (10) and search (11) do nothing here; any other skill
    just prints its name. */
@@ -604,7 +575,7 @@ void far player_key_sleep(int bedroll)
 /* Changes hunger by nutrition (higher is fuller). Returns 0, eating nothing, if it
    would go past 255 (too full). Eating also heals food_heal / 6 HP (at most 8) and
    resets food_heal. PLAYTIME.C and player_sleep call it with negative values. */
-char far player_eat(int nutrition)
+unsigned char far player_eat(int nutrition)
 {
     int value;
 
@@ -654,7 +625,7 @@ void far player_won_game(void)
    cutscene number plus one, 0 for none). Cutscene 2 is the ending: the game is won. */
 void far cs_check(void)
 {
-    unsigned char *cs = &player->quest_bytes[15];
+    unsigned char *cs = &player->quest_bytes[QB_CUTSCENE];
 
     if (*cs > 0)
     {
@@ -718,7 +689,7 @@ void far do_gem(void)
     player->play_mana = player->max_mana;
     if (player->max_mana > 8)
         player->play_mana -= player->max_mana / 8 + 2;
-    ThePlayer->b15 = (ThePlayer->b15 & 0xC0) | 1;
+    SET_SEQ(ThePlayer, 1);
     player->poison = 0;
     player->active_spells = 0;
     FixPlayerEquips();
@@ -730,9 +701,9 @@ void far do_gem(void)
         z = tile->height << 3;
         if (put_at((x << 3) + xoff, (y << 3) + yoff, z, stain, 0, 0))
         {
-            stain->pos = (stain->pos & 0xFF80) | (z & 0x7F);
-            stain->pos = (stain->pos & 0x1FFF) | ((yoff & 7) << 13);
-            stain->pos = (stain->pos & 0xE3FF) | ((xoff & 7) << 10);
+            SET_Z(stain, z);
+            SET_FINEX(stain, yoff);
+            SET_FINEY(stain, xoff);
             obj_deal(stain, x, y, 1);
         }
     }
@@ -866,10 +837,10 @@ void far player_is_dead(void)
             player->pit_fighters[i] = 0;
         }
         player->quest_bytes[QB_PIT_RECORD] = 0;
-        player->quest_bytes[5] = 0;
+        player->quest_bytes[QB_JOSPUR_DEBT] = 0;
     }
     kill_all_effects();
-    load_new_music(7, 1);
+    load_new_music(MUSIC_DEATH, 1);
     player_get_exp(-(int)(player->exp / 9));
     render_FB();
     fadeout3d(5);
@@ -910,7 +881,7 @@ int far DetectedTrap(struct Object far *obj, int skill)
     for (head = &obj->ol.link; trig = Obj_InList(&head, 0, MAJOR_TRAP, -1, -1), trig;
          head = &trig->qn.link)
     {
-        if (OBJ_MINOR(trig) == 3)
+        if (OBJ_MINOR(trig) == MINOR_TRIGGER2)
             return skill_check(skill, ((PlayerLevel - 1) / 8 << 1) + 10);
     }
     return 0;
@@ -934,12 +905,12 @@ int far RemoveTrap(struct Object far *obj, int skill)
     for (head = &obj->ol.link; trig = Obj_InList(&head, 0, MAJOR_TRAP, -1, -1), trig;
          head = &trig->qn.link)
     {
-        if (OBJ_MINOR(trig) == 3)
+        if (OBJ_MINOR(trig) == MINOR_TRIGGER2)
             break;
     }
     if (trig)
     {
-        if (OBJ_MINOR(trig) >= 2)
+        if (OBJ_MINOR(trig) >= MINOR_TRIGGER)
             trap = Obj_PtrTMem(&trig->ol.link);
         else
         {

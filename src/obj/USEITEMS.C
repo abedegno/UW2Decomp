@@ -23,6 +23,7 @@
 #include "combat.h"
 #include "critter.h"
 #include "event.h"
+#include "gfx.h"
 #include "inv.h"
 #include "map.h"
 #include "motion.h"
@@ -32,37 +33,9 @@
 #include "sys.h"
 #include "ui.h"
 
-extern char UsingPole;
-extern struct Player PlayerDat;
-extern struct Inplist near *inplist;
-extern signed char Food[];
-extern long nextSpellTime;
-extern char ValidLightSlots[];
 /* match: this file's _BSS, DS:8184 (ovr137's ends there): of the files before ovr140's TxmTerr,
    only this one uses it (seg044 does too). */
 char door_type;
-
-void far scroll_print(char far *s);
-char far using_punt(struct Object far *obj, char a, int b);
-unsigned char far player_eat(int nutrition);
-void far set_effect(int which, char amount);
-void far get_name(char far *buf, struct Object far *obj, int a, int b);
-struct Object far * far CreateObj(int id, int b);
-void far update_map_scraps(int scrap, int owner, char link);
-void far show_cutscene(int n);
-int far add_animobj(int index, int len, int a, char x, char y);
-void far play_effect(char type, int x, int y, int a);
-void far damage_item(struct Object far *who, void far *source, int a, int b,
-                     unsigned char damage, int type);
-void far flip_switch(struct Object far *obj, int how);
-void far mouse_release(int n);
-char far decode_obj_spell(struct Object far *obj, int *spell, int *power, char *flag);
-unsigned char far put_at(int x, int y, int z, struct Object far *obj, int a, int b);
-
-/* Later in this file. */
-void far play_effect_here(unsigned char a, int b, int c);
-void far UseObj(struct Object far *who, struct Object far *obj, int how);
-void far repair_item(struct Object far *obj, int skill, int how);
 
 /* Bones or a skull used on a gravestone are buried and deleted; on anything else, "It
    seems to have no effect." */
@@ -108,7 +81,7 @@ void far UseWatch(void)
     text[i++] = minutes % 10 + '0';
     text[i++] = 0;
     scroll_print(text);
-    game_sprint(0x60);
+    game_sprint(0x60);  /* '.' */
 }
 
 /* A storage crystal prints a four-character signature, letter digit letter digit, made
@@ -380,14 +353,14 @@ int far UseFood(struct Object far *who, struct Object far *food, unsigned char h
     if (leftover > 0 && GameInputMode != 1 && qty == 1)
     {
         slot = FindSlot(food);
-        PlayerDat.weight -= ComObjData[OBJ_ITEM(food)].mass;
-        food->id = food->id & 0xFE00 | leftover & ID_ITEM;
-        PlayerDat.weight += ComObjData[OBJ_ITEM(food)].mass;
+        PlayerDat.rec.weight -= ComObjData[OBJ_ITEM(food)].mass;
+        SET_ITEM(food, leftover);
+        PlayerDat.rec.weight += ComObjData[OBJ_ITEM(food)].mass;
         displayEnc(0);
         leftover = 0;
         RedisplayInvSlot(slot);
     }
-    else if (using_punt(food, how, 1) && GameInputMode == 1)
+    else if ((char)using_punt(food, how, 1) && GameInputMode == 1)
         CursorObjPtr = 0;
     if (leftover > 0)
     {
@@ -431,12 +404,12 @@ void far UseOilOn(struct Object far *obj, unsigned char how, unsigned char other
         using_punt(ObjectActing, how, 1);
         if (CursorObjPtr == obj)
         {
-            PlayerDat.weight -= ComObjData[OBJ_ITEM(obj)].mass;
-            obj->id = obj->id & 0xFE00 | ITEM_TORCH;
-            PlayerDat.weight += ComObjData[OBJ_ITEM(obj)].mass;
+            PlayerDat.rec.weight -= ComObjData[OBJ_ITEM(obj)].mass;
+            SET_ITEM(obj, ITEM_TORCH);
+            PlayerDat.rec.weight += ComObjData[OBJ_ITEM(obj)].mass;
         }
         else
-            obj->id = obj->id & 0xFE00 | ITEM_TORCH;
+            SET_ITEM(obj, ITEM_TORCH);
         obj->qn.f.quality = 0x28;
         displayEnc(0);
         RedisplayInvSlot(FindSlot(obj));
@@ -612,7 +585,7 @@ void far UseCont(struct Object far *who, struct Object far *obj, char how)
         get_name(name, obj, 0, 0);
         scroll_print("The ");
         scroll_print(name);
-        game_sprint(0x170);
+        game_sprint(0x170);  /* ' is locked.' */
     }
     else if (how)
         OpenTheBag(FindSlot(obj));
@@ -684,10 +657,10 @@ void far UseLight(struct Object far *obj, unsigned char how)
         }
     }
     if (OBJ_INCLASS(obj) >= 4)
-        obj->id = obj->id & 0xFFF0 | (OBJ_INCLASS(obj) - 4) & 0xF;
+        SET_INCLASS(obj, OBJ_INCLASS(obj) - 4);
     else
     {
-        obj->id = obj->id & 0xFFF0 | (OBJ_INCLASS(obj) + 4) & 0xF;
+        SET_INCLASS(obj, OBJ_INCLASS(obj) + 4);
         play_effect_here(0x20, 0x40, 0);
     }
     FixPlayerEquips();
@@ -734,7 +707,7 @@ void far moveDoor(struct Object far *door)
     if ((OBJ_INCLASS(door) & 7) == 6)
         len = 4;
     door->ol.f.owner = OBJ_INMAJOR(door);
-    door->id = door->id & 0xFE00 | ITEM_MOVING_DOOR;
+    SET_ITEM(door, ITEM_MOVING_DOOR);
     add_animobj(Obj_MemTPtr(door), len, 0, MapObj_X, MapObj_Y);
 }
 
@@ -780,7 +753,7 @@ void far OpenDoor(struct Object far *who, struct Object far *door)
     {
         door->ol.f.owner = OBJ_OWNER(door) & 0xFFFE;
         if (OBJ_INCLASS(door) != 6)
-            door->pos = door->pos & 0xFF80 | (OBJ_Z(door) + 0x18) & 0x7F;
+            SET_Z(door, OBJ_Z(door) + 0x18);
         checkTrap(who, door, 8, MapObj_X, MapObj_Y);
         moveDoor(door);
     }
@@ -875,7 +848,7 @@ void far UseRune(struct Object far *who, struct Object far *rune)
     if (OBJ_ITEM(rune) == ITEM_FLAM_RUNE)
     {
         damage_item(who, rune, MapObj_X, MapObj_Y, rollem(3, 4) + 4, 8);
-        rune->id = rune->id & 0xFE00 | ITEM_EXPLOSION_1C2;
+        SET_ITEM(rune, ITEM_EXPLOSION_1C2);
         if (add_animobj(Obj_MemTPtr(rune), 4, 0, MapObj_X, MapObj_Y) == -1)
             return;
         fireball_effect(rune, MapObj_X, MapObj_Y);
@@ -917,7 +890,7 @@ void far UseRect(struct Object far *who, struct Object far *obj)
                     get_name(name, obj, 0, 0);
                     scroll_print("The ");
                     scroll_print(name);
-                    game_sprint(0x170);
+                    game_sprint(0x170);  /* ' is locked.' */
                     play_effect(0x2D, (MapObj_X << 3) + OBJ_FINEX(obj),
                                 (MapObj_Y << 3) + OBJ_FINEY(obj), 0);
                 }
@@ -1013,10 +986,10 @@ void far UseMagic(struct Object far *who, struct Object far *obj, char how)
                 if (spell == 4)
                     game_sprint(0x108); /* "The waters of the fountain renew your strength." */
                 else
-                    game_sprint(0xFC);
+                    game_sprint(0xFC);  /* 'The water refreshes you.' */
             }
             else
-                game_sprint(0xFC);
+                game_sprint(0xFC);  /* 'The water refreshes you.' */
             break;
         }
     }
@@ -1061,10 +1034,10 @@ void far UseRockHammerOn(struct Object far *obj, unsigned char how, char other)
             n = id + (int)(rand() * 2L / 0x8000L) + 1;
             if (n > ITEM_SMALL_BOULDER)
                 n = ITEM_SLING_STONE;
-            rock->id = rock->id & 0xFE00 | n & ID_ITEM;
+            SET_ITEM(rock, n);
             if (n == ITEM_SLING_STONE)
             {
-                rock->id = rock->id & 0x7FFF | ID_ISQUANT;
+                SET_ISQUANT(rock, 1);
                 rock->ol.f.link = rand() % 6 + 3;
             }
             if (!put_at((MapObj_X << 3) + xoff, (MapObj_Y << 3) + yoff, z, rock, 6, 0))

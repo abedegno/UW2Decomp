@@ -29,9 +29,6 @@
 int gameopts_done;                     /* DS:67D6+22E2, also written by the options overlay */
 static int icon_button_handle;         /* DS:67D6+22E4, only ever used in this file */
 
-int far input_addmouse(int a, int b, int c, int d, int buttons, int mode, void far (*handler)(int));
-void far mouse_release(int flag);
-void far busywaiting_new_options(struct buttongroup *g);
 
 /* This file's _DATA, DS:0120..0267, in definition order: the option panel's button groups.
    It starts a new file (word-aligned, after seg013's emm_id ends at DS:011F) and lies
@@ -42,7 +39,6 @@ char dseg_67d6_121 = 0;                /* DS:0121, never referenced */
 char current_hilit_button = -1;        /* DS:0122 */
 unsigned char button_to_mode[6] = { 1, 0, 3, 4, 2, 5 };    /* DS:0123 */
 unsigned char mode_to_button[6] = { 1, 0, 4, 2, 3, 5 };    /* DS:0129 */
-extern struct buttongroup quit_buttongroup;
 struct buttongroup gameopts_buttongroup = {                  /* DS:012F */
     game_group_fun, 0,
     { save_opt, restore_opt, music_opt, sound_opt, donothing_opt, donothing_opt, resume_play_opt },

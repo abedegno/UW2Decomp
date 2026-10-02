@@ -17,6 +17,9 @@
 ; zeros).
 ; It has no relocations.
 
+; The BIOS video (int 10h) functions used here.
+VID_GET_MODE    equ     0Fh
+
         .186
 
 _DATA   segment word public 'DATA'
@@ -34,7 +37,7 @@ SEG021_TEXT segment para public 'CODE'
 ; _680 (saveMode): read the current mode (int 10h, AH = 0Fh) into 0350 and the equipment byte
 ; into 0355.
 _seg021_22FD_680 proc near
-        mov     ah,0Fh
+        mov     ah,VID_GET_MODE
         int     10h
         mov     byte ptr ds:[350h],al
         push    ds

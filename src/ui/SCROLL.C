@@ -71,14 +71,6 @@ static long click_time = 0;             /* DS:0984 */
 static int edge_phase = 0;              /* DS:0988 */
 static int conv_edge_phase = 0;         /* DS:098A */
 char scroll_esc = 1;                    /* DS:098C */
-extern unsigned char far *foreground_color;       /* DS:21C4, reused from SKILLCHK.C */
-/* DS:21CC, _cur_font in symbols.tsv (provisional); only its line height is used here. */
-extern struct FontInfo far *cur_font;
-extern long far *Time;                  /* DS:2158 */
-
-void far scroll_clear(int which);
-void far rectangle(int top, int mid, int bottom, int count);
-void far scroll_wait(int ticks, int also);
 
 /* Whether the cursor touches the current scroll's box, so printing must hide it first. */
 /* name: not anchored in the map when named; the target table keeps the IDA name. This is
@@ -394,7 +386,6 @@ void far draw_scroll(int x, int y, int w, int h, char flag)
    probably a framed text box. It belongs to this file: the EXE's relocations for it run
    in one descending sequence with this file's last record. */
 /* name: FM Towns has no counterpart, so the name is provisional. */
-extern unsigned char far Transparency;          /* 370D:0DC5 */
 
 void far seg043_3619_669(int x, int y, int r, int b)
 {

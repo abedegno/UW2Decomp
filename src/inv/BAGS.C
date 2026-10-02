@@ -32,8 +32,6 @@
 #include "ui.h"
 #include "uw2.h"
 
-extern struct Player PlayerDat;
-extern union Link Inventory[];
 /* This file's _BSS, DS:6A76..6A85: the backpack slots' screen saves while a bag is open. */
 /* match: ovr122's _BSS starts at 6A86; only this file uses it. */
 int BagSaveHandles[8];
@@ -41,11 +39,7 @@ int BagSaveHandles[8];
 /* match: ovr119's strings end there and ovr122's data starts at 15D2; of ovr120 and
    ovr121, the two files between, only this one uses it. */
 unsigned char display_inventory_no_show = 0;
-extern char RightPanel;
-extern struct Inplist near *inplist;
 
-void far UseObj(struct Object far *who, struct Object far *obj, int how);
-void far set_screen_frame(int frame, int how);
 
 /* A click on display position slot that is not a pick-up or put-down: 0x15 and 0x16
    scroll the open bag, 0x14 (the open bag's own picture) closes it, 0x17 drops or throws the
@@ -120,7 +114,7 @@ void far MakeBagClose(struct Bag far *bag)
     obj = Obj_IntTMem(bag->obj.f.index);
     cls = obj->id & ID_INCLASS;
     if (cls < 12 && (cls & 1))
-        obj->id = obj->id & 0xFFF0 | (cls - 1) & 0xF;
+        SET_INCLASS(obj, cls - 1);
 }
 
 void far CloseAllBags(void)
@@ -283,7 +277,7 @@ void far OpenTheBag(int slot)
     int j;
 
     obj = Obj_PtrTMem(&Inventory[slot]);
-    if (OBJ_MAJOR(obj) != MAJOR_MISC || OBJ_MINOR(obj) != 0)
+    if (OBJ_MAJOR(obj) != MAJOR_MISC || OBJ_MINOR(obj) != MINOR_CONTAINER)
         return;
     if (OBJ_INCLASS(obj) == 0xF) {
         if (inplist->mode == 1)
@@ -346,7 +340,7 @@ void far OpenTheBag(int slot)
     cont = Obj_PtrTMem(&Inventory[19]);
     cls = cont->id & ID_INCLASS;
     if (cls < 12 && !(cls & 1))
-        cont->id = cont->id & 0xFFF0 | (cls + 1) & 0xF;
+        SET_INCLASS(cont, cls + 1);
     DisplayOpenBag();
     displayInventoryArray(0x14, 0x14);
     if (SlotToDisplay[slot] < 11)
@@ -436,7 +430,7 @@ char far PutObjectInBag(struct Object far *obj, int slot)
         return 0;
     }
     weight = ItemWeight(obj);
-    PlayerDat.weight += weight;
+    PlayerDat.rec.weight += weight;
     while (bag != 0) {
         bag->weight += weight;
         bag = bag->prev;
@@ -445,7 +439,7 @@ char far PutObjectInBag(struct Object far *obj, int slot)
         do {
             if (AddTogether(obj, next)) {
                 if (!OBJ_ISQUANT(next)) {
-                    next->id = next->id & 0x7FFF | ID_ISQUANT;
+                    SET_ISQUANT(next, 1);
                     next->ol.f.link = 1;
                 }
                 if (OBJ_ISQUANT(obj))
@@ -470,7 +464,7 @@ char far PutObjectInBag(struct Object far *obj, int slot)
     } else if (displayEnc(1))
         grfx_quikfont(FONT_5X6P);
     if (OBJ_ITEM(obj) >= FIRST_LIT_LIGHT && OBJ_ITEM(obj) < FIRST_WAND)
-        obj->id = obj->id & 0xFFF0 | (OBJ_INCLASS(obj) - 4) & 0xF;
+        SET_INCLASS(obj, OBJ_INCLASS(obj) - 4);
     return 1;
 }
 
@@ -506,7 +500,7 @@ char far SwapItemsInBag(struct Object far *obj, int slot)
     diff = ItemWeight(obj) - ItemWeight(target);
     for (bag = OpenBag; bag != 0; bag = bag->prev)
         bag->weight += diff;
-    PlayerDat.weight += ItemWeight(obj);
+    PlayerDat.rec.weight += ItemWeight(obj);
     FixPlayerEquips();
     FixOpenBag();
     displayInventoryArray(SlotToDisplay[slot], SlotToDisplay[slot]);

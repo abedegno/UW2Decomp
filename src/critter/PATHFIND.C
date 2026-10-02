@@ -49,9 +49,11 @@
    flood_path, find_free_path, move_along_path). */
 #include <stdlib.h>
 #include <dos.h>
+#include "combat.h"
 #include "critter.h"
 #include "event.h"
 #include "file.h"
+#include "gfx.h"
 #include "map.h"
 #include "motion.h"
 #include "object.h"
@@ -119,24 +121,10 @@ static int projxpos;                    /* 227E, homing dart's fine x; name chos
    defined. */
 struct PathSq far pathsq[63];
 struct PathRec far paths[16];
-extern struct StaticTile far stdat[MAP_SIZE][MAP_SIZE];
 /* The two flood fill frontiers (64 squares each). */
 /* name: static in FM Towns, provisional names. */
 struct PathPt { unsigned char x, y; };
 static struct PathPt far flood_list0[64], far flood_list1[64];
-extern struct Object far * far CreateObj(int id, int owner);
-extern void far TerrainCheck(int flags);
-extern void far UseObj(struct Object far *user, struct Object far *target, int mode);
-extern void far damage_item(struct Object far *target, struct Object far *source,
-    int x, int y, int damage, int type);
-extern struct Object far * far obj_deal(struct Object far *obj, int x, int y, int mode);
-extern int far near_mob_put_at(struct Object far *source, struct Object far *obj,
-    int mode, int flags);
-extern void far put_effect(struct Object far *obj, int type, int size,
-    int a, int b, int x, int y);
-extern void far process_area(char count, unsigned char src,
-    unsigned char (far *callback)(int, int, struct Object far *),
-    unsigned char type, char x, char y, char w, char h);
 /* Initialised data, DS:00AC..00C2: the step for each of the four path directions (0 +y,
    1 +x, 2 -y, 3 -x), the free path slots (a bit per entry of paths), the direction from
    one square to the next by [dx + 1][dy + 1], and the slope tile type climbed in each
@@ -148,10 +136,7 @@ unsigned freepaths = 0xFFFF;
 static unsigned char path_turns[3][3] = {
     { 0xFF, 3, 0xFF }, { 2, 0xFF, 0 }, { 0xFF, 1, 0xFF } };
 static unsigned char slope_for_dir[4] = { 6, 8, 7, 9 };
-extern unsigned TxmTerr[];
-extern void far critter_set_goal(unsigned char goal, int target);
 static unsigned char far crit_hndlr_obj(struct Phys *pn);
-unsigned char far do_crit_phys(struct Phys *pn, struct Handler *tp);
 
 /* Leave a dead critter's remains. fluids (the creature's corpse field, AI.C passes it
    first) makes item 0xD9 + fluids where the critter lay (0xDB rubble, 0xDC wood chips,
@@ -165,11 +150,9 @@ void far build_corpse(struct Object far *obj, char fluids, char corpse) {
     if (fluids == 0) goto corpse_part;
     if ((remains = CreateObj(0xD9 + (unsigned char)fluids, 0)) == 0)
         goto corpse_part;
-    remains->pos = (remains->pos & 0x1FFF)
-        | (OBJ_FINEX(obj) & 7) << 13;
-    remains->pos = (remains->pos & 0xE3FF)
-        | (OBJ_FINEY(obj) & 7) << 10;
-    remains->pos = (remains->pos & 0xFF80) | OBJ_Z(obj);
+    SET_FINEX(remains, OBJ_FINEX(obj));
+    SET_FINEY(remains, OBJ_FINEY(obj));
+    SET_Z(remains, OBJ_Z(obj));
     remains->qn.f.quality = 0x28;
     Obj_Add(&home->objects, remains);
     obj_deal(remains, XP, YP, 1);
@@ -209,8 +192,7 @@ unsigned char far move_me_joe(void) {
     YP = OBJ_HOMEY(meptr);
     result = set_phys_data(meptr, &CN3);
     if (result) {
-        meptr->b0A = meptr->b0A & 0xF0
-            | ((OBJ_BIN(meptr) + OBJ_RATE(meptr)) & 0xF) << 0;
+        SET_BIN(meptr, OBJ_BIN(meptr) + OBJ_RATE(meptr));
         if (OBJ_ITEM(meptr) == ITEM_HOMING_DART) check_homing();
         else if (OBJ_ITEM(meptr) == ITEM_SATELLITE) check_sat();
     }
@@ -276,7 +258,7 @@ void far check_homing(void) {
     proj_ycoord = (OBJ_HOMEY(meptr) << 3)
         + OBJ_FINEY(meptr);
     process_area(1, meptr->last_hit,
-        store_targ, 0,
+        (SpellFn)store_targ, 0,
         xhome, yhome, width, height);
     if (htarget > 0) {
         struct Object far *target;
@@ -360,7 +342,7 @@ void far check_sat(void) {
     }
     meptr->b14 = OBJ_RATE(meptr) | ((newpitch & 0x1F) << 3);
     if (OBJ_SPEED(meptr) < 0xF)
-        meptr->b13 = meptr->b13 & 0x80 | (0xF & 0x7F) << 0;
+        SET_SPEED(meptr, 0xF);
     if (OBJ_LONER(meptr) != 0) meptr->hp = 0;
     else if ((rand() & 0x1F) == 1 && meptr->hp > 0) meptr->hp = meptr->hp - 1;
 }
@@ -407,7 +389,7 @@ unsigned char far crit_hndlr_walk(struct Phys *pn) {
     register struct Phys *motion = pn;
     if (motion->x & 0x1000) {
         if (CN1.acc[2] == 0) CN1.acc[2] = -4;
-        meptr->b14 = meptr->b14 & 0xF8 | 1;
+        SET_RATE(meptr, 1);
         failed = 1;
         control = 0;
         return 0;
@@ -417,10 +399,10 @@ unsigned char far crit_hndlr_walk(struct Phys *pn) {
             failed = 1;
             control = 0;
             put_effect(meptr, 6, 3, 0, 0, CN1.x >> 8, CN1.y >> 8);
-            meptr->b15 = meptr->b15 & 0xC0 | 7;
+            SET_SEQ(meptr, 7);
             set_cur_seq_len();
-            meptr->goal_word = meptr->goal_word & 0xFFF | ((seq_lframe & 0xF) << 12);
-            meptr->b14 = meptr->b14 & 0xF8 | 1;
+            SET_FRAME(meptr, seq_lframe);
+            SET_RATE(meptr, 1);
             return 1;
         }
         if (OBJ_B15_7(meptr) == 0) {
@@ -540,14 +522,14 @@ unsigned char far hyp_move(unsigned char x1, unsigned char y1,
     if (x1 == 0) {
         *out = height;
         h23 = tile3->height;
-        if (x3 > x2 && (tile_walls[type3] & 2)) return 0;
-        if (x3 < x2 && (tile_walls[type3] & 4)) return 0;
-        if (y3 > y2 && (tile_walls[type3] & 8)) return 0;
-        if (y3 < y2 && (tile_walls[type3] & 0x10)) return 0;
-        if (x3 > x2 && (tile_walls[type2] & 4)) return 0;
-        if (x3 < x2 && (tile_walls[type2] & 2)) return 0;
-        if (y3 > y2 && (tile_walls[type2] & 0x10)) return 0;
-        if (y3 < y2 && (tile_walls[type2] & 8)) return 0;
+        if (x3 > x2 && (tile_walls[type3] & TW_WEST)) return 0;
+        if (x3 < x2 && (tile_walls[type3] & TW_EAST)) return 0;
+        if (y3 > y2 && (tile_walls[type3] & TW_SOUTH)) return 0;
+        if (y3 < y2 && (tile_walls[type3] & TW_NORTH)) return 0;
+        if (x3 > x2 && (tile_walls[type2] & TW_EAST)) return 0;
+        if (x3 < x2 && (tile_walls[type2] & TW_WEST)) return 0;
+        if (y3 > y2 && (tile_walls[type2] & TW_NORTH)) return 0;
+        if (y3 < y2 && (tile_walls[type2] & TW_SOUTH)) return 0;
         if (!(0x1000 & flags)) return 1;
         if (type3 >= TILE_SLOPE_N && type3 <= TILE_SLOPE_W
             && slope_for_dir[path_turns[x3 - x2 + 1][y3 - y2 + 1]] != type3)
@@ -586,20 +568,20 @@ unsigned char far hyp_move(unsigned char x1, unsigned char y1,
     }
     *out = height;
     if (x3 > x2) {
-        if ((tile_walls[type3] & 2) || (tile_walls[type2] & 4)) return 0;
+        if ((tile_walls[type3] & TW_WEST) || (tile_walls[type2] & TW_EAST)) return 0;
     } else if (x3 < x2) {
-        if ((tile_walls[type3] & 4) || (tile_walls[type2] & 2)) return 0;
+        if ((tile_walls[type3] & TW_EAST) || (tile_walls[type2] & TW_WEST)) return 0;
     } else if (y3 > y2) {
-        if ((tile_walls[type3] & 8) || (tile_walls[type2] & 0x10)) return 0;
+        if ((tile_walls[type3] & TW_SOUTH) || (tile_walls[type2] & TW_NORTH)) return 0;
     } else if (y3 < y2) {
-        if ((tile_walls[type3] & 0x10) || (tile_walls[type2] & 8)) return 0;
+        if ((tile_walls[type3] & TW_NORTH) || (tile_walls[type2] & TW_SOUTH)) return 0;
     }
     objh = 0;
     for (link = (union Link far *)&tile2->objects.word; link->f.index && objh == 0;
          link = (union Link far *)&obj->qn) {
         obj = Obj_PtrTMem(link);
         com = &ComObjData[obj->id & ID_ITEM];
-        if (OBJ_MAJOR(obj) == MAJOR_RECT && OBJ_MINOR(obj) == 0
+        if (OBJ_MAJOR(obj) == MAJOR_RECT && OBJ_MINOR(obj) == MINOR_DOOR
             && OBJ_INCLASS(obj) < 8) {
             if (checkLock(meptr, obj, 0) == 0) {
                 dhead = OBJ_HEADING(obj) & 3;
@@ -734,26 +716,26 @@ unsigned char far hyp_see(unsigned char oldx, unsigned char oldy,
     unsigned char type1 = tile1->type;
     unsigned char type2 = tile2->type;
     if (oldx == 0 || (oldx == x1 && oldy == y1)) {
-        if (x2 > x1 && (tile_walls[type2] & 2)) return 0;
-        if (x2 < x1 && (tile_walls[type2] & 4)) return 0;
-        if (y2 > y1 && (tile_walls[type2] & 8)) return 0;
-        if (y2 < y1 && (tile_walls[type2] & 0x10)) return 0;
-        if (x2 > x1 && (tile_walls[type1] & 4)) return 0;
-        if (x2 < x1 && (tile_walls[type1] & 2)) return 0;
-        if (y2 > y1 && (tile_walls[type1] & 0x10)) return 0;
-        if (y2 < y1 && (tile_walls[type1] & 8)) return 0;
+        if (x2 > x1 && (tile_walls[type2] & TW_WEST)) return 0;
+        if (x2 < x1 && (tile_walls[type2] & TW_EAST)) return 0;
+        if (y2 > y1 && (tile_walls[type2] & TW_SOUTH)) return 0;
+        if (y2 < y1 && (tile_walls[type2] & TW_NORTH)) return 0;
+        if (x2 > x1 && (tile_walls[type1] & TW_EAST)) return 0;
+        if (x2 < x1 && (tile_walls[type1] & TW_WEST)) return 0;
+        if (y2 > y1 && (tile_walls[type1] & TW_NORTH)) return 0;
+        if (y2 < y1 && (tile_walls[type1] & TW_SOUTH)) return 0;
         if ((int)height >> 3 < tile2->height) return 0;
         else return 1;
     } else {
         if (x2 == 0) return 1;
-        if (x2 > x1 && (tile_walls[type2] & 2)) return 0;
-        if (x2 < x1 && (tile_walls[type2] & 4)) return 0;
-        if (y2 > y1 && (tile_walls[type2] & 8)) return 0;
-        if (y2 < y1 && (tile_walls[type2] & 0x10)) return 0;
-        if (x2 > x1 && (tile_walls[type1] & 4)) return 0;
-        if (x2 < x1 && (tile_walls[type1] & 2)) return 0;
-        if (y2 > y1 && (tile_walls[type1] & 0x10)) return 0;
-        if (y2 < y1 && (tile_walls[type1] & 8)) return 0;
+        if (x2 > x1 && (tile_walls[type2] & TW_WEST)) return 0;
+        if (x2 < x1 && (tile_walls[type2] & TW_EAST)) return 0;
+        if (y2 > y1 && (tile_walls[type2] & TW_SOUTH)) return 0;
+        if (y2 < y1 && (tile_walls[type2] & TW_NORTH)) return 0;
+        if (x2 > x1 && (tile_walls[type1] & TW_EAST)) return 0;
+        if (x2 < x1 && (tile_walls[type1] & TW_WEST)) return 0;
+        if (y2 > y1 && (tile_walls[type1] & TW_NORTH)) return 0;
+        if (y2 < y1 && (tile_walls[type1] & TW_SOUTH)) return 0;
         if ((int)height >> 3 < tile2->height) return 0;
     }
     return 1;
@@ -795,13 +777,13 @@ unsigned char far flood_path(char x, char y, unsigned char height0,
                      : (destx + reach < MAP_SIZE ? destx + reach : MAP_SIZE);
     maxy = y > desty ? (y + reach < MAP_SIZE ? y + reach : MAP_SIZE)
                      : (desty + reach < MAP_SIZE ? desty + reach : MAP_SIZE);
-    stdat[x][y].pathx = x;
-    stdat[x][y].height = height0;
-    stdat[x][y].step = 0;
+    STILES[x][y].pathx = x;
+    STILES[x][y].height = height0;
+    STILES[x][y].step = 0;
     for (d = 0; d < 4; d++) {
         nx = x + PathingOffset[d].x;
         ny = y + PathingOffset[d].y;
-        np = &stdat[nx][ny];
+        np = &STILES[nx][ny];
         dist = 0;
         if (hyp_move(0, 0, x, y, nx, ny,
                 tp_act->noclimb, tp_act->w6, height0, &np->height, &dist)) {
@@ -828,12 +810,12 @@ unsigned char far flood_path(char x, char y, unsigned char height0,
         for (i = 0; i < ncur && nnext < 0x40; i = i + 1) {
             tx = cur[i].x;
             ty = cur[i].y;
-            rec = &stdat[tx][ty];
+            rec = &STILES[tx][ty];
             for (d = 0; d < 4; d++) {
                 nx = tx + PathingOffset[d].x;
                 ny = ty + PathingOffset[d].y;
                 if (nx < minx || nx > maxx || ny < miny || ny > maxy) continue;
-                np = &stdat[nx][ny];
+                np = &STILES[nx][ny];
                 dist = rec->dist;
                 if (rec->pathx == nx && rec->pathy == ny) continue;
                 ok = hyp_move(rec->pathx, rec->pathy,
@@ -885,7 +867,7 @@ void far make_path_from_flood_data(unsigned char length, unsigned char x,
     pathsq[length + 1].y = y;
     pathsq[0].flag = 0;
     for (i = length + 1; i > 0; i = i - 1) {
-        tile = &stdat[pathsq[i].x][pathsq[i].y];
+        tile = &STILES[pathsq[i].x][pathsq[i].y];
         pathsq[i - 1].x = tile->pathx;
         pathsq[i - 1].y = tile->pathy;
         pathsq[i].flag = tile->pathflag;
@@ -1208,9 +1190,9 @@ void far do_that_jump_kinda_thing(struct PathRec far *path) {
         heading = deltatotheta((char)x - (char)(OBJ_HOMEX(meptr)),
                                (char)y - (char)(OBJ_HOMEY(meptr)));
         didmove = 1;
-        meptr->b14 = meptr->b14 & 0xF8 | 1;
-        meptr->b14 = meptr->b14 & 7 | 0xB0;
-        meptr->b13 = meptr->b13 & 0x80 | 11;
+        SET_RATE(meptr, 1);
+        SET_PITCH(meptr, 0x16);
+        SET_SPEED(meptr, 11);
     } else {
         heading = deltatotheta((char)x - (char)myxpost,
                                (char)y - (char)myypost);
@@ -1237,11 +1219,11 @@ void far set_loc(unsigned char x, unsigned char y, unsigned char z) {
     if (OBJ_DESTX(meptr) != x
         || OBJ_DESTY(meptr) != y
         || OBJ_TARGETZ(meptr) != z) {
-        meptr->b0F = meptr->b0F & 0xFFC0 | (x & 0x3F) << 0;
-        meptr->b0F = meptr->b0F & 0xF03F | (y & 0x3F) << 6;
-        meptr->attitude_word = meptr->attitude_word & 0xFF0F | (z & 0xF) << 4;
-        meptr->b18 = meptr->b18 & 0xDF | 0x20;
-        meptr->b18 = meptr->b18 & 0xBF;
+        SET_DESTX(meptr, x);
+        SET_DESTY(meptr, y);
+        SET_TARGETZ(meptr, z);
+        SET_B18_5(meptr, 1);
+        SET_B18_6(meptr, 0);
     }
 }
 /* Move the current critter towards square (x, y) at height z. The b18 flags: bit 5 the
@@ -1265,27 +1247,27 @@ void far crit_head_for_loc(unsigned char x, unsigned char y, char z) {
     set_loc(x, y, z);
     if (((meptr->b18 & 0x20) >> 5) && OBJ_B15_7(meptr)) {
         freepaths |= 1 << OBJ_PATH(meptr);
-        meptr->b15 = meptr->b15 & 0x7F;
+        SET_B15_7(meptr, 0);
     }
     dx = x - myxpos;
     dy = y - myypos;
     if (dx == 0 && dy == 0) {
         if OBJ_B15_7(meptr) {
             freepaths |= 1 << OBJ_PATH(meptr);
-            meptr->b15 = meptr->b15 & 0x7F;
+            SET_B15_7(meptr, 0);
         }
         if (OBJ_GOAL(meptr) == 1)
             critter_set_goal(8, 0);
         else if (control) {
-            meptr->b13 = meptr->b13 & 0x80;
-            meptr->b15 = meptr->b15 & 0xBF | 0x40;
-            meptr->b15 = meptr->b15 & 0xC0;
-            meptr->goal_word = meptr->goal_word & 0xFFF;
+            SET_SPEED(meptr, 0);
+            SET_B15_6(meptr, 1);
+            SET_SEQ(meptr, 0);
+            SET_FRAME(meptr, 0);
             return;
         }
     }
     if (!control) {
-        meptr->b14 = meptr->b14 & 0xF8 | 1;
+        SET_RATE(meptr, 1);
         if (OBJ_B15_7(meptr)
             && paths[meptr->home & 0xF].x == OBJ_HOMEX(meptr)
             && paths[meptr->home & 0xF].y == OBJ_HOMEY(meptr))
@@ -1295,10 +1277,10 @@ void far crit_head_for_loc(unsigned char x, unsigned char y, char z) {
     if (failed && !aligned && !OBJ_B18_6(meptr)) {
         if (didhitobj) {
             if (hitadoor) {
-                meptr->b15 = meptr->b15 & 0xC0;
-                meptr->goal_word = meptr->goal_word & 0xFFF;
+                SET_SEQ(meptr, 0);
+                SET_FRAME(meptr, 0);
                 if (rand() % 4 == 0)
-                    meptr->b18 = meptr->b18 & 0xBF | 0x40;
+                    SET_B18_6(meptr, 1);
                 else
                     try_to_open_door(collobject);
             } else if ((((item = collobject->id & ID_ITEM) & ID_MAJOR) >> 6) == MAJOR_CREATURE
@@ -1307,73 +1289,73 @@ void far crit_head_for_loc(unsigned char x, unsigned char y, char z) {
                 && OBJ_GOAL(collobject) == 5) {
             } else if ((item >> 4) == CLASS_DOOR && (item & ID_INCLASS) >= 8
                 && mycst->flier) {
-                meptr->b14 = meptr->b14 & 7 | 0x70;
+                SET_PITCH(meptr, 0xE);
                 failed = 0;
                 dontchangedz = 1;
                 opening = 1;
             } else
-                meptr->b18 = meptr->b18 & 0xBF | 0x40;
+                SET_B18_6(meptr, 1);
         }
         if (failed) {
             if OBJ_B15_7(meptr) {
                 freepaths |= 1 << OBJ_PATH(meptr);
-                meptr->b15 = meptr->b15 & 0x7F;
+                SET_B15_7(meptr, 0);
             }
-            meptr->b18 = meptr->b18 & 0x7F;
+            SET_B18_7(meptr, 0);
             blocked = 1;
         }
     }
     if OBJ_B15_7(meptr) {
         if (!move_along_path(&paths[meptr->home & 0xF])) {
             freepaths |= 1 << OBJ_PATH(meptr);
-            meptr->b15 = meptr->b15 & 0x7F;
+            SET_B15_7(meptr, 0);
         }
     } else if (!((meptr->b18 & 0x20) >> 5) && OBJ_B18_7(meptr)) {
         heading = deltatotheta(dx, dy);
         set_htx(heading);
         if (mycst->flier) adjust_height(x, y);
     } else if (!((meptr->b18 & 0x20) >> 5) && OBJ_B18_6(meptr)) {
-        if (rand() % 8 == 0) meptr->b18 = meptr->b18 & 0xBF;
+        if (rand() % 8 == 0) SET_B18_6(meptr, 0);
         crit_drunkwalk();
         return;
     } else if (!blocked && beeline(myxpos, myypos, x, y) == 1) {
-        meptr->b18 = meptr->b18 & 0x7F | 0x80;
+        SET_B18_7(meptr, 1);
         heading = deltatotheta(dx, dy);
         set_htx(heading);
-        meptr->b18 = meptr->b18 & 0xBF;
+        SET_B18_6(meptr, 0);
         if OBJ_B15_7(meptr) {
             freepaths |= 1 << OBJ_PATH(meptr);
-            meptr->b15 = meptr->b15 & 0x7F;
+            SET_B15_7(meptr, 0);
         }
     } else if (find_free_path(&slot)
         && flood_path(myxpos, myypos, OBJ_Z(meptr) >> 3, x, y, z,
                       acceptable_danger())) {
         freepaths &= ~(1 << slot);
         store_path(&paths[slot]);
-        meptr->b18 = meptr->b18 & 0xBF;
-        meptr->b15 = meptr->b15 & 0x7F | 0x80;
+        SET_B18_6(meptr, 0);
+        SET_B15_7(meptr, 1);
+        /* match: open-coded, as SET_PATH has no shift by 0 */
         meptr->home = meptr->home & 0xFFF0 | (slot & 0xF) << 0;
         move_along_path(&paths[meptr->home & 0xF]);
     } else {
-        meptr->b18 = meptr->b18 & 0xBF | 0x40;
-        meptr->b18 = meptr->b18 & 0x7F;
+        SET_B18_6(meptr, 1);
+        SET_B18_7(meptr, 0);
         crit_drunkwalk();
         return;
     }
     if (!didmove) {
-        meptr->b15 = meptr->b15 & 0xBF;
+        SET_B15_6(meptr, 0);
         if (OBJ_SEQ(meptr) != 1) {
-            meptr->b15 = meptr->b15 & 0xC0 | 1;
+            SET_SEQ(meptr, 1);
             set_cur_seq_len();
             if (OBJ_FRAME(meptr) > seq_lframe - 1)
-                meptr->goal_word = meptr->goal_word & 0xFFF;
+                SET_FRAME(meptr, 0);
         } else
-            meptr->goal_word = meptr->goal_word & 0xFFF
-                | ((OBJ_FRAME(meptr) + 1) % seq_len & 0xF) << 12;
+            SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % seq_len);
         if (opening) speed = 0;
         else speed = OBJ_GOAL(meptr) == 5 ? mycst->run : mycst->speed;
-        meptr->b13 = meptr->b13 & 0x80 | (speed & 0x7F) << 0;
-        meptr->b14 = meptr->b14 & 0xF8 | 4;
+        SET_SPEED(meptr, speed);
+        SET_RATE(meptr, 4);
     }
 }
 /* A flier's pitch on the way to (x, y): keep about 20 height units above the floor here

@@ -29,6 +29,9 @@
    game's strings in both). */
 
 #include <ctype.h>
+#include <alloc.h>
+#include <io.h>
+#include <stdio.h>
 #include "conv.h"
 #include "file.h"
 #include "object.h"
@@ -56,18 +59,7 @@ char SPACE[] = " ";
 char aStrings_pak[] = "strings.pak";
 char aRb_4[] = "rb";
 
-int far replace_string(char far *s, int id);
 
-void far scroll_print(char far *s);
-int far read(int file, void *p, int count);
-void far * far farmalloc(unsigned long size);
-int far close(int file);
-int far fclose(int file);
-void far farfree(void far *p);
-int far data_fopen(char *name, char *mode);
-int far fread(void *p, int size, int count, int file);
-int far fseek(int file, long offset, int whence);
-int far fgetc(int file);
 
 /* Empties the two made blocks and loads the Huffman tree; a failure is fatal. */
 unsigned char far init_strings(void)
@@ -284,7 +276,7 @@ char far * far read_string(int block, int string)
 }
 
 /* The next bit of the file, high bit of each byte first; non-zero for a 1. */
-int far seg039_3452_781(int file)
+int far seg039_3452_781(FILE *file)
 {
     int bit;
     if (string_bits_used == 8) {
@@ -299,10 +291,10 @@ int far seg039_3452_781(int file)
 
 /* Walks the Huffman tree from node index (the root) to a leaf, one bit per step, and
    returns the leaf's character. */
-int far seg039_3452_7B2(int file, int index)
+int far seg039_3452_7B2(FILE *file, int index)
 {
     register int value;
-    register int f;
+    register FILE *f;
     f = file;
     value = index;
     while (StringsPak_Address_Indices[value].left != 0xff) {

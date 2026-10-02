@@ -38,6 +38,7 @@
 #include <stdlib.h>
 #include "event.h"
 #include "map.h"
+#include "motion.h"
 #include "object.h"
 #include "uw2.h"
 
@@ -53,12 +54,6 @@ struct Pnt {
     unsigned char y;
     unsigned flags;
 };
-
-extern int TxmTerr[];
-extern struct Object far *objdata;
-
-/* Elsewhere in the game. */
-struct Object far * far obj_deal(struct Object far *obj, int x, int y, int a);
 
 /* Uninitialised data, DS:251A..2587. nvokHgt and nvokTerr are can_place's results: the
    height an object placed there would rest at and the terrain byte there. */

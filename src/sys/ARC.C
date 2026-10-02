@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "file.h"
+#include "gfx.h"
 #include "sys.h"
 
 /* The open archive. */
@@ -43,7 +44,6 @@ struct ArcFile {
    name: FM Towns keeps it at 7BDA0 with no symbol of its own and its open_arc_ stores to
    it unnamed, so it was static; the name is provisional. */
 static struct ArcFile far arcfile;
-extern char far stdat[];
 
 /* The table copies, in the big shared buffer stdat; arc_read_tables fills them and
    arc_write_tables writes them back, both only when put_arc rebuilds a file. arcstr is
@@ -52,7 +52,7 @@ unsigned long far *offtab = (unsigned long far *)(stdat + 0x2000);
 unsigned long far *flagtab = (unsigned long far *)(stdat + 0x2800);
 unsigned long far *lentab = (unsigned long far *)(stdat + 0x3000);
 unsigned long far *alloctab = (unsigned long far *)(stdat + 0x3800);
-char far *arcstr = stdat + 0x4000;
+char far *arcstr = (char far *)stdat + 0x4000;
 
 /* Reads the four tables into offtab and the rest, leaving the file position alone. */
 void far arc_read_tables(register int fd)

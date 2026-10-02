@@ -34,8 +34,6 @@
 #include "sys.h"
 #include "view3d.h"
 
-void far seg013_1D3C_E4(int a, int b, int c);
-void far bltfromdrive(char *name, void far *buf, unsigned n);
 
 /* Empty the critter page cache and load CR.AN and AS.AN, and PG.MP if load_map. Returns
    0 if a file cannot be opened, else 1. */

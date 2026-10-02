@@ -54,6 +54,17 @@
 ; table counts them as seg021's). Which module made it is not known; this is the first module
 ; linked after seg021's last one that refers to seg021.
 
+; The DOS (int 21h) functions used here.
+
+; The model interpreter's opcode table: a word per opcode, the offset of its handler
+; (INTERP.ASM), in seg052_519C, the data segment while interpreting.
+OPCODE_TABLE    equ     24F4h
+DOS_OPEN        equ     3Dh
+DOS_CLOSE       equ     3Eh
+DOS_READ        equ     3Fh
+; The EMS (int 67h) functions used here.
+EMS_MAP_PAGES   equ     50h
+
         .386
 
         extrn   _CmapCache:far
@@ -442,7 +453,7 @@ L7D77:
         pop     es
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_fetchmap endp
 
 ; seg004_0849_7DA4  (+7DA4)
@@ -508,7 +519,7 @@ L7DDD:
         pop     es
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
         lodsw
 L7E0A:
         sub     ax,1C0h
@@ -635,7 +646,7 @@ L7ED5:
         add     si,8
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_uwcrit endp
 
 ; seg004_0849_7EDE  (+7EDE)
@@ -747,7 +758,7 @@ L7F81:
         add     si,4
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _unload_cpg endp
 
 ; seg004_0849_7F8D  (+7F8D)
@@ -808,7 +819,7 @@ L7FC2:
         add     al,30h
         stosb
         mov     dx,0D03Ah
-        mov     ax,3D00h
+        mov     ax,DOS_OPEN shl 8
         int     21h
         jb      short L802D
         mov     dx,ax
@@ -820,11 +831,11 @@ L7FC2:
         mov     dx,0
         mov     ax,word ptr ds:[0E4D2h]
         mov     ds,ax
-        mov     ax,3F00h
+        mov     ax,DOS_READ shl 8
         int     21h
         lahf
         mov     cl,ah
-        mov     ax,3E00h
+        mov     ax,DOS_CLOSE shl 8
         int     21h
         mov     ah,cl
         sahf
@@ -850,7 +861,7 @@ L8032:
         mov     byte ptr [bx-1E37h],0FEh
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _load_cpg endp
 
 ; seg004_0849_805B  (+805B)
@@ -880,7 +891,7 @@ lcpg_swap:
         mov     word ptr [si],ax
         sub     si,4
         mov     cx,2
-        mov     ax,5000h
+        mov     ax,EMS_MAP_PAGES shl 8
         mov     dx,word ptr ds:[0E4D4h]
         int     67h
         pop     si
@@ -958,7 +969,7 @@ _do_setbmcol proc near
         mov     es,bx
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_setbmcol endp
 
 ; seg004_0849_810A  (+810A)
@@ -969,7 +980,7 @@ _do_mouseq proc near
         call    far ptr _seg021_22FD_102B
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_mouseq endp
 
 ; seg004_0849_8115  (+8115)

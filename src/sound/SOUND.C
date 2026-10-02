@@ -57,6 +57,7 @@
 #include <fcntl.h>
 #include <stat.h>
 #include <alloc.h>
+#include "critter.h"
 #include "file.h"
 #include "gfx.h"
 #include "object.h"
@@ -110,22 +111,10 @@ struct Effect {
     unsigned priority;                  /* 0x06 */
 };
 
-/* EMS and the workspace (seg013 and seg042). name: provisional. */
-void far MapMemory_seg013_1D3C_C7(int phys, int page);
-char far seg013_1D3C_E4(int a, int b, int c);
-extern char ws_active;                  /* DS:0922, set while the workspace is mapped */
 /* The effects table, SOUNDS.DAT's entries (49 at most). */
 /* match: far, so its own segment (60A0:0000, segment table entry 70, after AI's);
    EFFECT.C and CUTS.C, its other users, are linked too late to own it. */
 struct Effect far effects[49];
-
-extern unsigned long far *Time;
-extern unsigned long lastcombattime;
-
-/* name: FM Towns calls this bltfromdrive_ (read_file_to_mbuf_ and load_sound_driver_ call it
-   where DOS calls 65E0:007A), and MISCUTIL defines it under that name. */
-unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
-unsigned char far OkEnoughMem_ovr167_463(void);
 
 /* The workspace may have taken EMS page 2: put back whichever mapping it should have. */
 #define RESTORE_EMS() \
@@ -198,8 +187,6 @@ unsigned char channel_punt = 0;
 unsigned char channel_sem = 0;
 unsigned char load_only = 0;
 static unsigned char sound_started = 0;
-
-void far kill_all_digi_effects(void);
 
 /* The 16 Hz effects timer when there is a digital driver. If a new sound has interrupted
    the one playing (channel_punt) and digi_fx_play is not in the middle of setting up
@@ -785,7 +772,7 @@ unsigned char far init_sounds(void)
                 goto fail;
             if (!init_timbres())
                 goto fail;
-            if (!OkEnoughMem_ovr167_463())
+            if (!(unsigned char)OkEnoughMem_ovr167_463())
                 goto fail;
         }
         sound_b292 = 0;
@@ -1440,7 +1427,7 @@ void far play_instrument(register int which)
     memset(hist, 0, 16);
     hpos = 0;
     if (sound_card == 0)
-        game_sprint(0x10B);
+        game_sprint(0x10B);  /* 'You play the instrument.' */
     else {
         game_sprint(0x109);
         patch = inst[which];
@@ -1496,7 +1483,7 @@ void far play_instrument(register int which)
             }
         }
         AIL_release_channel(music_driver, ch);
-        game_sprint(0x10A);
+        game_sprint(0x10A);  /* 'You put the instrument away.' */
     }
 }
 
@@ -1543,7 +1530,7 @@ void far free_sounds(void)
 /* Asks for theme m next, unless theme 6 is playing. */
 void far set_new_music(unsigned char m)
 {
-    if (curmusic != 6)
+    if (curmusic != MUSIC_VICTORY)
         newmusic = m;
 }
 
@@ -1573,14 +1560,14 @@ void far loop_music_maybe(void)
 
     m = curmusic;
     if (music_over()) {
-        if (curmusic == 1 || curmusic == 6 || curmusic == 7)
+        if (curmusic == MUSIC_THEME || curmusic == MUSIC_VICTORY || curmusic == MUSIC_DEATH)
             m = 10;
         load_new_music(m, 1);
     }
 }
 
-#define WALKING(m)  ((m) >= 8 && (m) <= 15)
-#define COMBAT(m)   ((m) >= 2 && (m) <= 4)
+#define WALKING(m)  ((m) >= MUSIC_WALK_FIRST && (m) <= MUSIC_WALK_LAST)
+#define COMBAT(m)   ((m) >= MUSIC_FOE_HURT && (m) <= MUSIC_DANGER)
 
 /* Called from the main loop to keep the right theme playing. Ten seconds (0xA00 ticks)
    after the last combat a combat theme gives way to theme 5 if the weapon is drawn, or
@@ -1596,11 +1583,11 @@ void far change_music_maybe(void)
         return;
     if (!music_on)
         return;
-    if (curmusic == 6 && !music_over())
+    if (curmusic == MUSIC_VICTORY && !music_over())
         return;
     if (COMBAT(curmusic) && *Time > lastcombattime + 0xA00) {
         if (player->drawn)
-            newmusic = 5;
+            newmusic = MUSIC_ARMED;
         else
             set_random_walking_music(-1);
     }
@@ -1616,12 +1603,12 @@ void far change_music_maybe(void)
         if (COMBAT(newmusic))
             theme_changed = *Time;
     } else if (music_over()) {
-        if ((!(WALKING(curmusic) || COMBAT(curmusic) || curmusic == 0x18) || WALKING(curmusic))
+        if ((!(WALKING(curmusic) || COMBAT(curmusic) || curmusic == MUSIC_INTRO) || WALKING(curmusic))
                 && scrmode == 1)
             set_random_walking_music(-1);
         if (player->drawn && !COMBAT(curmusic))
-            newmusic = 5;
-        else if ((WALKING(curmusic) || COMBAT(curmusic) || curmusic == 0x18) && newmusic == 0)
+            newmusic = MUSIC_ARMED;
+        else if ((WALKING(curmusic) || COMBAT(curmusic) || curmusic == MUSIC_INTRO) && newmusic == 0)
             newmusic = curmusic;
         load_new_music(newmusic, 1);
         if (COMBAT(newmusic))

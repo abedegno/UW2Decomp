@@ -35,29 +35,9 @@
 #include "sys.h"
 #include "ui.h"
 
-extern unsigned char far *foreground_color;
-extern struct FontInfo far *cur_font;
-
 /* name: FM Towns keeps these as statics, so their names are not known. */
 static unsigned char far *opbuf = 0;    /* where gronk_gr puts the next button picture */
 static struct Button *buttons;          /* the menu's buttons, on real_start's stack */
-
-void far show_cutscene(int n);
-void far show(int x, int y, unsigned char far *buf, int h, int w, int a, int b);
-void far set_new_music(int n);
-unsigned far get_workspace(void);
-char far disk_to_vid(int blk, unsigned char far *buf);
-char far display_screen(int pal, int blk);
-unsigned char far gronk_gr(char *name, int a, int b, unsigned char far *(far *adr)(int),
-                           int (far *move)(unsigned char far *, int, int));
-unsigned char far read_quikpal(int which, unsigned char far *pal);
-void far fadeout(unsigned char far *pal, int steps, int x);
-void far punt_fightmode(void);
-void far preload_cr(int n);
-void far free_world(int n);
-char far RestoreGame();                 /* match: no prototype: the slot is pushed as an int */
-void far load_weapcm(void);
-void far automap_area(int x0, int y0, int x1, int y1, int *arg, char (far *fn)());
 
 /* gronk_gr's callbacks while loading the menu buttons: where to put the next picture, and
    recording it. Pictures alternate: a button's normal picture, then its selected one. */
@@ -161,7 +141,7 @@ void far real_start(int intro)
     mouse_show();
     done = 0;
     while (!done) {
-        set_new_music(1);
+        set_new_music(MUSIC_THEME);
         change_music_maybe();
         if (choice < 4 && choice > -1) {
             opbuf = MK_FP(get_workspace(), 0);
@@ -170,7 +150,7 @@ void far real_start(int intro)
             disk_to_vid(5, opbuf);
             mouse_show();
             set_workspace();
-            if (opbuf == 0 || !gronk_gr("opbtn", 0, -1, adr_opbtn, move_opbtn))
+            if (opbuf == 0 || !gronk_gr("opbtn", 0, -1, (ArtAllocFn)adr_opbtn, (ArtMoveFn)move_opbtn))
                 pfatal_code(ERR_READ | 0x00D);
             if (choice != 3) {
                 draw_start_buttons(n, buttons, 0, sel);
@@ -322,25 +302,25 @@ int far parse_start_input(register int n, struct Button far *b, int text, int se
             else if (hit >= n)
                 cur = hit - n;
             break;
-        case 0x91: case 0x93: case 0xA9: case 0xAB: case 0x166: case 0x16E:
+        case KEY_RIGHT: case KEY_DOWN: case 0xA9: case 0xAB: case KEY_CTRL | 'f': case KEY_CTRL | 'n':
             cur++;
             break;
-        case 0x8D: case 0x8F: case 0xA6: case 0xA8: case 0x162: case 0x170:
+        case KEY_UP: case KEY_LEFT: case 0xA6: case 0xA8: case KEY_CTRL | 'b': case KEY_CTRL | 'p':
             cur--;
             break;
         case 0x0D:
             result = cur;
             break;
-        case 0x8C: case 0x8E: case 0xA5: case 0xA7: case 0x23C:
+        case KEY_HOME: case KEY_PGUP: case 0xA5: case 0xA7: case KEY_ALT | '<':
             cur = 0;
             break;
-        case 0x92: case 0x94: case 0xAA: case 0xAC: case 0x23E:
+        case KEY_END: case KEY_PGDN: case 0xAA: case 0xAC: case KEY_ALT | '>':
             cur = n - 1;
             break;
-        case 0x1B:
+        case KEY_ESC:
             if (text == 0)
                 break;
-        case 0x278:
+        case KEY_ALT | 'x':
             result = -1;
             break;
         }
@@ -407,7 +387,7 @@ int far do_journey(void)
    Region_ovr147_A73) as seen. Never called. */
 void far UnknownAutomapLoop_ovr147_A56(void)
 {
-    automap_area(0x12, 0x1E, 0x2C, 0x34, 0, Region_ovr147_A73);
+    automap_area(0x12, 0x1E, 0x2C, 0x34, 0, (AreaMapFn)Region_ovr147_A73);
 }
 
 char far Region_ovr147_A73(register int x, register int y)

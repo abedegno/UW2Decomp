@@ -15,6 +15,8 @@
 #include <stat.h>
 #include <string.h>
 #include <stdlib.h>
+#include <alloc.h>
+#include <stdio.h>
 #include "file.h"
 #include "gfx.h"
 #include "sys.h"
@@ -89,7 +91,6 @@ int far postodir(x1, y1, x2, y2)
 char x1, y1, x2, y2;
 { return mpos(x2 - x1, y2 - y1); }
 
-void far scroll_print(char far *s);
 /* Prints s and then where something is, to the message scroll: with radius < 0, the
    direction -radius - 1 given by the caller; otherwise, if (ox, oy) is further than
    radius tiles (Manhattan distance) from (px, py), the direction to it. Directions are
@@ -183,8 +184,6 @@ void far check_dirs(void)
     if (!ok) first_punt(ERR_READ | 1);
 }
 
-unsigned far coreleft(void);
-unsigned long far farcoreleft(void);
 /* 1 if at least 2200 bytes of near heap and 1500 bytes of far heap are free. */
 int far OkEnoughMem_ovr167_463(void)
 {
@@ -218,7 +217,7 @@ void far check_fds(void)
 
 /* Write n bytes from buf as the whole file `name` (blttodrive), or read n bytes of it
    into buf (bltfromdrive); 1 if all went well. */
-char far blttodrive(void far *buf, char *name, unsigned n)
+unsigned char far blttodrive(void far *buf, char *name, unsigned n)
 {
     unsigned char ok = 1;
     register int fd;
@@ -229,7 +228,7 @@ char far blttodrive(void far *buf, char *name, unsigned n)
     return ok;
 }
 
-char far bltfromdrive(char *name, void far *buf, unsigned n)
+unsigned char far bltfromdrive(char *name, void far *buf, unsigned n)
 {
     unsigned char ok = 1;
     register int fd;
@@ -339,16 +338,15 @@ int far xorwrite(int fd, unsigned char key, unsigned char far *buf, unsigned n)
     return total;
 }
 
-void far fopen(char *path, int mode);
 /* Opens a file in DATA\ (data_fopen, with stdio), or, with our_open, in the save game's
    working directory HomeDir (directory 0) or DATA\ (otherwise): mode 0 read, 1 create for
    writing, 2 create for reading and writing, 3 read and write, all binary. */
-void far data_fopen(char *name, int mode)
+FILE * far data_fopen(char *name, char *mode)
 {
     char path[0x42];
     strcpy(path, "DATA\\");
     strcat(path, name);
-    fopen(path, mode);
+    return fopen(path, mode);
 }
 int far our_open(char *name, int directory, int mode)
 {

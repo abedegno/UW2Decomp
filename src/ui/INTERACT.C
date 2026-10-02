@@ -64,14 +64,6 @@ unsigned char DurCount = 0;
 unsigned char realDScheck = 1;
 unsigned char releaseable = 0;
 
-extern struct Inplist near *inplist;
-extern unsigned long far *Time;
-extern unsigned char RightPanel;
-extern unsigned char UsingPole;
-extern unsigned TxmTerr[];
-extern int PickUp;
-extern unsigned char far stdat[];
-extern char gameopts_buttongroup[];
 
 /* This file's _BSS, DS:24E4..2507. */
 /* match: laid out by name (tools/bssorder.py): the keys run
@@ -82,7 +74,7 @@ extern char gameopts_buttongroup[];
    padding, as Turbo C puts anything wider than a byte at an even offset). */
 int pTxtId;
 int current_button;
-void (far *ObjectActor)(struct Object far *obj, int a, int b);
+ActorFn ObjectActor;
 struct Object far *ObjectActing;
 int RightButtonThing;
 int ObjectActorArg;
@@ -93,18 +85,6 @@ unsigned char CrownTmap;
 union Link far *releasePtr;
 int GameInputMode;
 
-void far player_attack(int swing);
-void far set_screen_frame(int frame, int how);
-void far scroll_print(char far *s);
-void far check_pplate(struct Object far *obj, struct Tile far *tile, int z, int how);
-void far UseObj(struct Object far *who, struct Object far *obj, int how);
-void far mouse_release(int how);
-char far mouse_dragged(int how);
-int far wyorn(int a, int id, char *answer);
-void far wd_bool(char yes);
-void far RemoveTrap(struct Object far *obj, int skill);
-void far busywaiting_new_options(char *group);
-void far set_new_music(int n);
 
 /* Called every frame: drives the player's attack, redraws the health and mana flasks and
    the compass (no compass in the Ethereal Void), cycles the palette, starts death when the
@@ -159,7 +139,7 @@ unsigned char far InPickRange(int dist, struct Object far *obj, struct Tile far 
     int px, py, dz;
     int x, y;
 
-    MapObj_X = (tile - mlowptr) & 0x3F;
+    MapObj_X = (tile - mlowptr) & MAP_MASK;
     MapObj_Y = (int)(tile - mlowptr) >> 6;
     if (dist != 0) {
         x = (MapObj_X << 3) + OBJ_FINEX(obj);
@@ -273,7 +253,8 @@ unsigned char far check_around(unsigned char far *map, int x, int y)
                 y += d[1];
                 if (x >= 1 && x <= xwid + 1 && y >= 0 && y <= xhgt) {
                     c = (map + y * (xwid + 2))[x + 2];
-                    if (c >= 1 && c < PickUp)
+                    /* match: this file read PickUp as a word */
+                    if (c >= 1 && c < *(int *)&PickUp)
                         return c;
                 }
             }
@@ -306,7 +287,7 @@ struct Object far * far pick_3d(int how)
     p += inplist->y * (xwid + 2) + inplist->x + 2;
     idx = 0;
     pTxtId = 0;
-    if (*p >= 1 && *p < PickUp) {
+    if (*p >= 1 && *p < *(int *)&PickUp) {
         idx = color_to_obj[*p - 1];
         PickMap = mlowptr + color_to_map[*p - 1];
     } else if (*p >= 0xAC && *p <= 0xFC || *p == 0) {
@@ -343,7 +324,7 @@ void far look_nothing(unsigned char how, int txt)
             t = 0x1FF;
         scroll_print("You see ");
         scroll_print(get_string(t | STR_TEXTURES));
-        game_sprint(0x60);
+        game_sprint(0x60);  /* '.' */
     } else
         game_sprint(how + 0xA6);  /* 'You cannot use that.', 'Why is this being printed?', 'You see nothing.' */
 }
@@ -673,7 +654,7 @@ void far deal_with_icons(int mode)
     } else
         current_button = mode_to_button[mode - 1];
     if (mode == 5)
-        busywaiting_new_options(gameopts_buttongroup);
+        busywaiting_new_options(&gameopts_buttongroup);
     else {
         set_screen_frame(8, 6);
         if (player->drawn) {
@@ -698,8 +679,8 @@ void far deal_with_icons(int mode)
                     player->drawn = 1;
                     set_screen_frame(8, 4);
                     new_IconSelect(mode_to_button[RightButtonThing - 1]);
-                    if (get_current_music() < 2 || get_current_music() > 4)
-                        set_new_music(5);
+                    if (get_current_music() < MUSIC_FOE_HURT || get_current_music() > MUSIC_DANGER)
+                        set_new_music(MUSIC_ARMED);
                 }
             } else
                 new_IconSelect(mode_to_button[RightButtonThing - 1]);
@@ -728,8 +709,8 @@ void far pick_fightmode(void)
     player->drawn = 1;
     set_screen_frame(8, 4);
     new_IconSelect(mode_to_button[RightButtonThing - 1]);
-    if (get_current_music() < 2 || get_current_music() > 4)
-        set_new_music(5);
+    if (get_current_music() < MUSIC_FOE_HURT || get_current_music() > MUSIC_DANGER)
+        set_new_music(MUSIC_ARMED);
 }
 
 /* Sheathes the weapon and leaves fight mode, back to walking music. */

@@ -37,16 +37,13 @@
 #include "motion.h"
 #include "object.h"
 #include "player.h"
+#include "sound.h"
 #include "sys.h"
+#include "ui.h"
 
-extern struct Tile far *mapdata;
-extern unsigned TxmTerr[];
-extern unsigned char PlayersMap[];
-extern unsigned long far *Time;
-extern int playerMod;
-extern char light_mod;
-extern char light_act;
-extern char loc_lght;
+/* match: declared here, not in map.h: LIGHTING.C defines set_light(signed char), and this
+   file's callers push an int (cbw). */
+void far set_light(int level);
 
 /* Uninitialised data, DS:229A onwards. saved_dz is the four bytes at DS:22B0, which
    nothing in the game references. */
@@ -66,21 +63,7 @@ static int lasts;
 static long saved_dz;
 int lastTerr;                           /* the terrain bits parse_player_terr last saw */
 
-void far punt_fightmode(void);
-void far set_effect(int which, char amount);
-void far set_screen_frame(int which, int frame);
-unsigned char far can_place(int item, int index, int x, int y, int z, char b, int dist);
-void far ObjectCheck(int a, int b);
-void far UseTrigger(struct Object far *who, void far *a, struct Object far *trig, int how);
-void far TerrainCheck(char a);
-unsigned char far set_resterr(int bits);
-char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
-                     unsigned char damage, unsigned char type);
-void far play_effect_here(int fx, int vol, char c);
-char far check_pplate(struct Object far *obj, struct Tile far *tile, int z, int how);
-void far set_light(int level);
 
-void far newFPS(char state);
 
 /* Initialised data, DS:C8 onwards. Speeds are in PN.speed's units, 0x2F to an object's
    OBJ_SPEED step (OBJPHYS.C). MaxPlayerAccel is the most the speed may change in a tick;
@@ -540,7 +523,7 @@ void far player_setup(int x, int y, int how)
     SET_HOMEY(ThePlayer, y);
     SET_FINEX_UNSIGNED(ThePlayer, 3);
     SET_FINEY(ThePlayer, 3);
-    ThePlayer->b15 = ThePlayer->b15 & 0xC0 | 1;
+    SET_SEQ(ThePlayer, 1);
     ThePlayer->qn.f.next = ThePlayer->qn.f.quality = 0;
     curP = &calc;
     curP->index = Obj_MemTPtr(ThePlayer);
@@ -552,7 +535,7 @@ void far player_setup(int x, int y, int how)
     TerrainCheck(PN.b24);
     PN.terrain = set_resterr(curP->hits0 | curP->hits1);
     parse_player_terr(PN.terrain, 0);
-    playerMod = 0;
+    playerMod[0] = 0;
     parse_effect();
     fiz_update = 1;
     sq = GrSq;
@@ -645,7 +628,7 @@ void far player_newsq(int sq)
 {
     unsigned char m;
 
-    m = PlayersMap[sq];
+    m = PlayersMap[0][sq];             /* sq indexes the whole map */
     if (!player->automap && (m & 0xF) < 10 && (m & 0xF))
         player->automap = 1;
 }

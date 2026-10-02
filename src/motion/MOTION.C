@@ -52,6 +52,7 @@
 #include "motion.h"
 #include "object.h"
 #include "player.h"
+#include "sound.h"
 #include "sys.h"
 
 /* This file's _BSS, DS:25C4..26E9 (seg030's ends at 25C3, seg032's starts at 26EA). PN,
@@ -89,15 +90,6 @@ struct MotionParams MP = {
     0, (int *)&Ppd, { 0 }, { 0 }, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     { 0, 0xE000, 0xC000, 0xA000, 0x8000, 0x6000, 0x4000, 0x2000 }
 };
-
-/* Elsewhere in the game. */
-void far TerrainCheck(char radius);
-void far ObjectCheck(char a, int b);
-void far play_effect(char fx, int x, int y, char vol);
-long far labs(long v);
-
-/* Later in this file. */
-unsigned char far set_resterr(unsigned bits);
 
 /* Moves pp for pp->time ticks under the handler tp. Gives up after 16 steps that
    collided (trycnt) and then zeroes the speed, vertical velocity and gravity, so a mover
@@ -878,10 +870,10 @@ struct Object far * far IsaDoor(unsigned char *x, unsigned char *y)
 
     for (i = 0; i < Ppd.count; i++) {
         item = OBJ_ITEM(Obj_PtrTMem(&oCollisions[i + Ppd.first].link));
-        t = oCollisions[i + Ppd.first].offset & 0x3F;
-        *x = (Ppd.x >> 3) + t & 0x3F;
+        t = oCollisions[i + Ppd.first].offset & MAP_MASK;
+        *x = (Ppd.x >> 3) + t & MAP_MASK;
         t = *x - (Ppd.x >> 3);
-        *y = (Ppd.y >> 3) + (oCollisions[i + Ppd.first].offset - t) / MAP_SIZE & 0x3F;
+        *y = (Ppd.y >> 3) + (oCollisions[i + Ppd.first].offset - t) / MAP_SIZE & MAP_MASK;
         if (item >> 4 == CLASS_DOOR && (item & ID_INCLASS) < 8)
             return Obj_PtrTMem(&oCollisions[i + Ppd.first].link);
     }

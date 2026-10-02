@@ -72,6 +72,12 @@ void far dispatch_key(struct Inplist *in, int code);
 void far init_input(void);
 void far free_input(void);
 void far input_del(int hndl);
+/* A key or mouse region's handler, called with the argument it was registered with. */
+typedef void (far *InputFn)(int arg);
+extern struct Inplist *inplist;
+int far input_addmouse(int ulx, int uly, int lrx, int lry, int arg, int mask, InputFn func);
+int far _input_addkey(int key, int arg, int mask, InputFn func);
+void far input_dispatch(struct Inplist *in);
 
 /* ICONS.C: the icon bar */
 extern int gameopts_done;
@@ -89,12 +95,40 @@ int far get_iconreg_button(void);
 void far new_IconUnselect(int index);
 void far new_IconSelect(int index);
 void far do_option_shortcut(int keycode);
+extern struct buttongroup gameopts_buttongroup;
+extern struct buttongroup quit_buttongroup;
 
 /* Input codes from do_keyboard_input (seg015): the key's code in the low byte, codes
    from 0x80 being the special keys, with these added for the shift keys held. */
 #define KEY_CTRL        0x100
 #define KEY_ALT         0x200
 #define KEY_SHIFT       0x400           /* added to special keys only */
+/* The special keys' codes: seg021's scan code table (Asc, dseg062_62a6:0010) gives F1 to
+   F10 (scan codes 3Bh..44h) 0x80..0x89 and the keypad (47h..53h) 0x8C..0x96; shifted Tab
+   is 0xA3. Ordinary keys give their character, Escape 0x1B. */
+#define KEY_ESC         0x1B
+#define KEY_F1          0x80
+#define KEY_F2          0x81
+#define KEY_F3          0x82
+#define KEY_F4          0x83
+#define KEY_F5          0x84
+#define KEY_F6          0x85
+#define KEY_F7          0x86
+#define KEY_F8          0x87
+#define KEY_F9          0x88
+#define KEY_F10         0x89
+#define KEY_HOME        0x8C
+#define KEY_UP          0x8D
+#define KEY_PGUP        0x8E
+#define KEY_LEFT        0x8F
+#define KEY_PAD5        0x90            /* the keypad's centre key */
+#define KEY_RIGHT       0x91
+#define KEY_END         0x92
+#define KEY_DOWN        0x93
+#define KEY_PGDN        0x94
+#define KEY_INS         0x95
+#define KEY_DEL         0x96
+#define KEY_BACKTAB     0xA3            /* Shift+Tab */
 
 /* MOUSE.C: the mouse */
 extern int joymovecur;
@@ -131,6 +165,9 @@ void far undefineMouseRegion(int handle);
 void far force_mouse_cursor(int id);
 void far unforce_mouse_cursor(int how);
 void far MousQUp(char from3d);
+void far mouse_release(char how);
+int far do_keyboard_input(char array);
+unsigned char far mouse_dragged(char how);
 
 /* WRAPPER.C: the options panel */
 int far get_buttonreg_button(void);
@@ -159,6 +196,8 @@ void far detail_group_fun(void);
 void far quit_group_fun(void);
 void far file_group_fun(void);
 void far musicsound_group_fun(void);
+extern unsigned char plyregen[2];
+void far busywaiting_new_options(struct buttongroup *g);
 
 /* GAMESCR.C: the main game screen's set-up and teardown and its status clicks */
 void far pull_chain(int how);
@@ -171,6 +210,15 @@ char far check_rest(void);
 void far init_scroll(void);
 void far scroll_more(void);
 void far wd_replace(int n);
+/* match: in this order because TLINK numbers the overlay's stub entries in the order
+   Turbo C lists the publics, which for names with the same hash key is the order they
+   were first seen: the EXE's stub has scroll_clear and wdialog before scroll_wait and
+   wd_bool. */
+void far scroll_clear(char redraw);
+int far wdialog(char *prompt, char *initial, char *result, char anychar, int maxlen);
+void far scroll_wait(int ticks, char mouse);
+void far wd_bool(char yes);
+int far wyorn(char *question, int id, char *answer);
 
 /* SCROLL.C: the message scroll */
 extern struct Scroll near *scroll;  /* DS:34B0 */
@@ -194,6 +242,7 @@ void far do_play_scroll(void);
 void far draw_edges(void);
 void far draw_conv_edges(void);
 void far draw_scroll(int x, int y, int w, int h, char flag);
+int far scroll_print(char far *s);
 
 /* MAINMENU.C: the main menu */
 int far parse_start_input(int n, struct Button far *b, int text, int sel);
@@ -226,8 +275,26 @@ void far inv_look(void);
 void far mous_in_panel(void);
 void far deal_with_icons(int mode);
 void far toggle_fightmode(void);
+extern int PickDist;
+extern long lastDurCheck;
+/* What a click on an object in the 3D view does, while a spell or skill wants a target. */
+typedef void (far *ActorFn)(struct Object far *obj, int a, int b);
+extern ActorFn ObjectActor;
+extern int ObjectActorArg;
+void far mous_in_3d(void);
+void far punt_fightmode(void);
 
 /* AUTOMAP.C: the automap */
+/* One map note: its text and where it sits on the map, 0x36 bytes. */
+struct ATM {
+    char text[0x32];
+    int x;                              /* 0x32, -1 once erased */
+    int y;                              /* 0x34 */
+};
+
+/* The map notes, up to 100 (FARDATA.ASM's far segment). */
+extern struct ATM far ATM_Strings[100];
+
 void far ManageDungeonMap(void);
 void far ShowDungeonMap(void);
 void far DoTile(int type, int x, int y);
@@ -243,6 +310,13 @@ char far ShadeSide(int side, int x, int y);
 void far ChangeAutoMapLevel(int lev);
 void far automap_scr(void);
 void far make_terrain_unseen(int x, int y, unsigned w, unsigned h);
+unsigned char far GetAutoMapLevel(int flags, int lev);
+extern unsigned char PlayersMap[MAP_SIZE][MAP_SIZE];
+unsigned char far SaveAutoMapLevel(int flags, int lev);
+/* What automap_area does to each tile. */
+typedef char (far *AreaMapFn)(int x, int y, int *arg);
+void far automap_area(int x0, int y0, int x1, int y1, int *arg, AreaMapFn fn);
+void far update_map_scraps(int scrap, int lev, unsigned char sections);
 
 /* String blocks of DATA\STRINGS.PAK. A string id is the block shifted left 9 plus the
    string's number in it (get_string splits it as id >> 9 and id & 0x1FF; make_string
@@ -280,8 +354,8 @@ void far clear_dynamics(int block);
 char far * far fix_name_string(char far *s, unsigned char article, char plural);
 char far * far str_cat(char far *dst, char far *src);
 char far * far read_string(int block, int string);
-int far seg039_3452_781(int file);
-int far seg039_3452_7B2(int file, int index);
+int far seg039_3452_781(FILE *file);
+int far seg039_3452_7B2(FILE *file, int index);
 void far game_sprint(int id);
 void far game_strings_3(int first, int second, int third);
 /* 3265:0814, upper-cases a far string in place and returns it. */
@@ -290,11 +364,18 @@ void far game_strings_3(int first, int second, int third);
 char far * far seg039_3452_814(char far *s);
 char far * far seg039_3452_857(char far *s);
 int far seg039_3452_89A(char far *s);
+unsigned char far init_strings(void);
+int far replace_string(char far *s, int id);
+int far get_name(char far *dst, struct Object far *obj, char article, char plural);
 
 /* Defined where no source has it yet: data the link takes from the EXE. */
 extern struct StringNode far *StringsPak_Address_Indices;
-extern int StringsPak_FileHandle;
+extern FILE *StringsPak_FileHandle;
 extern int StringsPak_NoOfNodes;
 extern int string_bits;
 
+/* JOYSTICK.C */
+void far seg011_6();  /* match: no prototype: callers pass an argument it ignores */
+void far JoyStickCalibration_seg011_1B8(void);
+void far seg011_2C6();  /* match: no prototype: MOUSE.C passes a third argument it ignores */
 #endif

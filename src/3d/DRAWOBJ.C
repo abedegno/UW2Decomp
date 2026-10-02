@@ -41,12 +41,6 @@
 /* match: tmapson, lighton, curautocode and the other scalars at DS:534-53F, and the tables
    after them up to DS:5F9, belong to the file before this one in the data segment
    (FM Towns puts them with process_grid and txtwal), so they are extern here. */
-extern unsigned char PickUp;
-extern char quad;
-extern char AnimObjInPipe;
-extern unsigned TxmTerr[];
-extern unsigned long far *Time;
-extern struct Object far *objdata;
 
 /* match: this file's _BSS, DS:2F96..2F9B, though nothing here uses it: the level's door textures,
    which ovr119 and ovr140 use. It lies between seg019's _BSS (keys rising to tCacheOK's 1004)
@@ -439,7 +433,7 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
     else
         head = ((heading + 0x10 - quad * 4) & 0xF) << 12;
     if ((flags & 0x40) && !(flags & 0x10)) {
-        if (o >= objdata)
+        if (o >= (struct Object far *)objdata)
             j = 0;
         else {
             j = (OBJ_PITCH(o) - 0x10) * 0x266;

@@ -26,19 +26,14 @@
 #include "gfx.h"
 #include "object.h"
 #include "player.h"
+#include "sound.h"
 #include "ui.h"
 
-extern struct Inplist near *inplist;
-extern char far Transparency;
-extern struct Spell far spells[];
 /* This file's _BSS, DS:6A96 (ovr122's ends at 6A95). Set by try_cast, it makes the next
    rune click start a new shelf. */
 /* name: only this file uses it, and FM Towns keeps it unnamed, so it was static. */
 static char dseg_67d6_6A96;     /* provisional */
 
-void far mouse_release(int n);
-void far scroll_print(char far *s);
-unsigned char far play_effect_here(unsigned char fx, unsigned char pan, char vol);
 
 unsigned char spell_delay = 0;
 unsigned long lstime = 0;
@@ -110,7 +105,7 @@ void far mous_in_rune(void)
         if (player->runebag[rune >> 3] >> 7 - (rune & 7) & 1) {
             if (inplist->cmd & 2) {
                 obj.ol.f.link = 0;
-                obj.id = obj.id & 0xFE00 | (rune + FIRST_RUNESTONE) & ID_ITEM;
+                SET_ITEM(&obj, rune + FIRST_RUNESTONE);
                 obj.ol.f.owner = 0;
                 LookAt((struct Object far *)&obj, 0);
             } else {

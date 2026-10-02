@@ -39,6 +39,7 @@
 #include "critter.h"
 #include "gfx.h"
 #include "inv.h"
+#include "map.h"
 #include "object.h"
 #include "player.h"
 #include "sys.h"
@@ -50,14 +51,7 @@
 /* match: DS:BFE, the first byte of this file's _DATA: its string at DS:BFF follows
    ovr096's data, which ends at an even address, so this byte is ours. */
 char fudge = 0;
-extern unsigned char far Transparency;
-extern struct Inplist near *inplist;
-extern unsigned char far *foreground_color;
 
-struct Object far * far CreateObj(int, char);
-char far near_mob_put_at(struct Object far *at, struct Object far *obj, int a, int b);
-char far mouse_dragged(int how);
-void far mouse_release(int how);
 
 static void far ReturnTradeObjectsToNPC_ovr097_F76(int only_unselected);
 
@@ -464,7 +458,7 @@ unsigned char far CombineToSlot_ovr097_D30(struct Object far *obj, int side,
 
     merged = 0;
     found = Obj_IntTMem(content[slot]);
-    if (OBJ_MAJOR(found) == MAJOR_MISC && OBJ_MINOR(found) == 0)
+    if (OBJ_MAJOR(found) == MAJOR_MISC && OBJ_MINOR(found) == MINOR_CONTAINER)
         return 0;
     if (OBJ_ISQUANT(obj) && OBJ_ISQUANT(found) &&
         !(obj->ol.f.link & LINK_SPECIAL) && !(found->ol.f.link & LINK_SPECIAL) &&

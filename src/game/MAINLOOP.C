@@ -22,10 +22,8 @@
 #include "sys.h"
 #include "ui.h"
 
-extern void *inplist;
 unsigned char dsfx_playing = 0;      /* this file's _DATA: DS:010A */
 
-void far input_dispatch(void *list);
 
 void far mainloop(void)
 {

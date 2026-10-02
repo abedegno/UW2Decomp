@@ -37,7 +37,6 @@
 #include "ui.h"
 #include "uw2.h"
 
-extern union Link Inventory[];
 
 /* name: FM Towns keeps these as statics after BagSaveHandles, so their names are not known. */
 /* match: these names were chosen to land in _BSS in the EXE's order (DS:6A86, 6A8A, 6A8E,
@@ -48,7 +47,6 @@ static int saveNum;                     /* the number of saved objects */
 static void far *saveBuf;               /* the workspace */
 static char cursorSaved;                /* the copy holds a cursor object */
 
-unsigned far get_workspace(void);
 
 /* Closes any open bag and frees every object the player carries. */
 void far Punt_player_inv(void)

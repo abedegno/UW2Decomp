@@ -71,6 +71,7 @@ void far vfree(int);
 /* SCALEBM.ASM */
 extern unsigned char far ShowClip;  /* 370D:0DC4, FM Towns _ShowClip */
 extern unsigned char far cXfer[];
+extern unsigned char far Transparency;  /* 370D:0DC5 */
 
 /* GRCORE.ASM */
 extern int far *Color_data_ptr;  /* DS:21B8 */
@@ -112,6 +113,10 @@ extern int far *wbot;  /* DS:21E0 */
 extern int far *wleft;  /* DS:21E8 */
 extern int far *wright;  /* DS:21E4 */
 extern int far *wtop;  /* DS:21DC */
+extern struct FontInfo far *cur_font;  /* DS:21CC */
+extern unsigned char far *foreground_color;  /* DS:21C4 */
+void far rectangle(int x, int y, int w, int h);
+void far show(int x, int y, unsigned char far *bm, int a, int b, int c, int d);
 
 /* A bitmap of a .GR file (UW-Formats 3.2): its type, its size, for a 4-bit bitmap the
    auxiliary palette, and then a word with the data's size (in nibbles for a 4-bit bitmap)
@@ -187,6 +192,12 @@ void far fadeout3d(int n);
 void far fadein3d(int n);
 void far fill_FB(int colour);
 void far cameras_fade(void);
+unsigned char far grfx_init(void);
+void far grfx_clear(void);
+unsigned char far read_quikpal(int n, void far *dest);
+unsigned char far grfx_quikpal(int n);
+void far grfx_palrange(void far *src, int start, int count);
+void far fadeout(unsigned char far *src, int count, int pump);
 
 /* LOADGR.C: art loading */
 extern unsigned first_button;
@@ -199,6 +210,12 @@ void far reload_gr_vpic(int offset, char *art, int image);
 unsigned char far read_gr_far(char *art, int image, void far *dst);
 int far load_all_gr(void);
 void far load_doors(void);
+extern unsigned char Palettes[32][16];
+/* gronk_gr's callbacks: one returns where to load an image of the given size, the other
+   moves a loaded image into place. */
+typedef void far *(far *ArtAllocFn)(int size);
+typedef unsigned char (far *ArtMoveFn)(void far *p, int size, int n);
+unsigned char far gronk_gr(char *art, int start, int count, ArtAllocFn adr, ArtMoveFn move);
 
 /* CUTS.C: the cutscene player */
 int far cutsop_txt(unsigned far *code, struct CutsState *st);
@@ -250,6 +267,10 @@ unsigned char far * far set_cuts_ems(int which);
 void far free_cuts_ems(void);
 void far anm_sound_callback(void);
 void far init_cutscene(void);
+/* A task install_timebased_task runs from the timer interrupt. */
+typedef void (far *Task)(int task, int done);
+int far install_timebased_task(Task fn, int period, int total);
+void far show_cutscene(unsigned n);
 
 /* PANELS.C: the screen furniture around the 3D view */
 extern unsigned char wframe[0x1F];
@@ -279,6 +300,11 @@ void far pretty_panelagain(void);
 void far restore_sliding_panel(int redraw);
 void far send_FB(void);
 void far player_look_shaft(void);
+extern unsigned char RightPanel;
+void far set_screen_frame(char which, int val);
+char far load_weapcm(void);
+extern char ShowStupidFirstPersonWeapon;
+void far player_look_grave();  /* match: no prototype: callers pass an argument it ignores */
 
 /* CREDITS.C: the credits */
 void far show_credits(void);
@@ -290,10 +316,19 @@ extern unsigned char far cmpbuf2_start[];
 extern char far dfx_buffer[];
 extern unsigned long far gr_offs[];
 extern unsigned char far seg_5DFD[];
+/* The shared far work buffer (at least 10000h bytes), which each user lays out its own
+   way: the archive tables (ARC.C), the LZSS work area (ACLZW.C), the pathfinder's
+   squares (critter.h's STILES), the cutscene player's state (CUTS.C), the 3D view's pick
+   buffer (INTERACT.C), panel pictures, chargen's skills table and screen copies.
+   name: FM Towns has _grbuf and _panelbuf at the same address. */
+extern unsigned char far stdat[];
 
 /* Defined where no source has it yet: data the link takes from the EXE. */
 void far CallbackFunctionSleepRelated_seg021_22FD_CB7(int);
 /* DS:34AA: the first EMS page of the sounds */
 extern unsigned char far sound_fpage;
 
+/* SHOWPIC.C */
+char far display_screen(int pal, int blk);
+char far disk_to_vid(int blk, char far *buf);
 #endif

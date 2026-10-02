@@ -32,45 +32,18 @@
 #include "motion.h"
 #include "object.h"
 #include "player.h"
+#include "sound.h"
 #include "sys.h"
 #include "ui.h"
 
+/* match: OBJUSE.C defines useNSpellCharges(obj, char n); this file pushes an int. */
+int far useNSpellCharges(struct Object far *obj, int n);
+
 #define SPELL_CLASS(s)  (((s).cls & 0xF8) >> 3)
 
-extern struct Spell far spells[];
-extern unsigned char curBin;
-extern struct Player PlayerDat;
-extern void (far *npp_func)(void);
-extern unsigned char far *ActiveMob;
-extern unsigned char far *LastActiveMob;
 
 char dtypes[6] = { 3, 4, 8, 0x10, 0x20, 0x40 };
 int demons[5] = { ITEM_IMP, ITEM_IMP, ITEM_HORDLING, ITEM_DESPOILER, ITEM_DESTROYER };
-
-void far scroll_print(char far *s);
-int far add_animobj(int index, int len, int a, char x, char y);
-int far useNSpellCharges(struct Object far *obj, int n);
-unsigned char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
-unsigned char far can_place(int item, int a, int x, int y, int z, int b, char dist);
-struct Object far * far CreateObj(int item, char mobile);
-struct Object far * far obj_deal(struct Object far *obj, int x, int y, char how);
-int far mpos(char dx, char dy);
-unsigned char far put_at(int x, int y, int z, struct Object far *obj, int a, int b);
-char far set_curmagic(char cls, char sub, char flags);
-void far do_teleport(struct Object far *who, int x, int y, int level);
-void far set_drugged(int on);
-typedef char (far *SpellFn)(int x, int y, struct Object far *target, struct Tile far *tile,
-                            unsigned char src);
-void far gronk_area(struct Object far *who, char count, SpellFn fn, unsigned char type,
-                    unsigned char dist, unsigned char radius);
-void far set_effect(int which, int amount);
-void far play_effect_on_mobile(int fx, struct Object far *obj, int vol);
-void far clearobj(int n);
-void far play_effect_here(int fx, int vol, int c);
-void far put_effect(struct Object far *obj, int type, int size, int a, int b, int x, int y);
-void far UseTrigger(struct Object far *who, struct Object far *obj, struct Object far *trigger, int how);
-char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
-                     unsigned char damage, unsigned char type);
 
 /* Appends the spells a casting critter can use to str ('X, Y and Z.'): its three
    Creature spells, plus for race 0x17 (liches, inferred) more by its abilities (flying,
@@ -121,7 +94,7 @@ char far study_monster_spells(struct Object far *obj, struct Creature *crit, cha
                 minor = spl[i] & ~0xC0;
                 if (spl[i] == 0xFF)
                     continue;
-                if (major == 0 && SPELL_CLASS(spells[spl[i]]) == 4 && crit->race == 0x0F) {
+                if (major == 0 && SPELL_CLASS(spells[spl[i]]) == SPELLC_HEAL && crit->race == 0x0F) {
                     major = 1;
                     minor = 6;
                 }
@@ -133,9 +106,9 @@ char far study_monster_spells(struct Object far *obj, struct Creature *crit, cha
                 if (count - i > 2)
                     strcat(str, ", ");
                 if (count - i == 2)
-                    str_cat(str, get_string(0x274));
+                    str_cat(str, get_string(0x274));  /* ' and ' */
             }
-            str_cat(str, get_string(0x260));
+            str_cat(str, get_string(0x260));  /* '.' */
         }
     }
     return count != 0;
@@ -180,7 +153,7 @@ char far sp_study_monster(struct Object far *caster, struct Object far *target)
         scroll_print("a ");
     GetObjDesc(target, 0, str);
     scroll_print(str);
-    game_sprint(0x60);
+    game_sprint(0x60);  /* '.' */
     game_sprint(0x139);  /* 'Its current vitality is ' */
     if (isnpc) {
         if (target->whoami == 100 && !OBJ_TERRAIN(target))
@@ -190,15 +163,15 @@ char far sp_study_monster(struct Object far *caster, struct Object far *target)
     } else
         itoa(3 | target->qn.f.quality, str, 10);
     scroll_print(str);
-    game_sprint(0x60);
+    game_sprint(0x60);  /* '.' */
     if (!isnpc) {
-        game_sprint(0x13D);
+        game_sprint(0x13D);  /* 'It is resistant to: ' */
         str[0] = 0;
-        str_cat(str, get_string(0x346));
+        str_cat(str, get_string(0x346));  /* 'Magic' */
         strcat(str, ", ");
-        str_cat(str, get_string(0x347));
+        str_cat(str, get_string(0x347));  /* 'Physical Attacks' */
         scroll_print(str);
-        game_sprint(0x60);
+        game_sprint(0x60);  /* '.' */
     } else {
         flags = 0;
         if (crit->b0F)
@@ -219,12 +192,12 @@ char far sp_study_monster(struct Object far *caster, struct Object far *target)
         }
         if (crit->race == 0x17) {
             strcat(str, ", ");
-            str_cat(str, get_string(0xD25));
+            str_cat(str, get_string(0xD25));  /* 'Rune of Stasis' */
         }
         if (hasres) {
-            game_sprint(0x13D);
+            game_sprint(0x13D);  /* 'It is resistant to: ' */
             scroll_print(str);
-            game_sprint(0x60);
+            game_sprint(0x60);  /* '.' */
         }
         target->whoami = whoami;
     }
@@ -306,7 +279,7 @@ char far charge_object(struct Object far *obj, int effect, int x, int y)
         sp_enchant_faildestroymess(obj, x, y);
         if (Obj_Rem(head, spell))
             Obj_Free(spell);
-        obj->id = obj->id & 0xFE00 | debris_type(OBJ_ITEM(obj), 0) & ID_ITEM;
+        SET_ITEM(obj, debris_type(OBJ_ITEM(obj), 0));
         return 1;
     } else {
         useNSpellCharges(obj, -1 - player->skills[SKILL_CASTING] / 15);
@@ -396,9 +369,9 @@ void far sp_enchant(struct Object far *obj, unsigned char inv, int x, int y)
     if (!already && OBJ_MAJOR(obj) == MAJOR_HACK
         && (OBJ_ISQUANT(obj) || Obj_PtrTMem(&obj->ol.link) == 0)) {
         obj->ol.f.link = 0x201;
-        obj->id = obj->id & 0xEFFF | ID_ENCHANT;
-        obj->id = obj->id & 0xF7FF;
-        obj->id = obj->id & 0x7FFF | ID_ISQUANT;
+        SET_ENCHANTED(obj, 1);
+        SET_FLAG11(obj, 0);
+        SET_ISQUANT(obj, 1);
         switch (OBJ_MINOR(obj)) {
         case 0:
         case 1:
@@ -423,7 +396,7 @@ report:
         game_sprint(0x12D);  /* 'You have enchanted the ' */
         GetObjDesc(obj, 1, str);
         scroll_print(str);
-        game_sprint(0x60);
+        game_sprint(0x60);  /* '.' */
     }
 }
 
@@ -564,12 +537,12 @@ void far creat_spell(struct Object far *caster, char which)
             if (Creature[item & ~0x1C0].flier)
                 z = (z + 0x80) / 2;
             if (caster == ThePlayer && which == 4) {
-                obj->b19 = obj->b19 & 0xBF | 0x40;
+                SET_ALLY(obj, 1);
             } else {
-                obj->attitude_word = obj->attitude_word & 0x3FFF;
-                obj->b19 = obj->b19 & 0xFE | 1;
-                obj->b0F = obj->b0F & 0xFFC0 | (OBJ_HOMEX(ThePlayer) & 0x3F) << 0;
-                obj->b0F = obj->b0F & 0xF03F | (OBJ_HOMEY(ThePlayer) & 0x3F) << 6;
+                SET_ATTITUDE(obj, 0);
+                SET_B19_0(obj, 1);
+                SET_DESTX(obj, OBJ_HOMEX(ThePlayer));
+                SET_DESTY(obj, OBJ_HOMEY(ThePlayer));
             }
         } else if (which == 6) {
             owner = 0;
@@ -580,13 +553,13 @@ void far creat_spell(struct Object far *caster, char which)
                     owner = 0;
             }
             obj->last_hit = owner;
-            obj->b15 = obj->b15 & 0x7F;
-            obj->b0A = obj->b0A & 0x7F;
+            SET_B15_7(obj, 0);
+            SET_LONER(obj, 0);
             z += 0x12;
             if (z > 0x78)
                 z++;
             obj->b0F = z << 3;
-            obj->b13 = obj->b13 & 0x80 | (rand() % 0xF + 0xF & 0x7F) << 0;
+            SET_SPEED(obj, rand() % 0xF + 0xF);
         } else
             obj->qn.f.quality = 0x3F;
         SET_Z(obj, z);
@@ -664,7 +637,7 @@ void far mdetect(int dist, int skill)
                 scroll_print(str);
                 scroll_print(" ");
                 game_sprint((i & 7) + 0x28);  /* 'to the North', 'to the Northeast', ... */
-                game_sprint(0x60);
+                game_sprint(0x60);  /* '.' */
             }
             max = best;
             best = i;
@@ -701,9 +674,10 @@ char far tremor_area(int x, int y, struct Object far *target, struct Tile far *t
         SET_Z(boulder, 0x6E);
     }
     if (put_at(x * 8 + 3, y * 8 + 3, 0x6E, boulder, 0, 0) && IsMobElem(boulder)) {
-        boulder->b13 = boulder->b13 & 0x80 | ((rand() & 3) + 2 & 0x7F) << 0;
+        SET_SPEED(boulder, (rand() & 3) + 2);
         boulder->heading = rand() & 0xFF;
-        boulder->b0A = boulder->b0A & 0xF0 | (curBin + (rand() & 3) & 0xF) << 0;
+        SET_BIN(boulder, curBin + (rand() & 3));
+        /* match: open-coded, as SET_RATE neither masks nor shifts by 0 */
         boulder->b14 = boulder->b14 & 0xF8 | (rand() % 3 + 1 & 7) << 0;
     }
     return 1;
@@ -766,7 +740,7 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
             break;
         case 3:                         /* locate */
             if (player->automap || (PlayerLevel - 1) / LEVELS_PER_WORLD == 8)
-                game_sprint(0x142);
+                game_sprint(0x142);  /* 'The spell has no noticeable effect.' */
             else {
                 game_sprint(0x12A);  /* 'Your position is revealed unto you.' */
                 player->automap = 1;
@@ -777,7 +751,7 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
             break;
         case 7:                         /* roaming sight */
             if ((PlayerLevel - 1) / LEVELS_PER_WORLD == 8)
-                game_sprint(0x142);
+                game_sprint(0x142);  /* 'The spell has no noticeable effect.' */
             else {
                 set_curmagic(0xB, 1, stab);
                 home_cam(0);
@@ -801,7 +775,7 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
                 player_setup(0, 0, -1);
                 editchng(0x7FFE);
             } else
-                game_sprint(0x121);
+                game_sprint(0x121);  /* 'The moonstone is not available.' */
             break;
         case 11:                        /* freeze time */
             set_curmagic(0xB, 0, stab);
@@ -812,7 +786,7 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
             clear_runes();
             clear_shelf();
             player->b60_11 = 1;
-            PlayerDat.weight = 0;
+            PlayerDat.rec.weight = 0;
             FixPlayerEquips();
             pretty_panelagain();
             break;
@@ -835,7 +809,7 @@ void far thump_your_magic_twanger_froggie(void)
         play_effect_here(0x12, 0x40, 0x28);
         play_effect_here(0x2A, 0x40, 0x14);
     } else
-        game_sprint(0x142);
+        game_sprint(0x142);  /* 'The spell has no noticeable effect.' */
 }
 
 /* Per-object callback of thump_your_magic_twanger_froggie: an invisible Guardian signet
@@ -853,7 +827,7 @@ char far check_Guardian_magic_marker(int x, int y, struct Object far *obj, struc
     bit = 1 << ((PlayerLevel - 1) / LEVELS_PER_WORLD - 1);
     if (OBJ_ITEM(obj) != ITEM_GUARDIAN_SIGNET_RING || !OBJ_DOORDIR(obj) || !OBJ_INVIS(obj))
         return 0;
-    obj->id = obj->id & 0xDFFF;
+    SET_DOORDIR(obj, 0);
     if (player->quest_bytes[QB_LINES_OF_POWER] & bit)
         cut = 1;
     if (!cut)

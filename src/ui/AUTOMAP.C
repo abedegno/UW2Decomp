@@ -39,34 +39,6 @@
 #include "sys.h"
 #include "ui.h"
 
-/* One map note: its text and where it sits on the map, 0x36 bytes. */
-struct ATM {
-    char text[0x32];
-    int x;                              /* 0x32, -1 once erased */
-    int y;                              /* 0x34 */
-};
-
-extern struct Inplist near *inplist;
-extern unsigned TxmTerr[];
-extern unsigned char far *foreground_color;
-extern unsigned char far Transparency;
-extern struct ATM far ATM_Strings[100];
-
-void far _input_addkey(int key, int a, int b, void (far *handler)(int));
-int far input_addmouse(int a, int b, int c, int d, int buttons, int mode, void (far *handler)(void));
-void far set_new_music(int n);
-void far fadeout(int a, int b, int c, int d);
-void far mouse_release(int n);
-int far do_keyboard_input(int n);
-unsigned far get_arc(int arc, int blk, char far *buf);
-unsigned char far put_arc(int arc, int blk, char far *buf, unsigned len);
-void far close_arc(int arc);
-void far grfx_clear(void);
-void far grfx_quikpal(int pal);
-void far rectangle(int x0, int y0, int x1, int y1);
-unsigned far get_workspace(void);
-char far disk_to_vid(int blk, char far *buf);
-
 /* Initialised data, DS:09EE. */
 /* name: none of it has an FM Towns name, so it was static. */
 
@@ -97,8 +69,6 @@ static int old_strings;
 static int num_words;
 static int map_mouse;
 
-unsigned char far SaveAutoMapLevel(int flags, int lev);
-unsigned char far GetAutoMapLevel(int flags, int lev);
 
 /* Opens the map screen: registers its key and mouse handlers once, saves the current
    level's map, and shows this level, or without a map of it (player->automap clear) the
@@ -110,8 +80,8 @@ void far AutoMap(void)
 
     noauto = !player->automap;
     if (!registered) {
-        _input_addkey(0x1B, 1, 2, newscr);
-        map_mouse = input_addmouse(0, 0, 0x13F, 0xC7, 0, 2, ManageDungeonMap);
+        _input_addkey(KEY_ESC, 1, 2, newscr);
+        map_mouse = input_addmouse(0, 0, 0x13F, 0xC7, 0, 2, (InputFn)ManageDungeonMap);
         registered = 1;
     }
     kill_all_effects();
@@ -131,7 +101,7 @@ void far AutoMap(void)
         level = player->map_scrap;
         GetAutoMapLevel(0, level);
     }
-    fadeout(0, 0, 0, 0);
+    fadeout((unsigned char far *)0, 0, 0);
     ShowAutoMapLevel(level);
     mouse_constrain(9, 3, 0x13F, 0xC7);
     mouse_hide();
@@ -213,7 +183,7 @@ unsigned char far SaveAutoMapLevel(int flags, int lev)
 
     if (!(flags & 4) && !open_arc(1, HomeDir))
         return ok;
-    ok = put_arc(1, lev + 0x9F, (char far *)PlayersMap, 0x1000);
+    ok = put_arc(1, lev + 0x9F, (char far *)PlayersMap, MAP_TILES);
     if (!(flags & 4))
         close_arc(1);
     return ok;
@@ -226,10 +196,10 @@ unsigned char far GetAutoMapLevel(int flags, int lev)
     register int n;
 
     if (!(flags & 4) && !open_arc(1, HomeDir))
-        memset(PlayersMap, 0, 0x1000);
+        memset(PlayersMap, 0, MAP_TILES);
     else {
         n = get_arc(1, lev + 0x9F, (char far *)PlayersMap);
-        ok = n == 0 || n == 0x1000;
+        ok = n == 0 || n == MAP_TILES;
         if (!(flags & 4))
             close_arc(1);
     }
@@ -247,7 +217,7 @@ void far ExitAutoMap(void)
     if (level != PlayerLevel)
         GetAutoMapLevel(0, PlayerLevel);
     if (player->drawn) {
-        set_new_music(5);
+        set_new_music(MUSIC_ARMED);
         change_music_maybe();
     }
     grfx_clear();
@@ -258,7 +228,7 @@ void far ExitAutoMap(void)
 
 void far ClearAutoMap(void)
 {
-    memset(PlayersMap, 0, 0x1000);
+    memset(PlayersMap, 0, MAP_TILES);
 }
 
 /* Draws every seen tile, three pixels a tile, and shades its sides that face unseen or
@@ -281,7 +251,7 @@ void far ShowDungeonMap(void)
                 continue;
             DoTile(t, x, y);
             memset(side, 0, 4);
-            if (tile_walls[t] & 1) {
+            if (tile_walls[t] & TW_DIAG) {
                 d = t - 2;
                 d = diag_side[d];
                 side[d] = ShadeSide(d, x, y);
@@ -909,7 +879,7 @@ void far update_map_scraps(int scrap, int lev, unsigned char sections)
             }
         }
     }
-    movedata(FP_SEG(PlayersMap), FP_OFF(PlayersMap), FP_SEG(buf), FP_OFF(buf), 0x1000);
+    movedata(FP_SEG(PlayersMap), FP_OFF(PlayersMap), FP_SEG(buf), FP_OFF(buf), MAP_TILES);
     GetAutoMapLevel(0, lev);
     for (y = 0x3F; y >= 1; y--) {
         for (x = 1; x < 0x3F; x++) {

@@ -34,9 +34,11 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "combat.h"
 #include "critter.h"
 #include "event.h"
 #include "file.h"
+#include "gfx.h"
 #include "map.h"
 #include "motion.h"
 #include "object.h"
@@ -44,38 +46,16 @@
 #include "ui.h"
 #include "uw2.h"
 
-typedef char (far *SpellFn)(int x, int y, struct Object far *target, struct Tile far *tile,
-                            unsigned char src);
+/* PATHFIND.C's squares. match: not in critter.h, since an uninitialised far definition
+   after an extern declaration of it comes out as near data. */
+extern struct PathSq far pathsq[];
 
-extern unsigned char far *ActiveMob;
-extern unsigned char far *LastActiveMob;
-extern unsigned TxmTerr[];
-extern unsigned char stay_centered;
 /* Set when wander_that_monster brought a monster to the player. */
 /* match: this file's _BSS, DS:554E (ovr104's ends at 554D; ovr108's starts at 5550):
    only this file uses it. */
 /* name: FM Towns has it as a static. Provisional name. */
 static char wander_found;
-extern char crithit;
-extern char typehit;
-extern long crithittime;
-extern int freepaths;
-extern struct PathSq far pathsq[];
-extern struct StaticTile far stdat[MAP_SIZE][MAP_SIZE];
 
-void far critter_set_goal(char goal, int gtarg);
-unsigned char far can_place(int item, int index, int x, int y, int z, char flier, char dist);
-void far gronk_area(struct Object far *who, char count, SpellFn fn, unsigned char type,
-                    unsigned char dist, unsigned char radius);
-void far process_area(char count, unsigned char src, SpellFn fn, unsigned char type,
-                      char x0, char y0, char w, char h);
-char far flood_path(char x, char y, int z, int tx, int ty, int tz, int how);
-void far UseTrap(struct Object far *trap, int x, int y);
-void far set_loc(int x, int y, int z);
-char far line_of_sight(int x, int y, int z, int tx, int ty, int tz);
-void far get_name(char far *buf, struct Object far *obj, int article, int plural);
-void far scroll_print(char far *s);
-void far remove_opponent(struct Object far *npc);
 
 /* critter_set_goal (AI.C) for any critter, not only the current one. */
 void far change_critter_goal(struct Object far *npc, char goal, int gtarg)
@@ -102,7 +82,7 @@ void far yearly_checkup(void)
         npc = &critdata[*p];
         SET_FED(npc, rand() % 2);
         if (rand() % 4 != 1)
-            npc->b19 = npc->b19 & 0xBF;
+            SET_ALLY(npc, 0);
     }
 }
 
@@ -168,12 +148,12 @@ void far up_crit(struct Object far *npc, char *counts)
         Obj_FreeLinkChain(&hometile->objects, npc);
         return;
     }
-    npc->b19 = npc->b19 & 0x7F;
-    npc->b19 = npc->b19 & 0xBF;
-    npc->b19 = npc->b19 & 0xEF;
-    npc->b19 = npc->b19 & 0xDF;
-    npc->b19 = npc->b19 & 0xFE;
-    npc->b19 = npc->b19 & 0xFD;
+    SET_FED(npc, 0);
+    SET_ALLY(npc, 0);
+    SET_B19_4(npc, 0);
+    SET_B19_5(npc, 0);
+    SET_B19_0(npc, 0);
+    SET_B19_1(npc, 0);
     if (OBJ_GOAL(npc) != 10)
         SET_HEADING(npc, rand() % 8);
     if (npc->hp < cst->avghit && !OBJ_NOHEAL(npc))
@@ -358,7 +338,7 @@ char far wander_that_monster(int x, int y, struct Object far *target, struct Til
                 next = Obj_PtrTMem(link);
                 if (OBJ_CLASS(next) == CLASS_TRIGGER && next->ol.f.link > 0) {
                     trap = Obj_PtrTMem(&next->ol.link);
-                    if (OBJ_MAJOR(trap) == MAJOR_TRAP && OBJ_MINOR(trap) == 0 && OBJ_INCLASS(trap) == 9)
+                    if (OBJ_MAJOR(trap) == MAJOR_TRAP && OBJ_MINOR(trap) == MINOR_TRAP && OBJ_INCLASS(trap) == 9)
                         UseTrap(trap, pathsq[i].x, pathsq[i].y);
                 }
             }
@@ -368,7 +348,7 @@ char far wander_that_monster(int x, int y, struct Object far *target, struct Til
         tile = Map_GetAddr(tx, ty);
         if (!set_gridx_and_y_based_on_tile_type(tile->type, &fx, &fy))
             return 0;
-        z = stdat[tx][ty].height << 3;
+        z = STILES[tx][ty].height << 3;
         if (can_place(OBJ_ITEM(obj), Obj_MemTPtr(obj), (tx << 3) + fx, (ty << 3) + fy, z,
                       mycst->flier, 8)) {
             Obj_Rem(&Map_GetAddr(myxpos, myypos)->objects, obj);
@@ -420,10 +400,10 @@ char far teleport_critter(struct Object far *critter, int x, int y, int how)
         SET_FINEX(obj, fx);
         SET_FINEY(obj, fy);
         SET_Z(obj, z);
-        critter->b19 = critter->b19 & 0xEF;
-        critter->b19 = critter->b19 & 0xDF;
-        critter->b19 = critter->b19 & 0xFE;
-        critter->b19 = critter->b19 & 0xFD;
+        SET_B19_4(critter, 0);
+        SET_B19_5(critter, 0);
+        SET_B19_0(critter, 0);
+        SET_B19_1(critter, 0);
         return 1;
     }
     return 0;
@@ -469,7 +449,7 @@ void far clear_paths(void)
 
     for (i = 2; i < NUM_MOBILE; i++) {
         obj = Obj_IntTMem(i);
-        obj->b15 = obj->b15 & 0x7F;
+        SET_B15_7(obj, 0);
     }
     freepaths = 0xFFFF;
 }

@@ -19,6 +19,8 @@
    mycst and similar pointers.
    Name: inferred (creature_init and creature_class_data: the class prefix). */
 
+#include <stdio.h>
+#include <stdlib.h>
 #include "critter.h"
 #include "object.h"
 
@@ -32,16 +34,13 @@
 unsigned cr_type;                       /* DS:492A, the creature's type within its class */
 struct Creature *cst;                   /* DS:492C */
 static char cr_unused[0x1E];            /* DS:492E, never used */
-struct Creature Creature[64];           /* DS:494C */
+struct Creature Creature[NUM_CREATURES];         /* DS:494C */
 unsigned cr_class;                      /* DS:554C, the creature's class */
-void far fread(void *address, int size, int count, int fd);
-void far fwrite(void *address, int size, int count, int fd);
-int far rand(void);
 
 /* Read the 64 critter records, 48 bytes each, from the open OBJECTS.DAT. */
-void far creature_init(int fd)
+void far creature_init(FILE *fd)
 {
-    fread(Creature, 0x30, 0x40, fd);
+    fread(Creature, 0x30, NUM_CREATURES, fd);
 }
 
 /* Write the critter table back to a file. Only its overlay stub refers to it in the IDA
@@ -49,9 +48,9 @@ void far creature_init(int fd)
 /* name: creature_init's counterpart, which FM Towns lacks; the name is provisional (IDA's
    ovr104_17), chosen so that its tools/bssorder.py key puts it in the EXE's overlay stub
    order. */
-void far creature_save_ovr104_17(int fd)
+void far creature_save_ovr104_17(FILE *fd)
 {
-    fwrite(Creature, 0x30, 0x40, fd);
+    fwrite(Creature, 0x30, NUM_CREATURES, fd);
 }
 
 /* The Creature entry of ActiveObj: minor class * 16 + type within the class, the same as

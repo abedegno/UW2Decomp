@@ -29,12 +29,8 @@
 /* This file's _BSS, DS:8188..8287, by name: TxmTerr 420, TxmID 988. They follow ovr139's
    answer_x (857) in a new run; this file loads them, with ActDoors, from the level. */
 int TxmID[0x40];                        /* the level's texture numbers */
-int TxmTerr[0x40];                      /* each texture's terrain type */
+unsigned TxmTerr[0x40];                     /* each texture's terrain type */
 
-unsigned far get_arc(int arc, int blk, char far *buf);
-unsigned char far put_arc(int arc, int blk, char far *buf, unsigned len);
-void far close_arc(int arc);
-void far show(int x, int y, unsigned char far *buf, int h, int w, int a, int b);
 
 char far init_txtlib(void)
 {

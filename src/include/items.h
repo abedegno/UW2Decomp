@@ -58,6 +58,18 @@ enum ObjMajor {
 #define CLASS_TRIGGER2      0x1B
 #define CLASS_ANIMOBJ       0x1C
 
+/* Minor classes, OBJ_MINOR: a class's place within its major class (its CLASS_ value's low
+   two bits). */
+#define MINOR_WEAPON        0           /* MAJOR_HACK: Weapons[] */
+#define MINOR_MISSILE       1           /* MAJOR_HACK: Missile[] */
+#define MINOR_ARMOR         2           /* MAJOR_HACK: Armor[] */
+#define MINOR_ARMOR2        3           /* MAJOR_HACK: Armor[] + 16 */
+#define MINOR_CONTAINER     0           /* MAJOR_MISC */
+#define MINOR_DOOR          0           /* MAJOR_RECT */
+#define MINOR_TRAP          0           /* MAJOR_TRAP: 0 and 1 traps, 2 and 3 triggers */
+#define MINOR_TRIGGER       2
+#define MINOR_TRIGGER2      3
+
 /* Trap types: a trap's item less FIRST_TRAP, the index UseTrap (ovr166) switches on;
    named after the trap items 0x180-0x198 in string block 4. */
 enum TrapType {

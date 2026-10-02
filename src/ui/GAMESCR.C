@@ -31,8 +31,6 @@
 #include "sys.h"
 #include "ui.h"
 
-extern struct Inplist near *inplist;
-extern char RightPanel;
 /* This file's uninitialised data: the four mouse-area handles, FM Towns names. Defined
    here, they land at DS:817C to DS:8183 in the EXE's order. */
 int inforMshandle;               /* DS:817C */
@@ -40,10 +38,6 @@ int actspMshandle;               /* DS:817E */
 int flaskMshandle;               /* DS:8180 */
 int spellMshandle;               /* DS:8182 */
 
-void far set_screen_frame(int a, int b);
-int far scroll_print(char far *s);
-void far mouse_release(int how);
-int far input_addmouse(int a, int b, int c, int d, int buttons, int mode, void far (*handler)());
 
 /* Flips the right-hand panel: from the inventory (RightPanel 0) to the statistics page
    (2), from any other panel back to the inventory, and nothing while a flip is under way
@@ -144,9 +138,9 @@ void far start_gameinp(void)
     LeftPanel = 0;
     setup_icon_buttons();
     spellMshandle = input_addmouse(0xA9, 0x22, 0xDF, 0x34, 0, 1, try_cast);
-    actspMshandle = input_addmouse(0x11, 0x22, 0x42, 0x34, 0, 1, try_clear);
-    inforMshandle = input_addmouse(0x5B, 0x22, 0x94, 0x34, 0, 1, print_info);
-    flaskMshandle = input_addmouse(0xF3, 0x24, 0x13C, 0x45, 0, 1, flask_info);
+    actspMshandle = input_addmouse(0x11, 0x22, 0x42, 0x34, 0, 1, (InputFn)try_clear);
+    inforMshandle = input_addmouse(0x5B, 0x22, 0x94, 0x34, 0, 1, (InputFn)print_info);
+    flaskMshandle = input_addmouse(0xF3, 0x24, 0x13C, 0x45, 0, 1, (InputFn)flask_info);
 }
 
 void far clear_gameinp(void)

@@ -81,6 +81,8 @@ extern unsigned char SpecShadeMode;  /* name: DOS only, no FM Towns name */
 void far set_graphics_level(void);
 void far process_grid(void);
 void far do_3d_pickup(void);
+extern unsigned char AnimObjInPipe;
+extern unsigned char PickUp;
 
 /* VIEW3D.C: setting up the 3D view */
 extern int chgtable[4][3];
@@ -100,6 +102,8 @@ void far init_3d(void);
 void far do_3d_grab(void);
 void far render_FB(void);
 void far establish_view(void);
+extern char quad;
+extern struct Gloc glocs[17][33];
 
 /* DRAWOBJ.C: drawing one object into the 3D view's render database */
 extern unsigned char ActDoors[6];  /* the level's door textures */
@@ -149,11 +153,13 @@ extern unsigned far *obj_tab;  /* two words per object; only the first is set by
 
 /* Defined where no source has it yet: data the link takes from the EXE. bmsegoff and
    bmhgtoff are offsets of the renderer's bitmap table (8 bytes a slot); smooth_div and
-   smooth_lowpass scale the distance shade (VIEW3D.C's preset_grid, GAMESORT.C). */
+   smooth_lowpass scale the distance shade (VIEW3D.C's preset_grid, GAMESORT.C) and
+   smooth_base is added to it; LIGHTING.C's set_light loads all three from SHADES.DAT. */
 extern int far _dblen;
 extern unsigned far bmhgtoff;
 /* in the graphics data segment */
 extern unsigned far bmsegoff;
+extern int far smooth_base;
 extern int far smooth_div;
 extern int far smooth_lowpass;
 

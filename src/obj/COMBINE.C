@@ -14,6 +14,7 @@
    one), called from USEITEMS.C.
    Name: descriptive (combining objects, init_combinables and CombineObjs). */
 
+#include "file.h"
 #include "object.h"
 
 struct Combination {
@@ -25,8 +26,6 @@ struct Combination {
 /* name: FM Towns has no name for it (its disassembly names the storage after _chroff, the
    last of ovr101's variables before it), so it was static. */
 static struct Combination ObjectCombinations[10];
-void far bltfromdrive(char *name, void far *dest, int size);
-struct Object far * far CreateObj(unsigned id, int mobile);
 
 void far init_combinables(void)
 {

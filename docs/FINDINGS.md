@@ -46,7 +46,7 @@ Each entry was re-read against the source before it was written here. The sectio
 ### gronkify_slay tests the wrong byte
 
 - **What happens:** schedule event 3 kills NPCs. For the NPC the player is talking to, a repeating row should instead count up `xclock[XC_CHANGED]` when byte 6 of the schedule work area is 15. In `SCHEDULE.C`'s layout, byte 6 is the event code of the first queued migration row, not the block number, and event codes run from 1 to 11.
-- **Where:** `gronkify_slay` in [event/SCDEVENT.C](../src/event/SCDEVENT.C); the layout is `struct SCDWork` in [event/SCHEDULE.C](../src/event/SCHEDULE.C).
+- **Where:** `gronkify_slay` in [event/SCDEVENT.C](../src/event/SCDEVENT.C); the layout is `struct SCDWork` in [include/event.h](../src/include/event.h).
 - **Evidence:** code reading; both builds (FM Towns also reads `Workspace+6`, and keeps the block number at +104h).
 - **Confidence:** likely.
 - **Effect:** the count-up probably never happens; the NPC is spared either way. Whether any plot step waits for it is not known.
@@ -55,7 +55,7 @@ Each entry was re-read against the source before it was written here. The sectio
 ### Saving more than 44 notes on one level corrupts them
 
 - **What happens:** a level's automap notes (`ATM_Strings`, 100 records of 0x36 bytes) sit inside `stdat`, at offset 468Eh. Their `LEV.ARK` blocks are flagged compress-on-write (flags 5 in all 80 note blocks), so `SaveTheWords` sends them through `put_arc` to `ac_shrink_disk`, which puts the LZSS work area at the start of `stdat`. Before it reads its input, the compressor sets `rson[4097..4352]` and `dad[0..4095]` to NIL, which covers offsets 5029h to 7229h of `stdat`, and its first `InsertNode` calls write `rson[4060..4078]` at 4FDFh to 5003h. That is note 44 (from its byte 9) onwards. The compressor then reads the notes from the same memory.
-- **Where:** `SaveTheWords` in [ui/AUTOMAP.C](../src/ui/AUTOMAP.C), `put_arc` in [sys/ARC.C](../src/sys/ARC.C), `ac_setup_lzw` in [sys/ACLZW.C](../src/sys/ACLZW.C), `CompressLZW_disk` and `struct LzwWork` in [sys/LZSS.C](../src/sys/LZSS.C), the buffer in [sys/FARDATA.ASM](../src/sys/FARDATA.ASM).
+- **Where:** `SaveTheWords` in [ui/AUTOMAP.C](../src/ui/AUTOMAP.C), `put_arc` in [sys/ARC.C](../src/sys/ARC.C), `ac_setup_lzw` in [sys/ACLZW.C](../src/sys/ACLZW.C), `CompressLZW_disk` in [sys/LZSS.C](../src/sys/LZSS.C) and `struct LzwWork` in [include/file.h](../src/include/file.h), the buffer in [sys/FARDATA.ASM](../src/sys/FARDATA.ASM).
 - **Evidence:** code reading, with the block flags read from the shipped `LEV.ARK`. Found while re-checking the `stdat` overlap candidates below. The FM Towns build was not checked (its 32-bit work area may be laid out differently).
 - **Confidence:** likely.
 - **Effect:** with 45 or more notes on a level, the 45th note is partly overwritten and the later ones are saved as NIL words (00 10). With fewer notes the input ends before 951h and nothing is lost. Not tried in the game.

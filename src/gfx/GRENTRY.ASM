@@ -40,6 +40,10 @@
 ; Its FD51 piece holds relocation entry 2441, the far pointer at 956 to stdat; it runs to the
 ; next module's first pointer (B0A). Its bounds are not otherwise known.
 
+; The VGA ports used here.
+SC_DATA         equ     3C5h  ; sequencer data
+GC_INDEX        equ     3CEh  ; graphics controller index
+
         .186
 
         extrn   _stdat:far
@@ -307,7 +311,7 @@ _DRAW_RELATED_seg003_0272_7F9 proc far
         mov     ax,0A000h
         mov     es,ax
         mov     bp,word ptr ds:[0AF0h]
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         mov     bx,word ptr ds:[94Eh]
         mov     ax,word ptr ds:[383Ah]
         add     bx,ax
@@ -562,7 +566,7 @@ _seg003_0272_9C9 endp
 ; four pixels) to video memory at the offset in 4116, one plane at a time. Probably the save
 ; half of VALLOC.ASM's save_rect when the frame buffer is the target.
 _seg003_0272_9FC proc near
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         mov     bp,si
         mov     di,word ptr ds:[4116h]
         push    ds
@@ -658,7 +662,7 @@ L0A95:
         sub     cx,bx
         inc     cx
         mov     bp,cx
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         mov     al,byte ptr ss:[bx+3B64h]
         and     al,byte ptr ss:[bx+3CA8h]
         add     cx,3
@@ -765,7 +769,7 @@ L0B88:
         pop     bp
         jmp     L0A8B
 L0B8C:
-        mov     dx,3CEh
+        mov     dx,GC_INDEX
         mov     ax,0FF08h
         out     dx,ax
         pop     es

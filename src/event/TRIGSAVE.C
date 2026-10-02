@@ -8,13 +8,13 @@
    Data: none of its own.
    Name: descriptive (writes the trigger table). */
 
+#include <stdio.h>
 #include "event.h"
 
-void far fwrite(void *address, int size, int count, int fd);
 
 /* name: FM Towns trap_save_ is the same size, but nothing else ties the two, so the
    IDA name is kept. */
-void far ovr162_0(int fd)
+void far ovr162_0(FILE *fd)
 {
     fwrite(Triggers, 1, 16, fd);
 }

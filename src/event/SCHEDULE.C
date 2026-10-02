@@ -27,6 +27,8 @@
    SCHEDULE.C). */
 #include <dos.h>
 #include <string.h>
+#include <mem.h>
+#include <stdio.h>
 #include "event.h"
 #include "file.h"
 #include "player.h"
@@ -36,19 +38,6 @@
    spellings through aliases until targets/ovr151.tsv is updated. The routines
    occur between the same neighbours and have the same behaviour in both builds. */
 
-/* One level's place in a schedule: the time it has reached and the next row to run. */
-struct SCDClock { unsigned time, next; };
-/* The work area: the migration queue, then the block as stored in SCD.ARK (row count,
-   block number, the 80 clocks, the rows). */
-struct SCDWork {
-    int migrations;
-    struct SCDRow migrationRecord[16];
-    unsigned rows;
-    unsigned char block;
-    char spare;
-    struct SCDClock clocks[80];
-    struct SCDRow record[1];
-};
 /* This file's _BSS, DS:8634..8637: the schedule work area, which Sched_SetBuf sets;
    ovr113 reads it too. */
 /* match: ovr147's _BSS ends at 8634; inanmMapX (key 41) after it starts another run. */
@@ -59,12 +48,6 @@ struct SCDWork far *SCD_dseg_67d6_8634;
 /* match: ovr150's DataDirectory ends at 1A7D, so this file starts at 1A7E; ovr152's data
    starts at 1AAC. */
 unsigned char scdBlockHasBeenModified_dseg_67d6_1A7E = 0;
-int far printf(const char *format, ...);
-unsigned far get_arc(int, unsigned, char far *);
-unsigned char far put_arc(int, unsigned, char far *, unsigned);
-void far close_arc(int);
-unsigned far get_workspace(void);
-void far movedata(unsigned, unsigned, unsigned, unsigned, unsigned);
 
 /* Runs (mode set) or skips the rows from the level's next row up to its clock time.
    Sched_DoEvent's result: 0 the row ran and changed the block, 4 the row deleted itself (so
@@ -228,7 +211,7 @@ unsigned char far Sched_SetAllClocks(unsigned char mode)
     for (block = 0; block < 16 && error == 0; block++) {
         clock = player->xclock[block];
         if ((error = Sched_Load(block)) != 0) break;
-        if (block == 0) error = Sched_WrapTime(player->xclock[XC_TIME], 72, mode);
+        if (block == 0) error = Sched_WrapTime(player->xclock[XC_TIME], DAY_STEPS, mode);
         else error = Sched_SetTime(clock, mode);
         if (error) break;
         error = Sched_Save(block);

@@ -12,19 +12,19 @@
    algorithm is in fact LZSS, see LZSS.C). */
 
 #include "file.h"
+#include "gfx.h"
 
-extern char far stdat[];
 /* This file's _DATA, DS:1AD4 (ovr152's strings end there; SKILLS.C's data starts at 1AD8):
    the LZSS work area, set up here and used by ovr127. */
-char far *globals = 0;
+struct LzwWork far *globals = 0;
 
 /* Points globals at stdat (LZSS.C's struct LzwWork, 722Fh bytes) and returns the rest of
    the buffer after it, 8DD0h bytes from stdat+722Fh, as the file read or write buffer: so
    stdat is at least 10000h bytes long. */
 void far ac_setup_lzw(char far **work, unsigned *worksize)
 {
-    globals = stdat;
-    *work = globals + 0x722F;
+    globals = (struct LzwWork far *)stdat;
+    *work = (char far *)globals + sizeof(struct LzwWork);
     *worksize = 0x8DD0;
 }
 

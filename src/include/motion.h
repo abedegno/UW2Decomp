@@ -105,6 +105,7 @@ struct Object far * far mob_to_static(struct Object far *obj);
 void far update_hack_vecs(struct Phys *pp);
 void far missile_newhit(struct Object far *proj, struct Object far *hit);
 int far do_objhit(int ci, int index);
+struct Object far * far obj_deal(struct Object far *obj, int x, int y, char how);
 
 /* MOTION.C: motion */
 extern struct MotionCalc Ppd;
@@ -131,6 +132,7 @@ void far do_physics(struct Phys *pp, struct Handler *tp);
 void far set_jmp(int force, char stop, int min);
 struct Object far * far IsaDoor(unsigned char *x, unsigned char *y);
 struct Object far * far CollObject(void);
+unsigned char far set_resterr(unsigned bits);
 
 /* PLAYMOVE.C: player input and motion */
 extern unsigned char pmouseHandled;
@@ -160,5 +162,10 @@ void far player_simple_move(int dir);
 void far check_physics(void);
 void far finish_player(void);
 void far get_eye(void);
+extern int playerMod[4];
+extern int PlayerPitch;
+extern int vort_rad;
+extern int vort_timer;
+void far set_effect(unsigned char which, char amount);
 
 #endif

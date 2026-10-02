@@ -192,6 +192,8 @@ struct AnimClass {
 #define SET_FLAGS(o, v)     ((o)->id = (o)->id & 0xE1FF | ((v) & 0xF) << 9)
 #define SET_FLAG9(o, v)     ((o)->id = (o)->id & 0xFDFF | ((v) & 1) << 9)
 #define SET_FLAG10(o, v)    ((o)->id = (o)->id & 0xFBFF | ((v) & 1) << 10)
+#define SET_FLAG11(o, v)    ((o)->id = (o)->id & 0xF7FF | ((v) & 1) << 11)
+#define SET_ENCHANTED(o, v) ((o)->id = (o)->id & 0xEFFF | ((v) & 1) << 12)
 #define SET_DOORDIR(o, v)   ((o)->id = (o)->id & 0xDFFF | ((v) & 1) << 13)
 #define SET_INVIS(o, v)     ((o)->id = (o)->id & 0xBFFF | ((v) & 1) << 14)
 #define SET_ISQUANT(o, v)   ((o)->id = (o)->id & 0x7FFF | ((v) & 1) << 15)
@@ -343,9 +345,19 @@ unsigned char far HasOrIsObj(struct Object far *obj, int id);
 struct Object far * far Obj_FindInMap(int major, int minor, int index, int *x, int *y);
 int far check_weight(union Link far *head, int min, int z, int adjust);
 unsigned char far ObjCrunch(char how);
+extern struct StaticObj far *objdata;
+extern unsigned char far *LastActiveMob;
+extern unsigned char far *ActiveMob;
+extern unsigned far *objtop;  /* the free static list; objtop and crittop tie objbot and critbot */
+extern unsigned far *objbot;
+extern unsigned far *objptr;
+extern unsigned far *crittop;  /* the free mobile list */
+extern unsigned far *critbot;
+extern unsigned far *critptr;
 
 /* MAPADDR.C: Map_GetAddr and CreateObj */
 struct Tile far * far Map_GetAddr(int x, int y);
+struct Object far * far CreateObj(int item, char mobile);
 
 /* OBJCLASS.C: object class data */
 extern struct Object far *ActiveObj;
@@ -355,6 +367,7 @@ char * far get_class_data(void);
 
 /* ANIMOBJ.C: animated object class data */
 char * far animobj_class_data(void);
+void far animobj_load(FILE *fd);
 
 /* COMBINE.C: combining objects */
 void far init_combinables(void);
@@ -365,15 +378,69 @@ char far make_stew(void);
 
 /* HACK.C: hack class data */
 char * far hack_class_data(void);
+/* A missile weapon, 3 bytes: the ranged weapons table of DATA\OBJECTS.DAT, in Missile[]. */
+struct MissileInfo {
+    unsigned char damage;               /* 0x00 */
+    unsigned char type;                 /* 0x01, the missile type */
+    signed char ammo;                   /* 0x02, the ammunition it fires */
+};
+
+/* A melee weapon, 8 bytes: the melee weapons table of DATA\OBJECTS.DAT. */
+struct Weapon {
+    unsigned char damage[3];            /* by swing kind: slash, bash, stab */
+    unsigned char min_charge;           /* 0x03 */
+    unsigned char speed;                /* 0x04 */
+    unsigned char max_charge;           /* 0x05 */
+    unsigned char skill;                /* 0x06, the skill it uses */
+    unsigned char durability;           /* 0x07 */
+};
+
+/* One armour or wearable's properties, 4 bytes, 32 of them from OBJECTS.DAT (UW-Formats,
+   "Armour and wearables table"), in ovr120's Armor. */
+struct Armour {
+    unsigned char protection;           /* 0x00 */
+    unsigned char durability;           /* 0x01 */
+    unsigned char b2;                   /* 0x02 */
+    unsigned char category;             /* 0x03: 0 shield, 1 body armour, 3 leggings,
+                                           4 gloves, 5 boots, 8 hat, 9 ring */
+};
+
+extern struct MissileInfo Missile[16];
+extern struct Weapon Weapons[16];
+extern struct Armour Armor[32];
+void far hack_init(FILE *fd);
 
 /* MISC.C: misc class data */
 char * far misc_class_data(void);
+/* One container type, 3 bytes: OBJECTS.DAT's container table (Guide, "Containers table"). */
+struct Container {
+    unsigned char capacity;             /* 0x00, 0 for no limit */
+    int mask;                           /* 0x01, what it accepts: an item id, 0x200.. a kind, or -1 */
+};
+/* The kinds a container's mask can name, as INVPANEL.C's ItemFitsSlot tests them. */
+#define CONT_RUNES      0x200           /* runestones (the rune bag) */
+#define CONT_MISSILES   0x201           /* sling stones, bolts, arrows and wands */
+#define CONT_SCROLLS    0x202           /* scrolls and maps */
+#define CONT_FOOD       0x203           /* food and reagents, not drinks */
+#define CONT_KEYS       0x204           /* keys, or a container of keys */
+
+/* One entry per light source type (item class, lit types 4 to 7). */
+struct Light {
+    unsigned char duration;             /* burn rate, 0 for an unlit light */
+    unsigned char pad;
+};
+
+extern struct Container Containers[16];
+extern struct Light Lights[16];
+extern char Food[0x10];
+void far misc_init(FILE *fd);
 
 /* DAMAGE.C: damage to objects */
 int far debris_type(int item, char type);
 char far damage_object(struct Object far *obj, struct Object far *who, int damage, int x, int y);
 char far remove_lock(struct Object far *obj, char all);
 unsigned char far check_res(struct Object far *obj, unsigned char damage, unsigned char type);
+char far damage_item(struct Object far *obj, struct Object far *who, int x, int y, unsigned char damage, unsigned char type);
 
 /* TREASURE.C: spilling a container's contents, and critter loot */
 char far drop_link_chain(struct Object far *cont, int owner);
@@ -391,6 +458,12 @@ void far UseThing(struct Object far *obj, void (far *fn)());
 int far checkLock(struct Object far *who, struct Object far *door, int key);
 void far BlastFunction(void);
 void far remove_spell(struct Object far *obj);
+extern long nextSpellTime;
+extern unsigned char always_decode;
+struct Object far * far UseObj(struct Object far *who, struct Object far *obj, unsigned char how);
+int far using_punt(struct Object far *obj, char inv, char how);
+char far flip_switch(struct Object far *obj, int state);
+char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
 
 /* USEITEMS.C: using objects */
 extern char door_type;
@@ -415,6 +488,8 @@ void far UseRune(struct Object far *who, struct Object far *rune);
 void far UseRect(struct Object far *who, struct Object far *obj);
 void far UseMagic(struct Object far *who, struct Object far *obj, char how);
 void far UseUtil(struct Object far *obj, char how);
+void far UseOilOn(struct Object far *obj, unsigned char how, unsigned char other);  /* ties UseKeyOn */
+void far UseKeyOn(struct Object far *obj, unsigned char how);
 
 /* LOOK.C: looking at things */
 char far do_mods(struct Object far *obj, int lore, char *s);
@@ -438,8 +513,24 @@ unsigned char far mts_doanim(struct Object far *obj, int x, int y, char who);
 int far get_animlen(struct Object far *obj);
 void far set_animlen(struct Object far *obj, int len);
 unsigned char far rem_timer_obj(int index);
+extern char animcount;
+extern struct AnimClass animclassd[16];
+extern int timerlist[0x40];
+extern char timercount;
+extern struct Anim animlist[0x40];
+int far add_animobj(int index, int len, unsigned char a, unsigned char x, unsigned char y);
+unsigned char far put_effect(struct Object far *who, int cls, int len, int frame, int z, int x, int y);
+int far find_anim(struct Object far *obj);
 
 #define OBJECT_H_COMPLETE
 #include "level.h"
 
+/* RECT.C */
+char * far rect_class_data(void);
+
+/* SPEC.C */
+char * far spec_class_data(void);
+
+/* STUFF.C */
+char * far stuff_class_data(void);
 #endif

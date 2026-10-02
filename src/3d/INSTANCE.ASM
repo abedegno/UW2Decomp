@@ -54,6 +54,10 @@
 ; module's. Where the piece starts is not known: it is taken from that pointer, and it runs to
 ; the end of the segment; the bytes before it come from the EXE (tools/extract.py).
 
+; The model interpreter's opcode table: a word per opcode, the offset of its handler
+; (INTERP.ASM), in seg052_519C, the data segment while interpreting.
+OPCODE_TABLE    equ     24F4h
+
         .386
 
         extrn   _seg021_22FD_C10:far
@@ -211,7 +215,7 @@ _seg004_0849_3000 proc near
         int     3
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _seg004_0849_3000 endp
 
 ; render_3d  (+3007): FM render_3d
@@ -291,7 +295,7 @@ _render_3d proc far
         mov     si,word ptr ds:[14CCh]
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         mov     ax,seg seg_370D
         mov     ds,ax
         mov     ax,word ptr cs:L30DA

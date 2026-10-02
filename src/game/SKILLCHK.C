@@ -18,9 +18,6 @@
 #include "sys.h"
 #include "ui.h"
 
-extern unsigned char RightPanel;
-extern struct Inplist near *inplist;
-extern unsigned char far *foreground_color;
 /* DS:8E1, levels by experience / 500. */
 /* name: no FM Towns name (it sits just past _ShowStupidFirstPersonWeapon there), so this
    name is ours. FM Towns has the table too, unnamed (static), read the same way, one byte

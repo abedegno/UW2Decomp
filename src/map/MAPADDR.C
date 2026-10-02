@@ -13,7 +13,6 @@
 #include "map.h"
 #include "object.h"
 
-extern struct Tile far *mapdata;
 
 /* The tile at x, y, or a null pointer when either is outside 0..63. */
 struct Tile far * far Map_GetAddr(int x, int y)
@@ -37,23 +36,23 @@ struct Object far * far CreateObj(int item, char mobile)
     if (obj == 0L)
         return 0L;
     obj->qn.f.quality = 40;
-    obj->id = obj->id & 0xFE00 | item & ID_ITEM;
-    obj->pos = obj->pos & 0xFF80;
-    obj->id = obj->id & 0xDFFF;
-    obj->id = obj->id & 0xBFFF;
-    obj->id = obj->id & 0xEFFF;
-    obj->id = obj->id & 0xF7FF;
-    obj->pos = obj->pos & 0x1FFF | 0x6000;
-    obj->pos = obj->pos & 0xE3FF | 0x0C00;
-    obj->pos = obj->pos & 0xFC7F;
-    obj->id = obj->id & 0xE1FF;
+    SET_ITEM(obj, item);
+    SET_Z(obj, 0);
+    SET_DOORDIR(obj, 0);
+    SET_INVIS(obj, 0);
+    SET_ENCHANTED(obj, 0);
+    SET_FLAG11(obj, 0);
+    SET_FINEX(obj, 3);
+    SET_FINEY(obj, 3);
+    SET_HEADING(obj, 0);
+    SET_FLAGS(obj, 0);
     obj->qn.f.next = 0;
     obj->ol.f.owner = 0;
     if (com->stack == 0 || com->stack == 2) {
         obj->ol.f.link = 1;
-        obj->id = obj->id & 0x7FFF | ID_ISQUANT;
+        SET_ISQUANT(obj, 1);
     } else {
-        obj->id = obj->id & 0x7FFF;
+        SET_ISQUANT(obj, 0);
         obj->ol.f.link = 0;
     }
     if (OBJ_MAJOR(obj) == MAJOR_CREATURE)

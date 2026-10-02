@@ -58,6 +58,19 @@
 ; at 3205.
 ; Its relocations are entries 2473-2475 of UW2.EXE's relocation table.
 
+; The BIOS video (int 10h) functions used here.
+VID_SET_MODE    equ     00h
+VID_DISPLAY_CODE equ     1Ah
+; The VGA ports used here.
+ATTR_INDEX      equ     3C0h  ; attribute controller
+SC_INDEX        equ     3C4h  ; sequencer index
+SC_DATA         equ     3C5h  ; sequencer data
+DAC_WRITE_INDEX equ     3C8h  ; DAC write index
+GC_INDEX        equ     3CEh  ; graphics controller index
+GC_DATA         equ     3CFh  ; graphics controller data
+CRTC_INDEX      equ     3D4h  ; CRT controller index
+INPUT_STATUS    equ     3DAh  ; input status 1 (vertical retrace)
+
 _ShowClip       equ     0DC4h           ; seg_370D:0DC4, symbols.tsv
 _Transparency   equ     0DC5h           ; seg_370D:0DC5, symbols.tsv
 
@@ -899,7 +912,7 @@ _seg003_0272_283D proc near
 L2850:
         mov     word ptr ds:[36A4h],0FFFFh
         call    _SetVideoMode_seg003_0272_2B9B
-        mov     dx,3D4h
+        mov     dx,CRTC_INDEX
         mov     al,9
         out     dx,al
         inc     dx
@@ -936,7 +949,7 @@ L2877:
         pop     es
         test    ax,ax
         jne     L28AE
-        mov     dx,3D4h
+        mov     dx,CRTC_INDEX
         mov     al,9
         out     dx,al
         inc     dx
@@ -944,7 +957,7 @@ L2877:
         out     dx,al
         jmp     short L28B9
 L28AE:
-        mov     dx,3D4h
+        mov     dx,CRTC_INDEX
         mov     al,9
         out     dx,al
         inc     dx
@@ -1003,13 +1016,13 @@ L291C:
         mov     si,3E00h
 _seg003_0272_292D:
         cli
-        mov     dx,3DAh
+        mov     dx,INPUT_STATUS
 L2931:
         in      al,dx
         and     al,8
         je      L2931
         mov     al,0
-        mov     dx,3C8h
+        mov     dx,DAC_WRITE_INDEX
         out     dx,al
         inc     dx
         mov     cx,100h
@@ -1048,7 +1061,7 @@ _seg003_0272_295F proc near
         shl     bx,1
         mov     ax,word ptr [bx+36ACh]
         mov     bx,ax
-        mov     dx,3D4h
+        mov     dx,CRTC_INDEX
         mov     al,0Ch
         out     dx,ax
         mov     ah,bl
@@ -1073,13 +1086,13 @@ _seg003_0272_2977 proc near
         mov     bx,cx
         shr     ax,1
         mov     ah,al
-        mov     dx,3D4h
+        mov     dx,CRTC_INDEX
         mov     al,13h
         out     dx,al
         inc     dx
         mov     al,ah
         out     dx,al
-        mov     dx,3C0h
+        mov     dx,ATTR_INDEX
         mov     al,30h
         out     dx,al
         inc     dx
@@ -1106,7 +1119,7 @@ L29B6:
         dec     ax
         call    _seg003_0272_2A8F
 L29C8:
-        mov     dx,3DAh
+        mov     dx,INPUT_STATUS
 L29CB:
         in      al,dx
         and     al,8
@@ -1115,7 +1128,7 @@ L29D0:
         in      al,dx
         and     al,8
         jne     L29D0
-        mov     dx,3D4h
+        mov     dx,CRTC_INDEX
         mov     al,0Ch
         out     dx,al
         inc     dx
@@ -1185,7 +1198,7 @@ L2A4B:
 L2A4F:
         xor     cx,cx
         call    _seg003_0272_2B2C
-        mov     dx,3DAh
+        mov     dx,INPUT_STATUS
 L2A57:
         in      al,dx
         and     al,8
@@ -1195,7 +1208,7 @@ L2A5C:
         and     al,8
         jne     L2A5C
         pop     bx
-        mov     dx,3D4h
+        mov     dx,CRTC_INDEX
         mov     al,0Ch
         out     dx,al
         inc     dx
@@ -1207,7 +1220,7 @@ L2A5C:
         inc     dx
         mov     al,bl
         out     dx,al
-        mov     dx,3DAh
+        mov     dx,INPUT_STATUS
 L2A77:
         in      al,dx
         and     al,8
@@ -1216,7 +1229,7 @@ L2A7C:
         in      al,dx
         and     al,8
         je      L2A7C
-        mov     dx,3C0h
+        mov     dx,ATTR_INDEX
         mov     al,33h
         out     dx,al
         pop     ax
@@ -1231,7 +1244,7 @@ _seg003_0272_2A0D endp
 ; overflow bits in registers 7 (bit 4) and 9 (bit 6).
 _seg003_0272_2A8F proc near
         push    ax
-        mov     dx,3D4h
+        mov     dx,CRTC_INDEX
         mov     al,18h
         out     dx,al
         inc     dx
@@ -1399,7 +1412,7 @@ _seg003_0272_2B62 endp
 ; _2B7A: is there a VGA? int 10h, AX = 1A00h (read display combination): carry clear for an
 ; active VGA (codes 7 or 8), set otherwise.
 _seg003_0272_2B7A proc near
-        mov     ax,1A00h
+        mov     ax,VID_DISPLAY_CODE shl 8
         int     10h
         cmp     al,1Ah
         jne     L2B99
@@ -1425,9 +1438,9 @@ _seg003_0272_2B7A endp
 ; on, the whole 256 KB cleared, and the CRTC switched from doubleword to byte addressing. Leaves
 ; the sequencer index at the map mask.
 _SetVideoMode_seg003_0272_2B9B proc near
-        mov     ax,13h
+        mov     ax,(VID_SET_MODE shl 8) + 13h
         int     10h
-        mov     dx,3C4h
+        mov     dx,SC_INDEX
         mov     al,4
         out     dx,al
         inc     dx
@@ -1435,7 +1448,7 @@ _SetVideoMode_seg003_0272_2B9B proc near
         and     al,0F7h
         or      al,4
         out     dx,al
-        mov     dx,3CEh
+        mov     dx,GC_INDEX
         mov     al,5
         out     dx,al
         inc     dx
@@ -1450,9 +1463,9 @@ _SetVideoMode_seg003_0272_2B9B proc near
         and     al,0FDh
         out     dx,al
         mov     ax,0FF08h
-        mov     dx,3CEh
+        mov     dx,GC_INDEX
         out     dx,ax
-        mov     dx,3C4h
+        mov     dx,SC_INDEX
         mov     ax,0F02h
         out     dx,ax
         push    es
@@ -1462,7 +1475,7 @@ _SetVideoMode_seg003_0272_2B9B proc near
         mov     cx,8000h
         rep stosw
         pop     es
-        mov     dx,3D4h
+        mov     dx,CRTC_INDEX
         mov     al,14h
         out     dx,al
         inc     dx
@@ -1476,7 +1489,7 @@ _SetVideoMode_seg003_0272_2B9B proc near
         in      al,dx
         or      al,40h
         out     dx,al
-        mov     dx,3C4h
+        mov     dx,SC_INDEX
         mov     al,2
         out     dx,al
         ret
@@ -1562,9 +1575,9 @@ _seg003_0272_2C44 proc near
         ret
 _seg003_0272_2C9A:
         mov     ax,1803h
-        mov     dx,3CEh
+        mov     dx,GC_INDEX
         out     dx,ax
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         mov     bl,0Fh
         push    es
         mov     es,word ptr ds:[3DFCh]
@@ -1617,7 +1630,7 @@ L2CF6:
         jmp     L2CBA
 L2D01:
         mov     ax,3
-        mov     dx,3CEh
+        mov     dx,GC_INDEX
         out     dx,ax
         mov     al,8
         out     dx,al
@@ -1633,7 +1646,7 @@ L2D14:
         ret
         call    _nullsub_2
 L2D19:
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         mov     bl,byte ptr ds:[4111h]
         push    es
         mov     es,word ptr ds:[3DFCh]
@@ -1699,7 +1712,7 @@ _seg003_0272_2C44 endp
 ;   _2E3A  copy the spans' whole groups from the other page (410C) through the latches
 ;   _2E79  copy from the other page (_2F18), then the same onto the displayed page (410E)
 _seg003_0272_2D83 proc near
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         mov     bl,byte ptr ds:[4111h]
         push    es
         mov     es,word ptr ds:[3DFCh]
@@ -1755,16 +1768,16 @@ L2DD0:
         jmp     L2DAD
 L2DE8:
         mov     al,0FFh
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         pop     es
         ret
         call    _nullsub_2
 _seg003_0272_2DF3:
         mov     ax,0
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         mov     al,0Fh
         out     dx,al
         mov     bx,si
@@ -1789,16 +1802,16 @@ L2E0B:
         jmp     L2E0B
 L2E2E:
         mov     ax,0FFh
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         pop     es
         ret
         call    _nullsub_2
 _seg003_0272_2E3A:
         mov     ax,0
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         mov     al,0Fh
         out     dx,al
         mov     bx,si
@@ -1834,16 +1847,16 @@ _seg003_0272_2E79:
         jmp     short L2E9A
 L2E8E:
         mov     ax,0FFh
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         pop     es
         ret
         call    _nullsub_2
 L2E9A:
         mov     ax,0
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         mov     bx,si
         push    es
         mov     es,word ptr ds:[3DFCh]
@@ -1896,7 +1909,7 @@ L2EF1:
         jmp     L2ECC
 L2F0C:
         mov     ax,0FFh
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         pop     es
         ret
@@ -1912,9 +1925,9 @@ _seg003_0272_2D83 endp
 ;          area is not in video memory, not traced
 _seg003_0272_2F18 proc near
         mov     ax,0
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         mov     bx,si
         push    es
         mov     es,word ptr ds:[3DFCh]
@@ -1967,16 +1980,16 @@ L2F6F:
         jmp     L2F4A
 L2F8A:
         mov     ax,0FFh
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         pop     es
         ret
         call    _nullsub_2
 _seg003_0272_2F96:
         mov     ax,0
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         mov     al,0Fh
         out     dx,al
         mov     bx,si
@@ -2004,10 +2017,10 @@ L2FD1:
         ret
         call    _nullsub_2
 _seg003_0272_2FD6:
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         mov     al,0Fh
         out     dx,al
-        mov     dx,3C4h
+        mov     dx,SC_INDEX
         mov     al,2
         out     dx,al
         inc     dx
@@ -2057,10 +2070,10 @@ L3032:
         ret
         call    _nullsub_2
 _seg003_0272_303B:
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         mov     al,0Fh
         out     dx,al
-        mov     dx,3CEh
+        mov     dx,GC_INDEX
         mov     al,4
         out     dx,al
         inc     dx
@@ -2118,7 +2131,7 @@ _seg003_0272_3094 proc near
         cmp     ax,word ptr ds:[3DF4h]
         jl      L30CE
 _seg003_0272_30AC:
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         push    es
         mov     es,word ptr ds:[3DFCh]
         mov     di,ax
@@ -2170,7 +2183,7 @@ _seg003_0272_30FB proc near
         mov     ah,al
         and     ah,3
         mov     al,4
-        mov     dx,3CEh
+        mov     dx,GC_INDEX
         out     dx,ax
         push    es
         mov     es,word ptr ds:[3DFCh]
@@ -2195,11 +2208,11 @@ _seg003_0272_3121 proc near
         sub     cx,dx
         inc     cx
         mov     ax,0
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         mov     al,byte ptr [di+3B64h]
         and     al,byte ptr [di+3CA8h]
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         out     dx,al
         shr     di,1
         shr     di,1
@@ -2217,7 +2230,7 @@ L3153:
         loop    L3153
         pop     es
         mov     ax,0FFh
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         ret
 _seg003_0272_3121 endp
@@ -2231,7 +2244,7 @@ _seg003_0272_3164 proc near
         inc     cx
         mov     al,byte ptr [di+3B64h]
         and     al,byte ptr [di+3CA8h]
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         out     dx,al
         shr     di,1
         shr     di,1

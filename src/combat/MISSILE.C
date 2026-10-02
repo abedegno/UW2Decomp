@@ -21,6 +21,7 @@
    Name: descriptive (missiles: player_fire, missile_fire). */
 
 #include "combat.h"
+#include "event.h"
 #include "inv.h"
 #include "map.h"
 #include "motion.h"
@@ -29,11 +30,6 @@
 #include "sound.h"
 #include "sys.h"
 #include "ui.h"
-
-extern struct Object far *objdata;
-extern struct Inplist near *inplist;
-extern struct MissileInfo Missile[];
-extern int PlayerPitch;
 
 /* This file's _DATA, DS:03B4..03B5: it starts the word after seg026's strings end. */
 unsigned char using_bow = 0;
@@ -50,16 +46,6 @@ static int missile_item;                /* DS:250E */
 static struct Object far *missile_src;  /* DS:2510 */
 static int missile_arc;                 /* DS:2514, always 1 */
 int missile_trx, missile_try;           /* DS:2516, 2518 */
-
-/* Elsewhere in the game. */
-char far play_effect_here(int fx, int vol, int c);
-void far play_effect_on_mobile(int fx, struct Object far *obj, int vol);
-unsigned char far can_place(int item, int a, int x, int y, int z, int b, char dist);
-struct Object far * far obj_deal(struct Object far *obj, int x, int y, int a);
-void far check_pplate(struct Object far *obj, struct Tile far *tile, int z, int how);
-struct Object far * far CreateObj(int id, int b);
-void far ObjectCheck(int a, int b);
-void far TerrainCheck(int a);
 
 /* The player's aim from the mouse position in the 3D view: missile_trx turns the shot
    up to about 40 heading units (of 256 a turn) either side of straight ahead, and
@@ -115,7 +101,7 @@ void far player_fire(int weapon)
         player_settr();
         if ((proj = missile_fire()) != 0) {
             if (using_bow && weapon != 8) {
-                if (play_effect_here(9, 0x40, 0) != -1)
+                if ((char)play_effect_here(9, 0x40, 0) != -1)
                     update_digi_playback();
             }
             fired = 1;
@@ -176,7 +162,7 @@ char far spell_fire(struct Object far *who, int spell)
     if (who == ThePlayer)
         player_settr();
     else {
-        if (who >= objdata) {
+        if (who >= (struct Object far *)objdata) {
             missile_x = inanmMapX;
             missile_y = inanmMapY;
             missile_try = 0;
@@ -258,8 +244,8 @@ char far ReturnObject(struct Object far *obj, char message)
             SET_FINEY(obj, y & 7);
             Obj_AddEnd(&tile->objects, obj);
             if (OBJ_CLASS(obj) == CLASS_LIGHT && OBJ_INCLASS(obj) >= 4 && OBJ_INCLASS(obj) <= 6)
-                obj->id = obj->id & 0xFFF0 | OBJ_INCLASS(obj) - 4 & 0xF;
-            if ((hit = obj_deal(obj, tx, ty, 1)) != 0 && hit > objdata)
+                SET_INCLASS(obj, OBJ_INCLASS(obj) - 4);
+            if ((hit = obj_deal(obj, tx, ty, 1)) != 0 && hit > (struct Object far *)objdata)
                 check_pplate(hit, tile, OBJ_Z(hit), 7);
             obj = 0;
         } else {
@@ -315,8 +301,8 @@ struct Object far * far missile_fire(void)
         missile_arc += missile_trx;
         missile_arc = (missile_arc + 0x100) & 0xFF;
         mob_init(proj, missile_x, missile_y);
-        proj->pos = proj->pos & 0xFC7F | (missile_arc >> 5 & 7) << 7;
-        proj->b18 = proj->b18 & 0xE0 | ((unsigned char)missile_arc & 0x1F) << 0;
+        SET_HEADING(proj, missile_arc >> 5);
+        SET_FINEHEAD(proj, (unsigned char)missile_arc);
         proj->heading = missile_arc;
         SET_DOORDIR(proj, 0);
         SET_Z(proj, OBJ_Z(missile_src));
@@ -326,7 +312,8 @@ struct Object far * far missile_fire(void)
             z = OBJ_Z(proj);
             SET_Z(proj, z + ComObjData[OBJ_ITEM(missile_src)].height * 5 / 6 + missile_try * 2);
             if (missile_src == ThePlayer && player->swim_count > 0x50)
-                SET_Z(proj, z + missile_try * 2 + (ComObjData[OBJ_ITEM(missile_src)].height - (player->swim_count >> 3)));
+                SET_Z(proj, z + missile_try * 2
+                      + (ComObjData[OBJ_ITEM(missile_src)].height - (player->swim_count >> 3)));
             if (!push_missile(proj, missile_src, 1))
                 goto failed;
         } else if (!push_missile(proj, missile_src, 1))
@@ -341,12 +328,12 @@ struct Object far * far missile_fire(void)
                     launcher = 0;
             }
             proj->last_hit = launcher;
-            proj->b15 = proj->b15 & 0x7F;
-            proj->b0A = proj->b0A & 0x7F;
+            SET_B15_7(proj, 0);
+            SET_LONER(proj, 0);
         }
-        proj->b14 = proj->b14 & 7 | ((unsigned char)missile_try + 0x10 & 0x1F) << 3;
-        proj->b14 = proj->b14 & 0xF8 | 1;
-        proj->b13 = proj->b13 & 0x80 | ((unsigned char)missile_class & 0x7F) << 0;
+        SET_PITCH(proj, (unsigned char)missile_try + 0x10);
+        SET_RATE(proj, 1);
+        SET_SPEED(proj, (unsigned char)missile_class);
         if (ComObjData[missile_item].can_own)
             proj->ol.f.owner = 0;
         Obj_Add(&Map_GetAddr(OBJ_HOMEX(proj), OBJ_HOMEY(proj))->objects, proj);
@@ -389,8 +376,8 @@ unsigned char far push_missile(struct Object far *proj, struct Object far *src, 
             return 0;
     }
     if (launch) {
-        proj->home = proj->home & 0x3FF | (curP->x >> 3 & 0x3F) << 10;
-        proj->home = proj->home & 0xFC0F | (curP->y >> 3 & 0x3F) << 4;
+        SET_HOMEX(proj, curP->x >> 3);
+        SET_HOMEY(proj, curP->y >> 3);
         SET_FINEX_UNSIGNED(proj, curP->x & 7);
         SET_FINEY(proj, curP->y & 7);
     }

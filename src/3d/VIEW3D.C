@@ -91,13 +91,11 @@ unsigned char enc_dat[16][7] = {
 unsigned char flciel[16] = { 0x00, 0x80, 0xC0, 0xC1, 0xC2, 0xC3, 0x84, 0x85, 0x86, 0x87 };
 unsigned char tile_to_five[16] = { 0, 0, 0, 0, 0, 0, 1, 2, 3, 4 };
 /* Per side of the arc (0 left, 1 right). */
-static int side_dark[2] = { 0x10, 0 };
-static int side_wall[2] = { 2, 4 };
+static int side_dark[2] = { TW_NORTH, 0 };
+static int side_wall[2] = { TW_WEST, TW_EAST };
 static int side_tile[2] = { 2, 3 };
 static int side_step[2] = { -1, 1 };
 
-extern struct Inplist near *inplist;
-extern unsigned long far *Time;
 /* match: this file's _BSS, DS:26EA..2C67 (seg031's ends at 26E9; seg019's starts at 2C68 with
    cWCol, key 27), laid out by name (tools/bssorder.py): lcldblen 148, xhgt 176, glocs 191,
    mxY 237, quad 377, strtime 411, mapptr 653, curZoom 667, gvecs 703, demo_mode 708,
@@ -119,12 +117,8 @@ int far *DbEntry;
 /* seg_5DFD (declared in gfx.h) is the 4 KB far buffer at 5DFD:0000 (segment table entry
    60) that seg004's texture loader copies a bitmap into; seg032_2E9B_195 points the
    bitmap table's segments back at it.
-   name: seg_5DFD is DOS only, no FM Towns name: IDA's segment name.
-   smooth_base is renderer data, the base added to the distance shade; GAMESORT.C reads
-   it as a byte, so each file declares it its own way. */
-extern int far smooth_base;
+   name: seg_5DFD is DOS only, no FM Towns name: IDA's segment name. */
 
-void far gr_putlab(int lab);
 
 /* Place the view window (w by h at x, y; y is its bottom row, since mous_player gets
    y - h + 1 as the top),
@@ -460,8 +454,8 @@ char far enc_n_chk(register struct Gvec *v, char dir, char want)
         v->loc->flags = 0;
     else {
         if (code & 0x10) {
-            if ((tile_walls[other = trans_grid[quad][v->map[chgtable[quad][1]].type]] & 8) == 0) {
-                if (v->map[chgtable[quad][1]].height + ((tile_walls[other] & 0x20) == 0x20) - (other == 6)
+            if ((tile_walls[other = trans_grid[quad][v->map[chgtable[quad][1]].type]] & TW_SOUTH) == 0) {
+                if (v->map[chgtable[quad][1]].height + ((tile_walls[other] & TW_SLOPE) == TW_SLOPE) - (other == TILE_SLOPE_N)
                     <= v->map->height + (here == 6) + (other == here && here != 1))
                     code -= 0x10;
                 else
@@ -469,8 +463,8 @@ char far enc_n_chk(register struct Gvec *v, char dir, char want)
             }
         }
         if (code & 0x20) {
-            if ((tile_walls[other = trans_grid[quad][v->map[chgtable[quad][0]].type]] & 2) == 0) {
-                if (v->map[chgtable[quad][0]].height + ((tile_walls[other] & 0x20) == 0x20) - (other == 8)
+            if ((tile_walls[other = trans_grid[quad][v->map[chgtable[quad][0]].type]] & TW_WEST) == 0) {
+                if (v->map[chgtable[quad][0]].height + ((tile_walls[other] & TW_SLOPE) == TW_SLOPE) - (other == TILE_SLOPE_E)
                     <= v->map->height + (here == 8) + (other == here && here != 1))
                     code -= 0x20;
                 else
@@ -478,8 +472,8 @@ char far enc_n_chk(register struct Gvec *v, char dir, char want)
             }
         }
         if (code & 8) {
-            if ((tile_walls[other = trans_grid[quad][(v->map - chgtable[quad][0])->type]] & 4) == 0) {
-                if ((v->map - chgtable[quad][0])->height + ((tile_walls[other] & 0x20) == 0x20) - (other == 9)
+            if ((tile_walls[other = trans_grid[quad][(v->map - chgtable[quad][0])->type]] & TW_EAST) == 0) {
+                if ((v->map - chgtable[quad][0])->height + ((tile_walls[other] & TW_SLOPE) == TW_SLOPE) - (other == TILE_SLOPE_W)
                     <= v->map->height + (here == 9) + (other == here && here != 1))
                     code -= 8;
                 else
@@ -489,10 +483,10 @@ char far enc_n_chk(register struct Gvec *v, char dir, char want)
         v->loc->flags = code;
         v->loc->shade = shade;
         if (dir) {
-            if ((tile_walls[trans_grid[quad][v->map[chgtable[quad][1]].type]] & 8) == want
-                    && side_dark[want == 8] == (tile_walls[here] & 0x10)
-                || (tile_walls[here] & 1) == 1
-                    && side_dark[want == 0] == (tile_walls[here] & 0x10)) {
+            if ((tile_walls[trans_grid[quad][v->map[chgtable[quad][1]].type]] & TW_SOUTH) == want
+                    && side_dark[want == TW_SOUTH] == (tile_walls[here] & TW_NORTH)
+                || (tile_walls[here] & TW_DIAG) == TW_DIAG
+                    && side_dark[want == 0] == (tile_walls[here] & TW_NORTH)) {
                 if (dir == 1) {
                     incvec(v);
                     v->fx = 0;

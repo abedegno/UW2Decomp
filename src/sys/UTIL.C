@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include "sys.h"
 
-extern unsigned long far *Time;
 
 /* Steps *val by step in direction dir (-1 or 1) unless that passes limit; returns whether
    it moved. */

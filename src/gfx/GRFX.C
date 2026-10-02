@@ -20,6 +20,8 @@
    grfx_setpal ...). */
 #include <dos.h>
 #include <string.h>
+#include <io.h>
+#include <mem.h>
 #include "file.h"
 #include "gfx.h"
 #include "player.h"
@@ -29,13 +31,9 @@
 
 /* name: FM Towns names; the target table still identifies these DOS entries by IDA name. */
 
-extern struct FontInfo far *cur_font;
-extern unsigned long far *Time;
 /* match: this file's _BSS, DS:5E34..6733 (ovr116's ends at 5E33; ovr119's starts at 6734, its
    keys starting again from gsize's 119): only this file uses it. */
 unsigned char fade_buffer[0x900];
-extern char far stdat;
-extern unsigned char ShowStupidFirstPersonWeapon;
 /* match: the file's _DATA, DS:14C4 to DS:14FE. FM Towns has these as statics after its public
    _grfx_driver (font_name is _grfx_driver+0xD there, font_suffixes +0x1A), which is FM
    Towns' own graphics driver block; DOS has no such block, and its first 12 bytes would
@@ -46,13 +44,9 @@ unsigned char font_name[13] = "font????.sys";
 char font_suffixes[6][5] = { "4x5p", "5x6p", "char", "big", "5x6i", "butn" };
 char sys_suffix[] = ".sys";
 char pals_name[] = "pals.dat";
-void far close(int);
-void far lseek(int, long, int);
-void far movedata(unsigned, unsigned, unsigned, unsigned, unsigned);
-unsigned far get_workspace(void);
-void far mouse_release(int);
 
-void far grfx_init(void)
+/* match: no return statement; UWEDIT.C tests what grfx_quikfont leaves in AL. */
+unsigned char far grfx_init(void)
 {
     seg021_22FD_755();
     init_graphics();
@@ -230,7 +224,7 @@ void far in3d(int count, void (far *callback)(int), int colour)
     }
     {
         screen = MK_FP(seg, 0);
-        movedata(FP_SEG(&stdat), FP_OFF(&stdat), FP_SEG(screen), FP_OFF(screen), 0x6800);
+        movedata(FP_SEG(stdat), FP_OFF(stdat), FP_SEG(screen), FP_OFF(screen), 0x6800);
         ShowStupidFirstPersonWeapon = 0;
         cFillFB(colour);
         send_FB();
@@ -238,7 +232,7 @@ void far in3d(int count, void (far *callback)(int), int colour)
             callback(i);
             send_FB();
             set_workspace();
-            movedata(FP_SEG(screen), FP_OFF(screen), FP_SEG(&stdat), FP_OFF(&stdat), 0x6800);
+            movedata(FP_SEG(screen), FP_OFF(screen), FP_SEG(stdat), FP_OFF(stdat), 0x6800);
             i--;
         }
         send_FB();

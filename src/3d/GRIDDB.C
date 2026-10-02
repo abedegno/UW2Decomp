@@ -51,16 +51,13 @@
 #include "object.h"
 #include "player.h"
 #include "sys.h"
+#include "ui.h"
 #include "view3d.h"
 
 typedef void (far *FlrFn)(unsigned char *pts, unsigned char shade, unsigned char tex);
 typedef void (far *WalFn)(unsigned char *pts, unsigned char shade, unsigned char height,
                           unsigned char tex);
 
-extern unsigned TxmTerr[];
-extern struct Gloc glocs[][33];
-extern unsigned char PlayersMap[MAP_SIZE][MAP_SIZE];
-extern signed char quad;
 
 /* match: this file's _BSS, DS:2C68..2F95 (seg032's xwid ends at 2C67; seg033's ActDoors
    starts at 2F96), laid out by name (tools/bssorder.py): cWCol 27, loopx and loopy 44,
@@ -586,7 +583,7 @@ void far grdb_elem(unsigned char *automap)
             if (p_gloc->shade & bit2) {
                 nh = tmptr[chgtable[quad][wall_nbr[w]]].height;
                 nt = trans_grid[quad][tmptr[chgtable[quad][wall_nbr[w]]].type];
-                if ((tile_walls[nt] & 0x20) == 0x20)
+                if ((tile_walls[nt] & TW_SLOPE) == TW_SLOPE)
                     wi = nt - 6;
                 else
                     wi = 4;

@@ -41,11 +41,6 @@
 #include "ui.h"
 #include "view3d.h"
 
-extern struct Inplist near *inplist;
-extern unsigned long far *Time;
-extern unsigned char far Transparency;
-extern unsigned char far stdat[];
-extern unsigned char Palettes[][16];
 
 /* This file's _BSS, DS:33E8-349A: the low byte of *Time at the last redraw, the weapon
    frame tables and the display elements' settings and goals. */
@@ -61,11 +56,6 @@ unsigned char frmtot[3];
 unsigned char wframe[0x1F];
 unsigned char goal[9];
 
-void far show(int x, int y, unsigned char far *buf, int h, int w, int a, int b);
-void far rectangle(int x1, int y1, int x2, int y2);
-char far gronk_gr(char *name, int start, int count, unsigned char far *(far *adr)(int size),
-                  char (far *mv)(unsigned char far *p, int size, int n));
-void far MapMemory_seg013_1D3C_C7(int phys, int log);
 
 /* The panel showing on the right, an index into panel_dispatch (FM Towns _RightPanel). */
 /* match: DS:79E, the first byte of this file's _DATA: seg035's data ends at 79E and this
@@ -580,7 +570,7 @@ char far do_weapload(void)
         ok &= fclose(fp) == 0;
     }
     start = (1 - player->lefty) * 0x7C + weapid * 0x1F;
-    ok &= gronk_gr("weap", start, count, adr_weapon, move_weapon);
+    ok &= (char)gronk_gr("weap", start, count, (ArtAllocFn)adr_weapon, (ArtMoveFn)move_weapon);
     return ok;
 }
 

@@ -29,6 +29,16 @@
 ; would be enter/leave, which the EXE never has, another sign the frames were
 ; written by hand. Forward jumps carry no padding, so they were written `short`.
 
+; The DOS (int 21h) functions used here.
+DOS_PRINT_STRING equ     09h
+; The VGA ports used here.
+SC_INDEX        equ     3C4h  ; sequencer index
+SC_DATA         equ     3C5h  ; sequencer data
+DAC_WRITE_INDEX equ     3C8h  ; DAC write index
+GC_INDEX        equ     3CEh  ; graphics controller index
+GC_DATA         equ     3CFh  ; graphics controller data
+INPUT_STATUS    equ     3DAh  ; input status 1 (vertical retrace)
+
         .model  medium
         .186
 
@@ -66,7 +76,7 @@ _grab   proc    far
         push    ds
         push    si
         push    di
-        mov     dx,3CEh                         ; graphics controller: read map select
+        mov     dx,GC_INDEX                         ; graphics controller: read map select
         mov     al,4
         out     dx,al
         mov     ax,0C7h
@@ -101,7 +111,7 @@ grab_planes:
 grab_pass:
         push    cx
         push    dx
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         pop     dx
         mov     ah,dl
@@ -129,7 +139,7 @@ grab_down_next:
         add     bx,4
 grab_down_plane:
         push    dx
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         pop     dx
         sub     di,3
@@ -169,7 +179,7 @@ grab_up_plane:
         pop     cx
         dec     cx
         jnz     grab_pass
-        mov     dx,3CEh                         ; graphics controller: bit mask FF
+        mov     dx,GC_INDEX                         ; graphics controller: bit mask FF
         mov     ax,0FF08h
         out     dx,ax
         pop     bp
@@ -188,7 +198,7 @@ _PrintStringToConsole_seg017_DE proc far
         push    dx
         push    ds
         lds     dx,[bp+6]
-        mov     ah,9
+        mov     ah,DOS_PRINT_STRING
         int     21h
         pop     ds
         pop     dx
@@ -408,7 +418,7 @@ _local_do_palette proc far
         mov     bp,sp
         push    si
         push    di
-        mov     dx,3DAh
+        mov     dx,INPUT_STATUS
 palette_wait:
         in      al,dx
         and     al,8
@@ -416,7 +426,7 @@ palette_wait:
         mov     al,[bp+8]
         xor     ah,ah
         mov     di,ax
-        mov     dx,3C8h
+        mov     dx,DAC_WRITE_INDEX
         out     dx,al
         inc     dx
         mov     cx,[bp+6]
@@ -459,10 +469,10 @@ _gr_pixel proc  far
         shr     dx,cl
         add     dx,ax
         add     bx,dx
-        mov     dx,3C4h                         ; sequencer: map mask
+        mov     dx,SC_INDEX                         ; sequencer: map mask
         mov     al,2
         out     dx,al
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         mov     cx,[bp+6]
         and     cx,3
         mov     ax,1
@@ -487,13 +497,13 @@ _DRAW_RELATED_seg017_2179_2A2 proc far
         push    ds
         push    si
         push    di
-        mov     dx,3C4h
+        mov     dx,SC_INDEX
         mov     al,2
         out     dx,al
         mov     ax,0A000h
         mov     es,ax
         mov     ax,1001h
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         mov     di,[bp+0Ah]
         out     dx,al
         mov     byte ptr es:[di],4
@@ -511,7 +521,7 @@ _DRAW_RELATED_seg017_2179_2A2 proc far
         mov     ax,1001h
         xor     dx,dx
 draw_plane:
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         out     dx,al
         mov     dx,[bp+0Eh]
         mov     [bp-2],dx
@@ -550,13 +560,13 @@ _DRAW_RELATED_seg017_2179_320 proc far
         mov     bp,sp
         push    ds
         push    si
-        mov     dx,3CEh
+        mov     dx,GC_INDEX
         mov     al,4
         out     dx,al
         mov     bx,0A000h
         mov     es,bx
         mov     bx,[bp+6]
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         mov     al,1
         out     dx,al
         mov     cl,es:[bx]
@@ -569,7 +579,7 @@ _DRAW_RELATED_seg017_2179_320 proc far
         mov     cl,es:[bx]
         mov     [si],cl
         mov     byte ptr [si+1],0
-        mov     dx,3CEh
+        mov     dx,GC_INDEX
         mov     ax,0FF08h
         out     dx,ax
         pop     si
@@ -589,7 +599,7 @@ _DRAW_RELATED_seg017_2179_361 proc far
         push    ds
         push    si
         push    di
-        mov     dx,3C4h
+        mov     dx,SC_INDEX
         mov     al,2
         out     dx,al
         mov     ax,[bp+0Ah]
@@ -617,7 +627,7 @@ store_byte:
         cmp     al,ah
         jnb     short store_result
         push    dx
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         out     dx,al
         pop     dx
         jmp     store_plane

@@ -38,10 +38,6 @@ static char ordinals[4][3] = { "ST", "ND", "RD", "TH" };
 /* Saved screen areas, DS:1B9F. FM Towns has 12 bytes here, three pointers. */
 int spsave[3] = { 0, 0, 0 };
 
-extern unsigned char far *foreground_color;
-extern unsigned long far *Time;
-extern struct Inplist near *inplist;
-extern char RightPanel;
 
 /* The header: the name (up to 15 characters, upper-cased, centred), the class and the
    level with its ordinal ("12TH"). */

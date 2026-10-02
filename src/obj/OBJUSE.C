@@ -27,30 +27,17 @@
 #include "motion.h"
 #include "object.h"
 #include "player.h"
+#include "sound.h"
 #include "sys.h"
 #include "ui.h"
 
-extern struct Inplist near *inplist;
-extern void (far *ObjectActor)();
-extern char ObjectActorArg;
+/* Defined below; in no header, because SPELLS2.C and BABLHACK.C call it with an int. */
+int far useNSpellCharges(struct Object far *obj, char n);
 
 /* The next time the player may cast from an object, and a flag that makes
    decode_obj_spell always identify the spell. */
 long nextSpellTime = 0;
 unsigned char always_decode = 0;
-
-void far UseKeyOn(struct Object far *obj, unsigned char how);
-struct Object far * far CreateObj(int item, char mobile);
-void far mouse_release(int n);
-void far get_name(char far *buf, struct Object far *obj, int article, char plural);
-void far scroll_print(char far *s);
-void far play_effect(char type, int x, int y, int a);
-char far play_effect_here(int fx, int vol, int c);
-void far UseTrigger(struct Object far *who, struct Object far *obj, struct Object far *trigger, int how);
-
-/* Later in this file. */
-char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
-int far useNSpellCharges(struct Object far *obj, char n);
 
 /* Uses obj on behalf of who (the player or a critter). how is 1 when the player uses it
    from the inventory and 0 in the world (the 3D view, a critter, a collision). In input
@@ -66,7 +53,7 @@ struct Object far * far UseObj(struct Object far *who, struct Object far *obj, u
 
     minor = OBJ_MINOR(obj);
     trap = 1;
-    if (inplist->mode == 4 && (OBJ_MAJOR(obj) != MAJOR_MISC || OBJ_MINOR(obj) != 0))
+    if (inplist->mode == 4 && (OBJ_MAJOR(obj) != MAJOR_MISC || OBJ_MINOR(obj) != MINOR_CONTAINER))
         return obj;
     switch (OBJ_MAJOR(obj)) {
     case MAJOR_HACK:
@@ -253,7 +240,7 @@ void far UseWand(struct Object far *wand, unsigned char how)
             link = &wand->ol.link;
             spell = Obj_InList(&link, 0, MAJOR_SPEC, 2, 0);
             if (spell == 0) {
-                wand->id = wand->id & 0xFFF0 | (OBJ_INCLASS(wand) + 4) & 0xF;
+                SET_INCLASS(wand, OBJ_INCLASS(wand) + 4);
                 game_sprint(0x8B); /* "With a loud <SNAP!>, the wand cracks." */
                 RedisplayInvSlot(FindSlot(wand));
             }
@@ -295,7 +282,7 @@ char far flip_switch(struct Object far *obj, int state)
         return 0;
     play_effect(0x13, (MapObj_X << 3) + 3, (MapObj_Y << 3) + 3, 0);
     type = (type + 8) & 0xF;
-    obj->id = obj->id & 0xFFF0 | type & 0xF;
+    SET_INCLASS(obj, type);
     editchng(2);
     return 1;
 }
@@ -328,7 +315,7 @@ int far checkLock(struct Object far *who, struct Object far *door, int key)
                     (OBJ_CLASS(door) == CLASS_CONTAINER && OBJ_INCLASS(door) < 0xC && (door->id & 1)))
                     return 4;
                 if ((lock->ol.f.link & 0x1FF) == key) {
-                    lock->id = lock->id & 0xFDFF | 0x200;
+                    SET_FLAG9(lock, 1);
                     return 2;
                 }
                 return 0;
@@ -352,7 +339,7 @@ int far checkLock(struct Object far *who, struct Object far *door, int key)
         if (Obj_Rem(link, lock))
             Obj_Free(lock);
     } else
-        lock->id = lock->id & 0xFDFF;
+        SET_FLAG9(lock, 0);
     return 3;
 }
 
@@ -493,7 +480,7 @@ char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsig
 void far remove_spell(struct Object far *obj)
 {
     if (OBJ_ISQUANT(obj) && (obj->id & ID_ENCHANT) && OBJ_MAJOR(obj) != MAJOR_RECT)
-        obj->id = obj->id & 0xEFFF;
+        SET_ENCHANTED(obj, 0);
 }
 
 /* Spends n charges of the cast-on-use spell in obj's contents; its quality is the charge

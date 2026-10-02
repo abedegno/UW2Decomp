@@ -29,6 +29,7 @@
 #include <fcntl.h>
 #include "gfx.h"
 #include "inv.h"
+#include "map.h"
 #include "object.h"
 #include "player.h"
 #include "sys.h"
@@ -37,15 +38,7 @@
 /* Copy a far string, terminator included, to any address. */
 #define far_strcpy(d, s) movedata(FP_SEG(s), FP_OFF(s), FP_SEG(d), FP_OFF(d), str_len(s) + 1)
 
-extern char always_decode;
-extern unsigned TxmTerr[];
 
-void far scroll_print(char far *s);
-void far scroll_clear(int n);
-void far get_name(char far *buf, struct Object far *obj, int article, char plural);
-char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
-void far player_look_grave(int n);
-void far show_cutscene(int n);
 
 /* Prints the look description of obj (see the file comment). The quality word is skipped
    for quality 0 and for a light at quality 1; indestructible items (qualclass 3) use the
@@ -355,7 +348,7 @@ void far BonesLook(struct Object far *obj, int print)
         if (obj->ol.f.owner == 0x3F)
             scroll_print("an adventurer.\n");
         else {
-            tmp.id = tmp.id & 0xFE00 | (obj->ol.f.owner + FIRST_CREATURE) & ID_ITEM;
+            SET_ITEM(&tmp, obj->ol.f.owner + FIRST_CREATURE);
             tmp.whoami = 0;
             get_name(text, &tmp, 1, 0);
             scroll_print(text);

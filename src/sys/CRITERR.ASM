@@ -15,6 +15,10 @@
 ; saved vector and the error code live in the code segment.
 ; name: inferred, System Shock's critical-error handler is CRITERR.C (critical_error).
 
+; The DOS (int 21h) functions used here.
+DOS_SET_VECTOR  equ     25h
+DOS_GET_VECTOR  equ     35h
+
         .186
 
 _DATA   segment word public 'DATA'
@@ -34,14 +38,14 @@ _setvect24 proc near
         push    bp
         push    ds
         push    es
-        mov     ax,3524h
+        mov     ax,(DOS_GET_VECTOR shl 8) + 24h
         int     21h
         mov     word ptr cs:L0170,es
         mov     word ptr cs:L0172,bx
         push    cs
         pop     ds
         mov     dx,offset INT24
-        mov     ax,2524h
+        mov     ax,(DOS_SET_VECTOR shl 8) + 24h
         int     21h
         pop     es
         pop     ds
@@ -62,7 +66,7 @@ _seg021_22FD_174 proc near
         push    ax
         pop     ds
         mov     dx,word ptr cs:L0172
-        mov     ax,2524h
+        mov     ax,(DOS_SET_VECTOR shl 8) + 24h
         int     21h
         pop     ds
         pop     bp

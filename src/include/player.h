@@ -131,12 +131,19 @@ enum PlayerClass {
 #define QB_PIT_RECORD   1               /* quest 129: the win-loss record in the pits */
 #define QB_GEMS_USED    2               /* quest 130: a bit per blackrock gem used up
                                            (UseKeyGem sets them) */
+#define QB_JOSPUR_DEBT  5               /* quest 133: what Jospur owes for fights in the
+                                           pits (BABLHACK.C pays it; cleared on leaving) */
+#define QB_WORMS_KILLED 7               /* quest 135: bloodworms killed on level 4, the
+                                           sewers (death_check counts to 0xC8) */
+#define QB_CUTSCENE     15              /* quest 143: the cutscene to play when a
+                                           conversation ends, plus one (SKILLS.C) */
 #define QB_WORLDS_VISITED 13            /* quest 141: a bit per world visited (the
                                            automap's world list tests them) */
 
 /* The X clocks, struct Player's xclock[] (Guide, "The X Clock"). */
 #define XC_TIME         0               /* the time of day in 72 steps (ovr135 and ovr110
                                            set it, the schedules read it) */
+#define DAY_STEPS       72              /* XC_TIME's steps in a day */
 #define XC_CASTLE       1               /* the castle plot's progress */
 #define XC_GEMS         2               /* Nystrul and the blackrock gems treated */
 #define XC_DJINN        3               /* the djinn capture's progress */
@@ -158,6 +165,8 @@ void far cs_check(void);
 void far do_mstone(void);
 void far player_is_dead(void);
 int far DetectedTrap(struct Object far *obj, int skill);
+unsigned char far player_eat(int nutrition);
+int far RemoveTrap(struct Object far *obj, int skill);
 
 /* SKILLCHK.C: skill checks, experience and levelling */
 void far panel_check_hpmp(void);
@@ -169,6 +178,7 @@ char far DegradeLights(int amount, unsigned char counter);
 void far sink_sink_sink(void);
 char far dispel_spell(int *i);
 void far duration_check(void);
+char far set_curmagic(unsigned char cls, unsigned char sub, unsigned char stability);
 
 /* PLAYER.C: setting up the player */
 extern unsigned char MoveCrits;
@@ -190,6 +200,13 @@ void far move_cam(int how);
 void far attach_eye(int mode);
 void far release_camera(int index);
 void far crystal_ball(struct Object far *obj, int x, int y);
+extern unsigned char IsJoy;
+/* The player record's storage (player points at it), a byte longer than the record. */
+union PlayerStore {
+    struct Player rec;
+    char bytes[0x37E];
+};
+extern union PlayerStore PlayerDat;
 
 /* CHARGEN.C: character creation */
 char far create_player(void);
@@ -209,6 +226,12 @@ void far read_player_data(int fd);
 void far parse_aspells(unsigned char *out);
 void far FixPlayerEquips(void);
 void far load_dl(void);
+extern unsigned char plyNotice[2];
+extern unsigned char UsingPole;
+extern unsigned char light_mod;
+extern signed char light_act;
+extern signed char loc_lght;
+void far set_drugged(char on);
 
 /* PHYSICS.C: the player's physics */
 extern unsigned char frictionless;
@@ -232,6 +255,9 @@ void far player_setup(int x, int y, int how);
 void far phys_affect_player(void);
 void far phys_bounce_up(struct Object far *obj);
 void far fizix_update(void);
+extern int pFPS[3];
+void far parse_player_terr(int terr, char force);
+void far newFPS(char state);
 
 /* Defined where no source has it yet: data the link takes from the EXE. */
 char far GetItemEnchantment(struct Object far *obj, int *major, int *effect, unsigned char *flag);

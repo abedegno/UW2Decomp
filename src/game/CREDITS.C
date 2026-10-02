@@ -8,9 +8,9 @@
    Data: none.
    Name: descriptive (show_credits). */
 
+#include "gfx.h"
 #include "sys.h"
 
-void far show_cutscene(int n);
 
 void far show_credits(void)
 {

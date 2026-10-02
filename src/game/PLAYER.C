@@ -25,12 +25,17 @@
 #include "critter.h"
 #include "file.h"
 #include "gfx.h"
+#include "map.h"
 #include "motion.h"
 #include "object.h"
 #include "player.h"
 #include "sys.h"
 #include "ui.h"
 #include "view3d.h"
+
+/* match: declared here, not in map.h: LIGHTING.C defines set_light(signed char), and this
+   file's callers push an int. */
+void far set_light(int level);
 
 /* match: the file's _DATA starts with these, DS:19DC to DS:19E6, where ovr142's data
    ends: the string after them is at the odd DS:19E7, so this file's word-aligned _DATA
@@ -43,11 +48,6 @@ int PMsHndle = 0;                       /* input_addmouse's handle for the 3D vi
 unsigned long nextstep = 0;
 unsigned long watertime = 0;            /* *Time when seg035 last applied water_eff */
 
-extern int PlayerPitch;
-extern struct Inplist near *inplist;
-extern unsigned vort_rad;
-extern unsigned vort_timer;
-
 /* This file's _BSS, DS:8298..8631 (ovr142's ends at 8297, ovr147's starts at 8632). The
    eight static ints are the handles of the cursor regions over the 3D view. PlayerDat is
    the storage of struct Player (0x37D bytes, one spare). */
@@ -56,13 +56,13 @@ extern unsigned vort_timer;
    region_dl 722, region_up 858, PWid 920, hrgn_ur 976, rgnh_r 1002. */
 /* name: FM Towns keeps the region handles as statics, so they are static here, with
    provisional names chosen for their keys. */
-char IsJoy;
+unsigned char IsJoy;
 static int region_south;                /* DS:829A, the region below the view */
 int PHgt;
 int PLeft;
 static int rgnh_ul;                     /* DS:82A0, up and left */
 static int rgnh_left;                   /* DS:82A2 */
-char PlayerDat[0x37E];
+union PlayerStore PlayerDat;
 int curvrad;
 static int region_br;                   /* DS:8624, down and right */
 int PBot;
@@ -72,19 +72,6 @@ int PWid;
 static int hrgn_ur;                     /* DS:862E, up and right */
 static int rgnh_r;                      /* DS:8630, right */
 
-/* Elsewhere in the game. */
-void far _input_addkey(int key, int a, int b, void (far *handler)());
-int far input_addmouse(int x0, int y0, int x1, int y1, int buttons, int mode, void (far *handler)());
-void far set_light(int level);
-void far scroll_print(char far *s);
-
-/* Input handlers. */
-void far player_attack(int how);
-void far do_escape_key(int a);
-void far npc_barter(int a);
-void far play_barter(int a);
-void far mous_in_3d(int a);
-
 /* Resets the player object: no links, whoami 0xFD, the adventurer's item id, quality
    and owner zero. */
 /* name: FM Towns calls it from init_player_structure; DOS from init_player, which holds
@@ -93,15 +80,15 @@ void far InitPlayerRec(void)
 {
     ThePlayer->ol.f.link = 0;
     ThePlayer->whoami = 0xFD;
-    ThePlayer->id = ThePlayer->id & 0x7FFF;
-    ThePlayer->id = ThePlayer->id & 0xDFFF | ID_DOORDIR;
-    ThePlayer->id = ThePlayer->id & 0xBFFF;
-    ThePlayer->pos = ThePlayer->pos & 0xFC7F;
-    ThePlayer->b18 = ThePlayer->b18 & 0xE0;
+    SET_ISQUANT(ThePlayer, 0);
+    SET_DOORDIR(ThePlayer, 1);
+    SET_INVIS(ThePlayer, 0);
+    SET_HEADING(ThePlayer, 0);
+    SET_FINEHEAD(ThePlayer, 0);
     ThePlayer->qn.f.next = ThePlayer->qn.f.quality = 0;
     ThePlayer->ol.f.link = ThePlayer->ol.f.owner = 0;
     ThePlayer->b11 = 0;
-    ThePlayer->id = ThePlayer->id & 0xFE00 | ITEM_ADVENTURER;
+    SET_ITEM(ThePlayer, ITEM_ADVENTURER);
 }
 
 /* Sets up the player at start-up: the player object is critdata[1], on level 1, with the physics square handler
@@ -142,7 +129,7 @@ void far init_player(void)
     set_light(0);
     PMsHndle = 0;
     IsJoy = (cJoyInit[0] | cJoyInit[1] | cJoyInit[2] | cJoyInit[3]) > 0;
-    player = (struct Player near *)PlayerDat;
+    player = &PlayerDat.rec;
     InitPlayerRec();
     playerdat = &Creature[OBJ_INMAJOR(ThePlayer)];
     ThePlayer->hp = playerdat->avghit;
@@ -171,49 +158,49 @@ void far init_player(void)
     _input_addkey('2', 0, 0x11, chg_plyp);
     _input_addkey('j', 7, 0x1B, parse_playin);
     _input_addkey('J', 6, 0x1B, parse_playin);
-    _input_addkey(0x86, 0, 0x1B, pull_chain);
-    _input_addkey(0x89, 0, 0x1B, player_key_sleep);
-    _input_addkey(0x88, 2, 0x1B, (void (far *)())player_use_skill);
-    _input_addkey(0x87, 1, 0x1B, try_cast);
-    _input_addkey(0x173, 0x173, 1, do_option_shortcut);
-    _input_addkey(0x172, 0x172, 1, do_option_shortcut);
-    _input_addkey(0x16D, 0x16D, 1, do_option_shortcut);
-    _input_addkey(0x166, 0x166, 1, do_option_shortcut);
-    _input_addkey(0x164, 0x164, 1, do_option_shortcut);
-    _input_addkey(0x171, 0x171, 1, do_option_shortcut);
-    _input_addkey(0x85, 5, 1, deal_with_icons);
-    _input_addkey(0x83, 4, 1, deal_with_icons);
-    _input_addkey(0x82, 3, 1, deal_with_icons);
-    _input_addkey(0x84, 2, 1, deal_with_icons);
-    _input_addkey(0x80, 1, 1, deal_with_icons);
-    _input_addkey(0x81, 0, 1, deal_with_icons);
+    _input_addkey(KEY_F7, 0, 0x1B, pull_chain);
+    _input_addkey(KEY_F10, 0, 0x1B, player_key_sleep);
+    _input_addkey(KEY_F9, 2, 0x1B, (void (far *)())player_use_skill);
+    _input_addkey(KEY_F8, 1, 0x1B, try_cast);
+    _input_addkey(KEY_CTRL | 's', KEY_CTRL | 's', 1, do_option_shortcut);
+    _input_addkey(KEY_CTRL | 'r', KEY_CTRL | 'r', 1, do_option_shortcut);
+    _input_addkey(KEY_CTRL | 'm', KEY_CTRL | 'm', 1, do_option_shortcut);
+    _input_addkey(KEY_CTRL | 'f', KEY_CTRL | 'f', 1, do_option_shortcut);
+    _input_addkey(KEY_CTRL | 'd', KEY_CTRL | 'd', 1, do_option_shortcut);
+    _input_addkey(KEY_CTRL | 'q', KEY_CTRL | 'q', 1, do_option_shortcut);
+    _input_addkey(KEY_F6, 5, 1, deal_with_icons);
+    _input_addkey(KEY_F4, 4, 1, deal_with_icons);
+    _input_addkey(KEY_F3, 3, 1, deal_with_icons);
+    _input_addkey(KEY_F5, 2, 1, deal_with_icons);
+    _input_addkey(KEY_F1, 1, 1, deal_with_icons);
+    _input_addkey(KEY_F2, 0, 1, deal_with_icons);
     _input_addkey('p', 9, 1, player_attack);
     _input_addkey('.', 3, 1, player_attack);
     _input_addkey(';', 6, 1, player_attack);
-    _input_addkey(0x4A3, 0x4A3, 7, keyboard_mouse);
-    _input_addkey(9, 9, 7, keyboard_mouse);
-    _input_addkey(0x8D, 0x8D, 7, keyboard_mouse);
-    _input_addkey(0x93, 0x93, 7, keyboard_mouse);
-    _input_addkey(0x8F, 0x8F, 7, keyboard_mouse);
-    _input_addkey(0x91, 0x91, 7, keyboard_mouse);
-    _input_addkey(0x8C, 0x8C, 7, keyboard_mouse);
-    _input_addkey(0x8E, 0x8E, 7, keyboard_mouse);
-    _input_addkey(0x92, 0x92, 7, keyboard_mouse);
-    _input_addkey(0x94, 0x94, 7, keyboard_mouse);
-    _input_addkey(0x95, 0x95, 7, keyboard_mouse);
-    _input_addkey(0x96, 0x96, 7, keyboard_mouse);
-    _input_addkey(0x1B, 4, 4, do_escape_key);
+    _input_addkey(KEY_SHIFT | KEY_BACKTAB, KEY_SHIFT | KEY_BACKTAB, 7, keyboard_mouse);
+    _input_addkey('\t', '\t', 7, keyboard_mouse);
+    _input_addkey(KEY_UP, KEY_UP, 7, keyboard_mouse);
+    _input_addkey(KEY_DOWN, KEY_DOWN, 7, keyboard_mouse);
+    _input_addkey(KEY_LEFT, KEY_LEFT, 7, keyboard_mouse);
+    _input_addkey(KEY_RIGHT, KEY_RIGHT, 7, keyboard_mouse);
+    _input_addkey(KEY_HOME, KEY_HOME, 7, keyboard_mouse);
+    _input_addkey(KEY_PGUP, KEY_PGUP, 7, keyboard_mouse);
+    _input_addkey(KEY_END, KEY_END, 7, keyboard_mouse);
+    _input_addkey(KEY_PGDN, KEY_PGDN, 7, keyboard_mouse);
+    _input_addkey(KEY_INS, KEY_INS, 7, keyboard_mouse);
+    _input_addkey(KEY_DEL, KEY_DEL, 7, keyboard_mouse);
+    _input_addkey(KEY_ESC, 4, 4, (InputFn)do_escape_key);
     _input_addkey('1', 1, 4, conv_play_menu);
     _input_addkey('2', 2, 4, conv_play_menu);
     _input_addkey('3', 3, 4, conv_play_menu);
     _input_addkey('4', 4, 4, conv_play_menu);
     _input_addkey('5', 5, 4, conv_play_menu);
-    input_addmouse(0x46, 0x87, 0x74, 0xBC, 4, 4, npc_barter);
-    input_addmouse(0x77, 0x87, 0xA3, 0xBC, 4, 4, play_barter);
+    input_addmouse(0x46, 0x87, 0x74, 0xBC, 4, 4, (InputFn)npc_barter);
+    input_addmouse(0x77, 0x87, 0xA3, 0xBC, 4, 4, (InputFn)play_barter);
     input_addmouse(0x10, 1, 0xDF, 0x1E, 0, 4, conv_play_menu);
-    _input_addkey(0x268, (int)&mouse_hand, 0x1B, flip_bool);
-    _input_addkey(0x286, 0, 0x1B, show_version);
-    _input_addkey(0x287, 0, 0x1B, report_loc);
+    _input_addkey(KEY_ALT | 'h', (int)&mouse_hand, 0x1B, (InputFn)flip_bool);
+    _input_addkey(KEY_ALT | KEY_F7, 0, 0x1B, (InputFn)show_version);
+    _input_addkey(KEY_ALT | KEY_F8, 0, 0x1B, (InputFn)report_loc);
 }
 
 /* Makes the 3D view the given rectangle: one mouse region for clicks, and eight cursor
@@ -225,7 +212,7 @@ void far mous_player(int left, register int bot, register int wid, int hgt)
     PBot = bot;
     PWid = wid;
     PHgt = hgt;
-    PMsHndle = input_addmouse(left, bot, left + wid - 1, bot + hgt - 1, 0, 0x1B, mous_in_3d);
+    PMsHndle = input_addmouse(left, bot, left + wid - 1, bot + hgt - 1, 0, 0x1B, (InputFn)mous_in_3d);
     rgnh_ul = defineMouseRegion(left, bot, left + wid * 5 / 15, bot + hgt * 3 / 15, 0x106F);
     hrgn_ur = defineMouseRegion(left + wid - wid * 5 / 15, bot, left + wid - 1, bot + hgt * 3 / 15, 0x1070);
     region_up = defineMouseRegion(left + wid * 5 / 15, bot, left + wid - wid * 5 / 15, bot + hgt * 3 / 15, 0x106E);
@@ -432,10 +419,11 @@ void far Vortex_ovr143_E09(void)
     xd = (vort_x << 8) - PN.x;
     yd = (vort_y << 8) - PN.y;
     vort_rad = cSqRt(xd * xd + yd * yd) >> 6;
-    x = (xd << 15) / ((long)vort_rad << 6);
-    y = (yd << 15) / ((long)vort_rad << 6);
+    /* match: this file treated vort_rad and vort_timer as unsigned */
+    x = (xd << 15) / ((long)(unsigned)vort_rad << 6);
+    y = (yd << 15) / ((long)(unsigned)vort_rad << 6);
     vort_theta = cAtan2(y, x);
-    for (vort_timer = 0; vort_timer < 0x40; vort_timer++) {
+    for (vort_timer = 0; (unsigned)vort_timer < 0x40; vort_timer++) {
         establish_view();
         vort_theta += 0xCCB;
     }

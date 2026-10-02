@@ -57,6 +57,10 @@
 ; C788 (FM Towns mapper_rtn, pointing at seg003's debug break), and it runs to the end of the
 ; segment; the bytes before it come from the EXE (tools/extract.py).
 
+; The model interpreter's opcode table: a word per opcode, the offset of its handler
+; (INTERP.ASM), in seg052_519C, the data segment while interpreting.
+OPCODE_TABLE    equ     24F4h
+
         .386
 
         extrn   _checkerboard1:far
@@ -254,7 +258,7 @@ _do_set_tmctxt proc near
         mov     word ptr ds:[0C7FEh],ax
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_set_tmctxt endp
 
 ; seg004_0849_3D05  (+3D05)
@@ -271,7 +275,7 @@ L3D12:
 L3D18:
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_set_gmap_ctxt endp
 
 ; seg004_0849_3D1E  (+3D1E)
@@ -297,7 +301,7 @@ _do_ctxt_gmap endp
 _do_gtri proc near
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_gtri endp
 
 ; seg004_0849_3D3E  (+3D3E)
@@ -572,7 +576,7 @@ L3F2E:
         call    _seg004_0849_3F77
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_tmap endp
 
 ; seg004_0849_3F43  (+3F43)
@@ -724,7 +728,7 @@ L4080:
         pop     si
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 ; An overflow handler like overflow_handler_mem that nothing installs.
 L4088   dw      0
 L408A:

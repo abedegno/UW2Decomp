@@ -15,6 +15,10 @@
 ; from anywhere in UW2.
 ; name: descriptive (system module 4, the BIOS keyboard).
 
+; The BIOS keyboard (int 16h) functions used here.
+KBD_READ        equ     00h
+KBD_STATUS      equ     01h
+
         .186
 
 _DATA   segment word public 'DATA'
@@ -47,11 +51,11 @@ _seg021_22FD_224 endp
 ; in AL) and ZF clear, or AX = 0 and ZF set if the buffer is empty. L022E, inside it, reads
 ; a key unconditionally.
 _seg021_22FD_228 proc near
-        mov     ah,1
+        mov     ah,KBD_STATUS
         int     16h
         je      short L0233
 L022E:
-        mov     ah,0
+        mov     ah,KBD_READ
         int     16h
         ret
 L0233:

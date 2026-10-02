@@ -32,6 +32,10 @@
 ; not zeros).
 ; It has no relocations.
 
+; The model interpreter's opcode table: a word per opcode, the offset of its handler
+; (INTERP.ASM), in seg052_519C, the data segment while interpreting.
+OPCODE_TABLE    equ     24F4h
+
         .386
 
 _DATA   segment word public use16 'DATA'
@@ -533,13 +537,13 @@ L05BF:
         pop     si
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 L05E3:
         mov     word ptr ds:[25E2h],0FFFFh
         mov     si,di
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 L05F1:
         pop     di
 L05F2:
@@ -547,7 +551,7 @@ L05F2:
         mov     si,di
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 do_obj endp
 
 SEG004_TEXT ends

@@ -52,13 +52,8 @@ struct ChrOpt {
     int spacing;                        /* 0x10 */
 };
 
-extern unsigned long far *Time;
-extern long lastDurCheck;
-extern unsigned char far *foreground_color;
-extern struct FontInfo far *cur_font;
-extern char in_game;
-extern unsigned char far Transparency;
-extern unsigned char far stdat[][4];
+/* stdat holding DATA\SKILLS.DAT: four bytes a class, its three attributes and its skill points. */
+#define CLASS_TAB ((unsigned char (far *)[4])stdat)
 /* This file's _BSS, DS:47B8..47BF (ovr097's ends at 47B8). */
 /* match: laid out by name: sknow 43, chroff 275, chrbuf 395. */
 /* name: FM Towns keeps the three together too. */
@@ -66,15 +61,6 @@ int sknow;
 int *chroff;                            /* offsets of the button pictures in chrbuf */
 unsigned char far *chrbuf;
 
-void far rectangle(int x0, int y0, int x1, int y1);
-void far show(int x, int y, unsigned char far *buf, int h, int w, int a, int b);
-char far disk_to_vid(int blk, unsigned char far *buf);
-unsigned char far read_quikpal(int which, unsigned char far *pal);
-unsigned char far gronk_gr(char *name, int a, int b, unsigned char far *(far *adr)(int),
-                           int (far *move)(unsigned char far *, int, int));
-void far fadeout(unsigned char far *pal, int steps, int x);
-void far grfx_clear(void);
-void far load_weapcm(void);
 
 /* The starting record of a new character. Fixed values: level 1, one skill point, the
    game clock at 0x465000, the time of day (X clock 0) at 15 of 72, the two moonstones
@@ -237,10 +223,10 @@ void far roll_stats(void)
     register int a;
 
     for (i = 0; i < 3; i++)
-        playerdat->attr[i] = stdat[player->pclass][i];
+        playerdat->attr[i] = CLASS_TAB[player->pclass][i];
     for (i = 0; i < NUM_SKILLS; i++)
         player->skills[i] = 0;
-    i = stdat[player->pclass][3];
+    i = CLASS_TAB[player->pclass][3];
     while (i > 0) {
         pts = (rand() & 3) + 1;
         if (pts > i)
@@ -729,7 +715,7 @@ char far strt_chargen(void)
     ok &= read_quikpal(PAL_CHARGEN, pal);
     set_cuts_ems(0);
     chroff = offs;
-    if (!gronk_gr("chrbtns", 0, -1, adr_chrpic, move_chrpic))
+    if (!gronk_gr("chrbtns", 0, -1, (ArtAllocFn)adr_chrpic, (ArtMoveFn)move_chrpic))
         goto fail;
     chrbuf = pic;
     if ((fd = open("DATA\\skills.dat", O_RDONLY | O_BINARY)) == -1)

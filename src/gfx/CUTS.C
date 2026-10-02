@@ -137,50 +137,22 @@ struct AnmHdr {
 #define LPDESC(anm, n) (&(anm)->lps[n])
 
 typedef int (far *CutsOp)(unsigned far *code, struct CutsState *st);
-typedef void (far *Task)(int task, int done);
 
-extern struct Stdat far stdat;
-
-/* Sound (SOUND.C) and AIL. */
-void far kill_all_digi_effects(void);
-void far set_new_music(unsigned char);
-void far load_new_music(int, int);
+/* stdat as the cutscene player's state. */
+#define STDAT (*(struct Stdat far *)stdat)
 
 /* EMS and files. */
-extern char ws_active;
 /* The first EMS page of the speech being streamed: the one-byte far variable at 6388:0000.
    cutsop_say passes sound_fpage, as FM Towns' cutsop_say_ does (_sound_fpage).
    name: FM Towns has it as a static (_task_sofar+0x22, beside sp_npages and audio_inpage at
    +0x20 and +0x21), so the name is provisional.
    match: far, so its own segment (segment table entry 77). */
 static unsigned char far speech_fpage;
-void far MapMemory_seg013_1D3C_C7(int phys, int page);
-unsigned char far seg013_1D3C_E4(int bank, int page, int count);
-unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
-
-/* Graphics. */
-extern unsigned long far *Time;
-extern unsigned char far *foreground_color;
-extern struct FontInfo far *cur_font;
-extern unsigned char far Transparency;
-void far rectangle(int, int, int, int);
-void far show(int x, int y, unsigned char far *buf, int h, int w, int skipx, int skipy);
-void far fadeout(unsigned char far *, int, int);
-void far grfx_clear(void);
-void far grfx_quikpal(int);
-unsigned char far read_quikpal(int which, unsigned char far *pal);
-void far grfx_palrange(unsigned char far *pal, int first, int count);
-
-/* Elsewhere. */
-extern unsigned char in_game;
-extern struct Inplist *inplist;
 
 #define SPEECH_BUF(o) MK_FP(EmsBuff + 0x800, (o))
 #define RESTORE_EMS() \
     if (ws_active) seg013_1D3C_E4(0, 0, 4); \
     else if (obj_inpage1 != 0xFF) MapMemory_seg013_1D3C_C7(2, obj_inpage1)
-
-int far install_timebased_task(Task fn, int period, int total);
 
 /* Initialised data, DS:1064 to DS:1141. */
 static int lp_page = -1;                /* the LPF page readlpinc is reading */
@@ -422,7 +394,7 @@ unsigned char far read_anmhdr(unsigned char far *dst)
     int i;
     unsigned value;
     wanted = 0xB00;
-    actual = intoFarBuffer_ovr167_5DA(stdat.anm_fd, dst, wanted);
+    actual = intoFarBuffer_ovr167_5DA(STDAT.anm_fd, dst, wanted);
     for (i = 0; i < 16; i++) {
         value = ((struct AnmHdr far *)dst)->cycles[i].period;
         ((struct AnmHdr far *)dst)->cycles[i].period = (value >> 8) & 0x3F;
@@ -436,9 +408,9 @@ int far readlp(unsigned page, struct LpDesc far *desc, void far *dst)
 {
     int size;
     register int got;
-    lseek(stdat.anm_fd, ((long)page << 16) + 0xB00L, 0);
+    lseek(STDAT.anm_fd, ((long)page << 16) + 0xB00L, 0);
     size = desc->nbytes + desc->nrecords * 2 + 8;
-    got = intoFarBuffer_ovr167_5DA(stdat.anm_fd, dst, size);
+    got = intoFarBuffer_ovr167_5DA(STDAT.anm_fd, dst, size);
 }
 
 /* 0x819: reads the next n bytes of large page page into dst, continuing where the last
@@ -451,12 +423,12 @@ int far readlpinc(unsigned page, struct LpDesc far *desc, unsigned n, void far *
     out_size = desc->nrecords * 2 + desc->nbytes + 8;
     if (page != lp_page) {
         lp_page = page;
-        lseek(stdat.anm_fd, ((long)page << 16) + 0xB00L, 0);
+        lseek(STDAT.anm_fd, ((long)page << 16) + 0xB00L, 0);
         lp_left = out_size;
     }
     if (lp_left == 0) return 0;
     if (n > lp_left) n = lp_left;
-    amount = intoFarBuffer_ovr167_5DA(stdat.anm_fd,
+    amount = intoFarBuffer_ovr167_5DA(STDAT.anm_fd,
              target + out_size - lp_left, n);
     lp_left -= amount;
     return amount;
@@ -568,8 +540,8 @@ void far cuts_do_fadeout(struct CutsState *st, int frame)
    in direction dir (pan_dx, pan_dy: 0 adds to y, 1 to x, 2 takes from y, 3 from x). */
 void far do_pan(struct CutsState *st)
 {
-    focus_x = st->panx51 + (stdat.frame + 1) * st->step57 * pan_dx[st->dir55];
-    focus_y = st->pany53 + (stdat.frame + 1) * st->step57 * pan_dy[st->dir55];
+    focus_x = st->panx51 + (STDAT.frame + 1) * st->step57 * pan_dx[st->dir55];
+    focus_y = st->pany53 + (STDAT.frame + 1) * st->step57 * pan_dy[st->dir55];
     vscreen_focus(focus_x, focus_y);
     st->remaining59--;
 }
@@ -768,7 +740,7 @@ int far cutsop_say(unsigned far *code, register struct CutsState *st)
 int far cutsop_fadeout(unsigned far *code, struct CutsState *st)
 {
     if (st->windowed == 0 && st->fade49 > -2) st->fade49 = code[0];
-    cuts_do_fadeout(st, stdat.frame);
+    cuts_do_fadeout(st, STDAT.frame);
     return 1;
 }
 
@@ -776,7 +748,7 @@ int far cutsop_fadeout(unsigned far *code, struct CutsState *st)
 int far cutsop_fadein(unsigned far *code, struct CutsState *st)
 {
     if (st->windowed == 0 && st->fade47 > -2) st->fade47 = code[0];
-    cuts_do_fadein(st, stdat.frame);
+    cuts_do_fadein(st, STDAT.frame);
     return 1;
 }
 
@@ -1014,8 +986,8 @@ int far run_time_critical_things(struct CutsState *st, struct AnmHdr far *hdr)
 {
     anm_cycle(hdr->cycles);
     anm_sound(st);
-    if (*Time - stdat.tick >= 8) {
-        stdat.tick = *Time;
+    if (*Time - STDAT.tick >= 8) {
+        STDAT.tick = *Time;
         run_timebased_tasks(0);
     }
     return 0;
@@ -1028,9 +1000,9 @@ int far cuts_run_pause(register struct CutsState *st, struct AnmHdr far *hdr)
     unsigned long now;
     register int in;
     in = -1;
-    last = (*Time - stdat.start) >> 8;
+    last = (*Time - STDAT.start) >> 8;
     while (in == -1 && !st->flags.bit.b1 &&
-           (now = (*Time - stdat.start) >> 8) < st->frame3F) {
+           (now = (*Time - STDAT.start) >> 8) < st->frame3F) {
         if (st->flags.bit.b7) in = gobble_input_events(0);
         else in = gobble_input_events(st);
         if (now > last) last = now;
@@ -1045,16 +1017,16 @@ int far cuts_run_pause(register struct CutsState *st, struct AnmHdr far *hdr)
    record. An opcode of 29 or more stops the scan. */
 void far cuts_process_opcodes(int frame, register struct CutsState *st)
 {
-    while (*stdat.code == frame && st->repeat41 == 0) {
-        if ((unsigned far *)stdat.n00 + 0x200 - ((*stdat.code >> 5) ? 1 << (*stdat.code >> 5) : 4) > stdat.code) {
-            stdat.code += 2;
-            if (stdat.code[-1] < 0x1D)
-                stdat.code += cuts_dispatch[stdat.code[-1]](stdat.code, st);
+    while (*STDAT.code == frame && st->repeat41 == 0) {
+        if ((unsigned far *)STDAT.n00 + 0x200 - ((*STDAT.code >> 5) ? 1 << (*STDAT.code >> 5) : 4) > STDAT.code) {
+            STDAT.code += 2;
+            if (STDAT.code[-1] < 0x1D)
+                STDAT.code += cuts_dispatch[STDAT.code[-1]](STDAT.code, st);
             else return;
         } else {
-            lseek(stdat.n0x_fd, (stdat.code - (unsigned far *)stdat.n00 - 0x200) * 2, 1);
-            intoFarBuffer_ovr167_5DA(stdat.n0x_fd, stdat.n00, 0x400);
-            stdat.code = (unsigned far *)stdat.n00;
+            lseek(STDAT.n0x_fd, (STDAT.code - (unsigned far *)STDAT.n00 - 0x200) * 2, 1);
+            intoFarBuffer_ovr167_5DA(STDAT.n0x_fd, STDAT.n00, 0x400);
+            STDAT.code = (unsigned far *)STDAT.n00;
         }
     }
 }
@@ -1253,26 +1225,26 @@ int far cuts_process_lp(register struct CutsState *st, struct AnmHdr far *anm,
     register int i;
 
     first = 1;
-    stdat.start = *Time;
-    page = set_cuts_ems(stdat.ems_page);
+    STDAT.start = *Time;
+    page = set_cuts_ems(STDAT.ems_page);
     sizes = ((struct LpPage far *)page)->sizes;
     data = (unsigned char far *)(sizes + lp->nrecords);
-    last = anm->nlps - 1 == stdat.lp_index && anm->lastdelta ? 1 : 0;
+    last = anm->nlps - 1 == STDAT.lp_index && anm->lastdelta ? 1 : 0;
     nrec = lp->nrecords - last;
     st->frame3D = st->frame3F = 0;
     st->flags.bit.b1 = 0;
-    if (nrec > 0 && anm->nlps - 1 > stdat.lp_index) {
+    if (nrec > 0 && anm->nlps - 1 > STDAT.lp_index) {
         struct LpDesc far *d;
         register unsigned sz;
-        d = LPDESC(anm, stdat.lptab[stdat.lp_index + 1]);
+        d = LPDESC(anm, STDAT.lptab[STDAT.lp_index + 1]);
         sz = d->nbytes + d->nrecords * 2 + 8;
         perrec = (nrec + sz - 1) / nrec;
     } else perrec = -2;
     for (i = 0; i < nrec && st->flags.bit.b2 && st->flags.bit.b3; i++) {
-        page = set_cuts_ems(stdat.ems_page);
+        page = set_cuts_ems(STDAT.ems_page);
         size = sizes[i];
         if (size != 0) size -= 4;
-        if (st->vscr4F == 0 && stdat.frame == 0 && st->fade49 > -2 && st->windowed == 0) {
+        if (st->vscr4F == 0 && STDAT.frame == 0 && st->fade49 > -2 && st->windowed == 0) {
             grSoftPageFlip();
             grfx_clear();
             flipped = 1;
@@ -1301,22 +1273,22 @@ int far cuts_process_lp(register struct CutsState *st, struct AnmHdr far *anm,
                 }
             }
         }
-        if (st->vscr4F == 0 && stdat.frame == 0 && st->fade49 > -2 && st->windowed == 0) {
+        if (st->vscr4F == 0 && STDAT.frame == 0 && st->fade49 > -2 && st->windowed == 0) {
             grPageFlip();
             grfx_setpal(st->palette);
             grSoftPageFlip();
         }
         data += sizes[i];
-        if (stdat.ahead_page >= 0 && anm->nlps > stdat.ahead_index) {
-            ems2 = set_cuts_ems(stdat.ahead_page);
-            readlpinc(stdat.lptab[stdat.ahead_index], LPDESC(anm, stdat.lptab[stdat.ahead_index]), perrec, ems2);
+        if (STDAT.ahead_page >= 0 && anm->nlps > STDAT.ahead_index) {
+            ems2 = set_cuts_ems(STDAT.ahead_page);
+            readlpinc(STDAT.lptab[STDAT.ahead_index], LPDESC(anm, STDAT.lptab[STDAT.ahead_index]), perrec, ems2);
         }
-        stdat.frame++;
+        STDAT.frame++;
         run_time_critical_things(st, anm);
         gobble_input_events(st);
-        if (st->repeat41 == 0) cuts_process_opcodes(stdat.frame, st);
+        if (st->repeat41 == 0) cuts_process_opcodes(STDAT.frame, st);
         if (!st->flags.bit.b0 && first)
-            while (!st->flags.bit.b0 && (now = *Time) - stdat.start < 0x100 / anm->rate) {
+            while (!st->flags.bit.b0 && (now = *Time) - STDAT.start < 0x100 / anm->rate) {
                 run_time_critical_things(st, anm);
                 gobble_input_events(st);
             }
@@ -1325,19 +1297,19 @@ int far cuts_process_lp(register struct CutsState *st, struct AnmHdr far *anm,
             cuts_draw_text(st);
             st->flag39 = 0;
         }
-        if (!st->flags.bit.b0 && st->frame3F != 0 && st->frame3D == stdat.frame)
+        if (!st->flags.bit.b0 && st->frame3F != 0 && st->frame3D == STDAT.frame)
             cuts_run_pause(st, anm);
-        if (st->frame3B == stdat.frame) {
+        if (st->frame3B == STDAT.frame) {
             st->frame3B = 0;
             if (st->flags.bit.b0) st->flags.bit.b0 = 0;
         }
-        if (st->repeat41 > 0 && st->repeat43 == stdat.frame) {
+        if (st->repeat41 > 0 && st->repeat43 == STDAT.frame) {
             first = 1;
             st->repeat41--;
             st->file4B = st->file4D;
             return 1;
         }
-        stdat.start = now;
+        STDAT.start = now;
     }
     return 0;
 }
@@ -1364,13 +1336,13 @@ void far cuts_process_anm(struct CutsState *st)
 
     result = 0;
     run_timebased_tasks(1);
-    n0x = stdat.n00 + 0x400;
+    n0x = STDAT.n00 + 0x400;
     hdr = (struct AnmHdr far *)n0x;
     desc = ((struct AnmHdr far *)n0x)->lps;
     st->palette = n0x + 0xB00;
-    stdat.lptab = st->palette + 0x300;
+    STDAT.lptab = st->palette + 0x300;
     cuts_process_opcodes(0x3E5, st);
-    if ((stdat.anm_fd = open(st->name, 0x8001)) == -1) {
+    if ((STDAT.anm_fd = open(st->name, 0x8001)) == -1) {
         st->flags.bit.b3 = 0;
         return;
     }
@@ -1379,28 +1351,28 @@ void far cuts_process_anm(struct CutsState *st)
         goto done;
     }
     if (st->windowed == 0) conv_anmpal(((struct AnmHdr far *)n0x)->palette, st->palette);
-    build_lptab(desc, hdr->nlps, stdat.lptab);
+    build_lptab(desc, hdr->nlps, STDAT.lptab);
     lp_page = -1;
     for (i = 0; i < num_buf && i < hdr->nlps; i++) {
         img = set_cuts_ems(i);
         if (img != 0)
-            if (readlp(stdat.lptab[i], &desc[stdat.lptab[i]], img) == -1) ;
+            if (readlp(STDAT.lptab[i], &desc[STDAT.lptab[i]], img) == -1) ;
     }
-    stdat.ahead_page = 1 - num_buf;
-    stdat.ems_page = 0;
-    stdat.ahead_index = 1;
-    stdat.lp_index = 0;
-    stdat.frame = 0;
+    STDAT.ahead_page = 1 - num_buf;
+    STDAT.ems_page = 0;
+    STDAT.ahead_index = 1;
+    STDAT.lp_index = 0;
+    STDAT.frame = 0;
     st->flags.bit.b1 = 0;
     st->flags.bit.b2 = 1;
-    if (st->repeat41 == 0) cuts_process_opcodes(stdat.frame, st);
+    if (st->repeat41 == 0) cuts_process_opcodes(STDAT.frame, st);
     for (i = 0; i < hdr->nlps && st->flags.bit.b2 && st->flags.bit.b3 && !result; i++) {
         result = cuts_process_lp(st, (struct AnmHdr far *)n0x,
-            &desc[stdat.lptab[stdat.lp_index]]);
-        stdat.lp_index++;
-        stdat.ahead_index++;
-        if (++stdat.ems_page >= num_buf) stdat.ems_page = 0;
-        if (++stdat.ahead_page >= num_buf) stdat.ahead_page = 0;
+            &desc[STDAT.lptab[STDAT.lp_index]]);
+        STDAT.lp_index++;
+        STDAT.ahead_index++;
+        if (++STDAT.ems_page >= num_buf) STDAT.ems_page = 0;
+        if (++STDAT.ahead_page >= num_buf) STDAT.ahead_page = 0;
     }
     if (st->repeat41 == 0) {
         reset_inf_values_eof(st);
@@ -1408,7 +1380,7 @@ void far cuts_process_anm(struct CutsState *st)
         if (st->fade49 == -2) grfx_clear();
     }
 done:
-    close(stdat.anm_fd);
+    close(STDAT.anm_fd);
 }
 
 /* 0x2B73: plays cutscene cuts in the window x, y, w, h (y is the top row, bottom-up):
@@ -1428,20 +1400,20 @@ void far show_anm(int cuts, int x, int y, int w, int h)
     st.h = h;
     if (x == 0 && y == 199 && w == 320 && h == 200) st.windowed = 0;
     else st.windowed = 1;
-    stdat.n00 = stdat.n00buf;
-    n0x = stdat.n00 + 0x400;
+    STDAT.n00 = STDAT.n00buf;
+    n0x = STDAT.n00 + 0x400;
     st.palette = n0x + 0xB00;
-    stdat.screen = MK_FP(FP_SEG(&stdat) + 0x134, 0);
+    STDAT.screen = MK_FP(FP_SEG(stdat) + 0x134, 0);
     if (get_cuts_ems() >= 3) {
         st.file4B = 0;
         cuts_make_fname(st.name, cuts, st.file4B);
-        if ((stdat.n0x_fd = open(st.name, 1)) == -1) {
+        if ((STDAT.n0x_fd = open(st.name, 1)) == -1) {
             seg042_35ED_12B();
             return;
         }
         if (st.windowed == 0) grfx_clear();
-        intoFarBuffer_ovr167_5DA(stdat.n0x_fd, stdat.n00, 0x400);
-        stdat.code = (unsigned far *)stdat.n00;
+        intoFarBuffer_ovr167_5DA(STDAT.n0x_fd, STDAT.n00, 0x400);
+        STDAT.code = (unsigned far *)STDAT.n00;
         cuts_init_info(&st);
         movedata(FP_SEG(palette), FP_OFF(palette), FP_SEG(st.palette), FP_OFF(st.palette), 0x300);
         if (st.windowed == 0) fadeout(st.palette, 2, 1);
@@ -1467,8 +1439,8 @@ void far show_anm(int cuts, int x, int y, int w, int h)
         free_cuts_ems();
     }
     free_speech_stuff();
-    close(stdat.n0x_fd);
-    mem_set(stdat.screen, 0, 0xFA00);
+    close(STDAT.n0x_fd);
+    mem_set(STDAT.screen, 0, 0xFA00);
 }
 
 /* 0x2DC5: the entry point (see the file comment). Sets the big font and the string block
@@ -1494,7 +1466,7 @@ void far show_cutscene(register unsigned n)
         w = 0xD0;
         h = 0x7F;
     }
-    if (n == 2) load_new_music(1, 1);
+    if (n == 2) load_new_music(MUSIC_THEME, 1);
     grfx_quikfont(FONT_BIG);
     CutsceneOrConversationStringBlock = n + STRBLK_CUTSCENE;
     mouse_hide();
@@ -1694,7 +1666,7 @@ int far virtual_screen(int w, int h, int split)
     ShowClip = 1; \
     set_the_window(top, bottom, right, left)
 
-/* 0x33E0: loads CUTS\lbackNNN.byt (a raw 320 by 200 picture) into stdat.screen and draws
+/* 0x33E0: loads CUTS\lbackNNN.byt (a raw 320 by 200 picture) into STDAT.screen and draws
    it into the virtual screen with its top left at x, y, in two parts when the screen has
    a split. Returns bltfromdrive's result. */
 int far lback_vscreen(int x, int y, unsigned n)
@@ -1710,17 +1682,17 @@ int far lback_vscreen(int x, int y, unsigned n)
     name[10] = ((n >> 6) & 7) + '0';
     name[11] = ((n >> 3) & 7) + '0';
     name[12] = (n & 7) + '0';
-    ok = bltfromdrive(name, stdat.screen, 0xFA00);
+    ok = bltfromdrive(name, STDAT.screen, 0xFA00);
     if (split == 0) {
         LBACK_WINDOW(y);
-        show(0, 0xC7, stdat.screen, 200, 320, 0, 0);
+        show(0, 0xC7, STDAT.screen, 200, 320, 0, 0);
     } else {
         LBACK_WINDOW(y);
-        show(0, 0xC7, stdat.screen, 200 - (split + 1), 320, 0, 0);
+        show(0, 0xC7, STDAT.screen, 200 - (split + 1), 320, 0, 0);
         ShowClip = 0;
         LBACK_WINDOW(y - (0xC7 - split));
         if (bottom != left)
-            show(0, 0xC7, stdat.screen, 200, 320, 0, 200 - (split + 1));
+            show(0, 0xC7, STDAT.screen, 200, 320, 0, 200 - (split + 1));
     }
     ShowClip = 0;
     vscreen_focus(focus_x, focus_y);

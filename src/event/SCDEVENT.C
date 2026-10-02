@@ -24,6 +24,7 @@
    Name: descriptive (the SCD event handlers: ev_*, gronkify_*, Sched_DoEvent). */
 #include <dos.h>
 #include <stdlib.h>
+#include "combat.h"
 #include "conv.h"
 #include "critter.h"
 #include "event.h"
@@ -31,8 +32,10 @@
 #include "object.h"
 #include "player.h"
 
-extern unsigned LastActiveMob;
-extern unsigned char far *ActiveMob;
+/* match: declared here, not in event.h: TRIGGER.C defines set_numbered_variable with an
+   unsigned char op, and this file's callers push op zero-extended to an int. */
+void far set_numbered_variable(int left, int op, int right);
+
 
 /* Calls code(npc, param) for the first (loop clear) or every active critter of a race,
    skipping loners. code returns true when it removed the critter from the active list. */
@@ -43,7 +46,7 @@ void far gronk_race(int race, unsigned char loop, int param,
     struct Object far *npc;
 
     list = (unsigned char far *)MK_FP(FP_SEG(ActiveMob), FP_OFF(ActiveMob));
-    while ((unsigned)list < LastActiveMob) {
+    while ((unsigned)list < FP_OFF(LastActiveMob)) {
         npc = Obj_IntTMem(*list);
         if (OBJ_MAJOR(npc) == MAJOR_CREATURE &&
             Creature[npc->id & ID_INMAJOR].race == race &&
@@ -65,7 +68,7 @@ void far gronk_all_critters(unsigned char loop, int param,
     struct Object far *npc;
 
     list = (unsigned char far *)MK_FP(FP_SEG(ActiveMob), FP_OFF(ActiveMob));
-    while ((unsigned)list < LastActiveMob) {
+    while ((unsigned)list < FP_OFF(LastActiveMob)) {
         npc = Obj_IntTMem(*list);
         if (OBJ_MAJOR(npc) == MAJOR_CREATURE) {
             if (code(npc, param))
@@ -77,8 +80,6 @@ void far gronk_all_critters(unsigned char loop, int param,
     }
 }
 
-void far gronk_whoami(int whoami, unsigned char all, int arg,
-                     char (far *fn)(struct Object far *, int));
 
 /* Selects critters by params: the low byte is the mode (0 by whoami, 1 by race, 2 the
    object with that index, 3 all), the high byte the value matched. */
@@ -113,7 +114,6 @@ char far ev_change_goal(char far *row)
     return 0;
 }
 
-char far check_alert(int mode, int x, int y);
 
 /* True when the player could see fine position x, y: it is roughly in front of him
    (within one eighth of a turn of his facing) and check_alert does not rule it out. */
@@ -134,8 +134,6 @@ unsigned char far player_looking(int x, int y)
 }
 
 struct EventRow { unsigned char b[16]; };
-unsigned char far teleport_critter(struct Object far *npc, int x, int y, int mode);
-void far Sched_Migrate(struct EventRow far *row);
 
 /* Event 2: moves the NPC to the row's square (and level), but only where the player can
    see neither the NPC nor the destination, unless the row's unseen flag says otherwise; with
@@ -160,9 +158,9 @@ char far gronkify_teleport(struct Object far *npc, unsigned char *row)
     }
     if (row[12] > 0) {
         copy = *(struct EventRow *)row;
-        *(unsigned *)copy.b = (unsigned)(player->xclock[XC_TIME] + row[12]) % 0x48;
+        *(unsigned *)copy.b = (unsigned)(player->xclock[XC_TIME] + row[12]) % DAY_STEPS;
         copy.b[3] = 1;
-        Sched_Migrate(&copy);
+        Sched_Migrate((struct SCDRow far *)&copy);
     }
     return 0;
 }
@@ -184,8 +182,6 @@ int far gronkify_remove(struct Object far *obj)
     return Obj_Punt(&tile->objects, obj, 1) == 0;
 }
 
-extern unsigned char far *SCD_dseg_67d6_8634;
-void far instant_kill(struct Object far *npc);
 
 /* Event 3: kills the critter outright, except the NPC the player is talking to when
    row[7] is 0; in that case, for a repeating row with row[8] set and byte 6 of the
@@ -195,7 +191,7 @@ void far instant_kill(struct Object far *npc);
 char far gronkify_slay(struct Object far *npc, unsigned char *row)
 {
     if (!row[7] && npc == talking_to) {
-        if (row[8] > 0 && SCD_dseg_67d6_8634[6] == 15 && !row[3])
+        if (row[8] > 0 && SCD_dseg_67d6_8634->migrationRecord[0].event == 15 && !row[3])
             player->xclock[XC_CHANGED]++;
         return 0;
     }
@@ -233,7 +229,6 @@ char far ev_set_qbit(unsigned char far *row)
     return 0;
 }
 
-void far UseTrigger(long a, long b, struct Object far *trigger, int kind);
 
 /* Event 5: fires every trigger of minor class 0xC on square (row[5], row[6]) with
    UseTrigger kind 0xC (the scheduled triggers' mode in the Guide's trigger type
@@ -269,8 +264,8 @@ char far gronkify_nystul(struct Object far *npc, unsigned char *row)
     p = r + 6;
     heading = p[2];
     npc->heading = heading << 5;
-    npc->pos = npc->pos & 0xFC7F | ((heading & 7) << 7);
-    npc->b18 &= 0xE0;
+    SET_HEADING(npc, heading);
+    SET_FINEHEAD(npc, 0);
     return 0;
 }
 
@@ -315,7 +310,6 @@ char far ev_gotha_hack(char far *row)
     return 0;
 }
 
-void far set_numbered_variable(int left, int op, int right);
 
 /* Hack 1 (the gargoyle, inferred from the name): if the critter stands on square
    (row[8], row[9]), applies set_numbered_variable(word at row[10], op row[12], word at
@@ -385,8 +379,6 @@ char far ev_soldier_hack(char far *row)
     return 0;
 }
 
-void far change_terrain(int x, int y, int wall, int floor, int height,
-                               int type, int a, int b, int c);
 /* Hack 3: across the whole map, about half the tiles whose floor is the given texture
    get the new floor texture and are raised by the given height (change_terrain; the ice
    caverns' freezing, inferred from the name). */
@@ -420,7 +412,6 @@ char far ev_door_hack(unsigned char far *row)
     return 0;
 }
 
-extern char (far *NestedSCDEventCodeJumps_dseg_67d6_1344[])(unsigned char far *);
 /* Event 7: dispatches by the row's hack byte. */
 void far ev_hack(unsigned char far *row)
 {
@@ -432,7 +423,7 @@ void far ev_hack(unsigned char far *row)
    hostile also forgets who last hit it. */
 char far gronkify_attitude(struct Object far *npc, int attitude)
 {
-    npc->attitude_word = npc->attitude_word & 0x3FFF | ((attitude & 3) << 14);
+    SET_ATTITUDE(npc, attitude);
     if (attitude)
         npc->last_hit = 0;
     return 0;
@@ -490,8 +481,6 @@ char far ev_trapvar(unsigned char far *row)
     return 0;
 }
 
-extern char (far *SCDEventCodeJumps_dseg_67d6_1364[])(unsigned char far *);
-void far Sched_Delete(unsigned char far *row);
 
 /* Runs one schedule row if it applies to this level and is enabled. Returns 5 when it did
    not apply, 6 for an unknown event code, 4 when the row deleted itself (a once row), else
@@ -509,7 +498,7 @@ char far Sched_DoEvent(unsigned char far *row)
         return 6;
     result = SCDEventCodeJumps_dseg_67d6_1364[(signed char)row[4]](row);
     if (row[3]) {
-        Sched_Delete(row);
+        Sched_Delete((struct SCDRow far *)row);
         return 4;
     }
     return result;
@@ -518,7 +507,6 @@ char far Sched_DoEvent(unsigned char far *row)
 /* This file's _DATA, DS:1344..1393: the schedule event handlers, by the event row's
    sub-code (the hack byte of event 7) and code. */
 /* match: ovr112's data ends at 1343, odd; ovr114's starts at 1394. */
-typedef char (far *SCDEventFn)(unsigned char far *);
 SCDEventFn NestedSCDEventCodeJumps_dseg_67d6_1344[8] = {
     (SCDEventFn)ev_donothing, (SCDEventFn)ev_garg_hack,
     (SCDEventFn)ev_soldier_hack, ev_freeze_hack, ev_door_hack,

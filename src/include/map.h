@@ -78,6 +78,8 @@ enum TileType {
 };
 
 #define MAP_SIZE        0x40            /* the map is 64 by 64 tiles (UW-Formats 4.2) */
+#define MAP_MASK        0x3F            /* keeps a tile coordinate on the map */
+#define MAP_TILES       0x1000          /* MAP_SIZE * MAP_SIZE: a byte a tile in PlayersMap */
 #define NUM_LEVELS      0x50            /* 80: LEV.ARK holds four blocks a level for 80
                                            levels (UW-Formats 4.1) */
 #define LEVELS_PER_WORLD 8              /* each world has eight levels; (level - 1) / 8
@@ -100,11 +102,17 @@ char far Anim_Load(char far *source);
 char far Anim_Save(char far *destination);
 unsigned char far Map_Load(int arc, int level, int folderType);
 char far Map_Save(int arc, int level, int folderType);
+extern struct Tile far *mapdata;
+char far Map_Init(void);
 
 /* TEXTMAPS.C: a level's texture map */
 extern int TxmID[0x40];
 void far load_txtmaps(void);
 void far Load_Terrains(int *ids);
+extern unsigned TxmTerr[0x40];
+char far init_txtlib(void);
+unsigned char far Txm_Load(int arc, int lev, int flags);
+unsigned char far Txm_Save(int arc, int lev, int flags);
 
 /* LIGHTING.C: lighting */
 void far init_lighting(void);
@@ -120,6 +128,12 @@ void far ComputeHeading(void);
 int far get_home_tile(void);
 void far process_objlist(void);
 unsigned char far drop_around_place(struct Object far *obj, int x, int y, int z, int range);
+void far TerrainCheck(unsigned char range);
+void far ObjectCheck(unsigned char flat, unsigned char useflag);
+unsigned char far can_place(int item, int index, int x, int y, int z, unsigned char flier, unsigned char range);
+unsigned char far put_at(int x, int y, int z, struct Object far *obj, int range, unsigned char nocull);
+unsigned char far near_mob_put_at(struct Object far *src, struct Object far *obj, int range, unsigned char nocull);
+extern char stay_centered;
 
 /* Defined where no source has it yet: data the link takes from the EXE. */
 extern unsigned char far ModelData_seg052_519C_2600;

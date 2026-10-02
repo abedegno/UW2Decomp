@@ -25,11 +25,7 @@
 #include "sys.h"
 #include "view3d.h"
 
-extern unsigned char Palettes[];
-extern unsigned char far Transparency;
 
-void far MapMemory_seg013_1D3C_C7(int physical, int page);
-void far show(int x, int y, void far *data, int width, int height, int a, int b);
 
 /* Maps the EMS page holding slot icon into physical page 2 (unless it is mapped already,
    obj_inpage1) and returns the picture's address in the frame. */
@@ -57,7 +53,7 @@ void far seg009_73(int icon, int x, int y, int height, int width)
         width = raw->width;
         height = raw->height;
         if (raw->type != BM_8BIT)
-            picture = cFrmtoRaw(&raw->u.b4.size, Palettes + ((unsigned)raw->u.b4.auxpal << 4),
+            picture = cFrmtoRaw(&raw->u.b4.size, Palettes[raw->u.b4.auxpal],
                                 raw->type);
         else
             picture = raw->u.b8.data;
@@ -73,7 +69,7 @@ void far * far grs_unpack(void far *data)
     void far *result;
     if (((struct Bitmap far *)data)->type != BM_8BIT)
         result = cFrmtoRaw(&((struct Bitmap far *)data)->u.b4.size,
-                   Palettes + ((unsigned)((struct Bitmap far *)data)->u.b4.auxpal << 4),
+                   Palettes[((struct Bitmap far *)data)->u.b4.auxpal],
                    ((struct Bitmap far *)data)->type);
     else
         result = ((struct Bitmap far *)data)->u.b8.data;
@@ -88,7 +84,7 @@ void far grs_fbplot(int icon, int x, int y)
     int width = p->width, height = p->height;
     void far *picture;
     if (p->type != BM_8BIT)
-        picture = cFrmtoRaw(&p->u.b4.size, Palettes + ((unsigned)p->u.b4.auxpal << 4), p->type);
+        picture = cFrmtoRaw(&p->u.b4.size, Palettes[p->u.b4.auxpal], p->type);
     else
         picture = p->u.b8.data;
     fbshow(picture, x, y, width, height);

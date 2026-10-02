@@ -141,16 +141,16 @@ char far update_converse_data(struct Object far *npc)
     bab_var_out("npc_goal", &val, 1);
     bab_var_out("npc_gtarg", &gtarg, 1);
     change_critter_goal(npc, val, gtarg);
-    npc->attitude_word = npc->attitude_word & 0xDFFF | 0x2000;
+    SET_TALKEDTO(npc, 1);
     bab_var_out("npc_attitude", &val, 1);
     if (val > 3) {
-        npc->attitude_word = npc->attitude_word & 0x3FFF | 0xC000;
-        npc->b19 = npc->b19 & 0xBF | 0x40;
+        SET_ATTITUDE(npc, 3);
+        SET_ALLY(npc, 1);
     } else
-        npc->attitude_word = npc->attitude_word & 0x3FFF | (val & 3) << 14;
+        SET_ATTITUDE(npc, val);
     if (val == 0)
         killed = 1;
-    npc->attitude_word = npc->attitude_word & 0xDFFF | 0x2000;
+    SET_TALKEDTO(npc, 1);
     bab_var_out("play_hunger", &val, 1);
     player->hunger = val;
     bab_var_out("play_hp", &val, 1);

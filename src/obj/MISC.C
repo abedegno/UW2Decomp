@@ -8,16 +8,18 @@
    get_class_data calls misc_class_data.
    Name: inferred (the class prefix, after misc_init and misc_class_data). */
 
+#include <stdio.h>
 #include "object.h"
 
 /* match: this file's _BSS, DS:6B10..6B6F, by name: Containers 339, Lights 620, Food 958. It follows
    ovr125's run (to CursorObjPtr, 995) and ovr134's ActiveObj (145) starts another; of the
    files between, only this one uses all three. */
-char Containers[0x30], Lights[0x20], Food[0x10];
-void far fread(void *address, int size, int count, int fd);
+struct Container Containers[16];
+struct Light Lights[16];
+char Food[0x10];
 
 /* FM Towns: misc_init, the class 2 loader named by init_objects. */
-void far misc_init(int fd)
+void far misc_init(FILE *fd)
 {
     fread(Containers, 3, 16, fd);
     fread(Lights, 2, 16, fd);
@@ -34,8 +36,8 @@ char * far misc_class_data(void)
     minor = OBJ_MINOR(ActiveObj);
     subclass = ActiveObj->id & ID_INCLASS;
     switch (minor) {
-    case 0: return Containers + subclass * 3;
-    case 1: return Lights + subclass * 2;
+    case 0: return (char *)Containers + subclass * 3;
+    case 1: return (char *)Lights + subclass * 2;
     case 2: return 0;
     default: return Food + subclass;
     }

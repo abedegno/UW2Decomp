@@ -18,6 +18,10 @@
 ; zeros).
 ; It has no relocations.
 
+; The mouse driver (int 33h) functions used here.
+MOUSE_STATUS    equ     03h
+MOUSE_MOTION    equ     0Bh
+
         .186
 
 _DATA   segment word public 'DATA'
@@ -76,7 +80,7 @@ _seg021_22FD_6C8 endp
 ; _6E7: the motion since the last call (function 0Bh, mickeys), each scaled by 100 / 200 (_6F8),
 ; so half a mickey per unit. Out: AX = x, BX = y.
 _Read_Mouse_Motion_seg021_6E7 proc near
-        mov     ax,0Bh
+        mov     ax,MOUSE_MOTION
         int     33h
         push    dx
         xchg    cx,ax
@@ -103,7 +107,7 @@ _seg021_22FD_6F8 endp
 ; _703: the position and buttons (function 3). Out: AX = the left and right buttons (bits 0, 1),
 ; CX, DX = x, y as the driver gives them.
 _seg021_22FD_703 proc near
-        mov     ax,3
+        mov     ax,MOUSE_STATUS
         int     33h
         xchg    bx,ax
         and     ax,3

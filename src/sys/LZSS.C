@@ -29,28 +29,6 @@
 #define THRESHOLD 2     /* encode a string as a position and length if longer than this */
 #define NIL       N     /* the tree's empty-node index */
 
-/* The work area. ovr153 places it at the start of stdat and the file buffer straight after
-   it, at +722Fh. The bytes at 0 and 0Dh and the words at 722Bh and 722Dh are set or
-   tested here but not otherwise used, so their meaning is unknown. text_buf's length is
-   measured only as the distance to lson. */
-struct LzwWork {
-    unsigned char flag0;                /* 0x0000, tested (to no effect) at the end of compression */
-    unsigned long textsize;             /* 0x0001 */
-    unsigned long codesize;             /* 0x0005 */
-    unsigned long printcount;           /* 0x0009 */
-    unsigned char flagD;                /* 0x000D, set to 1 when compressing */
-    int match_position;                 /* 0x000E */
-    int match_length;                   /* 0x0010 */
-    unsigned char text_buf[N + F + 1];  /* 0x0012 */
-    int lson[N + 1];                    /* 0x1025 */
-    int rson[N + 257];                  /* 0x3027 */
-    int dad[N + 1];                     /* 0x5229 */
-    int w722B;                          /* 0x722B, set to -1 when compressing */
-    int w722D;                          /* 0x722D, set to 0 when compressing */
-};
-
-/* ovr153 declares this char far *; here it is the work area. */
-extern struct LzwWork far *globals;
 
 /* Inserts the string of length F at text_buf[r] into the tree, and sets match_position
    and match_length to the longest match found. A match of F bytes replaces the old node

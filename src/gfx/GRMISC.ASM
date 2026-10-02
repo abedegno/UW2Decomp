@@ -43,6 +43,9 @@
 ; odd). Its three far jumps to _5311 use EA, which TASM would shorten within a module.
 ; Its relocations are entries 2367-2371 of UW2.EXE's relocation table.
 
+; The VGA ports used here.
+INPUT_STATUS    equ     3DAh  ; input status 1 (vertical retrace)
+
         .186
 
         extrn   _seg021_22FD_C00:far
@@ -132,7 +135,7 @@ _seg003_0272_18 endp
 ; the value _46 stored at DS:652. In: DS = seg_370D. Out: AX, DX changed. It keeps a frame that
 ; is already late from waiting a further retrace.
 _seg003_0272_28 proc near
-        mov     dx,3DAh
+        mov     dx,INPUT_STATUS
 L002B:
         call    far ptr _seg021_22FD_C00
         neg     ax

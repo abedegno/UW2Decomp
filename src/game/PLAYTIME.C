@@ -32,27 +32,11 @@
 #include "sys.h"
 #include "ui.h"
 
-/* One entry per light source type (item class, lit types 4 to 7). */
-struct Light {
-    unsigned char duration;             /* burn rate, 0 for an unlit light */
-    unsigned char pad;
-};
-
 /* An active spell word, struct Player's spells[]: the class in bits 0 to 3, the
    subclass in bits 4 to 7, the duration left (in duration checks) in the high byte. */
 #define SPELL_CLASS(s)  ((s) & 0x0F)
 #define SPELL_SUB(s)    (((s) & 0xF0) >> 4)
 #define SPELL_STAB(s)   ((s) >> 8)
-
-extern unsigned char plyregen[];        /* [0] regeneration bits, [1] update counter */
-extern char ValidLightSlots[];
-extern struct Light Lights[];
-
-void far Killorn_just_crashed(int how);
-void far damage_item(struct Object far *who, void far *source, int a, int b,
-                     unsigned char damage, int type);
-char far player_eat(int nutrition);
-int far get_workspace(void);
 
 /* Ends active spell *i. Levitate and fly (class 1, motion, subclasses 3 and 5, per the
    Guide's table of motion spells) do not end at once: they become slow fall (subclass
@@ -62,7 +46,7 @@ int far get_workspace(void);
    into the freed slot and *i is stepped back so the caller's loop sees it. */
 char far dispel_spell(int *i)
 {
-    if (SPELL_CLASS(player->spells[*i]) == 1
+    if (SPELL_CLASS(player->spells[*i]) == SPELLC_MOTION
         && (SPELL_SUB(player->spells[*i]) == 3 || SPELL_SUB(player->spells[*i]) == 5))
     {
         player->spells[*i] = (player->spells[*i] >> 8 << 8) + 0x21;
@@ -70,12 +54,12 @@ char far dispel_spell(int *i)
     }
     else
     {
-        if (SPELL_CLASS(player->spells[*i]) == 0xB && SPELL_SUB(player->spells[*i]) == 1)
+        if (SPELL_CLASS(player->spells[*i]) == SPELLC_XT && SPELL_SUB(player->spells[*i]) == 1)
         {
             attach_eye(1);
             GameInputMode -= 8;
         }
-        if (SPELL_CLASS(player->spells[*i]) == 1)
+        if (SPELL_CLASS(player->spells[*i]) == SPELLC_MOTION)
             fiz_update = 1;
         player->active_spells--;
         if ((*i)-- < player->active_spells)
@@ -169,12 +153,12 @@ void far duration_check(void)
         /* The hour: X clock 0 steps on, and the schedules in SCD.ARK block 0 are
            loaded into the workspace, run up to the new time and saved back. */
         player->xclock[XC_TIME]++;
-        player->xclock[XC_TIME] = player->xclock[XC_TIME] % 72;
+        player->xclock[XC_TIME] = player->xclock[XC_TIME] % DAY_STEPS;
         if (get_workspace())
         {
             Sched_SetBuf(0, set_workspace());
             Sched_Load(0);
-            Sched_WrapTime(player->xclock[XC_TIME], 72, 1);
+            Sched_WrapTime(player->xclock[XC_TIME], DAY_STEPS, 1);
             Sched_Save(0);
             release_workspace();
         }
@@ -219,7 +203,7 @@ char far DegradeLights(int amount, unsigned char counter)
             else
             {
                 OBJ_QUALITY(obj) = 1;
-                obj->id = obj->id & 0xFFF0 | (OBJ_INCLASS(obj) - 4) & 0x0F;
+                SET_INCLASS(obj, OBJ_INCLASS(obj) - 4);
                 RedisplayInvSlot(ValidLightSlots[i]);
                 changed = 1;
             }

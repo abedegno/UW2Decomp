@@ -19,11 +19,14 @@
    MAP.C has map_init. */
 
 #include <dos.h>
+#include <alloc.h>
+#include <mem.h>
 #include "file.h"
 #include "map.h"
 #include "object.h"
 #include "sys.h"
 
+#include "ui.h"
 /* hgt_val converts a tile's 4-bit floor height to a z in the units PHYSICS.C and
    GRIDDB.C use, 0x40 a step. Entries 14 and 15 are 0; entry 16 (0x400) is reached by
    GRIDDB.C's hgt_val[ht + *hm]. mapdata is the level block (struct LevelBlock), MapDirty
@@ -34,27 +37,10 @@
    has hgt_val as the same 34 bytes, after ovr126's strings. */
 int hgt_val[17] = { 0x000, 0x040, 0x080, 0x0C0, 0x100, 0x140, 0x180, 0x1C0, 0x200,
                     0x240, 0x280, 0x2C0, 0x300, 0x340, 0, 0, 0x400 };      /* DS:1874 */
-char far * near mapdata = 0;            /* DS:1896 */
+struct Tile far *mapdata = 0;           /* DS:1896 */
 /* name: FM Towns _MapDirty: its Map_Load_ and Map_Save_ clear it as these do. DS:189A. */
 unsigned char MapDirty = 0;
-extern char far *ActiveMob;
-extern char far *LastActiveMob;
-extern char far *objbot;
-extern char far *objptr;
-extern char far *critbot;
-extern char far *critptr;
-extern char animcount;
-extern int timerlist[];
-extern char timercount;
-extern struct Anim animlist[];
 
-extern void far * far farmalloc(unsigned long size);
-extern int far get_arc(int type, int block, void far *dst);
-extern unsigned char far put_arc(int type, int block, void far *src, unsigned size);
-extern void far close_arc(int close);
-extern int far wyorn(int a, int b, char *answer);
-extern void far movedata(unsigned srcseg, unsigned srcoff,
-                                                unsigned dstseg, unsigned dstoff, unsigned size);
 
 /* Allocates the level block on first use and lays the object store out in it. A failed
    allocation is fatal (first_punt, low memory). */
@@ -99,18 +85,15 @@ unsigned char far Map_Load(int arc, int level, int folderType)
     if (!open_arc(1,
             folderType & 2 ? HomeDir : "DATA\\"))
         return 0;
-    get_arc(1, level - 1, mapdata);
+    get_arc(1, level - 1, (char far *)mapdata);
     if ((folderType & 1) || *end != LEVEL_MAGIC)
         close_arc(1);
     if (*end != LEVEL_MAGIC) {
         pfatal_code(3);
     } else {
-        critptr = (char far *)critbot
-            + end[-2] * 2;                  /* nmobfree */
-        objptr = (char far *)objbot
-            + end[-1] * 2;                  /* nstaticfree */
-        LastActiveMob =
-            (char far *)ActiveMob + end[-3]; /* nactive */
+        critptr = critbot + end[-2];        /* nmobfree */
+        objptr = objbot + end[-1];          /* nstaticfree */
+        LastActiveMob = ActiveMob + end[-3]; /* nactive */
         MapDirty = 0;
     }
     Anim_Load((char far *)LEVEL->anims);
@@ -148,7 +131,7 @@ char far Map_Save(int arc, int level, int folderType)
             folderType & 2 ? HomeDir : "DATA\\") == 0)
         return 0;
     result = put_arc(1, level - 1,
-                         mapdata, sizeof(struct LevelBlock));
+                         (char far *)mapdata, sizeof(struct LevelBlock));
     if (folderType & 1)
         close_arc(1);
     return result;

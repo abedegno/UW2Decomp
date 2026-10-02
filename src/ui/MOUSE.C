@@ -41,6 +41,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include "gfx.h"
+#include "player.h"
 #include "sys.h"
 #include "ui.h"
 
@@ -107,19 +108,13 @@ int m3dw;                               /* DS:23DC */
 int m3dh;                               /* DS:23DE */
 int m3dt;                               /* DS:23E0, cursor against it: 0 outside, 1 across, 2 inside */
 
-extern unsigned char IsJoy;                     /* DS:8298 */
-extern unsigned long far *Time;                 /* DS:2158 */
 /* The asm graphics module's pointer table. DS:21B8 points at seg048:434; its words 0x100
    and 0x101 are the save-under buffer FM Towns keeps at _Color_data_ptr+0x400 (4-byte
    entries there), so the name is provisional. The window edges are FM Towns wleft, wtop,
    wright and wbot, in the same order in memory (seg048:3DF4..3DFA); DS:21EC also points
    at wleft, so which of 21E8 and 21EC is "wleft" is not proven. */
-extern unsigned char far Transparency;          /* 370D:0DC5 */
 
-void far rectangle(int x0, int y0, int x1, int y1);
 /* seg011 (1AFA): the joystick code, which FM Towns lacks, so IDA names. */
-void far seg011_6(int from3d);
-void far seg011_2C6(int *dx, int *dy, int from3d);
 
 /* Sets the full-screen bounds and the default cursor (picture 0x106C, the arrow used
    whenever no region or forced cursor applies), allocates the 40 by 40 save-under buffer
@@ -768,7 +763,7 @@ void far keyboard_mouse(int key)
     int y = mouse_y;
 
     switch (key) {
-    case 0x4A3:
+    case KEY_SHIFT | KEY_BACKTAB:
         if (warp_x >= 0)
             return;
         if (mouse_x < 0xE2) {
@@ -796,38 +791,38 @@ void far keyboard_mouse(int key)
             y = 0x82;
         }
         break;
-    case 0x8F:
+    case KEY_LEFT:
         x = 0;
         k = 0x4B;
         break;
-    case 0x91:
+    case KEY_RIGHT:
         x = 0x13F;
         k = 0x4D;
         break;
-    case 0x8D:
+    case KEY_UP:
         y = 0xC7;
         k = 0x48;
         break;
-    case 0x93:
+    case KEY_DOWN:
         y = 0;
         k = 0x50;
         break;
-    case 0x8C:
+    case KEY_HOME:
         x = 0;
         y = 0xC7;
         k = 0x47;
         break;
-    case 0x8E:
+    case KEY_PGUP:
         x = 0x13F;
         y = 0xC7;
         k = 0x49;
         break;
-    case 0x92:
+    case KEY_END:
         x = 0;
         y = 0;
         k = 0x4F;
         break;
-    case 0x94:
+    case KEY_PGDN:
         x = 0x13F;
         y = 0;
         k = 0x51;

@@ -38,6 +38,11 @@
 ; a word-aligned module (TASM 2.0's `even` pads with 90h).
 ; It has no relocations.
 
+; The VGA ports used here.
+SC_DATA         equ     3C5h  ; sequencer data
+GC_INDEX        equ     3CEh  ; graphics controller index
+GC_DATA         equ     3CFh  ; graphics controller data
+
         .186
 
 _DATA   segment word public 'DATA'
@@ -63,7 +68,7 @@ L5370:
 ; _5372: linear bitmap rows to the planar screen, opaque. For each row, four passes, one per
 ; plane: set the map mask for the plane, then copy every fourth source byte.
 _seg003_0272_5372:
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         push    es
         mov     es,word ptr ds:[3DFCh]
 L537A:
@@ -186,7 +191,7 @@ L5465:
         retn
 ; _5467: as _5372, skipping source bytes of colour 0 (transparent).
 _seg003_0272_5467:
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         push    es
         mov     es,word ptr ds:[3DFCh]
 L546F:
@@ -354,15 +359,15 @@ L5589:
         inc     di
         mov     word ptr ds:[55E8h],di
         xor     ah,ah
-        mov     dx,3CEh
+        mov     dx,GC_INDEX
         mov     al,4
         out     dx,al
         mov     al,byte ptr [bx+3B64h]
         and     al,byte ptr [bx+3CA8h]
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         out     dx,al
         mov     al,ah
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         mov     cx,word ptr ds:[55E8h]
         add     cx,3
@@ -380,10 +385,10 @@ L5589:
 L55E5:
         mov     al,byte ptr [bx+3B64h]
         and     al,byte ptr [bx+3CA8h]
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         out     dx,al
         mov     al,ah
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         mov     cx,word ptr ds:[55E8h]
         add     cx,3
@@ -399,10 +404,10 @@ L55E5:
         je      L567E
         mov     al,byte ptr [bx+3B64h]
         and     al,byte ptr [bx+3CA8h]
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         out     dx,al
         mov     al,ah
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         mov     cx,word ptr ds:[55E8h]
         add     cx,3
@@ -418,10 +423,10 @@ L55E5:
         je      L567E
         mov     al,byte ptr [bx+3B64h]
         and     al,byte ptr [bx+3CA8h]
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         out     dx,al
         mov     al,ah
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         mov     cx,word ptr ds:[55E8h]
         add     cx,3
@@ -439,7 +444,7 @@ L567E:
         pop     bp
         jmp     L557F
 L5682:
-        mov     dx,3CEh
+        mov     dx,GC_INDEX
         mov     ax,0FF08h
         out     dx,ax
         pop     es
@@ -448,10 +453,10 @@ L5682:
 ; the latches; whole groups of four pixels with all planes enabled, then the last partial group
 ; with the right-edge plane mask.
 _seg003_0272_568B:
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         xor     al,al
         out     dx,al
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         push    es
         mov     es,word ptr ds:[3DFCh]
         mov     bx,si
@@ -486,7 +491,7 @@ L56D2:
         jmp     L569B
 L56DB:
         pop     es
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         mov     al,0FFh
         out     dx,al
         retn
@@ -514,15 +519,15 @@ L56F0:
         mov     word ptr ds:[55E8h],di
         push    si
         xor     ah,ah
-        mov     dx,3CEh
+        mov     dx,GC_INDEX
         mov     al,4
         out     dx,al
         mov     al,byte ptr [bx+3B64h]
         and     al,byte ptr [bx+3CA8h]
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         out     dx,al
         mov     al,ah
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         mov     cx,word ptr ds:[55E8h]
         add     cx,3
@@ -549,10 +554,10 @@ L5742:
 L5754:
         mov     al,byte ptr [bx+3B64h]
         and     al,byte ptr [bx+3CA8h]
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         out     dx,al
         mov     al,ah
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         mov     cx,word ptr ds:[55E8h]
         add     cx,3
@@ -577,10 +582,10 @@ L5783:
         je      L580E
         mov     al,byte ptr [bx+3B64h]
         and     al,byte ptr [bx+3CA8h]
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         out     dx,al
         mov     al,ah
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         mov     cx,word ptr ds:[55E8h]
         add     cx,3
@@ -605,10 +610,10 @@ L57C1:
         je      L580E
         mov     al,byte ptr [bx+3B64h]
         and     al,byte ptr [bx+3CA8h]
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         out     dx,al
         mov     al,ah
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         out     dx,al
         mov     cx,word ptr ds:[55E8h]
         add     cx,3
@@ -635,7 +640,7 @@ L580E:
         pop     si
         jmp     L56E8
 L5812:
-        mov     dx,3CEh
+        mov     dx,GC_INDEX
         mov     ax,0FF08h
         out     dx,ax
         pop     es
@@ -643,10 +648,10 @@ L5812:
 ; _581B: screen to screen through the latches, left to right (vcopy); the record's source offset
 ; is the destination here and the row address the source.
 _seg003_0272_581B:
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         xor     al,al
         out     dx,al
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         push    es
         mov     es,word ptr ds:[3DFCh]
         mov     bx,si
@@ -679,7 +684,7 @@ L585C:
         jmp     L582B
 L5865:
         pop     es
-        mov     dx,3CFh
+        mov     dx,GC_DATA
 
 ; seg003_0272_5869  (+5869)
 ; _5869: the bit mask back to 0FFh (DX = 3CFh), the tail of _581B. _586D is _581B right to left
@@ -689,10 +694,10 @@ _seg003_0272_5869 proc near
         out     dx,al
         ret
 _seg003_0272_586D:
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         xor     al,al
         out     dx,al
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         push    es
         mov     es,word ptr ds:[3DFCh]
         mov     bx,si
@@ -730,7 +735,7 @@ L58B5:
 L58BE:
         cld
         pop     es
-        mov     dx,3CFh
+        mov     dx,GC_DATA
         mov     al,0FFh
         out     dx,al
         ret

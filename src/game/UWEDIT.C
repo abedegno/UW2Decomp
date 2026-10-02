@@ -96,14 +96,6 @@ int lastscrmode;
 int NewPlayerX, NewPlayerY;
 int NewPlayerLevel;
 
-extern struct Inplist near *inplist;
-extern int PlayerPitch;
-extern unsigned long nextSpellTime;
-extern char quit_buttongroup[];
-/* The shared work buffer. init_edit passes the paragraph after its start, which only
-   references its segment. */
-/* name: FM Towns has _grbuf and _panelbuf at the same address. */
-extern char far stdat[];
 
 /* name: elsewhere in the game. Names not confirmed by the map come from FM Towns init_world,
    whose calls run in the same order where DOS has them: init_mem (DOS seg042's first
@@ -112,39 +104,6 @@ extern char far stdat[];
    init_debug (empty in FM Towns), init_ai, and init_cutscene (empty in both). grfx_init is
    ovr118_0, the FM Towns function before grfx_load_font. pfatal is FM pfatal_, which sets
    *cPerror from cExitMessage as ovr114_15D does. */
-void far init_strings(void);
-void far Map_Init(void);
-void far init_sounds(void);
-void far init_timers(void);
-unsigned char far OkEnoughMem_ovr167_463(void);    /* enough memory free; DOS only */
-void far punt_sound_stuff(int quiet);
-unsigned char far grfx_init(void);
-unsigned char far display_screen(int pal, int blk);
-void far load_new_music(int a, int b);
-void far init_txtlib(void);
-unsigned char far init_save(void);
-void far grfx_clear(void);
-void far grfx_quikpal(int pal);
-void far show_cutscene(int n);
-void far _input_addkey(int key, int a, int b, void (far *handler)());
-void far busywaiting_new_options(char *group);
-void far fadeout(unsigned char far *pal, int steps, int x);
-unsigned char far read_quikpal(int which, unsigned char far *pal);
-void far load_digi_fx(int n);
-void far set_drugged(int on);
-void far punt_fightmode(void);
-void far set_screen_frame(int which, int frame);
-void far scroll_clear(int n);
-unsigned char far ChangeLevel(int from, int to);
-unsigned char far find_good_x_and_y(struct Object far *obj, int x, int y, int *nx, int *ny,
-                                    int how);
-void far seg016_1E73_2FCB(FILE *fp);   /* reads UW.CFG; DOS only */
-
-/* The other screens' handlers, in other files. */
-void far strt_converse(void);
-
-/* This file. */
-void far free_world(char flag);
 
 /* This file's data, DS:11F4 to DS:12C5, then its strings. */
 
@@ -207,15 +166,15 @@ void far init_world(int argc, char *argv[])
     init_sounds();
     init_timers();
     init_cutscene();
-    if (!OkEnoughMem_ovr167_463()) {
+    if (!(unsigned char)OkEnoughMem_ovr167_463()) {
         punt_sound_stuff(1);
-        if (!OkEnoughMem_ovr167_463())
+        if (!(unsigned char)OkEnoughMem_ovr167_463())
             first_punt(ERR_LOWMEM | 4);
     }
     if (!grfx_init())
         pfatal_code(ERR_READ | 3);
     display_screen(5, 6);
-    load_new_music(1, 1);
+    load_new_music(MUSIC_THEME, 1);
     seg001_023B_C();
     if ((err = load_all_gr()) != 0)
         pfatal_code(err);
@@ -276,8 +235,8 @@ void far init_edit(int argc, char *argv[])
         dungeonf[0] = 0;
     strcpy(WorkPath, "DATA\\");
     getcurdir(0, CurDir);
-    _input_addkey(0x278, 0, 1, graceful_exit);
-    _input_addkey(0x271, FP_SEG(stdat) + 1, 0xFF, save_screenshot);
+    _input_addkey(KEY_ALT | 'x', 0, 1, (InputFn)graceful_exit);
+    _input_addkey(KEY_ALT | 'q', FP_SEG(stdat) + 1, 0xFF, save_screenshot);
     notdone = 1;
     changed = 0x7FFF;
     scrmode = 0;
@@ -287,7 +246,7 @@ void far init_edit(int argc, char *argv[])
 
 void far graceful_exit(void)
 {
-    busywaiting_new_options(quit_buttongroup);
+    busywaiting_new_options(&quit_buttongroup);
 }
 
 void far editexit(void)
@@ -358,7 +317,7 @@ void far strt_demscr(void)
     movedata(FP_SEG(palette), FP_OFF(palette), FP_SEG((unsigned char far *)pal),
              FP_OFF((unsigned char far *)pal), 0x300);
     fadeout(pal, 2, 0);
-    if (!display_screen(-1, 4))
+    if (!(unsigned char)display_screen(-1, 4))
         pfatal_code(ERR_READ | 0xB);
     init_gamedisp();
     editchng(0x7DFE);
@@ -397,8 +356,8 @@ void far reset_game(void)
     reset_times();
     Punt_player_inv();
     FixPlayerEquips();
-    ThePlayer->pos = ThePlayer->pos & 0xFC7F;
-    ThePlayer->b18 = ThePlayer->b18 & 0xE0;
+    SET_HEADING(ThePlayer, 0);
+    SET_FINEHEAD(ThePlayer, 0);
     PlayerPitch = PlayerBank = PlayerHeading = PlayerFacing = 0;
     combEfflen = tremEfflen = slidEfflen = 0;
     player->motion_state = 0;
@@ -498,7 +457,7 @@ unsigned char far new_player_pos(void)
             fadeout3d(curvrad);
         }
         if (PlayerLevel != NewPlayerLevel)
-            if (!ChangeLevel(PlayerLevel, NewPlayerLevel))
+            if (!(unsigned char)ChangeLevel(PlayerLevel, NewPlayerLevel))
                 pfatal_code(ERR_READ | 0xC);
         if (npp_func)
             npp_func();
@@ -515,7 +474,7 @@ unsigned char far new_player_pos(void)
             player_setup(NewPlayerX, NewPlayerY, (trap_teleport_data & 1) - 1);
             if (trap_teleport_data & 0x20) {
                 trap_teleport_data &= ~0x23;
-                ThePlayer->pos = ThePlayer->pos & 0xFC7F | ((trap_teleport_data >> 2) & 7) << 7;
+                SET_HEADING(ThePlayer, trap_teleport_data >> 2);
                 PlayerHeading = PlayerFacing = trap_teleport_data << 11;
             }
             trap_teleport_data = -1;

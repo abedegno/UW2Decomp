@@ -43,6 +43,11 @@ extern int change_state[3];
 extern char NewPlyFade;
 void far newscr(int mode);
 void far real_death(int how);
+extern char in_game;
+extern void (far *npp_func)();
+void far free_world(char flag);
+void far editexit();  /* match: no prototype: callers pass an argument it ignores */
+void far clearobj();  /* match: no prototype: callers pass an argument it ignores */
 
 /* MAINLOOP.C: the main loop and the per-screen change dispatcher */
 extern unsigned char dsfx_playing;
@@ -57,6 +62,8 @@ extern unsigned ems_frame;
 void far seg013_1D3C_138(unsigned handle, char far *name);
 int far seg013_1D3C_A(unsigned min_pages, unsigned max_pages);
 void far seg013_1D3C_B2(void);
+char far MapMemory_seg013_1D3C_C7(char physical, unsigned logical);
+unsigned char far seg013_1D3C_E4(unsigned physical, unsigned logical, int count);
 
 /* TMPALLOC.C: memory and the workspace */
 /* name: DOS A5 is FM Towns mem_setup: both initialise the page counts and invalidate
@@ -70,6 +77,8 @@ void far free_mem(void);
 void far map_crit_pages(void);
 int far set_workspace(void);
 void far release_workspace(void);
+extern unsigned char ws_active;
+int far get_workspace(void);
 
 /* Error codes for first_punt, pfatal_code and the init functions' returns: error_code
    prints the top four bits as the kind (and as a letter, 'A' + kind) and the rest as
@@ -144,6 +153,7 @@ void far seg021_22FD_755(void);    /* seg021's start-up (grfx_init) */
 void far seg021_22FD_791(void);    /* and shut-down (grfx_close) */
 void far seg021_22FD_7CD(void);    /* read the joystick into *joy_position */
 void far seg021_22FD_809(void);    /* read its buttons into *joy_buttons */
+extern unsigned long far *Time;  /* DS:2158 */
 
 /* C3DENTRY.ASM: the C entry points into the 3D renderer (seg004) and the frame buffer
    (seg003's GRENTRY.ASM). cRender draws a frame from the render database and in fact
@@ -189,4 +199,6 @@ void far panel_check(void);
 /* Defined where no source has it yet: data the link takes from the EXE. */
 void far stub112_25(int code);
 
+/* COM1INT.C */
+void far Interupt4_COM1_ovr132_0(void);
 #endif

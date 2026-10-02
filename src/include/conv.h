@@ -57,10 +57,37 @@ int far * far getmem_addr(int addr);
 void far babl_setmem(int addr, int value);
 void far bab_var(char *name, int *values, int count);
 void far bab_var_out(char *name, int *values, int count);
+/* Binds a conversation built-in by name: bab_fun(char *name, void (far *fn)()). */
+int far load_script(char *name, char far *work);
+void far bab_fun();  /* match: no prototype: the built-ins passed have many types */
+int far babl_run(void);
 
 /* BABLHACK.C: conversation built-ins that reach into the game */
 struct Object far * far place_pitfighter(int power, int x, int y);
 void far do_babl_teleport(void);
+extern unsigned char running_away;
+void far teleport_player(int far *args);  /* ties teleport_talker */
+int far teleport_talker(int far *args);
+/* The built-ins CONVERSE.C binds with bab_fun, given the argument stack. */
+int far babl_hack(int far *args);
+void far set_sequence(int far *args);
+int far x_exp(int far *args);
+void far set_attitude(int far *args);
+void far set_race_attitude(int far *args);
+int far x_skills(int far *args);
+int far x_traps(int far *args);
+int far place_object(int far *args);
+int far take_from_npc_inv(int far *args);
+void far add_to_npc_inv(int far *args);
+void far transform_talker(int far *args);
+void far remove_talker(void);
+void far set_quest(int far *args);
+int far get_quest(int far *args);
+int far x_clock(int far *args);
+int far sex(int far *args);
+int far gronk_door(int far *args);
+void far x_obj_stuff(int far *args);
+void far x_obj_pos(int far *args);
 
 /* BARTER.C: bartering in conversations */
 /* A trade adjustment set by a conversation, read when bartering. Defined in ovr097: it is
@@ -92,6 +119,16 @@ int far npc_barter_give(int item);
 int far npc_barter_give_id(int index);
 int far npc_inv_create(int item);
 int far npc_inv_delete(int item);
+void far play_barter(void);
+void far npc_barter(void);
+/* The built-ins CONVERSE.C binds with bab_fun. */
+void far setup_to_barter(void);
+int far do_offer(int far *args);
+int far do_demand(int far *args);
+void far do_decline(void);
+void far do_judgement(void);
+int far npc_likes_dislikes(int far *args);
+int far give_all_stuff(void);
 
 /* CONVERSE.C: conversations */
 extern struct Object far *talking_to;
@@ -126,9 +163,13 @@ int far give_ptr_npc(int far *stack);
 int far switch_pic(int far *stack);
 void far TalkTo(struct Object far *thing);
 void far free_converse(void);
+void far strt_converse(void);
+void far do_escape_key(void);
+int far set_inv_quality(int far *stack);
 
 /* CONVVARS.C: handing variables to a conversation and taking them back */
 void far setup_converse_data(struct Object far *npc);
+char far update_converse_data(struct Object far *npc);
 
 /* GRDB.C: the label table of the conversation (babl) bytecode assembler */
 extern int far *dbptr;
@@ -137,6 +178,7 @@ int far Clk(int n);
 void far gr_entry(void);
 void far gr_tostrt(void);
 void far Ref(unsigned char lab, int rel);
+void far gr_putlab(unsigned char lab);
 
 /* Defined where no source has it yet: data the link takes from the EXE. */
 extern int CutsceneOrConversationStringBlock;

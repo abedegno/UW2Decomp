@@ -23,16 +23,8 @@
 /* match: this file's _DATA, DS:1A78..1A7D (ovr149's data ends at 1A77, odd); ovr151's starts at
    1A7E with scdBlockHasBeenModified, which only ovr151 uses, as only this file uses this. */
 char DataDirectory[] = "DATA\\";
-extern char far Transparency;
 
-void far grfx_clear(void);
-unsigned far get_workspace(void);
-void far grfx_quikpal(int pal);
-int far get_arc(int arc, int blk, char far *buf);
-void far close_arc(int arc);
-void far show(int x, int y, char far *buf, int h, int w, int a, int b);
 
-char far disk_to_vid(int blk, char far *buf);
 
 /* Shows block blk. pal >= 0: clear the screen, draw on the hidden page, then load palette
    pal and flip; pal < 0: draw straight to the current page with the current palette.

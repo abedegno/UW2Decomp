@@ -8,13 +8,12 @@
    animclassd is defined in EFFECT.C, which reads it each frame to run the animations.
    Name: inferred (the class prefix, after animobj_load and animobj_class_data). */
 
+#include <stdio.h>
 #include "object.h"
 
-extern struct AnimClass animclassd[];
-void far fread(void *address, int size, int count, int fd);
 
 /* FM Towns: animobj_load. */
-void far animobj_load(int fd)
+void far animobj_load(FILE *fd)
 {
     fread(animclassd, 4, 16, fd);
 }

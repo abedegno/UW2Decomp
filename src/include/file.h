@@ -14,6 +14,10 @@ struct Object;
 
 /* ARC.C: the .ark archives */
 unsigned char far open_arc(int which, char *dir);
+unsigned char far close_arc(int arc);
+unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len);
+unsigned far get_arc(int arc, unsigned blk, char far *buf);
+int far check_arc(int which, char *dir, int blk);
 
 /* MISCUTIL.C: file I/O helpers */
 void far flip_bool(char *p);
@@ -31,6 +35,15 @@ int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n);
    name: the DOS helpers' original names are not known, so these are the IDA names. */
 int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
 int far our_open(char *name, int directory, int mode);
+int far OkEnoughMem_ovr167_463(void);
+/* name: FM Towns bltfromdrive_ (read_file_to_mbuf_ and load_sound_driver_ call it where
+   DOS calls 65E0:007A). */
+unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
+unsigned char far blttodrive(void far *buf, char *name, unsigned n);
+FILE * far data_fopen(char *name, char *mode);
+int far mpos(char x, char y);
+int far xorread(int fd, unsigned char key, unsigned char far *buf, unsigned n);
+int far xorwrite(int fd, unsigned char key, unsigned char far *buf, unsigned n);
 
 /* LZSS.C: LZSS compression of archive blocks (Okumura's LZSS; the "LZW" in the original
    names is not the algorithm). Both return the number of bytes produced. */
@@ -43,6 +56,26 @@ unsigned far CompressLZW_disk(unsigned char far *src, int fd, unsigned char far 
    long, then the LZSS stream (the name says LZW; the algorithm is LZSS.C's) */
 unsigned far ac_unshrink_disk(char far *dst, int fd, unsigned n);
 unsigned far ac_shrink_disk(char far *src, int fd, unsigned n);
+/* LZSS.C's work area. ACLZW.C places it at the start of stdat and the file buffer straight after
+   it, at +722Fh. The bytes at 0 and 0Dh and the words at 722Bh and 722Dh are set or
+   tested by LZSS.C but not otherwise used, so their meaning is unknown. text_buf's length is
+   measured only as the distance to lson. */
+struct LzwWork {
+    unsigned char flag0;                /* 0x0000, tested (to no effect) at the end of compression */
+    unsigned long textsize;             /* 0x0001 */
+    unsigned long codesize;             /* 0x0005 */
+    unsigned long printcount;           /* 0x0009 */
+    unsigned char flagD;                /* 0x000D, set to 1 when compressing */
+    int match_position;                 /* 0x000E */
+    int match_length;                   /* 0x0010 */
+    unsigned char text_buf[4096 + 18 + 1]; /* 0x0012, N + F + 1 (LZSS.C) */
+    int lson[4096 + 1];                 /* 0x1025 */
+    int rson[4096 + 257];               /* 0x3027 */
+    int dad[4096 + 1];                  /* 0x5229 */
+    int w722B;                          /* 0x722B, set to -1 when compressing */
+    int w722D;                          /* 0x722D, set to 0 when compressing */
+};
+extern struct LzwWork far *globals;
 
 /* INVSAVE.C: saving and restoring the player's inventory in player.dat */
 void far FreePlayerInv(union Link far *head);
@@ -67,6 +100,15 @@ void far ShowSaveRest(void);
 void far DoSaveRest(int restore, int slot);
 unsigned char far copy_file(char *srcdir, char *dstdir, char *name);
 void far gruesome_door_hack(int x, int y);
+unsigned char far init_save(void);
+/* RestoreGame(char slot) and SaveGame(char slot, char *desc). */
+/* match: no prototypes: their callers push the slot as an int. SaveGame is declared before
+   SaveLevel because TLINK numbers the overlay's stub entries in the order Turbo C lists
+   the publics, which for names with the same hash key is the order they were first seen:
+   the EXE's stub has SaveGame before SaveLevel. */
+char far RestoreGame();
+int far SaveGame();
+char far ChangeLevel(int from, int to);
 
 /* SCRSHOT.C: screenshots */
 void far ovr116_194(int fd, char size);

@@ -113,7 +113,7 @@ char far MapMemory_seg013_1D3C_C7(char physical, unsigned logical)
 /* Maps count (at most 4) consecutive logical pages from `logical` into consecutive
    physical pages from `physical` in one call (EMS 4.0 function 5000h, which takes the
    pairs in ems_page_map); 1 if it worked. */
-char far seg013_1D3C_E4(unsigned physical, unsigned logical, int count)
+unsigned char far seg013_1D3C_E4(unsigned physical, unsigned logical, int count)
 {
     register int i;
 

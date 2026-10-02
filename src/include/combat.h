@@ -4,25 +4,21 @@
 
 #include "uw2.h"
 
-struct MissileInfo;
 struct Object;
 struct Spell;
 struct Tile;
-struct Weapon;
 
 #include "map.h"
 #include "object.h"
 
-/* A missile weapon, 3 bytes: the ranged weapons table of DATA\OBJECTS.DAT, in Missile[]. */
-struct MissileInfo {
-    unsigned char damage;               /* 0x00 */
-    unsigned char type;                 /* 0x01, the missile type */
-    signed char ammo;                   /* 0x02, the ammunition it fires */
-};
-
 /* One spell's runes, 4 bytes. */
 /* Spell classes, struct Spell's cls >> 3: do_spell's switch (ovr156) sends each class to
-   the function FM Towns names. Classes 0 to 3 start an active spell (set_curmagic). */
+   the function FM Towns names. Classes 0 to 3 start an active spell (set_curmagic); their
+   effects are PLAYDATA.C's player_affected_by. */
+#define SPELLC_LIGHT    0               /* the light level */
+#define SPELLC_MOTION   1               /* leap, slow fall, levitate, water walk, fly, bounce */
+#define SPELLC_ARMOUR   2               /* armour at every hit location */
+#define SPELLC_PROTECT  3               /* stealth, resistances, valor, poisoned weapon */
 #define SPELLC_HEAL     4               /* healing */
 #define SPELLC_MISSILE  5               /* release_missile, or aim one for the player */
 #define SPELLC_AREA     6               /* nail_area */
@@ -43,31 +39,16 @@ struct Spell {
     unsigned char sub;
 };
 
-/* A melee weapon, 8 bytes: the melee weapons table of DATA\OBJECTS.DAT. */
-struct Weapon {
-    unsigned char damage[3];            /* by swing kind: slash, bash, stab */
-    unsigned char min_charge;           /* 0x03 */
-    unsigned char speed;                /* 0x04 */
-    unsigned char max_charge;           /* 0x05 */
-    unsigned char skill;                /* 0x06, the skill it uses */
-    unsigned char durability;           /* 0x07 */
-};
-
-/* One armour or wearable's properties, 4 bytes, 32 of them from OBJECTS.DAT (UW-Formats,
-   "Armour and wearables table"), in ovr120's Armor. */
-struct Armour {
-    unsigned char protection;           /* 0x00 */
-    unsigned char durability;           /* 0x01 */
-    unsigned char b2;                   /* 0x02 */
-    unsigned char category;             /* 0x03: 0 shield, 1 body armour, 3 leggings,
-                                           4 gloves, 5 boots, 8 hat, 9 ring */
-};
-
 /* COMBAT.C: combat */
 int far check_ammo(int weapon);
 void far clear_fight_state(void);
 char far critter_attack(struct Object far *npc, int swing, unsigned char charge, int type,
                         int poison);
+extern signed char cmbModTH[4];
+extern unsigned char using_altaras_dagger;
+void far player_attack(int swing);
+void far missile_thwack(int attacker, struct Object far *missile, struct Object far *def, int x, int y, int dmg, unsigned char type);
+void far player_killed_a(struct Object far *npc);
 
 /* MISSILE.C: missiles */
 struct Object far * far missile_fire(void);
@@ -103,6 +84,16 @@ char far hit_critter_goal(char goal, char attitude, int gtarg, struct Object far
                           int y);
 char far sp_hold(int x, int y, struct Object far *target, struct Tile far *tile, unsigned char src);
 void far obj_spells(struct Object far *target, int how, unsigned char b);
+unsigned char far anti_magic_p(int x, int y);
+/* An area spell's action on one square (gronk_area, process_area). */
+typedef char (far *SpellFn)(int x, int y, struct Object far *target, struct Tile far *tile,
+                            unsigned char src);
+void far gronk_area(struct Object far *who, char count, SpellFn fn, unsigned char type, unsigned char dist, unsigned char radius);
+/* What gronk_whoami (and gronk_race) do to each critter they find. */
+typedef char (far *WhoamiFn)(struct Object far *npc, int arg);
+void far gronk_whoami(int whoami, unsigned char all, int arg, WhoamiFn fn);
+void far process_area(char count, unsigned char src, SpellFn fn, unsigned char type, char x0, char y0, char w, char h);
+extern struct Spell far spells[69];
 
 /* SPELLS2.C: spells */
 void far sp_enchant(struct Object far *obj, unsigned char inv, int x, int y);
@@ -116,6 +107,7 @@ void far xt_spells(struct Object far *caster, char stab, char sub);
 char far check_Guardian_magic_marker(int x, int y, struct Object far *obj, struct Tile far *tile,
                                      unsigned char src);
 void far thump_your_magic_twanger_froggie(void);
+char far sp_study_monster(struct Object far *caster, struct Object far *target);
 
 /* RUNES.C: the rune bag and casting from runes */
 extern unsigned long lstime;

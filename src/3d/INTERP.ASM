@@ -99,6 +99,10 @@
 ; not zeros).
 ; Its relocations are entries 2328-2350 of UW2.EXE's relocation table.
 
+; The model interpreter's opcode table: a word per opcode, the offset of its handler
+; (INTERP.ASM), in seg052_519C, the data segment while interpreting.
+OPCODE_TABLE    equ     24F4h
+
         .386
 
         extrn   _seg003_0272_0:far
@@ -598,7 +602,7 @@ _do_int2 proc near
         int     2
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_int2 endp
 
 ; seg004_0849_1098  (+1098)
@@ -637,7 +641,7 @@ L10AD:
 L10D2:
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_pntres endp
 
 ; seg004_0849_10D8  (+10D8)
@@ -688,7 +692,7 @@ L113E:
 L113F:
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 L1145:
         add     bx,14D0h
         add     di,14D0h
@@ -723,7 +727,7 @@ L1151:
         pop     si
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
         xchg    bx,di
         sti
         add     sp,6
@@ -988,7 +992,7 @@ _do_movei proc near
         mov     word ptr [bx],ax
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_movei endp
 
 ; seg004_0849_13D6  (+13D6)
@@ -1000,7 +1004,7 @@ _do_movec proc near
         movsw
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_movec endp
 
 ; seg004_0849_13E0  (+13E0)
@@ -1014,7 +1018,7 @@ _do_movem proc near
         mov     word ptr [bx],ax
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_movem endp
 
 ; seg004_0849_13EF  (+13EF)
@@ -1029,7 +1033,7 @@ _do_move_odata proc near
         mov     word ptr [bx],ax
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_move_odata endp
 
 ; seg004_0849_13FD  (+13FD)
@@ -1056,7 +1060,7 @@ L140C:
         jne     L140C
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_multires endp
 
 ; seg004_0849_1432  (+1432)
@@ -1085,7 +1089,7 @@ L1448:
         jne     L1448
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_minimulti endp
 
 ; seg004_0849_146E  (+146E)
@@ -1105,7 +1109,7 @@ L1474:
         and     si,-2
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_setshade endp
 
 ; seg004_0849_1487  (+1487)
@@ -1137,7 +1141,7 @@ L14A7:
         and     si,-2
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
         lodsw
         mov     bx,word ptr [si+6]
         mov     byte ptr [bx+14D7h],al
@@ -1159,7 +1163,7 @@ _do_defres proc near
         mov     byte ptr [di+14D6h],al
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_defres endp
 
 ; seg004_0849_14DD  (+14DD)
@@ -1178,7 +1182,7 @@ _do_minires proc near
         mov     byte ptr [di+14D6h],al
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_minires endp
 
 ; seg004_0849_1501  (+1501)
@@ -1201,7 +1205,7 @@ _do_strres proc near
         mov     si,dx
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_strres endp
 
 ; seg004_0849_1524  (+1524)
@@ -1225,7 +1229,7 @@ _do_cntres proc near
 L1544:
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_cntres endp
 
 ; seg004_0849_154A  (+154A)
@@ -1518,7 +1522,7 @@ L1740:
         mov     word ptr ds:[25E4h],0
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 L1760:
         mov     byte ptr ds:[14CAh],bh
         mov     byte ptr ds:[14CBh],bl
@@ -1586,7 +1590,7 @@ modify_biasy:
         pop     si
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 clip_needed:
         js      short must_clip_3d
         push    si
@@ -1634,7 +1638,7 @@ L182C:
         pop     si
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 must_clip_3d:
         mov     word ptr ss:[5A5h],offset _overflow_handler_reg
         test    byte ptr ds:[14CAh],4
@@ -1695,7 +1699,7 @@ L18E4:
 L18E7:
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_closure endp
 
 ; seg004_0849_18ED  (+18ED)
@@ -1705,7 +1709,7 @@ _do_asmcal proc near
         call    ax
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_asmcal endp
 
 ; seg004_0849_18F6  (+18F6)
@@ -1717,12 +1721,12 @@ _do_sfcal proc near
         add     si,ax
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
 L1901:
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_sfcal endp
 
 ; seg004_0849_1907  (+1907)
@@ -1739,7 +1743,7 @@ _do_ifge proc near
         add     si,cx
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_ifge endp
 
 ; seg004_0849_191A  (+191A)
@@ -1755,7 +1759,7 @@ _do_ifle proc near
         add     si,cx
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_ifle endp
 
 ; seg004_0849_192D  (+192D)
@@ -1773,18 +1777,18 @@ _do_sortvar proc near
         add     si,ax
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         lodsw
         push    si
         add     si,ax
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 L1950:
         lodsw
         add     ax,si
@@ -1795,15 +1799,15 @@ L1950:
         add     si,ax
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_sortvar endp
 
 ; seg004_0849_196E  (+196E)
@@ -1841,18 +1845,18 @@ _do_sortnorm proc near
         add     si,ax
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         lodsw
         push    si
         add     si,ax
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_sortnorm endp
 
 ; seg004_0849_19B6  (+19B6)
@@ -1880,18 +1884,18 @@ L19D7:
         add     si,ax
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         lodsw
         push    si
         add     si,ax
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_sortnorm_x0 endp
 
 ; seg004_0849_19F3  (+19F3)
@@ -1919,18 +1923,18 @@ L1A14:
         add     si,ax
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         lodsw
         push    si
         add     si,ax
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_sortnorm_y0 endp
 
 ; seg004_0849_1A30  (+1A30)
@@ -1958,18 +1962,18 @@ L1A51:
         add     si,ax
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         lodsw
         push    si
         add     si,ax
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_sortnorm_z0 endp
 
 ; seg004_0849_1A6D  (+1A6D)
@@ -2015,12 +2019,12 @@ _do_org proc near
         call    _self_modify
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 L1AC1:
         mov     word ptr ds:[25E2h],0FFFFh
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_org endp
 
 ; seg004_0849_1ACD  (+1ACD)
@@ -2052,7 +2056,7 @@ L1AE9:
 L1AF2:
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_hull endp
 
 ; seg004_0849_1AF8  (+1AF8)
@@ -2090,14 +2094,14 @@ _flat_y_rel proc near
         mov     si,bp
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 L1B31:
         or      al,4
         stosb
         mov     si,bp
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 L1B3C:
         add     cx,dx
         jge     short L1B42
@@ -2107,7 +2111,7 @@ L1B42:
         mov     si,bp
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _flat_y_rel endp
 
 ; seg004_0849_1B4B  (+1B4B)
@@ -2146,7 +2150,7 @@ _do_y_rel proc near
         mov     byte ptr [di+14D6h],al
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
         mov     bp,offset _instance_pitch
         jmp     short L1BA0
         mov     bp,offset _instance_bank
@@ -2211,7 +2215,7 @@ L1BDC:
         call    _self_modify
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     word ptr ds:[14C2h]
         pop     word ptr ds:[14BCh]
         pop     word ptr ds:[14B6h]
@@ -2228,12 +2232,12 @@ L1BDC:
         call    _self_modify
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 L1C6D:
         call    _self_modify
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         pop     word ptr ds:[25EAh]
         pop     word ptr ds:[25E8h]
@@ -2241,7 +2245,7 @@ L1C6D:
         call    _self_modify
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_y_rel endp
 
 ; seg004_0849_1C8C  (+1C8C)
@@ -2261,7 +2265,7 @@ _do_movres proc near
         mov     si,ax
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_movres endp
 
 ; seg004_0849_1CA5  (+1CA5)
@@ -2311,7 +2315,7 @@ L1CF7:
         mov     byte ptr [di+14D6h],al
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _flat_x_rel endp
 
 ; seg004_0849_1D01  (+1D01)
@@ -2344,7 +2348,7 @@ _do_x_rel proc near
         mov     byte ptr [di+14D6h],al
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_x_rel endp
 
 ; seg004_0849_1D49  (+1D49)
@@ -2393,7 +2397,7 @@ L1D9A:
         mov     byte ptr [di+14D6h],al
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _flat_z_rel endp
 
 ; seg004_0849_1DA4  (+1DA4)
@@ -2425,7 +2429,7 @@ _do_z_rel proc near
         mov     byte ptr [di+14D6h],al
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_z_rel endp
 
 ; seg004_0849_1DEC  (+1DEC)
@@ -2468,7 +2472,7 @@ _do_xz_rel proc near
         mov     byte ptr [di+14D6h],al
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_xz_rel endp
 
 ; seg004_0849_1E4D  (+1E4D)
@@ -2511,7 +2515,7 @@ _do_xy_rel proc near
         mov     byte ptr [di+14D6h],al
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_xy_rel endp
 
 ; seg004_0849_1EAE  (+1EAE)
@@ -2555,7 +2559,7 @@ _do_yz_rel proc near
         mov     byte ptr [di+14D6h],al
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_yz_rel endp
 
 ; seg004_0849_1F0F  (+1F0F)
@@ -2592,7 +2596,7 @@ _flat_xz_rel proc near
         mov     byte ptr [di+14D6h],al
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _flat_xz_rel endp
 
 ; seg004_0849_1F62  (+1F62)
@@ -2625,7 +2629,7 @@ _flat_xy_rel proc near
         mov     byte ptr [di+14D6h],al
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _flat_xy_rel endp
 
 ; seg004_0849_1FAA  (+1FAA)
@@ -2658,7 +2662,7 @@ _flat_yz_rel proc near
         mov     byte ptr [di+14D6h],al
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _flat_yz_rel endp
 
 ; seg004_0849_1FF2  (+1FF2)
@@ -2679,7 +2683,7 @@ setcol_common:
         mov     ds,bp
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_setcolor endp
 
 ; seg004_0849_2016  (+2016)
@@ -2719,7 +2723,7 @@ _do_goursurf proc near
         mov     word ptr ds:[14A8h],offset _seg003_0272_5956
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_goursurf endp
 
 ; seg004_0849_204A  (+204A)
@@ -2739,7 +2743,7 @@ _do_uwsurf proc near
         mov     es,bx
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 L207B:
         mov     bx,es
         mov     ax,seg seg_370D
@@ -2764,7 +2768,7 @@ _do_transsurf proc near
         mov     es,bx
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_transsurf endp
 
 ; seg004_0849_20B6  (+20B6)
@@ -2774,7 +2778,7 @@ _do_vexsurf proc near
         mov     word ptr ds:[14A8h],38B4h
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_vexsurf endp
 
 ; seg004_0849_20C8  (+20C8)
@@ -2789,7 +2793,7 @@ _do_cavesurf proc near
         mov     word ptr ds:[14A8h],249Ch
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
         lodsw
         push    si
         add     si,ax
@@ -2820,7 +2824,7 @@ L20F0:
         pop     si
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
         push    word ptr ds:[25E6h]
         push    word ptr ds:[25E8h]
         push    word ptr ds:[25EAh]
@@ -2915,14 +2919,14 @@ L2196:
         add     si,ax
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         pop     word ptr ds:[25EAh]
         pop     word ptr ds:[25E8h]
         pop     word ptr ds:[25E6h]
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
         mov     cl,byte ptr ds:[25E0h]
         mov     bx,word ptr ds:[25E6h]
         neg     bx
@@ -3014,7 +3018,7 @@ L2286:
         pop     si
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_cavesurf endp
 
 ; seg004_0849_22EB  (+22EB)
@@ -3024,7 +3028,7 @@ _do_ijmp proc near
         add     si,ax
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_ijmp endp
 
 ; seg004_0849_22F4  (+22F4)
@@ -3035,7 +3039,7 @@ _do_ijmp_i proc near
         mov     si,word ptr [bx]
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_ijmp_i endp
 
 ; seg004_0849_22FF  (+22FF)
@@ -3051,7 +3055,7 @@ _do_rorg proc near
         call    _self_modify
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_rorg endp
 
 ; seg004_0849_2317  (+2317)
@@ -3077,7 +3081,7 @@ _do_defdelta proc near
         mov     word ptr [di+14D4h],bp
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_defdelta endp
 
 ; seg004_0849_2342  (+2342)
@@ -3102,7 +3106,7 @@ _do_addres proc near
         mov     byte ptr [di+14D6h],al
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_addres endp
 
 ; seg004_0849_237F  (+237F)
@@ -3127,7 +3131,7 @@ _do_subres proc near
         mov     byte ptr [di+14D6h],al
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_subres endp
 
 ; seg004_0849_23BC  (+23BC)
@@ -3169,7 +3173,7 @@ L23C6:
         add     si,ax
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         pop     word ptr ds:[25EAh]
         pop     word ptr ds:[25E8h]
@@ -3186,7 +3190,7 @@ L23C6:
         call    _self_modify
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_ihcall endp
 
 ; seg004_0849_2445  (+2445)
@@ -3226,7 +3230,7 @@ L244F:
         add     si,ax
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         pop     word ptr ds:[25EAh]
         pop     word ptr ds:[25E8h]
@@ -3243,7 +3247,7 @@ L244F:
         call    _self_modify
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_ibcall endp
 
 ; seg004_0849_24CE  (+24CE)
@@ -3283,7 +3287,7 @@ L24D8:
         add     si,ax
         lodsw
         xchg    bx,ax
-        call    word ptr [bx+24F4h]
+        call    word ptr [bx+OPCODE_TABLE]
         pop     si
         pop     word ptr ds:[25EAh]
         pop     word ptr ds:[25E8h]
@@ -3300,7 +3304,7 @@ L24D8:
         call    _self_modify
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_ipcall endp
 
 ; seg004_0849_2557  (+2557)
@@ -3313,7 +3317,7 @@ _do_pushc proc near
         push    word ptr ds:[25E0h]
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_pushc endp
 
 ; seg004_0849_256D  (+256D)
@@ -3326,7 +3330,7 @@ _do_popc proc near
         call    _self_modify
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_popc endp
 
 ; seg004_0849_2586  (+2586)
@@ -3353,7 +3357,7 @@ _do_jnorm_x0 proc near
 L25A9:
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_jnorm_x0 endp
 
 ; seg004_0849_25AF  (+25AF)
@@ -3380,7 +3384,7 @@ _do_jnorm_y0 proc near
 L25D2:
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_jnorm_y0 endp
 
 ; seg004_0849_25D8  (+25D8)
@@ -3407,7 +3411,7 @@ _do_jnorm_z0 proc near
 L25FB:
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_jnorm_z0 endp
 
 ; seg004_0849_2601  (+2601)
@@ -3426,7 +3430,7 @@ _do_jnorm_yz0 proc near
 L2612:
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_jnorm_yz0 endp
 
 ; seg004_0849_2618  (+2618)
@@ -3444,7 +3448,7 @@ _do_jnorm_xz0 proc near
 L2629:
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_jnorm_xz0 endp
 
 ; seg004_0849_262F  (+262F)
@@ -3462,7 +3466,7 @@ _do_jnorm_xy0 proc near
 L2640:
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_jnorm_xy0 endp
 
 ; seg004_0849_2646  (+2646)
@@ -3499,7 +3503,7 @@ _do_jnorm proc near
 L2677:
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_jnorm endp
 
 ; seg004_0849_267D  (+267D)
@@ -3551,7 +3555,7 @@ L26D3:
         mov     es,ax
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _do_3d_clip endp
 
 ; seg004_0849_26E1  (+26E1)
@@ -4350,12 +4354,12 @@ L2D81:
         add     si,2
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 L2E18:
         add     si,2
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 L2E21:
         mov     dl,al
         mov     bx,word ptr [di+14D0h]
@@ -4496,7 +4500,7 @@ L2FED:
         add     si,ax
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 L2FFA:
         ret
 _do_parapiped endp

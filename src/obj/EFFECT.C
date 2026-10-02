@@ -29,13 +29,16 @@
 #include <stdlib.h>
 #include "combat.h"
 #include "critter.h"
+#include "event.h"
 #include "map.h"
 #include "object.h"
 #include "player.h"
+#include "sound.h"
 #include "sys.h"
 #include "ui.h"
 #include "uw2.h"
 
+#include "view3d.h"
 unsigned char lengset = 0;              /* DS:98E, check_door set the length itself */
 unsigned char DoAnimO = 1;              /* DS:98F */
 static int timer_tick = 0;              /* DS:990; name: FM Towns keeps it in _spec_col */
@@ -46,13 +49,7 @@ int timerlist[0x40];                    /* DS:34F6 */
 char timercount;                        /* DS:3576 */
 struct Anim animlist[0x40];             /* DS:3578 */
 
-extern unsigned char AnimObjInPipe;
 
-struct Object far * far CreateObj(int item, char mobile);
-unsigned char far can_place(int item, int index, int x, int y, int z, int b, char dist);
-void far play_effect(char type, int x, int y, int a);
-void far UseTrigger(struct Object far *who, void far *a, struct Object far *trig, int how);
-int far rand(void);
 
 /* Removes animation n's object from its tile and frees it. */
 void far rem_anim_from_map(int n)
@@ -349,7 +346,7 @@ unsigned char far mts_doanim(struct Object far *obj, int x, int y, char who)
 /* Creates effect cls (an animation class, item FIRST_ANIMOBJ + cls) on tile x, y for len
    frames starting at frame: at who's fine position, and at height -z when z is negative,
    else who's z plus z eighths of who's height. Returns 0 when it could not be made. */
-unsigned char far put_effect(struct Object far *who, int cls, int len, unsigned char frame,
+unsigned char far put_effect(struct Object far *who, int cls, int len, int frame,
                              int z, int x, int y)
 {
     struct Object far *p;

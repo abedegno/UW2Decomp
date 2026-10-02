@@ -28,6 +28,7 @@
    Name: inferred (triggers and traps: UseTrigger, SetOffTrap, UseTrap; the job of System
    Shock's TRIGGER.C). */
 #include <stdlib.h>
+#include <stdio.h>
 #include "combat.h"
 #include "critter.h"
 #include "event.h"
@@ -54,12 +55,11 @@ static int RemoveTrapFlags;                             /* DS:863E */
 static struct Object far *ObjRunCodeAround;             /* DS:8640 */
 static struct Object far *CharacterThatTriggeredTrap;   /* DS:8644 */
 static struct Object far *TriggeringButton;             /* DS:8648 */
-void far fread(void near *dest, int count, int size, int handle);
 
 /* Reads the 16-byte trigger type table from OBJECTS.DAT (handle positioned by the caller). */
 /* name: IDA: LoadTriggerObjDat. FM Towns' trap_init, first in this run of functions: the
    same fread of 16 bytes into the trigger type table. */
-void far trap_init(int handle)
+void far trap_init(FILE *handle)
 {
     fread(Triggers, 1, 16, handle);
 }
@@ -129,7 +129,6 @@ int far UseTrigger(struct Object far *who, struct Object far *start,
         update_pplate(trig);
     return result;
 }
-int far UseTrap(struct Object far *trap, int x, int y);
 /* Runs trap at square x, y, remembering who set the chain off and with which object.
    The function has no return statement, as in DOS, so its callers get whatever is
    left in AX. */
@@ -219,7 +218,6 @@ int far get_numbered_variable(int index)
     if (index < 0x10) return player->xclock[index];
     return 0;
 }
-extern unsigned char stay_centered;
 /* This file's _DATA, DS:1BA6..1BBC, in definition order. */
 /* match: ovr158's strings end at 1BA5 (odd), ovr167's data starts at 1BBE. This file uses
    three of the four; FM Towns keeps tile_walls and map_sq (TriggerChainTileData here)
@@ -229,13 +227,6 @@ unsigned char tile_walls[16] = { 30, 0, 19, 21, 11, 13, 32, 32, 32, 32, 0, 0, 0,
 int trap_teleport_data = -1;                                    /* DS:1BB6 */
 unsigned char CreatedObjectFound_dseg_67d6_1BB8 = 0;            /* DS:1BB8 */
 struct Tile far *TriggerChainTileData_dseg_67d6_1BB9 = 0;       /* DS:1BB9, FM Towns map_sq */
-int far do_teleport(struct Object far *who, int x, int y, int level);
-int far change_terrain(int x, int y, int wall, int floor, int height,
-                              int type, int dx, int dy, int extra);
-unsigned char far put_at(int x, int y, int z, struct Object far *obj, int range, int nocull);
-int far add_animobj(int index, int len, int a, char x, char y);
-void far trap_obj_del(union Link far *head, struct Object far *obj);
-void far scroll_print(char far *s);
 
 /* Condition traps (variable, skill, proximity, inventory) branch by running the trap or
    trigger that follows the first object the trap links to, and return its result. */
@@ -731,7 +722,7 @@ void far kill_triggers(union Link far *head)
     while (obj != 0) {
         next = Obj_PtrTMem(&obj->qn.link);
         if (OBJ_MAJOR(obj) == MAJOR_TRAP &&
-            OBJ_MINOR(obj) >= 2 &&
+            OBJ_MINOR(obj) >= MINOR_TRIGGER &&
             obj->ol.f.link == RemoveTrapIndex) {
             if (Triggers[obj->id & ID_INCLASS] == 10)
                 rem_timer_obj(Obj_MemTPtr(obj));
@@ -746,7 +737,6 @@ void far kill_triggers(union Link far *head)
         obj = next;
     }
 }
-extern struct Tile far *mapdata;
 /* Deletes trap and its chain. Its flags count the triggers pointing at it, so the whole
    map is searched to remove them too. */
 void far delete_trap(union Link far *head, struct Object far *trap)
@@ -767,9 +757,6 @@ void far delete_trap(union Link far *head, struct Object far *trap)
     if ((trap = Obj_Find(head, 1, Obj_MemTPtr(trap))) != 0)
         Obj_FreeLinkChain(Obj_Find_Head, trap);
 }
-void far Sched_SetAllClocks(int how);
-void far gronkify_change_goal();
-void far gronk_whoami(int who, int how, unsigned char near *info, void (far *fn)());
 /* The hack traps (TRAP_HACK), each a special case of the game, chosen by the trap's
    quality: 2 the crystal ball, 3 and 4 the eight-position switch, 5 a crime against owner,
    10 the best weapon for the arena, 11 fraznium, 12 a standing wave, 14 a cycling floor, 17
@@ -901,8 +888,11 @@ int far do_trap_hack(struct Object far *trap, register int x, register int y)
         info[7] = trap->ol.f.owner;
         info[8] = OBJ_FINEY(trap) > 0 ? 1
                 : Obj_MemTPtr(CharacterThatTriggeredTrap);
-        gronk_whoami(((OBJ_HEADING(trap) > 0 ? 1 : 0) << 7) + OBJ_Z(trap),
-                     OBJ_FINEX(trap) > 0 ? 1 : 0, info, gronkify_change_goal);
+        /* match: this call pushes `all` as an int, not converted to gronk_whoami's
+           unsigned char */
+        ((void (far *)(int, int, int, WhoamiFn))gronk_whoami)(
+            ((OBJ_HEADING(trap) > 0 ? 1 : 0) << 7) + OBJ_Z(trap),
+            OBJ_FINEX(trap) > 0 ? 1 : 0, (int)info, (WhoamiFn)gronkify_change_goal);
         break;
     case 44:
         player_sleep(trap->ol.f.owner);
@@ -938,20 +928,20 @@ int far cast_trap_spell(int x, int y, int sub)
         return 0;
     }
     tile = Map_GetAddr(x, y);
-    trigger->id = trigger->id & 0xBFFF | (1 & 1) << 14;
-    trigger->id = trigger->id & 0xDFFF | (1 & 1) << 13;
+    SET_INVIS(trigger, 1);
+    SET_DOORDIR(trigger, 1);
     SET_MAJOR(trigger, 6);
     SET_MINOR(trigger, 2);
     SET_INCLASS(trigger, 0);
     SET_Z(trigger, tile->height << 3);
-    trigger->id = trigger->id & 0x7FFF | (1 & 1) << 15;
+    SET_ISQUANT(trigger, 1);
     SET_FINEX(trigger, 3);
     SET_FINEY(trigger, 3);
     SET_HEADING(trigger, 0);
-    trigger->id = trigger->id & 0xF7FF | (0 & 1) << 11;
-    trigger->id = trigger->id & 0xEFFF | (1 & 1) << 12;
-    trigger->id = trigger->id & 0xFDFF | (0 & 1) << 9;
-    trigger->id = trigger->id & 0xFBFF | (0 & 1) << 10;
+    SET_FLAG11(trigger, 0);
+    SET_ENCHANTED(trigger, 1);
+    SET_FLAG9(trigger, 0);
+    SET_FLAG10(trigger, 0);
     trigger->qn.f.next = trigger->qn.f.quality = 0;
     trigger->ol.f.link = Obj_MemTPtr(trap);
     trigger->qn.f.quality = x;
@@ -960,10 +950,10 @@ int far cast_trap_spell(int x, int y, int sub)
     SET_MAJOR(trap, 6);
     SET_MINOR(trap, 0);
     SET_INCLASS(trap, sub);
-    trap->id = trap->id & 0xBFFF | (1 & 1) << 14;
-    trap->id = trap->id & 0xDFFF | (1 & 1) << 13;
+    SET_INVIS(trap, 1);
+    SET_DOORDIR(trap, 1);
     SET_Z(trap, tile->height << 3);
-    trap->id = trap->id & 0x7FFF | (1 & 1) << 15;
+    SET_ISQUANT(trap, 1);
     SET_FINEX(trap, 3);
     SET_FINEY(trap, 3);
     trap->qn.f.next = 0;
@@ -988,7 +978,7 @@ void far trigger_obj_del(union Link far *head, struct Object far *obj)
         y = obj->ol.f.owner;
         delete_trap(&Map_GetAddr(x, y)->objects, linked);
     } else if (Obj_Rem(head, obj)) {
-        linked->id = linked->id & 0xE1FF | (((flags - 1) & 0xF) << 9);
+        SET_FLAGS(linked, flags - 1);
         Obj_Free(obj);
     }
     if (Triggers[obj->id & ID_INCLASS] == 10)
@@ -1015,15 +1005,13 @@ char far is_this_wandering(int x, int y, struct Object far *obj)
     return CreatedObjectFound_dseg_67d6_1BB8;
 }
 typedef char (far *AreaFn)(int, int, struct Object far *);
-void far gronk_area(struct Object far *who, char count, AreaFn fn,
-                    unsigned char type, unsigned char dist, unsigned char radius);
 /* True if a created (temporary) object is already within four squares of obj, so a
    create-object trap should not add another. */
 char far dont_create_wandering_monster_here(struct Object far *obj)
 {
     CreatedObjectFound_dseg_67d6_1BB8 = 0;
     ObjRunCodeAround = obj;
-    gronk_area(obj, 1, is_this_wandering, 0, 0, 4);
+    gronk_area(obj, 1, (SpellFn)is_this_wandering, 0, 0, 4);
     return CreatedObjectFound_dseg_67d6_1BB8;
 }
 /* For the wandering monster and door updates: 0 when the player is within 8 squares of
@@ -1051,7 +1039,7 @@ void far DoWanderingMonsters(unsigned char is_player)
         if (OBJ_FLAGS(obj) == 0) {
             newobj = Obj_PtrTMem(&obj->ol.link);
             if (IsMobElem(newobj)) {
-                newobj->attitude_word = newobj->attitude_word & 0xFEFF | 0x100;
+                SET_TEMP(newobj, 1);
                 if (check_alert(is_player, x, y))
                     UseTrap(obj, x, y);
             }
@@ -1164,8 +1152,7 @@ void far update_pplate(struct Object far *trig)
     while (next != 0) {
         if (((OBJ_CLASS(next) & 0x1E) == CLASS_TRIGGER) &&
             ((Triggers[next->id & ID_INCLASS] & 7) == 7))
-            next->pos = next->pos & 0xE3FF |
-                ((notset + (OBJ_FINEY(next) & 6)) & 7) << 10;
+            SET_FINEY(next, notset + (OBJ_FINEY(next) & 6));
         next = Obj_PtrTMem(&next->qn.link);
     }
     if (((OBJ_FINEY(trig) & 2) >> 1) != 0) {
@@ -1198,8 +1185,6 @@ void far do_ice_hack(struct Object far *trap)
                                0x3F, texture, height, 0x10, 0, 0, 0);
     }
 }
-struct Object far * far CreateObj(int id, int extra);
-unsigned char far put_at(int x, int y, int z, struct Object far *obj, int a, int b);
 /* Puts a bridge object on x, y at height z facing heading, unless one is there. */
 struct Object far * far place_bridge(int x, int y, int zarg, int headingarg)
 {
@@ -1222,8 +1207,8 @@ struct Object far * far place_bridge(int x, int y, int zarg, int headingarg)
         if (!put_at((x << 3) + (heading > 2 ? 1 : 0) + 3,
                     (y << 3) + (heading == 2 || heading == 4 ? 1 : 0) + 3,
                     z, obj, 0, 1)) return 0;
-        obj->pos = obj->pos & 0xFC7F | (heading & 7) << 7;
-        obj->pos = obj->pos & 0xFF80 | z & 0x7F;
+        SET_HEADING(obj, heading);
+        SET_Z(obj, z);
     }
     return obj;
 }

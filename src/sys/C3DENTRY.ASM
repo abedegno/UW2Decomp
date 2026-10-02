@@ -34,6 +34,9 @@
 ; Its _DATA is DS:2164..2194 (relocation entries 2372-2380), defined before the code because
 ; those entries come before the code's.
 
+; The DOS (int 21h) functions used here.
+DOS_SET_VECTOR  equ     25h
+
         .186
 
         extrn   _DRAW_RELATED_seg003_0272_7F9:far
@@ -350,7 +353,7 @@ _cRender proc far
         mov     ax,word ptr es:[bx+2]
         mov     word ptr cs:L0C2E,ax
         mov     dx,5A0h
-        mov     ax,2500h
+        mov     ax,DOS_SET_VECTOR shl 8
         int     21h
         call    far ptr _seg003_0272_6E2
         call    far ptr _render_3d

@@ -29,6 +29,10 @@
 ; not zeros).
 ; Its relocations are entries 2319-2327 of UW2.EXE's relocation table.
 
+; The model interpreter's opcode table: a word per opcode, the offset of its handler
+; (INTERP.ASM), in seg052_519C, the data segment while interpreting.
+OPCODE_TABLE    equ     24F4h
+
         .386
 
         extrn   _seg003_0272_5311:far
@@ -121,7 +125,7 @@ _seg004_0849_64F:
         pop     si
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 L068D:
         js      short L0703
         push    si
@@ -172,7 +176,7 @@ L06CA:
         pop     si
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 L0703:
         mov     word ptr ss:[5A5h],offset _seg004_0849_D83
         test    byte ptr ds:[14CAh],4
@@ -233,7 +237,7 @@ L078F:
 L0792:
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _smooth_closure endp
 
 ; seg004_0849_798  (+798)
@@ -281,7 +285,7 @@ L07EE:
         mov     es,ax
         lodsw
         xchg    bx,ax
-        jmp     word ptr [bx+24F4h]
+        jmp     word ptr [bx+OPCODE_TABLE]
 _seg004_0849_798 endp
 
 ; seg004_0849_7FC  (+7FC)

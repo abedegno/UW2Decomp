@@ -112,6 +112,15 @@ void far ruin_cure_potions(int x, int y);
 void far remove_TK_wand(void);
 void far go_vend(int which, int machine, int x, int y, int choice);
 void far put_player_in_jail(void);
+unsigned char far find_good_x_and_y(struct Object far *obj, int x, int y, int *nx, int *ny, char clear);
+int far do_teleport(struct Object far *who, int x, int y, int level);
+int far change_terrain(int x, int y, int wall, int floor, int height, int type, int dx, int dy, int adjust);
+void far talk_to_disembodied(char whoami);
+unsigned char far remove_opponent(struct Object far *npc);
+unsigned char far death_check(struct Object far *obj, unsigned char mode);
+void far repair_item(struct Object far *obj, int skill, char who);
+unsigned char far instant_kill(struct Object far *obj);
+void far Killorn_just_crashed(unsigned char entering);
 
 /* SCDEVENT.C: SCD event handling */
 void far gronk_race(int race, unsigned char loop, int param,
@@ -119,6 +128,12 @@ void far gronk_race(int race, unsigned char loop, int param,
 unsigned char far player_looking(int x, int y);
 char far gronkify_attitude(struct Object far *npc, int attitude);
 char far Sched_DoEvent(unsigned char far *row);
+/* A schedule event's handler (NestedSCDEventCodeJumps_dseg_67d6_1344 and
+   SCDEventCodeJumps_dseg_67d6_1364), given the event row. */
+typedef char (far *SCDEventFn)(unsigned char far *);
+char far gronkify_change_goal(struct Object far *npc, char *row);
+extern SCDEventFn NestedSCDEventCodeJumps_dseg_67d6_1344[8];
+extern SCDEventFn SCDEventCodeJumps_dseg_67d6_1364[12];
 
 /* TRIGGER.C: triggers and traps */
 extern unsigned char Triggers[16];
@@ -128,6 +143,15 @@ int far SetOffTrap(struct Object far *who, struct Object far *context, struct Ob
                    int x, int y);
 int far do_math_op(int value, int op, int right);
 int far get_numbered_variable(int index);
+/* tile_walls[type]: which sides of a tile of each type (enum TileType) are wall, from the
+   table's values and PATHFIND.C's moves (moving east into a tile is blocked by its west
+   wall). The 3D view (VIEW3D.C) reads it through trans_grid, by sides relative to the view. */
+#define TW_DIAG         0x01            /* a diagonal */
+#define TW_WEST         0x02
+#define TW_EAST         0x04
+#define TW_SOUTH        0x08
+#define TW_NORTH        0x10
+#define TW_SLOPE        0x20
 extern unsigned char tile_walls[16];
 extern int trap_teleport_data;
 extern struct Tile far *TriggerChainTileData_dseg_67d6_1BB9;  /* name: FM Towns: map_sq */
@@ -141,6 +165,13 @@ void far do_ice_hack(struct Object far *trap);
 void far DoWanderingMonsters(unsigned char is_player);
 void far DoClosingDoors(unsigned char is_player);
 int far Ply_Weight(void);
+void far trap_init(FILE *handle);
+unsigned char near * far trap_class_data(void);
+int far UseTrigger(struct Object far *who, struct Object far *start, struct Object far *trig, int type);
+int far UseTrap(struct Object far *trap, int x, int y);
+void far trap_obj_del(union Link far *head, struct Object far *obj);
+char far check_alert(unsigned char is_player, int x, int y);
+char far check_pplate(struct Object far *who, struct Tile far *tile, int z, int how);
 
 /* SCHEDULE.C: SCD schedules */
 unsigned char far Sched_Insert(struct SCDRow far *row, unsigned char run);
@@ -153,5 +184,22 @@ void far Sched_SetBuf(int ofs, int seg);
    Sched_WrapTime. */
 unsigned char far Sched_IncrTime(unsigned n, unsigned char mode);
 unsigned char far Sched_WrapTime(unsigned time, unsigned span, unsigned char mode);
+/* One level's place in a schedule: the time it has reached and the next row to run. */
+struct SCDClock { unsigned time, next; };
+/* The work area: the migration queue, then the block as stored in SCD.ARK (row count,
+   block number, the 80 clocks, the rows). */
+struct SCDWork {
+    int migrations;
+    struct SCDRow migrationRecord[16];
+    unsigned rows;
+    unsigned char block;
+    char spare;
+    struct SCDClock clocks[80];
+    struct SCDRow record[1];
+};
+extern struct SCDWork far *SCD_dseg_67d6_8634;
+unsigned char far Sched_SetAllClocks(unsigned char mode);
+unsigned char far Sched_Delete(struct SCDRow far *row);
+unsigned char far Sched_Migrate(struct SCDRow far *row);
 
 #endif

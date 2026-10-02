@@ -52,23 +52,6 @@
 #include "sys.h"
 #include "ui.h"
 
-void far Txm_Load(int arc, int level, int flags);
-char far Txm_Save(int arc, int level, int flags);
-void far GetAutoMapLevel(int arc, int level);
-char far SaveAutoMapLevel(int arc, int level);
-void far close_arc(int arc);
-void far scroll_print(char far *s);
-void far scroll_clear(char redraw);
-void far load_weapcm(void);
-void far newFPS(int n);
-int far wdialog(char *prompt, char *initial, char *result, char anychar, int maxlen);
-unsigned char far blttodrive(char far *src, char *path, int len);
-unsigned far get_workspace(void);
-void far Sched_SetAllClocks(int n);
-int far find_anim();
-void far load_digi_fx(int which);
-void far clearobj(int n);
-void far Killorn_just_crashed(int how);
 
 /* match: the tests in SaveLevel and copy_file have empty bodies: the bytes keep each
    test with no jump after it, as if a debugging message had been compiled out. */
@@ -76,7 +59,7 @@ void far Killorn_just_crashed(int how);
 
 /* Makes the SAVE0 directory, empties it, and checks for 1200 bytes free on the
    current drive. Returns 0 (start-up then stops with "Not enough disk space") if not. */
-char far init_save(void)
+unsigned char far init_save(void)
 {
     long space;
     struct dfree df;
@@ -125,10 +108,6 @@ int far GetLevel(int level)
     return ok;
 }
 
-/* match: declared here because TLINK numbers the overlay's stub entries in the order
-   Turbo C lists the publics, which for names with the same hash key is the order they
-   were first seen: the EXE's stub has SaveGame before SaveLevel. */
-int far SaveGame();
 
 /* Writes level back into SAVE0's LEV.ARK: the map and objects (without the player's
    inventory, which is freed and restored round it), the texture map and the automap. */
@@ -142,7 +121,7 @@ char far SaveLevel(int level)
     FreePlayerInv(&ThePlayer->ol.link);
     sq = GrSq;
     change_GrSq(-1, -1);
-    ThePlayer->id = ThePlayer->id & 0xFE3F;
+    SET_MAJOR(ThePlayer, 0);
     if ((saved = Map_Save(0, level, 2)) == 0)
         complain("map");
     ok = saved;
@@ -205,7 +184,6 @@ void far ShowSaveRest(void)
     scroll_print("\\0");
 }
 
-char far RestoreGame();
 
 /* Saves to or restores from slot 1 to 4 and prints the outcome, string 0xAE + msg:
    restore 1 no game there, 2 complete, 3 failed; save 4 failed, 5 succeeded,
@@ -255,13 +233,13 @@ char far RestoreGame(char slot)
     if (clear_dir(HomeDir)) {
         game_sprint(0xB9);              /* "..." after each step */
         if (copy_dir(path, HomeDir)) {
-            game_sprint(0xB9);
+            game_sprint(0xB9);  /* '...' */
             reset_game();
             if (RestorePlayerInv(HomeDir)) {
-                game_sprint(0xB9);
+                game_sprint(0xB9);  /* '...' */
                 if (GetLevel(PlayerLevel)) {
                     do_level_hacks(PlayerLevel, 3);
-                    game_sprint(0xB9);
+                    game_sprint(0xB9);  /* '...' */
                     set_creatures_from_saved_game();
                     return 1;
                 }
@@ -301,11 +279,11 @@ int far SaveGame(char slot, char *desc)
     strcat(path, "\\");
     if (!clear_dir(path))
         goto fail;
-    game_sprint(0xB9);
+    game_sprint(0xB9);  /* '...' */
     if (SavePlayerInv(HomeDir)) {
-        game_sprint(0xB9);
+        game_sprint(0xB9);  /* '...' */
         if (SaveLevel(PlayerLevel)) {
-            game_sprint(0xB9);
+            game_sprint(0xB9);  /* '...' */
             if (copy_dir(HomeDir, path)) {
                 scroll_print("\\0");
                 scroll_clear(1);

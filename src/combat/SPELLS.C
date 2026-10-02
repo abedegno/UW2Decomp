@@ -36,38 +36,13 @@
 
 #define SPELL_CLASS(s)  (((s).cls & 0xF8) >> 3)
 
-extern struct Object far *objdata;
-extern int ObjectActorArg;
 /* This file's _BSS, DS:8638..8639: the map square of an object (not a critter) that casts. */
 /* match: after ovr151's SCD pointer (key 363) in a new run (41),
    before ovr163's LootCreature; of the files between, only this one uses them. */
 unsigned char inanmMapX, inanmMapY;
-extern struct Spell far spells[];
-extern struct Inplist near *inplist;
-extern unsigned char far *ActiveMob;
-extern unsigned char far *LastActiveMob;
-extern void (far *ObjectActor)();
-extern void (far *npp_func)(void);
 
 int area_spell_state = 0;
 unsigned char mspell_mused = 0;
-
-/* Elsewhere in the game. */
-char far set_curmagic(char cls, char sub, char flags);
-void far show_cutscene(int n);
-struct Object far * far CreateObj(int id, int b);
-int far add_animobj(int index, int len, char a, char x, char y);
-void far put_effect(struct Object far *obj, int type, int size, int a, int b, int x, int y);
-char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
-                     unsigned char damage, unsigned char type);
-void far remove_opponent(struct Object far *npc);
-void far set_screen_frame(int which, int frame);
-void far mouse_release(int n);
-void far scroll_print(char far *s);
-void far RemoveTrap(struct Object far *obj, int skill);
-void far do_teleport(struct Object far *who, int x, int y, int level);
-void far set_effect(int which, char amount);
-void far automap_area(int x0, int y0, int x1, int y1, int *circle, int (far *fn)());
 
 void far spend_mana(int cost)
 {
@@ -76,7 +51,7 @@ void far spend_mana(int cost)
 }
 
 /* True on a square whose tile has bit 0 of its door byte set: no magic works there. */
-char far anti_magic_p(int x, int y)
+unsigned char far anti_magic_p(int x, int y)
 {
     return Map_GetAddr(x, y)->door & 1;
 }
@@ -108,7 +83,7 @@ void far cast(unsigned char spell, struct Object far *who, struct Object far *ta
 char far do_spell(unsigned char cls, unsigned char sub, struct Object far *who,
                   struct Object far *target)
 {
-    if (who >= objdata && cls <= 11) {
+    if (who >= (struct Object far *)objdata && cls <= 11) {
         if (anti_magic_p(inanmMapX, inanmMapY))
             return 0;
     } else if (anti_magic_p(OBJ_HOMEX(who), OBJ_HOMEY(who)))
@@ -504,7 +479,7 @@ char far sp_bleed(int x, int y, struct Object far *target, struct Tile far *tile
     if (OBJ_MAJOR(target) != MAJOR_CREATURE)
         return 0;
     if (!Creature[target->id & ID_INMAJOR].blood) {
-        game_sprint(0x12B);
+        game_sprint(0x12B);  /* 'That creature does not bleed.' */
         return 0;
     }
     return wound_foe(x, y, target, tile, src, power, 4, 0, 1);
@@ -521,7 +496,7 @@ char far sp_smite(int x, int y, struct Object far *target, struct Tile far *tile
     if (OBJ_MAJOR(target) != MAJOR_CREATURE)
         return 0;
     if (!Creature[target->id & ID_INMAJOR].blood) {
-        game_sprint(0x12B);
+        game_sprint(0x12B);  /* 'That creature does not bleed.' */
         return 0;
     }
     return wound_foe(x, y, target, tile, src, power, 4, 0, 1);
@@ -618,9 +593,6 @@ char far sp_hold(int x, int y, struct Object far *target, struct Tile far *tile,
         return hit_critter_goal(15, 1, time, target, x, y);
     return 0;
 }
-
-typedef char (far *SpellFn)(int x, int y, struct Object far *target, struct Tile far *tile,
-                            unsigned char src);
 
 /* Calls fn on the squares of a w + 1 by h + 1 rectangle (clipped to the map), at most
    count times that return true. type is the target mode, sub's top bits: 0 every critter
@@ -752,9 +724,6 @@ struct AreaSpell {
     unsigned char radius;
 };
 
-char far sp_study_monster(int x, int y, struct Object far *target, struct Tile far *tile,
-                          unsigned char src);
-
 struct AreaSpell area_spells[8] = {
     { sp_true_sight, 100, 1, 2 },
     { sp_sheet_light, 6, 4, 2 },
@@ -767,7 +736,7 @@ struct AreaSpell area_spells[8] = {
 
 SpellFn area1_spells[8] = {
     sp_bleed, sp_fear, sp_ward_undead, sp_charm, sp_poison, sp_hold, sp_smite,
-    sp_study_monster
+    (SpellFn)sp_study_monster
 };
 
 /* Area spells (class 6): area_spells[minor - 1] gives the per-square handler, how many
@@ -813,9 +782,9 @@ void far nail_1area(struct Object far *who, unsigned char sub)
 {
     if (who == ThePlayer) {
         if (sub > 7)
-            ObjectActor = obj_spells;
+            ObjectActor = (ActorFn)obj_spells;
         else
-            ObjectActor = target_spells;
+            ObjectActor = (ActorFn)target_spells;
         GameInputMode = 2;
         ObjectActorArg = sub;
         ObjectActing = who;
@@ -862,12 +831,12 @@ void far obj_spells(struct Object far *target, int how, unsigned char b)
             GetObjDesc(target, 1, name);
             game_sprint(0x12F);  /* 'The spell repairs the ' */
             scroll_print(name);
-            game_sprint(0x60);
+            game_sprint(0x60);  /* '.' */
             target->qn.f.quality = 0x3F;
             FixPlayerEquips();
             editchng(0x200);
         } else {
-            game_sprint(0x142);
+            game_sprint(0x142);  /* 'The spell has no noticeable effect.' */
             mspell_mused = 0;
         }
         break;
@@ -1019,7 +988,7 @@ void far special_spells(struct Object far *who, struct Object far *target, char 
         break;
     case 7:
         if ((PlayerLevel - 1) / LEVELS_PER_WORLD == 8) {
-            game_sprint(0x142);
+            game_sprint(0x142);  /* 'The spell has no noticeable effect.' */
             break;
         }
         r = player->skills[SKILL_CASTING];
@@ -1028,7 +997,7 @@ void far special_spells(struct Object far *who, struct Object far *target, char 
         circle[0] = px;
         circle[1] = py;
         circle[2] = r;
-        automap_area(px - r, py - r, px + r, py + r, circle, clip_circle);
+        automap_area(px - r, py - r, px + r, py + r, circle, (AreaMapFn)clip_circle);
         game_sprint(0x113);  /* 'You gain a sudden awareness of your surroundings.' */
         break;
     case 8:

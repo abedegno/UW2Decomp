@@ -14,6 +14,9 @@
 ; Runs with DS on seg021's data segment (see STARTUP.ASM and SYSENTRY.ASM).
 ; name: descriptive (system module 5); init and errorexit are the FM Towns names.
 
+; The DOS (int 21h) functions used here.
+DOS_PRINT_STRING equ     09h
+
         .186
 
         extrn   dseg062_62a6:far
@@ -114,7 +117,7 @@ L028C:
         cmp     word ptr ds:[190h],0
         je      short L02B2
         mov     dx,word ptr ds:[190h]
-        mov     ah,9
+        mov     ah,DOS_PRINT_STRING
         int     21h
 L02B2:
         jmp     dword ptr ds:[18Ch]

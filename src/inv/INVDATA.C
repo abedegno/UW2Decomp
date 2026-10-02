@@ -8,7 +8,7 @@
    What it does in the game: the inventory is the player object's contents list (the
    player's ol.link), with Inventory[] (28 link words, slot layout in inv.h) naming the
    object shown in each slot. This file keeps the two and the carried weight
-   (PlayerDat.weight, and each open bag's weight) in step. The panel (INVPANEL.C) and bags
+   (PlayerDat.rec.weight, and each open bag's weight) in step. The panel (INVPANEL.C) and bags
    (BAGS.C) call it for every move; the rest of the game asks it what the player carries
    (FindObj for ammunition, keys and the like; AskInventory for the weapon hand and armour)
    and wears out armour and weapons through DamageInventory (COMBAT.C, traps).
@@ -29,23 +29,14 @@
 
 #include <string.h>
 #include "inv.h"
+#include "map.h"
 #include "object.h"
 #include "player.h"
 #include "ui.h"
 #include "uw2.h"
 
-extern struct Player PlayerDat;
-extern union Link Inventory[];
-extern struct Inplist near *inplist;
 
-char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
-                     unsigned char damage, unsigned char type);
-struct Object far * far CreateObj(int item, char mobile);
-int far near_mob_put_at(struct Object far *at, struct Object far *obj, int a, int b);
-void far get_name(char far *buf, struct Object far *obj, int article, char plural);
-void far scroll_print(char far *s);
 
-char far invRemoveObject(struct Object far *obj, int qty);
 
 void far RedisplayInvSlot(int slot)
 {
@@ -98,7 +89,7 @@ unsigned char far AddToInventory(struct Object far *obj, int slot)
             Inventory[slot].f.index = Obj_MemTPtr(obj);
         }
         Obj_AddEnd(&owner->ol.link, obj);
-        PlayerDat.weight += mass;
+        PlayerDat.rec.weight += mass;
         done = 1;
     } else if (fits == -1)
         done = 0;
@@ -240,7 +231,7 @@ char far InvRemoveOneObject(struct Object far *obj)
 /* Removes obj, or qty of a stack (-1 for all), from the inventory: through its slot if it
    has one (redrawing the slot or the open bag), else out of the contents lists, splitting
    a stack when only part is taken. Returns 0 when it is not carried. */
-char far invRemoveObject(struct Object far *obj, int qty)
+unsigned char far invRemoveObject(struct Object far *obj, int qty)
 {
     int index;
     int have;
@@ -277,7 +268,7 @@ char far invRemoveObject(struct Object far *obj, int qty)
         }
         if (!Obj_Rem(Obj_Find_Head, obj))
             return 0;
-        PlayerDat.weight -= mass;
+        PlayerDat.rec.weight -= mass;
         DisplayInvObject(0x13);
         FixPlayerEquips();
     }
@@ -291,7 +282,7 @@ struct Object far * far RemoveAllFromSlot(int major, int minor, int cls, registe
 
     taken = removeFromSlot(major, minor, cls, slot, 0);
     if ((inslot = Obj_PtrTMem(&Inventory[slot])) != 0 && OBJ_MAJOR(inslot) == MAJOR_MISC
-        && OBJ_MINOR(inslot) == 0 && OpenBag != 0) {
+        && OBJ_MINOR(inslot) == MINOR_CONTAINER && OpenBag != 0) {
         FixOpenBag();
         DisplayOpenBag();
     } else
@@ -306,7 +297,7 @@ struct Object far * far RemoveOneFromSlot(int major, int minor, int cls, registe
 
     taken = removeFromSlot(major, minor, cls, slot, 1);
     if ((inslot = Obj_PtrTMem(&Inventory[slot])) != 0 && OBJ_MAJOR(inslot) == MAJOR_MISC
-        && OBJ_MINOR(inslot) == 0 && OpenBag != 0) {
+        && OBJ_MINOR(inslot) == MINOR_CONTAINER && OpenBag != 0) {
         FixOpenBag();
         DisplayOpenBag();
     } else
@@ -370,7 +361,7 @@ struct Object far * far takeFromSlot(int major, int minor, int cls, int slot, in
     if (!Obj_Rem(&owner->ol.link, obj))
         return 0;
     mass = ItemWeight(obj);
-    PlayerDat.weight -= mass;
+    PlayerDat.rec.weight -= mass;
     if (OpenBag != 0 && Obj_MemTPtr(owner) == OpenBag->obj.f.index) {
         index = Obj_MemTPtr(obj);
         for (i = 20; i <= 27; i++) {
@@ -442,7 +433,7 @@ int far DamageInventory(int slot, unsigned char damage, unsigned char type, int 
         return -1;
     strcpy(text, "Your ");
     if (obj == ThePlayer)
-        obj->id = obj->id & 0xFE00 | ITEM_FIST;
+        SET_ITEM(obj, ITEM_FIST);
     get_name(text + strlen(text), obj, 0, 0);
     if (text[strlen(text) - 1] == 's')
         strcat(text, " were");
@@ -475,7 +466,7 @@ int far ItemWeight(struct Object far *obj)
 /* True if the player can carry obj as well without going over max_weight. */
 unsigned char far EncumCheck(struct Object far *obj)
 {
-    if (ItemWeight(obj) + PlayerDat.weight > PlayerDat.max_weight)
+    if (ItemWeight(obj) + PlayerDat.rec.weight > PlayerDat.rec.max_weight)
         return 0;
     return 1;
 }

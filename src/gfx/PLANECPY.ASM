@@ -23,6 +23,9 @@
 ; was byte-aligned, and .model medium declares SEG020_TEXT word-aligned (and refuses
 ; another alignment).
 
+; The VGA ports used here.
+SC_DATA         equ     3C5h  ; sequencer data
+
 SEG020_TEXT segment byte public 'CODE'
 SEG020_TEXT ends
 DGROUP  group   _DATA
@@ -41,7 +44,7 @@ _seg020_1 proc far
         push    si
         push    di
         push    es
-        mov     dx,3C5h
+        mov     dx,SC_DATA
         mov     si,word ptr [bp+6]
         mov     bx,word ptr [bp+0Ah]
         shl     bx,1

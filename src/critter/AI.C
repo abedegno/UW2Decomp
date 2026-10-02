@@ -49,6 +49,7 @@
 #include "combat.h"
 #include "conv.h"
 #include "critter.h"
+#include "event.h"
 #include "map.h"
 #include "motion.h"
 #include "object.h"
@@ -58,16 +59,12 @@
 #include "ui.h"
 #include "view3d.h"
 
-extern struct Object far *objdata;
-extern unsigned char far *ActiveMob;
-extern unsigned char far *LastActiveMob;
-extern unsigned long far *Time;
-extern int freepaths;
 int lastXeye, lastYeye;                 /* DS:2294, this file's _BSS (see below) */
+/* match: MISSILE.C's missile_try ties with that file's statics missile_src and missile_arc
+   (key 957), which a header cannot declare first, so it is declared only here. */
 extern int missile_try;
 long lastcombattime;                    /* DS:2280, this file's _BSS (see below) */
 
-extern struct MissileInfo Missile[];
 /* The charge of a critter's blow, by attack frame (the 4-bit attack frame in the word at
    0x0F, which crit_attack counts up while the critter stands in reach and critter_ai
    passes to critter_attack): 50 for an unwound blow up to 255 after 15 frames. */
@@ -88,8 +85,6 @@ static struct AtkCharge far atk_charge[16] = {
    this file and cannot be split. Until seg006 is matched it is declared here as extern;
    the names are the FM Towns ones. */
 
-/* The current critter, set up by set_critter_vars and critter_ai. */
-extern unsigned myxpost, myypost;
 /* match: this file's _BSS, DS:2280..2299, laid out by name (tools/bssorder.py):
    lastcombattime 84, crithittime 139, hitx and hity 520, hitpz 552, curBin 555, victim
    574, seq_len 603, seqptr 659, lastXeye and lastYeye 820, seq_lframe 859 (Turbo C puts
@@ -116,16 +111,7 @@ struct Seq {
 };
 struct Seq far *seqptr;
 
-void far set_loc(unsigned char x, unsigned char y, char z);
-unsigned char far anti_magic_p(int x, int y);
-void far do_crit_phys(struct Phys *pn, struct Handler *tp);
-char far death_check(struct Object far *obj, char how);
-void far player_killed_a(struct Object far *npc);
-void far play_effect(char type, int x, int y, char vol);
-void far set_new_music(int n);
-unsigned char far line_of_sight(int x1, int y1, int z1, int x2, int y2, int z2);
 
-void far critter_set_goal(unsigned char goal, int target);
 
 /* Initialised data, DS:C4: the time bin of the last pass over the mobile objects, and the
    critter the player last hit (its mobile index) and its race (struct Creature's race;
@@ -1132,8 +1118,8 @@ unsigned char far critter_ai(void)
             SET_FRAME(meptr, OBJ_FRAME(meptr) + 1);
     } else if (OBJ_SEQ(meptr) >= 3 && OBJ_SEQ(meptr) <= 5) {
         if (OBJ_FRAME(meptr) == 0 && OBJ_GTARG(meptr) == 1) {
-            if (get_current_music() < 2 || get_current_music() > 4)
-                set_new_music(3);
+            if (get_current_music() < MUSIC_FOE_HURT || get_current_music() > MUSIC_DANGER)
+                set_new_music(MUSIC_COMBAT);
             lastcombattime = *Time;
         }
         if (OBJ_FRAME(meptr) == 3)
@@ -1493,7 +1479,7 @@ unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
     cr = &Creature[(minor << 4) + index];
     victim = cr;
     SET_DAMAGE(obj, OBJ_DAMAGE(obj) + damage);
-    if (from == 0 || from >= objdata)
+    if (from == 0 || from >= (struct Object far *)objdata)
         who = 0;
     else if (OBJ_MAJOR(from) != MAJOR_CREATURE)
         who = from->last_hit;
@@ -1526,16 +1512,16 @@ unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
     if (who == 1 && obj != ThePlayer) {
         ratio = (obj->hp << 6) / (cr->avghit + 1);
         if (ratio < 0x10)
-            set_new_music(2);
+            set_new_music(MUSIC_FOE_HURT);
         else
-            set_new_music(3);
+            set_new_music(MUSIC_COMBAT);
         lastcombattime = *Time;
     } else if (obj == ThePlayer && who) {
         ratio = (ThePlayer->hp << 6) / (playerdat->avghit + 1);
         if (ratio < 0x10)
-            set_new_music(4);
+            set_new_music(MUSIC_DANGER);
         else
-            set_new_music(3);
+            set_new_music(MUSIC_COMBAT);
         lastcombattime = *Time;
     }
     return 0;
@@ -1560,7 +1546,7 @@ unsigned char far timetodo(int bin, int rate)
    is no longer due: critters through critter_ai, everything else through move_me_joe.
    An object that removed itself returns 0, and the loop steps back one so the entry
    that took its place is not skipped. */
-void far move_mobile(char delta)
+void far move_mobile(int delta)
 {
     unsigned char far *p;
     unsigned char ok;

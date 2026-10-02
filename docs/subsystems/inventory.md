@@ -51,7 +51,7 @@ The object on the mouse cursor is `CursorObjPtr`. It belongs to no list while it
 - **Opening a bag** switches the container to its open item (even minor class to the odd one after it, below class 12) and closing switches it back (`OpenTheBag`, `MakeBagClose`). The rune bag (class 0xF) opens the rune panel instead.
 - **Barter.** In barter mode a container other than class 0xF cannot be picked up: "You cannot barter a container. Instead, remove the contents you want to trade."
 - **Moonstones.** Dropping a moonstone, or a container holding one, into the world records the level in a free `player->moonstones` entry, which Gate Travel uses (`combat/SPELLS.C`).
-- **Weight.** `ItemWeight` is mass times quantity, or mass plus contents for a container. `PlayerDat.weight` is the carried total and `max_weight` the limit; the panel shows `(max_weight - weight) / 10`, so weights are probably in tenths of a stone. Each open bag keeps its contents' weight (`struct Bag`'s weight) for the capacity checks.
+- **Weight.** `ItemWeight` is mass times quantity, or mass plus contents for a container. `PlayerDat.rec.weight` is the carried total and `max_weight` the limit; the panel shows `(max_weight - weight) / 10`, so weights are probably in tenths of a stone. Each open bag keeps its contents' weight (`struct Bag`'s weight) for the capacity checks.
 - **Wear** (`DamageInventory`). Damage to a slot's object goes through `damage_item` (`combat/DAMAGE.C`), so resistances and toughness apply. A destroyed object can leave debris by the player; the scroll says "Your X was damaged." or "... destroyed." The player's weapon wears on a bad miss and when striking doors, his armour when a critter scores a critical (`frp_check` in `combat/COMBAT.C`).
 
 ## Saving

@@ -8,14 +8,13 @@
    name: descriptive; init_debug is the FM Towns name, and System Shock defines its
    init_debug in INIT.C, its whole start-up, which here is UWEDIT.C. */
 
-int far _input_addkey(int key, int arg, int mask, void (far *func)(int));
-void far JoyStickCalibration_seg011_1B8(int arg);
-void far Interupt4_COM1_ovr132_0(int arg);
+#include "sys.h"
+#include "ui.h"
 
 void far init_debug(void)
 {
-    _input_addkey(0x16A, 0, 0xFF, JoyStickCalibration_seg011_1B8);
-    _input_addkey(0x283, 0, 0xFF, Interupt4_COM1_ovr132_0);
+    _input_addkey(KEY_CTRL | 'j', 0, 0xFF, (InputFn)JoyStickCalibration_seg011_1B8);
+    _input_addkey(KEY_ALT | KEY_F4, 0, 0xFF, (InputFn)Interupt4_COM1_ovr132_0);
 }
 
 void far ovr109_31(void)

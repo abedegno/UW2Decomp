@@ -102,6 +102,8 @@ struct StaticTile {
     unsigned char pathflag:1, dist:7;   /* 0x03 */
     unsigned char step;                 /* 0x04 */
 };
+/* stdat (gfx.h) as the pathfinder's 64 by 64 squares. */
+#define STILES ((struct StaticTile (far *)[MAP_SIZE])stdat)
 
 /* PATHFIND.C: critter motion, homing projectiles, path traversal and doors */
 extern int crit_terr;
@@ -157,6 +159,14 @@ unsigned char far move_me_joe(void);
 void far init_ai(void);
 int far get_terrain(struct Object far *obj);
 void far crit_head_for_loc(unsigned char x, unsigned char y, char z);
+/* The current critter's position, set up by set_critter_vars and critter_ai (AI.C). */
+extern int myxpost;
+extern int myypost;
+extern unsigned freepaths;
+unsigned char far do_crit_phys(struct Phys *pn, struct Handler *tp);
+unsigned char far flood_path(char x, char y, unsigned char height0, char destx, char desty, char destz, unsigned char range);
+unsigned char far line_of_sight(int x1, int y1, int z1, int x2, int y2, int z2);
+void far set_loc(unsigned char x, unsigned char y, unsigned char z);
 
 /* AI.C: critter movement and AI */
 extern int lastXeye;
@@ -194,6 +204,13 @@ void far set_critter_vars(struct Object far *obj);
 unsigned char far acceptable_danger(void);
 unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
                                  struct Object far *from);
+extern long lastcombattime;
+extern unsigned long crithittime;
+extern signed char curBin;
+extern unsigned char crithit;
+extern unsigned char typehit;
+void far critter_set_goal(unsigned char goal, int target);
+void far move_mobile(int delta);
 
 /* CRITTIME.C: critters between moments */
 void far change_critter_goal(struct Object far *npc, char goal, int gtarg);
@@ -210,14 +227,19 @@ void far maybe_cheat_arena_fire(void);
 void far arena_opponent_runs(struct Object far *obj);
 void far where_shall_we_hang_out(struct Object far *npc, int *x, int *y);
 char far maybe_go_hang_out(struct Object far *npc);
+char far teleport_critter(struct Object far *critter, int x, int y, int how);
 
 /* CREATURE.C: creature class data */
-extern struct Creature Creature[64];
+#define NUM_CREATURES   0x40            /* creature types: OBJECTS.DAT's creature table */
+extern struct Creature Creature[NUM_CREATURES];
 char far init_this_critter(struct Object far *obj);
 void far creature_obj_init(void);
+void far creature_init(FILE *fd);
+struct Creature * far creature_class_data(void);
 
 /* CRPAGES.C: critter art pages */
 void far NightCleanCritPages(void);
 void far PreLoadCritPages(void);
+unsigned char far preload_cr(unsigned char load_map);
 
 #endif

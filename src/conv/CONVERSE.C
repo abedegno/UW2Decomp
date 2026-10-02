@@ -40,6 +40,8 @@
 #include <stdlib.h>
 #include <dos.h>
 #include "conv.h"
+#include "event.h"
+#include "file.h"
 #include "gfx.h"
 #include "inv.h"
 #include "motion.h"
@@ -48,11 +50,6 @@
 #include "sound.h"
 #include "sys.h"
 #include "ui.h"
-
-extern unsigned char RightPanel;
-extern unsigned char far *foreground_color;
-extern struct Inplist near *inplist;
-extern struct FontInfo far *cur_font;
 
 /* This file's own uninitialised data, DS:47FC..4927, in its _BSS with talking_to. */
 /* name: The FM Towns build keeps all of it static, so none of it has an original name and
@@ -87,42 +84,6 @@ static int babl_ask_handle = 0;             /* the string babl_ask returns */
 char far *conv_buffer = 0;
 static char cnv_file[] = "DATA\\cnv.ark";
 unsigned cnv_id = 0;
-
-void far talk_to_disembodied(int);
-int far scroll_print(char far *);
-int far check_arc(int, char *, int);
-int far get_workspace(void);
-void far mouse_release(int);
-void far disk_to_vid(int, void far *);
-void far scroll_clear(int);
-void far scroll_wait(int, int);
-unsigned char far gronk_gr(char *, int, int, char far *(far *)(int),
-                           int (far *)(char far *, int, int));
-void far show(int, int, char far *, int, int, int, int);
-int far get_name(char far *, struct Object far *, char, char);
-void far rectangle(int, int, int, int);
-void far Sched_SetAllClocks(int);
-void far input_dispatch(void *);
-int far load_script(char *, void far *);
-void far bab_fun();                 /* (char *name, the built-in) */
-void far babl_run(void);
-unsigned char far update_converse_data(struct Object far *);
-void far wdialog(char *, char *, char *, char, int);
-void far replace_string(char far *, int);
-unsigned char far invRemoveObject(struct Object far *, int);
-
-/* the built-ins of other files, all registered by Converse */
-int far get_quest(), far set_quest(), far sex();
-int far do_offer(), far do_demand(), far do_decline(), far do_judgement();
-int far setup_to_barter(), far npc_likes_dislikes();
-int far babl_hack(), far give_all_stuff(), far gronk_door(), far set_sequence();
-int far set_attitude(), far set_race_attitude(), far take_from_npc_inv();
-int far add_to_npc_inv(), far place_object(), far transform_talker();
-int far remove_talker(), far x_skills(), far x_traps(), far x_obj_stuff();
-int far x_obj_pos(), far x_clock(), far x_exp(), far teleport_player();
-int far teleport_talker();
-
-int far set_inv_quality(int far *);
 
 /* Start a conversation with thing, if it will talk. A wisp is talked to through
    talk_to_disembodied(0x30). Anything not a creature, a critter with goal 15, or any
@@ -226,17 +187,17 @@ void far strt_converse(void)
     scroll_clear(0);
     grfx_quikfont(FONT_5X6P);
     convo_facedata = convoScreen;
-    if (!gronk_gr("heads", player->female * 5 + player->body, 1, adr_convpic, move_convpic))
+    if (!gronk_gr("heads", player->female * 5 + player->body, 1, (ArtAllocFn)adr_convpic, (ArtMoveFn)move_convpic))
         pfatal_code(ERR_READ | 0x15);
     show(0xa8, 0xc4, convoPics[0], 0x46, 0x40, 0, 0);
     convo_facedata = convoScreen;
     who = talking_to->whoami;
     if (who > 0)
-        loaded = gronk_gr("charhead", who - 1, 1, adr_convpic, move_convpic);
+        loaded = gronk_gr("charhead", who - 1, 1, (ArtAllocFn)adr_convpic, (ArtMoveFn)move_convpic);
     if (!loaded)
-        loaded = gronk_gr("ghed", OBJ_INMAJOR(talking_to), 1, adr_convpic, move_convpic);
+        loaded = gronk_gr("ghed", OBJ_INMAJOR(talking_to), 1, (ArtAllocFn)adr_convpic, (ArtMoveFn)move_convpic);
     if (!loaded)
-        loaded = gronk_gr("ghed", 0, 1, adr_convpic, move_convpic);
+        loaded = gronk_gr("ghed", 0, 1, (ArtAllocFn)adr_convpic, (ArtMoveFn)move_convpic);
     if (!loaded) pfatal_code(ERR_READ | 0x15);
     show(2, 0xc4, convoPics[0], 0x46, 0x40, 0, 0);
     str_copy(name, get_string(player_name_handle));
@@ -870,16 +831,16 @@ int far switch_pic(int far *stack)
     saved = convo_facedata;
     if (convo_facedata == 0) return 0;
     if (which < 0x100)
-        loaded = gronk_gr("charhead", which - 1, 1, adr_convpic, move_convpic);
+        loaded = gronk_gr("charhead", which - 1, 1, (ArtAllocFn)adr_convpic, (ArtMoveFn)move_convpic);
     else if (which <= 0x140)
-        loaded = gronk_gr("ghed", which - 0x100, 1, adr_convpic, move_convpic);
+        loaded = gronk_gr("ghed", which - 0x100, 1, (ArtAllocFn)adr_convpic, (ArtMoveFn)move_convpic);
     if (!loaded) {
         convo_facedata = saved;
-        loaded = gronk_gr("ghed", 0, 1, adr_convpic, move_convpic);
+        loaded = gronk_gr("ghed", 0, 1, (ArtAllocFn)adr_convpic, (ArtMoveFn)move_convpic);
     }
     if (loaded) {
         who.b0F = 2;
-        who.id = who.id & 0xFE3F | (MAJOR_CREATURE & 7) << 6;
+        SET_MAJOR(&who, MAJOR_CREATURE);
         if (which < 0x100) who.whoami = which;
         else who.id = who.id & 0xFFC0 | ((which - 0x100) & 0x3F) << 0;
         mouse_hide();

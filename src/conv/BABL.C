@@ -46,6 +46,7 @@
 #include <string.h>
 #include "conv.h"
 #include "file.h"
+#include "gfx.h"
 #include "sys.h"
 #include "ui.h"
 
@@ -101,21 +102,11 @@ char *opcode_text[] = {
     "PUSH_REG", "STRCMP", "EXIT_OP", "SAY_OP", "RESPOND_OP", "OPNEG"
 };
 
-/* Other files' data: stdat is the shared work buffer, used by init_babl as a page of
-   zeros. */
-extern char far stdat[];
 /* 40h bytes, far, so its own segment (6384:0000, segment table entry 76); load_script
    clears the first byte and nothing else here touches it. */
 /* name: The byte in a segment of its own is a static in the FM Towns build: FM Towns'
    load_script_ stores to it unnamed, so the name is provisional. */
 static char far seg066_0[0x40];
-
-int far get_arc(int arc, int blk, char far *buf);
-void far close_arc(int arc);
-int far scroll_print(char far *s);
-
-/* This file's functions called before their definitions. */
-void far bab_fun(char *name, void (far *fn)());
 
 /* The whole work area starts as one free block of 0xFBFF bytes. */
 /* name: A static in the FM Towns build. */

@@ -6,7 +6,7 @@
    (xor eax,eax; ret).
    Name: inferred (the class prefix, after spec_class_data). */
 
-int far spec_class_data(void)
+char * far spec_class_data(void)
 {
     return 0;
 }

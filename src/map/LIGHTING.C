@@ -16,6 +16,8 @@
    name: descriptive (the file's own name is not known). */
 
 #include <dos.h>
+#include <io.h>
+#include <mem.h>
 #include "file.h"
 #include "gfx.h"
 #include "map.h"
@@ -28,14 +30,7 @@
    first byte of this file's _DATA (which holds DS:1AAD and is word-aligned). */
 unsigned char cur_light_level = 0xFF;
 
-extern unsigned far smooth_base;
 
-void far close(int fd);
-long far lseek(int fd, long offset, int origin);
-int far read(int fd, void *buf, unsigned n);
-void far movedata(unsigned srcseg, unsigned srcoff,
-                                         unsigned dstseg, unsigned dstoff,
-                                         unsigned n);
 
 /* Reads exactly n bytes of the file `name` to seg:off; 1 when it got all n, else 0. */
 /* name: FM Towns lget_: target table currently calls this lget. */

@@ -28,6 +28,7 @@
    anonymous helpers by their matching positions and operations: sort_setup, sort_obj,
    build_sort, set_sds, set_osum and clear_objsort. */
 
+#include <mem.h>
 #include "object.h"
 #include "sys.h"
 #include "view3d.h"
@@ -57,12 +58,7 @@ signed char trans_pos_x[64] = {
     0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7,
     7, 0, 6, 0, 5, 0, 4, 0, 3, 0, 2, 0, 1, 0, 0, 0,
     0, 7, 0, 6, 0, 5, 0, 4, 0, 3, 0, 2, 0, 1, 0, 0 };
-extern signed char quad;
-extern unsigned char PickUp;
-extern unsigned char far smooth_base;
 
-void far memset(void near *dest, int value, unsigned count);
-void far memcpy(void near *dest, void near *src, unsigned count);
 
 /* Called by GRIDDB.C's subprocess: -10 at the start of a frame (clear everything held),
    2 before a row's left half, 1 before its right half (what the left half passed to
@@ -345,7 +341,7 @@ void far do_objsort(union Link far *link)
             distance = temp * smooth_div >> 6;
             distance += smooth_lowpass;
             if (distance < 0) distance = 0;
-            locsqmod = distance + smooth_base;
+            locsqmod = distance + (unsigned char)smooth_base;  /* match: read as a byte */
             if (locsqmod > 14) locsqmod = 14;
         }
         do_obj(next);

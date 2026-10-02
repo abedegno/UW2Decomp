@@ -78,12 +78,6 @@ static unsigned char swim_pan = 0;
 static unsigned char swim_count = 0;
 static unsigned char noise_count = 0;
 
-extern struct Inplist near *inplist;
-extern unsigned long far *Time;
-/* PHYSICS.C's pFPS[3]; this file reads only pFPS[0], the run speed. */
-extern int pFPS;
-/* DS:19B2, the noise and visibility the player's actions add up to. */
-extern char plyNotice[2];
 /* This file's _BSS, DS:33C6..33E7 (seg034's ends at 33C5; seg037's starts at 33E8). All
    FM Towns names. campos and camang are the camera when it is not on an object (UsPtr 0);
    the vort_ variables are the moongate vortex's spinning camera. */
@@ -100,11 +94,6 @@ int vort_rad;
 int vort_timer;
 int vort_theta;
 unsigned char vort_x, vort_y;
-
-void far move_mobile(int frames);
-unsigned char far play_effect_here(unsigned char fx, unsigned char pan, char vol);
-char far damage_item(struct Object far *obj, struct Object far *who, int x, int y,
-                     unsigned char damage, unsigned char type);
 
 /* The mouse button is down in the 3D view (ui/INTERACT.C): moves the Wizard Eye camera,
    or reads the mouse as movement and keeps the pointer inside the view while the button
@@ -363,11 +352,11 @@ void far move_player(int incr)
     editchng(10);
     if ((PN.terrain & 0x10) == 0)
     {
-        if (PN.speed > pFPS >> 2 && PlayerInput == 1)
+        if (PN.speed > pFPS[0] >> 2 && PlayerInput == 1)
         {
             char bob;
 
-            if ((bob = PN.speed * 4 / (pFPS >> 1) - 1) < 2)
+            if ((bob = PN.speed * 4 / (pFPS[0] >> 1) - 1) < 2)
                 bob = 2;
             doMod = 1;
             playerMod[0] = bobEffect[tsteps >> 4] * bob;
@@ -472,7 +461,7 @@ void far set_sound(char easy)
     else if (PN.speed == 0)
         n = 0;
     else
-        n = PN.speed * 10 / pFPS + n - 5;
+        n = PN.speed * 10 / pFPS[0] + n - 5;
     if (player->motion_state)
         n = n + 4;
     if (n < 0)
@@ -515,7 +504,7 @@ void far parse_effect(void)
         playerMod[0] = -player->swim_count;
         if (player->swim_count > 0x50)
         {
-            amp = PN.speed * 4 / (pFPS >> 1) - 3;
+            amp = PN.speed * 4 / (pFPS[0] >> 1) - 3;
             if (amp < 1)
                 amp = 1;
             phase = tsteps >> 4;
@@ -536,7 +525,7 @@ void far parse_effect(void)
             if (player->xclock[XC_DJINN] == 3)
             {
                 player->xclock[XC_DJINN] = 4;
-                game_sprint(0x14E);
+                game_sprint(0x14E);  /* 'The oily mud bakes on your skin.' */
             }
         }
     }

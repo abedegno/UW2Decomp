@@ -16,6 +16,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "critter.h"
+#include "event.h"
 #include "object.h"
 #include "sys.h"
 
@@ -23,20 +25,6 @@
    ComObjData (0x1600 bytes, from comobj.dat) and finds the active object's class data. */
 struct Object far *ActiveObj;
 struct ComObj ComObjData[512];
-
-/* Each major class's part of OBJECTS.DAT; classes 3 to 5 have none. */
-void far hack_init(FILE *fp);
-void far creature_init(FILE *fp);
-void far misc_init(FILE *fp);
-void far trap_init(FILE *fp);
-void far animobj_load(FILE *fp);
-
-/* Each major class's data for the active object. */
-char * far creature_class_data(void);
-char * far stuff_class_data(void);
-char * far spec_class_data(void);
-char * far rect_class_data(void);
-char * far trap_class_data(void);
 
 /* Reads OBJECTS.DAT (a 2-byte header, then each class's tables in major class order,
    classes 3 to 5 having none) and COMOBJ.DAT (a 2-byte header, then 512 records of 11
@@ -82,8 +70,9 @@ char * far get_class_data(void)
 {
     register int cls = OBJ_MAJOR(ActiveObj);
     char * (far *data[8])(void) = {
-        hack_class_data, creature_class_data, misc_class_data, stuff_class_data,
-        spec_class_data, rect_class_data, trap_class_data, animobj_class_data
+        hack_class_data, (char * (far *)(void))creature_class_data, misc_class_data,
+        stuff_class_data, spec_class_data, rect_class_data,
+        (char * (far *)(void))trap_class_data, animobj_class_data
     };
 
     return data[cls]();

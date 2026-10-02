@@ -17,6 +17,9 @@
    player_name_handle, plyNotice, the light globals, and the tables below.
    Name: descriptive (reading and writing player data and its spells, save_player_data). */
 
+#include <io.h>
+#include <mem.h>
+#include <stdlib.h>
 #include "combat.h"
 #include "critter.h"
 #include "file.h"
@@ -29,6 +32,10 @@
 #include "sound.h"
 #include "ui.h"
 #include "view3d.h"
+
+/* LIGHTING.C's set_light, declared where it is called because PLAYER.C and PHYSICS.C
+   declare it taking an int. */
+void far set_light(signed char n);
 
 /* This file's _BSS, DS:8288..8297. player is the struct Player record (its storage is
    PLAYER.C's PlayerDat), playerdat the adventurer's creature type record (attributes,
@@ -44,10 +51,6 @@ struct Object far *ThePlayer;
 int PlayerLevel;
 int PlayerFacing;
 int PlayerHeading;
-extern unsigned long lastDurCheck;
-extern unsigned char cmbModTH[4];
-extern unsigned char plyregen;
-extern unsigned PickDist;
 
 /* This file's _DATA runs from DS:19AC to the end of "dl.dat" at DS:19DB. */
 /* Body slot to defence index: inventory slots 0 to 4 (probably helm, chest, gloves,
@@ -56,7 +59,7 @@ extern unsigned PickDist;
 static signed char defence_slot_index[6] = {3, 0, 1, 2, 2, 0};
 /* [0] noise, [1] visibility; seg035 reads both as plyNotice[2]. */
 unsigned char plyNotice[2] = {0x0F, 0x0F};
-char UsingPole = 0;
+unsigned char UsingPole = 0;
 unsigned char light_mod = 0xFF;
 signed char light_act = 0xFF;
 signed char loc_lght = 0xFF;
@@ -73,16 +76,6 @@ static char ShroomsRelated = 1;
 /* match: FM Towns indexes it from _loc_lght as well, so the source subtracted 5 from the
    minor class. */
 static unsigned char damage_protection_flags[5] = {0x40, 0x08, 0x10, 0x01, 0x02};
-void far write(int fd, void *p, int n);
-void far read(int fd, void *p, int n);
-void far xorwrite(int fd, unsigned char key, void far *p, unsigned n);
-void far xorread(int fd, unsigned char key, void far *p, unsigned n);
-void far newFPS(int n);
-void far memset(void *p, int value, int count);
-int far rand(void);
-void far grfx_quikpal(int n);
-long far lseek(int fd, long pos, int whence);
-void far close(int fd);
 
 /* name: IDA left this empty function unnamed; FM Towns correspondence is unconfirmed. */
 void far MaybePlayerDayLoadrelated_ovr142_0(void) {}
@@ -105,14 +98,14 @@ void far save_player_data(int fd)
     player->music = (unsigned)music_is_on();
     player->terrain = PN.terrain;
     write(fd, &key, 1);
-    xorwrite(fd, key, player, 0x37D);
+    xorwrite(fd, key, (unsigned char far *)player, 0x37D);
 }
 
 void far read_player_data(int fd)
 {
     unsigned char key;
     read(fd, &key, 1);
-    xorread(fd, key, player, 0x37D);
+    xorread(fd, key, (unsigned char far *)player, 0x37D);
     playerdat->attr[0] = player->strength;
     playerdat->attr[1] = player->dexterity;
     playerdat->attr[2] = player->intelligence;
@@ -147,7 +140,7 @@ void far init_spells(void)
     Valor = 0;
     PickDist = 0x90;
     if (UsingPole) PickDist = 0x190;
-    plyregen = 0;
+    plyregen[0] = 0;
 }
 
 void far swap_tmap(void) {}
@@ -206,11 +199,11 @@ unsigned char far player_affected_by(unsigned char major, unsigned char minor,
 {
     register int i;
     switch (major) {
-    case 2:
+    case SPELLC_ARMOUR:
         if ((*bonuses >> 4) < minor)
             *bonuses = (*bonuses & 0xF) + (minor << 4);
         break;
-    case 3:
+    case SPELLC_PROTECT:
         switch (minor - 1) {
         case 0:
             cmbModTH[0] += 3;
@@ -233,24 +226,24 @@ unsigned char far player_affected_by(unsigned char major, unsigned char minor,
             break;
         }
         break;
-    case 1:
+    case SPELLC_MOTION:
         motionbits = motionbits | (1 << (minor - 1));
         break;
-    case 0:
+    case SPELLC_LIGHT:
         if (((player->light & 0xF0) >> 4) < minor)
             player->light = minor << 4;
         break;
-    case 11:
+    case SPELLC_XT:
         switch (minor) {
         case 0: TimeStop = 1; break;
         case 1: WizEye = 1; break;
         case 2: Hasted = 1; break;
         case 3: PickDist = 0; break;
-        case 14: plyregen |= 1; break;
-        case 15: plyregen |= 2; break;
+        case 14: plyregen[0] |= 1; break;
+        case 15: plyregen[0] |= 2; break;
         }
         break;
-    case 9:
+    case SPELLC_BACKFIRE:
         backfire(ThePlayer, minor);
         break;
     case 12:
@@ -283,7 +276,6 @@ static unsigned char spell_class_values[16] = {
     0x14, 0xFF, 0x13, 0x05, 0x80, 0x80, 0x80, 0x80,
     0x80, 0x80, 0x80, 0x11, 0x80, 0x80, 0x80, 0x80
 };
-extern struct Armour Armor[];
 
 /* Fills out[3] with the icon of each active spell for the active spell display. */
 void far parse_aspells(unsigned char *out)
@@ -331,7 +323,7 @@ int far armor_val(struct Object far *obj)
 {
     register int armour;
     register int protection;
-    if (OBJ_MAJOR(obj) == MAJOR_HACK && OBJ_MINOR(obj) < 2)
+    if (OBJ_MAJOR(obj) == MAJOR_HACK && OBJ_MINOR(obj) < MINOR_ARMOR)
         return 0;
     armour = Armor[OBJ_ITEM(obj) - FIRST_ARMOR].protection;
     protection = ((unsigned)(obj->qn.f.quality * armour)) >> 6;
@@ -339,11 +331,6 @@ int far armor_val(struct Object far *obj)
     return protection;
 }
 
-extern signed char ValidLightSlots[];
-extern struct Weapon Weapons[];
-char far decode_obj_spell(struct Object far *obj, int *major, int *effect, unsigned char *flag);
-void far set_light(signed char n);
-void far newFPS(int n);
 
 /* Works out the player's derived state from scratch:
    - armour per hit location from slots 0 to 4, plus a shield (hack major, minor 3,
@@ -374,7 +361,7 @@ void far FixPlayerEquips(void)
     }
     item = AskInventory(player->lefty + 7);
     if (item && OBJ_MAJOR(item) == MAJOR_HACK &&
-        OBJ_MINOR(item) == 3 &&
+        OBJ_MINOR(item) == MINOR_ARMOR2 &&
         OBJ_INCLASS(item) >= 11 && OBJ_INCLASS(item) <= 15) {
         armour = armor_val(item);
         playerdat->armour[0] += armour;
@@ -384,8 +371,8 @@ void far FixPlayerEquips(void)
     ActiveObj = AskInventory(8 - player->lefty);
     armour = 2;
     if (ActiveObj && OBJ_MAJOR(ActiveObj) == MAJOR_HACK &&
-        OBJ_MINOR(ActiveObj) < 2) {
-        if (OBJ_MINOR(ActiveObj) == 0) {
+        OBJ_MINOR(ActiveObj) < MINOR_ARMOR) {
+        if (OBJ_MINOR(ActiveObj) == MINOR_WEAPON) {
             armour = Weapons[ActiveObj->id & ID_INCLASS].skill;
             if (armour < 3) armour = 3;
             else if (armour > 5) armour = 5;

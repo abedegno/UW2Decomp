@@ -25,6 +25,7 @@
    name: inferred, the job of System Shock's TMPALLOC.C (temp_malloc, temp_free). */
 
 #include <dos.h>
+#include <stdlib.h>
 #include "gfx.h"
 #include "sys.h"
 #include "view3d.h"
@@ -38,9 +39,6 @@ unsigned char gfx_inpage = 0;           /* DS:0923 */
 unsigned char obj_inpage2 = 0;          /* DS:0924 */
 unsigned char saved_tmap_inpage = 0;    /* DS:0925 */
 
-int far rand(void);
-void far MapMemory_seg013_1D3C_C7(int phys, int page);
-unsigned char far seg013_1D3C_E4(int a, int b, int c);
 
 /* Allocates EMS: asks for 89 to 103 pages (an even number chosen with rand(), so 1.4 to
    1.6 MB; why it is random is not known) and needs at least 41 (656 KB), else first_punt

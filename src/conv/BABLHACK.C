@@ -27,10 +27,13 @@
 
 #include <stdlib.h>
 #include <time.h>
+#include "combat.h"
 #include "conv.h"
 #include "critter.h"
 #include "event.h"
+#include "inv.h"
 #include "map.h"
+#include "motion.h"
 #include "object.h"
 #include "player.h"
 #include "sound.h"
@@ -38,29 +41,15 @@
 #include "ui.h"
 #include "uw2.h"
 
-/* Jospur's debt to the player for fights won in the pits: quest 133. */
-#define JOSPUR_DEBT     quest_bytes[0x85 - 0x80]
-
-extern union Link Inventory[];
-extern void (far *npp_func)();
-extern unsigned char stay_centered;
-extern long lastDurCheck;
-
-struct Object far * far CreateObj(int item, char mobile);
-unsigned char far can_place(int item, int index, int x, int y, int z, char flier, char dist);
-unsigned char far put_at(int x, int y, int z, struct Object far *obj, int range,
-                         unsigned char nocull);
-struct Object far * far obj_deal(struct Object far *obj, int x, int y, char how);
-int far useNSpellCharges(struct Object far *obj, int n);
-void far gronk_whoami(int whoami, unsigned char all, int arg,
-                      char (far *fn)());
-void far do_teleport(struct Object far *who, int x, int y, int level);
-char far teleport_critter(struct Object far *critter, int x, int y, int how);
+/* match: declared here, not in event.h: TRIGGER.C defines set_numbered_variable with an
+   unsigned char op, and this file's callers push an int. */
 void far set_numbered_variable(int var, int how, int val);
+/* match: OBJUSE.C defines useNSpellCharges(obj, char n); this file pushes an int. */
+int far useNSpellCharges(struct Object far *obj, int n);
 
 /* Read and cleared by babl_hack mode 1. Set by WORLDEV.C's arena_player_runs when the
    player runs from a pit fight, which then starts a conversation with a pit fighter. */
-char running_away = 0;
+unsigned char running_away = 0;
 /* Where teleport_player and teleport_talker asked to go, done by do_babl_teleport once
    the conversation is over; -1 for nothing pending. */
 static char tele_level = -1, tele_x = 0, tele_y = 0;
@@ -186,18 +175,18 @@ placed:
         case 5: debt = 40; break;
         default: debt = 0; break;
         }
-        player->JOSPUR_DEBT = debt;
+        player->quest_bytes[QB_JOSPUR_DEBT] = debt;
         npp_func = set_me_inarena;
         return count;
     }
     case 3:
-        i = player->JOSPUR_DEBT;
-        player->JOSPUR_DEBT = 0;
+        i = player->quest_bytes[QB_JOSPUR_DEBT];
+        player->quest_bytes[QB_JOSPUR_DEBT] = 0;
         return i;
     case 4:
         return player->in_pits;
     case 5:
-        gronk_whoami(getmem(args[-2]), 0, 1, set_me_loner);
+        gronk_whoami(getmem(args[-2]), 0, 1, (WhoamiFn)set_me_loner);
         return 0;
     case 6:
         return speech_available();

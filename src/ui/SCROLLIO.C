@@ -24,20 +24,12 @@
 #include <ctype.h>
 #include "gfx.h"
 #include "sound.h"
+#include "sys.h"
 #include "ui.h"
 
-extern unsigned char far *foreground_color;      /* DS:21C4 */
-extern struct FontInfo far *cur_font;                /* DS:21CC, provisional */
-extern unsigned long far *Time;                  /* DS:2158; SCROLL.C calls it
-                                                    PITTimerGlobal */
-extern struct Inplist near *inplist;             /* DS:E4 */
 /* This file's _BSS, DS:8186: where the answer starts. Only this file uses it. */
 /* name: static in FM Towns, so static here; provisional name. */
 static int answer_x;
-
-int far scroll_print(char far *s);
-void far mouse_release(int how);
-void far rectangle(int x0, int y0, int x1, int y1);
 
 void far init_scroll(void)
 {
@@ -46,13 +38,6 @@ void far init_scroll(void)
     draw_scroll(0x10, 0x1E, 0xDF, 1, 0);
     draw_edges();
 }
-
-/* match: declared here because TLINK numbers the overlay's stub entries in the order
-   Turbo C lists the publics, which for names with the same hash key is the order they
-   were first seen: the EXE's stub has scroll_clear and wdialog before scroll_wait and
-   wd_bool. */
-void far scroll_clear(char redraw);
-int far wdialog(char *prompt, char *initial, char *result, char anychar, int maxlen);
 
 /* Waits for the input to change from what it is on entry (a key or a click), or for
    ticks of *Time when ticks is not 0, keeping the music going; the buttons must be
@@ -213,24 +198,24 @@ int far wdialog(char *prompt, char *initial, char *result, char anychar, int max
         switch (key) {
         case -1:
             continue;
-        case 0x16B:
+        case KEY_CTRL | 'k':
             if (pos < 0)
                 pos = -pos;
             text[pos] = 0;
             break;
-        case 0x8C: case 0xA5: case 0x161:
+        case KEY_HOME: case 0xA5: case KEY_CTRL | 'a':
             pos = 0;
             break;
-        case 0x92: case 0xAA: case 0x165:
+        case KEY_END: case 0xAA: case KEY_CTRL | 'e':
             pos = strlen(text);
             break;
-        case 0x91: case 0xA9: case 0x166:
+        case KEY_RIGHT: case 0xA9: case KEY_CTRL | 'f':
             if (pos < 0)
                 pos = -pos;
             if (strlen(text) > pos)
                 pos++;
             break;
-        case 0x8F: case 0xA8: case 0x162:
+        case KEY_LEFT: case 0xA8: case KEY_CTRL | 'b':
             if (pos < 0)
                 pos = -pos;
             if (pos > 0)
@@ -245,7 +230,7 @@ int far wdialog(char *prompt, char *initial, char *result, char anychar, int max
                 pos--;
             }
             break;
-        case 0x96: case 0x164:
+        case KEY_DEL: case KEY_CTRL | 'd':
             if (pos < 0)
                 pos = -pos;
             if (strlen(text) > pos)

@@ -48,19 +48,11 @@
 #include "ui.h"
 #include "view3d.h"
 
-/* The five groups and current_buttongroup are another file's data (DS:012F..0266). */
-extern struct buttongroup gameopts_buttongroup;
-extern struct buttongroup quit_buttongroup;
 /* This file's _BSS, DS:8178..817B. */
 /* match: laid out by name: save_rest 843, music_sound 925. Only this file uses them.
    (DS:8174..8177, after ovr134's ComObjData, is never referenced.) */
 int save_rest;
 int music_sound;
-
-void far scroll_clear(int n);
-void far editexit(int how);
-void far punt_fightmode(void);
-void far rectangle(int x0, int y0, int x1, int y1);
 
 unsigned char plyregen[2] = { 0, 0 };   /* used by ovr135 */
 int save_or_rest = 0;
@@ -123,15 +115,15 @@ void far busywaiting_new_options(struct buttongroup *g)
             if (button != -1)
                 deal_with_button(button);
             break;
-        case 0x8D:
-        case 0x8F:
+        case KEY_UP:
+        case KEY_LEFT:
         case 0xA6:
         case 0xA8:
             move_hilite(-1);
             break;
         case 0x20:
-        case 0x91:
-        case 0x93:
+        case KEY_RIGHT:
+        case KEY_DOWN:
         case 0xA9:
         case 0xAB:
             move_hilite(1);
@@ -139,16 +131,16 @@ void far busywaiting_new_options(struct buttongroup *g)
         case 0x0D:
             deal_with_button(current_hilit_button);
             break;
-        case 0x1B:
+        case KEY_ESC:
             gameopts_done = 1;
             scroll_clear(1);
             break;
-        case 0x258:
-        case 0x278:
+        case KEY_ALT | 'X':
+        case KEY_ALT | 'x':
             if (current_buttongroup == &quit_buttongroup)
                 deal_with_button(2);
             break;
-        case 0x85:
+        case KEY_F6:
             if (current_buttongroup == &gameopts_buttongroup)
                 deal_with_button(6);
             break;

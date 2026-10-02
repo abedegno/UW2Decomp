@@ -17,11 +17,10 @@
 
 #include <dos.h>
 #include <string.h>
+#include <stdlib.h>
 #include "sound.h"
 #include "sys.h"
 
-void far exit(int code);
-void far free_world(char flag);
 
 /* Prints "Cannot run Underworld.", the reason for the code's kind, and the code. The
    strings end in '$' for DOS function 9 (PrintStringToConsole, MODEX.ASM). */

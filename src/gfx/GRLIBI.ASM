@@ -43,6 +43,9 @@
 ; a word-aligned module (TASM 2.0's `even` pads with 90h).
 ; Its relocations are entries 2477 of UW2.EXE's relocation table.
 
+; The VGA ports used here.
+SC_DATA         equ     3C5h  ; sequencer data
+
         .186
 
         extrn   seg_370D:far
@@ -635,7 +638,7 @@ L3C84:
         push    es
         mov     es,word ptr ds:[3DFCh]
         mov     cl,byte ptr ds:[4A0Ch]
-        mov     dx,3C5h
+        mov     dx,SC_DATA
 L3CBD:
         jmp     word ptr ds:[4CFAh]
         even

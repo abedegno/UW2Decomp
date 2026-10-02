@@ -17,6 +17,10 @@
 ; zeros).
 ; Its relocations are entries 2278-2279 of UW2.EXE's relocation table.
 
+; The DOS (int 21h) functions used here.
+DOS_SET_VECTOR  equ     25h
+DOS_GET_VECTOR  equ     35h
+
         .186
 
         extrn   dseg062_62a6:far
@@ -48,7 +52,7 @@ L0596:
 _seg021_22FD_598 proc near
         call    _seg021_22FD_46B
         push    es
-        mov     ax,3509h
+        mov     ax,(DOS_GET_VECTOR shl 8) + 9
         int     21h
         mov     word ptr cs:L0596,es
         mov     word ptr cs:L0594,bx
@@ -56,7 +60,7 @@ _seg021_22FD_598 proc near
         push    cs
         pop     ds
         mov     dx,62Eh
-        mov     ax,2509h
+        mov     ax,(DOS_SET_VECTOR shl 8) + 9
         int     21h
         mov     ax,seg dseg062_62a6
         mov     ds,ax
@@ -75,7 +79,7 @@ _seg021_22FD_5C8 proc near
         push    ds
         push    es
         lds     dx,dword ptr cs:L0594
-        mov     ax,2509h
+        mov     ax,(DOS_SET_VECTOR shl 8) + 9
         int     21h
         xor     ax,ax
         mov     es,ax

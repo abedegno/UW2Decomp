@@ -17,19 +17,17 @@
 #include <stdlib.h>
 #include "combat.h"
 #include "critter.h"
+#include "event.h"
+#include "map.h"
 #include "object.h"
 #include "player.h"
 #include "sys.h"
 #include "ui.h"
 
-extern struct MissileInfo Missile[];
 /* This file's _BSS, DS:863A. */
 /* name: only this file uses it; no FM Towns name, so static. */
 static struct Creature near *LootCreature;
 
-char far put_at(int x, int y, int z, struct Object far *obj, int a, int b);
-void far UseTrigger(struct Object far *who, int a, int b, struct Object far *trig, int how);
-struct Object far * far CreateObj(int id, int b);
 
 /* Empties container cont onto the floor at its position (MapObj_X, MapObj_Y for a static
    container), after removing its locks. Each object can be given owner (when nonzero and
@@ -62,11 +60,11 @@ char far drop_link_chain(struct Object far *cont, int owner)
             if (owner && ComObjData[OBJ_ITEM(obj)].can_own)
                 obj->ol.f.owner = owner;
             if (OBJ_ITEM(obj) >= FIRST_LIT_LIGHT && OBJ_ITEM(obj) <= ITEM_LIT_LIGHT_SPHERE)
-                obj->id = obj->id & 0xFE00 | (OBJ_ITEM(obj) - 4) & ID_ITEM;
+                SET_ITEM(obj, OBJ_ITEM(obj) - 4);
             put_at(x, y, z, obj, 6, 0);
-            if (OBJ_MAJOR(obj) == MAJOR_TRAP && OBJ_MINOR(obj) >= 2) {
+            if (OBJ_MAJOR(obj) == MAJOR_TRAP && OBJ_MINOR(obj) >= MINOR_TRIGGER) {
                 cont->ol.f.link = Obj_MemTPtr(next);
-                UseTrigger(ThePlayer, 0, 0, obj, 4);
+                UseTrigger(ThePlayer, (struct Object far *)0, obj, 4);
                 next = Obj_PtrTMem(&cont->ol.link);
                 cont->ol.f.link = 0;
             }
@@ -167,7 +165,7 @@ void far generate_weapons(struct Object far *npc)
         else
             quality = rand() % 64;
         obj->qn.f.quality = quality;
-        if (OBJ_MINOR(obj) == 1 && (unsigned char)Missile[obj->id & ID_INCLASS].ammo == 0xC0)
+        if (OBJ_MINOR(obj) == MINOR_MISSILE && (unsigned char)Missile[obj->id & ID_INCLASS].ammo == 0xC0)
             obj->ol.f.link = rand() % 8 + 4;
         Obj_Add(&npc->ol.link, obj);
     }
@@ -211,5 +209,5 @@ void far generate_inventory(struct Object far *npc)
     generate_food(npc);
     generate_weapons(npc);
     generate_equipment(npc);
-    npc->attitude_word = npc->attitude_word & 0xEFFF | 0x1000;
+    SET_HAS_INV(npc, 1);
 }

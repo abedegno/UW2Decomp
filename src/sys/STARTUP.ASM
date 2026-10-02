@@ -30,6 +30,15 @@
 ; grfx_close calls _791, which runs seg021_22FD_17.
 ; name: descriptive (system module 1, start-up).
 
+; The BIOS clock (int 1Ah) functions used here.
+RTC_GET_TIME    equ     02h
+RTC_GET_DATE    equ     04h
+; The BIOS video (int 10h) functions used here.
+VID_PALETTE     equ     10h
+; The DOS (int 21h) functions used here.
+DOS_SET_DATE    equ     2Bh
+DOS_SET_TIME    equ     2Dh
+
         .186
 
 _DATA   segment word public 'DATA'
@@ -100,7 +109,7 @@ _seg021_22FD_65 proc near
         push    si
         push    di
         push    es
-        mov     ax,1009h
+        mov     ax,(VID_PALETTE shl 8) + 9
         mov     dx,SEG021_TEXT
         mov     es,dx
         mov     dx,54h
@@ -108,7 +117,7 @@ _seg021_22FD_65 proc near
         mov     di,0
         mov     si,0
 L007B:
-        mov     ax,1015h
+        mov     ax,(VID_PALETTE shl 8) + 15h
         mov     bl,byte ptr cs:L0054[si]
         int     10h
         mov     byte ptr cs:L0024[di],dh
@@ -164,15 +173,15 @@ _seg021_22FD_A1 endp
 ; CX:DX) and function 2 (time, BCD in CX:DX), converted to binary by _112 and _11B and set
 ; with int 21h 2Dh (time) and 2Bh (date, century * 100 + year).
 _seg021_22FD_E9 proc near
-        mov     ah,4
+        mov     ah,RTC_GET_DATE
         int     1Ah
         push    cx
         push    dx
-        mov     ah,2
+        mov     ah,RTC_GET_TIME
         int     1Ah
         call    _seg021_22FD_112
         xor     dl,dl
-        mov     ah,2Dh
+        mov     ah,DOS_SET_TIME
         int     21h
         pop     dx
         pop     cx
@@ -183,7 +192,7 @@ _seg021_22FD_E9 proc near
         mul     ch
         xor     ch,ch
         add     cx,ax
-        mov     ah,2Bh
+        mov     ah,DOS_SET_DATE
         int     21h
         ret
 _seg021_22FD_E9 endp

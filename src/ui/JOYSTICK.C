@@ -19,12 +19,11 @@
    Name: descriptive (joystick motion and calibration, DOS only). */
 
 #include "motion.h"
+#include "player.h"
 #include "sound.h"
 #include "sys.h"
 #include "ui.h"
 
-extern long far *Time;
-extern unsigned char IsJoy;
 
 /* this file's _DATA, DS:00E8 to DS:0106, in definition order */
 int joy_center_x = 0, joy_center_y = 0;
@@ -33,9 +32,6 @@ int joy_divisor = 16, joy_interval = 5, joy_clamp = 16, joy_gain = 20, joy_limit
 int joy_filter_x = 0, joy_filter_y = 0;
 long joy_last_tick = 0;
 
-int far do_keyboard_input(int mode);
-void far scroll_print(char far *string);
-void far scroll_clear(int value);
 
 /* The stick as movement: the reading is scaled to -127..127 by the calibration. With
    button 1 up, a dead zone of 20 each way; pulled back (y above 20) sets PlayerInput 8,

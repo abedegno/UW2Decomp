@@ -76,6 +76,10 @@ What the move to `src/include` showed about Turbo C (each was found by the gate)
 - **A byte view of a word field:** `(unsigned char)ComObjData[i].value` compiles to the same `mov al,[bx+4]` as reading a `unsigned char` field at that offset (ovr163).
 - **Fields at the same offset compile alike whatever the name:** a scalar field and the matching element of an array field (`player->fatigue` against `fatigue[0]`, `PN.pitch` against `PN.vel[2]`), a bitfield and the same bits in another partition of its word, and `(&player->fatigue)[i]` against an array indexed by `i`, all give the same bytes. Only the bits a field covers, its unit (a `char` or an `int` bitfield) and its type matter.
 - **Turbo C 1.01 has no anonymous unions in C,** so a word read both whole and as bitfields is a named union (`union Link`, `struct Object`'s `qn` and `ol`), and every access names the view.
+- **A return's signedness is the caller's business when the callee returns constants:** `return 1` is `mov al,1` in a `char` and in an `unsigned char` function, so the definer can take the type most callers read. A caller that read the other type casts the call: `!(unsigned char)f()` gives `mov ah,0; or ax,ax` where the shared `char` gives `cbw`.
+- **A `char` parameter cannot be undone at the call:** with `f(char)` in scope an `int` argument is pushed from its low byte, and no cast restores the word push (or the `cbw`/`mov ah,0` before it). Such names stay declared per file, or the one odd call goes through a cast function pointer (`TRIGGER.C`'s `gronk_whoami`). An old-style `f()` declaration is compatible with a `(void)` definition, which keeps callers that pass ignored arguments.
+- **Casts to a far array pointer:** `(T (far *)[N])buf` is a far pointer to arrays of N and indexes a far buffer exactly as an array declared that way; `(T far (*)[N])` is a near pointer and loses the segment. `(*(struct X far *)buf).f` on a far array compiles as a struct variable's field would.
+- **An uninitialised `far` variable's `extern` stays out of headers:** a definition after an `extern` declaration of it comes out as near data.
 
 ## Named constants
 

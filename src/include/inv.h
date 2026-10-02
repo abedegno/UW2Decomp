@@ -60,6 +60,7 @@ struct Object far * far RemoveOneFromSlot(int major, int minor, int cls, int slo
 unsigned char far ObjWorn(int id, int slot);
 int far DamageInventory(int slot, unsigned char damage, unsigned char type, int how, char debris);
 unsigned char far EncumCheck(struct Object far *obj);
+unsigned char far invRemoveObject(struct Object far *obj, int qty);
 
 /* INVPANEL.C: the inventory panel */
 /* The inventory's slots, Inventory[28] (each a union Link naming the object shown there;
@@ -106,5 +107,7 @@ void far DisplayInvSpecial(void);
 void far DoInventoryMouse(int how);
 void far DoInventoryDrag(struct Object far *obj);
 void far DisplayInventory(void);
+extern union Link Inventory[28];
+extern char ValidLightSlots[4];
 
 #endif
