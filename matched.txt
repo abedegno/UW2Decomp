@@ -1,3 +1,4 @@
+# The segments whose source matches whole and verifies, by their IDA names (as in map/files.tsv), one per line. A segment split into modules is listed once. Read by tools/files.py and tools/anchors.py.
 ovr154
 seg012_1D31
 seg038_342C
@@ -108,4 +109,3 @@ seg001_023B
 seg004_0849
 seg000
 seg018_21B4
-seg019_21BA_C

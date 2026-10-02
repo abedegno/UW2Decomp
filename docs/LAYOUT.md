@@ -1,6 +1,6 @@
 # Layout assumptions
 
-The exact link (`tools/link.py`) proves the sources by rebuilding `UW2.EXE`, and for that every byte may sit where the original has it. The modding build (`tools/link.py --mod`, see the README) lets sources change size, so anything that holds an address as a plain number, rather than as a fixup the linker fills in, breaks when the thing it points at moves. This file records where such numbers are, how they were found, what was changed, and what still depends on the original layout.
+The exact link (`tools/link.py`) proves the sources by rebuilding `UW2.EXE`, and for that every byte may sit where the original has it. The modding build (`tools/link.py --mod`, see [LINKING.md](LINKING.md#the-modding-build)) lets sources change size, so anything that holds an address as a plain number, rather than as a fixup the linker fills in, breaks when the thing it points at moves. This file records where such numbers are, how they were found, what was changed, and what still depends on the original layout.
 
 The scan is `tools/addrscan.py` (needs `.venv/bin/python`). It reads the matched objects, the EXE's relocations, symbols.tsv and the IDA listing, follows the segment registers through the assembly, and lists every operand with no fixup that could be an address. Lines it marks with `*` are the ones that may go through DGROUP or through a segment it cannot name; each of those was read by hand (below).
 

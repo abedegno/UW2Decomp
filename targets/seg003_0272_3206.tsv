@@ -1,5 +1,5 @@
 # segment seg003_0272_3206 base 0x6656 size 0x47F org 0x3206
-# cname: as in targets/seg003_0272.tsv; SEG003 split at +3206..+3685
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name; SEG003 split at +3206..+3685
 seg003_0272_3206	seg003_0272_3206	0x0	0x15
 seg003_0272_321B	seg003_0272_321B	0x15	0x4F
 seg003_0272_326A	seg003_0272_326A	0x64	0x3

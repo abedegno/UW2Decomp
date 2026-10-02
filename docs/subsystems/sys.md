@@ -4,7 +4,7 @@ This page describes the parts of UW2 under the game: start-up and shutdown, the 
 
 ## Files
 
-seg021 is a library of 17 small assembly modules, the "system layer" (README, "Linking"; `map/filenames.tsv` lists them in module order):
+seg021 is a library of 17 small assembly modules, the "system layer" ([LINKING.md](../LINKING.md#the-exact-link); `map/filenames.tsv` lists them in module order):
 
 | File | Name | What it does |
 |---|---|---|

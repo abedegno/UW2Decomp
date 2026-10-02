@@ -1,5 +1,5 @@
 # segment seg004_0849_40B0 base 0xD270 size 0x63E org 0x40B0
-# cname: as in targets/seg004_0849.tsv; SEG004 split at +40B0..+46EE
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name; SEG004 split at +40B0..+46EE
 clip_vertex_x_neg_z	seg004_0849_40B0	0x0	0xB6
 clip_vertex_y_neg_z	seg004_0849_4166	0xB6	0xBA
 clip_vertex_x_z	seg004_0849_4220	0x170	0xB3

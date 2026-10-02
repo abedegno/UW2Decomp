@@ -33,7 +33,7 @@ This page describes how UW2 puts pictures on the screen: the graphics library (D
 | `SHOWPIC.C` | ovr150 | descriptive | full-screen pictures from BYT.ARK |
 | `CUTS.C` | ovr108 | inferred (the `cuts_` and `cutsop_` prefixes) | the cutscene player |
 
-`map/filenames.tsv` has the evidence for each name. seg003's modules were found from TLINK's padding and the relocation order (README, "Linking"); their routines have no names in the DOS build, so the comments give FM Towns' names where the FM Towns graphics library lines up with them by order or by job.
+`map/filenames.tsv` has the evidence for each name. seg003's modules were found from TLINK's padding and the relocation order ([LINKING.md](../LINKING.md#the-exact-link)); their routines have no names in the DOS build, so the comments give FM Towns' names where the FM Towns graphics library lines up with them by order or by job.
 
 ## The screen
 

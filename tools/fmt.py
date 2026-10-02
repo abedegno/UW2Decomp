@@ -1,6 +1,6 @@
 """Disassemble a function from the FM Towns UW2 build, naming calls and globals.
 usage: fmt.py NAME_        (e.g. fmt.py dream_)
-Needs fmtowns/uw2fmt.img and fmtowns/syms.tsv (see README). 32-bit Watcom register-call code:
+Needs fmtowns/uw2fmt.img and fmtowns/syms.tsv (see docs/BUILDING.md). 32-bit Watcom register-call code:
 arguments arrive in EAX, EDX, EBX, ECX. A second witness for meaning; DOS decides the bytes."""
 import sys,os,re
 from iced_x86 import Decoder,Formatter,FormatterSyntax

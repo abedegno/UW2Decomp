@@ -1,6 +1,6 @@
 # segment seg006_1413 base 0x14E65 size 0x38EF org 0x5
 # cname: original FM Towns name where the map anchors or confirms it, else the IDA name
-crit_terr	DropNPCRemains_seg006_1413_5	0x0	0x16E
+build_corpse	DropNPCRemains_seg006_1413_5	0x0	0x16E
 move_me_joe	MotionProcessing_seg006_1413_173	0x16E	0x154
 store_targ	HomingDartTargeting_seg006_1413_2C8	0x2C2	0x81
 merge_angles	GetDeflectionMaybe_seg006_1413_34B	0x343	0x58

@@ -2,7 +2,8 @@
 
     python3 tools/repocheck.py
 
-Tracked means committed or not ignored, so a new file is checked before it is added.
+Tracked means committed or not ignored, so a new file is checked before it is added, and a
+deleted one is not checked before its deletion is staged.
 
 - Every tracked .py compiles, every .mjs passes `node --check` (when node is on PATH) and
   every .sh passes `sh -n`.
@@ -22,7 +23,8 @@ problems = []
 def tracked():
     r = subprocess.run(['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
                        cwd=root, capture_output=True, text=True, check=True)
-    return [p for p in r.stdout.split('\0') if p]
+    # a file deleted from the working tree but not yet from the index is not checked
+    return [p for p in r.stdout.split('\0') if p and os.path.lexists(os.path.join(root, p))]
 
 
 def check_code(files):

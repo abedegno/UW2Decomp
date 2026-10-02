@@ -1,6 +1,6 @@
 # What the decompilation found
 
-This page collects what matching UW2 byte for byte revealed about the game: likely bugs in the shipped program, the game rules the code implements, how the engine works, code nothing calls, and the questions still open. The detail lives in the [subsystem notes](subsystems/), [LAYOUT.md](LAYOUT.md), [MATCHING.md](../MATCHING.md) and the comments in `src/`; each entry here links to it.
+This page collects what matching UW2 byte for byte revealed about the game: likely bugs in the shipped program, the game rules the code implements, how the engine works, code nothing calls, and the questions still open. The detail lives in the [subsystem notes](subsystems/), [LAYOUT.md](LAYOUT.md), [MATCHING.md](MATCHING.md) and the comments in `src/`; each entry here links to it.
 
 Everything here is read from the matched sources, which compile to the same bytes as the shipped `UW2.EXE`, so a statement about what the code does is a statement about what DOS UW2 does. Two other witnesses are used where they help: the FM Towns build of UW2 (`tools/fmt.py`, the same program compiled for a 32-bit machine, with Looking Glass's own names), and the game data of the GOG release. Statements about intent or about the effect in the game are inferences, and say so.
 
@@ -73,7 +73,7 @@ Each entry was re-read against the source before it was written here. The sectio
 ### A chained bitfield assignment sets stray cutscene flags
 
 - **What happens:** `reset_inf_values_eof` clears three flag bits with `b0 = b1 = b6 = 0`. Turbo C 1.01 compiles a three-deep chain of bitfield stores by OR-ing an uninitialised DX, shifted left by one, into the middle field's byte (`shl dx,1; or [si+5Bh],dl`), so any of bits 1 to 7 of the flags byte can be set. The function then clears bit 0, sets bits 2 and 4, and clears bit 7, so bits 1, 3, 5 and 6 (a key arrived, keep playing the cutscene, speech available, speech playing) can be left set.
-- **Where:** [gfx/CUTS.C](../src/gfx/CUTS.C); the compiler behaviour is described in [MATCHING.md](../MATCHING.md).
+- **Where:** [gfx/CUTS.C](../src/gfx/CUTS.C); the compiler behaviour is described in [MATCHING.md](MATCHING.md).
 - **Evidence:** the DOS bytes. It is the compiler's code generation, so the source was right and the program is not.
 - **Confidence:** confirmed.
 - **Effect:** unknown. Several opcodes clear bit 1 again before it is read; what the other bits do at the start of the next file was not traced.
@@ -270,9 +270,9 @@ World rules: mana cannot be restored by magic in the Scintillus Academy (world 5
 - **Memory.** UW2 needs EMS 4.0. The four physical pages normally hold a critter page pair, an art page and a texture page, and `get_workspace` lends the whole frame as a 64 KB scratch area. `stdat` is shared in time by the frame buffer, the archive tables, LZSS, the cutscene player and the automap notes. ([sys.md](subsystems/sys.md#memory))
 - **Overlays.** Most of the C runs as Borland VROOMM overlays from a 300h-paragraph buffer, kept in EMS through `_OvrInitEms`. ([sys.md](subsystems/sys.md#the-overlay-manager))
 - **Sound.** Miles' AIL 2 owns int 8 and runs up to 16 timers; UW2 uses two, the 256 Hz game clock and a 16 Hz effects timer. ([sound.md](subsystems/sound.md))
-- **Toolchain.** Turbo C++ 1.01, medium model, `-mm -1 -G -O -Y -d` (the switches vary by file, and each file records its own); Turbo Assembler 2.0 for the assembly, with seg004 in 386 code and the overlay manager showing MASM 5.1's encodings. ([MATCHING.md](../MATCHING.md))
-- **Link.** TLINK linked the program as `uwedit.exe` on 12 May 1993, with `C0.ASM` changed in three places. seg003, seg004 and seg021 were libraries of 14, 14 and 17 assembly modules, recovered from TLINK's padding and the relocation order. The relinked EXE matches except for two bytes, the code flags of seg003 and seg004 in the overlay segment table. ([README](../README.md#linking))
-- **Shared code.** The FM Towns build was linked from the same object list in the same order and kept 3237 original names; System Shock's source release shares file names and functions with UW2 (`interp.asm`, `DAMAGE.C`, `GAMEWRAP.C` and others); `LZSS.C` is Okumura's 1989 code almost line for line; `AIL.ASM` is Miles' AIL 2.14. ([README](../README.md#where-the-sources-are))
+- **Toolchain.** Turbo C++ 1.01, medium model, `-mm -1 -G -O -Y -d` (the switches vary by file, and each file records its own); Turbo Assembler 2.0 for the assembly, with seg004 in 386 code and the overlay manager showing MASM 5.1's encodings. ([MATCHING.md](MATCHING.md))
+- **Link.** TLINK linked the program as `uwedit.exe` on 12 May 1993, with `C0.ASM` changed in three places. seg003, seg004 and seg021 were libraries of 14, 14 and 17 assembly modules, recovered from TLINK's padding and the relocation order. The relinked EXE matches except for two bytes, the code flags of seg003 and seg004 in the overlay segment table. ([LINKING.md](LINKING.md#the-exact-link))
+- **Shared code.** The FM Towns build was linked from the same object list in the same order and kept 3237 original names; System Shock's source release shares file names and functions with UW2 (`interp.asm`, `DAMAGE.C`, `GAMEWRAP.C` and others); `LZSS.C` is Okumura's 1989 code almost line for line; `AIL.ASM` is Miles' AIL 2.14. ([MAP.md](MAP.md#source-file-names))
 - **Layout.** Every address the assembly writes as a number, and the four DGROUP addresses that had to become names, are audited in [LAYOUT.md](LAYOUT.md).
 
 ## 4. Dead code and open questions
@@ -320,4 +320,4 @@ Still open:
 - Screen furniture: whether the gargoyle eyes' sequence reflects anything in the game. ([ui.md](subsystems/ui.md#open-questions))
 - Sound: AIL.ASM's data labels against the AIL 2.14 source, and the version word 0D3h; offset 14h of the driver description; why effects 0x5A and 0x5B play as MIDI only with speech card 1; the unit behind the loop count of effects of length 5000 and more; the song titles of themes other than 2 to 6. ([sound.md](subsystems/sound.md#open-questions))
 - System: who writes FD71:0120, which the keyboard layout choice and the joystick set-up read. ([sys.md](subsystems/sys.md#open-questions))
-- Link: why the code flags of seg003 and seg004 are 0 in the original (possibly another TLINK 3.0x) ([README](../README.md#linking)); how the overlay manager sizes its buffer, and how far an overlay's code can grow ([LAYOUT.md](LAYOUT.md#limits-that-still-apply)); the owners of eight small unreferenced DGROUP gaps ([README](../README.md#linking)).
+- Link: why the code flags of seg003 and seg004 are 0 in the original (possibly another TLINK 3.0x) ([LINKING.md](LINKING.md#the-two-bytes)); how the overlay manager sizes its buffer, and how far an overlay's code can grow ([LAYOUT.md](LAYOUT.md#limits-that-still-apply)); the owners of eight small unreferenced DGROUP gaps ([LINKING.md](LINKING.md#what-still-comes-from-your-exe)).

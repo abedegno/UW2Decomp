@@ -6,7 +6,7 @@
 --obj links another build of one object in place of build/STEM/STEM.OBJ (to try a changed
 source without disturbing the matched build).
 
---mod is the modding build (README, "Modding build"): sources may change by any size. The
+--mod is the modding build (docs/LINKING.md, "The modding build"): sources may change by any size. The
 layout comes from the last exact run (build/LINK/base, written by extract.py when every object
 verified), the sources whose text differs from that run's are compiled into build/MODLINK/src
 (the matched objects in build/ are left alone), and the EXE goes to build/MODLINK/out. Nothing

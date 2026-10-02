@@ -1,5 +1,5 @@
 # segment seg004_0849_4E10 base 0xDFD0 size 0x392 org 0x4E10
-# cname: as in targets/seg004_0849.tsv; SEG004 split at +4E10..+51A2
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name; SEG004 split at +4E10..+51A2
 _asm_project_polygon	seg004_0849_4E10	0x0	0x7A
 _asm_texture_map_1	seg004_0849_4E8A	0x7A	0x75
 divide_overflow_handler	seg004_0849_4EFF	0xEF	0x5D

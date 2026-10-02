@@ -1,2 +1,2 @@
 # segment seg004_0849_46F0 base 0xD8B0 size 0x43C org 0x46F0
-# cname: as in targets/seg004_0849.tsv; SEG004 split at +46F0..+4B2C
+# cname: original FM Towns name where the map anchors or confirms it, else the IDA name; SEG004 split at +46F0..+4B2C

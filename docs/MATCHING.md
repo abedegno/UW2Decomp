@@ -27,6 +27,8 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 
 The assembly modules (seg003, seg004, seg020 to seg022, seg045, seg046, SetPnt in seg019) were assembled with something that behaves exactly like **Turbo Assembler 2.0 in its default single-pass mode**: a routine from seg004 rebuilds byte for byte with it (`tools/setup-tasm.sh`; `tools/tcc.mjs` assembles `.ASM` files with TASM, options such as `/ml`). MASM 5.1 is also single-pass and has not been ruled out.
 
+The assembly segments are seg001 (screen memory and rectangle save and restore), seg002 (a run, skip and dump decoder), seg003 (graphics), seg004 (the 3D renderer, 386 code), seg017, seg020, seg021 (start-up and input), seg022 (the Miles AIL 2.0 sound API), seg045 (now the C file `src/conv/GRDB.C`) and seg046 (Borland's overlay manager from OVERLAY.LIB), with SetPnt at the start of seg019. seg013 is C with inline assembly.
+
 - **The padding tells you what the source said.** With `.386`, a forward conditional jump written without `short` is reserved as a 4-byte near jump and, when the target turns out close, becomes the 2-byte jump plus `nop nop`; a forward `jmp` likewise becomes `EB xx 90`. Forward jumps with no padding were written `short`. Backward jumps are never padded. So write plain `jcc label` where the original has the `nop`s (and drop them from the source), and `jcc short label` where it doesn't.
 - Register-to-register forms are the `8B` (reg, r/m) encodings and the AX short forms (`05 imm16`) are used, as TASM does by default.
 - seg004 uses 386 instructions with 32-bit registers in 16-bit segments: `.386` with `segment use16`.
@@ -66,7 +68,7 @@ The assembly modules (seg003, seg004, seg020 to seg022, seg045, seg046, SetPnt i
 
 ## Shared headers
 
-What the move to `src/include` showed about Turbo C (each was found by the gate):
+What the move to `src/include` showed about Turbo C (each was found by the gate). The rules that follow from it, where a declaration goes and which names stay in their files, are in [CONTRIBUTING.md](CONTRIBUTING.md#shared-headers).
 
 - **An unused declaration costs nothing:** an `extern` or prototype the file never uses leaves no EXTDEF, so a header may declare far more than a file needs. The object does gain comment records naming each included file and its time stamp, which no tool reads.
 - **`struct X;` works** as an incomplete declaration, and a later definition completes the same tag. A tag declared and never defined draws "Undefined structure" at the end of the compile, a warning only.
@@ -102,6 +104,7 @@ What replacing cast-pointer offsets with fields, and per-file macros with shared
 - **Pointer types of the same address are free:** retyping `unsigned far *` link variables to `union Link far *` (and `&tile->objects.word` to `&tile->objects`, `*head` to `head->word`, a local bitfield struct cast to `head->f.index`) changed no byte; moving seg029's prototypes into `object.h` first drew 234 "Suspicious pointer conversion" warnings at the callers, and the retyping cleared them all; so did returning `unsigned char` rather than `char` from a function that returns a constant (clear_owner, passed to Obj_Check).
 - **Two headers that include each other** can share a struct that needs both complete only from a third header that each includes at its end (`level.h`).
 
+## Data and names
 
 - A file's `_DATA` holds its initialised data in definition order, including the initialisers of local arrays (emitted where the function is), and then the string-literal pool in order of first use. `verify.py` compares it with the EXE, so data the code reads by a fixed DS address may belong to the file itself: look at the bytes around it.
 - Static data doesn't appear in the FM Towns symbol table, so an unnamed table inside a file's data range was probably `static`.

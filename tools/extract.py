@@ -74,7 +74,7 @@ from fixups import fixups
 from sources import all_sources, stem as stem_of, target as target_of, by_segment, family
 
 EXE = os.environ.get('UW2_EXE', os.path.expanduser('~/UWGOG/UW2/UW2.EXE'))
-# --mod: the modding build (see the README's "Modding build"). The layout is worked out from
+# --mod: the modding build (see docs/LINKING.md, "The modding build"). The layout is worked out from
 # the matched objects and their places as the last exact run recorded them (BASE), not from
 # the objects in build/, which may hold changed sources; the modules go to build/MODLINK.
 MOD = '--mod' in sys.argv[1:]

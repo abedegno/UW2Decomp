@@ -158,7 +158,7 @@ struct AnimClass {
 #define HOME_X          0xFC00          /* bits 10-15 */
 
 /* Accessors for an object's fields. The getters are written mask then shift, as the
-   original's macros were (MATCHING.md, "Bitfields versus macros"). A setter rewrites the
+   original's macros were (docs/MATCHING.md, "Bitfields versus macros"). A setter rewrites the
    whole word or byte.
    Names of the mobile fields come from the code that uses them; UnderworldGodot's
    uwobject.cs (Hank Morgan's reading of the same bytes) agrees where noted, and names

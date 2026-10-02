@@ -1,5 +1,5 @@
 """Collect DOS proc <-> original name anchors and check they keep link order.
-Sources: targets/*.tsv for the files in matched.txt, far functions in symbols.tsv,, map/pairs_*.tsv (callpairs.py output), and the
+Sources: targets/*.tsv for the segments in matched.txt, far functions in symbols.tsv, map/pairs_*.tsv (callpairs.py output), and the
 string anchors from UWReverseEngineering's 'UW2 FM Towns' folder. Writes map/anchors.tsv."""
 import os, re, glob
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -14,10 +14,13 @@ def add(ida, name, why):
     fmn = name if name.endswith('_') else name + '_'
     if ida not in dosidx or fmn not in fm: return
     anchors.setdefault(ida, (fmn, why))
-# only files that match and verify count; other target tables take their names from the map
-done = {l.strip() for l in open(os.path.join(root, 'matched.txt')) if l.strip()}
+# only files that match and verify count; other target tables take their names from the map.
+# matched.txt lists segments; a segment split into modules has a table per module, named
+# segment_OFFSET (seg003_0272_EC, seg019_21BA_C), which counts when its segment is listed
+done = {l.strip() for l in open(os.path.join(root, 'matched.txt')) if l.strip() and not l.startswith('#')}
 for t in glob.glob(os.path.join(root, 'targets', '*.tsv')):
-    if os.path.splitext(os.path.basename(t))[0] not in done: continue
+    name = os.path.splitext(os.path.basename(t))[0]
+    if name not in done and re.sub(r'^(seg\d{3}_[0-9A-F]{4})_[0-9A-F]+$', r'\1', name) not in done: continue
     for l in open(t):
         if not l.startswith('#'): c, ida = l.split('\t')[:2]; add(ida, c, 'matched')
 for p in glob.glob(os.path.join(root, 'map', 'pairs_*.tsv')):
