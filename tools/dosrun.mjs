@@ -1,5 +1,7 @@
-// Run batch lines headless in DOS (dos-mcp's js-dos backend) with Turbo C++ 1.01 and
-// TASM 2.0 staged in C:\, then copy named outputs back. Generic counterpart of tcc.mjs.
+// Run batch lines headless in DOS with Turbo C++ 1.01 and TASM 2.0 staged in C:\, then copy
+// named outputs back. Generic counterpart of tcc.mjs. The DOS is the one tools/dosbackend.mjs
+// picks (UW2_DOS: emu2, dosbox-x, staging, jsdos); with emu2 a line must be a program with an
+// optional redirection, or echo.
 //
 //   node tools/dosrun.mjs OUTDIR [options]
 //     -f PATH[=DOSNAME]   stage a file in C:\ (DOSNAME defaults to the upper-cased basename);
@@ -14,7 +16,7 @@
 // redirects itself); it is always copied back. An output that is missing, empty, or (for
 // .OBJ) not a well-formed OMF chain, or (for .EXE) shorter than its MZ header says, counts
 // as damaged and the run is retried: the emulator occasionally hands back such files.
-import { JsDosBackend } from "dos-mcp/dist/backend/jsdos.js";
+import { runStage } from "./dosbackend.mjs";
 import { cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, basename, dirname } from "node:path";
@@ -85,26 +87,19 @@ writeFileSync(join(stage, "RUN.BAT"), [
 let ok = false;
 for (let attempt = 0; attempt < retries && !ok; attempt++) {
   if (attempt) console.log("run did not finish or left a damaged output, retrying");
-  const be = new JsDosBackend({ headless: true });
   let bad = false;
   try {
-    await be.loadBundle({ source: stage, autoexec: ["RUN.BAT"] });
-    let done = false;
-    for (let i = 0; i < timeout * 2 && !done; i++) {
-      await be.wait(500);
-      try { await be.fsStat("C:/DONE.TXT"); done = true; } catch { }
-    }
-    if (!done) { bad = true; console.log("timed out"); }
-    else await be.wait(1000);   // let DOS finish writing before the files are read
-    mkdirSync(outDir, { recursive: true });
-    for (const n of [...outs, "RUN.LOG"]) {
-      let b = null;
-      try { b = await be.fsRead(`C:/${n.replace(/\\/g, "/")}`); } catch { }
-      if (n !== "RUN.LOG" && damaged(n, b)) { bad = true; console.log("missing or damaged", n); }
-      if (b) writeFileSync(join(outDir, basename(n.replace(/\\/g, "/"))), b);
-    }
+    const run = await runStage(stage, "RUN.BAT", timeout);
+    try {
+      if (!run.finished) { bad = true; console.log("timed out"); }
+      mkdirSync(outDir, { recursive: true });
+      for (const n of [...outs, "RUN.LOG"]) {
+        const b = await run.read(n);
+        if (n !== "RUN.LOG" && damaged(n, b)) { bad = true; console.log("missing or damaged", n); }
+        if (b) writeFileSync(join(outDir, basename(n.replace(/\\/g, "/"))), b);
+      }
+    } finally { await run.close(); }
   } catch (e) { bad = true; console.log("error", e.message); }
-  finally { await be.shutdown(); }
   ok = !bad;
 }
 rmSync(stage, { recursive: true, force: true });

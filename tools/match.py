@@ -1,4 +1,4 @@
-"""Compile a source file and compare every function with UW2.EXE.
+"""Compile a source file (tools/tcc.mjs, in the DOS tools/dosbackend.mjs picks) and compare every function with UW2.EXE.
 usage: match.py src/FILE.C [--dis NAME] [--no-build]
 The target table is targets/<segment>.tsv, named by a '/* target: ovr154 */' line in the source.
 Fixup bytes are masked; the linker's far->near call rewrite (9A .. -> 90 0E E8 ..) counts as equal."""

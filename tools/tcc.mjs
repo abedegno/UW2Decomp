@@ -1,7 +1,8 @@
-// Compile C files with Turbo C++ 1.01 in DOS (dos-mcp js-dos, headless) and copy the
-// resulting .OBJ files back.   node tcc.mjs <outDir> "<options>" FILE.C|FILE.ASM [...]
+// Compile C files with Turbo C++ 1.01 in headless DOS and copy the resulting .OBJ files
+// back.   node tcc.mjs <outDir> "<options>" FILE.C|FILE.ASM [...]
 // .ASM files go to TASM with the options given (for example "/ml"), .C files to TCC -c.
-import { JsDosBackend } from "dos-mcp/dist/backend/jsdos.js";
+// The DOS is the one tools/dosbackend.mjs picks (UW2_DOS: emu2, dosbox-x, staging, jsdos).
+import { runStage } from "./dosbackend.mjs";
 import { cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, readdirSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, basename } from "node:path";
@@ -47,23 +48,19 @@ writeFileSync(join(stage, "BUILD.BAT"), [
   "echo DONE > DONE.TXT", ""].join("\r\n"));
 // the emulator occasionally hands back empty files or never finishes; retry the run
 for (let attempt = 0; attempt < 3; attempt++) {
-const be = new JsDosBackend({ headless: true });
 let empty = false;
+// several emulators at once can slow a build well past a minute, so allow five
+const run = await runStage(stage, "BUILD.BAT", 300);
 try {
-  await be.loadBundle({ source: stage, autoexec: ["BUILD.BAT"] });
-  // several emulators at once can slow a build well past a minute, so allow five
-  let done = false;
-  for (let i = 0; i < 600 && !done; i++) {
-    await be.wait(500);
-    try { await be.fsStat("C:/DONE.TXT"); done = true; } catch { }
-  }
-  if (!done) empty = true;
-  else await be.wait(1000);        // let DOS finish writing before the files are read
+  if (!run.finished) empty = true;
   mkdirSync(outDir, { recursive: true });
   for (const n of [...names.map(n => n.replace(/\.(C|ASM)$/, ".OBJ")), "BUILD.LOG"]) {
-    try { const b = await be.fsRead(`C:/${n}`); if (n.endsWith(".OBJ") && !wellFormed(b)) empty = true; writeFileSync(join(outDir, n), b); } catch (e) { console.log("missing", n); }
+    const b = await run.read(n);
+    if (!b) { console.log("missing", n); continue; }
+    if (n.endsWith(".OBJ") && !wellFormed(b)) empty = true;
+    writeFileSync(join(outDir, n), b);
   }
-} finally { await be.shutdown(); }
+} finally { await run.close(); }
 if (!empty) break;
 console.log("build did not finish or left a damaged object, retrying");
 }

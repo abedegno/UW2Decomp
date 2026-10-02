@@ -1,4 +1,6 @@
 // node rungame.mjs EXE OUTPREFIX step...   steps: w:ms  k:Key[,Key]  s:name
+// Always js-dos, whatever UW2_DOS says (that chooses the DOS for the toolchain only): the game
+// needs a screen, keys, and dos-mcp's memory reads.
 import { JsDosBackend } from "dos-mcp/dist/backend/jsdos.js";
 import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";

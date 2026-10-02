@@ -162,6 +162,8 @@ def write_probe(recs, hs):
             lines.append(f'    dump("{tag}", "{path}", sizeof({ty}));')
         lines.append('    #undef P')
         lines.append('}')
+    # compat.h renames main to uw2_main for the port; the probe is its own program
+    lines += ['#ifdef main', '#undef main', '#endif']
     lines.append('int main(void)')
     lines.append('{')
     lines += [f'    probe{n}();' for n in range(len(recs))]

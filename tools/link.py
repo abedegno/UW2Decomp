@@ -9,7 +9,8 @@ source without disturbing the matched build).
 --mod is the modding build (docs/LINKING.md, "The modding build"): sources may change by any size. The
 layout comes from the last exact run (build/LINK/base, written by extract.py when every object
 verified), the sources whose text differs from that run's are compiled into build/MODLINK/src
-(the matched objects in build/ are left alone), and the EXE goes to build/MODLINK/out. Nothing
+(the matched objects in build/ are left alone; several to a DOS session and several sessions
+at once, as the gate compiles, tools/dosbatch.py), and the EXE goes to build/MODLINK/out. Nothing
 is compared with your EXE, and an overlay's publics may come in any order (TLINK then numbers
 its stub entries differently, which nothing depends on).
 
@@ -23,7 +24,8 @@ its stub entries differently, which nothing depends on).
    names, statics, alignment or segment references disagree with the EXE (extract.py reports
    them), or an overlay whose publics are listed out of the EXE's stub order (see
    stub_order_wrong), stops the link until it is corrected.
-4. In DOS: the date is set to 12 May 1993 (TLINK records it), TASM assembles the generated
+4. In DOS (tools/dosrun.mjs, in the DOS tools/dosbackend.mjs picks; with emu2 the date
+   needs tools/emu2-date.patch): the date is set to 12 May 1993 (TLINK records it), TASM assembles the generated
    modules, TLIB puts the second library's modules (seg003's, seg004's, seg021's but its
    first, and seg045's) into UWLIB.LIB in the manifest's order,
    and TLINK links from LINK.RSP:
@@ -125,15 +127,19 @@ def changed_sources():
     """--mod: {stem: object} for each source whose text (with the src/include headers it
     includes) is not what the last exact run built, compiled (unless the object there was built
     from this same text) into build/MODLINK/src/STEM
-    with the source's own /* opts: */ (match.py's defaults otherwise)."""
+    with the source's own /* opts: */ (match.py's defaults otherwise). The compiles are
+    batched and run in parallel as the gate's are (tools/dosbatch.py); a source that fails in
+    a batch is compiled once more on its own before it counts as failed."""
     from srcdeps import source_hash
     from sources import all_sources, stem as stem_of, by_segment
+    from dosbatch import compile_many, backend, sessions
     overlay_manager = by_segment('seg046')     # linked from OVERLAY.LIB, not from its source
     lay = os.path.join(LINKDIR_EXACT, 'base', 'layout.json')
     if not os.path.exists(lay):
         sys.exit('no build/LINK/base: run the exact link (python3 tools/link.py) once while every source matches')
     known = json.load(open(lay))['sources']
-    out = {}
+    out, todo, shas = {}, [], {}
+    dest = lambda stem: os.path.join(LINKDIR, 'src', stem)
     for src in all_sources():
         text = open(src, 'rb').read()
         head = text[:3000].decode('latin1')
@@ -143,19 +149,24 @@ def changed_sources():
         if stem not in known: sys.exit(f'{stem}: a source the exact run did not have; --mod links the existing files only')
         sha = source_hash(src)          # the text and the src/include headers it includes
         if sha == known[stem][1]: continue
-        d = os.path.join(LINKDIR, 'src', stem); obj = os.path.join(d, stem + '.OBJ')
+        d = dest(stem); obj = os.path.join(d, stem + '.OBJ')
         shafile = os.path.join(d, 'SOURCE.SHA1')
         if not os.path.exists(obj) or not os.path.exists(shafile) or open(shafile).read() != sha:
             opts = re.search(r'/\*\s*opts:\s*([^*]+?)\s*\*/', head)
             opts = opts.group(1) if opts else ('/ml' if src.upper().endswith('.ASM') else '-mm -1 -G -O -Z')
             print(f'compiling {os.path.relpath(src, root)} ({opts})')
             if os.path.exists(obj): os.remove(obj)
-            subprocess.run(['node', os.path.join(here, 'tcc.mjs'), d, opts, src], check=True)
-            log = open(os.path.join(d, 'BUILD.LOG'), encoding='latin1').read()
-            bad = [l for l in log.splitlines() if re.search(r'Error|Fatal', l) and not re.search(r'messages:\s+None', l)]
-            if bad or not os.path.exists(obj): sys.exit(f'{stem}: build failed\n' + log)
-            open(shafile, 'w').write(sha)
+            if os.path.exists(shafile): os.remove(shafile)
+            todo.append((stem, src, opts)); shas[stem] = sha
         out[stem] = obj
+    if todo:
+        if len(todo) > 1: print(f'{len(todo)} sources in {backend()}, {sessions()} sessions at once')
+        res = compile_many(todo, dest)
+        again = [t for t in todo if res.get(t[0])]
+        if again: res.update(compile_many(again, dest, batch=1))     # failed in a batch: once more alone
+        for stem, src, opts in todo:
+            if res.get(stem): sys.exit(f'{stem}: build failed\n{res[stem]}')
+            open(os.path.join(dest(stem), 'SOURCE.SHA1'), 'w').write(shas[stem])
     return out
 
 def main():

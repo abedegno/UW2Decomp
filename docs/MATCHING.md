@@ -13,7 +13,7 @@ So if reloads differ in a way restructuring can't fix, try the file with and wit
 
 ## Tools
 
-- `python3 tools/match.py src/FILE.C` compiles the file in DOS (headless js-dos through the dos-mcp npm package, about 30 s) and compares every public function with the EXE, named by `/* target: ovr154 */` in the source and looked up in `targets/ovr154.tsv`. It prints MATCH, or how many bytes differ and where.
+- `python3 tools/match.py src/FILE.C` compiles the file in headless DOS (the one `tools/dosbackend.mjs` picks: about a second in emu2 or DOSBox-X, 7 s in js-dos; [BUILDING.md](BUILDING.md#choosing-the-dos)) and compares every public function with the EXE, named by `/* target: ovr154 */` in the source and looked up in `targets/ovr154.tsv`. It prints MATCH, or how many bytes differ and where.
 - `--dis NAME` adds an instruction diff for one function (needs `.venv/bin/python`, which has iced-x86). Jump and call targets are hidden in the diff, so a length difference shows up as the instruction that caused it.
 - `--no-build` re-compares the last build.
 - Only functions present in the file are reported, so a work file can hold a subset.

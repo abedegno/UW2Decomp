@@ -1,0 +1,76 @@
+diff --git a/src/dos.c b/src/dos.c
+index c550737..0b7dcdc 100644
+--- a/src/dos.c
++++ b/src/dos.c
+@@ -443,6 +443,41 @@ static int dos_rw_record_fcb(unsigned addr, int write, int update, int seq)
+     }
+ }
+ 
++// A date set through INT 21h AH=2Bh, kept in the file EMU2_DATE_FILE names (if set) so
++// that it outlasts this process: "YYYY MM DD". Returns 1 and fills *lt when one is set.
++static int get_set_date(struct tm *lt)
++{
++    const char *fn = getenv(ENV_DATE_FILE);
++    FILE *f;
++    int y, m, d, ok;
++    if(!fn || !(f = fopen(fn, "r")))
++        return 0;
++    ok = fscanf(f, "%d %d %d", &y, &m, &d) == 3;
++    fclose(f);
++    if(!ok)
++        return 0;
++    memset(lt, 0, sizeof(*lt));
++    lt->tm_year = y - 1900;
++    lt->tm_mon = m - 1;
++    lt->tm_mday = d;
++    lt->tm_hour = 12;
++    lt->tm_isdst = -1;
++    return mktime(lt) != (time_t)-1; // fills in tm_wday
++}
++
++static int put_set_date(unsigned y, unsigned m, unsigned d)
++{
++    const char *fn = getenv(ENV_DATE_FILE);
++    FILE *f;
++    if(!fn || y < 1980 || y > 2099 || m < 1 || m > 12 || d < 1 || d > 31)
++        return 0;
++    if(!(f = fopen(fn, "w")))
++        return 0;
++    fprintf(f, "%u %u %u\n", y, m, d);
++    fclose(f);
++    return 1;
++}
++
+ // Converts Unix time_t to DOS time/date
+ static uint32_t get_time_date(time_t tm)
+ {
+@@ -1610,7 +1645,7 @@ void intr21(void)
+     {
+         time_t tm = time(0);
+         struct tm lt;
+-        if(localtime_r(&tm, &lt))
++        if(get_set_date(&lt) || localtime_r(&tm, &lt))
+         {
+             cpuSetAL(lt.tm_wday);
+             cpuSetCX(lt.tm_year + 1900);
+@@ -1619,8 +1654,9 @@ void intr21(void)
+         break;
+     }
+     case 0x2B: // SET SYSTEM DATE
+-        // Invalid date - don't support setting date.
+-        cpuSetAL(0xFF);
++        // Supported only when EMU2_DATE_FILE names a file to keep the date in, so that
++        // the programs run after this one see it; otherwise an invalid date.
++        cpuSetAL(put_set_date(cpuGetCX(), cpuGetDX() >> 8, cpuGetDX() & 0xFF) ? 0 : 0xFF);
+         break;
+     case 0x2C: // GET SYSTEM TIME
+     {
+diff --git a/src/env.h b/src/env.h
+index a5f13f6..1c13338 100644
+--- a/src/env.h
++++ b/src/env.h
+@@ -13,3 +13,4 @@
+ #define ENV_ROWS      "EMU2_ROWS"
+ #define ENV_DOSVER    "EMU2_DOSVER"
+ #define ENV_CPUSPEED  "EMU2_CPU_SPEED"
++#define ENV_DATE_FILE "EMU2_DATE_FILE"

@@ -6,8 +6,9 @@
     python3 tools/uw2.py boot [EXE]      boot the modding build (or EXE): title, intro and menu screenshots
 
 The gate, `check`:
-1. Every source with a `/* target: */` line is compiled, several to a DOS session and three
-   sessions at once, each with its own `/* opts: */`. A source is recompiled only when its text
+1. Every source with a `/* target: */` line is compiled, several to a DOS session and several
+   sessions at once (tools/dosbatch.py: one per core up to 12 in a native DOS, 3 in js-dos),
+   each with its own `/* opts: */`. A source is recompiled only when its text
    (with the src/include headers it includes), its object in build/, or the toolchain differs from the last check it passed (build/check/
    state.json); --all recompiles everything. Objects land in build/STEM as match.py leaves them.
    A source that fails from a batch is built again on its own by match.py before it counts.
@@ -32,8 +33,6 @@ EXE = os.path.expanduser(os.environ.get('UW2_EXE', '~/UWGOG/UW2/UW2.EXE'))
 PY = os.path.join(root, '.venv', 'bin', 'python')
 if not os.path.exists(PY): PY = sys.executable
 DEFAULT_OPTS = '-mm -1 -G -O -Z'          # match.py's default for a C file
-SESSIONS = 3                              # DOS sessions at once
-BATCH = 8                                 # sources per DOS session
 KNOWN = {0x6676C: (0x00, 0x01), 0x66774: (0x00, 0x01)}   # the overlay table's code flag for seg003 and seg004
 STATE = os.path.join(root, 'build', 'check', 'state.json')
 
@@ -48,6 +47,7 @@ def rel(p): return os.path.relpath(p, root)
 sys.path.insert(0, here)
 from srcdeps import source_hash     # a source's text plus the src/include headers it includes
 from sources import all_sources, stem as stem_of, target as target_of     # every source under src/, by stem
+from dosbatch import compile_many, backend, sessions     # batches of sources in headless DOS
 
 
 def sources():
@@ -63,56 +63,15 @@ def sources():
 
 def toolchain():
     h = hashlib.sha1()
-    for p in (os.path.join(here, 'tcc.mjs'), os.path.join(root, 'TC', 'TCC.EXE'), os.path.join(root, 'TASM', 'TASM.EXE')):
+    for p in (os.path.join(here, 'tcc.mjs'), os.path.join(here, 'dosbackend.mjs'), os.path.join(root, 'TC', 'TCC.EXE'), os.path.join(root, 'TASM', 'TASM.EXE')):
         if os.path.exists(p): h.update(sha1(p).encode())
     return h.hexdigest()
 
 
 # ---- compiling ------------------------------------------------------------------------
-def build_batch(n, opts, items, tmp):
-    """Compile items [(stem, src)] in one DOS session; place each object in build/STEM.
-    Returns {stem: error text or None}."""
-    d = os.path.join(tmp, f'batch{n:03d}')
-    r = subprocess.run(['node', os.path.join(here, 'tcc.mjs'), d, opts] + [s for _, s in items],
-                       capture_output=True, text=True)
-    logpath = os.path.join(d, 'BUILD.LOG')
-    log = open(logpath, encoding='latin1').read() if os.path.exists(logpath) else ''
-    # one section per file, each starting at the compiler's or assembler's banner
-    parts = re.split(r'(?m)^(?=Turbo (?:C\+\+|Assembler)\s+Version)', log)
-    res = {}
-    for stem, src in items:
-        name = os.path.basename(src).lower()
-        mine = [p for p in parts if re.search(r'(?im)^\s*(?:Assembling file:\s+)?' + re.escape(name) + r'\b', p)]
-        text = mine[0] if len(mine) == 1 else ''
-        obj = os.path.join(d, stem + '.OBJ')
-        errs = [l for l in text.splitlines() if re.search(r'Error|Fatal', l) and not re.search(r'messages:\s+None', l)]
-        if not os.path.exists(obj) or not text or errs:
-            res[stem] = '\n'.join(errs) or f'no object or log from the batch (tcc.mjs: {r.stdout.strip()[-200:]})'
-            continue
-        out = os.path.join(root, 'build', stem); os.makedirs(out, exist_ok=True)
-        # replace, not rewrite, so anything reading build/STEM never sees half a file
-        open(os.path.join(d, stem + '.LOG'), 'w', encoding='latin1').write(text)
-        os.replace(os.path.join(d, stem + '.LOG'), os.path.join(out, 'BUILD.LOG'))
-        os.replace(obj, os.path.join(out, stem + '.OBJ'))
-        res[stem] = None
-    return res
-
-
 def compile_all(todo):
-    """Compile [(stem, src, opts)] batched by options. Returns {stem: error or None}."""
-    groups = {}
-    for stem, src, opts in todo: groups.setdefault(opts, []).append((stem, src))
-    jobs = []
-    for opts, items in sorted(groups.items()):
-        for i in range(0, len(items), BATCH): jobs.append((opts, items[i:i + BATCH]))
-    tmp = tempfile.mkdtemp(prefix='batch-', dir=os.path.join(root, 'build', 'check'))
-    res = {}
-    try:
-        with ThreadPoolExecutor(SESSIONS) as pool:
-            for r in pool.map(lambda a: build_batch(a[0], *a[1], tmp), enumerate(jobs)): res.update(r)
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
-    return res
+    """Compile [(stem, src, opts)] batched by options into build/STEM. Returns {stem: error or None}."""
+    return compile_many(todo, lambda stem: os.path.join(root, 'build', stem))
 
 
 def match_verify(src, build=False):
@@ -251,6 +210,7 @@ def cmd_check(force):
     t1 = time.time()
     built = compile_all(todo) if todo else {}
     print(f'compiled {len(todo)} of {len(srcs)} sources in {time.time() - t1:.0f}s'
+          + (f' ({backend()}, {sessions()} sessions)' if todo else '')
           + (' (the rest are unchanged since they last passed)' if len(todo) < len(srcs) else ''))
 
     # 2. match and verify every source; a batch failure gets one build of its own
@@ -263,7 +223,7 @@ def cmd_check(force):
         if not ok and stem in built:          # a fresh batch object that fails: rebuild it alone once
             ok, why = match_verify(src, build=True)
         return stem, ok, why
-    with ThreadPoolExecutor(SESSIONS) as pool:
+    with ThreadPoolExecutor(sessions()) as pool:
         per = list(pool.map(one, srcs))
     for (stem, ok, why), (_, src, opts) in zip(per, srcs):
         if ok:
