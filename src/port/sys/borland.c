@@ -376,6 +376,7 @@ void seg021_exit_chain(void);
 void bc_exit(int status)
 {
     fflush(stdout);
+    port_blackbox_close(0);
     seg021_exit_chain();
     fflush(stdout);
     fflush(stderr);

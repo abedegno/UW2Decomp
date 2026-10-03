@@ -6,6 +6,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "port.h"
 #ifdef _WIN32
 /* Windows has no backtrace(): a fault is reported without the call stack. */
 #include <io.h>
@@ -24,6 +25,7 @@ static void on_fault(int sig)
     static const char msg[] = "uw2port: host fault; the call stack:\n";
     if (write(2, msg, sizeof msg - 1) < 0) { }
     backtrace_symbols_fd(frames, n, 2);
+    port_blackbox_close(1);             /* the session's recording, for a replay of the fault */
     signal(sig, SIG_DFL);
     raise(sig);
 }

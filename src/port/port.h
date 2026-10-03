@@ -27,6 +27,10 @@ void port_halt(const char *why) __attribute__((noreturn));
 /* Called after each grPageFlip from C (a full screen the game has just shown): writes the
    screenshots --shot-at-flip asks for (sys/main.c). */
 void port_on_flip(void);
+/* The black box (sys/blackbox.c): a player's session recorded to the home directory's
+   recordings/, and its streams written out at a fault or at the game's exit. */
+int port_blackbox_start(const char *home);
+void port_blackbox_close(int crashed);
 
 /* The paragraph map (mem/parmap.c, docs/PORT.md "Far pointers and segments"): host memory
    given DOS paragraph numbers, so that MK_FP, FP_SEG, FP_OFF and segment arithmetic work.

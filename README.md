@@ -13,7 +13,7 @@ Neither contains any of the game. You need your own copy of UW2 (the GOG release
 2. Install UW2 from GOG. The port finds it in GOG's usual folders (on Windows, where GOG's installer recorded it in the registry), including inside GOG's Mac app and its `game.gog` CD image. If it finds nothing, it asks you to choose the folder that holds `UW2.EXE` (or the GOG install folder), and remembers it. From a command line, `uw2port --data /path/to/UW2` names it.
 3. Start it: `UW2.app` on macOS (signed and notarised, so it opens like any app; a package whose `README.txt` says it is not notarised needs right-click and Open the first time), `uw2port.exe` on Windows, and on Linux the AppImage (`chmod +x UW2-*.AppImage`, then run it) or `./uw2` from the tarball. The Linux packages need glibc 2.35 or later (Ubuntu 22.04 or newer).
 
-The controls are the game's own: the mouse, and the keys in the game's manual. The game's cursor follows the system pointer; `--mouse lock` captures the pointer on a click instead, as DOSBox does, with Ctrl+F10 to release it. Saved games and settings go to `~/.uw2port` (`%APPDATA%\uw2port` on Windows), never to the game folder.
+The controls are the game's own: the mouse, and the keys in the game's manual. The game's cursor follows the system pointer; `--mouse lock` captures the pointer on a click instead, as DOSBox does, with Ctrl+F10 to release it. Saved games and settings go to `~/.uw2port` (`%APPDATA%\uw2port` on Windows), never to the game folder. Each session's inputs are recorded to `recordings/` there (the newest five are kept; `--no-recording` turns it off), so if the game crashes, the newest folder there replays it exactly: please attach it to a bug report.
 
 Options (`uw2port --help` lists them all):
 

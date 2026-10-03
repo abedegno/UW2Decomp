@@ -176,6 +176,9 @@ static const char help_text[] =
     "  --audio-wav FILE       write everything the sound cards play to a WAV file (44100 Hz)\n"
     "  --ail-log FILE         log every AIL call and driver service\n"
     "  --hw-log FILE          log every register write and MIDI byte the drivers make\n"
+    "  --no-recording         do not record this session (by default each session's inputs go\n"
+    "                         to recordings/ in the home directory, the newest five kept, so\n"
+    "                         that a crash can be replayed)\n"
     "  -v                     trace (also UW2PORT_TRACE=1)\n"
     "  -h, --help             this list\n"
     "\n"
@@ -259,7 +262,7 @@ int main(int argc, char *argv[])
     const char *data = NULL, *home = getenv("UW2PORT_HOME"), *replay = NULL;
     const char *sound = NULL, *roms = NULL, *wav = NULL, *ail_log = NULL, *hw_log = NULL, *mouse = NULL;
     char mouse_buf[16];
-    int audio_device = 1, interactive;
+    int audio_device = 1, interactive, recording = 1;
     PlatConfig cfg;
     PlatHooks hooks;
     int i;
@@ -297,6 +300,7 @@ int main(int argc, char *argv[])
         else if (!strcmp(a, "--mt32-roms") && i + 1 < argc) roms = argv[++i];
         else if (!strcmp(a, "--audio-wav") && i + 1 < argc) wav = argv[++i];
         else if (!strcmp(a, "--no-audio")) audio_device = 0;
+        else if (!strcmp(a, "--no-recording")) recording = 0;
         else if (!strcmp(a, "--ail-log") && i + 1 < argc) ail_log = argv[++i];
         else if (!strcmp(a, "--hw-log") && i + 1 < argc) hw_log = argv[++i];
         else if (!strcmp(a, "-v")) port_trace = 1;
@@ -355,6 +359,7 @@ int main(int argc, char *argv[])
     }
     vga_window_init();
     if (rp_request != 1 && rp_request != 2) rp_request = 0;   /* the port reads the world */
+    if (interactive && recording && rp_request == 0) port_blackbox_start(home);
     if (replay && copy_to_home(replay, home, "REPLAY.IN")) return 1;
     if (sound && write_uw_cfg(sound)) return 1;
     audio_config(wav, roms, audio_device && !cfg.hidden);

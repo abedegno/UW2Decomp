@@ -145,6 +145,22 @@ struct Stream {
 };
 
 int16 rp_request = RP_AUTO;             /* the port sets it before the game starts */
+#ifndef __TURBOC__
+/* The port's black box (src/port/sys/blackbox.c): every player's session is recorded, with no
+   state dumps and no F12 stop, to the name blackbox.c gives, so that a crash can be replayed. */
+int16 rp_blackbox;
+const char *rp_blackbox_name;
+#define BLACKBOX rp_blackbox
+#define RECORD_NAME (rp_blackbox ? rp_blackbox_name : "RECORD.OUT")
+/* a black box recording has no last call: live play makes some 30 million hook calls a
+   second, so the 32-bit count wraps every two minutes or so, and a replay of one runs on to
+   the end of its streams (or into the code that crashed) */
+#define NO_STOP (stop_at == 0xFFFFFFFFUL)
+#else
+#define BLACKBOX 0
+#define RECORD_NAME "RECORD.OUT"
+#define NO_STOP 0
+#endif
 static int16 rp_mode = -1;              /* RP_OFF, RP_RECORD or RP_REPLAY once started */
 static int16 rp_version = 3;            /* of the file replayed: 2 has no SOUND moments */
 static int16 log_fd = -1, dump_fd = -1;
@@ -380,11 +396,12 @@ static void rp_start(void)
             return;
     }
     if (rp_mode == RP_OFF) {
-        log_fd = open("RECORD.OUT", O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0x180);
+        log_fd = open(RECORD_NAME, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0x180);
         if (log_fd < 0) return;
         rp_mode = RP_RECORD;
         write(log_fd, hdr, HDR_LEN);
     }
+    if (BLACKBOX) return;
     dump_fd = open("STATE.OUT", O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0x180);
     if (getenv("UWRPCK")) ck_mask = ~(strtoul(getenv("UWRPCK"), 0, 16) - 1);
     if (getenv("UWRPFB")) dump_fb = 1;
@@ -641,7 +658,7 @@ static int begin(void)
     rp_start();
     if (rp_mode == RP_OFF || finishing) return 0;
     events++;
-    if (rp_mode == RP_REPLAY && events == stop_at) rp_finish(CK_END);
+    if (rp_mode == RP_REPLAY && events == stop_at && !NO_STOP) rp_finish(CK_END);
     return 1;
 }
 
@@ -791,7 +808,7 @@ int far rp_key(void)
     if (!begin()) return key();
     if (rp_mode == RP_RECORD) {
         r = key();
-        if ((r >> 8 & 0xFF) == STOP_SCAN) rp_finish(CK_END);
+        if ((r >> 8 & 0xFF) == STOP_SCAN && !BLACKBOX) rp_finish(CK_END);
         for (n = 0, i = 0; i < KSTATE_LEN; i++)
             if (Shift[i] != kstate[i]) n++;
         if (n || !kstate_known) {
@@ -1033,3 +1050,22 @@ void far rp_checkpoint(int n)
     if (misc(M_CKPT, (unsigned)n, 0) != (unsigned)n) desync(S_MISC, M_CKPT);
     rp_dump(CK_NAMED, n, 1);
 }
+
+#ifndef __TURBOC__
+/* The black box's end: the streams' last runs and chunks written, and the header's call count
+   left at FFFFFFFFh (NO_STOP), so that a replay goes on to the end of the streams, and after a
+   crash into the code that crashed, instead of stopping at a count that has wrapped. Called
+   from the fault handler too, on the game thread that faulted, so it only writes. crashed is
+   for the log. */
+void rp_blackbox_close(int crashed)
+{
+    static const unsigned char none[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
+    (void)crashed;
+    if (!rp_blackbox || rp_mode != RP_RECORD || finishing) return;
+    finishing = 1;
+    record_close();
+    lseek(log_fd, 8, SEEK_SET);
+    write(log_fd, none, 4);
+    close(log_fd);
+}
+#endif
