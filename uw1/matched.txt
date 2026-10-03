@@ -1,1 +1,5 @@
 seg041_37AA
+seg010
+seg031
+seg011_1CA3
+seg035_3073
