@@ -1,0 +1,262 @@
+/* target: seg028_2985 */
+/* opts: -mm -1 -G -O -Y -d */
+/* The player's timed updates: active spells running down, light sources burning out,
+   poison, hunger, drunkenness and drowning. The whole of DOS resident segment
+   seg028_2985, in original order. Seeded from UW2Decomp's src/game/PLAYTIME.C (UW2's
+   overlay ovr135). Function names are UW2's (the FM Towns originals), the routines being
+   the same; UW1 has no symbols of its own.
+
+   The clock: duration_check runs once per tick of the player's slow clock (UW2's caller is
+   INTERACT.C). plyregen[1] counts the calls, and the work is spread over that count:
+     every call     active spells lose a step, lights burn, mushrooms wear off,
+                    regeneration, drowning;
+     every 3rd      poison damage, and a mana regeneration roll on the mana skill;
+     every 24th     hunger, sobering up, a 1 in 4 chance of wandering monsters, the
+                    critters' yearly_checkup, fatigue and two neighbouring bytes counted
+                    up, an HP regeneration roll on strength (inferred: attr[0]), and the
+                    count starts again.
+   Entry points: duration_check, set_curmagic (the spells, to start an active spell),
+   DegradeLights (also called with a larger amount when time passes quickly, probably by
+   sleeping), sink_sink_sink, dispel_spell.
+
+   UW1 against UW2: no Killorn countdown, sleep counter or hourly schedule (UW2's every 60th
+   call); the slow work is every 24th call (UW2 30th); lights burn while time is stopped,
+   go out at quality 0 and ValidLightSlots is signed; drowning flashes colour 0xC6.
+   struct Player differs (Player1Time below).
+   Data: none of its own; plyregen and the light tables are elsewhere.
+   Name: descriptive (the player's timed updates: duration_check, DegradeLights). */
+
+#include <stdlib.h>
+#include "combat.h"
+#include "critter.h"
+#include "event.h"
+#include "gfx.h"
+#include "inv.h"
+#include "object.h"
+#include "player.h"
+#include "sys.h"
+#include "ui.h"
+
+/* An active spell word, struct Player's spells[]: the class in bits 0 to 3, the
+   subclass in bits 4 to 7, the duration left (in duration checks) in the high byte. */
+/* UW1: struct Player differs from UW2's (player.h). This file reads the poison level and
+   the active spell count (word 0x5F, bits 2-5 and 6-9), the hallucination and drink
+   levels (byte 0x61 bits 2-3, word 0x61 bits 4-9) and the swimming count (byte 0xB9). */
+struct Player1Time {
+    char pad0[0x5F];
+    uint16 b5F_0:1;
+    uint16 drawn:1;
+    uint16 poison:4;                    /* word 0x5F, bits 2-5 */
+    uint16 active_spells:4;             /* word 0x5F, bits 6-9 */
+    uint16 nrunes:2;                    /* byte 0x60, bits 2-3 */
+    uint16 b60_4:4;
+    uint16 b61_0:2;                     /* byte 0x61 */
+    uint16 shrooms:2;                   /* byte 0x61, bits 2-3 */
+    uint16 drunk:6;                     /* word 0x61, bits 4-9 */
+    char pad63[0xB9 - 0x63];
+    unsigned char swim_count;           /* 0xB9 */
+};
+#define PLAYER1 ((struct Player1Time *)player)
+
+#define SPELL_CLASS(s)  ((s) & 0x0F)
+#define SPELL_SUB(s)    (((s) & 0xF0) >> 4)
+#define SPELL_STAB(s)   ((s) >> 8)
+
+/* Ends active spell *i. Levitate and fly (class 1, motion, subclasses 3 and 5, per the
+   Guide's table of motion spells) do not end at once: they become slow fall (subclass
+   2) for one more check, so the player is not dropped. Class 11 subclass 1 detaches the
+   camera, so ending it reattaches the eye and leaves that input mode. Any other motion
+   spell sets fiz_update so the physics picks up the change. The last spell is moved
+   into the freed slot and *i is stepped back so the caller's loop sees it. */
+char far dispel_spell(int16 *i)
+{
+    if (SPELL_CLASS(player->spells[*i]) == SPELLC_MOTION
+        && (SPELL_SUB(player->spells[*i]) == 3 || SPELL_SUB(player->spells[*i]) == 5))
+    {
+        player->spells[*i] = (player->spells[*i] >> 8 << 8) + 0x21;
+        player->spells[*i] = (player->spells[*i] & 0xFF) + 0x100;
+    }
+    else
+    {
+        if (SPELL_CLASS(player->spells[*i]) == SPELLC_XT && SPELL_SUB(player->spells[*i]) == 1)
+        {
+            attach_eye(1);
+            GameInputMode -= 8;
+        }
+        if (SPELL_CLASS(player->spells[*i]) == SPELLC_MOTION)
+            fiz_update = 1;
+        PLAYER1->active_spells--;
+        if ((*i)-- < PLAYER1->active_spells)
+            player->spells[*i + 1] = player->spells[PLAYER1->active_spells];
+    }
+    return 1;
+}
+
+void far duration_check(void)
+{
+    int16 i;
+    char changed;
+    int dmg;
+    int stab;
+
+    changed = 0;
+    plyregen[1]++;
+    for (i = 0; i < PLAYER1->active_spells; i++)
+    {
+        stab = SPELL_STAB(player->spells[i]);
+        if (stab == 1)
+            changed = dispel_spell(&i);
+        else
+            player->spells[i] = (player->spells[i] & 0xFF) + ((stab - 1) << 8);
+    }
+    if (DegradeLights(1, plyregen[1]))
+        changed = 1;
+    if (PLAYER1->shrooms)
+    {
+        if (--PLAYER1->shrooms == 0)
+            changed = 1;
+    }
+    if (changed)
+    {
+        FixPlayerEquips();
+        editchng(2);
+    }
+    if (plyregen[0] != 0)
+    {
+        if (plyregen[0] & 1)
+            restore_hp(ThePlayer, -1);
+        if (plyregen[0] & 2)
+            restore_mana(ThePlayer, -1);
+    }
+    if (PLAYER1->swim_count > 0x50)
+        sink_sink_sink();
+    if (plyregen[1] % 3 == 0)
+    {
+        if (PLAYER1->poison)
+        {
+            dmg = PLAYER1->poison--;
+            damage_item(ThePlayer, 0L, 0, 0, dmg, 0x10);
+        }
+        if ((dmg = skill_check(player->skills[SKILL_MANA], 10)) > 0)
+            restore_mana(ThePlayer, -dmg);
+    }
+    if (plyregen[1] % 24 == 0)
+    {
+        player_eat(-3 - (rand() & 3));
+        if (PLAYER1->drunk)
+            PLAYER1->drunk--;
+        if ((rand() & 3) == 0)
+            DoWanderingMonsters(1);
+        yearly_checkup();
+        for (i = 0; i < 3; i++)
+            if ((&player->fatigue)[i] < 0xFF)
+                (&player->fatigue)[i]++;
+        if (skill_check(playerdat->attr[0], 15) > 0)
+            restore_hp(ThePlayer, -1);
+        plyregen[1] = 0;
+    }
+}
+
+/* Burns the lit light sources in the four light slots (ValidLightSlots). A lit light
+   (class CLASS_LIGHT, types 4 to 7) with burn rate r loses a point of quality when
+   counter is a multiple of r, plus amount / r more when amount > 1. When it would burn
+   down to nothing it goes out at quality 0: its type drops by 4 to the unlit version.
+   Returns 1 if a light went out. */
+char far DegradeLights(int amount, unsigned char counter)
+{
+    int light;
+    struct Object far *obj;
+    char changed;
+    register int i;
+    register int burn;
+
+    changed = 0;
+    for (i = 0; i < 4; i++)
+    {
+        if ((obj = AskInventory(ValidLightSlots[i])) == 0)
+            continue;
+        light = obj->id & ID_INCLASS;
+        if (OBJ_CLASS(obj) != CLASS_LIGHT || light < 4 || light >= 8)
+            continue;
+        if ((light = Lights[light].duration) == 0)
+            continue;
+        burn = 0;
+        if (counter % light == 0)
+            burn = 1;
+        if (amount > 1)
+            burn += amount / light;
+        if (burn == 0)
+            continue;
+        if (OBJ_QUALITY(obj) > burn)
+            OBJ_QUALITY(obj) = OBJ_QUALITY(obj) - burn;
+        else
+        {
+            OBJ_QUALITY(obj) = 0;
+            SET_INCLASS(obj, OBJ_INCLASS(obj) - 4);
+            RedisplayInvSlot(ValidLightSlots[i]);
+            changed = 1;
+        }
+    }
+    return changed;
+}
+
+/* Drowning, run while swim_count is above 0x50. The load is weight * 32 / max_weight.
+   A failed swimming check against the load adds rollem(3 - result, 4) to swim_count (up
+   to 0x8C). Above 0x78 the player also takes rollem(2, hurt + 2) damage, with hurt =
+   2 minus a second swimming check, and the screen flashes (fill_FB(0xC6)). */
+void far sink_sink_sink(void)
+{
+    unsigned char load;
+    register int skill;
+    register int hurt;
+
+    load = 0;
+    if (player->max_weight != 0)
+        load += (player->weight << 5) / player->max_weight;
+    if ((skill = skill_check(player->skills[SKILL_SWIMMING], load)) < 1 && PLAYER1->swim_count < 0x8C)
+        PLAYER1->swim_count += rollem(3 - skill, 4);
+    if (PLAYER1->swim_count > 0x78)
+    {
+        hurt = 2 - skill_check(player->skills[SKILL_SWIMMING], load);
+        if (hurt)
+        {
+            fill_FB(0xC6);
+            editchng(2);
+            damage_item(ThePlayer, 0L, 0, 0, rollem(2, hurt + 2), 0);
+        }
+    }
+}
+
+/* Starts an active spell of class cls and subclass sub on the player. At most three
+   are active; returns 0 if all three slots are taken. The duration, in duration checks,
+   comes from stability: 1 gives 1, 0 gives 2d3, 0x40 gives 2d8 + 6, 0x80 gives 3d20 + 24
+   (rollem(dice, sides)). */
+char far set_curmagic(unsigned char cls, unsigned char sub, unsigned char stability)
+{
+    unsigned char stab;
+
+    if (PLAYER1->active_spells == 3)
+        return 0;
+    player->spells[PLAYER1->active_spells] =
+        (player->spells[PLAYER1->active_spells] >> 8 << 8) + cls + (sub << 4);
+    switch (stability)
+    {
+    case 1:
+        stab = 1;
+        break;
+    case 0:
+        stab = rollem(2, 3);
+        break;
+    case 0x40:
+        stab = rollem(2, 8) + 6;
+        break;
+    case 0x80:
+        stab = rollem(3, 20) + 24;
+        break;
+    }
+    player->spells[PLAYER1->active_spells] =
+        (player->spells[PLAYER1->active_spells] & 0xFF) + (stab << 8);
+    PLAYER1->active_spells++;
+    FixPlayerEquips();
+    return 1;
+}

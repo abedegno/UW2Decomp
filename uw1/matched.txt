@@ -44,3 +44,10 @@ seg012
 ovr110
 seg042
 ovr106
+seg022_230E
+seg023
+seg025
+ovr119
+seg038_3307
+seg028_2985
+seg037_32E6
