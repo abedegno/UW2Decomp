@@ -1,0 +1,70 @@
+# The Linux side of `make setup` for CI (docs/BUILDING.md, "Continuous integration"): system
+# packages, Python with tools/requirements.txt in .venv, Node with dos-mcp, and the tools built
+# from source (emu2, SDL3 and libmt32emu, Nuked OPL3), each cached by the script that pins it.
+# Nothing here touches the game or the Borland toolchain, so every cached path is free of both.
+name: Linux tools
+description: Install and cache the tools the gate and the port need on an Ubuntu runner
+inputs:
+  full:
+    description: also install DOSBox-X and the LLVM tools (make test-full)
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: System packages
+      shell: bash
+      env:
+        FULL: ${{ inputs.full }}
+      run: |
+        pkgs="clang mtools p7zip-full age ninja-build pkg-config"
+        if [ "$FULL" = true ]; then pkgs="$pkgs dosbox-x llvm-18 libclang-rt-18-dev"; fi
+        sudo apt-get update -qq
+        # shellcheck disable=SC2086
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $pkgs >/dev/null
+        clang --version | head -1
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+        cache: pip
+        cache-dependency-path: tools/requirements.txt
+    - name: Python packages
+      shell: bash
+      run: |
+        python -m venv .venv
+        .venv/bin/pip install -q -r tools/requirements.txt
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+        cache: npm
+    - name: Node packages
+      shell: bash
+      # dos-mcp's headless Chrome is only for js-dos, which CI never uses (emu2 and DOSBox-X)
+      env:
+        PUPPETEER_SKIP_DOWNLOAD: "true"
+      run: npm ci --no-audit --no-fund
+    - name: Cache emu2
+      uses: actions/cache@v4
+      with:
+        path: tools/emu2
+        key: emu2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/setup-emu2.sh', 'tools/emu2-date.patch') }}
+    - name: Cache SDL3 and libmt32emu
+      uses: actions/cache@v4
+      with:
+        path: tools/libs
+        key: libs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/setup-libs.sh') }}
+    - name: Cache Nuked OPL3
+      uses: actions/cache@v4
+      with:
+        path: tools/nuked-opl3
+        key: nuked-opl3-${{ hashFiles('tools/setup-sound.sh') }}
+    - name: Build what is not cached
+      shell: bash
+      run: |
+        sh tools/setup-emu2.sh
+        sh tools/setup-libs.sh
+        export PKG_CONFIG_PATH="$PWD/tools/libs/lib/pkgconfig"
+        sh tools/setup-sound.sh
+        {
+          echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+          echo "LD_LIBRARY_PATH=$PWD/tools/libs/lib"
+        } >> "$GITHUB_ENV"

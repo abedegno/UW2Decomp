@@ -9,6 +9,8 @@
 #   make setup         toolchain, Python venv, npm packages and emu2 (idempotent)
 #   make setup-emu2    only build emu2, the fast DOS for the toolchain (tools/setup-emu2.sh)
 #   make setup-sound   fetch the port's OPL emulator, Nuked OPL3 (tools/setup-sound.sh)
+#   make setup-libs    build SDL3 and libmt32emu from source into tools/libs, where no package
+#                      has them (Linux; tools/setup-libs.sh)
 #   make hooks         install the git pre-push hook that runs make test
 #   make port-check    compile the C for the host, compile only (docs/PORT.md, Milestone 1)
 #   make port          compile the C for the host and link it with the stubs: build/port/uw2port
@@ -30,7 +32,7 @@ PY := $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 TC_DISKS ?=
 TASM_DISKS ?=
 
-.PHONY: game exact check check-all boot setup setup-emu2 setup-sound hooks port-check port port-debug help \
+.PHONY: game exact check check-all boot setup setup-emu2 setup-sound setup-libs hooks port-check port port-debug help \
         test test-full verify golden fuzz coverage
 .DEFAULT_GOAL := game
 
@@ -50,7 +52,7 @@ boot:
 	@$(PY) tools/uw2.py boot
 
 setup:
-	@if [ -f TC/TCC.EXE ] && [ "$$(md5 -q TC/TCC.EXE 2>/dev/null || md5sum TC/TCC.EXE | cut -d' ' -f1)" = db4c0704f7091b8d875be038bee2bf1e ]; then \
+	@if [ -f TC/TCC.EXE ] && [ -f TC/OVERLAY.LIB ] && [ "$$(md5 -q TC/TCC.EXE 2>/dev/null || md5sum TC/TCC.EXE | cut -d' ' -f1)" = db4c0704f7091b8d875be038bee2bf1e ]; then \
 	  echo "TC: Turbo C++ 1.01 already in TC/"; \
 	elif [ -n "$(TC_DISKS)" ]; then sh tools/setup-tc.sh "$(TC_DISKS)"; \
 	else echo "TC/ is missing: make setup TC_DISKS=DIR (the directory holding Disk01.img..Disk04.img)"; exit 1; fi
@@ -59,8 +61,8 @@ setup:
 	elif [ -n "$(TASM_DISKS)" ]; then sh tools/setup-tasm.sh "$(TASM_DISKS)"; \
 	else echo "TASM/ is missing: make setup TASM_DISKS=DIR (the directory holding Disk01.img)"; exit 1; fi
 	@[ -x .venv/bin/python ] || python3 -m venv .venv
-	@.venv/bin/python -c "import iced_x86" 2>/dev/null || .venv/bin/pip install -q iced-x86
-	@echo "Python: .venv with iced-x86"
+	@.venv/bin/python -c "import iced_x86, unicorn" 2>/dev/null || .venv/bin/pip install -q -r tools/requirements.txt
+	@echo "Python: .venv with iced-x86 and unicorn (tools/requirements.txt)"
 	@[ -d node_modules/dos-mcp ] || npm install
 	@echo "Node: dos-mcp installed"
 	@sh tools/setup-emu2.sh || echo "emu2: not built; the toolchain runs in DOSBox-X if installed (brew install dosbox-x), else js-dos"
@@ -74,6 +76,9 @@ setup-emu2:
 
 setup-sound:
 	@sh tools/setup-sound.sh
+
+setup-libs:
+	@sh tools/setup-libs.sh
 
 hooks:
 	@sh tools/install-hooks.sh

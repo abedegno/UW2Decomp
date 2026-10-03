@@ -1,0 +1,3 @@
+# The Python packages the tools use (make setup installs them into .venv; CI caches them by this file)
+iced-x86==1.21.0
+unicorn==2.1.4

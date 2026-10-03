@@ -39,6 +39,8 @@
 #define _huge
 #define interrupt
 #define _interrupt
+#undef _cdecl                           /* MinGW's headers define these two */
+#undef _pascal
 #define cdecl
 #define _cdecl
 #define pascal
@@ -91,6 +93,8 @@ extern uint16_t port_si, port_di, port_bp, port_sp, port_cs, port_ds, port_es, p
 #undef O_CREAT
 #undef O_TRUNC
 #undef O_EXCL
+#undef O_TEXT
+#undef O_BINARY
 #define O_RDONLY 0x0001
 #define O_WRONLY 0x0002
 #define O_RDWR   0x0004
@@ -161,7 +165,9 @@ char *strupr(char *s);
 char *strlwr(char *s);
 int stricmp(const char *a, const char *b);
 int strnicmp(const char *a, const char *b, size_t n);
+#ifndef _WIN32                          /* MinGW's stdlib.h declares environ as a macro */
 extern char **environ;
+#endif
 
 /* Borland's <ctype.h> table, which GAMESTRN.C reads directly (_ctype + 1, with its bits). The
    port provides the table with Borland's contents. */

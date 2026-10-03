@@ -1,7 +1,7 @@
-# Hosted CI runs only what needs neither the Borland toolchain nor UW2.EXE, which cannot be
-# on GitHub: tools/repocheck.py (Python and script syntax, Markdown links, no game data or
-# Borland binaries committed). The real gate is `make check`, run locally by the pre-push
-# hook (`make hooks`).
+# tools/repocheck.py (Python and script syntax, Markdown links, no game data or Borland
+# binaries committed), which needs neither the Borland toolchain nor UW2.EXE, so it runs on
+# every push and pull request, forks included. The gate itself runs in the pre-push hook
+# (`make hooks`) and in accuracy.yml (docs/BUILDING.md, "Continuous integration").
 name: repocheck
 on:
   push:

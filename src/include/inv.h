@@ -85,8 +85,17 @@ extern struct Object far *CursorObjPtr;
 extern struct Bag far *OpenBagList;
 extern struct Bag far *OpenBag;
 extern struct InvRect InvDisplay[23];
+#ifdef __TURBOC__
 extern char SlotToDisplay[28];
 extern char DisplayToSlot[21];
+#else
+/* BAGS.C's OpenTheBag writes an open bag's slots 20..27 to SlotToDisplay[40..47],
+   which in DOS are DisplayToSlot[12..19], the next variable in DGROUP. The port keeps the
+   two in one array, so the write lands there too whatever the host's alignment (x86-64 puts
+   a separate 21-byte array on a 16-byte boundary, four bytes further on). */
+extern char SlotToDisplay[28 + 21];
+#define DisplayToSlot (SlotToDisplay + 28)
+#endif
 extern unsigned char InvUpArrow;
 extern unsigned char InvDownArrow;
 extern unsigned char inv_refresh;

@@ -243,7 +243,11 @@ int main(int argc, char *argv[])
     /* The game finds its home through UWHOME; the port's home directory plays that part,
        laid over the data root, so the game's default (".", the game's own directory) is
        right and the host's own UWHOME must not leak in. */
+#ifdef _WIN32
+    _putenv("UWHOME=");                 /* Windows has no unsetenv; an empty value removes it */
+#else
     unsetenv("UWHOME");
+#endif
     pit_start();
     memset(&hooks, 0, sizeof hooks);
     hooks.scanout = vga_scanout;

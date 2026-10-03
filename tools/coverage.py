@@ -6,12 +6,13 @@ docs/COVERAGE.md (docs/BUILDING.md, "Testing").
 It builds the port with clang's source-based coverage (tools/portbuild.py --coverage, in
 build/port-cov), replays every session in it against its golden (tools/replay.py verify --cov;
 a session that differs from DOS stops the report), runs tools/fuzzasm.py on the same objects
-(--deep for its long run), merges the profiles (xcrun llvm-profdata) and has xcrun llvm-cov
-count, for every source of the port, the lines, functions and regions run. docs/COVERAGE.md gets
-the totals, a table per directory and per file, the functions only the fuzzing reaches, and
-the functions nothing reaches: the list to record new sessions from.
+(--deep for its long run), merges the profiles (llvm-profdata) and has llvm-cov count, for
+every source of the port, the lines, functions and regions run (xcrun finds both on macOS; on
+Linux they are the versioned ones of the clang in use). docs/COVERAGE.md gets the totals, a
+table per directory and per file, the functions only the fuzzing reaches, and the functions
+nothing reaches: the list to record new sessions from.
 """
-import os, sys, json, glob, shutil, subprocess, argparse, collections
+import os, re, sys, json, glob, shutil, subprocess, argparse, collections
 
 here = os.path.dirname(os.path.abspath(__file__)); root = os.path.dirname(here)
 sys.path.insert(0, here)
@@ -27,8 +28,21 @@ def run(cmd, **kw):
     return r
 
 
+def llvm(tool):
+    """An LLVM tool of the clang the port is built with: through xcrun on macOS; elsewhere on the
+    PATH, else the versioned one beside the clang (llvm-cov-18, /usr/lib/llvm-18/bin on Ubuntu)."""
+    if sys.platform == 'darwin': return ['xcrun', tool]
+    import portcheck
+    cc = portcheck.host_cc()
+    m = re.match(r'(\d+)', subprocess.run([cc, '-dumpversion'], capture_output=True, text=True).stdout.strip())
+    major = m.group(1) if m else ''
+    for c in ([f'{tool}-{major}', f'/usr/lib/llvm-{major}/bin/{tool}'] if major else []) + [tool]:
+        if shutil.which(c): return [c]
+    sys.exit(f'coverage.py: no {tool} for clang {major or "?"} (install llvm)')
+
+
 def export(profdata, objects):
-    cmd = ['xcrun', 'llvm-cov', 'export', '-format=text', '-skip-expansions', f'-instr-profile={profdata}', objects[0]]
+    cmd = llvm('llvm-cov') + ['export', '-format=text', '-skip-expansions', f'-instr-profile={profdata}', objects[0]]
     for o in objects[1:]: cmd += ['-object', o]
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode: sys.exit('coverage.py: llvm-cov export failed\n' + r.stderr[-2000:])
@@ -66,7 +80,7 @@ def main(argv):
     replay_raw = sorted(glob.glob(os.path.join(COV, 'replay-*.profraw')))
     fuzz_raw = sorted(glob.glob(os.path.join(COV, 'fuzz-*.profraw')))
     for name, raws in (('replay', replay_raw), ('all', replay_raw + fuzz_raw)):
-        run(['xcrun', 'llvm-profdata', 'merge', '-sparse', '-o', os.path.join(COV, name + '.profdata')] + raws)
+        run(llvm('llvm-profdata') + ['merge', '-sparse', '-o', os.path.join(COV, name + '.profdata')] + raws)
     objs = [os.path.join(root, 'build', 'port-cov', 'uw2port'), os.path.join(root, 'build', 'fuzz-cov', 'fuzzhost')]
     rep = export(os.path.join(COV, 'replay.profdata'), objs)
     allc = export(os.path.join(COV, 'all.profdata'), objs)

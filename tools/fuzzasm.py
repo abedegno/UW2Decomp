@@ -586,9 +586,9 @@ def build_host(coverage=False):
     newest = max(os.path.getmtime(o) for o in objs + [src])
     if os.path.exists(host) and os.path.getmtime(host) >= newest: return host
     cov = ['-fprofile-instr-generate', '-fcoverage-mapping'] if coverage else []
-    r = subprocess.run(['cc'] + portbuild.PORT_FLAGS + cov + ['-c', '-o', host + '.o', src], capture_output=True, text=True)
+    r = subprocess.run([portcheck.host_cc()] + portbuild.PORT_FLAGS + cov + ['-c', '-o', host + '.o', src], capture_output=True, text=True)
     if r.returncode: sys.exit('fuzzasm.py: fuzzhost.c does not compile:\n' + r.stderr[-3000:])
-    r = subprocess.run(['cc', '-o', host] + (['-fprofile-instr-generate'] if coverage else []) + [host + '.o'] + objs +
+    r = subprocess.run([portcheck.host_cc(), '-o', host] + (['-fprofile-instr-generate'] if coverage else []) + [host + '.o'] + objs +
                        portbuild.pkg_config('--libs') + libs, capture_output=True, text=True)
     if r.returncode: sys.exit('fuzzasm.py: fuzzhost does not link:\n' + r.stderr[-3000:])
     return host

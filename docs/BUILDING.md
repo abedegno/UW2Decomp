@@ -4,11 +4,11 @@ Everything runs on your own machine: Turbo C++, TASM and TLINK run headless in a
 
 ## Requirements
 
-- Node 20 or later, Python 3, mtools and 7z (`brew install mtools p7zip` on macOS).
+- Node 20 or later, Python 3, mtools and 7z (`brew install mtools p7zip` on macOS, `apt install mtools p7zip-full` on Ubuntu).
 - The Turbo C++ 1.01 disk images (four 720K images, which Borland released free of charge) and the Turbo Assembler 2.0 disk image. Neither is in this repository.
 - UW2's `UW2.EXE` at `~/UWGOG/UW2/UW2.EXE`, or set `UW2_EXE`. The GOG release works. No game data is in this repository either.
 
-Optional, for speed: git, make and a C compiler (the Xcode command line tools), with which `make setup` builds emu2, a DOS that runs the toolchain about twenty times faster than js-dos ([Choosing the DOS](#choosing-the-dos)). Or DOSBox-X (`brew install dosbox-x`), nearly as fast. DOSBox-X is also where the replays' DOS side runs when it is installed, three and a half times faster than js-dos ([Testing](#testing)), and the tests need Unicorn in the `.venv` (`.venv/bin/pip install unicorn==2.1.4`) for the routine fuzzing and `tools/ailcheck.py`.
+Optional, for speed: git, make and a C compiler (the Xcode command line tools), with which `make setup` builds emu2, a DOS that runs the toolchain about twenty times faster than js-dos ([Choosing the DOS](#choosing-the-dos)). Or DOSBox-X (`brew install dosbox-x`), nearly as fast. DOSBox-X is also where the replays' DOS side runs when it is installed, three and a half times faster than js-dos ([Testing](#testing)), The tests need Unicorn in the `.venv` for the routine fuzzing and `tools/ailcheck.py`; `make setup` installs it with iced-x86 from `tools/requirements.txt`.
 
 Optional, for the map tools and the assembly drafts (see [MAP.md](MAP.md)):
 
@@ -17,14 +17,14 @@ Optional, for the map tools and the assembly drafts (see [MAP.md](MAP.md)):
 
 ## Make targets
 
-- `make setup TC_DISKS=DIR TASM_DISKS=DIR` extracts Turbo C++ into `TC/` and TASM into `TASM/` from the directories holding their disk images and checks both are the expected builds (by MD5), makes `.venv` with `iced-x86` (for instruction diffs), runs `npm install`, builds emu2 into `tools/emu2` (`make setup-emu2` does only that; a failure there is not fatal, the tools then use DOSBox-X or js-dos), and fetches the port's OPL emulator into `tools/nuked-opl3` (`make setup-sound` does only that, [Sound](#sound)). It skips whatever is already in place, so it is safe to run again, and prints which DOS the toolchain will use.
+- `make setup TC_DISKS=DIR TASM_DISKS=DIR` extracts Turbo C++ into `TC/` and TASM into `TASM/` from the directories holding their disk images and checks both are the expected builds (by MD5), makes `.venv` with `iced-x86` (for instruction diffs) and `unicorn` (for the tests) from `tools/requirements.txt`, runs `npm install`, builds emu2 into `tools/emu2` (`make setup-emu2` does only that; a failure there is not fatal, the tools then use DOSBox-X or js-dos), and fetches the port's OPL emulator into `tools/nuked-opl3` (`make setup-sound` does only that, [Sound](#sound)). On Linux, `make setup-libs` builds SDL3 and libmt32emu from source into `tools/libs` ([The native port](#the-native-port)). It skips whatever is already in place, so it is safe to run again, and prints which DOS the toolchain will use.
 - `make` (or `make game`) is the modding build, `tools/link.py --mod`, and prints the path of the EXE. See [LINKING.md](LINKING.md#the-modding-build).
 - `make exact` links the matched objects exactly (`tools/link.py`) and compares the result with your `UW2.EXE` (`tools/exediff.py`); it passes when the two are byte-identical.
 - `make check` is the gate, below. `make check-all` is the same with every source recompiled.
 - `make boot` boots the modding build in headless DOS and saves screenshots of the title, the intro and the main menu under `build/boot/`. Look at them.
 - `make test` is the test every change to the port runs before it is pushed: the gate, the port build, the routine fuzzing's quick run and every replay session in the port against its golden ([Testing](#testing)). `make test-full` is the long tier. `make verify`, `make golden`, `make fuzz` and `make coverage` run one part each.
 - `make hooks` installs a git pre-push hook that runs `make test` and stops the push when it fails.
-- `make port-check` compiles every C source for the host with Apple clang, compile only, and summarises the errors, warnings and unresolved names ([PORT.md](PORT.md#milestone-1-baseline)). It never touches the DOS build.
+- `make port-check` compiles every C source for the host with clang, compile only, and summarises the errors, warnings and unresolved names ([PORT.md](PORT.md#milestone-1-baseline)). It never touches the DOS build.
 - `make port` compiles every C source for the host, compiles the port's own C (`src/port`) and links them with SDL3 into `build/port/uw2port` ([the native port](#the-native-port), below). It never touches the DOS build either.
 - `make help` prints this list.
 
@@ -32,9 +32,13 @@ Everything built goes under `build/`, which is never committed.
 
 ## The native port
 
-The port ([PORT.md](PORT.md)) is a second build of the same C, for a modern host. Today it builds on macOS on Apple Silicon.
+The port ([PORT.md](PORT.md)) is a second build of the same C, for a modern host. It builds on macOS on Apple Silicon, on Linux (Ubuntu 24.04, x86-64 and arm64) and on Windows (MSYS2's CLANG64 environment). The replays and the fuzzing pass on macOS and on Linux; the Windows build is compiled and linked by CI and has not been run ([Continuous integration](#continuous-integration)).
 
-What it needs: Apple's clang (the Xcode command line tools), Python 3, `pkg-config` and SDL3 (`brew install sdl3 pkg-config`; 3.4.16 is the version tested); for sound, Nuked OPL3 and libmt32emu ([Sound](#sound)), without which the port builds and those chips are silent. No Turbo C, DOS or game data is needed to build it, only to run it.
+What it needs: clang, Python 3, `pkg-config` and SDL3 (3.4.16 is the version tested); for sound, Nuked OPL3 and libmt32emu ([Sound](#sound)), without which the port builds and those chips are silent. No Turbo C, DOS or game data is needed to build it, only to run it. The tools use `$CC` when it is set, else `clang`, else `cc`; the flags are clang's.
+
+- macOS: the Xcode command line tools, and `brew install sdl3 mt32emu pkgconf`.
+- Linux: `apt install clang pkg-config cmake ninja-build`, then `make setup-libs`, which builds SDL3 3.4.16 and libmt32emu 2.8.3 from source into `tools/libs` (ignored by git; no Ubuntu release before 25.04 packages SDL3, and none packages libmt32emu). Without the X11 or Wayland development headers SDL3 is built without windows, which is enough for `--hidden`. Then `export PKG_CONFIG_PATH=$PWD/tools/libs/lib/pkgconfig LD_LIBRARY_PATH=$PWD/tools/libs/lib`.
+- Windows: MSYS2's CLANG64 shell with `pacman -S make mingw-w64-clang-x86_64-{clang,pkgconf,sdl3,python}`, then `make PY=python port`. The build has no MT-32 (MSYS2 has no libmt32emu) and links `build/port/uw2port.exe`.
 
 - `make port` compiles all 98 C sources the port uses and the port's own C under `src/port` (the SDL3 backend with SDL's flags), and links `build/port/uw2port`. It prints any warning in the port's own C.
 - `make port-check` is the compile-only measurement of the game's C ([PORT.md](PORT.md#milestone-1-baseline)).
@@ -63,8 +67,8 @@ The port plays the game's music and effects through C versions of the game's own
 | What | Library | License | Where from |
 | --- | --- | --- | --- |
 | the FM chips (Ad Lib, Sound Blaster, Pro Audio Spectrum) | Nuked OPL3, commit `765ec96` | LGPL-2.1 | `make setup-sound` (`tools/setup-sound.sh`) fetches `opl3.c` and `opl3.h` into `tools/nuked-opl3`, ignored by git, and checks them by SHA-256; `make port` compiles them when they are there |
-| the Roland MT-32 and CM-32L | libmt32emu (munt) 2.8.3 | LGPL-2.1-or-later | `brew install mt32emu`; `make port` links it when `pkg-config` finds it |
-| the audio output | SDL3 | zlib | `brew install sdl3` |
+| the Roland MT-32 and CM-32L | libmt32emu (munt) 2.8.3 | LGPL-2.1-or-later | `brew install mt32emu`, or `make setup-libs` on Linux; `make port` links it when `pkg-config` finds it |
+| the audio output | SDL3 | zlib | `brew install sdl3`, or `make setup-libs` on Linux |
 
 `make port` says which it found (`sound: Nuked OPL3, libmt32emu`).
 
@@ -161,7 +165,51 @@ The sessions run at once, one per core up to eight (`-j N` changes it; four for 
 
 It recompiles only the sources whose text, headers or object have changed since they last passed (`build/check/state.json`). With emu2, `make check-all` takes about 7 seconds and `make check` with nothing changed about 4; with js-dos, two and a half minutes and about ten seconds.
 
-Hosted CI cannot run the gate, because the toolchain and the game cannot be on GitHub, so the pre-push hook is the gate. It runs `make test`, the gate and the port's tests together ([Testing](#testing)); `make hooks` again updates a hook an older version installed. Bypass it for one push with `git push --no-verify` (or `SKIP_CHECK=1 git push`). It checks the working tree, not the commits being pushed, so commit or stash first. The GitHub workflow runs only `tools/repocheck.py`: script syntax, relative Markdown links, and that no game data or Borland binary is committed. Run it locally with `.venv/bin/python tools/repocheck.py`.
+The pre-push hook runs the gate before anything leaves your machine, and CI runs it again ([Continuous integration](#continuous-integration)). The hook runs `make test`, the gate and the port's tests together ([Testing](#testing)); `make hooks` again updates a hook an older version installed. Bypass it for one push with `git push --no-verify` (or `SKIP_CHECK=1 git push`). It checks the working tree, not the commits being pushed, so commit or stash first. `tools/repocheck.py` checks script syntax, relative Markdown links, and that no game data or Borland binary is committed; run it locally with `.venv/bin/python tools/repocheck.py`.
+
+## Continuous integration
+
+Four workflows run on GitHub's standard hosted runners, in this public repository:
+
+| Workflow | When | What it runs | Needs the bundle |
+| --- | --- | --- | --- |
+| `port.yml` | every push and pull request, forks included | `make port` and `make port-check` on Ubuntu 24.04, macOS and Windows (MSYS2 CLANG64); nothing is run | no |
+| `repocheck.yml` | every push and pull request, forks included | `tools/repocheck.py` | no |
+| `accuracy.yml` | pushes to `main`, pull requests from branches of this repository, and by hand | `make setup` and `make test` on Ubuntu 24.04: the gate, the port build, the quick fuzzing and the eight sessions against their goldens | yes |
+| `nightly.yml` | 03:17 UTC each day, and by hand | `make test-full` on Ubuntu 24.04, with DOSBox-X from Ubuntu (2024.03.01, whose goldens are the committed ones); fails if a regenerated golden differs from the committed one, and puts the step times and the coverage totals in the job summary | yes |
+
+A pull request from a fork gets `port.yml` and `repocheck.yml` only: GitHub gives a fork's pull request no secrets, and `accuracy.yml` skips itself for one rather than fail.
+
+### The bundle
+
+The gate and the replays need the game and the Borland toolchain, which cannot be published. They come from the private repository `abedegno/uw2-ci-assets` (its Actions are disabled), which holds one file, `uw2-ci-assets.tar.gz.age`: an [age](https://age-encryption.org)-encrypted tar.gz of `game/UW2` (the owner's GOG copy of the game), `tc/Disk01.img` to `Disk04.img` (Turbo C++ 1.01), `tasm/Disk01.img` (TASM 2.0), `MANIFEST.txt` and `SHA256SUMS`. Two secrets of this repository open it: `UW2_ASSETS_DEPLOY_KEY`, the private half of an ed25519 deploy key that can only read `uw2-ci-assets`, and `UW2_ASSETS_AGE_KEY`, the age secret key.
+
+The local action `.github/actions/uw2-assets` clones the bundle over SSH with the deploy key (written to `$RUNNER_TEMP` with mode 600 and deleted once the clone is done, and checked against GitHub's published host key), and `tools/ci-assets.sh` decrypts it into `$RUNNER_TEMP/uw2-assets`, with the age key on age's standard input rather than in a file. It checks every file against `SHA256SUMS` and prints only how many passed, and sets `UW2_EXE`, `UW2_DIR`, `TC_DISKS` and `TASM_DISKS`, which `make setup` and the tools read. `.github/actions/linux-tools` installs everything else: the Ubuntu packages, Python with `tools/requirements.txt` in `.venv`, Node with `npm ci` (without dos-mcp's Chrome, which only js-dos uses), and emu2, SDL3, libmt32emu and Nuked OPL3, built by their setup scripts.
+
+### What keeps the data private
+
+- Nothing decrypted, and nothing built from it, is cached. The caches hold only emu2 (`tools/emu2`), SDL3 and libmt32emu (`tools/libs`), Nuked OPL3 (`tools/nuked-opl3`), and pip's and npm's downloads, each keyed on the script or file that pins it.
+- A failed run uploads only pictures and text: the difference pictures of a session that differs from its golden (`diff_ck*.png`, the DOS and port screens beside each other), the port's log of each replay, the run's own output and, at night, the changed golden screens and the list of changed golden files. Never a state dump, a saved game, an object, an EXE or anything else under `build/`.
+- No step lists or prints the decrypted tree. `tools/ci-assets.sh` reports a count, and the tools print only the path of `UW2.EXE`.
+- The last step of each job, run whatever happened before it, deletes `$RUNNER_TEMP/uw2-assets`, `TC/`, `TASM/` and `build/`. The runner is discarded after the job in any case.
+- No workflow uses `pull_request_target`. The jobs with secrets run on pushes to `main`, on the schedule, by hand, and on pull requests whose branch is in this repository, whose authors can already push here.
+- The deploy key can read `uw2-ci-assets` and nothing else, and the bundle is useless without the age key.
+
+### Linux and Windows
+
+Three things differ on Linux, and the tools allow for each. The file system is case-sensitive, and emu2 creates a file under the case the DOS program gave (`TCC` writes `skills.obj`), so `tools/dosbackend.mjs` finds a DOS run's outputs, and the programs a batch runs, without regard to case. `fmtowns/syms.tsv` is made from the FM Towns release, which CI does not have, so without it the gate's rebuilt `symbols.tsv` cannot mark a name as original: `make check` then compares the names and addresses but not that mark, and says so. And `make setup` now takes `OVERLAY.LIB` from Turbo C++'s `XLIB.ZIP` as well: the link needs it, and `tools/setup-tc.sh` did not extract it before. With these, `make test` passes on Ubuntu 24.04 on x86-64 and on arm64, and so does every step of `make test-full` but the deep fuzzing, which was not tried there; DOSBox-X 2024.03.01 from Ubuntu makes goldens identical to the committed ones.
+
+x86-64 found one difference of its own. BAGS.C's `OpenTheBag` writes past the end of `SlotToDisplay` into `DisplayToSlot`, the next variable in DGROUP, as DOS does on purpose. On arm64 the host compiler happened to put the two arrays end to end, but x86-64 puts an array of 16 bytes or more on a 16-byte boundary, so the write missed and the `items` session went another way after a bag was opened. The port now keeps the two in one array (`inv.h`, `INVPANEL.C`; the DOS build is unchanged, and the gate proves it).
+
+The Windows build needs the port's few POSIX calls replaced: the EMS frame's double mapping (`mem/frame.c`) uses a file mapping viewed twice, the crash handler prints no call stack, and `mkdir` and `unsetenv` have Windows forms. `src/port/include/io.h` brings in MinGW's own `io.h`, which it would otherwise hide. On Windows `long` is 32 bits, as in DOS, where macOS and Linux have 64.
+
+### Rotating the keys and the bundle
+
+The age key is kept in the owner's macOS Keychain, service `uw2-ci-assets-age` (`security find-generic-password -s uw2-ci-assets-age -w` prints it, and `... -w | age-keygen -y` its recipient).
+
+- A new bundle (new game files, say): put `game/UW2`, `tc/Disk01.img` to `Disk04.img`, `tasm/Disk01.img` and a `MANIFEST.txt` in an empty directory, and in it run `find game tc tasm MANIFEST.txt -type f | sort | xargs shasum -a 256 > SHA256SUMS`, then `COPYFILE_DISABLE=1 tar --no-xattrs -czf - game tc tasm MANIFEST.txt SHA256SUMS | age -r "$(security find-generic-password -s uw2-ci-assets-age -w | age-keygen -y)" -o uw2-ci-assets.tar.gz.age`. Commit that one file to `uw2-ci-assets` in place of the old one.
+- A new age key: `age-keygen -o new.key`, store its `AGE-SECRET-KEY-1...` line with `security add-generic-password -U -s uw2-ci-assets-age -a "$USER" -w "$(grep AGE-SECRET-KEY new.key)"`, make the bundle again with the new recipient (above), set the secret with `security find-generic-password -s uw2-ci-assets-age -w | gh secret set UW2_ASSETS_AGE_KEY -R abedegno/UW2Decomp`, and delete `new.key`. Until the new bundle is pushed, the jobs that need it fail.
+- A new deploy key: `ssh-keygen -t ed25519 -N '' -C 'UW2Decomp CI (read-only)' -f deploy`, `gh repo deploy-key add deploy.pub -R abedegno/uw2-ci-assets -t 'UW2Decomp CI (read-only)'` (read-only unless `-w` is given), `gh secret set UW2_ASSETS_DEPLOY_KEY -R abedegno/UW2Decomp < deploy`, then remove the old key (`gh repo deploy-key list -R abedegno/uw2-ci-assets`, `gh repo deploy-key delete ID -R abedegno/uw2-ci-assets`) and delete `deploy` and `deploy.pub`.
 
 ## Choosing the DOS
 
@@ -209,7 +257,7 @@ All of them are in `tools/`, and each describes itself at the top.
 | Role | Tools |
 | --- | --- |
 | Make targets and the gate | `uw2.py` (behind the Makefile), `install-hooks.sh`, `repocheck.py` |
-| Toolchain setup | `setup-tc.sh`, `setup-tasm.sh`, `setup-sound.sh` (the port's OPL emulator) |
+| Toolchain setup | `setup-tc.sh`, `setup-tasm.sh`, `setup-sound.sh` (the port's OPL emulator), `setup-libs.sh` (SDL3 and libmt32emu from source, for Linux), `requirements.txt` (the Python packages), `ci-assets.sh` (CI only: decrypts the asset bundle) |
 | Building in headless DOS | `tcc.mjs` (compile or assemble), `dosrun.mjs` (batch lines, used by the link), `dosbackend.mjs` (the DOS they run in), `dosbatch.py` (many sources at once, for the gate and `link.py --mod`), `setup-emu2.sh` with `emu2-date.patch`, `rungame.mjs` (boot and screenshot, always js-dos) |
 | Matching one file | `match.py`, `verify.py`, `bssorder.py` (predicts `_BSS` order), `asmgen.py` (first draft of an assembly module), `fmt.py` (FM Towns disassembly) |
 | Object files | `omf.py`, `fixups.py` |

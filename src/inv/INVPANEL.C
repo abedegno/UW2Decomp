@@ -73,13 +73,15 @@ struct InvRect InvDisplay[23] = {
     { 0x125, 0x85, 0x12E, 0x7C, 0x126, 0x85, 0x8, 0xA },
     { 0x12F, 0x85, 0x138, 0x7C, 0x130, 0x85, 0x8, 0xA }
 };
-char SlotToDisplay[28] = {
-    2, 3, 4, 1, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+#define SLOT_TO_DISPLAY 2, 3, 4, 1, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, \
     12, 13, 14, 15, 16, 17, 18, 19
-};
-char DisplayToSlot[21] = {
-    1, 3, 0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
-};
+#define DISPLAY_TO_SLOT 1, 3, 0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
+#ifdef __TURBOC__
+char SlotToDisplay[28] = { SLOT_TO_DISPLAY };
+char DisplayToSlot[21] = { DISPLAY_TO_SLOT };
+#else
+char SlotToDisplay[28 + 21] = { SLOT_TO_DISPLAY, DISPLAY_TO_SLOT };     /* inv.h has why */
+#endif
 /* name: FM Towns keeps the next four as unnamed statics; the names are mine. */
 static int16 panel_input = 0;           /* DS:1799, the panel's mouse handler */
 static int16 shown_capacity = -1;       /* DS:179B, the weight figure on screen */

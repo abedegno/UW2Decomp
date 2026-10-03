@@ -55,7 +55,7 @@ BACKEND = 'sdl3'
 def pkg_config(*args):
     r = subprocess.run(['pkg-config'] + list(args) + [BACKEND], capture_output=True, text=True)
     if r.returncode:
-        raise SystemExit(f'portbuild.py: pkg-config cannot find {BACKEND} (install SDL3: brew install sdl3)')
+        raise SystemExit(f'portbuild.py: pkg-config cannot find {BACKEND} (install SDL3: brew install sdl3, or make setup-libs on Linux)')
     return r.stdout.split()
 
 
@@ -110,7 +110,7 @@ def compile_port(cc, path, sound_cflags=()):
 
 def main(argv):
     ap = argparse.ArgumentParser(description='Build and link the native port.')
-    ap.add_argument('--cc', default=os.environ.get('CC', 'cc'))
+    ap.add_argument('--cc', default=portcheck.host_cc())
     ap.add_argument('--run', action='store_true')
     ap.add_argument('--debug', action='store_true')
     ap.add_argument('--coverage', action='store_true')
@@ -152,8 +152,13 @@ def main(argv):
     for p, e in warn:
         print(f'{os.path.relpath(p, root)}: warnings\n' + '\n'.join(l for l in e.split('\n') if 'warning' in l)[:2000])
     print('sound: ' + ', '.join([('Nuked OPL3' if '-DUW2_HAVE_OPL' in snd_cflags else 'no OPL emulator (tools/setup-sound.sh)'),
-                                 ('libmt32emu' if '-DUW2_HAVE_MT32EMU' in snd_cflags else 'no libmt32emu (brew install mt32emu)')]))
-    r = subprocess.run([a.cc, '-o', EXE] + link_extra + objs + pkg_config('--libs') + snd_libs, capture_output=True, text=True, cwd=root)
+                                 ('libmt32emu' if '-DUW2_HAVE_MT32EMU' in snd_cflags else 'no libmt32emu (brew install mt32emu, or make setup-libs)')]))
+    # the sound drivers' threads: in the C library on macOS and on Linux's glibc 2.34 and later,
+    # in winpthreads on Windows (MinGW), which -pthread links
+    threads = [] if sys.platform == 'darwin' else ['-pthread']
+    r = subprocess.run([a.cc, '-o', EXE] + link_extra + objs + pkg_config('--libs') + snd_libs + threads,
+                       capture_output=True, text=True, cwd=root)
+    if not os.path.exists(EXE) and os.path.exists(EXE + '.exe'): EXE += '.exe'     # Windows
     if r.returncode:
         und = sorted(set(re.findall(r'"_?([A-Za-z_]\w*)", referenced from', r.stderr)))
         print(f'link failed: {len(und)} undefined names' + (': ' + ' '.join(und) if und else ''))

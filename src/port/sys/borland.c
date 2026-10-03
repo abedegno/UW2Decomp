@@ -23,6 +23,10 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
+#ifdef _WIN32
+#include <direct.h>
+#define mkdir(path, mode) _mkdir(path)  /* Windows's mkdir takes no mode */
+#endif
 #include "port.h"
 #include "plat.h"
 

@@ -3,11 +3,19 @@
    stopped. */
 #undef _POSIX_C_SOURCE
 #define _DARWIN_C_SOURCE
-#include <execinfo.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef _WIN32
+/* Windows has no backtrace(): a fault is reported without the call stack. */
+#include <io.h>
+#define backtrace(frames, n) ((void)(frames), (void)(n), 0)
+#define backtrace_symbols_fd(frames, n, fd) \
+    ((void)(frames), (void)(n), (void)!write(fd, "(no call stack on this host)\n", 29))
+#else
+#include <execinfo.h>
 #include <unistd.h>
+#endif
 
 static void on_fault(int sig)
 {
@@ -23,7 +31,9 @@ static void on_fault(int sig)
 void port_crash_handlers(void)
 {
     signal(SIGSEGV, on_fault);
+#ifdef SIGBUS
     signal(SIGBUS, on_fault);
+#endif
     signal(SIGILL, on_fault);
 }
 

@@ -1,8 +1,9 @@
 #!/bin/sh
 # Install the pre-push hook: git push runs `make test` first (the gate, the port build, the routine
 # fuzzing's quick run and every replay session against its golden; docs/BUILDING.md, "Testing")
-# and stops when it fails. It needs the toolchain and your UW2.EXE, which hosted CI cannot have,
-# so it runs here. Run `make hooks` again to update a hook an older version installed.
+# and stops when it fails. It needs the toolchain and your UW2.EXE; CI runs it again after the
+# push (.github/workflows/accuracy.yml). Run `make hooks` again to update a hook an older
+# version installed.
 # Bypass for one push (a docs-only change, say):  git push --no-verify   or   SKIP_CHECK=1 git push
 set -e
 root=$(cd "$(dirname "$0")/.." && pwd)

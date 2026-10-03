@@ -19,7 +19,7 @@
 // Binaries can be named with UW2_DOSBOX_X, UW2_DOSBOX_STAGING and UW2_EMU2.
 // The game itself (rungame.mjs, dos-mcp memory reads) always runs in js-dos.
 import { spawn, spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync, openSync, closeSync, statSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync, openSync, closeSync, statSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";
 import { join, dirname, delimiter } from "node:path";
 
@@ -78,8 +78,23 @@ export async function runStage(stage, bat, timeout = 300) {
     if (name === "emu2") runEmu2(run, bat, timeout);
     else await runDosBox(name, run, bat, timeout);
   } catch (e) { await close(); throw e; }
-  const read = async n => { try { return readFileSync(join(run, n.replace(/\\/g, "/"))); } catch { return null; } };
+  const read = async n => { const p = caseless(run, n.replace(/\\/g, "/")); try { return p && readFileSync(p); } catch { return null; } };
   return { finished: existsSync(join(run, "DONE.TXT")), read, close };
+}
+
+// A DOS file name names a host file whatever its case. On a case-sensitive file system (Linux)
+// emu2 creates a file under the case the program used (TCC writes skills.obj for SKILLS.C), so
+// each part of the path is matched without regard to case when the exact name is not there.
+function caseless(dir, rel) {
+  let p = dir;
+  for (const part of rel.split("/").filter(Boolean)) {
+    if (existsSync(join(p, part))) { p = join(p, part); continue; }
+    let hit;
+    try { hit = readdirSync(p).find(n => n.toUpperCase() === part.toUpperCase()); } catch { }
+    if (!hit) return null;
+    p = join(p, hit);
+  }
+  return p;
 }
 
 async function runJsDos(stage, bat, timeout) {
@@ -159,7 +174,9 @@ function runEmu2(run, bat, timeout) {
       const echo = cmd.match(/^@?echo\s+(.*)$/i);
       if (echo) { if (file) writeFileSync(out, echo[1] + "\r\n"); continue; }
       const [prog, ...rest] = cmd.split(/\s+/);
-      const found = [prog, prog + ".EXE", prog + ".COM"].map(n => n.toUpperCase()).find(n => /\.(EXE|COM)$/.test(n) && existsSync(join(run, n)));
+      // a program an earlier line made can have a lower-case name on Linux (TLINK writes setdate.com)
+      const found = [prog, prog + ".EXE", prog + ".COM"].map(n => n.toUpperCase()).filter(n => /\.(EXE|COM)$/.test(n))
+        .map(n => caseless(run, n)).find(Boolean);
       if (!found) throw new Error(`emu2 backend: cannot run batch line '${line}'`);
       const left = deadline - Date.now();
       if (left <= 0) return;

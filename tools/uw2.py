@@ -123,14 +123,19 @@ def symbols_from_scratch(srcs):
     finally:
         verify.root = saved
         shutil.rmtree(d, ignore_errors=True)
+    # Without fmtowns/syms.tsv (made from the FM Towns release, which hosted CI does not have)
+    # the rebuild cannot tell an original name from a provisional one, so that mark is not
+    # compared; the names and their addresses still are.
+    fm = os.path.exists(os.path.join(root, 'fmtowns', 'syms.tsv'))
     probs = [f'only in the committed file: {n} {old[n][0]}' for n in sorted(set(old) - set(new))]
     probs += [f'only in the rebuild: {n} {new[n][0]}' for n in sorted(set(new) - set(old))]
     for n in sorted(set(old) & set(new)):
         if old[n][0] != new[n][0]: probs.append(f'{n}: committed {old[n][0]}, rebuilt {new[n][0]}')
-        elif old[n][1] != new[n][1] and not (old[n][1] == 'library' and new[n][1] == 'provisional'):
+        elif old[n][1] != new[n][1] and not (old[n][1] == 'library' and new[n][1] == 'provisional') \
+                and not (not fm and old[n][1] == 'FM Towns' and new[n][1] == 'provisional'):
             probs.append(f'{n}: committed source {old[n][1]!r}, rebuilt {new[n][1]!r}')
     if probs: return False, '\n    '.join(probs[:30]) + (f'\n    ... {len(probs) - 30} more' if len(probs) > 30 else '')
-    return True, f'{len(new)} names'
+    return True, f'{len(new)} names' + ('' if fm else ' (no fmtowns/syms.tsv: original-name marks not checked)')
 
 
 # ---- linking --------------------------------------------------------------------------

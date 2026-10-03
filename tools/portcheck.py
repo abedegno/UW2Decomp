@@ -4,7 +4,7 @@
     python3 tools/portcheck.py --diag FILE  every diagnostic for one source (path or stem)
     python3 tools/portcheck.py --list CAT   every diagnostic in one category
     python3 tools/portcheck.py --json       also write build/port/summary.json
-    python3 tools/portcheck.py --cc CC      another compiler (default cc, Apple clang on macOS)
+    python3 tools/portcheck.py --cc CC      another compiler (default $CC, else clang, else cc)
 
 Each .C under src/ (tools/sources.py: not src/include, not src/port) is compiled with the host
 C compiler as C89 with GNU extensions, with src/port/compat.h force-included and the port's
@@ -22,7 +22,7 @@ platform layer's and the assembly replacement's workload; docs/PORT.md has the b
 The DOS build is untouched: tools/tcc.mjs stages src/include only, tools/srcdeps.py hashes
 src/include only, and tools/sources.py skips src/port.
 """
-import os, re, sys, json, ctypes, argparse, subprocess, collections
+import os, re, sys, json, shutil, ctypes, argparse, subprocess, collections
 from concurrent.futures import ThreadPoolExecutor
 
 here = os.path.dirname(os.path.abspath(__file__)); root = os.path.dirname(here)
@@ -97,6 +97,12 @@ def category(msg, flag, text):
     return OTHER
 
 
+def host_cc():
+    """The host C compiler: $CC, else clang (the flags here are clang's: Apple's on macOS, the
+    distribution's on Linux, MSYS2's on Windows), else cc."""
+    return os.environ.get('CC') or ('clang' if shutil.which('clang') else 'cc')
+
+
 def dos_only(path):
     """A source whose header comment says `port: dos-only` is DOS-specific (EMS.C's int 67h
     calls); the port replaces it in src/port/ and never compiles it."""
@@ -126,14 +132,20 @@ def rel(p):
     return os.path.relpath(p, root)
 
 
+NM = shutil.which('nm') or shutil.which('llvm-nm')
+
+
 def nm(obj, flag):
-    r = subprocess.run(['nm', flag, obj], capture_output=True, text=True)
+    """The names an object defines (-gU) or needs (-u). Mach-O puts an underscore before every C
+    name; ELF and 64-bit COFF do not."""
     out = set()
+    if not NM: return out
+    r = subprocess.run([NM, flag, obj], capture_output=True, text=True)
     for l in r.stdout.split('\n'):
         l = l.strip()
         if not l: continue
         name = l.split()[-1]
-        out.add(name[1:] if name.startswith('_') else name)
+        out.add(name[1:] if sys.platform == 'darwin' and name.startswith('_') else name)
     return out
 
 
@@ -175,16 +187,25 @@ def borland_names():
     return names
 
 
+_libc = []
 def libc_has(name):
+    """Whether the host C library has the name: the process's own symbols on macOS and Linux,
+    the Universal C Runtime (or msvcrt) on Windows."""
+    if not _libc:
+        libs = [None] if os.name != 'nt' else ['ucrtbase', 'msvcrt']
+        for n in libs:
+            try: _libc.append(ctypes.CDLL(n)); break
+            except OSError: pass
+        else: _libc.append(None)
     try:
-        ctypes.CDLL(None)[name]; return True
-    except (AttributeError, OSError):
+        _libc[0][name]; return True
+    except (AttributeError, OSError, TypeError):
         return False
 
 
 def main(argv):
     ap = argparse.ArgumentParser(description='Compile the game sources for the host (Milestone 1).')
-    ap.add_argument('--cc', default=os.environ.get('CC', 'cc'))
+    ap.add_argument('--cc', default=host_cc())
     ap.add_argument('--diag', metavar='FILE')
     ap.add_argument('--list', metavar='CATEGORY')
     ap.add_argument('--json', action='store_true', help='also write build/port/summary.json')

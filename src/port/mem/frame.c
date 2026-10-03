@@ -6,6 +6,38 @@
    left inaccessible, so a pointer that runs further faults at once (sys/crash.c reports where)
    instead of corrupting other data. Kept apart from ems.c because it needs the host's own
    memory-mapping calls, which the game's headers do not see. */
+#ifdef _WIN32
+/* Windows: one section mapped at two adjacent addresses. The 144 KB are reserved to find a
+   free range, then released and mapped there (allocation granularity is 64 KB, so both views
+   and the guard page start on its boundary); another thread can take the range in between,
+   so it is tried a few times. The guard is left reserved and inaccessible. */
+#include <windows.h>
+
+unsigned char *port_frame_alloc(void)
+{
+    HANDLE section = CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, 0x10000, NULL);
+    unsigned char *result = NULL;
+    int attempt;
+    if (!section) return NULL;
+    for (attempt = 0; attempt < 16 && !result; attempt++) {
+        unsigned char *base = VirtualAlloc(NULL, 0x30000, MEM_RESERVE, PAGE_NOACCESS);
+        void *a, *b;
+        if (!base) break;
+        VirtualFree(base, 0, MEM_RELEASE);
+        a = MapViewOfFileEx(section, FILE_MAP_WRITE, 0, 0, 0x10000, base);
+        b = a ? MapViewOfFileEx(section, FILE_MAP_WRITE, 0, 0, 0x10000, base + 0x10000) : NULL;
+        if (a && b) {
+            VirtualAlloc(base + 0x20000, 0x10000, MEM_RESERVE, PAGE_NOACCESS);
+            result = base;
+        } else {
+            if (a) UnmapViewOfFile(a);
+            if (b) UnmapViewOfFile(b);
+        }
+    }
+    CloseHandle(section);   /* the views keep the section alive */
+    return result;
+}
+#else
 #undef _POSIX_C_SOURCE
 #define _DARWIN_C_SOURCE
 #include <fcntl.h>
@@ -33,3 +65,4 @@ unsigned char *port_frame_alloc(void)
     close(fd);
     return base;
 }
+#endif
