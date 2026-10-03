@@ -200,7 +200,7 @@ def build_plan():
         text = open(src, encoding='latin1').read()
         defs = []
         if HOOKS.search(text) or src in replay_sources(): defs.append('-DREPLAY')
-        if 'NULLTRAP(' in text: defs.append('-DNULLTRAP')
+        if 'NULLTRAP(' in text or 'NULLREC(' in text: defs.append('-DNULLTRAP')
         if defs: todo.append((stem(src), src, (opts_of(src) if src not in replay_sources() else '-mm -1 -G -O -Y -d') + ' ' + ' '.join(defs)))
     lay = os.path.join(root, 'build', 'LINK', 'base', 'layout.json')
     base = json.load(open(lay))['sources'] if os.path.exists(lay) else None

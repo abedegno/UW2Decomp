@@ -458,7 +458,7 @@ char far PutObjectInBag(struct Object far *obj, int slot)
         if (found)
             Inventory[i].f.index = Obj_MemTPtr(obj);
     }
-    if (Obj_MemTPtr(cont) == OpenBag->obj.f.index) {
+    if (Obj_MemTPtr(cont) == FARNULLREC(OpenBag, "ffww")->obj.f.index) {
         FixOpenBag();
         displayInventoryArray(0xC, 0x13);
     } else if (displayEnc(1))

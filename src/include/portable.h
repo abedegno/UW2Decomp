@@ -86,8 +86,19 @@ static void nulltrap_hit(char *file, int line)
 #else
 void *port_null_near(const char *file, int line);
 void *port_null_far(const char *file, int line);
+void *port_null_far_record(const char *layout, unsigned host_size, const char *file, int line);
 #define NULLTRAP(p)     ((p) ? (p) : (__typeof__(p))port_null_near(__FILE__, __LINE__))
 #define FARNULLTRAP(p)  ((p) ? (p) : (__typeof__(p))port_null_far(__FILE__, __LINE__))
+#define FARNULLREC(p, layout) ((p) ? (p) : (__typeof__(p))port_null_far_record((layout), sizeof *(p), __FILE__, __LINE__))
+#endif
+
+/* FARNULLREC(p, layout): FARNULLTRAP for a far pointer to a struct that holds pointers, whose
+   host layout is not DOS's (HOST_LAYOUT_BEGIN), so that the vector table's bytes would land
+   in the wrong fields: on the host a null p becomes a host struct filled from the vector
+   table by the struct's DOS layout, one letter a field as FILE_RECORDS takes it (w a word,
+   n a near pointer, f a far pointer, the pointers null). FARNULLTRAP everywhere else. */
+#if defined(__TURBOC__)
+#define FARNULLREC(p, layout) FARNULLTRAP(p)
 #endif
 
 /* FAR_COPY(dst, src, n): copy n bytes between far buffers, written in DOS as

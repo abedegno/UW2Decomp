@@ -112,7 +112,7 @@ int far FindSlot(struct Object far *obj)
             if (Inventory[slot].f.index == index)
                 return slot;
             inslot = Obj_PtrTMem(&Inventory[slot]);
-            if (!OBJ_ISQUANT(inslot) && Inventory[slot].f.index != OpenBag->obj.f.index
+            if (!OBJ_ISQUANT(inslot) && Inventory[slot].f.index != FARNULLREC(OpenBag, "ffww")->obj.f.index
                 && inslot != 0 && Obj_Find(&inslot->ol.link, 1, index) != 0)
                 return -slot;
         }

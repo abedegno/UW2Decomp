@@ -223,6 +223,15 @@ Each entry was re-read against the source before it was written here. The sectio
 - **Effect:** the same on every machine, since the values come from the frame and a constant argument.
 - **For a port:** a faithful port gives DOS's two values; starting the loop at 0x82, or giving 0x81 a place of its own, is the evident fix.
 
+### Opening a carried container with no bag open reads the interrupt vector table
+
+- **What happens:** `FindSlot` looks for an object in the inventory, and for each slot holding a container that is not the open bag it searches the container; the test compares the slot with `OpenBag->obj` without checking `OpenBag`, which is 0 while no bag is open. So opening a container from the backpack (`UseCont` calls `FindSlot`) reads `obj`, the word at offset 8 of a null far pointer: 0000:0008, the offset half of the int 2 vector, 00F4h under DOSBox, a link to object 3. A slot holding object 3 would be skipped. The function that puts an object into a container (BAGS.C, after `AddTogether`) reads the same field the same way when the container is not the open bag.
+- **Where:** `FindSlot` in [inv/INVDATA.C](../src/inv/INVDATA.C) and the container function in [inv/BAGS.C](../src/inv/BAGS.C), marked `FARNULLREC` (portable.h): `struct Bag` holds pointers, so on the host the field is not at DOS's offset, and the port reads the vector table by the struct's DOS layout.
+- **Evidence:** 1.2.0-rc7 crashed (a read at address 10h, the host's offset of `obj`) opening a bag picked up in the Avatar's room; in a replay of the `items` session, with the sack carried and no bag open, `FindSlot` crashes the unmarked port at 10h and reads 0000:0008 in the marked one.
+- **Confidence:** confirmed.
+- **Effect:** depends on the machine: the int 2 vector differs between DOS set-ups; under DOSBox only an inventory slot holding object 3 is affected.
+- **For a port:** a faithful port reads the vector table it models; testing `OpenBag` first is the evident fix.
+
 ### Escape at a conversation's typed answer reads DS:0
 
 - **What happens:** when a conversation asks the player to type an answer, CONVERSE.C calls `wdialog` with no initial text (a null pointer). If the player presses Escape, `wdialog` copies the initial text into the answer anyway, so the answer becomes the string at DS:0. In UW2.EXE DS:0 holds the tail of an overlay stub (docs/PORT.md, "Null pointers"): the answer is `'` and byte 06h while ovr167 is not in the overlay buffer, and byte 06h followed by the overlay's segment bytes while it is.
