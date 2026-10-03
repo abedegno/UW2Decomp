@@ -4,7 +4,8 @@ TASM/
 TC/
 __pycache__/
 build/
-fmtowns/
+fmtowns/*
+!fmtowns/syms.tsv
 node_modules/
 tools/emu2/
 tools/libs/
