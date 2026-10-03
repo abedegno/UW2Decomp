@@ -87,8 +87,8 @@ void far DoSpecialActions(int slot)
     case 9:
         if (9 - player->lefty == slot) {
             obj = Obj_PtrTMem(&Inventory[DisplayToSlot[slot]]);
-            id = OBJ_ITEM(obj);
-            cls = OBJ_CLASS(obj);
+            id = OBJ_ITEM(FARNULLTRAP(obj));     /* an empty hand reads 19h, a bow */
+            cls = OBJ_CLASS(FARNULLTRAP(obj));
             if (cls == CLASS_WEAPON || id == ITEM_SLING || id == ITEM_BOW || id == ITEM_CROSSBOW || id == ITEM_JEWELED_BOW) {
                 toggle_fightmode();
                 break;

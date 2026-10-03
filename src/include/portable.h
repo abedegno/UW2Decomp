@@ -230,6 +230,21 @@ RpTimerFn far rp_slave_timer(RpTimerFn f, unsigned hz);
 #define FRAME_INDEX(arr, i, below) ((i) < 0 ? (below) : (arr)[i])
 #endif
 
+/* TABLE_NEXT(arr, i, n, next) and TABLE_PREV(arr, i, prev, nprev): element i of a table of n
+   entries that the original indexes past its end, or before its start, where DOS has the
+   table next defined right after it, or prev (nprev entries) right before it, so that it
+   reads those (GAMESCR.C reads button_to_mode[6..10], which is mode_to_button; INTERACT.C
+   mode_to_button[-1], button_to_mode[5]; COMBAT.C swing_keys[-1], swing_kind[8]). The original
+   index under Turbo C; on the host, where the compiler lays the tables out, the neighbour's
+   entry. */
+#ifdef __TURBOC__
+#define TABLE_NEXT(arr, i, n, next) arr[i]
+#define TABLE_PREV(arr, i, prev, nprev) arr[i]
+#else
+#define TABLE_NEXT(arr, i, n, next) ((i) >= (n) ? (next)[(i) - (n)] : (arr)[i])
+#define TABLE_PREV(arr, i, prev, nprev) ((i) < 0 ? (prev)[(nprev) + (i)] : (arr)[i])
+#endif
+
 /* READ_PAIR(fd, a, b): read(fd, &a, 4), where the original reads two words into a one-word
    local and relies on Turbo C having put local b right after it on the stack (BABL.C reads
    a bglobals.dat record's slot and size so). The original tokens under Turbo C; on the host

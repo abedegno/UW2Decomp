@@ -488,7 +488,7 @@ char far do_miss(int hit)
             weapon = 1;
         if (hitobj == 1) {
             armour = AskInventory(slot = hitloc + 1 & 3);
-            item = OBJ_ITEM(armour);
+            item = OBJ_ITEM(FARNULLTRAP(armour));   /* read before the test: 19h for none */
             if (armour == 0)
                 victim = 0;
             else if (item == ITEM_LEATHER_VEST || item == ITEM_LEATHER_LEGGINGS
@@ -848,7 +848,7 @@ void far player_attack(int swing)
     if (fire_mode != 0)
         swing_state = -1;
     pQatt = -1 - swing_kind[swing - 1];
-    attackKey = swing_keys[swing / 3 - 1];
+    attackKey = TABLE_PREV(swing_keys, swing / 3 - 1, swing_kind, 9);
     set_screen_frame(8, -pQatt - 1);
     set_screen_frame(3, 1);
     play_pow = 0;

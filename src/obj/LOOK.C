@@ -54,7 +54,11 @@ void far LookAt(struct Object far *obj, int lore)
     char name[10];
     char plural;
     char far *owner;
-    char text[80];
+    /* match: 80 bytes, but an identified, enchanted, owned item's description runs to 85
+       with its terminator (the jewelled sword of Unsurpassed Accuracy belonging to a human):
+       in DOS the end lands on owner, plural and name, all used by then; the host's frame is
+       the compiler's, so the host's array is long enough (FRAME_LEN) */
+    char text[FRAME_LEN(80, 96)];
     char qual[26];
     struct ComObj *com;
     int q;

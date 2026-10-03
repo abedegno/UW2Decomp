@@ -159,7 +159,7 @@ void far init_gamedisp(void)
     play_music();
     start_gameinp();
     if (LeftPanel == 0 && RightButtonThing != 0)
-        new_IconSelect(button_to_mode[RightButtonThing + 5]);
+        new_IconSelect(TABLE_NEXT(button_to_mode, RightButtonThing + 5, 6, mode_to_button));
     display_scr();
     init_scrgr();
 }

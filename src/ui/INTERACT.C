@@ -537,10 +537,10 @@ void far inv_look(void)
     checkTrap(ThePlayer, newPlObj, 5, MapObj_X, MapObj_Y);
     if (newPlObj == 0)
         newPlObj = pick_inv(2);
-    ident = OBJ_MAJOR(newPlObj) != MAJOR_RECT && OBJ_MAJOR(newPlObj) != MAJOR_TRAP
-        && ComObjData[OBJ_ITEM(newPlObj)].render != 2;
+    ident = OBJ_MAJOR(FARNULLTRAP(newPlObj)) != MAJOR_RECT && OBJ_MAJOR(FARNULLTRAP(newPlObj)) != MAJOR_TRAP
+        && ComObjData[OBJ_ITEM(FARNULLTRAP(newPlObj))].render != 2;
     if (ident == 1) {
-        head = OBJ_HEADING(newPlObj);
+        head = OBJ_HEADING(FARNULLTRAP(newPlObj));
         if (head & 4)
             lore = head & 3;
         else {
@@ -549,7 +549,7 @@ void far inv_look(void)
                 lore = 1;
             if ((head & 3) > lore)
                 lore = head & 3;
-            SET_HEADING(newPlObj, lore | 4);
+            SET_HEADING(FARNULLTRAP(newPlObj), lore | 4);
         }
     } else
         lore = 1;
@@ -652,7 +652,7 @@ void far deal_with_icons(int mode)
         mouse_release(1);
         released = 1;
     } else
-        current_button = mode_to_button[mode - 1];
+        current_button = TABLE_PREV(mode_to_button, mode - 1, button_to_mode, 6);
     if (mode == 5)
         busywaiting_new_options(&gameopts_buttongroup);
     else {

@@ -579,7 +579,7 @@ void far maybe_rescue_guy_from_fire(struct Object far *obj)
         return;
     x = (OBJ_HOMEX(obj) << 3) + OBJ_FINEX(obj);
     y = (OBJ_HOMEY(obj) << 3) + OBJ_FINEY(obj);
-    if (((TxmTerr[Map_GetAddr(x, y)->floor] & TERR_CLASS) >> 6) != TERRAIN_LAVA)
+    if (((TxmTerr[FARNULLTRAP(Map_GetAddr(x, y))->floor] & TERR_CLASS) >> 6) != TERRAIN_LAVA)
         return;
     if (player_looking(x, y) != 0)
         return;

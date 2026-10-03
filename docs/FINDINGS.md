@@ -232,6 +232,22 @@ Each entry was re-read against the source before it was written here. The sectio
 - **Effect:** depends on the machine: the int 2 vector differs between DOS set-ups; under DOSBox only an inventory slot holding object 3 is affected.
 - **For a port:** a faithful port reads the vector table it models; testing `OpenBag` first is the evident fix.
 
+### More reads the original makes through null pointers and past its tables
+
+An audit of the whole game's C for the three ways DOS forgives what a modern host does not (null pointers, reads beyond a table, the host's struct layouts), after three of them crashed the port in play. Each site is marked so that the port reads what DOS read (portable.h); none changes the DOS bytes.
+
+- **A missed blow on an unarmoured spot** ([combat/COMBAT.C](../src/combat/COMBAT.C), `do_miss`): `OBJ_ITEM(armour)` is read before `armour` is tested, so a critter's melee miss where the player wears nothing reads 0000:0000 (item 19h); the value is not used. Common in any early fight. `FARNULLTRAP`.
+- **The Pits' fire rescue** ([critter/CRITTIME.C](../src/critter/CRITTIME.C), `maybe_rescue_guy_from_fire`): the lava rescue already listed above reads `Map_GetAddr(...)->floor` through the null square (floor 0). `FARNULLTRAP`.
+- **Looking at nothing in the inventory** ([ui/INTERACT.C](../src/ui/INTERACT.C), `inv_look`): with no object under the pointer (the open bag's own picture, or a look released over an empty slot) the major class, item and heading are read through the null object (item 19h), and the lore bits are written into the vector table's int 0 segment word unless bit 2 is set there. `FARNULLTRAP`.
+- **Use on the weapon hand with it empty** ([inv/BAGS.C](../src/inv/BAGS.C), `DoSpecialActions`): the item reads as 19h, a bow, so DOS toggles fight mode. `FARNULLTRAP`.
+- **Mode buttons** ([ui/GAMESCR.C](../src/ui/GAMESCR.C), `init_gamedisp`; [ui/INTERACT.C](../src/ui/INTERACT.C), `deal_with_icons`): `button_to_mode[RightButtonThing + 5]` reads 6 to 10, which is `mode_to_button` (WRAPPER.C has `mode_to_button[RightButtonThing - 1]`, evidently what was meant), and F2's mode 0 reads `mode_to_button[-1]`, `button_to_mode[5]`. `TABLE_NEXT`, `TABLE_PREV`.
+- **A swing in the left two ninths of the view** ([combat/COMBAT.C](../src/combat/COMBAT.C), `player_attack`): `swing_keys[swing / 3 - 1]` with swing 1 or 2 reads `swing_kind[8]`, 1. `TABLE_PREV`.
+- **Long descriptions** ([obj/LOOK.C](../src/obj/LOOK.C), `LookAt`): an identified, enchanted, owned item's description runs to 85 bytes in `text[80]`; in DOS the end lands on locals already used. The host's array is longer (`FRAME_LEN`).
+- **Disarming a special effects trap** ([game/SKILLS.C](../src/game/SKILLS.C), `RemoveTrap`): "special effects trap" and its 0 are 21 bytes in `name[20]`; in DOS the 0 clears the low byte of `trig`, which `delete_trap` then uses, so a successful disarm of such a trap deletes through a wrong pointer. The host's array is longer (`FRAME_LEN`); the port does not reproduce the stray pointer.
+- **Evidence:** the audits (clang's AST over the game's C; AddressSanitizer and `-fsanitize=array-bounds` builds over the ten sessions, where the mode buttons made `items` and `talk` differ from DOS under ASan's layout; clang's host struct layouts), with the DOS frames and data read from the matched objects.
+- **Confidence:** confirmed (the code); the effects as stated.
+- **For a port:** testing the pointer or the index is the evident fix in each case.
+
 ### Escape at a conversation's typed answer reads DS:0
 
 - **What happens:** when a conversation asks the player to type an answer, CONVERSE.C calls `wdialog` with no initial text (a null pointer). If the player presses Escape, `wdialog` copies the initial text into the answer anyway, so the answer becomes the string at DS:0. In UW2.EXE DS:0 holds the tail of an overlay stub (docs/PORT.md, "Null pointers"): the answer is `'` and byte 06h while ovr167 is not in the overlay buffer, and byte 06h followed by the overlay's segment bytes while it is.

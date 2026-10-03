@@ -896,7 +896,10 @@ int far RemoveTrap(struct Object far *obj, int skill)
     union Link far *head;
     struct Object far *trap;
     struct Object far *trig;
-    char name[20];
+    /* match: 20 bytes, one short of "special effects trap" and its 0: in DOS the 0 lands on
+       the low byte of trig, which delete_trap then uses (docs/FINDINGS.md); the host's array
+       is long enough (FRAME_LEN), so the port does not reproduce that */
+    char name[FRAME_LEN(20, 24)];
     int result = 0;
     int owner;
 
