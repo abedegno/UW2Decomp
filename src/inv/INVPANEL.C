@@ -309,7 +309,7 @@ void far DoInventoryDrag(struct Object far *obj)
    place and patches the same string the same way. */
 char far load_inv_pic(int n, int img)
 {
-    register char *name = "armor_f";
+    register char *name = WRITABLE_STR("armor_f");
 
     if (player->female != 1)
         name[6] = 'm';

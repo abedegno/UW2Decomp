@@ -240,8 +240,11 @@ RpTimerFn far rp_slave_timer(RpTimerFn f, unsigned hz);
 #endif
 
 /* WRITABLE_STR(s): a string literal the code writes into (SOUND.C builds the driver's and the
-   music's file names in place). The literal under Turbo C; on the host a literal is
-   read-only, so it is an array of the same characters, which the code may change. */
+   music's file names in place, INVPANEL.C's load_inv_pic the armour file's last letter,
+   SKILLS.C's advance the new level's digits). The literal under Turbo C; on the host a literal
+   is read-only, so it is an array of the same characters, which the code may change. clang's
+   -Wwrite-strings over the game's C lists every literal that reaches a char pointer; these
+   are the only ones written through. */
 #ifdef __TURBOC__
 #define WRITABLE_STR(s) s
 #else

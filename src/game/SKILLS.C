@@ -88,7 +88,7 @@ void far player_compute(char restore)
    maxima. */
 void far advance(char levels)
 {
-    register char *s = " 0\n";
+    register char *s = WRITABLE_STR(" 0\n");
 
     player->level = player->level + levels;
     if (player->level >= 10)
