@@ -1,0 +1,43 @@
+# Exhume project configuration for Ultima Underworld: The Stygian Abyss (UW.EXE, DOS, 1992,
+# the GOG release). The same toolchain as UW2 (Turbo C++ 1.01, TASM 2.0, TLINK 3.01).
+
+[project]
+name = "UW1"
+root = "${UW1DECOMP:-~/UW1Decomp}"
+src = "${EXHUME_SRC:-src}"
+targets = "targets"
+symbols = "${EXHUME_SYMBOLS:-symbols.tsv}"
+matched = "${EXHUME_MATCHED:-matched.txt}"
+map = "${EXHUME_MAP:-map}"
+build = "${EXHUME_BUILD:-build}"
+queue = "queue"
+
+[binary]
+exe = "${UW1_EXE:-~/UWGOG/UW1/UW.EXE}"
+# DGROUP: fingerprint.py's suggestion from C0's copyright (DS:0 at file 0x5DCC0); to be
+# confirmed with a string the code addresses by DS offset
+dgroup_para = 0x5AAC
+overlay_segment = "ovr(\\d{3})"
+# UWReverseEngineering's UW1_asm.asm (input MD5 8AFC3C29EF5667A3AB6667E8CBC8D63A, the GOG UW.EXE);
+# a segment name's paragraph is the load paragraph + 0x1ED, as in UW2 (dseg_5c99 is DGROUP at 0x5AAC)
+listing = "${UW1_ASM:-~/UWReverseEngineering/UW1_asm.asm}"
+listing_para_bias = 0x1ED
+listing_stub_prefix = "stub"
+
+[toolchain]
+profile = "borland-tc101"
+home = "${EXHUME_TC:-~/UW2Decomp/TC}"
+stage = ["${EXHUME_TC:-~/UW2Decomp/TC}", "${EXHUME_TASM:-~/UW2Decomp/TASM}/TASM.EXE"]
+c_opts = "-mm -1 -G -O -Z"
+
+[map]
+library_segments = ["seg000"]
+
+[run]
+data = "${UW1_DATA:-~/UWGOG/UW1}"
+exe_name = "UW.EXE"
+
+[names]
+# UW1 has no build with symbols; its names come from UW2's matched sources through kin.py
+# (UW2's names are the FM Towns build's originals)
+original_label = "UW2 kin"

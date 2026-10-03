@@ -1,0 +1,6 @@
+# segment seg041_37AA base 0x38DD2 size 0x163 org 0x2
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+mvcheck	seg041_37AA_2	0x0	0x4B
+move_along	GetCoordinateInDirection_seg041_4D	0x4B	0x9B
+EndMantra_seg041_E8	EndMantra_seg041_E8	0xE6	0x36
+rollem	DiceRoll_seg041_11E	0x11C	0x47
