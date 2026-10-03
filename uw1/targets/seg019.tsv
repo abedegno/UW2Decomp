@@ -5,7 +5,7 @@ save_rect	seg019_17	0x17	0x4E
 restore_rect	seg019_65	0x65	0x3C
 find_proc	seg019_A1	0xA1	0x48
 call_driver	seg019_E9	0xE9	0x29
-send_EOI	seg019_112	0x112	0x9
+seg019_112	seg019_112	0x112	0x9
 init_DDA_arrays	seg019_11B	0x11B	0x35
 hook_timer_process	seg019_150	0x150	0x24
 unhook_timer_process	seg019_174	0x174	0x15
@@ -35,11 +35,11 @@ _AIL_index_VOC_block	seg019_5C8	0x5C8	0x21
 seg019_5E9	seg019_5E9	0x5E9	0x97
 _AIL_register_sound_buffer	seg019_680	0x680	0x12
 _AIL_format_sound_buffer	seg019_692	0x692	0xE
-_AIL_sound_buffer_status	seg019_6A0	0x6A0	0x6
+seg019_6A0	seg019_6A0	0x6A0	0x6
 seg019_6A6	seg019_6A6	0x6A6	0x22
 _AIL_start_digital_playback	seg019_6C8	0x6C8	0x1F
 _AIL_stop_digital_playback	seg019_6E7	0x6E7	0x11
-_AIL_pause_digital_playback	seg019_6F8	0x6F8	0xB
+seg019_6F8	seg019_6F8	0x6F8	0xB
 seg019_703	seg019_703	0x703	0x2D
 _AIL_resume_digital_playback	seg019_730	0x730	0xE
 _AIL_set_digital_playback_volume	seg019_73E	0x73E	0x17

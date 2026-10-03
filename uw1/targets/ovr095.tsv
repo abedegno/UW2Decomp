@@ -20,7 +20,7 @@ RedisplayBarterSlots	ovr095_F07	0xF07	0x1D5
 nothing_there	ovr095_10DC	0x10DC	0x33
 do_offer	do_offer_ovr095_110F	0x110F	0x1AB
 do_demand_ovr095_12BA	do_demand_ovr095_12BA	0x12BA	0x217
-mouse_get_input	do_decline_ovr095_14D1	0x14D1	0xD
+do_decline_ovr095_14D1	do_decline_ovr095_14D1	0x14D1	0xD
 do_judgement	TradeAppraisal_ovr095_14DE	0x14DE	0x169
 total_offering_ovr097_17CB	ovr095_1647	0x1647	0x6A
 ovr095_16B1	ovr095_16B1	0x16B1	0x108

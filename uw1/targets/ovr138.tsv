@@ -1,6 +1,6 @@
 # segment ovr138 base 0x7F8C0 size 0xA48 org 0x0
 # cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
-adr_chrpic	ovr138_0	0x0	0x22
+ovr138_0	ovr138_0	0x0	0x22
 move_opbtn	ovr138_22	0x22	0x72
 ovr138_94	ovr138_94	0x94	0x39
 do_intro_scene	ovr138_CD	0xCD	0x2F

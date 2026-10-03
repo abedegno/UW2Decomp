@@ -2,7 +2,7 @@
 # cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
 get_cuts_ems	ovr105_0	0x0	0x10
 set_cuts_ems	ovr105_10	0x10	0x44
-free_scrgr	ovr105_54	0x54	0xA
+ovr105_54	ovr105_54	0x54	0xA
 makeFourChars_ovr108_671	ovr105_5E	0x5E	0x3C
 build_lptab	ovr105_9A	0x9A	0xA3
 read_anmhdr	ovr105_13D	0x13D	0x67
@@ -13,7 +13,7 @@ anm_cycle	ovr105_2E1	0x2E1	0xCA
 ovr105_3AB	ovr105_3AB	0x3AB	0xB
 cutsop_txt	CutsceneDisplayString_ovr105_3B6	0x3B6	0x200
 cutsop_erase	Cutscene_1_SetFlag_ovr105_5B6	0x5B6	0xF
-cutsop_func	CutsceneNOP_ovr105_5C5	0x5C5	0x8
+CutsceneNOP_ovr105_5C5	CutsceneNOP_ovr105_5C5	0x5C5	0x8
 Cutscene_3_Pause_ovr105_5CD	Cutscene_3_Pause_ovr105_5CD	0x5CD	0x2D
 Cutscene_14_Wait_ovr105_5FA	Cutscene_14_Wait_ovr105_5FA	0x5FA	0x47
 Cutscene4_PlayToFrame_ovr105_641	Cutscene4_PlayToFrame_ovr105_641	0x641	0x41

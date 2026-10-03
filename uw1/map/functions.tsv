@@ -11,11 +11,11 @@ seg000	seg000_330	330	1B9			0	0
 seg001	seg001_C	C	3E			0	0
 seg001	seg001_4A	4A	10			0	0
 seg001	seg001_5A	5A	AB	valloc	kin-near	0	0
-seg001	seg001_105	105	D	vfree	kin-same	0	0
+seg001	seg001_105	105	D			0	0
 seg001	seg001_112	112	C3	keyboard_interrupt	kin-near	0	0
 seg001	seg001_1D5	1D5	1A	save_rect	kin-same	0	0
 seg001	seg001_1EF	1EF	6C			0	0
-seg001	MaybeRedrawSlot_seg001_25B	25B	D	vfree	kin-same	0	0
+seg001	MaybeRedrawSlot_seg001_25B	25B	D			0	0
 seg001	seg001_268	268	121			0	0
 seg002	seg002_A	A	8F			0	0
 seg003	seg003_0	0	8			0	0
@@ -191,7 +191,7 @@ seg004	seg004_2B16	2B16	A			0	0
 seg004	seg004_2B20	2B20	F			0	0
 seg004	seg004_2B2F	2B2F	344			0	0
 seg004	seg004_2E73	2E73	1BA			0	0
-seg004	seg004_302D	302D	9	__GETDS	kin-same	0	0
+seg004	seg004_302D	302D	9			0	0
 seg004	seg004_3036	3036	11			0	0
 seg004	seg004_3047	3047	13			0	0
 seg004	seg004_305A	305A	54			0	0
@@ -422,7 +422,7 @@ seg006_1477	DropNPCRemains_seg006_5	5	15F	build_corpse	kin-near	0	0
 seg006_1477	seg006_1477_164	164	12A			0	0
 seg006_1477	InitVariablesAndDelegates_seg006_1477_28E	28E	D9			0	0
 seg006_1477	seg006_1477_367	367	290			0	0
-seg006_1477	SetALto0_seg006_1477_5F7	5F7	7	make_stew	kin-same	0	0
+seg006_1477	SetALto0_seg006_1477_5F7	5F7	7			0	0
 seg006_1477	seg006_1477_5FE	5FE	CD			0	0
 seg006_1477	CalculateMotionTopLevel_seg006_6CB	6CB	2B	do_crit_phys	kin-same	0	0
 seg006_1477	TraverseMultipleTiles_seg006_1477_6F6	6F6	960	hyp_move	kin-near	0	0
@@ -523,7 +523,7 @@ seg013_1CC9	seg013_1CC9_E	E	67	init_mouse	kin-same	0	0
 seg013_1CC9	seg013_1CC9_75	75	4C	_actual_mhide	kin-same	0	0
 seg013_1CC9	LikelyDrawCursor_seg013_1CC9_C1	C1	16	mouse_show	kin-same	0	0
 seg013_1CC9	seg013_1CC9_D7	D7	21	mouse_hide	kin-same	0	0
-seg013_1CC9	seg013_1CC9_F8	F8	1D	mous_3d_set	kin-same	0	0
+seg013_1CC9	seg013_1CC9_F8	F8	1D			0	0
 seg013_1CC9	seg013_1CC9_115	115	25	mous_in_3d_p	kin-same	0	0
 seg013_1CC9	seg013_1CC9_13A	13A	11A			0	0
 seg013_1CC9	seg013_1CC9_254	254	65			0	0
@@ -535,13 +535,13 @@ seg013_1CC9	seg013_1CC9_318	318	2D	mouse_putxy	kin-same	0	0
 seg013_1CC9	seg013_1CC9_345	345	22	mouse_getbut	kin-same	0	0
 seg013_1CC9	ClickEventRelated_seg013_1CC9_367	367	7D	mouse_release	kin-same	0	0
 seg013_1CC9	seg013_1CC9_3E4	3E4	89	mouse_dragged	kin-near	0	0
-seg013_1CC9	seg013_1CC9_46D	46D	1D	mous_3d_set	kin-same	0	0
+seg013_1CC9	seg013_1CC9_46D	46D	1D			0	0
 seg013_1CC9	MaybeSetScreenSize_seg013_1CC9_48A	48A	19	mouse_freereign	kin-same	0	0
 seg013_1CC9	seg013_1CC9_4A3	4A3	4C	do_mouse_input	kin-same	0	0
 seg013_1CC9	seg013_1CC9_4EF	4EF	7C	do_keyarray_input	kin-same	0	0
 seg013_1CC9	seg013_1CC9_56B	56B	99	do_keyboard_input	kin-same	0	0
 seg013_1CC9	seg013_1CC9_604	604	4D	get_input	kin-same	0	0
-seg013_1CC9	seg013_1CC9_651	651	D	mouse_get_input	kin-same	0	0
+seg013_1CC9	seg013_1CC9_651	651	D			0	0
 seg013_1CC9	seg013_1CC9_65E	65E	D	mouse_get_input_sp	kin-same	0	0
 seg013_1CC9	seg013_1CC9_66B	66B	71	defineMouseRegion	kin-same	0	0
 seg013_1CC9	seg013_1CC9_6DC	6DC	5E	undefineMouseRegion	kin-same	0	0
@@ -568,7 +568,7 @@ seg014_1DC5	LoadXMIFILE_seg014_41C	41C	157			0	0
 seg014_1DC5	seg014_1DC5_573	573	9A			0	0
 seg014_1DC5	seg014_1DC5_60D	60D	CE			0	0
 seg014_1DC5	seg014_1DC5_6DB	6DB	5D	read_file_to_mbuf	kin-near	0	0
-seg014_1DC5	GetMusicFileNo_seg014_738	738	8	get_current_music	kin-same	0	0
+seg014_1DC5	GetMusicFileNo_seg014_738	738	8			0	0
 seg014_1DC5	seg014_1DC5_740	740	14	music_is_on	kin-near	0	0
 seg014_1DC5	seg014_1DC5_754	754	14	music_is_on	kin-near	0	0
 seg014_1DC5	ToggleMusic_seg014_768	768	94			0	0
@@ -593,7 +593,7 @@ seg014_1DC5	RefreshMusic_seg014_160D	160D	1B4			0	0
 seg014_1DC5	MaybeCheckThemeIsPlaying_seg014_1DC5_17C1	17C1	2C	music_over	kin-same	0	0
 seg014_1DC5	seg014_1DC5_17ED	17ED	4D	do_settings	kin-same	0	0
 seg014_1DC5	seg014_1DC5_183A	183A	E3			0	0
-seg014_1DC5	seg014_1DC5_191D	191D	8	get_current_music	kin-same	0	0
+seg014_1DC5	seg014_1DC5_191D	191D	8			0	0
 seg014_1DC5	seg014_1DC5_1925	1925	5C			0	0
 seg014_1DC5	seg014_1DC5_1981	1981	1C0			0	0
 seg014_1DC5	seg014_1DC5_1B41	1B41	137			0	0
@@ -632,7 +632,7 @@ seg019	seg019_17	17	4E	save_rect	kin-same	0	0
 seg019	seg019_65	65	3C	restore_rect	kin-near	0	0
 seg019	seg019_A1	A1	48	find_proc	kin-near	0	0
 seg019	seg019_E9	E9	29	call_driver	kin-same	0	0
-seg019	seg019_112	112	9	send_EOI	kin-same	0	0
+seg019	seg019_112	112	9			0	0
 seg019	seg019_11B	11B	35	init_DDA_arrays	kin-same	0	0
 seg019	seg019_150	150	24	hook_timer_process	kin-same	0	0
 seg019	seg019_174	174	15	unhook_timer_process	kin-same	0	0
@@ -662,11 +662,11 @@ seg019	seg019_5C8	5C8	21	_AIL_index_VOC_block	kin-same	0	0
 seg019	seg019_5E9	5E9	97			0	0
 seg019	seg019_680	680	12	_AIL_register_sound_buffer	kin-same	0	0
 seg019	seg019_692	692	E	_AIL_format_sound_buffer	kin-same	0	0
-seg019	seg019_6A0	6A0	6	_AIL_sound_buffer_status	kin-same	0	0
+seg019	seg019_6A0	6A0	6			0	0
 seg019	seg019_6A6	6A6	22			0	0
 seg019	seg019_6C8	6C8	1F	_AIL_start_digital_playback	kin-same	0	0
 seg019	seg019_6E7	6E7	11	_AIL_stop_digital_playback	kin-same	0	0
-seg019	seg019_6F8	6F8	B	_AIL_pause_digital_playback	kin-same	0	0
+seg019	seg019_6F8	6F8	B			0	0
 seg019	seg019_703	703	2D			0	0
 seg019	seg019_730	730	E	_AIL_resume_digital_playback	kin-same	0	0
 seg019	seg019_73E	73E	17	_AIL_set_digital_playback_volume	kin-same	0	0
@@ -736,13 +736,13 @@ seg020	seg020_C0D	C0D	6			0	0
 seg020	seg020_C13	C13	12			0	0
 seg020	seg020_C25	C25	6			0	0
 seg020	seg020_C2B	C2B	6			0	0
-seg020	seg020_C31	C31	C	AIL_stop_sequence	kin-same	0	0
+seg020	seg020_C31	C31	C			0	0
 seg020	seg020_C3D	C3D	12	AIL_sequence_status	kin-same	0	0
 seg020	seg020_C4F	C4F	6			0	0
 seg020	seg020_C55	C55	2A	AIL_set_relative_tempo	kin-same	0	0
 seg020	seg020_C7F	C7F	1E	AIL_send_channel_voice_message	kin-same	0	0
-seg020	seg020_C9D	C9D	C	AIL_lock_channel	kin-same	0	0
-seg020	seg020_CA9	CA9	A	AIL_release_channel	kin-same	0	0
+seg020	seg020_C9D	C9D	C			0	0
+seg020	seg020_CA9	CA9	A			0	0
 seg021	seg021_5	5	A2	rotate_bank	kin-same	0	0
 seg021	seg021_A7	A7	A2			0	0
 seg022_230E	PickBodyHitPoint_seg022_A	A	79	pickloc	kin-same	0	0
@@ -942,7 +942,7 @@ seg036_3087	seg036_3087_B3	B3	54			0	0
 seg036_3087	seg036_3087_107	107	67			0	0
 seg036_3087	seg036_3087_16E	16E	24F			0	0
 seg036_3087	seg036_3087_3BD	3BD	18	hold_scrgr	kin-same	0	0
-seg036_3087	seg036_3087_3D5	3D5	A	free_scrgr	kin-same	0	0
+seg036_3087	seg036_3087_3D5	3D5	A			0	0
 seg036_3087	UpdateUIAnim_seg036_3087_3DF	3DF	1C6			0	0
 seg036_3087	seg036_3087_5A5	5A5	147	update_screen	kin-near	0	0
 seg036_3087	ProbablyDrawFlask_seg036_6EC	6EC	334	adjust_flasks	kin-near	0	0
@@ -1004,7 +1004,7 @@ seg038_3307	DoorAndTrapSpells_seg038_3307_1560	1560	E5			0	0
 seg038_3307	MajorSpellClassB_seg038_1645	1645	1E5			0	0
 seg038_3307	DamageObjectsInTile_seg038_3307_182A	182A	B9	damage_square	kin-near	0	0
 seg039_3495	seg039_3495_3	3	80	init_strings	kin-near	0	0
-seg039_3495	seg039_3495_83	83	A	free_scrgr	kin-same	0	0
+seg039_3495	seg039_3495_83	83	A			0	0
 seg039_3495	GetStringByID_seg039_3495_8D	8D	89	get_string	kin-near	0	0
 seg039_3495	seg039_3495_116	116	104	make_string	kin-near	0	0
 seg039_3495	seg039_3495_21A	21A	7B	replace_string	kin-near	0	0
@@ -1155,13 +1155,13 @@ seg046	seg046_1071	1071	12C			0	0
 seg046	seg046_119D	119D	AB	_EXTCOPY	kin-same	0	0
 ovr089	ovr089_0	0	17	animobj_load	kin-near	0	0
 ovr089	ovr089_17	17	14			0	0
-ovr090	ovr090_0	0	5	mous_3d_show	kin-same	0	0
+ovr090	ovr090_0	0	5			0	0
 ovr090	ovr090_5	5	E			0	0
-ovr090	ovr090_13	13	5	mous_3d_show	kin-same	0	0
-ovr090	ovr090_18	18	5	mous_3d_show	kin-same	0	0
-ovr090	ovr090_1D	1D	5	mous_3d_show	kin-same	0	0
-ovr090	ovr090_22	22	5	mous_3d_show	kin-same	0	0
-ovr090	ovr090_27	27	5	mous_3d_show	kin-same	0	0
+ovr090	ovr090_13	13	5			0	0
+ovr090	ovr090_18	18	5			0	0
+ovr090	ovr090_1D	1D	5			0	0
+ovr090	ovr090_22	22	5			0	0
+ovr090	ovr090_27	27	5			0	0
 ovr091	ovr091_0	0	153			0	0
 ovr091	ovr091_153	153	D9			0	0
 ovr091	ovr091_22C	22C	3EE			0	0
@@ -1206,8 +1206,8 @@ ovr093	Contains_ovr093_ED4	ED4	12F	StringContains_ovr095_BDB	kin-same	0	0
 ovr093	Append_ovr093_1003	1003	BD	babl_str_append_ovr095_D0A	kin-same	0	0
 ovr093	Copy_ovr093_10C0	10C0	6F	STRING_COPY_ovr095_DC7	kin-same	0	0
 ovr093	Find_ovr093_112F	112F	57	conv_find_ovr095_E36	kin-same	0	0
-ovr093	Length_ovr093_1186	1186	25	conv_length_ovr095_E8D	kin-same	0	0
-ovr093	Val_ovr093_11AB	11AB	25	conv_length_ovr095_E8D	kin-same	0	0
+ovr093	Length_ovr093_1186	1186	25			0	0
+ovr093	Val_ovr093_11AB	11AB	25			0	0
 ovr093	ConversationTextVariableReplacement_ovr093_11D0	11D0	258	convert_string	kin-near	0	0
 ovr093	GetStringReplacementNumberValue_ovr093_1428	1428	103	AtIndex_ovr095_11C0	kin-same	0	0
 ovr093	ovr093_152B	152B	1FF	DoReadHeader_ovr095_12C3	kin-near	0	0
@@ -1277,7 +1277,7 @@ ovr095	ovr095_F07	F07	1D5	RedisplayBarterSlots	kin-near	0	0
 ovr095	ovr095_10DC	10DC	33	nothing_there	kin-near	0	0
 ovr095	do_offer_ovr095_110F	110F	1AB	do_offer	kin-near	0	0
 ovr095	do_demand_ovr095_12BA	12BA	217			0	0
-ovr095	do_decline_ovr095_14D1	14D1	D	mouse_get_input	kin-same	0	0
+ovr095	do_decline_ovr095_14D1	14D1	D			0	0
 ovr095	TradeAppraisal_ovr095_14DE	14DE	169	do_judgement	kin-near	0	0
 ovr095	ovr095_1647	1647	6A	total_offering_ovr097_17CB	kin-near	0	0
 ovr095	ovr095_16B1	16B1	108			0	0
@@ -1292,13 +1292,13 @@ ovr095	ovr095_1D97	1D97	165			0	0
 ovr095	ovr095_1EFC	1EFC	7F	npc_inv_delete	kin-near	0	0
 ovr095	set_likes_dislikes_ovr095_1F7B	1F7B	32	npc_likes_dislikes	kin-same	0	0
 ovr095	ovr095_1FAD	1FAD	107	does_npc_like	kin-near	0	0
-ovr096	ovr096_0	0	5	mous_3d_show	kin-same	0	0
-ovr096	ovr096_5	5	5	mous_3d_show	kin-same	0	0
-ovr096	ovr096_A	A	8	place_browse	kin-same	0	0
-ovr096	ovr096_12	12	5	mous_3d_show	kin-same	0	0
-ovr096	ovr096_17	17	5	mous_3d_show	kin-same	0	0
-ovr096	ovr096_1C	1C	5	mous_3d_show	kin-same	0	0
-ovr096	ovr096_21	21	5	mous_3d_show	kin-same	0	0
+ovr096	ovr096_0	0	5			0	0
+ovr096	ovr096_5	5	5			0	0
+ovr096	ovr096_A	A	8			0	0
+ovr096	ovr096_12	12	5			0	0
+ovr096	ovr096_17	17	5			0	0
+ovr096	ovr096_1C	1C	5			0	0
+ovr096	ovr096_21	21	5			0	0
 ovr098	InitPlayer_ovr098_0	0	258			0	0
 ovr098	ovr098_258	258	EF	set_sklmnu	kin-near	0	0
 ovr098	ovr098_347	347	150	show_atts	kin-near	0	0
@@ -1310,7 +1310,7 @@ ovr098	ovr098_94A	94A	165			0	0
 ovr098	ovr098_AAF	AAF	195	mousopt	kin-same	0	0
 ovr098	MaybeShrine_ovr098_C44	C44	323	pickopt	kin-near	0	0
 ovr098	ovr098_F67	F67	546	gen_char	kin-near	0	0
-ovr098	ovr098_14AD	14AD	22	adr_chrpic	kin-same	0	0
+ovr098	ovr098_14AD	14AD	22			0	0
 ovr098	ovr098_14CF	14CF	3F	move_chrpic	kin-same	0	0
 ovr098	ovr098_150E	150E	289			0	0
 ovr098	ovr098_1797	1797	1E	create_player	kin-same	0	0
@@ -1320,11 +1320,11 @@ ovr099	ovr099_15A	15A	1F	CombineObjs	kin-same	0	0
 ovr099	ovr099_179	179	39	RemoveAfterCombine	kin-near	0	0
 ovr099	RotwormStew_ovr099_1B2	1B2	173			0	0
 ovr100	TalkTo_ovr100_0	0	197			0	0
-ovr100	ovr100_197	197	22	adr_chrpic	kin-same	0	0
+ovr100	ovr100_197	197	22			0	0
 ovr100	ovr100_1B9	1B9	28			0	0
 ovr100	BeginConversation_ovr100_1E1	1E1	3FC			0	0
 ovr100	ovr100_5DD	5DD	26			0	0
-ovr100	ovr100_603	603	5	mous_3d_show	kin-same	0	0
+ovr100	ovr100_603	603	5			0	0
 ovr100	InitConversation_ovr100_608	608	375			0	0
 ovr100	ovr100_97D	97D	D0	converse_event_loop	kin-near	0	0
 ovr100	babl_menu_ovr100_A4D	A4D	1DF	conv_choice_ovr103_A13	kin-near	0	0
@@ -1341,11 +1341,11 @@ ovr100	find_barter_ovr100_126C	126C	AE			0	0
 ovr100	find_barter_total_ovr100_131A	131A	14B	find_barter_total	kin-same	0	0
 ovr100	give_to_npc_ovr100_1465	1465	E8			0	0
 ovr100	give_ptr_npc_ovr100_154D	154D	D2			0	0
-ovr100	do_inv_delete_ovr100_161F	161F	1B	conv_inv_delete	kin-same	0	0
+ovr100	do_inv_delete_ovr100_161F	161F	1B			0	0
 ovr100	find_inv_ovr100_163A	163A	2B	conv_find_inv	kin-same	0	0
-ovr100	take_from_npc_ovr100_1665	1665	1B	conv_inv_delete	kin-same	0	0
-ovr100	take_id_from_npc_ovr100_1680	1680	1B	conv_inv_delete	kin-same	0	0
-ovr100	do_inv_create_ovr100_169B	169B	1B	conv_inv_delete	kin-same	0	0
+ovr100	take_from_npc_ovr100_1665	1665	1B			0	0
+ovr100	take_id_from_npc_ovr100_1680	1680	1B			0	0
+ovr100	do_inv_create_ovr100_169B	169B	1B			0	0
 ovr100	identify_inv_ovr100_16B6	16B6	1F2	conv_inv_name	kin-near	0	0
 ovr100	count_inv_ovr100_18A8	18A8	5C	count_inv	kin-same	0	0
 ovr100	check_inv_quality_ovr100_1904	1904	36	check_inv_quality	kin-same	0	0
@@ -1373,7 +1373,7 @@ ovr104	AngerNPCByIllegalAction_ovr104_C37	C37	215	critter_get_told	kin-near	0	0
 ovr104	ovr104_E4C	E4C	94			0	0
 ovr105	ovr105_0	0	10	get_cuts_ems	kin-same	0	0
 ovr105	ovr105_10	10	44	set_cuts_ems	kin-same	0	0
-ovr105	ovr105_54	54	A	free_scrgr	kin-same	0	0
+ovr105	ovr105_54	54	A			0	0
 ovr105	ovr105_5E	5E	3C	makeFourChars_ovr108_671	kin-same	0	0
 ovr105	ovr105_9A	9A	A3	build_lptab	kin-near	0	0
 ovr105	ovr105_13D	13D	67	read_anmhdr	kin-near	0	0
@@ -1384,7 +1384,7 @@ ovr105	ovr105_2E1	2E1	CA	anm_cycle	kin-same	0	0
 ovr105	ovr105_3AB	3AB	B			0	0
 ovr105	CutsceneDisplayString_ovr105_3B6	3B6	200	cutsop_txt	kin-near	0	0
 ovr105	Cutscene_1_SetFlag_ovr105_5B6	5B6	F	cutsop_erase	kin-same	0	0
-ovr105	CutsceneNOP_ovr105_5C5	5C5	8	cutsop_func	kin-same	0	0
+ovr105	CutsceneNOP_ovr105_5C5	5C5	8			0	0
 ovr105	Cutscene_3_Pause_ovr105_5CD	5CD	2D			0	0
 ovr105	Cutscene_14_Wait_ovr105_5FA	5FA	47			0	0
 ovr105	Cutscene4_PlayToFrame_ovr105_641	641	41			0	0
@@ -1405,8 +1405,8 @@ ovr105	ovr105_14E3	14E3	13	reset_db	kin-same	0	0
 ovr105	OpenCutsFile_ovr105_14F6	14F6	143	writeCutsValue_ovr108_2EAC	kin-near	0	0
 ovr105	ovr105_1639	1639	19			0	0
 ovr106	ovr106_0	0	1B			0	0
-ovr106	SetBasePtrToStackPtr_ovr106_1B	1B	5	mous_3d_show	kin-same	0	0
-ovr106	ovr106_20	20	5	mous_3d_show	kin-same	0	0
+ovr106	SetBasePtrToStackPtr_ovr106_1B	1B	5			0	0
+ovr106	ovr106_20	20	5			0	0
 ovr107	ovr107_0	0	949	find_good_x_and_y	kin-same	0	0
 ovr107	Teleport_ovr107_949	949	AF			0	0
 ovr107	ChangeTile_ovr107_9F8	9F8	2BA			0	0
@@ -1433,7 +1433,7 @@ ovr109	ovr109_4A	4A	16A			0	0
 ovr109	ovr109_1B4	1B4	40	free_world	kin-near	0	0
 ovr109	SplashScreen_ovr109_1F4	1F4	18	titlescr	kin-same	0	0
 ovr109	ovr109_20C	20C	94			0	0
-ovr109	ovr109_2A0	2A0	B	editexit	kin-same	0	0
+ovr109	ovr109_2A0	2A0	B			0	0
 ovr109	ResetMap_ovr109_2AB	2AB	19	clearobj	kin-same	0	0
 ovr109	ovr109_2C4	2C4	3B	change_screen	kin-same	0	0
 ovr109	ShowMapAndOtherFullScreenUIs_ovr109_2FF	2FF	6F	newscr	kin-same	0	0
@@ -1442,7 +1442,7 @@ ovr109	ovr109_37B	37B	AD			0	0
 ovr109	ovr109_428	428	14	free_demscr	kin-same	0	0
 ovr109	ovr109_43C	43C	BF			0	0
 ovr109	DeathEndGame_ovr109_4FB	4FB	D9	real_death	kin-near	0	0
-ovr109	soundrelated_ovr109_5D4	5D4	A	free_scrgr	kin-same	0	0
+ovr109	soundrelated_ovr109_5D4	5D4	A			0	0
 ovr109	DividByZeroError_ovr109_5DE	5DE	4F	div_zero_ovr112_661	kin-near	0	0
 ovr109	Teleport_ovr109_62D	62D	113			0	0
 ovr109	ovr109_740	740	31			0	0
@@ -1562,7 +1562,7 @@ ovr120	ovr120_DDD	DDD	97	ItemWeight	kin-near	0	0
 ovr120	ovr120_E74	E74	21	EncumCheck	kin-same	0	0
 ovr121	ovr121_0	0	48			0	0
 ovr121	ovr121_48	48	19D	BeginInventory	kin-near	0	0
-ovr121	ovr121_1E5	1E5	5	mous_3d_show	kin-same	0	0
+ovr121	ovr121_1E5	1E5	5			0	0
 ovr121	ovr121_1EA	1EA	57	ClearInventory	kin-same	0	0
 ovr121	ovr121_241	241	342			0	0
 ovr121	ovr121_583	583	B4			0	0
@@ -1599,7 +1599,7 @@ ovr125	ovr125_3A	3A	4F	misc_class_data	kin-near	0	0
 ovr126	Acknowledgements_ovr126_0	0	18	show_credits	kin-same	0	0
 ovr127	ovr127_0	0	7			0	0
 ovr129	ovr129_0	0	EE	init_objects	kin-near	0	0
-ovr129	ovr129_EE	EE	7	make_stew	kin-same	0	0
+ovr129	ovr129_EE	EE	7			0	0
 ovr129	ovr129_F5	F5	35	get_class_data	kin-near	0	0
 ovr130	ovr130_0	0	121			0	0
 ovr130	ovr130_121	121	2A			0	0
@@ -1629,7 +1629,7 @@ ovr131	ovr131_2E2	2E2	93			0	0
 ovr131	LoadT64AndDoorsGR_ovr131_375	375	127			0	0
 ovr131	LoadTextureFile_ovr131_49C	49C	145			0	0
 ovr131	BuildTerrainData_ovr131_5E1	5E1	A5			0	0
-ovr133	ovr133_0	0	5	mous_3d_show	kin-same	0	0
+ovr133	ovr133_0	0	5			0	0
 ovr133	ovr133_5	5	FB			0	0
 ovr133	ovr133_100	100	E4			0	0
 ovr133	ResetPlayerStatusValues_ovr133_1E4	1E4	78	init_spells	kin-near	0	0
@@ -1657,8 +1657,8 @@ ovr134	LaunchPlayerAtMoongate_ovr134_D52	D52	F4	Vortex_ovr143_E09	kin-same	0	0
 ovr134	ovr134_E46	E46	5B	chg_plys	kin-same	0	0
 ovr134	ovr134_EA1	EA1	25			0	0
 ovr134	ovr134_EC6	EC6	26			0	0
-ovr137	ovr137_0	0	5	mous_3d_show	kin-same	0	0
-ovr138	ovr138_0	0	22	adr_chrpic	kin-same	0	0
+ovr137	ovr137_0	0	5			0	0
+ovr138	ovr138_0	0	22			0	0
 ovr138	ovr138_22	22	72	move_opbtn	kin-same	0	0
 ovr138	ovr138_94	94	39			0	0
 ovr138	ovr138_CD	CD	2F	do_intro_scene	kin-near	0	0
@@ -1667,7 +1667,7 @@ ovr138	MainMenu_ovr138_248	248	329			0	0
 ovr138	ovr138_571	571	1F7	parse_start_mouse	kin-near	0	0
 ovr138	ovr138_768	768	1BD	parse_start_input	kin-near	0	0
 ovr138	MainMenuListSaveGames_ovr138_925	925	176	do_journey	kin-near	0	0
-ovr139	ovr139_0	0	7	unbound	kin-same	0	0
+ovr139	ovr139_0	0	7			0	0
 ovr140	ovr140_0	0	92	init_save	kin-near	0	0
 ovr140	ovr140_92	92	9B			0	0
 ovr140	ovr140_12D	12D	FC			0	0
@@ -1708,7 +1708,7 @@ ovr143	Resurrection_ovr143_1521	1521	D3			0	0
 ovr143	CallBackGateTravel_ovr143_15F4	15F4	1C			0	0
 ovr143	DeathAndResurrection_ovr143_1610	1610	219			0	0
 ovr143	SearchForTrap_ovr143_1829	1829	2D8			0	0
-ovr144	ovr144_0	0	7	unbound	kin-same	0	0
+ovr144	ovr144_0	0	7			0	0
 ovr145	ovr145_0	0	F3	sp_hdr	kin-near	0	0
 ovr145	ovr145_F3	F3	5C	sp_att	kin-near	0	0
 ovr145	ovr145_14F	14F	74	sp_hp	kin-near	0	0
@@ -1718,7 +1718,7 @@ ovr145	ovr145_284	284	DB			0	0
 ovr145	ovr145_35F	35F	E6			0	0
 ovr145	ovr145_445	445	B6			0	0
 ovr145	ovr145_4FB	4FB	10			0	0
-ovr146	ovr146_0	0	7	unbound	kin-same	0	0
+ovr146	ovr146_0	0	7			0	0
 ovr149	ovr149_0	0	16			0	0
 ovr150	SpillInventory_ovr150_0	0	12E			0	0
 ovr150	SpillCritterInventory_ovr150_12E	12E	2C	drop_some_objects	kin-same	0	0
@@ -1727,9 +1727,9 @@ ovr150	SpawnFoodLoot_ovr150_2BB	2BB	66	generate_food	kin-same	0	0
 ovr150	SpawnArmsLoot_ovr150_321	321	121	generate_weapons	kin-same	0	0
 ovr150	SpawnOtherLoot_ovr150_442	442	D4	generate_equipment	kin-near	0	0
 ovr150	SpawnNPCLoot_ovr150_516	516	87	generate_inventory	kin-near	0	0
-ovr152	ovr152_0	0	5	mous_3d_show	kin-same	0	0
+ovr152	ovr152_0	0	5			0	0
 ovr152	ovr152_5	5	E			0	0
-ovr152	ovr152_13	13	5	mous_3d_show	kin-same	0	0
+ovr152	ovr152_13	13	5			0	0
 ovr153	ovr153_0	0	17	trap_save	kin-near	0	0
 ovr153	ovr153_17	17	24			0	0
 ovr153	Trigger_ovr153_3B	3B	20F			0	0
@@ -1765,7 +1765,7 @@ ovr154	ovr154_544	544	4D	FarWrite_ovr167_627	kin-same	0	0
 ovr154	ovr154_591	591	7C			0	0
 ovr154	ovr154_60D	60D	84			0	0
 ovr154	ovr154_691	691	31			0	0
-ovr144	ovr144_0	0	7	unbound	kin-same	0	0
+ovr144	ovr144_0	0	7			0	0
 ovr145	ovr145_0	0	F3	sp_hdr	kin-near	0	0
 ovr145	ovr145_F3	F3	5C	sp_att	kin-near	0	0
 ovr145	ovr145_14F	14F	74	sp_hp	kin-near	0	0
@@ -1775,7 +1775,7 @@ ovr145	ovr145_284	284	DB			0	0
 ovr145	ovr145_35F	35F	E6			0	0
 ovr145	ovr145_445	445	B6			0	0
 ovr145	ovr145_4FB	4FB	11			0	0
-ovr146	ovr146_0	0	7	unbound	kin-same	0	0
+ovr146	ovr146_0	0	7			0	0
 ovr149	ovr149_0	0	17	trap_save	kin-near	0	0
 ovr150	ovr150_0	0	12E			0	0
 ovr150	ovr150_12E	12E	2C	drop_some_objects	kin-same	0	0
@@ -1784,9 +1784,9 @@ ovr150	ovr150_2BB	2BB	66	generate_food	kin-same	0	0
 ovr150	ovr150_321	321	121	generate_weapons	kin-same	0	0
 ovr150	ovr150_442	442	D4	generate_equipment	kin-near	0	0
 ovr150	ovr150_516	516	87	generate_inventory	kin-near	0	0
-ovr152	ovr152_0	0	5	mous_3d_show	kin-same	0	0
+ovr152	ovr152_0	0	5			0	0
 ovr152	ovr152_5	5	E			0	0
-ovr152	ovr152_13	13	5	mous_3d_show	kin-same	0	0
+ovr152	ovr152_13	13	5			0	0
 ovr153	ovr153_0	0	17	trap_save	kin-near	0	0
 ovr153	ovr153_17	17	24			0	0
 ovr153	ovr153_3B	3B	20F			0	0

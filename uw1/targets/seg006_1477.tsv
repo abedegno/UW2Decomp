@@ -4,7 +4,7 @@ build_corpse	DropNPCRemains_seg006_5	0x0	0x15F
 seg006_1477_164	seg006_1477_164	0x15F	0x12A
 InitVariablesAndDelegates_seg006_1477_28E	InitVariablesAndDelegates_seg006_1477_28E	0x289	0xD9
 seg006_1477_367	seg006_1477_367	0x362	0x290
-make_stew	SetALto0_seg006_1477_5F7	0x5F2	0x7
+SetALto0_seg006_1477_5F7	SetALto0_seg006_1477_5F7	0x5F2	0x7
 seg006_1477_5FE	seg006_1477_5FE	0x5F9	0xCD
 do_crit_phys	CalculateMotionTopLevel_seg006_6CB	0x6C6	0x2B
 hyp_move	TraverseMultipleTiles_seg006_1477_6F6	0x6F1	0x960

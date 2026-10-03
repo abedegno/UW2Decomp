@@ -5,7 +5,7 @@ seg036_3087_B3	seg036_3087_B3	0xA5	0x54
 seg036_3087_107	seg036_3087_107	0xF9	0x67
 seg036_3087_16E	seg036_3087_16E	0x160	0x24F
 hold_scrgr	seg036_3087_3BD	0x3AF	0x18
-free_scrgr	seg036_3087_3D5	0x3C7	0xA
+seg036_3087_3D5	seg036_3087_3D5	0x3C7	0xA
 UpdateUIAnim_seg036_3087_3DF	UpdateUIAnim_seg036_3087_3DF	0x3D1	0x1C6
 update_screen	seg036_3087_5A5	0x597	0x147
 adjust_flasks	ProbablyDrawFlask_seg036_6EC	0x6DE	0x334

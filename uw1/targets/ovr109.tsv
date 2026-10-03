@@ -5,7 +5,7 @@ ovr109_4A	ovr109_4A	0x4A	0x16A
 free_world	ovr109_1B4	0x1B4	0x40
 titlescr	SplashScreen_ovr109_1F4	0x1F4	0x18
 ovr109_20C	ovr109_20C	0x20C	0x94
-editexit	ovr109_2A0	0x2A0	0xB
+ovr109_2A0	ovr109_2A0	0x2A0	0xB
 clearobj	ResetMap_ovr109_2AB	0x2AB	0x19
 change_screen	ovr109_2C4	0x2C4	0x3B
 newscr	ShowMapAndOtherFullScreenUIs_ovr109_2FF	0x2FF	0x6F
@@ -14,7 +14,7 @@ ovr109_37B	ovr109_37B	0x37B	0xAD
 free_demscr	ovr109_428	0x428	0x14
 ovr109_43C	ovr109_43C	0x43C	0xBF
 real_death	DeathEndGame_ovr109_4FB	0x4FB	0xD9
-free_scrgr	soundrelated_ovr109_5D4	0x5D4	0xA
+soundrelated_ovr109_5D4	soundrelated_ovr109_5D4	0x5D4	0xA
 div_zero_ovr112_661	DividByZeroError_ovr109_5DE	0x5DE	0x4F
 Teleport_ovr109_62D	Teleport_ovr109_62D	0x62D	0x113
 ovr109_740	ovr109_740	0x740	0x33

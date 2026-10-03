@@ -2,7 +2,7 @@
 # cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
 ovr121_0	ovr121_0	0x0	0x48
 BeginInventory	ovr121_48	0x48	0x19D
-mous_3d_show	ovr121_1E5	0x1E5	0x5
+ovr121_1E5	ovr121_1E5	0x1E5	0x5
 ClearInventory	ovr121_1EA	0x1EA	0x57
 ovr121_241	ovr121_241	0x241	0x342
 ovr121_583	ovr121_583	0x583	0xB4

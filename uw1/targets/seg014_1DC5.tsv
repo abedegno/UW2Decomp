@@ -9,7 +9,7 @@ LoadXMIFILE_seg014_41C	LoadXMIFILE_seg014_41C	0x3FF	0x157
 seg014_1DC5_573	seg014_1DC5_573	0x556	0x9A
 seg014_1DC5_60D	seg014_1DC5_60D	0x5F0	0xCE
 read_file_to_mbuf	seg014_1DC5_6DB	0x6BE	0x5D
-get_current_music	GetMusicFileNo_seg014_738	0x71B	0x8
+GetMusicFileNo_seg014_738	GetMusicFileNo_seg014_738	0x71B	0x8
 music_is_on	seg014_1DC5_740	0x723	0x14
 music_is_on	seg014_1DC5_754	0x737	0x14
 ToggleMusic_seg014_768	ToggleMusic_seg014_768	0x74B	0x94
@@ -34,7 +34,7 @@ RefreshMusic_seg014_160D	RefreshMusic_seg014_160D	0x15F0	0x1B4
 music_over	MaybeCheckThemeIsPlaying_seg014_1DC5_17C1	0x17A4	0x2C
 do_settings	seg014_1DC5_17ED	0x17D0	0x4D
 seg014_1DC5_183A	seg014_1DC5_183A	0x181D	0xE3
-get_current_music	seg014_1DC5_191D	0x1900	0x8
+seg014_1DC5_191D	seg014_1DC5_191D	0x1900	0x8
 seg014_1DC5_1925	seg014_1DC5_1925	0x1908	0x5C
 seg014_1DC5_1981	seg014_1DC5_1981	0x1964	0x1C0
 seg014_1DC5_1B41	seg014_1DC5_1B41	0x1B24	0x137

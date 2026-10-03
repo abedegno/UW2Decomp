@@ -19,8 +19,8 @@ StringContains_ovr095_BDB	Contains_ovr093_ED4	0xED4	0x12F
 babl_str_append_ovr095_D0A	Append_ovr093_1003	0x1003	0xBD
 STRING_COPY_ovr095_DC7	Copy_ovr093_10C0	0x10C0	0x6F
 conv_find_ovr095_E36	Find_ovr093_112F	0x112F	0x57
-conv_length_ovr095_E8D	Length_ovr093_1186	0x1186	0x25
-conv_length_ovr095_E8D	Val_ovr093_11AB	0x11AB	0x25
+Length_ovr093_1186	Length_ovr093_1186	0x1186	0x25
+Val_ovr093_11AB	Val_ovr093_11AB	0x11AB	0x25
 convert_string	ConversationTextVariableReplacement_ovr093_11D0	0x11D0	0x258
 AtIndex_ovr095_11C0	GetStringReplacementNumberValue_ovr093_1428	0x1428	0x103
 DoReadHeader_ovr095_12C3	ovr093_152B	0x152B	0x1FF

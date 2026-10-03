@@ -4,7 +4,7 @@ init_mouse	seg013_1CC9_E	0x0	0x67
 _actual_mhide	seg013_1CC9_75	0x67	0x4C
 mouse_show	LikelyDrawCursor_seg013_1CC9_C1	0xB3	0x16
 mouse_hide	seg013_1CC9_D7	0xC9	0x21
-mous_3d_set	seg013_1CC9_F8	0xEA	0x1D
+seg013_1CC9_F8	seg013_1CC9_F8	0xEA	0x1D
 mous_in_3d_p	seg013_1CC9_115	0x107	0x25
 seg013_1CC9_13A	seg013_1CC9_13A	0x12C	0x11A
 seg013_1CC9_254	seg013_1CC9_254	0x246	0x65
@@ -16,13 +16,13 @@ mouse_putxy	seg013_1CC9_318	0x30A	0x2D
 mouse_getbut	seg013_1CC9_345	0x337	0x22
 mouse_release	ClickEventRelated_seg013_1CC9_367	0x359	0x7D
 mouse_dragged	seg013_1CC9_3E4	0x3D6	0x89
-mous_3d_set	seg013_1CC9_46D	0x45F	0x1D
+seg013_1CC9_46D	seg013_1CC9_46D	0x45F	0x1D
 mouse_freereign	MaybeSetScreenSize_seg013_1CC9_48A	0x47C	0x19
 do_mouse_input	seg013_1CC9_4A3	0x495	0x4C
 do_keyarray_input	seg013_1CC9_4EF	0x4E1	0x7C
 do_keyboard_input	seg013_1CC9_56B	0x55D	0x99
 get_input	seg013_1CC9_604	0x5F6	0x4D
-mouse_get_input	seg013_1CC9_651	0x643	0xD
+seg013_1CC9_651	seg013_1CC9_651	0x643	0xD
 mouse_get_input_sp	seg013_1CC9_65E	0x650	0xD
 defineMouseRegion	seg013_1CC9_66B	0x65D	0x71
 undefineMouseRegion	seg013_1CC9_6DC	0x6CE	0x5E
