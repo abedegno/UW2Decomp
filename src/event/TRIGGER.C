@@ -102,17 +102,17 @@ int far UseTrigger(struct Object far *who, struct Object far *start,
             return UseTrigger(who, start, trig, type);
         }
         if (Triggers[sub] != type) return 2;
-        if (OBJ_ITEM(who) == ITEM_ADVENTURER) {
+        if (OBJ_ITEM(FARNULLTRAP(who)) == ITEM_ADVENTURER) {
             if (!(trig->id & ID_FLAG11)) return 2;
             if (type == 5 && OBJ_Z(trig) > 0 &&
                 skill_check(player->skills[SKILL_SEARCH], trig->pos & POS_Z) <= 0)
                 return 2;
         } else {
-            if (OBJ_MAJOR(who) == MAJOR_CREATURE) {
+            if (OBJ_MAJOR(FARNULLTRAP(who)) == MAJOR_CREATURE) {
                 if (!(trig->id & ID_ENCHANT) ||
                     OBJ_MAJOR(trig) == MAJOR_RECT) return 2;
             }
-            if (OBJ_MAJOR(who) != MAJOR_CREATURE && !(trig->id & ID_FLAG9))
+            if (OBJ_MAJOR(FARNULLTRAP(who)) != MAJOR_CREATURE && !(trig->id & ID_FLAG9))
                 return 2;
         }
     }
@@ -384,14 +384,14 @@ int far UseTrap(struct Object far *trap, int x, int y)
         break;
     }
     case TRAP_PROXIMITY:
-        if (OBJ_HOMEX(CharacterThatTriggeredTrap) >= x &&
-            OBJ_HOMEY(CharacterThatTriggeredTrap) >= y &&
-            OBJ_HOMEX(CharacterThatTriggeredTrap) - x <= trap->qn.f.quality &&
-            OBJ_HOMEY(CharacterThatTriggeredTrap) - y <= trap->ol.f.owner &&
+        if (OBJ_HOMEX(FARNULLTRAP(CharacterThatTriggeredTrap)) >= x &&
+            OBJ_HOMEY(FARNULLTRAP(CharacterThatTriggeredTrap)) >= y &&
+            OBJ_HOMEX(FARNULLTRAP(CharacterThatTriggeredTrap)) - x <= trap->qn.f.quality &&
+            OBJ_HOMEY(FARNULLTRAP(CharacterThatTriggeredTrap)) - y <= trap->ol.f.owner &&
             (OBJ_FINEX(trap) ||
-             OBJ_Z(CharacterThatTriggeredTrap) <= OBJ_Z(trap)) &&
+             OBJ_Z(FARNULLTRAP(CharacterThatTriggeredTrap)) <= OBJ_Z(trap)) &&
             (OBJ_FINEY(trap) ||
-             OBJ_Z(CharacterThatTriggeredTrap) > OBJ_Z(trap)))
+             OBJ_Z(FARNULLTRAP(CharacterThatTriggeredTrap)) > OBJ_Z(trap)))
             break;
         RUN_ELSE_CHAIN();
     case TRAP_CHANGE_FROM:
@@ -780,7 +780,7 @@ int far do_trap_hack(struct Object far *trap, register int x, register int y)
         break;
     case 3:
     case 4:
-        eight_pos_switch(OBJ_FLAGS(TriggeringButton), trap, x, y);
+        eight_pos_switch(OBJ_FLAGS(FARNULLTRAP(TriggeringButton)), trap, x, y);
         break;
     case 5:
         player_did_bad(trap->ol.f.owner);
@@ -883,7 +883,7 @@ int far do_trap_hack(struct Object far *trap, register int x, register int y)
     case 41:
     case 42:
         go_vend(trap->qn.f.quality, trap->ol.f.owner, x, y,
-                OBJ_FLAGS(TriggeringButton));
+                OBJ_FLAGS(FARNULLTRAP(TriggeringButton)));
         break;
     case 43:
         info[7] = trap->ol.f.owner;
@@ -909,7 +909,7 @@ int far do_trap_hack(struct Object far *trap, register int x, register int y)
     case 62:
         if (Obj_IntTMem(trap->ol.f.link) == CharacterThatTriggeredTrap ||
             trap->ol.f.link == 1)
-            SET_GOAL(CharacterThatTriggeredTrap, trap->ol.f.owner);
+            SET_GOAL(FARNULLTRAP(CharacterThatTriggeredTrap), trap->ol.f.owner);
         break;
     }
     return 2;

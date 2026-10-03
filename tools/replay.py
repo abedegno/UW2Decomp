@@ -155,6 +155,12 @@ SESSIONS['talk'] = _ENTRY + [
     's:nystul', 'k:1', 'w:3000', 's:talk1', 'k:1', 'w:3000', 's:talk2', 'k:1', 'w:3000',
     's:talk_end']
 
+# boot with no saved game and no key at all: the title, then the whole introduction (Lord
+# British's letter: the festival street's horizontal pan, the castle's vertical pan over two
+# lback pictures, the banquet), to the main menu. The only session that plays the cutscenes
+# rather than skipping them
+SESSIONS['intro'] = ['w:30000', 's:street', 'w:7000', 's:castle', 'w:6000', 's:castle_pan',
+                     'w:60000', 's:intro_end', 'w:20000', 's:menu']
 
 # DATA\UW.CFG for the sessions with sound: the music card (3, Sound Blaster FM, DM03.ADV, or 5,
 # Roland MT-32, DM05.ADV, on js-dos's MPU-401 at 330h) and the speech card (1, Sound Blaster

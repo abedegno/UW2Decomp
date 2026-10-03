@@ -687,8 +687,10 @@ void far where_shall_we_hang_out(struct Object far *npc, int16 *x, int16 *y)
             *x = 0x2A;
             *y = 0x24;
         } else {
-            *x = xs[npc->whoami - 0x82];
-            *y = ys[npc->whoami - 0x82];
+            /* whoami 0x81 reads below each table (FRAME_INDEX): x is ys[13], 0x22, and y the
+               high byte of gronk_whoami's arg, which move_folks_around passes as 0 */
+            *x = FRAME_INDEX(xs, npc->whoami - 0x82, ys[13]);
+            *y = FRAME_INDEX(ys, npc->whoami - 0x82, 0);
         }
     } else {
         switch (loc) {

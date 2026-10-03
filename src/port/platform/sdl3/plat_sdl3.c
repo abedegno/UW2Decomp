@@ -180,6 +180,15 @@ static void set_icon(SDL_Window *w)
 #endif
 }
 
+/* With the pointer lock option, the window's title says how to capture or release it. */
+static void mouse_title(SDL_Window *w, const PlatConfig *cfg, int locked)
+{
+    char t[256];
+    snprintf(t, sizeof t, "%s - %s", cfg->title ? cfg->title : "UW2",
+             locked ? "Ctrl+F10 releases the mouse" : "click to capture the mouse");
+    SDL_SetWindowTitle(w, t);
+}
+
 int plat_run(const PlatConfig *cfg, const PlatHooks *h, int (*game)(void *), void *arg)
 {
     static uint8_t pix[640 * 480];
@@ -190,7 +199,8 @@ int plat_run(const PlatConfig *cfg, const PlatHooks *h, int (*game)(void *), voi
     SDL_Renderer *ren = NULL;
     SDL_Texture *tex = NULL;
     int tw = 0, th = 0, w = 320, hgt = 200, quit = 0, shot = 0, i, scale = cfg->scale > 0 ? cfg->scale : 3;
-    unsigned buttons = 0;
+    unsigned buttons = 0, swallow = 0;
+    int locked = 0, cursor_hidden = 0;
     void *targ[2];
     SDL_FRect dst = { 0, 0, 0, 0 };
     Uint64 start;
@@ -199,6 +209,8 @@ int plat_run(const PlatConfig *cfg, const PlatHooks *h, int (*game)(void *), voi
 
     hooks = h;
     if (cfg->hidden) SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "offscreen");
+    /* a captured pointer moves the game's cursor as fast as it moved the host's */
+    if (cfg->mouse_lock) SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_SYSTEM_SCALE, "1");
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
         fprintf(stderr, "uw2port: SDL_Init: %s\n", SDL_GetError());
         return 1;
@@ -213,6 +225,7 @@ int plat_run(const PlatConfig *cfg, const PlatHooks *h, int (*game)(void *), voi
         }
         SDL_SetRenderVSync(ren, 1);
         set_icon(win);
+        if (cfg->mouse_lock) mouse_title(win, cfg, 0);
     }
     targ[0] = (void *)game;
     targ[1] = arg;
@@ -243,12 +256,35 @@ int plat_run(const PlatConfig *cfg, const PlatHooks *h, int (*game)(void *), voi
                 break;
             case SDL_EVENT_KEY_DOWN:
             case SDL_EVENT_KEY_UP:
+                if (cfg->mouse_lock && e.key.scancode == SDL_SCANCODE_F10 && (e.key.mod & SDL_KMOD_CTRL)) {
+                    /* Ctrl+F10 releases a captured pointer, as in DOSBox; the game never sees it */
+                    if (e.type == SDL_EVENT_KEY_DOWN && locked) {
+                        SDL_SetWindowRelativeMouseMode(win, false);
+                        locked = 0;
+                        mouse_title(win, cfg, 0);
+                    }
+                    break;
+                }
                 if (!e.key.repeat) key(e.key.scancode, e.type == SDL_EVENT_KEY_DOWN);
                 break;
             case SDL_EVENT_MOUSE_MOTION:
             case SDL_EVENT_MOUSE_BUTTON_DOWN:
             case SDL_EVENT_MOUSE_BUTTON_UP:
                 if (e.motion.which == SDL_TOUCH_MOUSEID || !hooks->pointer || !ren || dst.w <= 0) break;
+                if (cfg->mouse_lock && !locked) {
+                    /* the pointer lock option: a click captures the pointer and goes no further,
+                       nor does its release; the pointer moves nothing until then */
+                    if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN && SDL_SetWindowRelativeMouseMode(win, true)) {
+                        locked = 1;
+                        swallow |= 1u << e.button.button;
+                        mouse_title(win, cfg, 1);
+                    }
+                    break;
+                }
+                if (e.type == SDL_EVENT_MOUSE_BUTTON_UP && (swallow & (1u << e.button.button))) {
+                    swallow &= ~(1u << e.button.button);
+                    break;
+                }
                 if (e.type == SDL_EVENT_MOUSE_MOTION) {
                     SDL_RenderCoordinatesFromWindow(ren, e.motion.x, e.motion.y, &x, &y);
                     p.type = PLAT_POINTER_MOVE;
@@ -269,7 +305,19 @@ int plat_run(const PlatConfig *cfg, const PlatHooks *h, int (*game)(void *), voi
                 p.x = (x - dst.x) * (float)w / dst.w;
                 p.y = (y - dst.y) * (float)hgt / dst.h;
                 p.buttons = buttons;
+                p.absolute = !locked;
+                if (!locked) {
+                    /* the game's cursor stands in for the host's over the picture */
+                    int over = x >= dst.x && x < dst.x + dst.w && y >= dst.y && y < dst.y + dst.h;
+                    if (over != cursor_hidden) {
+                        if (over) SDL_HideCursor(); else SDL_ShowCursor();
+                        cursor_hidden = over;
+                    }
+                }
                 hooks->pointer(&p);
+                break;
+            case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+                if (cursor_hidden) { SDL_ShowCursor(); cursor_hidden = 0; }
                 break;
             case SDL_EVENT_FINGER_DOWN:
             case SDL_EVENT_FINGER_UP:
@@ -287,6 +335,7 @@ int plat_run(const PlatConfig *cfg, const PlatHooks *h, int (*game)(void *), voi
                 p.y = (y - dst.y) * (float)hgt / dst.h;
                 p.dx = e.tfinger.dx * (float)ow * (float)w / dst.w;
                 p.dy = e.tfinger.dy * (float)oh * (float)hgt / dst.h;
+                p.absolute = 1;
                 hooks->pointer(&p);
                 break;
             }

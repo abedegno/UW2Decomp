@@ -205,6 +205,24 @@ Each entry was re-read against the source before it was written here. The sectio
 - **Effect:** depends on the machine. Under DOSBox int 1's segment is 0070h, a link to object 1 (the player), so the game walks the player's object list looking for a trap and finds none; with another DOS or BIOS the link is another object, and a trap in its list could go off. The port's vector table stand-in holds DOSBox's ints 1 to 7 (docs/PORT.md, "Null pointers").
 - **For a port:** a faithful port reads the vector table it models; passing the object `inv_look` picks, or returning on a null object, is the evident fix.
 
+### A scheduled trigger reads the interrupt vector table
+
+- **What happens:** schedule event 5, `ev_trigger`, sets off each trigger of minor class 0xC on a square with `UseTrigger(0L, 0L, trigger, 0xC)`, with no one setting it off. `UseTrigger` then asks who set it off before it runs the trap chain: `OBJ_ITEM(who)` and twice `OBJ_MAJOR(who)` read the `id` word of a null far pointer, 0000:0000, the offset half of the int 0 vector (0019h, which `init_world` puts there). Item 19h is neither the adventurer nor a creature, so the trigger goes off when it has `ID_FLAG9`, and every class 0xC trigger in LEV.ARK has it. A door the chain opens (a DOOR trap of quality 1) calls `OpenDoor` and `checkTrap` with the same null, and its own trigger reads the vector again.
+- **Where:** `UseTrigger` in [event/TRIGGER.C](../src/event/TRIGGER.C), marked `FARNULLTRAP` at the three reads; its caller `ev_trigger` in [event/SCDEVENT.C](../src/event/SCDEVENT.C). With no one setting the chain off, `CharacterThatTriggeredTrap` and `TriggeringButton` are 0 too; no trap kind a class 0xC trigger reaches in the shipped data reads them, but PROXIMITY, hacks 3, 4, 41, 42 and 62 would, and are marked; TELEPORT, DAMAGE and hack 30 pass the null pointer on to `do_teleport`, `whack_thing` and `arena_opponent_runs`, which are not.
+- **Evidence:** the 1.2.0-rc4 port crashed at `UseTrigger` called from `ev_trigger` right after the first conversation with Lord British, which sets quest 109 and so enables block 15's row 25, `ev_trigger` on level 1 square (30, 44): trigger 232, whose chain is hack 36, `move_folks_around`. The same trigger fires from block 0 every six steps of the day clock while the player is on level 1. A walk over every class 0xC trigger in LEV.ARK and every event 5 row in SCD.ARK found the three reads above as the only null reads their chains reach.
+- **Confidence:** confirmed (the reads); the trap chains are from the data.
+- **Effect:** none: the vector's offset is the same on every machine, and with it the trigger always goes off, as it was evidently meant to.
+- **For a port:** a faithful port reads the vector table it models; skipping the checks for a null `who` is the evident fix.
+
+### The castle schedule reads below its tables for whoami 0x81
+
+- **What happens:** `move_folks_around` (trap hack 36) runs `maybe_go_hang_out` for whoami 0x81 to 0x8F, but `where_shall_we_hang_out` indexes its tables of each person's own spot by `whoami - 0x82`, so for 0x81 it reads `xs[-1]` and `ys[-1]`. In DOS's frame `ys` lies just below `xs`, so `xs[-1]` is `ys[13]`, 22h; `ys[-1]` is the high byte of the SI the function saved, `gronk_whoami`'s `arg`, which `move_folks_around` passes as 0. Whoever has whoami 0x81 is sent to square (22h, 0) whenever the stage of the day picks its own spot.
+- **Where:** `where_shall_we_hang_out` in [critter/CRITTIME.C](../src/critter/CRITTIME.C), the two reads marked `FRAME_INDEX` (portable.h); the loop in `move_folks_around`, [event/WORLDEV.C](../src/event/WORLDEV.C).
+- **Evidence:** the `lb` replay: after the first conversation with Lord British fires the schedule, DOS left quality 22h in object 248 and the port 0; the frame (`sub sp,28h`, `xs` at bp-1Ah, `ys` at bp-28h) and `gronk_whoami`'s `mov si,[bp+0Ah]` give the two values.
+- **Confidence:** confirmed.
+- **Effect:** the same on every machine, since the values come from the frame and a constant argument.
+- **For a port:** a faithful port gives DOS's two values; starting the loop at 0x82, or giving 0x81 a place of its own, is the evident fix.
+
 ### Escape at a conversation's typed answer reads DS:0
 
 - **What happens:** when a conversation asks the player to type an answer, CONVERSE.C calls `wdialog` with no initial text (a null pointer). If the player presses Escape, `wdialog` copies the initial text into the answer anyway, so the answer becomes the string at DS:0. In UW2.EXE DS:0 holds the tail of an overlay stub (docs/PORT.md, "Null pointers"): the answer is `'` and byte 06h while ovr167 is not in the overlay buffer, and byte 06h followed by the overlay's segment bytes while it is.

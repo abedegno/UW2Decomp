@@ -129,7 +129,7 @@ unsigned char far tag_check(char far *p, int unused)
     base = p - 8;
     p = base;
     q = p;
-    if (((char far * far *)q)[(*(uint16 far *)base >> 2) - 1] == p + 8)
+    if (TAG_SLOT(q, (*(uint16 far *)base >> 2) - 1) == TAG_VAL(p + 8))
         return 1;
     return 0;
 }
@@ -164,7 +164,7 @@ char far * far bab_malloc(int32 n)
             current->next = current;
             tail = current;
             result = (char far *)current + 8;
-            ((char far * far *)tail)[((unsigned)current->size >> 2) - 1] = result;
+            TAG_SLOT(tail, ((unsigned)current->size >> 2) - 1) = TAG_VAL(result);
             break;
         }
         previous = current;
@@ -239,8 +239,8 @@ char far * far bab_realloc(char far *p, int32 n)
                 split->size = block->size - n;
                 block->size = n;
                 tail = block;
-                ((char far * far *)tail)[((unsigned)block->size >> 2) - 1] =
-                    (char far *)block + 8;
+                TAG_SLOT(tail, ((unsigned)block->size >> 2) - 1) =
+                    TAG_VAL((char far *)block + 8);
                 free_list = split;
                 return result;
             }
@@ -256,7 +256,7 @@ char far * far bab_realloc(char far *p, int32 n)
                         block->size = n;
                         tail = block;
                         result = (char far *)block + 8;
-                        ((char far * far *)tail)[((unsigned)block->size >> 2) - 1] = result;
+                        TAG_SLOT(tail, ((unsigned)block->size >> 2) - 1) = TAG_VAL(result);
                         current->next = split;
                         return result;
                     }
@@ -729,8 +729,8 @@ int far DoReadHeader_ovr095_12C3(void)
     babl_import_table[i].count = 0;
     babl_import_table[i].index = 0;
     if (func_count > 0)
-        funcs = (void (far * far *)())bab_malloc(
-            (int32)(func_count * sizeof(void (far *)())));
+        funcs = HOST_TABLE((void (far * far *)())bab_malloc(
+            (int32)(func_count * DOS_SIZEOF(void (far *)(), 4))), func_count);
     for (i = 0; i < func_count; i++)
         funcs[i] = (void (far *)())unbound;
     return 1;

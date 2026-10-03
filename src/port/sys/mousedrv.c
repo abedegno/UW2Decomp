@@ -5,6 +5,16 @@
    pointer moving one screen pixel gives two mickeys either way. The game reads only the motion
    and the buttons (MOUSE.C keeps its own cursor), so a touch screen drives it as a mouse does.
 
+   The game's cursor follows the host's pointer. Fed the host's motion, it drifts away from
+   it: the scaling drops half a pixel whenever the mickeys are odd, and the game stops its
+   cursor at the edges of the box it confines it to while the host's pointer goes on. So
+   while the pointer is not captured (an event with absolute set), function 0Bh reports
+   the motion that puts the game's cursor (mouse_getxy) where the host's pointer is, once per
+   move of the host's pointer, and none while it stays still, which leaves the game's own
+   moves (the keyboard's warps, mouse_putxy) alone. Captured (the pointer lock option,
+   platform/sdl3), the host's motion goes through as mickeys, in whole pixels so that none
+   is lost to the scaling.
+
    MOUSEDRV.ASM's routines are kept: _6C8 resets the driver and stores the motion divisor (200)
    in FD71:0360 and MouseOn (FD71:0362); _6E7 reads the motion and scales it by 100 / 200;
    _703 gives the buttons. */
@@ -16,17 +26,27 @@
 #define W(o) ((int16_t)(D[(o)] | D[(o) + 1] << 8))
 #define SETW(o, v) port_setw(&D[(o)], (uint16_t)(v))
 
-static _Atomic int mick_x, mick_y, pos_x, pos_y, buttons;
+static _Atomic int mick_x, mick_y, pos_x, pos_y, buttons, abs_x, abs_y, moved;
 static float frac_x, frac_y;
+
+void mouse_getxy(int16_t *x, int16_t *y);       /* ui/MOUSE.C: the game's cursor */
 
 void mouse_event(const PlatPointer *ev)
 {
-    float mx = ev->dx * 2.0f + frac_x, my = ev->dy * 2.0f + frac_y;
-    int ix = (int)mx, iy = (int)my, x = (int)(ev->x * 2.0f), y = (int)ev->y;
-    frac_x = mx - (float)ix;
-    frac_y = my - (float)iy;
-    atomic_fetch_add(&mick_x, ix);
-    atomic_fetch_add(&mick_y, iy);
+    int x = (int)(ev->x * 2.0f), y = (int)ev->y;
+    if (ev->absolute) {
+        int ax = (int)ev->x, ay = (int)ev->y;
+        atomic_store(&abs_x, ax < 0 ? 0 : ax > 319 ? 319 : ax);
+        atomic_store(&abs_y, ay < 0 ? 0 : ay > 199 ? 199 : ay);
+        atomic_store(&moved, 1);
+    } else {
+        float mx = ev->dx + frac_x, my = ev->dy + frac_y;
+        int ix = (int)mx, iy = (int)my;
+        frac_x = mx - (float)ix;
+        frac_y = my - (float)iy;
+        atomic_fetch_add(&mick_x, ix * 2);
+        atomic_fetch_add(&mick_y, iy * 2);
+    }
     if (x < 0) x = 0;
     if (x > 639) x = 639;
     if (y < 0) y = 0;
@@ -53,6 +73,14 @@ int mouse_int33(uint16_t *ax, uint16_t *bx, uint16_t *cx, uint16_t *dx)
     case 0x0B:                          /* motion since the last call, in mickeys */
         x = atomic_exchange(&mick_x, 0);
         y = atomic_exchange(&mick_y, 0);
+        if (atomic_exchange(&moved, 0)) {
+            /* to the host's pointer: the game's y counts up from the bottom row, and _6F8
+               scales mickeys by 100 / [0360] */
+            int16_t gx, gy, d = W(0x360);
+            mouse_getxy(&gx, &gy);
+            x = (atomic_load(&abs_x) - gx) * d / 100;
+            y = (atomic_load(&abs_y) - (199 - gy)) * d / 100;
+        }
         *cx = (uint16_t)(int16_t)x;
         *dx = (uint16_t)(int16_t)y;
         return 1;

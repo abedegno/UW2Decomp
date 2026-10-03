@@ -27,7 +27,9 @@
    them by the port (src/port/sys/mousedrv.c), so a touch screen needs no other path. x and y
    are in the game's screen pixels (0..319, 0..199, from the top left), already undone from the
    window's scaling and letterbox; dx and dy are the relative motion in host pixels at the
-   window's scale, for the mickeys of int 33h function 0Bh. */
+   window's scale, for the mickeys of int 33h function 0Bh. absolute is set when x and y are
+   where the host's pointer is and the game's cursor should follow it; it is clear while the
+   pointer is captured, when only dx and dy mean anything. */
 enum { PLAT_POINTER_MOVE = 0, PLAT_POINTER_DOWN = 1, PLAT_POINTER_UP = 2 };
 enum { PLAT_BUTTON_LEFT = 1, PLAT_BUTTON_RIGHT = 2, PLAT_BUTTON_MIDDLE = 4 };
 typedef struct PlatPointer {
@@ -37,6 +39,7 @@ typedef struct PlatPointer {
     float dx, dy;           /* relative motion */
     unsigned button;        /* the button that changed (PLAT_BUTTON_*), for _DOWN and _UP */
     unsigned buttons;       /* every button now held */
+    int absolute;           /* x, y place the game's cursor (not captured) */
 } PlatPointer;
 
 /* Lifecycle events: the host is about to suspend the program (a phone going to the
@@ -68,6 +71,8 @@ typedef struct PlatConfig {
     const char *screenshot_path;
     const char *window_shot_path;   /* with a screenshot, also the window's scaled contents */
     long exit_after_ms;         /* > 0: quit this long after start */
+    int mouse_lock;             /* capture the pointer on a click, as DOSBox does (Ctrl+F10
+                                   releases it); default: the game's cursor follows the host's */
 } PlatConfig;
 
 /* Runs the program: opens the window, starts game(arg) on a thread of its own and runs the

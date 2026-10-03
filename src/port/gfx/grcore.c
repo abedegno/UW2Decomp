@@ -189,6 +189,16 @@ void show(int x, int y, unsigned char *bm, int a, int b, int c, int d)
 {
     uint16_t off, seg;
     bitmap_fp(bm, &off, &seg);
+    /* No DOS caller's picture wraps its offset at 64 KB. One whose maker is no longer among the
+       recent MK_FP results splits by its region, which can put it high in a segment: CUTS.C's
+       STDAT.screen, MK_FP(FP_SEG(stdat) + 0x134, 0) at the start of a cutscene, is 3E29:0000
+       in DOS but split as 3CF5:1340, so lback_vscreen's 64000 bytes wrapped after 60608 and drew
+       stdat's first bytes as a band across the intro's castle pan. A split that would wrap
+       before the picture's last row is taken at the picture's paragraph instead. */
+    if ((uint32_t)off + ((uint32_t)(uint16_t)d + (uint32_t)(uint16_t)a) * (uint16_t)b > 0x10000u) {
+        seg = (uint16_t)(seg + (off >> 4));
+        off &= 15;
+    }
     SETW(0x0DC6, c);
     SETW(0x0DC8, d);
     seg003_0272_21D4((int16_t)x, (int16_t)y, off, seg, (int16_t)b, (int16_t)a);

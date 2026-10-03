@@ -206,6 +206,18 @@ RpTimerFn far rp_slave_timer(RpTimerFn f, unsigned hz);
 #define FRAME_TAIL(arr, i, var) ((arr)[i])
 #endif
 
+/* FRAME_INDEX(arr, i, below): element i of a local array, where i can be -1 and the original
+   then reads the stack slot Turbo C laid out below the array; below is what DOS finds there
+   (CRITTIME.C's where_shall_we_hang_out indexes its castle tables by whoami - 0x82 for
+   whoami 0x81 too: xs[-1] is ys[13], and ys[-1] the high byte of the SI it saved, which is
+   gronk_whoami's arg). Under Turbo C the original tokens; on the host, where the frame is the
+   compiler's, below for a negative index. */
+#ifdef __TURBOC__
+#define FRAME_INDEX(arr, i, below) arr[i]
+#else
+#define FRAME_INDEX(arr, i, below) ((i) < 0 ? (below) : (arr)[i])
+#endif
+
 /* READ_PAIR(fd, a, b): read(fd, &a, 4), where the original reads two words into a one-word
    local and relies on Turbo C having put local b right after it on the stack (BABL.C reads
    a bglobals.dat record's slot and size so). The original tokens under Turbo C; on the host
@@ -263,6 +275,38 @@ void *port_file_records(void *p, int n, const char *layout, unsigned host_size);
 void *port_file_records_end(const void *q);
 #define FILE_RECORDS(T, p, n, layout) ((T *)port_file_records((p), (n), (layout), sizeof(T)))
 #define FILE_RECORDS_END(q, n) port_file_records_end(q)
+#endif
+
+/* DOS_SIZEOF(T, n) and HOST_TABLE(p, n): a table of n pointers the original allocates from a
+   heap of its own (BABL.C's funcs, n far function pointers from bab_malloc). DOS_SIZEOF is
+   sizeof(T) under Turbo C and n, DOS's size, on the host, so that the heap gives out the same
+   blocks at the same places as in DOS; HOST_TABLE is the heap's block p under Turbo C and on
+   the host a table of n host pointers in host memory (one per call site, kept from one call to
+   the next), since the host's pointers do not fit DOS's block (and with a full heap, where DOS
+   would write the table over the vector table, the port still has it). Both the original
+   tokens under Turbo C. */
+#ifdef __TURBOC__
+#define DOS_SIZEOF(T, n) sizeof(T)
+#define HOST_TABLE(p, n) p
+#else
+#define DOS_SIZEOF(T, n) (n)
+#define HOST_TABLE(p, n) __extension__ ({ static void *port_table_; __typeof__(p) port_dos_ = (p); \
+    port_table_ = realloc(port_table_, (size_t)(n) * sizeof(*port_dos_) + 1); \
+    (void)port_dos_; (__typeof__(p))port_table_; })
+#endif
+
+/* TAG_SLOT(b, i) and TAG_VAL(p): BABL.C's heap tags each block with a far pointer in its last
+   four bytes, slot i of the block b taken as an array of far pointers, and checks the tag
+   when it frees the block. Under Turbo C the original tokens. On the host a pointer is eight
+   bytes, so slot i of a pointer array lies twice as far in, past the block's end and into
+   the blocks after it; the host keeps the tag in DOS's four bytes instead, as the low 32 bits
+   of the pointer (TAG_VAL), so that the heap's blocks hold what they hold in DOS. */
+#ifdef __TURBOC__
+#define TAG_SLOT(b, i) ((char far * far *)b)[i]
+#define TAG_VAL(p) p
+#else
+#define TAG_SLOT(b, i) (*(uint32_t *)((char *)(b) + (i) * 4))
+#define TAG_VAL(p) ((uint32_t)(uintptr_t)(p))
 #endif
 
 /* STACK_JUNK(v): the initialiser of a local the original reads before it ever sets it. In DOS

@@ -79,6 +79,7 @@ void vga_write(uint16_t off, uint8_t v);       /* a CPU write to A000:off */
 uint8_t vga_read(uint16_t off);                /* a CPU read of A000:off (loads the latches) */
 void vga_set_mode(int mode);                   /* int 10h, AH = 0 */
 void vga_scanout(uint8_t *pixels, int *w, int *h, uint8_t rgb6[768]);
+void vga_scanout_now(uint8_t *pixels, int *w, int *h, uint8_t rgb6[768]);
 void vga_get_dac(uint8_t rgb6[768]);
 const uint8_t *vga_plane(int p);               /* for the state dump */
 void vga_window_init(void);                    /* A000:0000 in the paragraph map */

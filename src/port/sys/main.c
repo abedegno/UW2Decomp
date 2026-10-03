@@ -76,7 +76,7 @@ void port_on_flip(void)
     flips++;
     for (i = 0; i < nshots; i++)
         if (shots[i].flip == flips) {
-            vga_scanout(pix, &w, &h, pal);
+            vga_scanout_now(pix, &w, &h, pal);
             if (plat_write_png(shots[i].path, pix, w, h, pal) == 0)
                 fprintf(stderr, "uw2port: wrote %s (%dx%d) at flip %d\n", shots[i].path, w, h, flips);
         }
@@ -160,6 +160,9 @@ static const char help_text[] =
     "  --scale N              initial window scale (3)\n"
     "  --no-aspect            square pixels (default: 200 lines shown as 240, as on a 4:3 CRT)\n"
     "  --no-integer           scale freely (default: whole multiples)\n"
+    "  --mouse follow|lock    follow: the game's cursor follows the system pointer (default);\n"
+    "                         lock: a click captures the pointer, as in DOSBox, and Ctrl+F10\n"
+    "                         releases it; kept until changed\n"
     "Testing and debugging:\n"
     "  --hidden               no window; the scan-out still runs\n"
     "  --screenshot-after MS  write the screen to a PNG MS milliseconds after start\n"
@@ -254,7 +257,8 @@ int main(int argc, char *argv[])
 {
     static char home_buf[1024], exe[1200], data_buf[1024], roms_buf[1024], abs_buf[1024];
     const char *data = NULL, *home = getenv("UW2PORT_HOME"), *replay = NULL;
-    const char *sound = NULL, *roms = NULL, *wav = NULL, *ail_log = NULL, *hw_log = NULL;
+    const char *sound = NULL, *roms = NULL, *wav = NULL, *ail_log = NULL, *hw_log = NULL, *mouse = NULL;
+    char mouse_buf[16];
     int audio_device = 1, interactive;
     PlatConfig cfg;
     PlatHooks hooks;
@@ -275,6 +279,8 @@ int main(int argc, char *argv[])
         else if (!strcmp(a, "--scale") && i + 1 < argc) cfg.scale = atoi(argv[++i]);
         else if (!strcmp(a, "--no-aspect")) cfg.aspect = 0;
         else if (!strcmp(a, "--no-integer")) cfg.integer_scale = 0;
+        else if (!strcmp(a, "--mouse") && i + 1 < argc && (!strcmp(argv[i + 1], "follow") || !strcmp(argv[i + 1], "lock")))
+            mouse = argv[++i];
         else if (!strcmp(a, "--hidden")) cfg.hidden = 1;
         else if (!strcmp(a, "--screenshot-after") && i + 1 < argc) cfg.screenshot_after_ms = atol(argv[++i]);
         else if (!strcmp(a, "--screenshot") && i + 1 < argc) cfg.screenshot_path = argv[++i];
@@ -328,6 +334,10 @@ int main(int argc, char *argv[])
         return 1;
     }
     if (interactive) port_config_set(home, "data", absolute(data, abs_buf, sizeof abs_buf));
+    if (mouse && interactive) port_config_set(home, "mouse", mouse);
+    else if (!mouse && port_config_get(home, "mouse", mouse_buf, sizeof mouse_buf) == 0)
+        mouse = mouse_buf;
+    cfg.mouse_lock = mouse && !strcmp(mouse, "lock");
     if (roms && interactive) port_config_set(home, "mt32-roms", absolute(roms, abs_buf, sizeof abs_buf));
     else if (!roms && !getenv("UW2PORT_MT32_ROMS") && port_config_get(home, "mt32-roms", roms_buf, sizeof roms_buf) == 0)
         roms = roms_buf;
