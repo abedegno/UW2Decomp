@@ -286,6 +286,21 @@ void audio_render_to(uint64_t t_us)
 #ifdef UW2_HAVE_MT32EMU
     int16_t mtb[2 * 512];
 #endif
+    if (!use_device && !wav) {
+        /* No one hears it (--hidden or --no-audio, and no --audio-wav): the chips' registers
+           are still written, and nothing the game or the drivers read depends on the samples,
+           so the synthesis is skipped; a replay runs that much faster (docs/BUILDING.md,
+           "Testing") */
+        int k;
+        if (target <= rendered) return;
+        rendered = target;
+        for (k = 0; k < NSEG; k++)
+            if (seg[k].data && rendered * 1000000u / AUDIO_RATE >= seg[k].stop) {
+                free(seg[k].data);
+                seg[k].data = NULL;
+            }
+        return;
+    }
     while (rendered < target) {
         int n = (int)(target - rendered > 512 ? 512 : target - rendered), i, k;
         memset(out, 0, sizeof out);

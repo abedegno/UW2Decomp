@@ -8,7 +8,7 @@ Everything runs on your own machine: Turbo C++, TASM and TLINK run headless in a
 - The Turbo C++ 1.01 disk images (four 720K images, which Borland released free of charge) and the Turbo Assembler 2.0 disk image. Neither is in this repository.
 - UW2's `UW2.EXE` at `~/UWGOG/UW2/UW2.EXE`, or set `UW2_EXE`. The GOG release works. No game data is in this repository either.
 
-Optional, for speed: git, make and a C compiler (the Xcode command line tools), with which `make setup` builds emu2, a DOS that runs the toolchain about twenty times faster than js-dos ([Choosing the DOS](#choosing-the-dos)). Or DOSBox-X (`brew install dosbox-x`), nearly as fast.
+Optional, for speed: git, make and a C compiler (the Xcode command line tools), with which `make setup` builds emu2, a DOS that runs the toolchain about twenty times faster than js-dos ([Choosing the DOS](#choosing-the-dos)). Or DOSBox-X (`brew install dosbox-x`), nearly as fast. DOSBox-X is also where the replays' DOS side runs when it is installed, three and a half times faster than js-dos ([Testing](#testing)), and the tests need Unicorn in the `.venv` (`.venv/bin/pip install unicorn==2.1.4`) for the routine fuzzing and `tools/ailcheck.py`.
 
 Optional, for the map tools and the assembly drafts (see [MAP.md](MAP.md)):
 
@@ -22,7 +22,8 @@ Optional, for the map tools and the assembly drafts (see [MAP.md](MAP.md)):
 - `make exact` links the matched objects exactly (`tools/link.py`) and compares the result with your `UW2.EXE` (`tools/exediff.py`); it passes when only the two known bytes differ.
 - `make check` is the gate, below. `make check-all` is the same with every source recompiled.
 - `make boot` boots the modding build in headless DOS and saves screenshots of the title, the intro and the main menu under `build/boot/`. Look at them.
-- `make hooks` installs a git pre-push hook that runs `make check` and stops the push when it fails.
+- `make test` is the test every change to the port runs before it is pushed: the gate, the port build, the routine fuzzing's quick run and every replay session in the port against its golden ([Testing](#testing)). `make test-full` is the long tier. `make verify`, `make golden`, `make fuzz` and `make coverage` run one part each.
+- `make hooks` installs a git pre-push hook that runs `make test` and stops the push when it fails.
 - `make port-check` compiles every C source for the host with Apple clang, compile only, and summarises the errors, warnings and unresolved names ([PORT.md](PORT.md#milestone-1-baseline)). It never touches the DOS build.
 - `make port` compiles every C source for the host, compiles the port's own C (`src/port`) and links them with SDL3 into `build/port/uw2port` ([the native port](#the-native-port), below). It never touches the DOS build either.
 - `make help` prints this list.
@@ -85,9 +86,69 @@ The MT-32 needs the user's own ROM images, which the repository never holds: `--
 - `python3 tools/replay.py check REC OUT` does it all: two DOS replays, the port, the debug port, and the comparisons of the dumps and of the saved games; with a sound card also each run's sound driver against the recording (DOS's `SNDCHECK.OUT`, the port's count, which must be 0) and `ailcheck.py` on the port's driver logs.
 - With a sound card the recording also holds, for each read of the sound hardware, the moment within the clock's tick at which DOS made it (recording format 3, [PORT.md](PORT.md#replays-with-a-sound-card)); recordings of format 2 still replay.
 
-The DOS runs take about forty seconds each in js-dos (a minute for walk). `UWRPCK=n` (hex) makes the periodic dumps every n clock ticks instead of 400h, `UWRPFB=1` puts the 3D view's frame buffer in every dump once a level is in, so that with a short interval every 3D frame is compared, not only those on the screen at a full checkpoint, and `UWRPTRACE=lo,hi` writes every hook call while the clock is in that range, with its caller, to `TRACE.OUT`, to find where two runs part. Each works in both builds.
+The DOS replays run in DOSBox-X when it is installed and otherwise in js-dos ([Testing](#testing) has the timings; `--backend jsdos` on `replaydos.mjs`, or `UW2_REPLAY_DOS=jsdos`, chooses js-dos); recording always runs in js-dos, which takes the inputs in real time. `UWRPCK=n` (hex) makes the periodic dumps every n clock ticks instead of 400h, `UWRPFB=1` puts the 3D view's frame buffer in every dump once a level is in, so that with a short interval every 3D frame is compared, not only those on the screen at a full checkpoint, and `UWRPTRACE=lo,hi` writes every hook call while the clock is in that range, with its caller, to `TRACE.OUT`, to find where two runs part. Each works in both builds.
 
 The recordings are small (15 KB to 333 KB) and hold only the inputs, so the canonical ones are committed under `tests/replay`, while the dumps (14 MB and more) and the replays' working directories stay under `build/replay`.
+
+## Testing
+
+The port is tested against DOS in three ways, in two tiers.
+
+| Command | What it runs | Time |
+| --- | --- | --- |
+| `make test` | `make check`; `make port`; the routine fuzzing's quick run (`tools/fuzzasm.py`); every replay session in the port against its golden (`tools/replay.py verify all`) | about 20 seconds |
+| `make test-full` | `make check`; `make port` and `make port-debug`; every golden made again from DOS, each session replayed twice and the two runs checked identical (`replay.py golden all`); every session against them in the port and in the UBSan build; `tools/ailcheck.py` on the three sessions with a music card; the fuzzing's deep run; the coverage report | about 12 minutes, ten of them the deep fuzzing |
+
+Both print a summary of their steps with the time each took, and exit 1 if any failed. `make test` is what every change to the port runs before it is pushed, and the pre-push hook runs it (`make hooks`; bypass with `git push --no-verify` or `SKIP_CHECK=1 git push`). The parts run alone: `make verify`, `make golden`, `make fuzz` (`FUZZ=--deep` for the long run) and `make coverage`.
+
+### Golden references
+
+Each session in `tests/replay` (every `NAME.rec`, with `NAME.cfg` for a sound card) has a golden reference in `tests/replay/golden/NAME`: `golden.json` and a PNG of the screen at each full checkpoint, made from DOS. `golden.json` holds no dump and no game data. For each checkpoint it has the header (kind, number, hook calls, clock) and a 64-bit BLAKE2b digest of each section of the dump, taken as `replay.py compare` compares DOS with the port: the program's machinery (`replay.py`'s `ALWAYS` and `CROSS` ranges, the byte after a string GRCORE copies) zeroed, and the words that hold a far block's segment replaced by the block they name (`tools/golden.py`'s `SEG_SLOTS`), since DOS and the port load the program at different segments. The `NULL` and `SEGS` sections are left out: they are the DOS set-up's own. Beside the digests it records the SHA-256 of the recording, of its `.cfg`, of the saved games the session writes and, for `load`, of the saved game it starts from, and the SHA-256 of the replay DOS build that made it.
+
+- `python3 tools/replay.py golden [SESSION ...|all]` makes them: it replays each session in DOS twice at once, requires the two runs to be identical (`compare --same-build`, the saved games byte for byte) and the null-pointer check to pass, and writes the golden from the first run. `--check` writes nothing and compares the new runs with the committed goldens instead.
+- `python3 tools/replay.py verify [SESSION ...|all]` replays the sessions in the port only and compares each checkpoint's digests with the golden's. It names the first checkpoint that differs and its sections, writes a DOS, port and difference picture (the differing pixels in red) for each screen that differs, as `build/replay/verify/NAME/port/diff_ckNNNN.png`, and checks the saved games and the port's count of sound driver reads that differ from DOS's (which must be 0). `--debug` replays with the UBSan build and fails on any report.
+- A golden whose recording or `.cfg` has changed is stale, and `verify` fails on it until it is made again. One made by another replay DOS build (`build/replay/UW2.EXE` has another SHA-256) is flagged in the output, since that build's dumps could differ; `make test-full` makes every golden again and says if any differs from the committed one.
+- `load` replays the saved game the `items` session makes, so it waits for `items`: `golden` stages items' first DOS run's `SAVE1`, `verify` the port's, once its digests are shown to be the golden's.
+
+The goldens of the eight sessions take 7 MB, almost all of it the 355 PNGs; the same goldens come out of DOSBox-X and of js-dos (below).
+
+### Fast replays
+
+In a replay the game's clock and every input come from the recording, so nothing needs to wait for real time:
+
+- **The port.** Under `--replay`, input status 1's retrace bit comes from a count of the reads instead of the host's clock (`gfx/vga.c`: every eighth read starts a retrace), so the game's waits for vertical retrace, which took a third of a replay's time, take a few reads; with no audio device and no `--audio-wav` (as `--hidden` has), the sound chips' synthesis is skipped (`sound/audio.c`), while the drivers still program them and every read the game makes of them is timed by the recorded moments as before. And `make port` compiles the port's C in `src/port/3d`, `src/port/gfx` and `src/port/x86` (the translated modules, the machine they run on, and the graphics C) with `-O2`; that code shares nothing with another thread but the screen the platform layer reads. The rest of the port's C and all of the game's stay unoptimised, and the debug and coverage builds compile everything without optimisation.
+- **DOS.** `tools/replaydos.mjs` replays in native DOSBox-X (`brew install dosbox-x`) when it is installed: headless (SDL's dummy drivers), the game's directory mounted from the host as `C:` (the replay build writes `STATE.OUT` and the saved games there), and the dynamic core at a fixed 300,000 cycles a millisecond with turbo on, so that emulated time runs as fast as the host can run the guest instead of with the wall clock. It has js-dos's hardware: a Sound Blaster 16 at 220h, IRQ 7, DMA 1 and 5 with an OPL3, an intelligent MPU-401 at 330h with no synthesiser, 16 MB. DOSBox-X loads the game at another segment than js-dos does, which the goldens' digests allow for; every golden of the eight sessions made in DOSBox-X is identical to the one made in js-dos, checkpoint for checkpoint and section for section, and so are the saved games. DOSBox-X has no memory read after the game exits, so its runs rely on the dumps' `NULL` sections for the null-pointer check (C0's checksum is in every one). js-dos remains the fallback (`--backend jsdos`, `UW2_REPLAY_DOS=jsdos`) and is always used to record.
+
+Measured on an Apple M4 Pro (14 cores), one session at a time:
+
+| Session | DOS, js-dos | DOS, DOSBox-X | port, before | port, after |
+| --- | --- | --- | --- | --- |
+| `newgame` | 38 s | 11 s | 3.9 s | 0.8 s |
+| `walk` | 61 s | 16 s | 7.8 s | 2.0 s |
+| `sound` | 91 s | 27 s | 8.5 s | 1.8 s |
+| `soundfm` | 89 s | 27 s | 8.6 s | 1.8 s |
+| `soundmt` | 155 s | 43 s | 10.5 s | 2.9 s |
+| `items` | 66 s | 18 s | 5.9 s | 1.7 s |
+| `talk` | 70 s | 18 s | 10.9 s | 2.8 s |
+| `load` | 20 s | 5 s | 1.9 s | 0.4 s |
+| all eight | 590 s | 165 s | 58 s | 14 s |
+
+The sessions run at once, one per core up to eight (`-j N` changes it; four for js-dos, whose every run is a headless Chrome): `verify all` takes 3.5 seconds, and `golden all` (sixteen DOS runs) 59 seconds in DOSBox-X and 219 seconds in js-dos.
+
+### Routine fuzzing
+
+`tools/fuzzasm.py` tests single routines on inputs no session gives them. For each target it runs the routine's own bytes from `UW2.EXE` (which the gate proves the matched sources build) in Unicorn, and the port's code for it (the translation, the hand-written C through the glue, or a C entry such as `cSqRt`) in `tools/fuzzhost.c`, a program linked from the port's objects in place of `main.c`, on the same registers and the same memory (the EXE's image at the port's load segment, so segment values agree, and two scratch segments). It compares the registers, the flags the routine's callers read, and every byte of memory the routine changed. The inputs are random, from a seed that is printed and that `--seed` repeats, and edge cases (0, 1, -1, 7FFFh, 8000h, FFFFh and each routine's own boundaries). A divide that faults stops both, and that counts as agreement. `--quick` (the default) runs 200 cases of each target, 40 of those that write a whole frame buffer or a 64 KB image, in about thirteen seconds; `--deep` fifty times as many, with a new seed each time; `--only` and `--list` choose and list the targets. Unicorn must be in the `.venv` (`.venv/bin/pip install unicorn==2.1.4`). PORT.md's Milestone 6a results list the targets and what they found.
+
+### Coverage
+
+`make coverage` (`tools/coverage.py`) builds the port with clang's source-based coverage, replays every session in it against its golden, runs the fuzzing on the same objects, and writes [COVERAGE.md](COVERAGE.md): the share of lines, functions and regions run, by directory and by file, the functions only the fuzzing reaches, and the functions nothing reaches, which is the list to record new sessions from. It takes about half a minute.
+
+### Adding a session
+
+1. Write its steps into `tools/replay.py`'s `SESSIONS` (the steps of `tools/replaydos.mjs`) and, for a sound card, its `UW.CFG` lines into `CFGS`.
+2. Record it in DOS: `python3 tools/replay.py record build/replay/NAME --session NAME`, and copy `RECORD.OUT` to `tests/replay/NAME.rec` (and `UW.CFG` to `tests/replay/NAME.cfg`). Look at the screenshots it took to see that it did what you meant.
+3. If it starts from another session's saved game, add it to `tools/golden.py`'s `STAGE_FROM`.
+4. `python3 tools/replay.py golden NAME` makes its golden (DOS twice, checked identical), and `python3 tools/replay.py verify NAME` replays it in the port. Commit the recording and `tests/replay/golden/NAME` together.
 
 ## The gate
 
@@ -100,7 +161,7 @@ The recordings are small (15 KB to 333 KB) and hold only the inputs, so the cano
 
 It recompiles only the sources whose text, headers or object have changed since they last passed (`build/check/state.json`). With emu2, `make check-all` takes about 7 seconds and `make check` with nothing changed about 4; with js-dos, two and a half minutes and about ten seconds.
 
-Hosted CI cannot run the gate, because the toolchain and the game cannot be on GitHub, so the pre-push hook is the gate. Bypass it for one push with `git push --no-verify` (or `SKIP_CHECK=1 git push`). It checks the working tree, not the commits being pushed, so commit or stash first. The GitHub workflow runs only `tools/repocheck.py`: script syntax, relative Markdown links, and that no game data or Borland binary is committed. Run it locally with `.venv/bin/python tools/repocheck.py`.
+Hosted CI cannot run the gate, because the toolchain and the game cannot be on GitHub, so the pre-push hook is the gate. It runs `make test`, the gate and the port's tests together ([Testing](#testing)); `make hooks` again updates a hook an older version installed. Bypass it for one push with `git push --no-verify` (or `SKIP_CHECK=1 git push`). It checks the working tree, not the commits being pushed, so commit or stash first. The GitHub workflow runs only `tools/repocheck.py`: script syntax, relative Markdown links, and that no game data or Borland binary is committed. Run it locally with `.venv/bin/python tools/repocheck.py`.
 
 ## Choosing the DOS
 
@@ -156,6 +217,6 @@ All of them are in `tools/`, and each describes itself at the top.
 | Linking | `link.py`, `extract.py`, `exediff.py`, `addrscan.py` (numbers that could be addresses) |
 | Target tables and names | `targets.py`, `syncnames.py` |
 | The map | `doslist.py`, `locate.py`, `callgraphs.py`, `callpairs.py`, `anchors.py`, `align.py`, `files.py` |
-| The port | `portcheck.py` (`make port-check`: compiles the C for the host, compile only), `portbuild.py` (`make port`, `make port-debug`: compiles and links it), `portstubs.py` (writes the link stubs), `portshot.py` (the port's screens against DOS's), `replay.py` and `replaydos.mjs` (record and replay sessions, compare the state dumps), `asm2c.py` (translates the renderer's assembly modules to C; `--check` says whether the committed C is up to date), `ailcheck.py` (the port's sound drivers against the real `.ADV` files), `widths.py` (explicit integer widths), `layoutcheck.py` (struct layouts under Turbo C against the host), `intaudit.py` (the promotion and overflow audit) ([PORT.md](PORT.md)) |
+| The port | `portcheck.py` (`make port-check`: compiles the C for the host, compile only), `portbuild.py` (`make port`, `make port-debug`: compiles and links it), `portstubs.py` (writes the link stubs), `portshot.py` (the port's screens against DOS's), `replay.py` and `replaydos.mjs` (record and replay sessions, compare the state dumps), `golden.py` (the sessions' golden references and the port against them: `replay.py golden` and `verify`), `fuzzasm.py` with `fuzzhost.c` (the routine fuzzing), `coverage.py` (`make coverage`), `test.py` (`make test`, `make test-full`), `asm2c.py` (translates the renderer's assembly modules to C; `--check` says whether the committed C is up to date), `ailcheck.py` (the port's sound drivers against the real `.ADV` files), `widths.py` (explicit integer widths), `layoutcheck.py` (struct layouts under Turbo C against the host), `intaudit.py` (the promotion and overflow audit) ([PORT.md](PORT.md)) |
 
 The canonical replay sessions are committed as `tests/replay/newgame.rec` (boot, the title, a new character, into the game), `tests/replay/walk.rec` (the same, then walking, turning, looking up and down and a click in the 3D view), `tests/replay/sound.rec`, `soundfm.rec` and `soundmt.rec` with their `.cfg` files (the same way in with a Sound Blaster, an FM chip alone or a Roland MT-32, then fight mode, swings, walking and a minute of music), `items.rec` (handling things, the automap, a save and a restore), `talk.rec` (a conversation with Nystul) and `load.rec` (loading the items session's save from the main menu; replay it with `--stage DIR`, DIR holding that `SAVE1`). They hold only recorded inputs, no game data: replay one with `python3 tools/replay.py dos tests/replay/walk.rec OUT` and `python3 tools/replay.py port tests/replay/walk.rec OUT`, then `compare`, or run `python3 tools/replay.py check tests/replay/walk.rec OUT`.

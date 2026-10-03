@@ -4,7 +4,7 @@ The sources rebuild `UW2.EXE` byte for byte, and every change has to keep it tha
 
 ## The rule
 
-- Every change must pass `make check` before it is pushed; `make hooks` makes that automatic ([BUILDING.md](BUILDING.md#the-gate)).
+- Every change must pass `make test` before it is pushed: the gate (`make check`), the port build, the routine fuzzing and every replay session in the port against its DOS golden. `make hooks` makes that automatic ([BUILDING.md](BUILDING.md#testing)).
 - A readability change (names, shared headers, `#define`s and enums, struct fields, comments, file renames) must keep the bytes identical, and the gate passing is the proof.
 - A change meant to alter the program, such as a fix or a mod, belongs in the modding build ([LINKING.md](LINKING.md#the-modding-build)), not in the matched sources.
 - Use the original names where the FM Towns build has them. When two files disagree about a name, the FM Towns code decides. DOS is the authority on bytes.
@@ -91,9 +91,11 @@ The sources also build the native port (PORT.md). Every change still has to pass
 - A local or field that a file read (`fread`, `read`, `intoFarBuffer_ovr167_5DA`) fills with a word has an explicit width; a plain `int` would keep two bytes of junk on the host.
 - A struct with pointer fields that the code lays straight over file data is reached through `FILE_RECORDS(T, p, n, layout)` and `FILE_RECORDS_END(q, n)` (CHARGEN.C's `DATA\chrgen.dat`).
 - Port-only C (the replacements for the assembly modules, the emulated hardware, the platform layer) lives under `src/port` and never in a game source; a file there says in its first line which module it replaces, or "replaces nothing".
-- A routine of a translated module has one implementation in the port (PORT.md, "One implementation per routine"). To replace the translation of a routine with C written by hand, add its range to `tools/asm2c.py`'s `HANDWRITTEN`, run the tool, give every place the remaining translation reaches in it a glue entry (`x86/glue.c`; the port lists any it lacks at start-up), and replay the sessions that reach it.
+- A routine of a translated module has one implementation in the port (PORT.md, "One implementation per routine"). To replace the translation of a routine with C written by hand, add its range to `tools/asm2c.py`'s `HANDWRITTEN`, run the tool, give every place the remaining translation reaches in it a glue entry (`x86/glue.c`; the port lists any it lacks at start-up), and replay the sessions that reach it. If no session reaches it, add the routine to `tools/fuzzasm.py`'s targets, so that its C is compared with the original's bytes on every `make test`.
 
-Each of these is the original tokens under Turbo C (port-only C is never seen by it). After a change, `make port-check` should show no new error or warning, and `make port` should still link.
+Each of these is the original tokens under Turbo C (port-only C is never seen by it). After a change, `make port-check` should show no new error or warning, and `make test` must pass: it builds the port and replays every session against its golden.
+
+A session that differs from its golden after a change to the port is a bug in the change; fix the port, never the golden. The goldens are made again (`make golden`, or `make test-full`) only when a recording or the replay DOS build changes (a change to `src/replay/REPLAY.C` or to a source the replay build compiles with `-DREPLAY`), and the regenerated files go in the same commit as that change. `replay.py verify` says when a golden is stale or was made by another replay build.
 
 ## Named constants
 

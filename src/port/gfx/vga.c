@@ -71,12 +71,22 @@ void vga_outw(unsigned port, uint16_t v)
 
 /* Input status 1: bit 3 vertical retrace, for the last 1.4 ms of each 14.3 ms frame (70 Hz),
    bit 0 not in the display; from the counter, so a wait for retrace takes as long as on the
-   real card. */
+   real card. Under replay (--replay) nothing the game keeps depends on how long a wait for
+   retrace takes (the game clock is the recording's), so the retrace comes from a count of the
+   reads instead: of every eight reads the sixth is out of the display and the last two are in
+   the retrace, and a replay runs as fast as the host can run it (docs/BUILDING.md, "Testing"). */
+extern int16_t rp_request;              /* src/replay/REPLAY.C: 2 when replaying */
 static uint8_t status1(void)
 {
-    uint64_t hz = plat_counter_hz(), t = plat_counter();
-    uint64_t frame = hz * 1000 / 70086, ph = t % (frame ? frame : 1);
+    static uint32_t reads;
+    uint64_t hz, t, frame, ph;
     uint8_t s = 0;
+    if (rp_request == 2) {
+        uint32_t k = ++reads & 7;
+        return k >= 6 ? 0x09 : k == 5 ? 0x01 : 0;
+    }
+    hz = plat_counter_hz(); t = plat_counter();
+    frame = hz * 1000 / 70086; ph = t % (frame ? frame : 1);
     if (ph >= frame - frame / 10) s |= 0x09;
     else if ((t / (hz / 31469 ? hz / 31469 : 1)) % 10 >= 8) s |= 0x01;
     return s;

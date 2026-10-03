@@ -9,10 +9,19 @@
 #   make setup         toolchain, Python venv, npm packages and emu2 (idempotent)
 #   make setup-emu2    only build emu2, the fast DOS for the toolchain (tools/setup-emu2.sh)
 #   make setup-sound   fetch the port's OPL emulator, Nuked OPL3 (tools/setup-sound.sh)
-#   make hooks         install the git pre-push hook that runs make check
+#   make hooks         install the git pre-push hook that runs make test
 #   make port-check    compile the C for the host, compile only (docs/PORT.md, Milestone 1)
 #   make port          compile the C for the host and link it with the stubs: build/port/uw2port
 #   make port-debug    the same with -g and UBSan's -fsanitize=null: build/port-debug/uw2port
+#   make test          check + port + routine fuzzing (quick) + every session against its golden
+#                      (docs/BUILDING.md, Testing); the pre-push hook runs it
+#   make test-full     check + both port builds + goldens regenerated from DOS (twice each) +
+#                      the sessions in the port and the UBSan build + ailcheck + deep fuzzing +
+#                      the coverage report
+#   make verify        only the sessions against their goldens, in the port (tools/replay.py verify)
+#   make golden        regenerate every session's golden from DOS (tools/replay.py golden)
+#   make fuzz          the routine fuzzing, quick (tools/fuzzasm.py; FUZZ=--deep for the long run)
+#   make coverage      the port's coverage over the sessions and the fuzzing: docs/COVERAGE.md
 #
 # make setup needs the Borland disk images the first time:
 #   make setup TC_DISKS="/path/to/Turbo C++ 1.01" TASM_DISKS="/path/to/Turbo Assembler 2.0"
@@ -21,7 +30,8 @@ PY := $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 TC_DISKS ?=
 TASM_DISKS ?=
 
-.PHONY: game exact check check-all boot setup setup-emu2 setup-sound hooks port-check port port-debug help
+.PHONY: game exact check check-all boot setup setup-emu2 setup-sound hooks port-check port port-debug help \
+        test test-full verify golden fuzz coverage
 .DEFAULT_GOAL := game
 
 game:
@@ -76,6 +86,24 @@ port:
 
 port-debug:
 	@$(PY) tools/portbuild.py --debug
+
+test:
+	@$(PY) tools/test.py fast
+
+test-full:
+	@$(PY) tools/test.py full
+
+verify:
+	@$(PY) tools/replay.py verify all
+
+golden:
+	@$(PY) tools/replay.py golden all
+
+fuzz:
+	@$(PY) tools/fuzzasm.py $(FUZZ)
+
+coverage:
+	@$(PY) tools/coverage.py
 
 help:
 	@sed -n '1,/^$$/p' Makefile

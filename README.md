@@ -30,9 +30,10 @@ make setup TC_DISKS="/path/to/Turbo C++ 1.01" TASM_DISKS="/path/to/Turbo Assembl
 make            # the modding build; prints the path of the EXE
 make check      # the gate: every file matches, and the exact link equals UW2.EXE except the two bytes
 make boot       # boot the modding build to the main menu and screenshot it
+make test       # the gate, the native port, and the port against DOS's golden replays
 ```
 
-`make setup` unpacks the toolchain into `TC/` and `TASM/` and installs the Python and Node packages; it is safe to run again. `make exact` links the matched objects and compares the result with your EXE. `make hooks` installs a pre-push hook that runs `make check`.
+`make setup` unpacks the toolchain into `TC/` and `TASM/` and installs the Python and Node packages; it is safe to run again. `make exact` links the matched objects and compares the result with your EXE. `make hooks` installs a pre-push hook that runs `make test`.
 
 ## The sources
 
@@ -76,4 +77,4 @@ The rest of the top level:
 - [LINKING.md](docs/LINKING.md): the exact link, the two bytes, what is taken from your EXE, and the modding build.
 - [LAYOUT.md](docs/LAYOUT.md): every address written as a number, and what still depends on the original layout.
 - [MAP.md](docs/MAP.md): the map, the target tables, `symbols.tsv`, `matched.txt` and the source file names.
-- [PORT.md](docs/PORT.md): the design of a native port built from these sources, Milestones 1 to 3 (the C compiles and links natively, and `make port` builds a binary that boots the game data to the opening screens in an SDL3 window, matching DOS byte for byte), and the plan for Milestone 4.
+- [PORT.md](docs/PORT.md): the design of a native port built from these sources and its results so far: Milestones 1 to 5 (`make port` builds a binary that plays the game, with its music and effects, and eight sessions recorded in DOS replay in it with DOS's state at every checkpoint) and 6a (`make test` checks the port against golden references from DOS on every push), and the plan for the rest of Milestone 6. [COVERAGE.md](docs/COVERAGE.md) is what the tests reach.

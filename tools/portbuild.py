@@ -39,6 +39,14 @@ EXE = os.path.join(OUT, 'uw2port')
 PORT_FLAGS = ['-x', 'c', '-std=gnu11', '-fsigned-char', '-D_POSIX_C_SOURCE=200809L', '-Wall', '-Wno-comment', '-Wno-unused-function',
               '-Wno-pragma-pack', '-I', PORT, '-I', os.path.join(PORT, 'platform'),
               '-I', os.path.join(PORT, 'include'), '-iquote', os.path.join(root, 'src', 'include')]
+# The port's own C that only computes: the modules translated from the assembly, the machine
+# they run on, and the graphics and renderer C written by hand. It shares nothing with another
+# thread but what the platform layer reads to draw, so it is compiled with -O2, which makes the
+# replays two to four times faster (docs/BUILDING.md, "Testing"); the rest of the port's C (the
+# PIT and the other threads' code, the sound drivers, memory, the platform layer) and the game's
+# C stay unoptimised. The debug and coverage builds compile everything without optimisation.
+OPTIMISED = [os.path.join(PORT, d) + os.sep for d in ('3d', 'gfx', 'x86')]
+OPT = ['-O2']
 # The one backend the port builds with today (docs/PORT.md, "The platform layer"): only files
 # under src/port/platform/<backend>/ see its headers, and the link takes its libraries.
 BACKEND = 'sdl3'
@@ -95,7 +103,8 @@ def compile_port(cc, path, sound_cflags=()):
     os.makedirs(os.path.dirname(obj), exist_ok=True)
     extra = pkg_config('--cflags') if is_backend(path) else []
     if path.endswith(os.path.join('sound', 'audio.c')): extra = list(sound_cflags)
-    r = subprocess.run([cc] + PORT_FLAGS + extra + ['-c', '-o', obj, path], capture_output=True, text=True, cwd=root)
+    opt = OPT if any(path.startswith(d) for d in OPTIMISED) else []
+    r = subprocess.run([cc] + opt + PORT_FLAGS + extra + ['-c', '-o', obj, path], capture_output=True, text=True, cwd=root)
     return path, r.returncode, r.stderr, obj if r.returncode == 0 else None
 
 
@@ -108,6 +117,8 @@ def main(argv):
     a = ap.parse_args(argv)
     global OUT, EXE
     link_extra = []
+    global OPT
+    if a.debug or a.coverage: OPT = []
     if a.debug:
         OUT = os.path.join(root, 'build', 'port-debug')
         EXE = os.path.join(OUT, 'uw2port')

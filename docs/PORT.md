@@ -1,6 +1,6 @@
 # Porting UW2 to modern systems
 
-This page is the design for a native port of UW2 built from the matched sources. Milestones 1 to 5 are done: the C compiles on a modern host with no errors, `make port` links it into a native macOS binary, the binary boots the real game data in an SDL3 window and plays its music and effects through C versions of the game's own sound drivers, and eight sessions recorded in DOS replay in the port with the same game state and the same video memory as DOS at every checkpoint: from boot through the title cutscene, the main menu and character creation into the game, walking and looking around its first rooms in the 3D view, fighting with a Sound Blaster, an FM chip or a Roland MT-32, picking things up, opening a container and the automap, writing a map note, saving and restoring, talking to Nystul, and loading the saved game from the main menu. The saves the port writes are byte for byte the ones DOS writes. The 3D renderer is seg004 and the parts of seg003 it uses, translated from the matched assembly instruction by instruction; each routine of the graphics library is either that translation or C written by hand, never both. The results of each milestone are below, followed by the plan for Milestone 6 (other platforms and a release) and the phase 2 enhancements. What the later milestones describe does not exist yet.
+This page is the design for a native port of UW2 built from the matched sources. Milestones 1 to 5 are done: the C compiles on a modern host with no errors, `make port` links it into a native macOS binary, the binary boots the real game data in an SDL3 window and plays its music and effects through C versions of the game's own sound drivers, and eight sessions recorded in DOS replay in the port with the same game state and the same video memory as DOS at every checkpoint: from boot through the title cutscene, the main menu and character creation into the game, walking and looking around its first rooms in the 3D view, fighting with a Sound Blaster, an FM chip or a Roland MT-32, picking things up, opening a container and the automap, writing a map note, saving and restoring, talking to Nystul, and loading the saved game from the main menu. The saves the port writes are byte for byte the ones DOS writes. The 3D renderer is seg004 and the parts of seg003 it uses, translated from the matched assembly instruction by instruction; each routine of the graphics library is either that translation or C written by hand, never both. Milestone 6a made that test fast enough to run on every push: each session has a golden reference made from DOS, the port replays all eight against them in a few seconds, single routines are fuzzed against the original's bytes, and `make test` runs it all with the gate in about twenty seconds. The results of each milestone are below, followed by the plan for the rest of Milestone 6 (other platforms and a release) and the phase 2 enhancements. What the later milestones describe does not exist yet.
 
 ## Goals and non-goals
 
@@ -349,6 +349,7 @@ The faithful port reproduces each likely bug, and the replay test proves it does
 | 3. Boot to the title (done) | the platform layer on SDL3 (video, pointer events, keyboard, time, files, lifecycle, silent audio); the paragraph map, the far heap and EMS; Borland's library; seg021 in C; the parts of seg003, MODEX, VALLOC and the VGA emulation the opening screens need; AIL with no driver; `port_null_near` and `port_null_far` | the port runs `init_world` past `display_screen(5, 6)` and shows the first title screen, and its VGA scan-out matches a DOS screenshot of that frame byte for byte |
 | 4. Replay, the way into the game, and the 3D view (done) | `GAME_TIME()` and the input hooks in the shared sources; the replay DOS build; `state_dump()`; the null-pointer write check; the cutscene player's screen access, the rest of seg003, the sprites and the mouse cursor, text; a `-fsanitize=null` debug build; seg004 and the seg003 modules it uses translated to C (`cRender`), the render interface and the sprite hook | a DOS session recorded and replayed in DOS gives identical dumps twice in a row; the same session from boot through the title cutscene, the main menu and character creation into the game replays in the port with identical dumps at each checkpoint, and a session in the game's first rooms (walking, turning, looking up and down, a click in the view) replays to its end with identical dumps, its 3D frames included |
 | 5. Sound, then the rest of the game loop (done) | the AIL API, the XMIDI sequencer, the OPL and MT-32 backends, the digital channel; then the panels, inventory, message scroll and automap screens, conversations, the locals read before they are set, saves | every theme plays; effects and the cutscene audio play; music timing matches a DOS recording; recorded sessions through those screens and into a conversation replay with identical dumps |
+| 6a. Fast and comprehensive accuracy tests (done) | golden references from DOS; unthrottled replays in the port and in native DOSBox-X; sessions in parallel; differential fuzzing of single routines; `make test`, `make test-full`, `make coverage` | `make test` passes in well under two minutes and runs on every push; goldens for every session; DOSBox-X's goldens equal js-dos's; the fuzzing runs clean or its differences are documented |
 | 6. Other platforms and the faithful release (phase 1) | Linux and Windows builds; settings for the sound cards, the ROMs and the window in the port; the remaining stubs; the replay suite over whole sessions; every null-pointer site decided | the replay suite passes on each platform; a set of recorded sessions, from character creation into several worlds, replays in the port with identical dumps and saves, with no null dereference reported by `-fsanitize=null`; saves load both ways |
 | 7. Enhancements (phase 2) | the readable renderer, routine by routine; scaling, mouselook, the FINDINGS fixes as options | each option is off by default, and the replay suite still passes with all options off |
 
@@ -794,6 +795,85 @@ All proved by the gate (`make check` and `make check-all` pass):
 - UW2's introduction has no speech, while UW1's has: every `say` in its scripts is subtitles only. UW2's speech files belong to eight other cutscenes ([FINDINGS.md](FINDINGS.md#3-engine-findings)).
 - DOSBox's Sound Blaster, and js-dos's in particular, ends single-cycle transfers early by a host-dependent amount (above). A DOS reference that is deterministic for the digital driver would need js-dos's mixer in its no-sound mode, which dos-mcp does not offer.
 - The seven frame-buffer dumps of the walk session before its first 3D frame (Milestone 4) still differ in 533 bytes at 1012h..1250h of `stdat`, which the archive code, LZSS, the cutscene player and the automap notes use before the 3D view does; the game state in them is identical. Not looked at again.
+
+## Milestone 6a results
+
+Run on 3 October 2026 on an Apple M4 Pro with 14 cores (Apple clang 21, SDL 3.4.16, DOSBox-X 2026.10.01, js-dos through dos-mcp 0.3.0, Unicorn 2.1.4). Milestone 5's `replay.py check` replays each session twice in js-dos, in roughly real time, before it replays it in the port: twenty minutes for the eight sessions. Milestone 6a separates the two. DOS is replayed once, to make a golden reference for each session, and the port is checked against the goldens on every push. [BUILDING.md](BUILDING.md#testing) has the commands; this section has what was built and what it showed.
+
+### Golden references
+
+`tests/replay/golden/SESSION/golden.json` holds, for each checkpoint of the session, its header and a 64-bit BLAKE2b digest of each section of the dump, taken over the bytes `replay.py compare` compares between DOS and the port: the machinery ranges zeroed, and the words that hold a far block's segment replaced by the block they name. Only GFX has such words in the eight sessions, nine of them (07D2, 0958, 0B0C, 0B1A, 553C to 5540, 558C, 55EC), and digests of the sections normalised that way agree between DOS and the port, and between js-dos and DOSBox-X, at every checkpoint of every session, while the raw sections differ in those words. Beside each full checkpoint is the screen as a PNG, for the pictures `verify` draws when a screen differs. Each golden also records the SHA-256 of its recording, its `.cfg`, the saved games it writes and the one it starts from, and of the replay DOS build that made it, so that a changed recording makes it stale and a changed replay build is flagged. The eight goldens hold 550 checkpoints and 355 PNGs in 7 MB; no dump and no game data are committed.
+
+`replay.py golden` replays a session twice in DOS at the same time and writes the golden only when the two runs are identical, section for section with `compare --same-build`, and their saved games byte for byte, and the null-pointer check passes. `replay.py verify` replays the port alone and compares digests; when a checkpoint differs it names the sections and, for a screen, writes DOS's picture, the port's and their difference side by side. All eight sessions are identical to their goldens in the port and in the UBSan build.
+
+### Unthrottled replays
+
+In a replay nothing the game keeps depends on real time: the clock and every input are the recording's. Three things in the port still waited for it or did work no one used, found with `sample` on a replay:
+
+| Change | Where | Effect |
+| --- | --- | --- |
+| Under `--replay`, the retrace bit of input status 1 comes from a count of reads (every eighth read starts a two-read retrace), not from the host's clock | `gfx/vga.c` | the waits for retrace in `local_do_palette` and the page flips were 30% of a replay's time; `newgame` went from 3.9 s to 1.2 s, `walk` from 7.8 s to 5.3 s |
+| The translated modules, the machine they run on and the graphics C (`src/port/3d`, `gfx`, `x86`) compiled with `-O2`; the rest of the port's C and all of the game's C stay unoptimised, and the debug and coverage builds are unoptimised throughout | `tools/portbuild.py` | the renderer was 85% of what was left; `walk` to 1.9 s, `talk` from 10.9 s to 2.7 s |
+| With no audio device and no `--audio-wav` (`--hidden`), the chips' synthesis is skipped; the drivers still program them, and every read the game makes of them is still timed by the recorded moments | `sound/audio.c` | Nuked OPL3 was 43% of the sound sessions; `sound` from 3.2 s to 2.1 s |
+
+None of the three changes what the game does: every session is identical to its golden before and after each, and the sound driver checks still find 0 reads that differ from DOS's and every register write and MIDI byte identical to the real drivers' (`ailcheck.py`).
+
+The DOS side runs in native DOSBox-X (`tools/replaydos.mjs --backend dosbox-x`, the default for a replay when it is installed). A replay needs no input, so DOSBox-X runs headless with the game's directory mounted from the host, the dynamic core at a fixed 300,000 cycles a millisecond, and turbo: its emulated time runs as fast as the host can run the guest, where js-dos is tied to the wall clock. Its hardware is js-dos's (a Sound Blaster 16 at 220h, IRQ 7, DMA 1 and 5, an OPL3, an intelligent MPU-401 at 330h, 16 MB). It loads the game at another segment than js-dos does, which the digests allow for. `replay.py golden all --backend jsdos --check` made all eight sessions again in js-dos, twice each, and every one is identical to the golden DOSBox-X made, checkpoint for checkpoint and section for section, saved games included. The one nuance is the Sound Blaster's, the reason the port ends a transfer where a recorded read says DOS's ended (Replays with a sound card, above): DOS's own driver, replaying a recording made in js-dos, disagrees with the recording in 14,237 to 15,591 reads of the `sound` session in js-dos, a different number each run, and in 20,528 in DOSBox-X, the same number every run, since DOSBox-X's mixer runs on the emulated clock. The game reads the recorded values in either, so its state is the same. The FM-only and MT-32 sessions differ in 1 or 2 reads in both.
+
+| Session | Checkpoints | DOS, js-dos | DOS, DOSBox-X | the port, before | the port, after |
+| --- | --- | --- | --- | --- | --- |
+| `newgame` | 43 | 38 s | 11 s | 3.9 s | 0.8 s |
+| `walk` | 68 | 61 s | 16 s | 7.8 s | 2.0 s |
+| `sound` | 71 | 91 s | 27 s | 8.5 s | 1.8 s |
+| `soundfm` | 72 | 89 s | 27 s | 8.6 s | 1.8 s |
+| `soundmt` | 95 | 155 s | 43 s | 10.5 s | 2.9 s |
+| `items` | 101 | 66 s | 18 s | 5.9 s | 1.7 s |
+| `talk` | 80 | 70 s | 18 s | 10.9 s | 2.8 s |
+| `load` | 20 | 20 s | 5 s | 1.9 s | 0.4 s |
+| all, one at a time | 550 | 590 s | 165 s | 58 s | 14 s |
+
+### Sessions in parallel
+
+`golden` and `verify` run the sessions at once, one per core up to eight (`-j`), `load` waiting for `items`, whose saved game it starts from. `verify all` takes 3.5 seconds; `golden all`, sixteen DOS runs, 59 seconds in DOSBox-X and 219 in js-dos (eight Chromes at once, each run a little slower than alone).
+
+### Routine fuzzing
+
+`tools/fuzzasm.py` runs single routines on inputs no session gives them: the original's bytes from `UW2.EXE` in Unicorn, the port's code in `tools/fuzzhost.c` (the port's objects linked with a driver in place of `main.c`), the same registers and memory on both sides, and every register, flag and byte of memory compared afterwards (the stack below the final SP excepted). 35 targets in seven modules:
+
+| Module | Targets | What they test |
+| --- | --- | --- |
+| IMATH (seg021) | 9 | `sincos` and `lsqrt` through the glue into `sys/imath.c`; `cSinCos`, `cFstSinCos` and `cSqRt`, its C entries; the translated arcsine, arccosine and `atan2`; `cAtan2`, C into the translation |
+| INSTANCE (seg004) | 5 | `mm3x9_bpsi`, `mm3x9t` (with the saturation slip in [FINDINGS.md](FINDINGS.md#mm3x9_bpsi-and-mm3x9t-saturate-the-wrong-product)), `mm9x9`, `code_pnt`, `mxmul` |
+| SPHERE | 2 | `sphere_check`; `get_dist`, which nothing in the EXE calls |
+| GRENTRY (seg003) | 7 | the frame buffer's span writers on a frame buffer laid out as `cPlaceFB` lays it out: solid spans, bitmap rows, the transparent rows (`gfx/grentry.c` through `seg003_call`), Gouraud spans; `cFillFB`, `cDimFB`, `cLiteFB` |
+| CLIP | 1 | `_asm_clip_polygon`, polygons across the frustum and behind the eye |
+| EXPAND | 11 | every image decoder, the palette builder and the record decoder, hand-written and translated, alone and through `seg004_uncmp`, cFrmtoRaw's C into the translation (formats 4 and 6, which no session reaches) |
+
+The quick run (`make test`) is 5,560 cases in 13 seconds; the deep run is 278,000 cases with a new seed each time. Both run clean. What they found:
+
+- **No port bug.** Every translated routine gives the original's registers, flags and memory on every input, the edge values included, and the hand-written C gives what its callers read.
+- **The hand-written C leaves dead registers alone.** `_63` leaves AL, DX and DI where the original leaves the last palette byte, the image's paragraph and the end of `uncmp_pal`; the decoders leave every register but AX; `_18D` leaves AX and CX. Every caller loads them again before reading them (do_uwobj, do_uwcrit and cFrmtoRaw read only AX after a decoder), so the fuzzing compares what the callers read for these, and says so in each target.
+- **The private stack.** `cAtan2` and `seg004_uncmp` run the translation on seg021's private stack (FD71:0510 down) outside the renderer, as C3DENTRY.ASM's entries do; what they push there is not compared.
+- **A byte of the original's self-modifying code.** The record decoder restores the byte it patches with the other encoding of the same instruction, so DOS's code segment changes where the port's does not ([FINDINGS.md](FINDINGS.md#3-engine-findings)). That byte is not compared.
+- **Divide faults agree.** `lsqrt` of a value whose first quotient overflows 16 bits (CX:BX of FFFF0000h or more) faults in DOS; the port stops there too rather than guess what the fault handler of the moment would do.
+
+### Coverage
+
+`make coverage` replays the eight sessions in the coverage build and runs the fuzzing on the same objects, and writes [COVERAGE.md](COVERAGE.md). Over the port's whole source, 45.4% of the lines and 1,335 of its 2,274 functions run: 41.9% of the game's shared C (776 of 1,522 functions), 72.3% of the port's hand-written C and 43.7% of the translated modules. The fuzzing adds 652 lines no session runs, 594 of them in the translated modules, and 7 functions: `cAtan2`, IMATH's translation (the arcsine, arccosine and `atan2`), `seg004_uncmp`'s way into the translation (`translated`, `asm_run_near`), `exp_4str`'s glue and `count4`, and `asm_seg003_fallback`, the glue into seg003's hand-written span writers. The least covered game code is what no session does yet: spells and runes (`src/combat`, 14%), the SCD events and traps (`src/event`, 6%), object use (`src/obj`, 24%) and most of the conversation built-ins (`src/conv`, 30%); COVERAGE.md lists every function nothing reaches, the list for the sessions of Milestone 6's release step.
+
+### make test
+
+`make test` (`tools/test.py fast`) runs `make check`, `make port`, the fuzzing's quick run and `replay.py verify all`, prints each step's time, and exits 1 with the steps that failed; the pre-push hook runs it (bypass with `git push --no-verify`). It takes 23 seconds with nothing to recompile: 4 for the gate, 2 for the port, 13 for the fuzzing and 3.5 for the eight sessions. `make test-full` makes every golden again from DOS (twice each, checked identical), replays the sessions in the port and in the UBSan build, runs `ailcheck.py` on the three sessions with a music card, the deep fuzzing and the coverage report, in 12.5 minutes (61 seconds for the sixteen DOS runs, 625 for the deep fuzzing), and says whether the regenerated goldens differ from the committed ones. Both pass.
+
+### Shared-source changes
+
+None. `make check` and `make check-all` pass, and `make port` and `make port-debug` link.
+
+### Found on the way
+
+- Unicorn 2.1.4's `emu_start` takes a linear address in 16-bit mode and sets IP to it minus CS's base, modulo 64 KB. `ailcheck.py` passes the offset alone, which works only because its driver's segment, 1000h, has a base of 10000h, 0 modulo 64 KB; `fuzzasm.py` passes the linear address.
+- js-dos's Sound Blaster timing differs from run to run, DOSBox-X's does not (above). A session with digital sound recorded in DOSBox-X would replay in it with no timing differences at all, but recording needs real-time input, which only js-dos's page takes here.
+- DOSBox-X has no equivalent of dos-mcp's `read_memory`, so its replays skip the null-pointer check made after the game exits; the dumps' `NULL` sections, with C0's checksum in every checkpoint, still cover it.
 
 ## Milestone 6: other platforms and a release
 

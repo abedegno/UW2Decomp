@@ -1,0 +1,58 @@
+{
+ "format": 1,
+ "session": "load",
+ "recording": {
+  "path": "tests/replay/load.rec",
+  "sha256": "80f31787e46e8929dc312082e22080aad6a016c363833c6b4871c4120a690f75"
+ },
+ "cfg": null,
+ "stage": {
+  "session": "items",
+  "files": {
+   "SAVE1/BGLOBALS.DAT": "bb5e4f6425b2f390ed97c36f455055772c3e43304a12bceb208546c96557466d",
+   "SAVE1/DESC": "a7937b64b8caa58f03721bb6bacf5c78cb235febe0e70b1b84cd99541461a08e",
+   "SAVE1/LEV.ARK": "d607606e3267cad079398509c56f07da3ef409fcf047dbba2f0b563df3e42781",
+   "SAVE1/PLAYER.DAT": "a231ae4f8c15cbae7ffb7da4f61221951b91ca0aeee92980b74b2402d9d49c15",
+   "SAVE1/SCD.ARK": "50c541603da236046298a24c15fbc0f276f37c7d624da8f8fc1487b1382a857a"
+  }
+ },
+ "replay_build": {
+  "exe_sha256": "7e4475567427119ec3764198cb216cf67f5cbd7a1675fd065206fd33dacdae8e",
+  "sources_key": "66a888c5d2df93a8377e0791bbcbf480c0eea392"
+ },
+ "dos": {
+  "backend": "dosbox-x",
+  "runs": 2,
+  "identical": true
+ },
+ "digest": "BLAKE2b-64 of each section as DOS and the port are compared (tools/golden.py, canon)",
+ "saves": {
+  "SAVE1/BGLOBALS.DAT": "bb5e4f6425b2f390ed97c36f455055772c3e43304a12bceb208546c96557466d",
+  "SAVE1/DESC": "a7937b64b8caa58f03721bb6bacf5c78cb235febe0e70b1b84cd99541461a08e",
+  "SAVE1/LEV.ARK": "d607606e3267cad079398509c56f07da3ef409fcf047dbba2f0b563df3e42781",
+  "SAVE1/PLAYER.DAT": "a231ae4f8c15cbae7ffb7da4f61221951b91ca0aeee92980b74b2402d9d49c15",
+  "SAVE1/SCD.ARK": "50c541603da236046298a24c15fbc0f276f37c7d624da8f8fc1487b1382a857a"
+ },
+ "checkpoints": [
+  {"i":0,"ck":[1,1,3,0],"secs":{"PLYR":"ce101300ca28c672","RAND":"4e4b9222998a66f6","CNTS":"43915fab795170cc","GFX":"c33d7847ddc110e9","PAL":"e1a92daa5cabe98e","CRTC":"b7a81f2b97e7f8a3","VGA":"755b83d5001a68b7"},"png":"ck0000.png"},
+  {"i":1,"ck":[3,32768,5,0],"secs":{"PLYR":"ce101300ca28c672","RAND":"4e4b9222998a66f6","CNTS":"ed3b3d1c9a86039a","GFX":"c33d7847ddc110e9","PAL":"e1a92daa5cabe98e","CRTC":"b7a81f2b97e7f8a3","VGA":"755b83d5001a68b7"},"png":"ck0001.png"},
+  {"i":2,"ck":[2,0,2199863,1024],"secs":{"PLYR":"ce101300ca28c672","RAND":"4e4b9222998a66f6","CNTS":"a50a90267704e091"}},
+  {"i":3,"ck":[2,0,3682821,2048],"secs":{"PLYR":"ce101300ca28c672","RAND":"4e4b9222998a66f6","CNTS":"dff6263dc850b80d"}},
+  {"i":4,"ck":[1,2,5231224,2912],"secs":{"PLYR":"ce101300ca28c672","RAND":"4e4b9222998a66f6","CNTS":"0c04f8895d8bd1fc","GFX":"9f2ce3ed54653ea0","PAL":"2e404218780e5666","CRTC":"b7a81f2b97e7f8a3","VGA":"77b9e384894a2bf0"},"png":"ck0004.png"},
+  {"i":5,"ck":[2,0,5705944,3072],"secs":{"PLYR":"ce101300ca28c672","RAND":"4e4b9222998a66f6","CNTS":"d5915e7a366ff6fe"}},
+  {"i":6,"ck":[3,283,6061555,3101],"secs":{"PLYR":"ce101300ca28c672","RAND":"4e4b9222998a66f6","CNTS":"4169698d7fbefb47","GFX":"6c59a7d25b05bb50","PAL":"9ef9025a8aefd07d","CRTC":"b7a81f2b97e7f8a3","VGA":"6becbee7bb5fcf74"},"png":"ck0006.png"},
+  {"i":7,"ck":[3,283,6676521,3421],"secs":{"PLYR":"ce101300ca28c672","RAND":"4e4b9222998a66f6","CNTS":"83db01400f4f7d6b","GFX":"6c59a7d25b05bb50","PAL":"9ef9025a8aefd07d","CRTC":"b7a81f2b97e7f8a3","VGA":"6becbee7bb5fcf74"},"png":"ck0007.png"},
+  {"i":8,"ck":[2,0,6676522,4150],"secs":{"PLYR":"ce101300ca28c672","RAND":"4e4b9222998a66f6","CNTS":"308e6a576a83a0f0"}},
+  {"i":9,"ck":[3,7181,7524884,4150],"secs":{"PLYR":"ce101300ca28c672","RAND":"4e4b9222998a66f6","CNTS":"e5d3dcbc2c27fcaa","GFX":"6c59a7d25b05bb50","PAL":"9ef9025a8aefd07d","CRTC":"b7a81f2b97e7f8a3","VGA":"6becbee7bb5fcf74"},"png":"ck0009.png"},
+  {"i":10,"ck":[2,0,7524885,5149],"secs":{"PLYR":"ce101300ca28c672","RAND":"4e4b9222998a66f6","CNTS":"d0f1e953813c5154"}},
+  {"i":11,"ck":[3,7181,8259163,5149],"secs":{"PLYR":"ce101300ca28c672","RAND":"4e4b9222998a66f6","CNTS":"2fe8266df60bed18","GFX":"19056752b7caf2f5","PAL":"9ef9025a8aefd07d","CRTC":"b7a81f2b97e7f8a3","VGA":"037fd59a52cdc378"},"png":"ck0011.png"},
+  {"i":12,"ck":[1,3,8259165,6026],"secs":{"PLYR":"a0e961985c0d486c","RAND":"4e4b9222998a66f6","LEVL":"547bfeda8d260afd","CNTS":"300144e71232908b","GFX":"5036e3b8c83da420","PAL":"9ef9025a8aefd07d","CRTC":"b7a81f2b97e7f8a3","VGA":"51143777a00b5968"},"png":"ck0012.png"},
+  {"i":13,"ck":[2,0,8610337,6144],"secs":{"PLYR":"a0e961985c0d486c","RAND":"4e4b9222998a66f6","LEVL":"547bfeda8d260afd","CNTS":"3315d4f24ae1a89a"}},
+  {"i":14,"ck":[1,4,8839680,6214],"secs":{"PLYR":"a0e961985c0d486c","RAND":"4e4b9222998a66f6","LEVL":"547bfeda8d260afd","CNTS":"b7121a28086b3081","GFX":"2c5378f3a9f08511","PAL":"2e404218780e5666","CRTC":"5820c1822f777b43","VGA":"540102a3eaf55c69"},"png":"ck0014.png"},
+  {"i":15,"ck":[1,5,9401894,6389],"secs":{"PLYR":"a0e961985c0d486c","RAND":"4e4b9222998a66f6","LEVL":"547bfeda8d260afd","CNTS":"e38fbed85814692a","GFX":"33540452db0acaa3","PAL":"e1a92daa5cabe98e","CRTC":"5820c1822f777b43","VGA":"a033c95cd44cf703"},"png":"ck0015.png"},
+  {"i":16,"ck":[2,0,10241478,7168],"secs":{"PLYR":"0e9afd4e75319ec4","RAND":"269d4e1dd6e7dfb2","LEVL":"5ea534b9fa85a848","CNTS":"2090c721217ec39c"}},
+  {"i":17,"ck":[3,4471,10771152,7645],"secs":{"PLYR":"558a5350341a2066","RAND":"a1d25a1316b4cf45","LEVL":"75bf4a1c9bc3c3ed","CNTS":"37636d8070ff2fe7","GFX":"e2da854a5b87e50a","PAL":"59f06567fbead903","CRTC":"5820c1822f777b43","VGA":"2b2d0d2a27ca65a6"},"png":"ck0017.png"},
+  {"i":18,"ck":[2,0,11222989,8192],"secs":{"PLYR":"ddde39a3ea495e0c","RAND":"0b0dedda44cb13e8","LEVL":"d65de868023e3baa","CNTS":"bddb88be16cab78c"}},
+  {"i":19,"ck":[4,0,11360128,8307],"secs":{"PLYR":"e414cb6ee0058ace","RAND":"0f4826cf98db7c6b","LEVL":"ebfc582d02cc8962","CNTS":"1184f64babde85cd","GFX":"b2135f58cde8eb68","PAL":"fcd1266ff05b1f0b","CRTC":"5820c1822f777b43","VGA":"14293ea22416ed5a"},"png":"ck0019.png"}
+ ]
+}

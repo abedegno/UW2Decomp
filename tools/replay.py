@@ -16,12 +16,19 @@ r"""Record a session in DOS and replay it in DOS and in the port, comparing the 
                                                         game's directory first, in DOS and in the port
     python3 tools/replay.py check REC OUT               replay REC in DOS twice and in the port, compare all
                                                         (with a sound card, the port's sound drivers too)
+    python3 tools/replay.py golden [SESSION ...|all] [-j N] [--backend B] [--check]
+                                                        make the sessions' golden references from DOS
+                                                        (twice, checked identical): tests/replay/golden/
+    python3 tools/replay.py verify [SESSION ...|all] [-j N] [--debug]
+                                                        replay the sessions in the port only, against
+                                                        the goldens (tools/golden.py has both)
 
 The replay DOS build is the modding build with every source that uses the hooks of
 src/include/portable.h compiled with -DREPLAY (and every source with a NULLTRAP mark with
 -DNULLTRAP, so the marked null pointers it reaches go to NULLTRAP.LOG), and src/replay/REPLAY.C
-linked in as one more resident module (tools/link.py --mod --add). Recording and the DOS
-replays run in js-dos (tools/replaydos.mjs); the port replays with --replay.
+linked in as one more resident module (tools/link.py --mod --add). Recording runs in js-dos
+(tools/replaydos.mjs), the DOS replays in DOSBox-X when it is installed and otherwise js-dos
+(replaydos.mjs --backend, or UW2_REPLAY_DOS); the port replays with --replay.
 
 A session with a sound card has a sound configuration, DATA\UW.CFG's two lines (CFGS below):
 recording writes it to OUT/UW.CFG beside OUT/RECORD.OUT, and a replay of REC uses the .cfg
@@ -172,13 +179,12 @@ def opts_of(src):
     return m.group(1) if m else '-mm -1 -G -O -Z'
 
 
-def build():
-    """Compile the hook users with -DREPLAY (the NULLTRAP users with -DNULLTRAP too) and
-    REPLAY.C, and link them as the modding build with REPLAY added. Cached by the sources'
-    hashes."""
+def build_plan():
+    """What the replay DOS build compiles: [(stem, path, options)] for the hook users (with
+    -DREPLAY), the NULLTRAP users (with -DNULLTRAP) and REPLAY.C, and the key of their sources'
+    hashes and options, which names the build."""
     from sources import all_sources, replay_sources, stem
     from srcdeps import source_hash
-    from dosbatch import compile_many
     todo = []
     for src in all_sources() + replay_sources():
         if not src.upper().endswith('.C'): continue
@@ -188,9 +194,19 @@ def build():
         if 'NULLTRAP(' in text: defs.append('-DNULLTRAP')
         if defs: todo.append((stem(src), src, (opts_of(src) if src not in replay_sources() else '-mm -1 -G -O -Y -d') + ' ' + ' '.join(defs)))
     key = hashlib.sha1(json.dumps([(s, source_hash(p), o) for s, p, o in todo]).encode()).hexdigest()
+    return todo, key
+
+
+def build(quiet=False):
+    """Compile the hook users with -DREPLAY (the NULLTRAP users with -DNULLTRAP too) and
+    REPLAY.C, and link them as the modding build with REPLAY added. Cached by the sources'
+    hashes."""
+    from dosbatch import compile_many
+    todo, key = build_plan()
     exe = os.path.join(OUT, 'UW2.EXE'); stamp = os.path.join(OUT, 'build.sha1')
     if os.path.exists(exe) and os.path.exists(stamp) and open(stamp).read() == key:
-        print(f'replay build: {os.path.relpath(exe, root)} (up to date)'); return exe
+        if not quiet: print(f'replay build: {os.path.relpath(exe, root)} (up to date)')
+        return exe
     objdir = lambda s: os.path.join(OUT, 'obj', s)
     print(f'replay build: compiling {len(todo)} sources with -DREPLAY or -DNULLTRAP')
     res = compile_many(todo, objdir)
@@ -202,7 +218,7 @@ def build():
     for s, _, _ in todo:
         obj = os.path.join(objdir(s), s + '.OBJ')
         cmd += ['--add' if s == 'REPLAY' else '--obj', f'{s}={obj}']
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL if quiet else None)
     shutil.copy(os.path.join(OUT, 'link', 'UW2.EXE'), exe)
     open(stamp, 'w').write(key)
     print(f'replay build: {os.path.relpath(exe, root)}, {os.path.getsize(exe)} bytes')
@@ -318,6 +334,7 @@ def label(ck):
 def ranges(a, b, skip=()):
     """The differing byte ranges of two equal-length byte strings, merged when close."""
     out = []
+    if a == b: return out
     for i in range(min(len(a), len(b))):
         if a[i] != b[i] and not any(lo <= i < hi for lo, hi in skip):
             if out and i - out[-1][1] <= 8: out[-1][1] = i + 1
@@ -472,25 +489,37 @@ def nulls(d):
 STAGE = None   # --stage DIR: files (a saved game) put into the game's directory, DOS's and the port's home
 
 
-def run_dos(out, rec=None, steps=(), timeout=900, cfg=None):
-    exe = build()
+def run_dos(out, rec=None, steps=(), timeout=900, cfg=None, stage=None, log=None, backend=None, exe=None):
+    """Runs the replay DOS build in tools/replaydos.mjs: records with steps, or replays rec.
+    stage (default --stage's) is put into the game's directory first; log, a file the run's
+    output goes to instead of the terminal; backend, replaydos's --backend (jsdos, dosbox-x;
+    by default DOSBox-X for a replay when it is installed)."""
+    exe = exe or build()
+    stage = stage or STAGE
     cmd = ['node', os.path.join(here, 'replaydos.mjs'), exe, out, '--timeout', str(timeout)]
-    if STAGE: cmd += ['--stage', STAGE]
+    if stage: cmd += ['--stage', stage]
     if rec: cmd += ['--replay', rec]
+    if backend: cmd += ['--backend', backend]
     cfg = cfg or (cfg_of(rec) if rec else None)
     if cfg: cmd += ['--cfg', cfg]
-    r = subprocess.run(cmd + list(steps))
+    os.makedirs(out, exist_ok=True)
+    if log:
+        with open(log, 'w') as f: r = subprocess.run(cmd + list(steps), stdout=f, stderr=subprocess.STDOUT)
+    else: r = subprocess.run(cmd + list(steps))
     return r.returncode
 
 
-def run_port(rec, out, extra=()):
+def run_port(rec, out, extra=(), stage=None, quiet=False):
     extra = list(extra)
     debug = '--debug' in extra
     if debug: extra.remove('--debug')
-    exe = os.path.join(root, 'build', 'port-debug' if debug else 'port', 'uw2port')
+    cov = '--cov' in extra              # the coverage build (tools/coverage.py), writing LLVM_PROFILE_FILE
+    if cov: extra.remove('--cov')
+    stage = stage or STAGE
+    exe = os.path.join(root, 'build', 'port-debug' if debug else 'port-cov' if cov else 'port', 'uw2port')
     if not os.path.exists(exe): sys.exit('replay.py: build the port first (make port)')
     home = os.path.join(out, 'home'); shutil.rmtree(home, ignore_errors=True); os.makedirs(home)
-    if STAGE: shutil.copytree(STAGE, home, dirs_exist_ok=True)
+    if stage: shutil.copytree(stage, home, dirs_exist_ok=True)
     cfg = cfg_of(rec)
     if cfg:
         os.makedirs(os.path.join(home, 'DATA'), exist_ok=True)
@@ -500,12 +529,14 @@ def run_port(rec, out, extra=()):
     r = subprocess.run(cmd, capture_output=True, text=True)
     open(os.path.join(out, 'port.log'), 'w').write(r.stdout + r.stderr)
     for f in ('STATE.OUT',):
+        if os.path.exists(os.path.join(out, f)): os.remove(os.path.join(out, f))
         if os.path.exists(os.path.join(home, f)): shutil.copy(os.path.join(home, f), os.path.join(out, f))
     for d in ('SAVE1', 'SAVE2', 'SAVE3', 'SAVE4'):         # the saved games, as DOS's runs copy theirs
+        shutil.rmtree(os.path.join(out, d), ignore_errors=True)
         if os.path.isdir(os.path.join(home, d)):
-            shutil.rmtree(os.path.join(out, d), ignore_errors=True)
             shutil.copytree(os.path.join(home, d), os.path.join(out, d))
     ub = [l for l in (r.stdout + r.stderr).splitlines() if 'runtime error' in l]
+    if quiet: return r.returncode
     if debug: print(f'port: UBSan reported {len(ub)} null dereferences' + ''.join('\n  ' + l for l in sorted(set(ub))[:20]))
     tail = [l for l in (r.stdout + r.stderr).splitlines() if 'uw2port' in l][-3:]
     print('port:', r.returncode, *tail, sep='\n  ')
@@ -554,6 +585,9 @@ def main(argv):
     if not argv: print(__doc__); return 2
     cmd, a = argv[0], argv[1:]
     if cmd == 'build': build(); return 0
+    if cmd in ('golden', 'verify'):
+        import golden
+        return golden.main(cmd, a)
     if cmd == 'record':
         out = a[0]; steps = a[1:]; cfg = None
         if steps[:1] == ['--session']:
@@ -587,7 +621,7 @@ def main(argv):
         print('\n== null pointers (DOS)'); r3 = nulls(d1)
         r4 = max(sound_check(d1, d2, p), driver_check(p))
         if os.path.isdir(os.path.join(d1, 'SAVE1')) or os.path.isdir(os.path.join(p, 'SAVE1')):
-            print('\n== saved games, DOS against DOS'); r4 = saves(d1, d2)
+            print('\n== saved games, DOS against DOS'); r4 = max(r4, saves(d1, d2))
             print('\n== saved games, DOS against the port'); r4 = max(r4, saves(d1, p))
         return max(r1, r2, r3, r4)
     print(__doc__); return 2
