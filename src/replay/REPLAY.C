@@ -113,6 +113,7 @@
 #define CK_INPUT    3
 #define CK_END      4
 #define CK_DESYNC   5
+#define CK_HOOK     6                   /* UWRPHOOK: a full dump at a hook call */
 
 #define KSTATE_LEN  0x89                /* FD71:01E2..026A */
 #define STOP_SCAN   0x58                /* F12 ends a recording */
@@ -172,6 +173,8 @@ static uint32 t_last;                   /* TIME: the last run's clock, for the d
 static uint32 last_ck_time;
 static uint32 ck_mask = ~(uint32)0x3FF;   /* periodic dumps every 400h ticks; UWRPCK=n (hex) for n */
 static int dump_fb;                        /* UWRPFB: every dump holds the 3D frame buffer */
+static uint32 full_lo, full_hi;            /* UWRPFULL=lo,hi: the periodic dumps in that clock range are full */
+static uint32 hook_lo, hook_hi;            /* UWRPHOOK=lo,hi: a full dump at each hook call in that range */
 static uint32 calls[NSTREAMS];
 /* UWRPTRACE=lo,hi (hex clock values): every hook call while the clock is in [lo, hi) goes to
    TRACE.OUT as a line: the call count, the stream, the value, and in DOS the caller's return
@@ -405,6 +408,16 @@ static void rp_start(void)
     dump_fd = open("STATE.OUT", O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0x180);
     if (getenv("UWRPCK")) ck_mask = ~(strtoul(getenv("UWRPCK"), 0, 16) - 1);
     if (getenv("UWRPFB")) dump_fb = 1;
+    if (getenv("UWRPFULL")) {
+        char *e = getenv("UWRPFULL");
+        full_lo = strtoul(e, &e, 16);
+        full_hi = *e ? strtoul(e + 1, 0, 16) : 0xFFFFFFFFUL;
+    }
+    if (getenv("UWRPHOOK")) {
+        char *e = getenv("UWRPHOOK");
+        hook_lo = strtoul(e, &e, 16);
+        hook_hi = *e ? strtoul(e + 1, 0, 16) : 0xFFFFFFFFUL;
+    }
     if (getenv("UWRPTRACE")) {
         char *e = getenv("UWRPTRACE");
         trace_lo = strtoul(e, &e, 16);
@@ -659,6 +672,7 @@ static int begin(void)
     if (rp_mode == RP_OFF || finishing) return 0;
     events++;
     if (rp_mode == RP_REPLAY && events == stop_at && !NO_STOP) rp_finish(CK_END);
+    if (events >= hook_lo && events < hook_hi && dump_fd >= 0) rp_dump(CK_HOOK, 0, 1);
     return 1;
 }
 
@@ -790,7 +804,7 @@ uint32 far rp_time(void)
         if (trace_fd >= 0) trace(S_TIME, t_now, CALLER_CS, CALLER_IP);
         if ((t_now ^ last_ck_time) & ck_mask) {
             last_ck_time = t_now;
-            rp_dump(CK_PERIODIC, 0, 0);
+            rp_dump(CK_PERIODIC, 0, t_now >= full_lo && t_now < full_hi);
         }
         t = t_now;
     }
