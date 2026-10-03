@@ -1,0 +1,21 @@
+# segment ovr092 base 0x66050 size 0x1146 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+OpenAutomap_ovr092_0	OpenAutomap_ovr092_0	0x0	0x97
+ovr092_97	ovr092_97	0x97	0x87
+ovr092_11E	ovr092_11E	0x11E	0x30
+ovr092_14E	ovr092_14E	0x14E	0x82
+ovr092_1D0	ovr092_1D0	0x1D0	0x15
+ShowDungeonMap	ovr092_1E5	0x1E5	0x142
+ShadeSide	ovr092_327	0x327	0xF8
+PixelDarken	ovr092_41F	0x41F	0x6C
+ovr092_48B	ovr092_48B	0x48B	0x1E4
+DoDoorTile	ovr092_66F	0x66F	0xF8
+CornerShade_ovr094_9D2	ovr092_767	0x767	0x47
+DetermineBetterHit	ovr092_7AE	0x7AE	0xF8
+ovr092_8A6	ovr092_8A6	0x8A6	0x4DA
+ovr092_D80	ovr092_D80	0xD80	0xBC
+ovr092_E3C	ovr092_E3C	0xE3C	0xCE
+ovr092_F0A	ovr092_F0A	0xF0A	0x5C
+ovr092_F66	ovr092_F66	0xF66	0x182
+ovr092_10E8	ovr092_10E8	0x10E8	0x54
+ovr092_113C	ovr092_113C	0x113C	0xA

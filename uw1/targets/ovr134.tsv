@@ -1,0 +1,18 @@
+# segment ovr134 base 0x7E830 size 0xEED org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+ovr134_0	ovr134_0	0x0	0x22
+InitPlayerRec	ovr134_22	0x22	0xB0
+InitPlayerAndRegisterKeys_ovr134_D2	InitPlayerAndRegisterKeys_ovr134_D2	0xD2	0x609
+mous_player	ovr134_6DB	0x6DB	0x25D
+demous_player	ovr134_938	0x938	0x6E
+ovr134_9A6	ovr134_9A6	0x9A6	0x6D
+PrintGameVersion_ovr134_A13	PrintGameVersion_ovr134_A13	0xA13	0x1B
+home_cam	SetCameraViewAtObject_ovr134_A2E	0xA2E	0xC9
+ovr134_AF7	ovr134_AF7	0xAF7	0xB8
+attach_eye	ChangeCameraReference_ovr134_BAF	0xBAF	0xF9
+release_camera	SetCameraAtObject_ovr134_CA8	0xCA8	0x16
+DoTrapCamera_ovr134_CBE	DoTrapCamera_ovr134_CBE	0xCBE	0x94
+Vortex_ovr143_E09	LaunchPlayerAtMoongate_ovr134_D52	0xD52	0xF4
+chg_plys	ovr134_E46	0xE46	0x5B
+ovr134_EA1	ovr134_EA1	0xEA1	0x25
+ovr134_EC6	ovr134_EC6	0xEC6	0x27

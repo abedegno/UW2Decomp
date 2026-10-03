@@ -1,0 +1,11 @@
+# segment seg009 base 0x1D511 size 0x3E3 org 0x1
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+grs_plot	seg009_1	0x0	0x6C
+seg009_6D	seg009_6D	0x6C	0xDD
+grs_unpack	seg009_14A	0x149	0x52
+grs_fbplot	seg009_19C	0x19B	0x85
+grs_which1	seg009_221	0x220	0x44
+seg009_265	seg009_265	0x264	0xC7
+pic_to_fbuf	seg009_32C	0x32B	0x21
+mask_to_screen	seg009_34D	0x34C	0x3F
+seg009_38C	seg009_38C	0x38B	0x58

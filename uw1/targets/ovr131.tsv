@@ -1,0 +1,9 @@
+# segment ovr131 base 0x7D5B0 size 0x687 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+ovr131_0	ovr131_0	0x0	0x1DD
+ovr131_1DD	ovr131_1DD	0x1DD	0x30
+ApplyTerrainData_ovr131_20D	ApplyTerrainData_ovr131_20D	0x20D	0xD5
+ovr131_2E2	ovr131_2E2	0x2E2	0x93
+LoadT64AndDoorsGR_ovr131_375	LoadT64AndDoorsGR_ovr131_375	0x375	0x127
+LoadTextureFile_ovr131_49C	LoadTextureFile_ovr131_49C	0x49C	0x145
+BuildTerrainData_ovr131_5E1	BuildTerrainData_ovr131_5E1	0x5E1	0xA6

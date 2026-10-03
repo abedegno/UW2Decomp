@@ -1,0 +1,4 @@
+# segment seg035_3073 base 0x31A69 size 0x145 org 0x9
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+Map_GetAddr	GetTile_seg035_9	0x0	0x35
+CreateObj	PrepareNewObjectProps_seg035_3E	0x35	0x110

@@ -1,0 +1,3 @@
+# segment ovr149 base 0x834E0 size 0x17 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+trap_save	ovr149_0	0x0	0x17

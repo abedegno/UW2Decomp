@@ -1,0 +1,11 @@
+# name	address	name source
+# address: DS:offset for near data, segment:offset for far code (load-relative paragraphs)
+_cFstSinCos	1F3A:0E63	provisional
+_move_along	35BD:004D	provisional
+_mvcheck	35BD:0002	provisional
+_rand	0EC5:0DE7	provisional
+_rollem	35BD:011E	provisional
+_seg041_35D7_E9	35BD:00E8	provisional
+_Time	DS:2364	provisional
+F_LDIV@	0EC5:3636	library
+F_LXMUL@	0EC5:35FB	library

@@ -1,0 +1,17 @@
+# segment ovr094 base 0x69980 size 0xB86 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+set_mob_att	ovr094_0	0x0	0x21
+set_attitude	set_attitude_ovr094_21	0x21	0x3B
+set_race_attitude	set_race_attitude_ovr094_5C	0x5C	0x177
+x_skills_ovr094_1D3	x_skills_ovr094_1D3	0x1D3	0x63
+x_traps_ovr094_236	x_traps_ovr094_236	0x236	0x49
+place_object	place_object_ovr094_27F	0x27F	0x1D7
+take_from_npc_inv	take_from_npc_inv_ovr094_456	0x456	0x68
+add_to_npc_inv	add_to_npc_inv_ovr094_4BE	0x4BE	0x34
+remove_talker	remove_taker_ovr094_4F2	0x4F2	0x4B
+set_quest_ovr094_53D	set_quest_ovr094_53D	0x53D	0x7B
+GetQuest_ovr094_5B8	GetQuest_ovr094_5B8	0x5B8	0x6C
+sex	sex_ovr094_624	0x624	0x25
+gronk_door	GronkDoor_ovr094_649	0x649	0x101
+x_obj_stuff	x_obj_stuff_ovr094_74A	0x74A	0x2B9
+x_obj_pos	x_obj_pos_ovr094_A03	0xA03	0x183

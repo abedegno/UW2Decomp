@@ -1,0 +1,15 @@
+# segment ovr140 base 0x80410 size 0x9EB org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+init_save	ovr140_0	0x0	0x92
+ovr140_92	ovr140_92	0x92	0x9B
+ovr140_12D	ovr140_12D	0x12D	0xFC
+EnumerateSaveGames_ovr140_229	EnumerateSaveGames_ovr140_229	0x229	0xDC
+ShowSaveRest	ovr140_305	0x305	0x98
+ovr140_39D	ovr140_39D	0x39D	0xAE
+RestoreGame_ovr140_44B	RestoreGame_ovr140_44B	0x44B	0xC9
+SaveGame_ovr140_514	SaveGame_ovr140_514	0x514	0x155
+clear_dir	ovr140_669	0x669	0x83
+ovr140_6EC	ovr140_6EC	0x6EC	0xCF
+ovr140_7BB	ovr140_7BB	0x7BB	0xC6
+ChangeLevel_ovr140_881	ChangeLevel_ovr140_881	0x881	0x85
+LevelChangeEvents_ovr140_906	LevelChangeEvents_ovr140_906	0x906	0xE5

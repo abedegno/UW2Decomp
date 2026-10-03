@@ -1,0 +1,7 @@
+# segment ovr099 base 0x6E140 size 0x326 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+ovr099_0	ovr099_0	0x0	0x16
+ovr099_16	ovr099_16	0x16	0x144
+CombineObjs	ovr099_15A	0x15A	0x1F
+RemoveAfterCombine	ovr099_179	0x179	0x39
+RotwormStew_ovr099_1B2	RotwormStew_ovr099_1B2	0x1B2	0x174

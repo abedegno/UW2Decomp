@@ -1,0 +1,15 @@
+# segment ovr117 base 0x77110 size 0x108F org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+ClickOnInventorySlot_ovr117_0	ClickOnInventorySlot_ovr117_0	0x0	0x192
+MakeBagClose	ovr117_192	0x192	0x4D
+ovr117_1DF	ovr117_1DF	0x1DF	0x8C
+FixBagArea	ovr117_26B	0x26B	0xB6
+CloseTheBag	ovr117_321	0x321	0xC9
+DisplayOpenBag	ovr117_3EA	0x3EA	0xB4
+FixOpenBag	ovr117_49E	0x49E	0x1DE
+OpenTheBag	ovr117_67C	0x67C	0x3B0
+ScrollItemsUp	ovr117_A2C	0xA2C	0x24
+ScrollItemsDown	ovr117_A50	0xA50	0xDD
+PutObjectInBag	ovr117_B2D	0xB2D	0x31C
+SwapItemsInBag	ovr117_E49	0xE49	0x188
+BagWeight	ovr117_FD1	0xFD1	0xBE

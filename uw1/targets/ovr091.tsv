@@ -1,0 +1,8 @@
+# segment ovr091 base 0x65790 size 0x84A org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+ovr091_0	ovr091_0	0x0	0x153
+ovr091_153	ovr091_153	0x153	0xD9
+ovr091_22C	ovr091_22C	0x22C	0x3EE
+ovr091_61A	ovr091_61A	0x61A	0x114
+count_arc	ovr091_72E	0x72E	0x6A
+ovr091_798	ovr091_798	0x798	0xB2

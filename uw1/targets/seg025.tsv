@@ -1,0 +1,10 @@
+# segment seg025 base 0x2776D size 0xD27 org 0xD
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+InitPlayerProjectilesValues_seg025_D	InitPlayerProjectilesValues_seg025_D	0x0	0x92
+MissileRelease_seg025_9F	MissileRelease_seg025_9F	0x92	0x1C3
+NPCMissileLaunch_seg025_262	NPCMissileLaunch_seg025_262	0x255	0x4F
+ProjectileSpell_seg025_2B1	ProjectileSpell_seg025_2B1	0x2A4	0xA4
+ReturnObject	DropOrThrowByPlayer_seg025_355	0x348	0x3E7
+seg025_73C	seg025_73C	0x72F	0x55
+missile_fire	PrepareProjectileObject_seg025_791	0x784	0x3C0
+push_missile	seg025_B51	0xB44	0x1E3

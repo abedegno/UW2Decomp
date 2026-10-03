@@ -1,0 +1,6 @@
+# segment ovr101 base 0x700B0 size 0x339 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+creature_init	ovr101_0	0x0	0x17
+creature_init	ovr101_17	0x17	0x17
+creature_class_data	ovr101_2E	0x2E	0x30
+ovr101_5E	ovr101_5E	0x5E	0x2DB

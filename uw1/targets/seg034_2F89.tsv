@@ -1,0 +1,15 @@
+# segment seg034_2F89 base 0x30BC0 size 0xEA9 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+player_mous_move	seg034_2F89_0	0x0	0x4E
+parse_playin	seg034_2F89_4E	0x4E	0x18C
+do_player_keyboard	seg034_2F89_1DA	0x1DA	0x15A
+player_simple_move	seg034_2F89_334	0x334	0xD2
+check_physics	seg034_2F89_406	0x406	0x112
+move_physics	GameObjectLoop_seg034_2F89_518	0x518	0xAC
+finish_player	seg034_2F89_5C4	0x5C4	0x40
+move_player	PlayerMotion_seg034_2F89_604	0x604	0x10F
+SurfaceFootsteps_seg034_2F89_713	SurfaceFootsteps_seg034_2F89_713	0x713	0x185
+set_sound	ApplyPlayerSneakScore_seg034_2F89_898	0x898	0xA5
+WalkOnSurfaceTypes_seg034_93D	WalkOnSurfaceTypes_seg034_93D	0x93D	0x22D
+SetScreenShake_seg034_2F89_B6A	SetScreenShake_seg034_2F89_B6A	0xB6A	0x2F
+get_eye	PositionCameraAtObject_seg034_2F89_B99	0xB99	0x310

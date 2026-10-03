@@ -1,0 +1,11 @@
+# segment seg000 base 0x3202 size 0x4E8 org 0x2
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+seg000_2	seg000_2	0x0	0xA4
+seg000_A6	seg000_A6	0xA4	0x45
+UIDrawRelated_seg000_EB	UIDrawRelated_seg000_EB	0xE9	0x35
+seg000_120	seg000_120	0x11E	0x35
+seg000_155	seg000_155	0x153	0x36
+seg000_18B	seg000_18B	0x189	0x6E
+seg000_1F9	seg000_1F9	0x1F7	0x30
+seg000_229	seg000_229	0x227	0x107
+seg000_330	seg000_330	0x32E	0x1BA

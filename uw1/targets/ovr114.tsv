@@ -1,0 +1,19 @@
+# segment ovr114 base 0x75FF0 size 0x552 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+grfx_init	ovr114_0	0x0	0x35
+OpenFont_ovr114_35	OpenFont_ovr114_35	0x35	0x88
+grfx_close	ovr114_BD	0xBD	0xF
+grfx_clear	ovr114_CC	0xCC	0x2F
+read_quikpal	ovr114_FB	0xFB	0x5F
+grfx_quikpal	GetPalette_ovr114_15A	0x15A	0x2E
+grfx_setpal	ovr114_188	0x188	0x2B
+fadeout	ovr114_1B3	0x1B3	0x106
+fadein	ovr114_2B9	0x2B9	0xE8
+out3d	ovr114_3A1	0x3A1	0x43
+in3d	ovr114_3E4	0x3E4	0x96
+ovr114_47A	ovr114_47A	0x47A	0x17
+ovr114_491	ovr114_491	0x491	0x17
+ovr114_4A8	ovr114_4A8	0x4A8	0x17
+ovr114_4BF	ovr114_4BF	0x4BF	0x17
+ProbablyFlashColour_ovr114_4D6	ProbablyFlashColour_ovr114_4D6	0x4D6	0x28
+cameras_fade	DoTrapCamera_ovr114_4FE	0x4FE	0x54

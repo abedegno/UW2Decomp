@@ -1,0 +1,7 @@
+# segment seg028_2985 base 0x2AB8C size 0x687 org 0xC
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+dispel_spell	CancelActiveSpell_seg028_C	0x0	0x131
+PlayerUpdates_seg028_2985_13D	PlayerUpdates_seg028_2985_13D	0x131	0x279
+DegradeLights	UpdateInventoryLightSources_seg028_2985_3B6	0x3AA	0xF8
+sink_sink_sink	SwimSkillCheck_seg028_4AE	0x4A2	0xDB
+PlayerStatusEffectSpells_seg028_589	PlayerStatusEffectSpells_seg028_589	0x57D	0x10A

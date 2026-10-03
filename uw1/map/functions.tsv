@@ -156,6 +156,101 @@ seg003	seg003_5B5D	5B5D	8			0	0
 seg003	seg003_5B65	5B65	7EB			0	0
 seg003	seg003_6350	6350	1F7			0	0
 seg003	seg003_6547	6547	B			0	0
+seg004	seg004_63	63	68			0	0
+seg004	seg004_CB	CB	C2			0	0
+seg004	seg004_18D	18D	7			0	0
+seg004	seg004_194	194	2C8			0	0
+seg004	seg004_45C	45C	132			0	0
+seg004	seg004_58E	58E	136			0	0
+seg004	seg004_6C4	6C4	134			0	0
+seg004	seg004_7F8	7F8	138			0	0
+seg004	seg004_930	930	141			0	0
+seg004	seg004_A71	A71	210			0	0
+seg004	seg004_C81	C81	EF			0	0
+seg004	seg004_D70	D70	4A			0	0
+seg004	seg004_DBA	DBA	CE			0	0
+seg004	seg004_E88	E88	76			0	0
+seg004	seg004_EFE	EFE	13C			0	0
+seg004	seg004_103A	103A	1F			0	0
+seg004	seg004_1059	1059	FA			0	0
+seg004	seg004_1153	1153	1AB			0	0
+seg004	seg004_12FE	12FE	34			0	0
+seg004	seg004_1332	1332	3E			0	0
+seg004	seg004_1370	1370	1AF			0	0
+seg004	seg004_151F	151F	8D			0	0
+seg004	seg004_15AC	15AC	16F			0	0
+seg004	seg004_171B	171B	90			0	0
+seg004	seg004_17AB	17AB	151			0	0
+seg004	seg004_18FC	18FC	2E8			0	0
+seg004	seg004_1BE4	1BE4	15F			0	0
+seg004	seg004_1D43	1D43	136			0	0
+seg004	seg004_1E79	1E79	B			0	0
+seg004	seg004_1E84	1E84	955			0	0
+seg004	seg004_27D9	27D9	33D			0	0
+seg004	seg004_2B16	2B16	A			0	0
+seg004	seg004_2B20	2B20	F			0	0
+seg004	seg004_2B2F	2B2F	344			0	0
+seg004	seg004_2E73	2E73	1BA			0	0
+seg004	seg004_302D	302D	9	__GETDS	kin-same	0	0
+seg004	seg004_3036	3036	11			0	0
+seg004	seg004_3047	3047	13			0	0
+seg004	seg004_305A	305A	54			0	0
+seg004	seg004_30AE	30AE	48			0	0
+seg004	seg004_30F6	30F6	3D			0	0
+seg004	seg004_3133	3133	3D			0	0
+seg004	seg004_3170	3170	3D			0	0
+seg004	seg004_31AD	31AD	DE			0	0
+seg004	seg004_328B	328B	141			0	0
+seg004	seg004_33CC	33CC	75			0	0
+seg004	seg004_3441	3441	A3			0	0
+seg004	seg004_34E4	34E4	24E			0	0
+seg004	seg004_3732	3732	2C			0	0
+seg004	seg004_375E	375E	1D9			0	0
+seg004	seg004_3937	3937	12			0	0
+seg004	seg004_3949	3949	21A			0	0
+seg004	seg004_3B63	3B63	4F8			0	0
+seg004	seg004_405B	405B	109			0	0
+seg004	seg004_4164	4164	110			0	0
+seg004	seg004_4274	4274	10E			0	0
+seg004	seg004_4382	4382	605			0	0
+seg004	seg004_4987	4987	1BD			0	0
+seg004	seg004_4B44	4B44	332			0	0
+seg004	seg004_4E76	4E76	1CA			0	0
+seg004	seg004_5040	5040	29			0	0
+seg004	seg004_5069	5069	6F			0	0
+seg004	seg004_50D8	50D8	CB			0	0
+seg004	seg004_51A3	51A3	6C			0	0
+seg004	seg004_520F	520F	F0			0	0
+seg004	seg004_52FF	52FF	75			0	0
+seg004	seg004_5374	5374	75			0	0
+seg004	seg004_53E9	53E9	3D			0	0
+seg004	seg004_5426	5426	12B			0	0
+seg004	seg004_5551	5551	3D			0	0
+seg004	seg004_558E	558E	12B			0	0
+seg004	seg004_56B9	56B9	3D			0	0
+seg004	seg004_56F6	56F6	12B			0	0
+seg004	seg004_5821	5821	13			0	0
+seg004	seg004_5834	5834	4A			0	0
+seg004	seg004_587E	587E	7C			0	0
+seg004	seg004_58FA	58FA	3D			0	0
+seg004	seg004_5937	5937	A5			0	0
+seg004	seg004_59DC	59DC	A7			0	0
+seg004	seg004_5A83	5A83	A5			0	0
+seg004	seg004_5B28	5B28	2D4			0	0
+seg004	seg004_5DFC	5DFC	8			0	0
+seg004	seg004_5E04	5E04	325			0	0
+seg004	seg004_6129	6129	122			0	0
+seg004	seg004_624B	624B	17B			0	0
+seg004	seg004_63C6	63C6	17F			0	0
+seg004	seg004_6545	6545	17D			0	0
+seg004	seg004_66C2	66C2	12AC			0	0
+seg004	seg004_796E	796E	D3			0	0
+seg004	seg004_7A41	7A41	C8			0	0
+seg004	seg004_7B09	7B09	2E	conv_comobj	kin-same	0	0
+seg004	seg004_7B37	7B37	6			0	0
+seg004	seg004_7B3D	7B3D	7D			0	0
+seg004	seg004_7BBA	7BBA	D1			0	0
+seg004	seg004_7C8B	7C8B	14F			0	0
 seg005_10B2	start	0	113			0	0
 seg005_10B2	seg005_10B2_113	113	20			0	0
 seg005_10B2	seg005_10B2_133	133	40			0	0
@@ -1612,5 +1707,120 @@ ovr143	FindTeleportToObject_ovr143_14AD	14AD	74	moveto	kin-near	0	0
 ovr143	Resurrection_ovr143_1521	1521	D3			0	0
 ovr143	CallBackGateTravel_ovr143_15F4	15F4	1C			0	0
 ovr143	DeathAndResurrection_ovr143_1610	1610	219			0	0
-ovr143	SearchForTrap_ovr143_1829	1829	8CA54			0	0
-ovr143	DefuseTrap_sub_8E27D	8E27D	1			0	0
+ovr143	SearchForTrap_ovr143_1829	1829	2D8			0	0
+ovr144	ovr144_0	0	7	unbound	kin-same	0	0
+ovr145	ovr145_0	0	F3	sp_hdr	kin-near	0	0
+ovr145	ovr145_F3	F3	5C	sp_att	kin-near	0	0
+ovr145	ovr145_14F	14F	74	sp_hp	kin-near	0	0
+ovr145	ovr145_1C3	1C3	73	sp_mp	kin-near	0	0
+ovr145	ovr145_236	236	4E	sp_xp	kin-near	0	0
+ovr145	ovr145_284	284	DB			0	0
+ovr145	ovr145_35F	35F	E6			0	0
+ovr145	ovr145_445	445	B6			0	0
+ovr145	ovr145_4FB	4FB	10			0	0
+ovr146	ovr146_0	0	7	unbound	kin-same	0	0
+ovr149	ovr149_0	0	16			0	0
+ovr150	SpillInventory_ovr150_0	0	12E			0	0
+ovr150	SpillCritterInventory_ovr150_12E	12E	2C	drop_some_objects	kin-same	0	0
+ovr150	SpawnValuableLoot_ovr150_15A	15A	161	generate_treasure	kin-near	0	0
+ovr150	SpawnFoodLoot_ovr150_2BB	2BB	66	generate_food	kin-same	0	0
+ovr150	SpawnArmsLoot_ovr150_321	321	121	generate_weapons	kin-same	0	0
+ovr150	SpawnOtherLoot_ovr150_442	442	D4	generate_equipment	kin-near	0	0
+ovr150	SpawnNPCLoot_ovr150_516	516	87	generate_inventory	kin-near	0	0
+ovr152	ovr152_0	0	5	mous_3d_show	kin-same	0	0
+ovr152	ovr152_5	5	E			0	0
+ovr152	ovr152_13	13	5	mous_3d_show	kin-same	0	0
+ovr153	ovr153_0	0	17	trap_save	kin-near	0	0
+ovr153	ovr153_17	17	24			0	0
+ovr153	Trigger_ovr153_3B	3B	20F			0	0
+ovr153	RunTrap_ovr153_24A	24A	4C	SetOffTrap	kin-same	0	0
+ovr153	Traps_ovr153_296	296	B2C			0	0
+ovr153	ovr153_DC2	DC2	C1			0	0
+ovr153	ovr153_E83	E83	BE	delete_trap	kin-same	0	0
+ovr153	TalkToNPC_ovr153_F41	F41	3A			0	0
+ovr153	DoTraps_ovr153_F7B	F7B	18F			0	0
+ovr153	CreateTrap_ovr153_110A	110A	252	cast_trap_spell	kin-near	0	0
+ovr153	ovr153_135C	135C	A6			0	0
+ovr153	ovr153_1402	1402	3B	trap_obj_del	kin-same	0	0
+ovr153	CheckForBitD_ovr153_143D	143D	51	is_this_wandering	kin-same	0	0
+ovr153	CheckForBitDInArea_ovr153_148E	148E	36	dont_create_wandering_monster_here	kin-near	0	0
+ovr153	CheckIfWithin8TilesFromObject_ovr153_14C4	14C4	53	check_alert	kin-near	0	0
+ovr153	TriggerCreateObjectTrap_ovr153_1517	1517	AD	DoWanderingMonsters	kin-same	0	0
+ovr153	FindAndCloseDoors_ovr153_15C4	15C4	E5	DoClosingDoors	kin-near	0	0
+ovr154	ovr154_17	17	65	solve_compass	kin-same	0	0
+ovr154	GetCardinal_ovr154_7C	7C	85	mpos	kin-same	0	0
+ovr154	GetCardinalDirection_ovr154_101	101	1A	postodir	kin-same	0	0
+ovr154	GetDetectedCreatureDirections_ovr154_11B	11B	C0	print_path_to	kin-near	0	0
+ovr154	ovr154_1DB	1DB	4EB			0	0
+ovr154	ovr154_2D1	2D1	20			0	0
+ovr154	ovr154_2F1	2F1	17			0	0
+ovr154	ovr154_308	308	2B	dir_exist	kin-same	0	0
+ovr154	ovr154_333	333	41			0	0
+ovr154	ovr154_374	374	33			0	0
+ovr154	ovr154_3A7	3A7	A7	check_fds	kin-near	0	0
+ovr154	ovr154_44E	44E	56	blttodrive	kin-same	0	0
+ovr154	ovr154_4A4	4A4	53	bltfromdrive	kin-same	0	0
+ovr154	ReadFileToAddress_ovr154_4F7	4F7	4D	intoFarBuffer_ovr167_5DA	kin-same	0	0
+ovr154	ovr154_544	544	4D	FarWrite_ovr167_627	kin-same	0	0
+ovr154	ovr154_591	591	7C			0	0
+ovr154	ovr154_60D	60D	84			0	0
+ovr154	ovr154_691	691	31			0	0
+ovr144	ovr144_0	0	7	unbound	kin-same	0	0
+ovr145	ovr145_0	0	F3	sp_hdr	kin-near	0	0
+ovr145	ovr145_F3	F3	5C	sp_att	kin-near	0	0
+ovr145	ovr145_14F	14F	74	sp_hp	kin-near	0	0
+ovr145	ovr145_1C3	1C3	73	sp_mp	kin-near	0	0
+ovr145	ovr145_236	236	4E	sp_xp	kin-near	0	0
+ovr145	ovr145_284	284	DB			0	0
+ovr145	ovr145_35F	35F	E6			0	0
+ovr145	ovr145_445	445	B6			0	0
+ovr145	ovr145_4FB	4FB	11			0	0
+ovr146	ovr146_0	0	7	unbound	kin-same	0	0
+ovr149	ovr149_0	0	17	trap_save	kin-near	0	0
+ovr150	ovr150_0	0	12E			0	0
+ovr150	ovr150_12E	12E	2C	drop_some_objects	kin-same	0	0
+ovr150	ovr150_15A	15A	161	generate_treasure	kin-near	0	0
+ovr150	ovr150_2BB	2BB	66	generate_food	kin-same	0	0
+ovr150	ovr150_321	321	121	generate_weapons	kin-same	0	0
+ovr150	ovr150_442	442	D4	generate_equipment	kin-near	0	0
+ovr150	ovr150_516	516	87	generate_inventory	kin-near	0	0
+ovr152	ovr152_0	0	5	mous_3d_show	kin-same	0	0
+ovr152	ovr152_5	5	E			0	0
+ovr152	ovr152_13	13	5	mous_3d_show	kin-same	0	0
+ovr153	ovr153_0	0	17	trap_save	kin-near	0	0
+ovr153	ovr153_17	17	24			0	0
+ovr153	ovr153_3B	3B	20F			0	0
+ovr153	ovr153_24A	24A	4C	SetOffTrap	kin-same	0	0
+ovr153	ovr153_296	296	AFC			0	0
+ovr153	ovr153_D92	D92	F1			0	0
+ovr153	ovr153_E83	E83	BE	delete_trap	kin-same	0	0
+ovr153	ovr153_F41	F41	3A			0	0
+ovr153	ovr153_F7B	F7B	173			0	0
+ovr153	ovr153_10EE	10EE	26E	cast_trap_spell	kin-near	0	0
+ovr153	ovr153_135C	135C	A6			0	0
+ovr153	ovr153_1402	1402	3B	trap_obj_del	kin-same	0	0
+ovr153	ovr153_143D	143D	51	is_this_wandering	kin-same	0	0
+ovr153	ovr153_148E	148E	36	dont_create_wandering_monster_here	kin-near	0	0
+ovr153	ovr153_14C4	14C4	53	check_alert	kin-near	0	0
+ovr153	ovr153_1517	1517	AD	DoWanderingMonsters	kin-same	0	0
+ovr153	ovr153_15C4	15C4	E6	DoClosingDoors	kin-near	0	0
+ovr154	ovr154_0	0	17	flip_bool	kin-same	0	0
+ovr154	ovr154_17	17	65	solve_compass	kin-same	0	0
+ovr154	ovr154_7C	7C	85	mpos	kin-same	0	0
+ovr154	ovr154_101	101	1A	postodir	kin-same	0	0
+ovr154	ovr154_11B	11B	C0	print_path_to	kin-near	0	0
+ovr154	ovr154_1DB	1DB	C1	unsolve_compass	kin-same	0	0
+ovr154	ovr154_29C	29C	35	errmsg	kin-near	0	0
+ovr154	ovr154_2D1	2D1	20			0	0
+ovr154	ovr154_2F1	2F1	17			0	0
+ovr154	ovr154_308	308	2B	dir_exist	kin-same	0	0
+ovr154	ovr154_333	333	41			0	0
+ovr154	ovr154_374	374	33			0	0
+ovr154	ovr154_3A7	3A7	A7	check_fds	kin-near	0	0
+ovr154	ovr154_44E	44E	56	blttodrive	kin-same	0	0
+ovr154	ovr154_4A4	4A4	53	bltfromdrive	kin-same	0	0
+ovr154	ovr154_4F7	4F7	4D	intoFarBuffer_ovr167_5DA	kin-same	0	0
+ovr154	ovr154_544	544	4D	FarWrite_ovr167_627	kin-same	0	0
+ovr154	ovr154_591	591	7C			0	0
+ovr154	ovr154_60D	60D	84			0	0
+ovr154	ovr154_691	691	35	data_fopen	kin-near	0	0

@@ -1,0 +1,22 @@
+# segment seg031 base 0x2DDAD size 0x1228 org 0xD
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+place_3d_view	seg031_D	0x0	0x8C
+set_cyb	seg031_99	0x8C	0xF0
+seg031_189	seg031_189	0x17C	0x73
+init_3d	seg031_1FC	0x1EF	0x4A
+reset_db	seg031_246	0x239	0x13
+send_db	seg031_259	0x24C	0x4D
+do_3d_grab	seg031_2A6	0x299	0x53
+render_FB	seg031_2F9	0x2EC	0x58
+establish_view	renderrelated_seg031_351	0x344	0x45
+setup_vars	PositionCamera_seg031_396	0x389	0x115
+preset_grid	SomethingToDoWithShadeCalcs_seg031_4AB	0x49E	0x109
+init_grid	seg031_5B4	0x5A7	0xCB
+incvec	seg031_67F	0x672	0x26
+decvec	seg031_6A5	0x698	0x26
+enc_n_chk	seg031_6CB	0x6BE	0x426
+newdels	seg031_AF1	0xAE4	0x1A8
+move_to_next	seg031_C99	0xC8C	0x377
+fill_the_grid	seg031_1010	0x1003	0x14E
+build_grid	seg031_115E	0x1151	0xBC
+do_2dclip	seg031_121A	0x120D	0x1B

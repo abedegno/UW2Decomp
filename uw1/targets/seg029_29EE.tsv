@@ -1,0 +1,12 @@
+# segment seg029_29EE base 0x2B213 size 0x1388 org 0x3
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+bounce_obj	seg029_29EE_3	0x0	0xAA
+seg029_29EE_AD	seg029_29EE_AD	0xAA	0xC6
+do_objhit	CollideObjects_seg029_29EE_173	0x170	0x259
+get_phys_data	InitMotionParams_seg029_29EE_3CC	0x3C9	0x24E
+ApplyProjectileMotion_seg029_29EE_61A	ApplyProjectileMotion_seg029_29EE_61A	0x617	0x405
+static_to_mob	seg029_29EE_A1F	0xA1C	0x11B
+mob_init	seg029_29EE_B3A	0xB37	0x135
+ObjectHitsFloorTileDestroyTalismans_seg029_C6F	ObjectHitsFloorTileDestroyTalismans_seg029_C6F	0xC6C	0x39C
+update_hack_vecs	seg029_29EE_100B	0x1008	0x42
+obj_deal	PlacedObjectCollison_seg029_104D	0x104A	0x33E

@@ -1,0 +1,22 @@
+# segment ovr121 base 0x79FA0 size 0x1948 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+ovr121_0	ovr121_0	0x0	0x48
+BeginInventory	ovr121_48	0x48	0x19D
+mous_3d_show	ovr121_1E5	0x1E5	0x5
+ClearInventory	ovr121_1EA	0x1EA	0x57
+ovr121_241	ovr121_241	0x241	0x342
+ovr121_583	ovr121_583	0x583	0xB4
+ovr121_637	ovr121_637	0x637	0x3A
+DisplayInvSpecial	ovr121_671	0x671	0x22B
+DisplayInvObject	ovr121_89C	0x89C	0xBE
+SetCursorObj	ovr121_95A	0x95A	0xBA
+AskHowMany	ovr121_A14	0xA14	0x137
+MaybeContainerLogic_ovr121_B4B	MaybeContainerLogic_ovr121_B4B	0xB4B	0x5C0
+RearrangeInventory	ovr121_110B	0x110B	0x54
+AddToEmptySlot	ovr121_115F	0x115F	0x50
+AddTogether	ovr121_11AF	0x11AF	0x16C
+AddToOccupiedSlot	ovr121_131B	0x131B	0x305
+MaybeRefreshInventory_ovr121_1620	MaybeRefreshInventory_ovr121_1620	0x1620	0x46
+displayInventoryArray	ovr121_1666	0x1666	0x1C1
+displayEnc	UpdateWeightDisplay_ovr121_1827	0x1827	0x85
+FindInventoryHit	ovr121_18AC	0x18AC	0x9C

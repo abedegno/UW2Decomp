@@ -1,0 +1,14 @@
+# segment seg017_1FDD base 0x21101 size 0x1425 org 0x1
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+draw_sprite	seg017_1FDD_1	0x0	0x35
+set_pix_xfer	seg017_1FDD_36	0x35	0x1A
+DetailLevel_seg017_50	DetailLevel_seg017_50	0x4F	0x75
+seg017_1FDD_C5	seg017_1FDD_C5	0xC4	0x27E
+do_3d_pickup	seg017_1FDD_343	0x342	0x1E3
+subprocess	StartRendering_seg017_526	0x525	0x274
+seg017_1FDD_79A	seg017_1FDD_79A	0x799	0xE6
+seg017_1FDD_880	seg017_1FDD_880	0x87F	0xE4
+seg017_1FDD_964	seg017_1FDD_964	0x963	0xE6
+seg017_1FDD_A4A	seg017_1FDD_A4A	0xA49	0x1D1
+seg017_1FDD_C1B	seg017_1FDD_C1B	0xC1A	0x1A1
+grdb_elem	seg017_1FDD_DBC	0xDBB	0x66A

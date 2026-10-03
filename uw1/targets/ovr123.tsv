@@ -1,0 +1,6 @@
+# segment ovr123 base 0x7C830 size 0x25E org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+Map_Init	ovr123_0	0x0	0x37
+ovr123_37	ovr123_37	0x37	0x3F
+ovr123_76	ovr123_76	0x76	0xF8
+ovr123_16E	ovr123_16E	0x16E	0xF0

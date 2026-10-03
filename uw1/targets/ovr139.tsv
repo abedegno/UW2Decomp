@@ -1,0 +1,3 @@
+# segment ovr139 base 0x80400 size 0x7 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+unbound	ovr139_0	0x0	0x7

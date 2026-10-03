@@ -1,0 +1,8 @@
+# segment seg023 base 0x25BBD size 0x542 org 0xD
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+remove_lock	RemoveDoorLock_seg023_D	0x0	0x8E
+try_remove	RemoveObjectFromTile_seg023_9B	0x8E	0x3B
+DamageObject_Debris_seg023_D6	DamageObject_Debris_seg023_D6	0xC9	0x229
+ScaleDamageAgainstObject_seg023_2FF	ScaleDamageAgainstObject_seg023_2FF	0x2F2	0x5B
+damage_item	DamageObject_seg023_35A	0x34D	0x8D
+damage_object	DamageObjectAndDoors_seg023_3E7	0x3DA	0x168

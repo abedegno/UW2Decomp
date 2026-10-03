@@ -1,0 +1,12 @@
+# segment ovr122 base 0x7BA10 size 0xD68 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+LookAt_ovr122_0	LookAt_ovr122_0	0x0	0x34A
+LookAtMagicEquipment_ovr122_34A	LookAtMagicEquipment_ovr122_34A	0x34A	0x62
+MagicItemDescription_ovr122_3AC	MagicItemDescription_ovr122_3AC	0x3AC	0x1DA
+Read_ovr122_586	Read_ovr122_586	0x586	0x13B
+ovr122_6C1	ovr122_6C1	0x6C1	0x25A
+BonesLook	LookAtBones_ovr122_91B	0x91B	0xDB
+KeyLook	LookAtKey_ovr122_9F6	0x9F6	0x42
+CritterLook	LookAtNPC_ovr122_A38	0xA38	0x1D9
+SpecialLook	LookAtObject_ovr122_C11	0xC11	0xB2
+LookAtTalisman_ovr122_CC3	LookAtTalisman_ovr122_CC3	0xCC3	0xA5

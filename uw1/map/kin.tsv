@@ -156,6 +156,101 @@ seg003	seg003_5B5D	965D	8	none	0.000
 seg003	seg003_5B65	9665	7EB	like	0.752	seg003_0272	seg003_0272_536B	
 seg003	seg003_6350	9E50	1F7	like	0.824	seg003_0272	seg003_0272_5B50	
 seg003	seg003_6547	A047	B	none	0.000			
+seg004	seg004_63	A0D3	68	near	0.969	seg004_0849	seg004_0849_63	
+seg004	seg004_CB	A13B	C2	like	0.878	seg004_0849	seg004_0849_CB	
+seg004	seg004_18D	A1FD	7	same	1.000	seg004_0849	seg004_0849_18D	
+seg004	seg004_194	A204	2C8	none	0.000			
+seg004	seg004_45C	A4CC	132	near	0.976	seg004_0849	seg004_0849_7FC	
+seg004	seg004_58E	A5FE	136	near	0.976	seg004_0849	seg004_0849_92E	
+seg004	seg004_6C4	A734	134	near	0.976	seg004_0849	seg004_0849_A64	
+seg004	seg004_7F8	A868	138	near	0.921	seg004_0849	seg004_0849_92E	
+seg004	seg004_930	A9A0	141	none	0.000			
+seg004	seg004_A71	AAE1	210	none	0.000			
+seg004	seg004_C81	ACF1	EF	none	0.000			
+seg004	seg004_D70	ADE0	4A	none	0.000			
+seg004	seg004_DBA	AE2A	CE	none	0.000			
+seg004	seg004_E88	AEF8	76	none	0.000			
+seg004	seg004_EFE	AF6E	13C	none	0.000			
+seg004	seg004_103A	B0AA	1F	none	0.000			
+seg004	seg004_1059	B0C9	FA	same	1.000	seg004_0849	seg004_0849_F0C	
+seg004	seg004_1153	B1C3	1AB	none	0.000			
+seg004	seg004_12FE	B36E	34	none	0.000			
+seg004	seg004_1332	B3A2	3E	none	0.000			
+seg004	seg004_1370	B3E0	1AF	none	0.000			
+seg004	seg004_151F	B58F	8D	none	0.000			
+seg004	seg004_15AC	B61C	16F	none	0.000			
+seg004	seg004_171B	B78B	90	none	0.000			
+seg004	seg004_17AB	B81B	151	none	0.000			
+seg004	seg004_18FC	B96C	2E8	none	0.000			
+seg004	seg004_1BE4	BC54	15F	none	0.000			
+seg004	seg004_1D43	BDB3	136	none	0.000			
+seg004	seg004_1E79	BEE9	B	none	0.000			
+seg004	seg004_1E84	BEF4	955	none	0.000			
+seg004	seg004_27D9	C849	33D	near	0.948	seg004_0849	seg004_0849_1099	
+seg004	seg004_2B16	CB86	A	same	1.000	seg004_0849	seg004_0849_13D6	
+seg004	seg004_2B20	CB90	F	same	1.000	seg004_0849	seg004_0849_13E0	
+seg004	seg004_2B2F	CB9F	344	like	0.783	seg004_0849	seg004_0849_13EF	
+seg004	seg004_2E73	CEE3	1BA	none	0.000			
+seg004	seg004_302D	D09D	9	same	1.000	seg004_0849	seg004_0849_18ED	
+seg004	seg004_3036	D0A6	11	same	1.000	seg004_0849	seg004_0849_18F6	
+seg004	seg004_3047	D0B7	13	same	1.000	seg004_0849	seg004_0849_1907	
+seg004	seg004_305A	D0CA	54	same	1.000	seg004_0849	seg004_0849_191A	
+seg004	seg004_30AE	D11E	48	same	1.000	seg004_0849	seg004_0849_196E	
+seg004	seg004_30F6	D166	3D	same	1.000	seg004_0849	seg004_0849_19B6	
+seg004	seg004_3133	D1A3	3D	same	1.000	seg004_0849	seg004_0849_19B6	
+seg004	seg004_3170	D1E0	3D	same	1.000	seg004_0849	seg004_0849_19B6	
+seg004	seg004_31AD	D21D	DE	near	0.982	seg004_0849	seg004_0849_1A6D	
+seg004	seg004_328B	D2FB	141	none	0.000			
+seg004	seg004_33CC	D43C	75	none	0.000			
+seg004	seg004_3441	D4B1	A3	none	0.000			
+seg004	seg004_34E4	D554	24E	none	0.000			
+seg004	seg004_3732	D7A2	2C	none	0.000			
+seg004	seg004_375E	D7CE	1D9	none	0.000			
+seg004	seg004_3937	D9A7	12	none	0.000			
+seg004	seg004_3949	D9B9	21A	none	0.000			
+seg004	seg004_3B63	DBD3	4F8	none	0.000			
+seg004	seg004_405B	E0CB	109	near	0.972	seg004_0849	seg004_0849_26E1	
+seg004	seg004_4164	E1D4	110	near	0.972	seg004_0849	seg004_0849_27EA	
+seg004	seg004_4274	E2E4	10E	near	0.972	seg004_0849	seg004_0849_28FA	
+seg004	seg004_4382	E3F2	605	near	0.991	seg004_0849	seg004_0849_2A08	
+seg004	seg004_4987	E9F7	1BD	none	0.000			
+seg004	seg004_4B44	EBB4	332	near	0.997	seg004_0849	seg004_0849_30DC	
+seg004	seg004_4E76	EEE6	1CA	none	0.000			
+seg004	seg004_5040	F0B0	29	none	0.000			
+seg004	seg004_5069	F0D9	6F	same	1.000	seg004_0849	seg004_0849_34C5	
+seg004	seg004_50D8	F148	CB	same	1.000	seg004_0849	seg004_0849_3534	
+seg004	seg004_51A3	F213	6C	like	0.838	seg004_0849	seg004_0849_35FF	
+seg004	seg004_520F	F27F	F0	none	0.000			
+seg004	seg004_52FF	F36F	75	none	0.000			
+seg004	seg004_5374	F3E4	75	none	0.000			
+seg004	seg004_53E9	F459	3D	same	1.000	seg004_0849	seg004_0849_3650	
+seg004	seg004_5426	F496	12B	same	1.000	seg004_0849	seg004_0849_368D	
+seg004	seg004_5551	F5C1	3D	same	1.000	seg004_0849	seg004_0849_37B8	
+seg004	seg004_558E	F5FE	12B	same	1.000	seg004_0849	seg004_0849_368D	
+seg004	seg004_56B9	F729	3D	same	1.000	seg004_0849	seg004_0849_3920	
+seg004	seg004_56F6	F766	12B	same	1.000	seg004_0849	seg004_0849_368D	
+seg004	seg004_5821	F891	13	none	0.000			
+seg004	seg004_5834	F8A4	4A	like	0.684	seg004_0849	seg004_0849_3B04	
+seg004	seg004_587E	F8EE	7C	same	1.000	seg004_0849	seg004_0849_3A88	
+seg004	seg004_58FA	F96A	3D	same	1.000	seg004_0849	seg004_0849_3B04	
+seg004	seg004_5937	F9A7	A5	none	0.000			
+seg004	seg004_59DC	FA4C	A7	none	0.000			
+seg004	seg004_5A83	FAF3	A5	none	0.000			
+seg004	seg004_5B28	FB98	2D4	like	0.694	seg004_0849	seg004_0849_3B41	
+seg004	seg004_5DFC	FE6C	8	none	0.000			
+seg004	seg004_5E04	FE74	325	none	0.000			
+seg004	seg004_6129	10199	122	none	0.000			
+seg004	seg004_624B	102BB	17B	like	0.681	seg004_0849	seg004_0849_26E1	
+seg004	seg004_63C6	10436	17F	like	0.698	seg004_0849	seg004_0849_27EA	
+seg004	seg004_6545	105B5	17D	like	0.698	seg004_0849	seg004_0849_28FA	
+seg004	seg004_66C2	10732	12AC	like	0.884	seg004_0849	seg004_0849_6952	
+seg004	seg004_796E	119DE	D3	none	0.000			
+seg004	seg004_7A41	11AB1	C8	none	0.000			
+seg004	seg004_7B09	11B79	2E	same	1.000	seg004_0849	seg004_0849_7EDE	
+seg004	seg004_7B37	11BA7	6	none	0.000			
+seg004	seg004_7B3D	11BAD	7D	like	0.854	seg004_0849	seg004_0849_7F12	
+seg004	seg004_7BBA	11C2A	D1	near	0.903	seg004_0849	seg004_0849_7F8D	
+seg004	seg004_7C8B	11CFB	14F	like	0.736	seg004_0849	seg004_0849_805B	
 seg005_10B2	start	11E50	113	near	0.929	seg005_105F	start	
 seg005_10B2	seg005_10B2_113	11F63	20	like	0.700	seg005_105F	seg005_105F_113	
 seg005_10B2	seg005_10B2_133	11F83	40	same	1.000	seg005_105F	ExitProgram_seg005_105F_133	
@@ -1612,5 +1707,120 @@ ovr143	FindTeleportToObject_ovr143_14AD	8271D	74	near	0.938	ovr154	FindItemOnMap
 ovr143	Resurrection_ovr143_1521	82791	D3	none	0.000			
 ovr143	CallBackGateTravel_ovr143_15F4	82864	1C	like	0.727	ovr154	FindMoonStone_ovr154_13EE	src/game/SKILLS.C
 ovr143	DeathAndResurrection_ovr143_1610	82880	219	none	0.000			
-ovr143	SearchForTrap_ovr143_1829	82A99	8CA54	none	0.000			
-ovr143	DefuseTrap_sub_8E27D	10F4ED	1	none	0.000			
+ovr143	SearchForTrap_ovr143_1829	82A99	2D8	none	0.000			
+ovr144	ovr144_0	82F30	7	same	1.000	ovr095	do_input_wait_ovr095_A54	src/conv/BABL.C
+ovr145	ovr145_0	82F40	F3	near	0.918	ovr158	PrintCharNameClassLevel_ovr158_0	src/ui/STATS.C
+ovr145	ovr145_F3	83033	5C	near	0.950	ovr158	PrintPlayerAttribute_ovr158_F3	src/ui/STATS.C
+ovr145	ovr145_14F	8308F	74	near	0.959	ovr158	PrintAHPString_ovr158_14F	src/ui/STATS.C
+ovr145	ovr145_1C3	83103	73	near	0.959	ovr158	PrintAManaString_ovr158_1C3	src/ui/STATS.C
+ovr145	ovr145_236	83176	4E	near	0.938	ovr158	PrintEXPString_ovr158_236	src/ui/STATS.C
+ovr145	ovr145_284	831C4	DB	like	0.779	ovr158	PrintSkill_ovr158_284	src/ui/STATS.C
+ovr145	ovr145_35F	8329F	E6	like	0.859	ovr158	StatsDisplay_ovr158_37C	src/ui/STATS.C
+ovr145	ovr145_445	83385	B6	like	0.687	ovr158	ProbablyStatDisplayClick_ovr158_460	src/ui/STATS.C
+ovr145	ovr145_4FB	8343B	10	like	0.800	ovr158	RedrawStatPanel_ovr158_54D	src/ui/STATS.C
+ovr146	ovr146_0	834B0	7	same	1.000	ovr095	do_input_wait_ovr095_A54	src/conv/BABL.C
+ovr149	ovr149_0	834E0	16	like	0.842	ovr162	ovr162_0	src/event/TRIGSAVE.C
+ovr150	SpillInventory_ovr150_0	83500	12E	like	0.755	ovr163	SpillInventory_ovr163_0	src/obj/TREASURE.C
+ovr150	SpillCritterInventory_ovr150_12E	8362E	2C	same	1.000	ovr163	SpillCritterInventory_ovr163_1F1	src/obj/TREASURE.C
+ovr150	SpawnValuableLoot_ovr150_15A	8365A	161	near	0.935	ovr163	LootSpawnValuables_ovr163_21D	src/obj/TREASURE.C
+ovr150	SpawnFoodLoot_ovr150_2BB	837BB	66	same	1.000	ovr163	LootSpawnFood_ovr163_396	src/obj/TREASURE.C
+ovr150	SpawnArmsLoot_ovr150_321	83821	121	same	1.000	ovr163	LootSpawnArms_ovr163_3FC	src/obj/TREASURE.C
+ovr150	SpawnOtherLoot_ovr150_442	83942	D4	near	0.948	ovr163	LootSpawnOther_ovr163_51D	src/obj/TREASURE.C
+ovr150	SpawnNPCLoot_ovr150_516	83A16	87	near	0.972	ovr163	SpawnNPCLoot_ovr163_609	src/obj/TREASURE.C
+ovr152	ovr152_0	83AE0	5	same	1.000	seg015_1D7C	seg015_1D7C_1F6	src/ui/MOUSE.C
+ovr152	ovr152_5	83AE5	E	same	1.000	ovr092	ovr092_5	src/sys/STUBS.C
+ovr152	ovr152_13	83AF3	5	same	1.000	seg015_1D7C	seg015_1D7C_1F6	src/ui/MOUSE.C
+ovr153	ovr153_0	83B00	17	near	0.900	ovr162	ovr162_0	src/event/TRIGSAVE.C
+ovr153	ovr153_17	83B17	24	like	0.800	ovr166	MajorClass6TriggerType_ovr166_17	src/event/TRIGGER.C
+ovr153	Trigger_ovr153_3B	83B3B	20F	like	0.885	ovr166	RunTrigger_ovr166_3B	src/event/TRIGGER.C
+ovr153	RunTrap_ovr153_24A	83D4A	4C	same	1.000	ovr166	TriggerTrap_ovr166_24C	src/event/TRIGGER.C
+ovr153	Traps_ovr153_296	83D96	B2C	none	0.000			
+ovr153	ovr153_DC2	848C2	C1	like	0.634	ovr166	RemoveTriggersPointingAtTrapToRemove_ovr166_1B84	src/event/TRIGGER.C
+ovr153	ovr153_E83	84983	BE	same	1.000	ovr166	RemoveTrapChain_ovr166_1C95	src/event/TRIGGER.C
+ovr153	TalkToNPC_ovr153_F41	84A41	3A	none	0.000			
+ovr153	DoTraps_ovr153_F7B	84A7B	18F	none	0.000			
+ovr153	CreateTrap_ovr153_110A	84C0A	252	near	0.992	ovr166	CreateMoveTriggerAndTrapInTile_ovr166_22E4	src/event/TRIGGER.C
+ovr153	ovr153_135C	84E5C	A6	like	0.853	ovr166	RemoveTriggerChain_ovr166_253F	src/event/TRIGGER.C
+ovr153	ovr153_1402	84F02	3B	same	1.000	ovr166	RemoveTrapTriggerChain_ovr166_2610	src/event/TRIGGER.C
+ovr153	CheckForBitD_ovr153_143D	84F3D	51	same	1.000	ovr166	CheckObjectBitRelatedToCreateObject_0xD_8_ovr166_264B	src/event/TRIGGER.C
+ovr153	CheckForBitDInArea_ovr153_148E	84F8E	36	near	0.900	ovr166	CheckIfMobileBit_D_8_1BB8_ovr166_269C	src/event/TRIGGER.C
+ovr153	CheckIfWithin8TilesFromObject_ovr153_14C4	84FC4	53	near	0.974	ovr166	CheckIfWithin8TilesFromObject_ovr166_26D2	src/event/TRIGGER.C
+ovr153	TriggerCreateObjectTrap_ovr153_1517	85017	AD	same	1.000	ovr166	FindAndTriggerCreateObjectTrap_ovr166_2726	src/event/TRIGGER.C
+ovr153	FindAndCloseDoors_ovr153_15C4	850C4	E5	near	0.951	ovr166	SCDFindandCloseDoor_ovr166_27D3	src/event/TRIGGER.C
+ovr154	ovr154_17	852A7	65	same	1.000	ovr167	ovr167_17	src/sys/MISCUTIL.C
+ovr154	GetCardinal_ovr154_7C	8530C	85	same	1.000	ovr167	TurnVectorsIntoHeading_ovr167_7C	src/sys/MISCUTIL.C
+ovr154	GetCardinalDirection_ovr154_101	85391	1A	same	1.000	ovr167	GetHeadingBetweenPoints_ovr167_177	src/sys/MISCUTIL.C
+ovr154	GetDetectedCreatureDirections_ovr154_11B	853AB	C0	near	0.916	ovr167	GetDetectedCreatureDirections_ovr167_191	src/sys/MISCUTIL.C
+ovr154	ovr154_1DB	8546B	4EB	none	0.000			
+ovr154	ovr154_2D1	85561	20	like	0.710	ovr118	FlashColour_ovr118_562	src/gfx/GRFX.C
+ovr154	ovr154_2F1	85581	17	none	0.000			
+ovr154	ovr154_308	85598	2B	same	1.000	ovr167	ListFiles_ovr167_3F6	src/sys/MISCUTIL.C
+ovr154	ovr154_333	855C3	41	like	0.879	ovr167	ovr167_421	src/sys/MISCUTIL.C
+ovr154	ovr154_374	85604	33	none	0.000			
+ovr154	ovr154_3A7	85637	A7	near	0.973	ovr167	DeleteTempFiles_ovr167_489	src/sys/MISCUTIL.C
+ovr154	ovr154_44E	856DE	56	same	1.000	ovr167	ovr167_531	src/sys/MISCUTIL.C
+ovr154	ovr154_4A4	85734	53	same	1.000	ovr167	LoadDatFile_ovr167_587	src/sys/MISCUTIL.C
+ovr154	ReadFileToAddress_ovr154_4F7	85787	4D	same	1.000	ovr167	FileReadToAddress_ovr167_5DA	src/sys/MISCUTIL.C
+ovr154	ovr154_544	857D4	4D	same	1.000	ovr167	FileWriteWithParams_ovr167_627	src/sys/MISCUTIL.C
+ovr154	ovr154_591	85821	7C	none	0.000			
+ovr154	ovr154_60D	8589D	84	none	0.000			
+ovr154	ovr154_691	85921	31	like	0.842	ovr167	LoadStringsPakToTable_ovr167_85A	src/sys/MISCUTIL.C
+ovr144	ovr144_0	82F30	7	same	1.000	ovr095	do_input_wait_ovr095_A54	src/conv/BABL.C
+ovr145	ovr145_0	82F40	F3	near	0.918	ovr158	PrintCharNameClassLevel_ovr158_0	src/ui/STATS.C
+ovr145	ovr145_F3	83033	5C	near	0.950	ovr158	PrintPlayerAttribute_ovr158_F3	src/ui/STATS.C
+ovr145	ovr145_14F	8308F	74	near	0.959	ovr158	PrintAHPString_ovr158_14F	src/ui/STATS.C
+ovr145	ovr145_1C3	83103	73	near	0.959	ovr158	PrintAManaString_ovr158_1C3	src/ui/STATS.C
+ovr145	ovr145_236	83176	4E	near	0.938	ovr158	PrintEXPString_ovr158_236	src/ui/STATS.C
+ovr145	ovr145_284	831C4	DB	like	0.779	ovr158	PrintSkill_ovr158_284	src/ui/STATS.C
+ovr145	ovr145_35F	8329F	E6	like	0.859	ovr158	StatsDisplay_ovr158_37C	src/ui/STATS.C
+ovr145	ovr145_445	83385	B6	like	0.687	ovr158	ProbablyStatDisplayClick_ovr158_460	src/ui/STATS.C
+ovr145	ovr145_4FB	8343B	11	like	0.750	ovr158	RedrawStatPanel_ovr158_54D	src/ui/STATS.C
+ovr146	ovr146_0	834B0	7	same	1.000	ovr095	do_input_wait_ovr095_A54	src/conv/BABL.C
+ovr149	ovr149_0	834E0	17	near	0.900	ovr162	ovr162_0	src/event/TRIGSAVE.C
+ovr150	ovr150_0	83500	12E	like	0.755	ovr163	SpillInventory_ovr163_0	src/obj/TREASURE.C
+ovr150	ovr150_12E	8362E	2C	same	1.000	ovr163	SpillCritterInventory_ovr163_1F1	src/obj/TREASURE.C
+ovr150	ovr150_15A	8365A	161	near	0.935	ovr163	LootSpawnValuables_ovr163_21D	src/obj/TREASURE.C
+ovr150	ovr150_2BB	837BB	66	same	1.000	ovr163	LootSpawnFood_ovr163_396	src/obj/TREASURE.C
+ovr150	ovr150_321	83821	121	same	1.000	ovr163	LootSpawnArms_ovr163_3FC	src/obj/TREASURE.C
+ovr150	ovr150_442	83942	D4	near	0.948	ovr163	LootSpawnOther_ovr163_51D	src/obj/TREASURE.C
+ovr150	ovr150_516	83A16	87	near	0.972	ovr163	SpawnNPCLoot_ovr163_609	src/obj/TREASURE.C
+ovr152	ovr152_0	83AE0	5	same	1.000	seg015_1D7C	seg015_1D7C_1F6	src/ui/MOUSE.C
+ovr152	ovr152_5	83AE5	E	same	1.000	ovr092	ovr092_5	src/sys/STUBS.C
+ovr152	ovr152_13	83AF3	5	same	1.000	seg015_1D7C	seg015_1D7C_1F6	src/ui/MOUSE.C
+ovr153	ovr153_0	83B00	17	near	0.900	ovr162	ovr162_0	src/event/TRIGSAVE.C
+ovr153	ovr153_17	83B17	24	like	0.800	ovr166	MajorClass6TriggerType_ovr166_17	src/event/TRIGGER.C
+ovr153	ovr153_3B	83B3B	20F	like	0.885	ovr166	RunTrigger_ovr166_3B	src/event/TRIGGER.C
+ovr153	ovr153_24A	83D4A	4C	same	1.000	ovr166	TriggerTrap_ovr166_24C	src/event/TRIGGER.C
+ovr153	ovr153_296	83D96	AFC	none	0.000			
+ovr153	ovr153_D92	84892	F1	none	0.000			
+ovr153	ovr153_E83	84983	BE	same	1.000	ovr166	RemoveTrapChain_ovr166_1C95	src/event/TRIGGER.C
+ovr153	ovr153_F41	84A41	3A	none	0.000			
+ovr153	ovr153_F7B	84A7B	173	none	0.000			
+ovr153	ovr153_10EE	84BEE	26E	near	0.949	ovr166	CreateMoveTriggerAndTrapInTile_ovr166_22E4	src/event/TRIGGER.C
+ovr153	ovr153_135C	84E5C	A6	like	0.853	ovr166	RemoveTriggerChain_ovr166_253F	src/event/TRIGGER.C
+ovr153	ovr153_1402	84F02	3B	same	1.000	ovr166	RemoveTrapTriggerChain_ovr166_2610	src/event/TRIGGER.C
+ovr153	ovr153_143D	84F3D	51	same	1.000	ovr166	CheckObjectBitRelatedToCreateObject_0xD_8_ovr166_264B	src/event/TRIGGER.C
+ovr153	ovr153_148E	84F8E	36	near	0.900	ovr166	CheckIfMobileBit_D_8_1BB8_ovr166_269C	src/event/TRIGGER.C
+ovr153	ovr153_14C4	84FC4	53	near	0.974	ovr166	CheckIfWithin8TilesFromObject_ovr166_26D2	src/event/TRIGGER.C
+ovr153	ovr153_1517	85017	AD	same	1.000	ovr166	FindAndTriggerCreateObjectTrap_ovr166_2726	src/event/TRIGGER.C
+ovr153	ovr153_15C4	850C4	E6	near	0.957	ovr166	SCDFindandCloseDoor_ovr166_27D3	src/event/TRIGGER.C
+ovr154	ovr154_0	85290	17	same	1.000	ovr167	NOT_ovr167_0	src/sys/MISCUTIL.C
+ovr154	ovr154_17	852A7	65	same	1.000	ovr167	ovr167_17	src/sys/MISCUTIL.C
+ovr154	ovr154_7C	8530C	85	same	1.000	ovr167	TurnVectorsIntoHeading_ovr167_7C	src/sys/MISCUTIL.C
+ovr154	ovr154_101	85391	1A	same	1.000	ovr167	GetHeadingBetweenPoints_ovr167_177	src/sys/MISCUTIL.C
+ovr154	ovr154_11B	853AB	C0	near	0.916	ovr167	GetDetectedCreatureDirections_ovr167_191	src/sys/MISCUTIL.C
+ovr154	ovr154_1DB	8546B	C1	same	1.000	ovr167	ovr167_252	src/sys/MISCUTIL.C
+ovr154	ovr154_29C	8552C	35	near	0.900	ovr167	PrintErrorToMessageScroll_ovr167_3C1	src/sys/MISCUTIL.C
+ovr154	ovr154_2D1	85561	20	like	0.710	ovr118	FlashColour_ovr118_562	src/gfx/GRFX.C
+ovr154	ovr154_2F1	85581	17	none	0.000			
+ovr154	ovr154_308	85598	2B	same	1.000	ovr167	ListFiles_ovr167_3F6	src/sys/MISCUTIL.C
+ovr154	ovr154_333	855C3	41	like	0.879	ovr167	ovr167_421	src/sys/MISCUTIL.C
+ovr154	ovr154_374	85604	33	none	0.000			
+ovr154	ovr154_3A7	85637	A7	near	0.973	ovr167	DeleteTempFiles_ovr167_489	src/sys/MISCUTIL.C
+ovr154	ovr154_44E	856DE	56	same	1.000	ovr167	ovr167_531	src/sys/MISCUTIL.C
+ovr154	ovr154_4A4	85734	53	same	1.000	ovr167	LoadDatFile_ovr167_587	src/sys/MISCUTIL.C
+ovr154	ovr154_4F7	85787	4D	same	1.000	ovr167	FileReadToAddress_ovr167_5DA	src/sys/MISCUTIL.C
+ovr154	ovr154_544	857D4	4D	same	1.000	ovr167	FileWriteWithParams_ovr167_627	src/sys/MISCUTIL.C
+ovr154	ovr154_591	85821	7C	none	0.000			
+ovr154	ovr154_60D	8589D	84	none	0.000			
+ovr154	ovr154_691	85921	35	near	0.950	ovr167	LoadStringsPakToTable_ovr167_85A	src/sys/MISCUTIL.C

@@ -1,0 +1,6 @@
+# segment ovr110 base 0x754F0 size 0x194 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+ovr110_0	ovr110_0	0x0	0xAB
+first_punt	ovr110_AB	0xAB	0x1C
+pfatal_code	CanNoLongerRunError_ovr110_C7	0xC7	0x8C
+pfatal	ovr110_153	0x153	0x41

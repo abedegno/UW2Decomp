@@ -1,0 +1,9 @@
+# segment seg010 base 0x1D8F4 size 0x473 org 0x4
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+init_input	seg010_4	0x0	0x56
+free_input	seg010_5A	0x56	0x29
+input_addmouse	RegisterEvent_seg010_83	0x7F	0x82
+_input_addkey	RegisterEventHandler_seg010_105	0x101	0x70
+input_del	seg010_175	0x171	0x13C
+input_dispatch	seg010_2B1	0x2AD	0x14C
+dispatch_key	seg010_3FD	0x3F9	0x7A
