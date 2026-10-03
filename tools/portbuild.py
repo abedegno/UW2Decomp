@@ -148,7 +148,9 @@ def windows_resource(cc):
     """On Windows, the program's icon (tools/dist/icon/uw2.ico) as a resource object for the
     link, compiled by llvm-windres (MSYS2 CLANG64's llvm package) or windres; [] elsewhere, or
     when neither is found (the program then has Windows's default icon)."""
-    if not (os.name == 'nt' or sys.platform in ('msys', 'cygwin') or os.environ.get('MSYSTEM')): return []
+    # decided by the compiler's target, as portcheck.layout_flags does: the Python running this
+    # need not be a Windows one (in the release job it was not, and the icon was lost silently)
+    if not portcheck.layout_flags(cc): return []
     import shutil
     tool = shutil.which('llvm-windres') or shutil.which('windres')
     if not tool:
