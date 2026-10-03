@@ -14,7 +14,7 @@ void PrintStringToConsole_seg017_DE(char *text)
 {
     size_t n = 0;
     while (text[n] != '$') n++;
-    fwrite(text, 1, n, stdout);
+    (fwrite)(text, 1, n, stdout);       /* the host's, buffered as printf's output is */
     fflush(stdout);
 }
 

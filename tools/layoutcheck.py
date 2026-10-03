@@ -68,7 +68,7 @@ def ast_records():
     hs = [h for h in sorted(os.listdir(INC)) if h.endswith('.h') and h != 'portable.h']
     open(tu, 'w').write(''.join(f'#include "{h}"\n' for h in hs))
     flags = [f for f in portcheck.FLAGS if not f.startswith('-W') and f not in ('-ferror-limit=0',)]
-    r = subprocess.run([os.environ.get('CC', 'cc')] + flags + ['-fsyntax-only', '-Wno-comment',
+    r = subprocess.run([os.environ.get('CC', 'cc')] + flags + portcheck.layout_flags(os.environ.get('CC', 'cc')) + ['-fsyntax-only', '-Wno-comment',
                         '-Xclang', '-ast-dump=json', tu], capture_output=True, text=True, cwd=root)
     if r.returncode: raise SystemExit('layoutcheck.py: clang failed on the headers\n' + r.stderr[-3000:])
     ast = json.loads(r.stdout)
@@ -177,7 +177,7 @@ def write_probe(recs, hs):
 def run_host(probe):
     exe = os.path.join(OUT, 'lprobe_host')
     flags = [f for f in portcheck.FLAGS if not f.startswith('-W') and f != '-ferror-limit=0']
-    r = subprocess.run([os.environ.get('CC', 'cc')] + flags + ['-w', '-o', exe, probe], capture_output=True,
+    r = subprocess.run([os.environ.get('CC', 'cc')] + flags + portcheck.layout_flags(os.environ.get('CC', 'cc')) + ['-w', '-o', exe, probe], capture_output=True,
                        text=True, cwd=root)
     if r.returncode: raise SystemExit('layoutcheck.py: the host probe does not build\n' + r.stderr[-4000:])
     out = subprocess.run([exe], capture_output=True, text=True).stdout

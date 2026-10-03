@@ -145,6 +145,20 @@ long bc_clock(void);
 #define stat(p, b) bc_stat(p, b)
 #define fstat(f, b) bc_fstat(f, b)
 #define fopen(p, m) bc_fopen(p, m)
+/* A stream's I/O goes straight to its handle, as the game also reads the handle itself
+   (LOADGR.C; sys/borland.c says why the host's buffered stdio cannot be used). */
+size_t bc_fread(void *buf, size_t size, size_t n, FILE *fp);
+size_t bc_fwrite(const void *buf, size_t size, size_t n, FILE *fp);
+int bc_fseek(FILE *fp, long off, int whence);
+long bc_ftell(FILE *fp);
+int bc_fgetc(FILE *fp);
+char *bc_fgets(char *s, int n, FILE *fp);
+#define fread(b, s, n, f) bc_fread(b, s, n, f)
+#define fwrite(b, s, n, f) bc_fwrite(b, s, n, f)
+#define fseek(f, o, w) bc_fseek(f, o, w)
+#define ftell(f) bc_ftell(f)
+#define fgetc(f) bc_fgetc(f)
+#define fgets(s, n, f) bc_fgets(s, n, f)
 /* exit runs the termination chain seg021's init hooked (sys/borland.c), then ends the
    program through the platform layer, which owns the main thread. */
 void bc_exit(int status);

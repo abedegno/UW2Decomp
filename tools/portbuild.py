@@ -188,7 +188,10 @@ def compile_port(cc, path, sound_cflags=()):
     extra = pkg_config('--cflags') if is_backend(path) else []
     if path.endswith(os.path.join('sound', 'audio.c')): extra = list(sound_cflags)
     opt = OPT if any(path.startswith(d) for d in OPTIMISED) else []
-    r = subprocess.run([cc] + ARCHS + opt + PORT_FLAGS + extra + ['-c', '-o', obj, path], capture_output=True, text=True, cwd=root)
+    # the game's struct layout (portcheck.layout_flags): port C that includes a game header
+    # must see the same layout as the game's C
+    r = subprocess.run([cc] + ARCHS + opt + PORT_FLAGS + portcheck.layout_flags(cc) + extra + ['-c', '-o', obj, path],
+                       capture_output=True, text=True, cwd=root)
     return path, r.returncode, r.stderr, obj if r.returncode == 0 else None
 
 

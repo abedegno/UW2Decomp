@@ -284,11 +284,65 @@ FILE *bc_fopen(const char *path, const char *mode)
     if (plat_resolve(path, how, host, sizeof host)) return NULL;
     port_log("fopen(\"%s\", \"%s\") -> %s\n", path, mode, host);
     fp = fopen(host, m);
-    /* Unbuffered: the game reads and writes a stream's handle directly too (LOADGR.C reads
-       fileno(grfp) after fseek(grfp, 0L, 1), which Borland's library made agree with the
-       handle's position by emptying the buffer; the host's may keep it). */
+    /* The stream's reads, writes and seeks are the port's, on its handle (below); the host's
+       stdio only opens and closes it, so it should hold no buffer. */
     if (fp) setvbuf(fp, NULL, _IONBF, 0);
     return fp;
+}
+
+/* A stream's I/O, done on its handle with no buffer, so that the stream and its handle are
+   always at the same place. The game reads a stream's handle directly too: LOADGR.C calls
+   fseek(grfp, 0L, 1) and then reads fileno(grfp), which works with Borland's library because
+   its fseek empties the buffer and moves the handle to the stream's position. No host C
+   library promises that. macOS's kept its buffer; Microsoft's UCRT, even for a stream set to
+   _IONBF, reads two bytes ahead into a small buffer, and its fseek to a place inside that
+   buffer moves only the buffer pointer, so the handle was a byte ahead and every .GR file's
+   offset table was read one byte late (error D004 on Windows). Every stream is binary, as the
+   port's streams always were: Borland's text mode is not applied to them. */
+size_t bc_fread(void *buf, size_t size, size_t n, FILE *fp)
+{
+    size_t want = size * n, got = 0;
+    ssize_t r;
+    if (!want) return 0;
+    while (got < want && (r = read(fileno(fp), (char *)buf + got, (unsigned)(want - got))) > 0) got += (size_t)r;
+    return got / size;
+}
+
+size_t bc_fwrite(const void *buf, size_t size, size_t n, FILE *fp)
+{
+    size_t want = size * n, put = 0;
+    ssize_t r;
+    if (!want) return 0;
+    while (put < want && (r = write(fileno(fp), (const char *)buf + put, (unsigned)(want - put))) > 0) put += (size_t)r;
+    return put / size;
+}
+
+int bc_fseek(FILE *fp, long off, int whence)
+{
+    return lseek(fileno(fp), (off_t)off, whence) == (off_t)-1 ? -1 : 0;
+}
+
+long bc_ftell(FILE *fp)
+{
+    return (long)lseek(fileno(fp), 0, SEEK_CUR);
+}
+
+int bc_fgetc(FILE *fp)
+{
+    unsigned char c;
+    return read(fileno(fp), &c, 1) == 1 ? c : EOF;
+}
+
+char *bc_fgets(char *s, int n, FILE *fp)
+{
+    int i = 0, c = 0;
+    while (i < n - 1 && (c = bc_fgetc(fp)) != EOF) {
+        s[i++] = (char)c;
+        if (c == '\n') break;
+    }
+    if (i == 0 && n > 1) return NULL;
+    s[i] = 0;
+    return s;
 }
 
 /* Borland's rand: a 32-bit LCG, multiplier 015A4E35h, seed 1, the high word's low 15 bits. */
