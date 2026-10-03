@@ -107,6 +107,10 @@ const char *plat_home(void);
    PLAT_WRITE: a file to be changed: copied from the data root into the home directory first.
    PLAT_CREATE: the home path. Returns 0, or -1 if the path is too long. */
 int plat_resolve(const char *dospath, int mode, char *out, size_t outsz);
+/* Deletes a file from the merged tree (a whiteout hides the data root's copy) and renames
+   one within it; 0, or -1 with errno set, as unlink and DOS's rename. */
+int plat_remove(const char *dospath);
+int plat_rename(const char *from, const char *to);
 /* Lists the DOS directory dir: calls fn for each entry of the merged tree, once per name. */
 int plat_listdir(const char *dosdir, void (*fn)(const char *name, int isdir, long size,
                                                long mtime, void *ctx), void *ctx);

@@ -1,7 +1,7 @@
 /* modex.c: replaces part of src/gfx/MODEX.ASM (seg017): the palette loader local_do_palette,
    the console print, the far string helpers (mem_set, str_len, str_copy, str_ncopy,
-   FindStringDelimiter, str_str, str_cmp) and gr_pixel. The video memory picture store (2A2,
-   320, 361) and grab are still the generated stubs. Each keeps the assembly's exact results:
+   FindStringDelimiter, str_str, str_cmp), gr_pixel, the video memory pictures (2A2, 320, 361)
+   and grab. Each keeps the assembly's exact results:
    str_ncopy copies at most n bytes and leaves no terminator when it stops short, and str_cmp
    compares bytes as unsigned and returns their difference. */
 #include "compat.h"
@@ -85,6 +85,72 @@ void gr_pixel(int x, int y, int color)
     vga_outb(SC_INDEX, 2);
     vga_outb(SC_DATA, (uint8_t)(1 << (x & 3)));
     vga_write(at, (uint8_t)color);
+}
+
+/* grab(dst, x, y, w, h): a w by h block of the screen, its top row at line 199 - y, into dst
+   as a linear w-wide image (PANELS.C keeps the panel it flips over this way, SCRSHOT.C takes
+   its GIF's rows). The assembly reads a plane at a time through the graphics controller's read
+   map and stores every fourth byte, in two passes that each walk down the rows for one plane
+   and back up (with the direction flag set) for the next; this is that, register for
+   register, so the odd strides and the plane order come out as in DOS. */
+void grab(void *dstp, int x, int y, int w, int h)
+{
+    unsigned char *dst = dstp;
+    uint16_t si, di = 0, bp, bx, cx, passes;
+    uint8_t al, ah, cl, dl, dh;
+    vga_outb(GC_INDEX, 4);                          /* read map select */
+    si = (uint16_t)((uint16_t)(0xC7 - y) * 0x50u + *dseg_67d6_21F4);
+    dl = (uint8_t)h;
+    dh = (uint8_t)w;
+    bx = (uint16_t)(0x50 - ((uint16_t)(w + 3) >> 2));
+    si = (uint16_t)(si + ((uint16_t)x >> 2));
+    al = (uint8_t)(x & 3);
+    bp = bx;
+    bx = (uint16_t)(dh & 3);
+    if (bx) bx = (uint16_t)(bx - 4);
+    for (passes = 2; passes; passes--) {
+        vga_outb(GC_DATA, al);
+        for (ah = dl; ah; ah--) {                   /* down the rows */
+            cl = (uint8_t)((uint8_t)(dh + 3) >> 2);
+            for (cx = cl; cx; cx--) {
+                dst[di] = vga_read(si);
+                si++;
+                di = (uint16_t)(di + 1 + 3);
+            }
+            si = (uint16_t)(si + bp);
+            di = (uint16_t)(di + bx);
+        }
+        al = (uint8_t)((al + 1) & 3);
+        if (!al) si++;
+        dh--;
+        if (!(dh & 3)) {
+            bp++;
+            bx = (uint16_t)(bx + 4);
+        }
+        vga_outb(GC_DATA, al);
+        di = (uint16_t)(di - 3 - bx);
+        si = (uint16_t)(si - bp - 1);
+        for (ah = dl; ah; ah--) {                   /* and back up, std */
+            cl = (uint8_t)((uint8_t)(dh + 3) >> 2);
+            for (cx = cl; cx; cx--) {
+                dst[di] = vga_read(si);
+                si--;
+                di = (uint16_t)(di - 1 - 3);
+            }
+            si = (uint16_t)(si - bp);
+            di = (uint16_t)(di - bx);
+        }
+        al = (uint8_t)((al + 1) & 3);
+        if (!al) si++;
+        dh--;
+        si = (uint16_t)(si + bp + 1);
+        di = (uint16_t)(di + 5 + bx);
+        if (!(dh & 3)) {
+            bp++;
+            bx = (uint16_t)(bx + 4);
+        }
+    }
+    vga_outw(GC_INDEX, 0xFF08);                     /* bit mask FF */
 }
 
 int seg001_023B_5A(int w, int h);

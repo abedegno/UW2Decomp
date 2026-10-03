@@ -78,14 +78,9 @@ uint8_t vga_reg_crtc(int i);
 void port_outb(unsigned port, uint8_t v);
 uint8_t port_inb(unsigned port);
 
-/* The PIT and the timers (sys/pit.c): the port's timer thread runs the AIL timers at their
-   rates, the BIOS tick at 18.2 Hz and the keyboard's typematic repeat. */
+/* The PIT (sys/pit.c): the port's timer thread gives AIL's timers (sound/ail.c) the time
+   that passes, and runs the BIOS tick at 18.2 Hz and the keyboard's typematic repeat. */
 void pit_start(void);
-typedef void (*pit_fn)(void);
-int pit_timer_register(pit_fn fn);             /* a handle, or -1 */
-void pit_timer_rate(int h, uint32_t hz);
-void pit_timer_run(int h, int on);
-void pit_timer_release(int h);
 uint32_t pit_bios_ticks(void);                 /* 18.2 Hz ticks since start, as 0040:006C */
 
 /* The keyboard controller (sys/kbdint.c): a byte from the platform, as from port 60h. */

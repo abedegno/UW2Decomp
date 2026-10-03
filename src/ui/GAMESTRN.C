@@ -86,7 +86,7 @@ char far * far get_string(int id)
     int string;
     register int i;
     register int block;
-    block = (unsigned)id >> 9;
+    block = (uint16)id >> 9;
     string = id & 0x1ff;
     found = -1;
     for (i = 0; i < string_blocks; i++)
@@ -130,7 +130,7 @@ int far replace_string(char far *s, int id)
     int block;
     int found;
     int i;
-    block = (unsigned)id >> 9;
+    block = (uint16)id >> 9;
     string = id & 0x1ff;
     found = -1;
     for (i = 0; i < string_blocks; i++)

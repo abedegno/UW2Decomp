@@ -1,8 +1,11 @@
-// node replaydos.mjs EXE OUTDIR [--replay FILE] [--timeout S] [step ...]
+// node replaydos.mjs EXE OUTDIR [--replay FILE] [--cfg FILE] [--stage DIR] [--timeout S] [step ...]
 //
 // Runs the replay DOS build (tools/replay.py builds it) in headless DOS, always js-dos through
 // dos-mcp, as tools/rungame.mjs runs the game. With --replay, FILE goes into the game's
-// directory as REPLAY.IN and the build replays it; otherwise the build records, and the steps
+// directory as REPLAY.IN and the build replays it; with --cfg, FILE replaces the game's
+// DATA\UW.CFG (the sound cards; js-dos has a Sound Blaster 16 at 220h, IRQ 7, DMA 1, with an
+// OPL3); with --stage, DIR's files and directories (a saved game, SAVE1) are copied into the
+// game's directory first; otherwise the build records, and the steps
 // drive the session: w:MS wait, k:KEY[,KEY...] keys (dos-mcp's names, 400 ms apart),
 // t:TEXT typed text, h:KEY,MS a key held down MS milliseconds, s:NAME a screenshot
 // OUTDIR/NAME.png, m:DX,DY a relative mouse move,
@@ -24,12 +27,14 @@ import { join, dirname } from "node:path";
 
 const args = process.argv.slice(2);
 const exe = args.shift(), out = args.shift();
-let replay = null, timeout = 600;
+let replay = null, timeout = 600, cfg = null, stageDir = null;
 const steps = [];
 while (args.length) {
   const a = args.shift();
   if (a === "--replay") replay = args.shift();
   else if (a === "--timeout") timeout = Number(args.shift());
+  else if (a === "--cfg") cfg = args.shift();
+  else if (a === "--stage") stageDir = args.shift();
   else steps.push(a);
 }
 mkdirSync(out, { recursive: true });
@@ -38,6 +43,8 @@ const game = process.env.UW2_DIR || (process.env.UW2_EXE ? dirname(process.env.U
 cpSync(game, stage, { recursive: true, filter: s => !s.includes("SAVE0.pristine") });
 cpSync(exe, join(stage, "UW2.EXE"));
 if (replay) cpSync(replay, join(stage, "REPLAY.IN"));
+if (cfg) cpSync(cfg, join(stage, "DATA", "UW.CFG"));
+if (stageDir) cpSync(stageDir, stage, { recursive: true });
 const be = new JsDosBackend({ headless: true });
 const t0 = Date.now();
 const log = (...m) => console.log(`[${((Date.now() - t0) / 1000).toFixed(1)}s]`, ...m);
@@ -90,6 +97,15 @@ try {
   for (const f of ["RECORD.OUT", "STATE.OUT", "NULLTRAP.LOG", "TRACE.OUT"]) {
     const b = await tryRead(f);
     if (b) { writeFileSync(join(out, f), b); log(`copied ${f} (${b.length} bytes)`); }
+  }
+  // the saved games a session made, SAVE1 to SAVE4, for comparing with the port's
+  for (const d of ["SAVE1", "SAVE2", "SAVE3", "SAVE4"]) {
+    let names = [];
+    try { names = (await bounded(be.fsList("/" + d), 20000, "fs_list")).filter(e => !e.isDir && !/^\./.test(e.name)).map(e => e.name); } catch { }
+    for (const n of names) {
+      const b = await tryRead(`${d}/${n}`);
+      if (b) { mkdirSync(join(out, d), { recursive: true }); writeFileSync(join(out, d, n), b); log(`copied ${d}/${n} (${b.length} bytes)`); }
+    }
   }
   try { const r = await bounded(be.screenshot("png"), 20000, "screenshot"); writeFileSync(join(out, "exit.png"), r.bytes); } catch { }
   const mem = { exited: done };

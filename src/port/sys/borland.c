@@ -220,9 +220,12 @@ int bc_access(const char *path, int mode)
 
 int bc_unlink(const char *path)
 {
-    char host[1024];
-    if (plat_resolve(path, PLAT_CREATE, host, sizeof host)) return -1;
-    return unlink(host);
+    return plat_remove(path);
+}
+
+int bc_rename(const char *from, const char *to)
+{
+    return plat_rename(from, to);
 }
 
 int bc_mkdir(const char *path)
@@ -456,15 +459,21 @@ uint8_t port_inb(unsigned port)
 }
 
 /* Directory search: findfirst and findnext over the merged tree, with DOS wildcards. The
-   search state lives in ff_reserved: an index into a table of results. */
+   search state lives in ff_reserved: an index into a table of results. The record is the
+   game's view of it (src/port/include/dir.h), byte for byte: packed, a 32-bit size. Before
+   Milestone 5 this copy was laid out naturally, so the game read ff_name six bytes early
+   and copied files with empty names: no save could be written. */
+#pragma pack(push, 1)
 struct ffblk {
     char ff_reserved[21];
     char ff_attrib;
     unsigned short ff_ftime;
     unsigned short ff_fdate;
-    long ff_fsize;
+    int ff_fsize;
     char ff_name[13];
 };
+#pragma pack(pop)
+_Static_assert(sizeof(struct ffblk) == 43, "Borland's ffblk is 43 bytes");
 
 struct found { char name[13]; int isdir; long size, mtime; };
 struct search { struct found *f; int n, cap, next, attrib; char pat[13]; int used; };
@@ -527,7 +536,7 @@ int findnext(struct ffblk *ff)
     f = &s->f[s->next++];
     strcpy(ff->ff_name, f->name);
     ff->ff_attrib = f->isdir ? 0x10 : 0x20;
-    ff->ff_fsize = f->size;
+    ff->ff_fsize = (int)f->size;
     t = (time_t)f->mtime;
     tm = localtime(&t);
     ff->ff_ftime = (unsigned short)(tm->tm_hour << 11 | tm->tm_min << 5 | tm->tm_sec / 2);

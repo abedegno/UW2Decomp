@@ -13,14 +13,19 @@
 #define FA_LABEL 0x08
 #define FA_DIREC 0x10
 #define FA_ARCH 0x20
+/* Borland's 43 bytes, packed (compat.h packs the game's view of it, and borland.c, which
+   fills it, packs its own copy the same way: they must agree, or ff_name is read where it is
+   not); the size is DOS's 32-bit long. */
+#pragma pack(push, 1)
 struct ffblk {
     char ff_reserved[21];
     char ff_attrib;
     unsigned short ff_ftime;
     unsigned short ff_fdate;
-    long ff_fsize;
+    int ff_fsize;
     char ff_name[13];
 };
+#pragma pack(pop)
 int findfirst(const char *path, struct ffblk *ff, int attrib);
 int findnext(struct ffblk *ff);
 int getcurdir(int drive, char *dir);

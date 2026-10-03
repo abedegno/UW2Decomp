@@ -620,7 +620,9 @@ void far DoPlayerWeapon(register unsigned char *wd, struct Object far *weap, int
     unsigned char flag;
     register int skill;
 
-    using_altaras_dagger = OBJ_ITEM(weap) == ITEM_JEWELLED_DAGGER;
+    /* weap is 0 bare-handed: then this reads the interrupt vector table's first word, the
+       offset of int0_trap, 0019h, which is no dagger (docs/PORT.md, "Null pointers") */
+    using_altaras_dagger = OBJ_ITEM(FARNULLTRAP(weap)) == ITEM_JEWELLED_DAGGER;
     if ((skill = wd[6]) >= SKILL_MISSILE || skill < SKILL_BAREHAND)
         skill = SKILL_BAREHAND;
     askill = (player->skills[SKILL_ATTACK] >> 1) + player->skills[skill] + Valor;

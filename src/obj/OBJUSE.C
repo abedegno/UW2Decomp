@@ -393,13 +393,16 @@ void far checkTrap(struct Object far *who, struct Object far *obj, int how, int 
     char runnext;
 
     runnext = 1;
-    if (OBJ_ISQUANT(obj) || obj->ol.f.link == 0)
+    /* obj is 0 when inv_look looks at an empty inventory slot: then this reads the
+       interrupt vector table, int 0 as the object's id and int 1's segment as its link
+       (docs/PORT.md, "Null pointers"; FINDINGS.md) */
+    if (OBJ_ISQUANT(FARNULLTRAP(obj)) || FARNULLTRAP(obj)->ol.f.link == 0)
         return;
-    link = &obj->ol.link;
+    link = &FARNULLTRAP(obj)->ol.link;
     trap = Obj_InList(&link, 0, MAJOR_TRAP, -1, -1);
-    if (OBJ_CLASS(obj) == CLASS_SWITCH) {
+    if (OBJ_CLASS(FARNULLTRAP(obj)) == CLASS_SWITCH) {
         runnext = 0;
-        if (OBJ_INCLASS(obj) > 7) {
+        if (OBJ_INCLASS(FARNULLTRAP(obj)) > 7) {
             link = &trap->qn.link;
             next = Obj_InList(&link, 0, MAJOR_TRAP, -1, -1);
             if (next != 0)

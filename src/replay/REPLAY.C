@@ -36,6 +36,10 @@
      7 MISC     a tag byte and its value, one call each: 7 WALL time()'s result (dword),
                 8 SRAND a seed (word, checked on replay, not used), 9 CKPT a CHECKPOINT's
                 number (word, checked)
+     8 SOUND    count, the value (word) of a read of the sound hardware's state (SND_READ:
+                a sequence's or a digital buffer's status, a locked channel, a timbre's
+                status or request, a device's presence). Sessions with no sound card never
+                read one, so the recordings made before the stream existed hold none.
    Recording stops at F12 (scan code 58h), which the game never sees: the call count goes
    into the header. Replay stops at that call, or when a stream runs out, with a last dump;
    then the game shuts down as at the end of main (free_world) and exits, through C0's null
@@ -49,7 +53,7 @@
      RAND  Borland's rand seed (dword)
      LEVL  the level block mapdata points at (7E08h), once a level is in it (its magic
            word is "uw"; before that the block holds whatever memory held)
-     CNTS  the calls of each stream so far (seven dwords, TIME first), to show which kind
+     CNTS  the calls of each stream so far (eight dwords, TIME first), to show which kind
            of input a replay that went astray asked for once too often
      SEGS  the segments of the far blocks, as words: seg_370D (the graphics data),
            stdat, cmpbuf1_start, dfx_buffer, seg004's data (EmsBuff's), seg_5DFD, seg021's
@@ -94,7 +98,8 @@
 #define S_JOY       5
 #define S_JOYB      6
 #define S_MISC      7
-#define NSTREAMS    8                   /* 1..7 */
+#define S_SOUND     8
+#define NSTREAMS    9                   /* 1..8 */
 
 #define M_WALL      7
 #define M_SRAND     8
@@ -222,6 +227,7 @@ static void run_out(int s)
         }
         break;
     case S_BUTTONS:
+    case S_SOUND:
         put_word(s, (unsigned)p->v1);
         break;
     default:                            /* MOUSE, JOY, JOYB */
@@ -316,6 +322,7 @@ static struct Stream *replayed(int s)
                 }
             break;
         case S_BUTTONS:
+        case S_SOUND:
             p->v1 = get_word(s);
             break;
         default:
@@ -671,21 +678,89 @@ static void trace(int s, uint32 v, unsigned cs, unsigned ip)
 
 /* ---- the hooks ---------------------------------------------------------------------- */
 
+/* ---- the timers REPLAY.C runs (SLAVE_TIMER) ------------------------------------------ */
+
+/* A game callback AIL ran from the timer interrupt runs here instead, at a read of the game
+   clock, as many times as AIL's DDA would have fired it by then: the PIT ticks once a clock
+   tick (3906 us, the 256 Hz clock being the fastest timer), and the timer fires whenever the
+   ticks' microseconds pass a multiple of its period. In DOS that phase is set by when the
+   timers were last reprogrammed, which no run controls; here it is a function of the clock
+   alone, the same in every run. */
+#define NSLAVES 2
+static RpTimerFn slave_fn[NSLAVES];
+static uint32 slave_period[NSLAVES];
+static uint32 slave_last[NSLAVES];
+static char slave_started[NSLAVES];
+static char slave_busy;
+
+static void far rp_null_timer(void)
+{
+}
+
+RpTimerFn far rp_slave_timer(RpTimerFn f, unsigned hz)
+{
+    int i;
+    for (i = 0; i < NSLAVES; i++)
+        if (!slave_fn[i] || slave_fn[i] == f) {
+            slave_fn[i] = f;
+            slave_period[i] = 1000000UL / hz;
+            slave_started[i] = 0;
+            return rp_null_timer;
+        }
+    return f;
+}
+
+static void slave_ticks(uint32 t)
+{
+    int i;
+    uint32 n;
+    if (slave_busy) return;
+    slave_busy = 1;
+    for (i = 0; i < NSLAVES; i++) {
+        if (!slave_fn[i]) continue;
+        /* the DDA's firings by clock t, t * 3906 / period without overflowing 32 bits */
+        n = (t / slave_period[i]) * 3906UL + ((t % slave_period[i]) * 3906UL) / slave_period[i];
+        if (!slave_started[i] || n < slave_last[i]) {
+            slave_started[i] = 1;
+            slave_last[i] = n;
+            continue;
+        }
+        while (slave_last[i] < n) {
+            slave_last[i]++;
+            slave_fn[i]();
+        }
+    }
+    slave_busy = 0;
+}
+
+#ifndef __TURBOC__
+void port_clock_read(uint32 t);         /* src/port/sound/ail.c: AIL's ticks under replay */
+#endif
+
 uint32 far rp_time(void)
 {
-    if (!begin()) return *Time;
-    if (rp_mode == RP_RECORD) {
-        t_now = *Time;
-        record(S_TIME, t_now, 0);
-    } else
-        t_now = replayed(S_TIME)->v1;
-    calls[S_TIME]++;
-    if (trace_fd >= 0) trace(S_TIME, t_now, CALLER_CS, CALLER_IP);
-    if ((t_now ^ last_ck_time) & ck_mask) {
-        last_ck_time = t_now;
-        rp_dump(CK_PERIODIC, 0, 0);
+    uint32 t;
+    if (!begin())
+        t = *Time;
+    else {
+        if (rp_mode == RP_RECORD) {
+            t_now = *Time;
+            record(S_TIME, t_now, 0);
+        } else
+            t_now = replayed(S_TIME)->v1;
+        calls[S_TIME]++;
+        if (trace_fd >= 0) trace(S_TIME, t_now, CALLER_CS, CALLER_IP);
+        if ((t_now ^ last_ck_time) & ck_mask) {
+            last_ck_time = t_now;
+            rp_dump(CK_PERIODIC, 0, 0);
+        }
+        t = t_now;
     }
-    return t_now;
+#ifndef __TURBOC__
+    port_clock_read(t);
+#endif
+    slave_ticks(t);
+    return t;
 }
 
 int far rp_key(void)
@@ -757,6 +832,30 @@ int far rp_mbuttons(void)
         rp_dump(CK_INPUT, 0x8000 | b, 1);
     }
     return b;
+}
+
+#ifndef __TURBOC__
+void port_sound_read(unsigned own, unsigned recorded, uint32 clock);   /* src/port/sound/ail.c */
+#endif
+
+unsigned far rp_sound(int drv, unsigned v)
+{
+    if (drv < 0) return v;          /* no driver: AIL answers 0, the same in every run */
+    if (!begin()) return v;
+    calls[S_SOUND]++;
+    if (rp_mode == RP_RECORD)
+        record(S_SOUND, (uint16)v, 0);
+    else {
+#ifndef __TURBOC__
+        unsigned own = v;
+#endif
+        v = (uint16)replayed(S_SOUND)->v1;
+#ifndef __TURBOC__
+        port_sound_read(own, v, t_now);
+#endif
+    }
+    if (trace_fd >= 0) trace(S_SOUND, (uint16)v, CALLER_CS, CALLER_IP);
+    return v;
 }
 
 void far rp_joy(void)

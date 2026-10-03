@@ -280,7 +280,8 @@ char far * far bab_realloc(char far *p, int32 n)
    globals, to bglobals.dat with every global zeroed (a new game). Returns 0, or an error
    code: ERR_READ | 7 when babglobs.dat cannot be opened, ERR_WRITE | 1 when bglobals.dat
    cannot be written (UW-Formats: D007, E001). Each record is the 4 bytes read into block
-   and, by the stack layout, size. */
+   and, by the stack layout, size (READ_PAIR and WRITE_PAIR, portable.h, give the host the
+   same two words). */
 int far init_babl(void)
 {
     char good;
@@ -292,8 +293,8 @@ int far init_babl(void)
         return ERR_READ | 7;
     if ((dest = our_open("bglobals.dat", 0, 1)) >= 0) {
         mem_set(stdat, 0, 0x1000);
-        while (good && read(source, &block, 4) == 4) {
-            if (write(dest, &block, 4) != 4)
+        while (good && READ_PAIR(source, block, size) == 4) {
+            if (WRITE_PAIR(dest, block, size) != 4)
                 good = 0;
             else
                 good = FarWrite_ovr167_627(dest, stdat, size << 1) == size << 1;
@@ -317,7 +318,7 @@ void far bab_get_globals(int16 far *memory, int count)
     if ((handle = our_open("bglobals.dat", 0, 0)) >= 0) {
         done = 0;
         while (!done) {
-            if (read(handle, &block, 4) < 4 || block > cnv_id) {
+            if (READ_PAIR(handle, block, size) < 4 || block > cnv_id) {
                 done = 1;
                 break;
             }
@@ -342,7 +343,7 @@ void far bab_put_globals(int16 far *memory, int count)
     if ((handle = our_open("bglobals.dat", 0, 3)) >= 0) {
         done = 0;
         while (!done) {
-            if (read(handle, &block, 4) < 4 || block > cnv_id) {
+            if (READ_PAIR(handle, block, size) < 4 || block > cnv_id) {
                 done = 1;
                 break;
             }

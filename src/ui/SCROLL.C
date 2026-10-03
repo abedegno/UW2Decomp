@@ -155,8 +155,9 @@ int far scroll_print(char far *s)
        of that because `found`, as a register variable, still reserves a two-byte spill
        slot right after it, and the true end of the 49-byte region is that slot, used
        below as `sentinel`. Matched against the EXE's frame size (sub sp,36h) and the
-       offsets of `sentinel` and `saved`, not guessed. */
-    char copy[47];
+       offsets of `sentinel` and `saved`, not guessed. On the host the array is 49 bytes and
+       `sentinel` its last (FRAME_LEN, FRAME_TAIL in portable.h). */
+    char copy[FRAME_LEN(47, 49)];
     register char *found;
     register int remaining;
     char saved;
@@ -183,10 +184,10 @@ int far scroll_print(char far *s)
     remaining = str_len(s);
     while (remaining > 0x31) {
         FAR_COPY(copy, s, 0x31);
-        sentinel = 0;
+        FRAME_TAIL(copy, 48, sentinel) = 0;
         found = strrchr(copy, ' ');
         if (found == 0)
-            found = &sentinel;
+            found = &FRAME_TAIL(copy, 48, sentinel);
         saved = *found;
         *found = 0;
         chunklen = found - copy;

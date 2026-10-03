@@ -117,6 +117,7 @@ int bc_close(int fd);
 long bc_lseek(int fd, long off, int whence);
 int bc_access(const char *path, int mode);
 int bc_unlink(const char *path);
+int bc_rename(const char *from, const char *to);
 int bc_mkdir(const char *path);
 int bc_chdir(const char *path);
 int bc_stat(const char *path, struct stat *st);
@@ -134,6 +135,7 @@ long bc_clock(void);
 #define lseek(f, o, w) bc_lseek(f, o, w)
 #define access(p, m) bc_access(p, m)
 #define unlink(p) bc_unlink(p)
+#define rename(a, b) bc_rename(a, b)
 #define mkdir(p) bc_mkdir(p)
 #define chdir(p) bc_chdir(p)
 #define stat(p, b) bc_stat(p, b)

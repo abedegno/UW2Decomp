@@ -1,4 +1,4 @@
-"""Record a session in DOS and replay it in DOS and in the port, comparing the state dumps
+r"""Record a session in DOS and replay it in DOS and in the port, comparing the state dumps
 (docs/PORT.md, "The differential test"; src/replay/REPLAY.C has the formats).
 
     python3 tools/replay.py build                       the replay DOS build: build/replay/UW2.EXE
@@ -11,6 +11,9 @@
     python3 tools/replay.py log REC                     what a recording holds
     python3 tools/replay.py show STATE [PNGDIR]         list a dump's checkpoints; write each full one's screen as a PNG
     python3 tools/replay.py nulls DIR                   the null-pointer write check of a DOS run's directory
+    python3 tools/replay.py saves A B                   compare the saved games (SAVE1..SAVE4) two runs made
+    ... --stage DIR                                     with DIR's files (a saved game, SAVE1/) put into the
+                                                        game's directory first, in DOS and in the port
     python3 tools/replay.py check REC OUT               replay REC in DOS twice and in the port, compare all
 
 The replay DOS build is the modding build with every source that uses the hooks of
@@ -18,6 +21,11 @@ src/include/portable.h compiled with -DREPLAY (and every source with a NULLTRAP 
 -DNULLTRAP, so the marked null pointers it reaches go to NULLTRAP.LOG), and src/replay/REPLAY.C
 linked in as one more resident module (tools/link.py --mod --add). Recording and the DOS
 replays run in js-dos (tools/replaydos.mjs); the port replays with --replay.
+
+A session with a sound card has a sound configuration, DATA\UW.CFG's two lines (CFGS below):
+recording writes it to OUT/UW.CFG beside OUT/RECORD.OUT, and a replay of REC uses the .cfg
+file beside it (tests/replay/sound.cfg for tests/replay/sound.rec) or the UW.CFG in its
+directory, in DOS (replaydos.mjs --cfg) and in the port (its home directory's DATA\UW.CFG).
 
 compare walks two dumps checkpoint by checkpoint. Each checkpoint names the event it was taken
 at (the count of hook calls) and the clock, so a checkpoint whose header differs means the two
@@ -38,18 +46,24 @@ PY = os.path.join(root, '.venv', 'bin', 'python')
 if not os.path.exists(PY): PY = sys.executable
 DATA = os.environ.get('UW2_DIR') or (os.path.dirname(os.environ['UW2_EXE']) if os.environ.get('UW2_EXE')
                                      else os.path.expanduser('~/UWGOG/UW2'))
-HOOKS = re.compile(r'\b(GAME_TIME|KEY|MOUSE|MBUTTONS|JOY_READ|JOY_BUTTONS|WALL_TIME|SRAND|CHECKPOINT|STACK_JUNK)\(')
+HOOKS = re.compile(r'\b(GAME_TIME|KEY|MOUSE|MBUTTONS|JOY_READ|JOY_BUTTONS|WALL_TIME|SRAND|CHECKPOINT|STACK_JUNK|SND_READ|SLAVE_TIMER)\(')
 KINDS = {1: 'checkpoint', 2: 'periodic', 3: 'input', 4: 'end', 5: 'DESYNC'}
-STREAMS = {1: 'TIME', 2: 'KEY', 3: 'MOUSE', 4: 'BUTTONS', 5: 'JOY', 6: 'JOYB', 7: 'MISC'}
+STREAMS = {1: 'TIME', 2: 'KEY', 3: 'MOUSE', 4: 'BUTTONS', 5: 'JOY', 6: 'JOYB', 7: 'MISC', 8: 'SOUND'}
 # Byte ranges of a section that are the program's machinery rather than game state:
 # (section, start, end, why). ALWAYS differ between any two runs, even of one build; CROSS
 # between DOS and the port.
 ALWAYS = [
     ('GFX ', 0x4E00, 0x4FA8, "seg003's private stack (GRCORE.ASM switches to 370D:4FA8): "
                              "interrupts push onto it whenever they come"),
-    ('GFX ', 0x5500, 0x5548, "the stack GRENTRY.ASM and GRDISP.ASM switch to (SP 5548h, saved at 5588h)"),
+    ('GFX ', 0x5480, 0x5548, "the stack GRENTRY.ASM and GRDISP.ASM switch to (SP 5548h, saved at 5588h); "
+                             "with a sound card the Sound Blaster's interrupt pushes onto it too, "
+                             "down to 54E9h (the bytes below are never written)"),
     ('GFX ', 0x652, 0x654, "GRMISC.ASM's _46: the low word of the real clock after each 3D frame, "
                            "for the retrace wait's time-out"),
+    ('NULL', 0x33 + 4 * 0x0D, 0x33 + 4 * 0x0E, "IRQ 5's vector (int 0Dh), which the digital driver points "
+                                               "at its handler while a buffer plays"),
+    ('NULL', 0x33 + 4 * 0x0F, 0x33 + 4 * 0x10, "IRQ 7's vector (int 0Fh), the same at the Sound Blaster's "
+                                               "usual IRQ"),
 ]
 CROSS = [
     ('GFX ', 0x558A, 0x558E, "GRDISP.ASM's saved SS:SP"),
@@ -77,7 +91,73 @@ SESSIONS = {
             'w:600', 'k:3', 'w:800', 's:lookdown', 'k:2', 'w:800', 'h:s,600', 'w:600', 'h:z,600',
             'w:600', 'h:c,600', 'w:600', 'h:d,900', 'w:600', 'h:w,2000', 'w:800', 's:ingame2',
             'c:left,150', 'w:2000', 'h:a,1200', 'w:600', 'h:w,1500', 'w:3000', 's:ingame3'],
+    # newgame's way into the game with a sound card (CFGS), then about forty seconds in the
+    # first rooms: fight mode (F1, which draws the weapon and asks for theme 5) and attacks into the air (the right button held in the
+    # view: the swing's effects, SOUNDS.DAT's, on the digital channel), walking and turning,
+    # and the music playing on, long enough for theme 5 (60 s) to end and the game to choose
+    # the next: the effects, the digital buffers and the music driver's state all reach the
+    # game
+    'sound': ['w:14000', 'k:Escape', 'w:2500', 'k:Escape', 'w:3500', 'k:Enter', 'w:4000'] +
+             ['k:Enter', 'w:2000'] * 8 + ['t:Avatar', 'w:1000', 'k:Enter', 'w:2000', 'k:Enter',
+             'w:6000', 's:ingame1', 'k:F1', 'w:800', 'c:right,1200', 'w:1500', 'c:right,1200', 'w:1500',
+             'h:w,1200', 'w:800', 'h:a,700', 'w:600', 'c:right,1200', 'w:1500', 'h:w,1500',
+             'w:600', 'h:d,1400', 'w:600', 'c:right,1500', 'w:2000', 's:ingame2', 'w:12000',
+             's:ingame3', 'w:40000', 's:ingame4'],
 }
+SESSIONS['soundfm'] = SESSIONS['sound']   # the same with every effect on the FM chip (CFGS)
+# a saved game loaded from the main menu: run with --stage DIR, DIR holding SAVE1/ (the one the
+# items session saves; DOS's or the port's, which are the same bytes): the title, Escape twice,
+# Journey Onward (Enter, the default when a save exists), slot 1 "first" (Enter), and a step
+SESSIONS['load'] = ['w:14000', 'k:Escape', 'w:2500', 'k:Escape', 'w:3500', 's:menu', 'k:Enter', 'w:3000',
+                    's:slots', 'k:Enter', 'w:6000', 's:loaded', 'h:w,800', 'w:1500', 's:load_end']
+_ENTRY = ['w:14000', 'k:Escape', 'w:2500', 'k:Escape', 'w:3500', 'k:Enter', 'w:4000'] + \
+         ['k:Enter', 'w:2000'] * 8 + ['t:Avatar', 'w:1000', 'k:Enter', 'w:2000', 'k:Enter', 'w:6000']
+# newgame's way into the game, then the Avatar's room (pointer moves are a corner slam, M, then
+# a move in the 640 by 400 frame): get mode (F3) and the book on the floor into the second
+# inventory slot; a step towards the sack in the corner, the sack into the first slot; use
+# mode (F2) on it, which opens it; the map in it, which opens the automap; a note there,
+# "hello"; Escape back; look mode (F5) at the next thing in the sack; the statistics panel
+# and back (F7 twice: the panel flip, MODEX.ASM's grab); a save to slot 1 described "first"
+# (Ctrl+S, Enter), a turn, a restore of slot 1 (Ctrl+R, Enter) and a few steps
+SESSIONS['items'] = _ENTRY + [
+    'k:F3', 'w:500', 'M', 'm:395,265', 'w:300', 'c:right,200', 'w:1500', 'M', 'm:530,185', 'w:300',
+    'c:left,200', 'w:1500', 's:items1', 'h:d,390', 'w:500', 'h:w,250', 'w:600', 'M', 'm:232,235', 'w:300',
+    'c:right,200', 'w:1500', 'M', 'm:500,178', 'w:300', 'c:left,200', 'w:1500', 'k:F2', 'w:500', 'M',
+    'm:500,178', 'w:300', 'c:right,200', 'w:2000', 's:items2', 'M', 'm:500,178', 'w:300', 'c:right,200',
+    'w:3000', 'M', 'm:300,200', 'w:300', 'c:left,200', 'w:1500', 't:hello', 'w:500', 'k:Enter', 'w:1500',
+    's:automap', 'k:Escape', 'w:2500', 'k:F5', 'w:500', 'M', 'm:535,178', 'w:300', 'c:right,200', 'w:2000',
+    'k:F7', 'w:2000', 's:stats', 'k:F7', 'w:2000', 'k:Control+s', 'w:1500', 'k:Enter', 'w:1500', 't:first',
+    'w:800', 'k:Enter', 'w:4000', 's:saved', 'h:a,1000', 'w:800', 'k:Control+r', 'w:1500', 'k:Enter',
+    'w:5000', 's:restored', 'h:w,600', 'w:1500', 's:items3']
+# newgame's way into the game, then out of the Avatar's room (left, forward, use mode on the
+# door, through it), east along the corridor to the great hall and into it, where Nystul is:
+# talk mode (F4) on him, and the answers to his conversation (1). The screenshots are part of
+# the session: they take time, and where the people in the hall stand depends on it
+SESSIONS['talk'] = _ENTRY + [
+    'h:a,2400', 'w:500', 'h:w,700', 'w:400', 'h:w,700', 'w:400', 'h:w,700', 'w:400', 'k:F2',
+    'w:400', 'M', 'm:240,150', 'w:300', 'c:right,200', 'w:2500', 'h:w,1500', 'w:400', 'h:w,1500',
+    'w:400', 'h:a,1200', 'w:400', 'h:d,2400', 'w:400', 'h:w,2000', 'w:400', 'h:w,2000', 'w:400',
+    'h:a,1200', 'w:400', 's:corridor', 'h:d,440', 'w:400', 's:east', 'h:w,2600', 'w:400',
+    's:hall_door', 'h:a,780', 'w:400', 's:north', 'h:w,900', 'w:400', 's:hall', 'h:w,600', 'w:400',
+    's:nystul_near', 'k:F4', 'w:400', 'M', 'm:240,170', 'w:300', 'c:right,200', 'w:3000',
+    's:nystul', 'k:1', 'w:3000', 's:talk1', 'k:1', 'w:3000', 's:talk2', 'k:1', 'w:3000',
+    's:talk_end']
+
+
+# DATA\UW.CFG for the sessions with sound: the music card (3, Sound Blaster FM, DM03.ADV) and
+# the speech card (1, Sound Blaster digital, DD01.ADV, or 0 for none, so every effect is played
+# on the FM chip), each with its IRQ, port and DMA (SOUND.C's seg016_1E73_2FCB reads them)
+CFGS = {
+    'sound': '3 7 220 1 sound\r\n1 7 220 1 speech\r\n',
+    'soundfm': '3 7 220 1 sound\r\n0 -1 -1 -1 speech\r\n',
+}
+
+
+def cfg_of(rec):
+    """The sound configuration of recording rec: the .cfg beside it, else its directory's UW.CFG."""
+    for c in (os.path.splitext(rec)[0] + '.cfg', os.path.join(os.path.dirname(os.path.abspath(rec)), 'UW.CFG')):
+        if os.path.exists(c): return c
+    return None
 
 
 def opts_of(src):
@@ -169,7 +249,7 @@ def read_log(path):
                 r, n = struct.unpack_from('<HB', b, q); q += 3
                 q += 0x89 if n == 0xFF else 2 * n
                 runs.append((c, r))
-            elif s == 4: runs.append((c, struct.unpack_from('<H', b, q)[0])); q += 2
+            elif s in (4, 8): runs.append((c, struct.unpack_from('<H', b, q)[0])); q += 2
             else: runs.append((c, struct.unpack_from('<hh', b, q))); q += 4
         out[STREAMS.get(s, s)] = runs
     return out, stop
@@ -265,7 +345,8 @@ def compare(pa, pb, same_build=False, quiet=False):
         if (a['kind'], a['n'], a['events'], a['time']) != (b['kind'], b['n'], b['events'], b['time']):
             print(f'checkpoint {i}: the runs went different ways: {label(a)} against {label(b)}')
             if 'CNTS' in a['secs'] and 'CNTS' in b['secs']:
-                ca = struct.unpack('<7I', a['secs']['CNTS']); cb = struct.unpack('<7I', b['secs']['CNTS'])
+                ca = struct.unpack(f"<{len(a['secs']['CNTS']) // 4}I", a['secs']['CNTS'])
+                cb = struct.unpack(f"<{len(b['secs']['CNTS']) // 4}I", b['secs']['CNTS'])
                 print('  calls by stream: ' + ', '.join(f'{STREAMS[k + 1]} {x}' + (f' against {y}' if x != y else '')
                                                     for k, (x, y) in enumerate(zip(ca, cb))))
             return 2
@@ -283,7 +364,7 @@ def compare(pa, pb, same_build=False, quiet=False):
                 # GRCORE's string entries copy the string, its 0 and one byte more to 370D:4FA8;
                 # that byte is whatever followed the string in the caller's buffer, often stack junk
                 z = x.find(b'\0', 0x4FA8, 0x4FA8 + 0x84)
-                if z >= 0: skip.append((z + 1, z + 2))
+                if z >= 0: skip.append((z + 1, 0x4FA8 + 0x84))   # and the junk of longer strings before it
             r = ranges(x, y, skip)
             if not r: continue
             if tag == 'VGA ':
@@ -304,6 +385,28 @@ def compare(pa, pb, same_build=False, quiet=False):
         worst = max(worst, 1)
     print('identical' if worst == 0 else f'differences, the first at checkpoint {first_bad}' if first_bad is not None else 'differences')
     return worst
+
+
+def saves(a, b):
+    """Compares the saved games two runs made (their SAVE1..SAVE4 directories), file for file
+    and byte for byte, case-blind on the names."""
+    bad = 0; n = 0
+    for d in ('SAVE1', 'SAVE2', 'SAVE3', 'SAVE4'):
+        da, db = os.path.join(a, d), os.path.join(b, d)
+        fa = {f.upper(): f for f in os.listdir(da)} if os.path.isdir(da) else {}
+        fb = {f.upper(): f for f in os.listdir(db)} if os.path.isdir(db) else {}
+        for f in sorted(set(fa) | set(fb)):
+            n += 1
+            if f not in fa or f not in fb:
+                print(f'{d}/{f}: only in {a if f in fa else b}'); bad = 1; continue
+            x = open(os.path.join(da, fa[f]), 'rb').read(); y = open(os.path.join(db, fb[f]), 'rb').read()
+            if x == y: print(f'{d}/{f}: identical, {len(x)} bytes'); continue
+            r = ranges(x, y) if len(x) == len(y) else None
+            print(f'{d}/{f}: differ' + (f', {len(x)} and {len(y)} bytes' if r is None else
+                                         ': ' + ', '.join(f'{l:X}..{h - 1:X}' for l, h in r[:8])))
+            bad = 1
+    if not n: print('no saved games in either run')
+    return bad
 
 
 def show(path, pngdir=None):
@@ -356,10 +459,16 @@ def nulls(d):
 
 # ---- running ----------------------------------------------------------------------------------
 
-def run_dos(out, rec=None, steps=(), timeout=900):
+STAGE = None   # --stage DIR: files (a saved game) put into the game's directory, DOS's and the port's home
+
+
+def run_dos(out, rec=None, steps=(), timeout=900, cfg=None):
     exe = build()
     cmd = ['node', os.path.join(here, 'replaydos.mjs'), exe, out, '--timeout', str(timeout)]
+    if STAGE: cmd += ['--stage', STAGE]
     if rec: cmd += ['--replay', rec]
+    cfg = cfg or (cfg_of(rec) if rec else None)
+    if cfg: cmd += ['--cfg', cfg]
     r = subprocess.run(cmd + list(steps))
     return r.returncode
 
@@ -371,12 +480,21 @@ def run_port(rec, out, extra=()):
     exe = os.path.join(root, 'build', 'port-debug' if debug else 'port', 'uw2port')
     if not os.path.exists(exe): sys.exit('replay.py: build the port first (make port)')
     home = os.path.join(out, 'home'); shutil.rmtree(home, ignore_errors=True); os.makedirs(home)
+    if STAGE: shutil.copytree(STAGE, home, dirs_exist_ok=True)
+    cfg = cfg_of(rec)
+    if cfg:
+        os.makedirs(os.path.join(home, 'DATA'), exist_ok=True)
+        shutil.copy(cfg, os.path.join(home, 'DATA', 'UW.CFG'))
     cmd = [exe, '--data', DATA, '--home', home, '--hidden', '--exit-on-halt', '--exit-after', '600000',
            '--replay', os.path.abspath(rec)] + list(extra)
     r = subprocess.run(cmd, capture_output=True, text=True)
     open(os.path.join(out, 'port.log'), 'w').write(r.stdout + r.stderr)
     for f in ('STATE.OUT',):
         if os.path.exists(os.path.join(home, f)): shutil.copy(os.path.join(home, f), os.path.join(out, f))
+    for d in ('SAVE1', 'SAVE2', 'SAVE3', 'SAVE4'):         # the saved games, as DOS's runs copy theirs
+        if os.path.isdir(os.path.join(home, d)):
+            shutil.rmtree(os.path.join(out, d), ignore_errors=True)
+            shutil.copytree(os.path.join(home, d), os.path.join(out, d))
     ub = [l for l in (r.stdout + r.stderr).splitlines() if 'runtime error' in l]
     if debug: print(f'port: UBSan reported {len(ub)} null dereferences' + ''.join('\n  ' + l for l in sorted(set(ub))[:20]))
     tail = [l for l in (r.stdout + r.stderr).splitlines() if 'uw2port' in l][-3:]
@@ -385,13 +503,21 @@ def run_port(rec, out, extra=()):
 
 
 def main(argv):
+    global STAGE
+    if '--stage' in argv:
+        i = argv.index('--stage'); STAGE = os.path.abspath(argv[i + 1]); argv = argv[:i] + argv[i + 2:]
     if not argv: print(__doc__); return 2
     cmd, a = argv[0], argv[1:]
     if cmd == 'build': build(); return 0
     if cmd == 'record':
-        out = a[0]; steps = a[1:]
-        if steps[:1] == ['--session']: steps = SESSIONS[steps[1]]
-        rc = run_dos(out, None, steps)
+        out = a[0]; steps = a[1:]; cfg = None
+        if steps[:1] == ['--session']:
+            name = steps[1]; steps = SESSIONS[name]
+            if name in CFGS:
+                os.makedirs(out, exist_ok=True)
+                cfg = os.path.join(out, 'UW.CFG')
+                open(cfg, 'w', newline='').write(CFGS[name])
+        rc = run_dos(out, None, steps, cfg=cfg)
         if os.path.exists(os.path.join(out, 'RECORD.OUT')):
             print('recorded:', log_summary(os.path.join(out, 'RECORD.OUT')))
         return rc
@@ -400,6 +526,7 @@ def main(argv):
     if cmd == 'port': return run_port(a[0], a[1], a[2:])
     if cmd == 'compare': return compare(a[0], a[1], '--same-build' in a)
     if cmd == 'show': show(a[0], a[1] if len(a) > 1 else None); return 0
+    if cmd == 'saves': return saves(a[0], a[1])
     if cmd == 'nulls': return nulls(a[0])
     if cmd == 'check':
         rec, out = a[0], a[1]
@@ -411,7 +538,11 @@ def main(argv):
         print('\n== DOS against DOS'); r1 = compare(d1, d2, True, quiet=True)
         print('\n== DOS against the port'); r2 = compare(d1, p)
         print('\n== null pointers (DOS)'); r3 = nulls(d1)
-        return max(r1, r2, r3)
+        r4 = 0
+        if os.path.isdir(os.path.join(d1, 'SAVE1')) or os.path.isdir(os.path.join(p, 'SAVE1')):
+            print('\n== saved games, DOS against DOS'); r4 = saves(d1, d2)
+            print('\n== saved games, DOS against the port'); r4 = max(r4, saves(d1, p))
+        return max(r1, r2, r3, r4)
     print(__doc__); return 2
 
 

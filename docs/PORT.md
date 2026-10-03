@@ -39,7 +39,7 @@ Every change to a shared source has to pass the gate. So a change made for the p
 | `src/port/compat.h` | the portability layer, force-included into every port compile | no |
 | `src/port/include/` | stand-ins for Borland's headers (`dos.h`, `alloc.h`, `mem.h`, `io.h`, `stat.h`, `dir.h`, `conio.h`, `bios.h`) | no |
 | `src/port/port.h` | what the port's own C shares: the paragraph map, the far data blocks, the emulated hardware | no |
-| `src/port/3d/`, `src/port/gfx/`, `src/port/sys/`, `src/port/sound/` | C written for the port to replace the assembly modules and the DOS-only C files, named after the module each replaces, and the emulated hardware (`gfx/vga.c`, `sys/pit.c`); the modules translated by `tools/asm2c.py` are here too (`3d/interp.c` .. `gfx/grlibn.c`, a `_x` suffix where a hand-written file of the same module exists) | no |
+| `src/port/3d/`, `src/port/gfx/`, `src/port/sys/`, `src/port/sound/` | C written for the port to replace the assembly modules and the DOS-only C files, named after the module each replaces, and the emulated hardware (`gfx/vga.c`, `sys/pit.c`, `sound/audio.c`); the modules translated by `tools/asm2c.py` are here too (`3d/interp.c` .. `gfx/grlibn.c`, a `_x` suffix where a hand-written file of the same module exists); `sound/` has AIL and the sound drivers (Sound, below) | no |
 | `src/port/x86/` | the machine the translated modules run on (`asmrt.h`, `asmrt.c`: registers, flags, segments, stack, divide faults, calls), where they meet the hand-written C (`glue.c`), and the table of translated modules (`modtab.c`, written by `tools/asm2c.py`) | no |
 | `src/port/3d/render.h` | the render interface: the frame buffer the renderer draws into and the per-object sprite hook | no |
 | `src/port/mem/` | the paragraph map, the far heap, EMS, and the far data loaded from the user's EXE | no |
@@ -57,6 +57,8 @@ Every change to a shared source has to pass the gate. So a change made for the p
 | `tools/widths.py` | rewrites integer declarations to the explicit widths | no |
 | `tools/layoutcheck.py` | compares every struct's layout under Turbo C (in DOS) and the port | no |
 | `tools/intaudit.py` | the promotion and overflow audit, on clang's AST | no |
+| `tools/setup-sound.sh` | fetches Nuked OPL3 into `tools/nuked-opl3` (ignored by git) | no |
+| `tools/ailcheck.py` | the port's sound drivers against the real `.ADV` files, in an x86 emulator | no |
 | `build/port/` | port objects and logs, never committed | no |
 
 The DOS tools never pick up port files, for three reasons:
@@ -206,7 +208,8 @@ Every assembly module gets a C replacement in `src/port/`, written from the matc
 | 3D renderer, seg004 | 14 modules in `src/3d` (EXPAND to PGCACHE), and SETPNT | 33,008 | C translated instruction by instruction from DOS (the 3D renderer, below); SETPNT and EXPAND also by hand |
 | Graphics library, seg003, and its neighbours | 14 modules in `src/gfx` (GRMISC to GRLIBN), SPRITE (seg000), VALLOC (seg001), MODEX (seg017) | 23,907 plus 2,915 | C written by hand, drawing into an emulated mode X screen; the modules the renderer calls also translated (below) |
 | System layer, seg021 | 17 modules in `src/sys` (STARTUP to C3DENTRY), INT0TRAP (seg018) | 4,067 plus 95 | C on top of the platform API |
-| Dropped | AIL (seg022), the overlay manager (seg046), LPFDELTA and PLANECPY (never called) | 3,321 and 4,670 | AIL's API is reimplemented in C (see Sound); the rest are not needed |
+| Sound, seg022, and the `.ADV` drivers | AIL | 3,321 | AIL's API and the drivers in C (see Sound) |
+| Dropped | the overlay manager (seg046), LPFDELTA and PLANECPY (never called) | 4,670 | not needed |
 
 FARDATA.ASM's buffers become C arrays registered in the paragraph map. The far data that `tools/extract.py` still takes from the user's EXE (about 83 KB, mostly the renderer's tables and the 3D object models) is loaded from the user's own `UW2.EXE` at start-up, by the same offsets extract.py uses. That way the port never holds game data. The tables become C source only where their meaning is known and they hold no game content.
 
@@ -243,25 +246,64 @@ The model is the PC's. The game runs on a thread of its own, as the CPU did. The
 - **Time.** `plat_counter` and `plat_counter_hz` are the host's high-resolution counter, and `plat_sleep_ns` a precise sleep. The PIT (`src/port/sys/pit.c`) runs on a thread of its own from them: the AIL timers at their own rates (the game clock, SOUND.C's `cllbck_tst`, at 256 Hz), the BIOS tick at 18.2 Hz for `clock`, and the keyboard's repeat. A timer is due whenever its period has passed, so its rate is exact on average, and a late wake-up runs the missed calls at once, as queued interrupts did. Under replay (Milestone 4) the game reads the recorded values instead.
 - **Files: the data root.** The user's own copy of UW2 is the data root, and it is never written. The port's home directory (`--home`, default `~/.uw2port`) plays the part of `UWHOME`: it is laid over the data root, so the game sees one tree. Every DOS path the game names (`DATA\uw.cfg`, `data`, `SAVE0\LEV.ARK`, `CRIT\CR01.00`, the scratch files `a.tmp` to `h.tmp`) is looked up one component at a time, without case, first in the home directory and then in the data root (`src/port/platform/files.c`). A file the game creates goes to the home directory. A file it opens to change stays in the data root until its first write, and is copied into the home directory then. Borland's text mode (CR LF, Ctrl-Z) is kept for handles opened without `O_BINARY`. The far data no source defines yet, and seg021's and seg003's data segments, are read from the user's `UW2.EXE` in the data root, which the port checks by its size and CRC-32 first.
 - **Lifecycle events.** The backend reports suspend (a phone going to the background, a window minimised), resume, and a request to quit (the window's close box). A phone build has to stop the timers and save on suspend; the desktop build only logs them.
-- **Audio.** An output stream of 16-bit stereo samples with a callback on the audio thread (`plat_audio_open`). Milestone 3 opens it and feeds silence. Sound is Milestone 5.
+- **Audio.** An output stream of 16-bit stereo samples with a callback on the audio thread (`plat_audio_open`), which drains the ring `sound/audio.c` renders into (Sound, below).
 - **No JIT and no self-modifying code** anywhere in the port. iOS refuses writable executable memory. The DOS code that patched itself (seg004's texture mappers, seg003's polygon clipper, SCALEBM.ASM's generated sprite code) becomes C that chooses with data what the patch chose: the translated code reads a patched immediate, displacement or jump condition from the code segment's bytes, which are data in the port, and SCALEBM.ASM's generated scalers are interpreted (the 3D renderer, below).
 - **Debugging.** `--screenshot-after MS` writes the scan-out to a PNG, `--window-shot FILE` the window's own scaled contents, `--shot-at-flip K:FILE` the screen right after the game's K-th page flip, `--hidden` runs with no window, `--exit-after MS` quits, `--exit-on-halt` quits where the port stops instead of leaving the window up, and `-v` traces file opens, the paragraph map's windows and the call stack at a stub. `UW2PORT_ASMTRACE=1` in the environment writes every entry into the translated assembly (the address and the registers) to the standard error.
 
 ## Sound
 
-SOUND.C stays shared and unchanged. The port replaces what is under it, which is AIL.ASM and the `.ADV` drivers that AIL loads.
+SOUND.C stays shared. The port replaces what is under it: AIL.ASM, the `.ADV` drivers AIL loads from `SOUND\`, and the sound card itself. The aim is that the port programs the sound hardware with the same register writes and MIDI bytes DOS's drivers did, at the same moments of the game's clock, and that the state the game reads back from the drivers is DOS's.
 
-The port implements the 37 AIL 2.0 functions the game calls (`AIL_startup`, `AIL_register_timer`, `AIL_register_sequence`, `AIL_start_digital_playback` and the rest) in C. John Miles released the AIL 2.14 source into the public domain, and the port translates it, including the XMIDI sequencer and the drivers' timbre handling, rather than inventing new behaviour.
+### The drivers, from Miles' source and Origin's binary
 
-Music is XMIDI (`UWAnn.XMI`, `UWRnn.XMI` for the MT-32), played through one of these backends:
+John Miles released AIL 2.14's source on 26 May 2000 as "open-source freeware, usable by anyone for any purpose, commercial or otherwise, without restriction or limitation" (its `READ.ME`). The port's reference copy is the release as mirrored at github.com/dah4k/AIL2, commit `54eb81dd4c5313eac003096d220cb809f79e8432` (directory `A214_D3`); github.com/Tronix286/AIL2 at `f9c05599bdeb05a0a2b05557f6a23cdafb8550ce` holds the same sources with CR LF line ends and a Creative Music System driver added. None of it is in the repository: the port's C is written from it, as the rest of the port is written from the matched assembly.
 
-- **OPL.** An emulated OPL2 or OPL3 chip (Nuked OPL3), driven by a C translation of AIL's AdLib driver with the game's own timbre bank (`UW.AD` or `UW.OPL`). This backend is the default, because it needs nothing the user does not have.
-- **MT-32 and CM-32L.** libmt32emu with the user's own ROMs, fed the timbres from `UW.MT` as the MT-32 driver sends them.
-- **General MIDI, phase 2.** A SoundFont synthesiser, for users with neither of the others.
+Assembling those sources with TASM 2.0 (the repository's own, in emu2) and comparing the results with the GOG release's driver files byte for byte showed which source each driver is ([FINDINGS.md](FINDINGS.md#3-engine-findings)):
 
-The UnderworldGodot project already runs the same XMI files through mt32emu, a SoundFont synthesiser and ADLMIDI on Apple Silicon, with a dedicated producer thread. The port uses the same architecture in C.
+| File | Card | What it is |
+| --- | --- | --- |
+| `DD01.ADV`, `DD02.ADV`, `DD03.ADV` | Sound Blaster, Sound Blaster Pro, Pro Audio Spectrum digital | AIL 2.14's `SBDIG`, `SBPDIG`, `PASDIG.ADV`, byte for byte |
+| `DM05.ADV` | Roland MT-32 (MPU-401) | MT32.INC and MPU401.INC as in 2.14, with an older XMIDI.ASM (82 bytes shorter: before 1.10's time signature function) |
+| `DM02`, `DM03`, `DM04`, `DM06`, `DM07.ADV` | Ad Lib, Sound Blaster FM, SB Pro 1 (two YM3812s), Pro Audio Spectrum, SB Pro 2 (YMF262) | YAMAHA.INC 1.02 assembled with `OSI_ALE`, Origin's time-variant effects (TVFX), whose `ALE.INC` was never released, with the same older XMIDI.ASM |
+| `DM01.ADV` | PC speaker | not emulated: the port registers it as a driver that plays nothing |
 
-Effects and speech are 8-bit `.VOC` samples on one digital channel. AIL's double-buffered playback is kept (two 2 KB buffers, refilled by `update_digi_playback`), so the game's EMS streaming and priorities work unchanged. The mixer resamples each buffer to the output rate. MIDI effects go through the music backend on the channels the game locks.
+With a stand-in `ALE.INC` holding DM03's own bytes, 2.14's sources assemble to DM03.ADV exactly except in XMIDI.ASM's rewind, time signature, beat counting and `serve_driver`, so everything else in the drivers is 2.14's source, and the rest was read from DM03's disassembly (`ALE.INC`'s data, 400h bytes of per-slot words, and its four routines, 0530h to 0ADAh). The C, in `src/port/sound/`:
+
+| File | Replaces | From |
+| --- | --- | --- |
+| `ail.c` | AIL.ASM (seg022) | the matched AIL.ASM (AIL 2.11, see FINDINGS.md): `API_timer`'s DDA, the driver table, the calls the game makes, and the logs below |
+| `xmidi.c` | XMIDI.ASM, the shell of every music driver | 2.14's XMIDI.ASM, with UW2's older beat and bar counting from DM03 |
+| `yamaha.c` | YAMAHA.INC and ALE.INC: the FM drivers | 2.14's YAMAHA.INC, routine by routine, with the YM3812, dual YM3812 and YMF262 variants; TVFX (`TV_switch_voice`, `TV_cmd`, `serve_synth`, `TV_phase`) from DM03.ADV |
+| `mt32.c` | MT32.INC and MPU401.INC: DM05 | 2.14's MT32.INC: the timbre cache, the system exclusive messages that upload `UW.MT`'s timbres and point patches at them, the sysex controllers |
+| `dmasound.c` | DMASOUND.ASM: DD01 to DD03 | 2.14's DMASOUND.ASM for what UW2 uses: `.VOC` block parsing, the double buffer and its statuses, start, stop, pause, resume, volume and pan as each card applies them (SBDIG ignores both, FINDINGS.md) |
+| `audio.c` | the sound card | the chips and the mixer (below) |
+
+`AIL_register_driver` recognises which driver the game loaded by the device names in the user's own `.ADV` file and reads the driver's description table from it (the offset `describe_driver` loads into AX), so the game's view of the driver (`struct DrvrDesc`: type, data suffix, factory port, IRQ and DMA, service rate) is the file's.
+
+### The timers and the hardware
+
+AIL's timers are `API_timer` as AIL.ASM has it: one PIT programmed for the shortest period any registered timer needs (3906 µs once the 256 Hz game clock exists), and per timer a period and an accumulator to which each PIT tick adds the PIT's period, firing the timer when it reaches its period; a change of the PIT's period clears every accumulator. So the music driver's 120 Hz service fires on the same PIT ticks relative to the game clock as in DOS. The ticks come from the port's timer thread in real time, or, under replay, from the replayed game clock (`port_clock_read`, below).
+
+The drivers write to `audio.c`, which is the card:
+
+- **FM.** Nuked OPL3 (github.com/nukeykt/Nuked-OPL3, LGPL-2.1, the most accurate OPL emulator, in C), one chip for the Ad Lib and the Sound Blaster, two in OPL2 mode, left and right, for the dual-YM3812 cards, one in OPL3 mode for the SB Pro 2. `tools/setup-sound.sh` (`make setup-sound`) fetches `opl3.c` and `opl3.h` at commit `765ec962e473aeb767e4cba74ffdc8f588ffbfe8` into `tools/nuked-opl3` (ignored by git) and checks their SHA-256; the port compiles them when they are there. The alternatives were DOSBox's OPL emulators (GPL-2.0, C++) and ymfm (BSD-3-Clause, C++, less exact on the OPL3); Nuked OPL3's LGPL is satisfied by source distribution and dynamic or relinkable linking, and nothing of it is committed.
+- **MT-32 and CM-32L.** libmt32emu (munt, LGPL-2.1-or-later) from Homebrew (`brew install mt32emu`, 2.8.3 tested), found by pkg-config at build time, with the user's own ROMs: `--mt32-roms DIR` or `UW2PORT_MT32_ROMS`, holding `CM32L_CONTROL.ROM` and `CM32L_PCM.ROM` (preferred) or `MT32_CONTROL.ROM` and `MT32_PCM.ROM`. The repository holds no ROM and never will. The MPU-401's bytes go to `mt32emu_parse_stream`.
+- **The DAC.** The Sound Blaster's 8-bit DAC as a mixer channel: each buffer the digital driver starts is copied and played from the microsecond it started, resampled from the `.VOC` time constant's rate, `1000000 / (256 - tc)`, at the card's levels.
+
+At every PIT tick, before the tick's timers run, `audio.c` renders everything up to that tick's time with the registers as they are, so a register written during a tick sounds from that tick, as on the card, and the output is in the AIL clock's time whatever the host does. The frames go to a ring that the platform's audio stream (SDL3) drains, and, with `--audio-wav FILE`, to a 44100 Hz stereo WAV file. Under replay the port runs faster than real time and the device gets whatever fits in the ring; the WAV file gets every frame.
+
+### Replays with a sound card
+
+With a card, the game reads state that time and the card change behind its back, and runs game code from the timer interrupt. Two hooks in `portable.h` make that deterministic, both the original tokens under Turbo C:
+
+- `SND_READ(drv, x)` marks the 17 reads of driver state the game makes (`AIL_sequence_status`, `AIL_sound_buffer_status`, `AIL_lock_channel`, `AIL_timbre_status`, `AIL_timbre_request`, `AIL_detect_device`, in SOUND.C and CUTS.C). REPLAY.C records each value in a stream of its own (stream 8, `SOUND`) and replays it, while `x` is still evaluated so the driver sees the same calls. A read of no driver (-1) is not recorded, so the sessions recorded without a card replay as before.
+- `SLAVE_TIMER(f)` marks the 16 Hz effects timer (`digi_fx_timer` or `fx_timer`), game code that sets `dsfx_playing` and restarts digital playback, which AIL ran at any instruction. Under REPLAY and in the port, AIL gets a timer that does nothing and REPLAY.C runs `f` at reads of the game clock, as many times as AIL's DDA would have fired it by then, a function of the clock alone (`t * 3906 / 62500`).
+
+The port's own drivers run beside the recorded values: under replay, `port_clock_read` advances AIL's PIT by the replayed clock (1/256 s a tick), so the music driver plays the session's music in the session's time, and `port_sound_read` compares each value the port's driver had with DOS's recorded one and counts the reads where they differ.
+
+### Checking the drivers against DOS's
+
+`--ail-log FILE` writes every AIL call the game makes, with the data it passes (the XMIDI image, each timbre) and every driver service tick; `--hw-log FILE` every register write and MIDI byte, with its tick. `tools/ailcheck.py AIL_LOG HW_LOG` loads the user's own driver file into an x86 emulator (Unicorn, `pip install unicorn`, GPL-2.0, a development tool only), makes the same calls with the same data in the same order, records every byte the real driver writes to the chip's or the MPU-401's ports, and compares the two streams write for write and tick for tick, and the values the calls return. The Milestone 5 results below have what it showed.
 
 ## The differential test: input record and replay
 
@@ -301,7 +343,7 @@ The faithful port reproduces each likely bug, and the replay test proves it does
 | 2. Compile and link (done) | gated source changes for the errors and the pointer, prototype and Borland issues; explicit widths; the layout check; the promotion audit; the null-pointer static pass; the far pointer macros; link stubs; `make port` | `make port-check` shows 0 errors and no pointer truncation in the shared C; `make port` links a native binary with stubs that abort; `tools/layoutcheck.py` shows every file record identical; the gate passes |
 | 3. Boot to the title (done) | the platform layer on SDL3 (video, pointer events, keyboard, time, files, lifecycle, silent audio); the paragraph map, the far heap and EMS; Borland's library; seg021 in C; the parts of seg003, MODEX, VALLOC and the VGA emulation the opening screens need; AIL with no driver; `port_null_near` and `port_null_far` | the port runs `init_world` past `display_screen(5, 6)` and shows the first title screen, and its VGA scan-out matches a DOS screenshot of that frame byte for byte |
 | 4. Replay, the way into the game, and the 3D view (done) | `GAME_TIME()` and the input hooks in the shared sources; the replay DOS build; `state_dump()`; the null-pointer write check; the cutscene player's screen access, the rest of seg003, the sprites and the mouse cursor, text; a `-fsanitize=null` debug build; seg004 and the seg003 modules it uses translated to C (`cRender`), the render interface and the sprite hook | a DOS session recorded and replayed in DOS gives identical dumps twice in a row; the same session from boot through the title cutscene, the main menu and character creation into the game replays in the port with identical dumps at each checkpoint, and a session in the game's first rooms (walking, turning, looking up and down, a click in the view) replays to its end with identical dumps, its 3D frames included |
-| 5. Sound, then the rest of the game loop | the AIL API, the XMIDI sequencer, the OPL and MT-32 backends, the digital channel; then the panels, inventory, message scroll and automap screens, conversations, the locals read before they are set, saves | every theme plays; effects, speech and the cutscene audio play; music timing matches a DOS recording; recorded sessions through those screens and into a conversation replay with identical dumps |
+| 5. Sound, then the rest of the game loop (done, but the graphics duplicates) | the AIL API, the XMIDI sequencer, the OPL and MT-32 backends, the digital channel; then the panels, inventory, message scroll and automap screens, conversations, the locals read before they are set, saves | every theme plays; effects and the cutscene audio play; music timing matches a DOS recording; recorded sessions through those screens and into a conversation replay with identical dumps |
 | 6. Faithful release (phase 1) | the replay suite over whole sessions; save compatibility; every null-pointer site decided | a set of recorded sessions, from character creation into several worlds, replays in the port with identical dumps and saves, with no null dereference reported by `-fsanitize=null`; saves load both ways |
 | 7. Enhancements (phase 2) | scaling, mouselook, the FINDINGS fixes as options, other platforms | each option is off by default, and the replay suite still passes with all options off |
 

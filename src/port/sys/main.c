@@ -22,6 +22,16 @@
      --replay FILE          replay the recording FILE (copied to the home directory as
                             REPLAY.IN) instead of reading the clock, keyboard and mouse, writing
                             the state dumps to STATE.OUT; the game quits at its end
+     --sound CARD[,SPEECH]  the sound cards, as UW.CFG names them (docs/BUILDING.md, "Sound"):
+                            music 0 none, 2 Ad Lib, 3 Sound Blaster, 4 Sound Blaster Pro 1,
+                            5 MT-32, 6 Pro Audio Spectrum, 7 Sound Blaster Pro 2; speech 0
+                            none, 1 Sound Blaster, 2 Sound Blaster Pro, 3 Pro Audio Spectrum.
+                            Written to DATA\UW.CFG in the home directory, which the game reads
+     --mt32-roms DIR        the user's MT-32 or CM-32L ROMs (also UW2PORT_MT32_ROMS)
+     --audio-wav FILE       write everything the sound cards play to a WAV file (44100 Hz)
+     --no-audio             open no audio device
+     --ail-log FILE         log every AIL call and driver service (src/port/sound/ail.c)
+     --hw-log FILE          log every register write and MIDI byte the drivers make
      -v                     trace (also UW2PORT_TRACE=1)
    Anything else goes to the game as its own command line (the dungeon file, UWEDIT.C). */
 #include <stdarg.h>
@@ -30,6 +40,7 @@
 #include <string.h>
 #include "port.h"
 #include "plat.h"
+#include "sound/audio.h"
 
 int uw2_main(int argc, char *argv[]);
 void borland_init(void);
@@ -131,12 +142,32 @@ static int copy_to_home(const char *src, const char *home, const char *name)
     return 0;
 }
 
+/* --sound CARD[,SPEECH]: DATA\UW.CFG in the home directory, the file UWSOUND.EXE writes: the
+   music card and the speech card, each with its IRQ, port (hex) and DMA, for the cards'
+   factory settings (SOUND.C, seg016_1E73_2FCB, reads it; the port's drivers take any) */
+static int write_uw_cfg(const char *spec)
+{
+    char path[1200];
+    int music = atoi(spec), speech = strchr(spec, ',') ? atoi(strchr(spec, ',') + 1) : 0;
+    FILE *f;
+    if (plat_resolve("DATA\\UW.CFG", PLAT_CREATE, path, sizeof path) || !(f = fopen(path, "wb"))) {
+        fprintf(stderr, "uw2port: cannot write DATA\\UW.CFG in the home directory\n");
+        return 1;
+    }
+    fprintf(f, "%d %s sound\r\n%d %s speech\r\n", music,
+            music == 0 ? "-1 -1 -1" : music == 2 ? "-1 388 -1" : music == 5 ? "-1 330 -1" : "7 220 1",
+            speech, speech == 0 ? "-1 -1 -1" : "7 220 1");
+    fclose(f);
+    return 0;
+}
+
 static void usage(void)
 {
     fprintf(stderr, "usage: uw2port [--data DIR] [--home DIR] [--scale N] [--no-aspect] [--no-integer]\n"
                     "               [--hidden] [--screenshot-after MS] [--screenshot FILE] [--window-shot FILE]\n"
                     "               [--shot-at-flip K:FILE] [--exit-after MS] [--exit-on-halt]\n"
-                    "               [--record | --replay FILE]\n"
+                    "               [--record | --replay FILE] [--sound CARD[,SPEECH]] [--mt32-roms DIR]\n"
+                    "               [--audio-wav FILE] [--no-audio] [--ail-log FILE] [--hw-log FILE]\n"
                     "               [-v] [game arguments]\n");
     exit(2);
 }
@@ -145,6 +176,8 @@ int main(int argc, char *argv[])
 {
     static char home_buf[1024], exe[1200];
     const char *data = ".", *home = getenv("UW2PORT_HOME"), *replay = NULL;
+    const char *sound = NULL, *roms = NULL, *wav = NULL, *ail_log = NULL, *hw_log = NULL;
+    int audio_device = 1;
     PlatConfig cfg;
     PlatHooks hooks;
     int i;
@@ -176,6 +209,12 @@ int main(int argc, char *argv[])
         else if (!strcmp(a, "--exit-on-halt")) exit_on_halt = 1;
         else if (!strcmp(a, "--record")) rp_request = 1;
         else if (!strcmp(a, "--replay") && i + 1 < argc) { rp_request = 2; replay = argv[++i]; }
+        else if (!strcmp(a, "--sound") && i + 1 < argc) sound = argv[++i];
+        else if (!strcmp(a, "--mt32-roms") && i + 1 < argc) roms = argv[++i];
+        else if (!strcmp(a, "--audio-wav") && i + 1 < argc) wav = argv[++i];
+        else if (!strcmp(a, "--no-audio")) audio_device = 0;
+        else if (!strcmp(a, "--ail-log") && i + 1 < argc) ail_log = argv[++i];
+        else if (!strcmp(a, "--hw-log") && i + 1 < argc) hw_log = argv[++i];
         else if (!strcmp(a, "-v")) port_trace = 1;
         else if (!strcmp(a, "--help") || !strcmp(a, "-h")) usage();
         else if (a[0] == '-' && a[1] == '-') usage();
@@ -195,6 +234,10 @@ int main(int argc, char *argv[])
     vga_window_init();
     if (rp_request != 1 && rp_request != 2) rp_request = 0;   /* the port reads the world */
     if (replay && copy_to_home(replay, home, "REPLAY.IN")) return 1;
+    if (sound && write_uw_cfg(sound)) return 1;
+    audio_config(wav, roms, audio_device && !cfg.hidden);
+    ail_set_logs(ail_log, hw_log);
+    ail_set_slaved(rp_request == 2);    /* under replay AIL's timers follow the replayed clock */
     borland_init();
     port_crash_handlers();
     /* The game finds its home through UWHOME; the port's home directory plays that part,

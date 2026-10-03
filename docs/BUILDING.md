@@ -17,7 +17,7 @@ Optional, for the map tools and the assembly drafts (see [MAP.md](MAP.md)):
 
 ## Make targets
 
-- `make setup TC_DISKS=DIR TASM_DISKS=DIR` extracts Turbo C++ into `TC/` and TASM into `TASM/` from the directories holding their disk images and checks both are the expected builds (by MD5), makes `.venv` with `iced-x86` (for instruction diffs), runs `npm install`, and builds emu2 into `tools/emu2` (`make setup-emu2` does only that; a failure there is not fatal, the tools then use DOSBox-X or js-dos). It skips whatever is already in place, so it is safe to run again, and prints which DOS the toolchain will use.
+- `make setup TC_DISKS=DIR TASM_DISKS=DIR` extracts Turbo C++ into `TC/` and TASM into `TASM/` from the directories holding their disk images and checks both are the expected builds (by MD5), makes `.venv` with `iced-x86` (for instruction diffs), runs `npm install`, builds emu2 into `tools/emu2` (`make setup-emu2` does only that; a failure there is not fatal, the tools then use DOSBox-X or js-dos), and fetches the port's OPL emulator into `tools/nuked-opl3` (`make setup-sound` does only that, [Sound](#sound)). It skips whatever is already in place, so it is safe to run again, and prints which DOS the toolchain will use.
 - `make` (or `make game`) is the modding build, `tools/link.py --mod`, and prints the path of the EXE. See [LINKING.md](LINKING.md#the-modding-build).
 - `make exact` links the matched objects exactly (`tools/link.py`) and compares the result with your `UW2.EXE` (`tools/exediff.py`); it passes when only the two known bytes differ.
 - `make check` is the gate, below. `make check-all` is the same with every source recompiled.
@@ -33,7 +33,7 @@ Everything built goes under `build/`, which is never committed.
 
 The port ([PORT.md](PORT.md)) is a second build of the same C, for a modern host. Today it builds on macOS on Apple Silicon.
 
-What it needs: Apple's clang (the Xcode command line tools), Python 3, `pkg-config` and SDL3 (`brew install sdl3 pkg-config`; 3.4.16 is the version tested). No Turbo C, DOS or game data is needed to build it, only to run it.
+What it needs: Apple's clang (the Xcode command line tools), Python 3, `pkg-config` and SDL3 (`brew install sdl3 pkg-config`; 3.4.16 is the version tested); for sound, Nuked OPL3 and libmt32emu ([Sound](#sound)), without which the port builds and those chips are silent. No Turbo C, DOS or game data is needed to build it, only to run it.
 
 - `make port` compiles all 98 C sources the port uses and the port's own C under `src/port` (the SDL3 backend with SDL's flags), and links `build/port/uw2port`. It prints any warning in the port's own C.
 - `make port-check` is the compile-only measurement of the game's C ([PORT.md](PORT.md#milestone-1-baseline)).
@@ -55,12 +55,31 @@ Window options: `--scale N` (3), `--no-aspect` (square pixels instead of 200 lin
 
 At Milestone 4 the port runs from boot through the title cutscene, the main menu and character creation into the game, and draws the 3D view: recorded DOS sessions replay in it with the same game state and the same video memory as DOS at every checkpoint, the 3D frames included. [PORT.md](PORT.md#milestone-4-results-the-3d-renderer) has the detail. `UW2PORT_ASMTRACE=1` writes every entry into the translated renderer, with the registers, to the standard error, and `UW2PORT_SPRITEHOOK=1` installs a sprite hook that only counts (PORT.md, "The render interface and the sprite hook").
 
+### Sound
+
+The port plays the game's music and effects through C versions of the game's own sound drivers ([PORT.md](PORT.md#sound)), on emulated hardware that comes from two libraries, neither of them in the repository:
+
+| What | Library | License | Where from |
+| --- | --- | --- | --- |
+| the FM chips (Ad Lib, Sound Blaster, Pro Audio Spectrum) | Nuked OPL3, commit `765ec96` | LGPL-2.1 | `make setup-sound` (`tools/setup-sound.sh`) fetches `opl3.c` and `opl3.h` into `tools/nuked-opl3`, ignored by git, and checks them by SHA-256; `make port` compiles them when they are there |
+| the Roland MT-32 and CM-32L | libmt32emu (munt) 2.8.3 | LGPL-2.1-or-later | `brew install mt32emu`; `make port` links it when `pkg-config` finds it |
+| the audio output | SDL3 | zlib | `brew install sdl3` |
+
+`make port` says which it found (`sound: Nuked OPL3, libmt32emu`).
+
+The game takes its sound cards from `DATA\UW.CFG`, whose two lines the GOG release sets to no card. `--sound CARD[,SPEECH]` writes that file into the port's home directory (where the game looks first): music card 2 Ad Lib, 3 Sound Blaster, 4 Sound Blaster Pro (two OPL2s), 5 MT-32, 6 Pro Audio Spectrum, 7 Sound Blaster Pro (OPL3), 0 none; speech card 1 Sound Blaster, 2 Sound Blaster Pro, 3 Pro Audio Spectrum, 0 none. `--sound 3,1` is a Sound Blaster with its digitised effects; the setting stays in the home directory until changed. The PC speaker (card 1) is not emulated.
+
+The MT-32 needs the user's own ROM images, which the repository never holds: `--mt32-roms DIR` (or `UW2PORT_MT32_ROMS=DIR`), a directory with `CM32L_CONTROL.ROM` and `CM32L_PCM.ROM` (used first) or `MT32_CONTROL.ROM` and `MT32_PCM.ROM`. Without them the MT-32 driver runs and the music is silent.
+
+`--audio-wav FILE` writes everything the cards play to a 44100 Hz stereo WAV file, in the game's own time (under `--replay` the whole session, however fast the port runs it); `--no-audio` opens no audio device. `--ail-log FILE` and `--hw-log FILE` write every call the game makes to its sound drivers and every register write or MIDI byte the drivers make, and `tools/ailcheck.py AIL_LOG HW_LOG` runs the same calls through the user's real `.ADV` driver in an x86 emulator and compares the writes (it needs `pip install unicorn`, 2.1.4 tested; a development tool only).
+
 ## Recording and replaying a session
 
 `tools/replay.py` records a session in DOS and replays it in DOS and in the port, comparing the state dumps ([PORT.md](PORT.md#milestone-4-results) has the formats and results):
 
 - `python3 tools/replay.py build` builds the replay DOS EXE, `build/replay/UW2.EXE`: the modding build with the sources that use the replay hooks compiled with `-DREPLAY` (and those with `NULLTRAP` marks with `-DNULLTRAP`), and `src/replay/REPLAY.C` linked in as one more resident module (`tools/link.py --mod --add`). The other commands build it when it is out of date.
-- `python3 tools/replay.py record OUT --session newgame` records the standard session (boot, the title, the main menu, a new character, sixteen seconds in the game) in headless DOS, and `--session walk` the same way into the game and then about forty seconds in its first rooms (walking, turning, looking up and down, a click in the view); `record OUT step ...` records your own steps (`tools/replaydos.mjs` lists them; `h:KEY,MS` holds a key down, as walking needs). The recording is `OUT/RECORD.OUT`, the dumps `OUT/STATE.OUT`.
+- `python3 tools/replay.py record OUT --session newgame` records the standard session (boot, the title, the main menu, a new character, sixteen seconds in the game) in headless DOS, and `--session walk` the same way into the game and then about forty seconds in its first rooms (walking, turning, looking up and down, a click in the view); `--session sound` does that with a Sound Blaster's music and digitised effects, fight mode and swings into the air, and stays long enough for a music theme to end, and `--session soundfm` the same with every effect on the FM chip (no speech card); `record OUT step ...` records your own steps (`tools/replaydos.mjs` lists them; `h:KEY,MS` holds a key down, as walking needs). The recording is `OUT/RECORD.OUT`, the dumps `OUT/STATE.OUT`, and a session with a sound card also `OUT/UW.CFG`.
+- A recording with a sound card has its `DATA\UW.CFG` beside it: `NAME.cfg` next to `NAME.rec` (`tests/replay/sound.cfg`), or `UW.CFG` in the recording's directory. Every replay of it, in DOS (`replaydos.mjs --cfg`, which puts the file into the staged game; js-dos has a Sound Blaster 16 at 220h, IRQ 7, DMA 1, with an OPL3) and in the port (into its home directory), uses it.
 - `python3 tools/replay.py dos REC OUT` and `port REC OUT [--debug]` replay a recording in DOS or in the port (the `make port-debug` build with `--debug`).
 - `python3 tools/replay.py compare A B` compares two runs' dumps checkpoint by checkpoint; `show STATE [PNGDIR]` lists a dump and writes the screen of each full checkpoint as a PNG; `nulls DIR` is the null-pointer write check of a DOS run; `log REC` describes a recording.
 - `python3 tools/replay.py check REC OUT` does it all: two DOS replays, the port, the debug port, and the comparisons.
@@ -128,7 +147,7 @@ All of them are in `tools/`, and each describes itself at the top.
 | Role | Tools |
 | --- | --- |
 | Make targets and the gate | `uw2.py` (behind the Makefile), `install-hooks.sh`, `repocheck.py` |
-| Toolchain setup | `setup-tc.sh`, `setup-tasm.sh` |
+| Toolchain setup | `setup-tc.sh`, `setup-tasm.sh`, `setup-sound.sh` (the port's OPL emulator) |
 | Building in headless DOS | `tcc.mjs` (compile or assemble), `dosrun.mjs` (batch lines, used by the link), `dosbackend.mjs` (the DOS they run in), `dosbatch.py` (many sources at once, for the gate and `link.py --mod`), `setup-emu2.sh` with `emu2-date.patch`, `rungame.mjs` (boot and screenshot, always js-dos) |
 | Matching one file | `match.py`, `verify.py`, `bssorder.py` (predicts `_BSS` order), `asmgen.py` (first draft of an assembly module), `fmt.py` (FM Towns disassembly) |
 | Object files | `omf.py`, `fixups.py` |
@@ -136,6 +155,6 @@ All of them are in `tools/`, and each describes itself at the top.
 | Linking | `link.py`, `extract.py`, `exediff.py`, `addrscan.py` (numbers that could be addresses) |
 | Target tables and names | `targets.py`, `syncnames.py` |
 | The map | `doslist.py`, `locate.py`, `callgraphs.py`, `callpairs.py`, `anchors.py`, `align.py`, `files.py` |
-| The port | `portcheck.py` (`make port-check`: compiles the C for the host, compile only), `portbuild.py` (`make port`, `make port-debug`: compiles and links it), `portstubs.py` (writes the link stubs), `portshot.py` (the port's screens against DOS's), `replay.py` and `replaydos.mjs` (record and replay sessions, compare the state dumps), `asm2c.py` (translates the renderer's assembly modules to C; `--check` says whether the committed C is up to date), `widths.py` (explicit integer widths), `layoutcheck.py` (struct layouts under Turbo C against the host), `intaudit.py` (the promotion and overflow audit) ([PORT.md](PORT.md)) |
+| The port | `portcheck.py` (`make port-check`: compiles the C for the host, compile only), `portbuild.py` (`make port`, `make port-debug`: compiles and links it), `portstubs.py` (writes the link stubs), `portshot.py` (the port's screens against DOS's), `replay.py` and `replaydos.mjs` (record and replay sessions, compare the state dumps), `asm2c.py` (translates the renderer's assembly modules to C; `--check` says whether the committed C is up to date), `ailcheck.py` (the port's sound drivers against the real `.ADV` files), `widths.py` (explicit integer widths), `layoutcheck.py` (struct layouts under Turbo C against the host), `intaudit.py` (the promotion and overflow audit) ([PORT.md](PORT.md)) |
 
-The canonical replay sessions are committed as `tests/replay/newgame.rec` (boot, the title, a new character, into the game) and `tests/replay/walk.rec` (the same, then walking, turning, looking up and down and a click in the 3D view). They hold only recorded inputs, no game data: replay one with `python3 tools/replay.py dos tests/replay/walk.rec OUT` and `python3 tools/replay.py port tests/replay/walk.rec OUT`, then `compare`.
+The canonical replay sessions are committed as `tests/replay/newgame.rec` (boot, the title, a new character, into the game), `tests/replay/walk.rec` (the same, then walking, turning, looking up and down and a click in the 3D view), and `tests/replay/sound.rec` and `soundfm.rec` with their `.cfg` files (the same way in with a Sound Blaster, then fight mode, swings, walking and a minute of music). They hold only recorded inputs, no game data: replay one with `python3 tools/replay.py dos tests/replay/walk.rec OUT` and `python3 tools/replay.py port tests/replay/walk.rec OUT`, then `compare`.

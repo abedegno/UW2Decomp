@@ -204,7 +204,7 @@ void far digi_fx_timer(void)
     if (ds_channel_status) {
         dsfx_playing = 1;
         if (channel_punt == 1 && channel_sem == 0
-                && AIL_sound_buffer_status(sphdriver, which_buffer) != 2) {
+                && SND_READ(sphdriver, AIL_sound_buffer_status(sphdriver, which_buffer)) != 2) {
             if (pending[0] == 1) {
                 AIL_register_sound_buffer(sphdriver, 0, &dsbuf[0]);
                 pending[0] = 0;
@@ -498,7 +498,7 @@ have_slot:
         ds_sounds_in_ems[slot].priority = prio;
     found = 0;
     for (i = 0; i < 2; i++) {
-        buf = AIL_sound_buffer_status(sphdriver, i);
+        buf = SND_READ(sphdriver, AIL_sound_buffer_status(sphdriver, i));
         if (buf == 3) {
             buf = i;
             goto got_buf;
@@ -507,7 +507,7 @@ have_slot:
     paused = 1;
     AIL_pause_digital_playback(sphdriver);
     for (i = 0; i < 2; i++) {
-        buf = AIL_sound_buffer_status(sphdriver, i);
+        buf = SND_READ(sphdriver, AIL_sound_buffer_status(sphdriver, i));
         if (buf == 0) {
             buf = i;
             found = 1;
@@ -634,8 +634,8 @@ void far update_digi_playback(void)
     chan = 0;
     if (ds_channel_status & (1 << chan)) {
         slot = ds_channel_info[chan].slot;
-        st[0] = AIL_sound_buffer_status(sphdriver, 0);
-        st[1] = AIL_sound_buffer_status(sphdriver, 1);
+        st[0] = SND_READ(sphdriver, AIL_sound_buffer_status(sphdriver, 0));
+        st[1] = SND_READ(sphdriver, AIL_sound_buffer_status(sphdriver, 1));
         if (st[0] == 3 && st[1] == 3 && ds_channel_info[chan].remaining <= 0) {
             if (ds_channel_info[chan].loops <= 0) {
 stop:
@@ -728,7 +728,7 @@ void far punt_sound_stuff(unsigned char failed)
    is built by writing into the string literal. */
 unsigned char far init_sounds(void)
 {
-    register char *name = "dm00.adv";
+    register char *name = WRITABLE_STR("dm00.adv");
     unsigned char failed = 0;
     char path[80];
 
@@ -757,7 +757,7 @@ unsigned char far init_sounds(void)
         if (drv_desc->drvr_type != 3)
             goto fail;
         do_settings(drv_desc, m_settings);
-        if (!AIL_detect_device(music_driver, drv_desc->io, drv_desc->irq, drv_desc->dma, drv_desc->drq))
+        if (!SND_READ(music_driver, AIL_detect_device(music_driver, drv_desc->io, drv_desc->irq, drv_desc->dma, drv_desc->drq)))
             goto fail;
         AIL_init_driver(music_driver, drv_desc->io, drv_desc->irq, drv_desc->dma, drv_desc->drq);
         if (speech_card != 0)
@@ -863,7 +863,7 @@ unsigned char far install_timbre(unsigned char bank, unsigned char patch)
    the music off for the session (music_ok = 0). */
 unsigned char far load_new_music(unsigned char music, char start)
 {
-    register char *name = "uwr00.xmi";
+    register char *name = WRITABLE_STR("uwr00.xmi");
     unsigned t;
     char ch;
     char path[80];
@@ -885,8 +885,8 @@ unsigned char far load_new_music(unsigned char music, char start)
         AIL_release_sequence_handle(music_driver, xmi_sequence);
         if ((xmi_sequence = AIL_register_sequence(music_driver, midi_buf, 0, state_table, 0L)) == -1)
             goto fail;
-        for (t = AIL_timbre_request(music_driver, xmi_sequence); t != 0xFFFF;
-             t = AIL_timbre_request(music_driver, xmi_sequence))
+        for (t = SND_READ(music_driver, AIL_timbre_request(music_driver, xmi_sequence)); t != 0xFFFF;
+             t = SND_READ(music_driver, AIL_timbre_request(music_driver, xmi_sequence)))
             if (!install_timbre(t >> 8, t & 0xFF))
                 goto fail;
     }
@@ -933,7 +933,7 @@ void far play_music(void)
 {
     if (!music_ok || !music_on || xmi_sequence == -1)
         return;
-    if (AIL_sequence_status(music_driver, xmi_sequence) != 1)
+    if (SND_READ(music_driver, AIL_sequence_status(music_driver, xmi_sequence)) != 1)
         AIL_start_sequence(music_driver, xmi_sequence);
     AIL_set_relative_volume(music_driver, xmi_sequence, 0x60, 0);
 }
@@ -1317,10 +1317,10 @@ unsigned char far init_fx(void)
 {
     fx_mask = 0;
     if (!speechok)
-        fx_clock = AIL_register_timer(fx_timer);
+        fx_clock = AIL_register_timer(SLAVE_TIMER(fx_timer));
     else {
         init_digi_fx();
-        fx_clock = AIL_register_timer(digi_fx_timer);
+        fx_clock = AIL_register_timer(SLAVE_TIMER(digi_fx_timer));
     }
     if (fx_clock == -1) {
         speechok = 0;
@@ -1381,10 +1381,10 @@ unsigned char far fx_play(unsigned char fx, unsigned char patch, unsigned char n
         ch = 2;
         goto note_on;
     }
-    if (AIL_timbre_status(music_driver, 1, patch) == 0)
+    if (SND_READ(music_driver, AIL_timbre_status(music_driver, 1, patch)) == 0)
         if (!install_timbre(1, patch))
             return 0xFF;
-    if ((ch = AIL_lock_channel(music_driver)) == 0)
+    if ((ch = SND_READ(music_driver, AIL_lock_channel(music_driver))) == 0)
         return 0xFF;
     fx_channels |= 1 << ch;
     fx_mask |= bit;
@@ -1432,7 +1432,7 @@ void far play_instrument(register int which)
     else {
         game_sprint(0x109);
         patch = inst[which];
-        if (AIL_timbre_status(music_driver, 0, patch) == 0)
+        if (SND_READ(music_driver, AIL_timbre_status(music_driver, 0, patch)) == 0)
             if (!install_timbre(0, patch))
                 ok = 0;
         if (ok == 1 && music_driver == -1)
@@ -1441,7 +1441,7 @@ void far play_instrument(register int which)
             if (sound_card == 1)
                 ch = 2;
             else {
-                ch = AIL_lock_channel(music_driver);
+                ch = SND_READ(music_driver, AIL_lock_channel(music_driver));
                 fx_channels |= 1 << ch;
                 AIL_send_channel_voice_message(music_driver, ch + 0xAF, 0x72, 0);
                 AIL_send_channel_voice_message(music_driver, ch + 0xDF, 0, 0x40);
@@ -1623,7 +1623,7 @@ unsigned char far music_over(void)
 {
     if (xmi_sequence == -1)
         return 1;
-    return AIL_sequence_status(music_driver, xmi_sequence) != 1;
+    return SND_READ(music_driver, AIL_sequence_status(music_driver, xmi_sequence)) != 1;
 }
 
 /* Overrides the driver's default port, IRQ and DMA with UW.CFG's (s: IRQ, port, DMA)
@@ -1642,7 +1642,7 @@ void far do_settings(struct DrvrDesc far *d, register int16 *s)
    port, IRQ and DMA first and then the driver's own defaults. Sets speechok. */
 unsigned char far init_speech(void)
 {
-    register char *name = "dd00.adv";
+    register char *name = WRITABLE_STR("dd00.adv");
     int io;
     int irq;
     int dma;
@@ -1665,12 +1665,12 @@ unsigned char far init_speech(void)
     dma = speech_descr->dma;
     drq = speech_descr->drq;
     do_settings(speech_descr, speech_cfg);
-    if (!AIL_detect_device(sphdriver, speech_descr->io, speech_descr->irq, speech_descr->dma, speech_descr->drq)) {
+    if (!SND_READ(sphdriver, AIL_detect_device(sphdriver, speech_descr->io, speech_descr->irq, speech_descr->dma, speech_descr->drq))) {
         speech_descr->io = io;
         speech_descr->irq = irq;
         speech_descr->dma = dma;
         speech_descr->drq = drq;
-        if (!AIL_detect_device(sphdriver, speech_descr->io, speech_descr->irq, speech_descr->dma, speech_descr->drq))
+        if (!SND_READ(sphdriver, AIL_detect_device(sphdriver, speech_descr->io, speech_descr->irq, speech_descr->dma, speech_descr->drq)))
             goto fail;
     }
     AIL_init_driver(sphdriver, speech_descr->io, speech_descr->irq, speech_descr->dma, speech_descr->drq);

@@ -282,7 +282,7 @@ void far update_big_speech(void)
 
     done[0] = done[1] = 0;
     for (i = 0; i < 2; i++) {
-        if (AIL_sound_buffer_status(sphdriver, i) == 3 && voc_left > 0) {
+        if (SND_READ(sphdriver, AIL_sound_buffer_status(sphdriver, i)) == 3 && voc_left > 0) {
             done[i] = 1;
             off = sp_pos & 0x3FFF;
             page = sp_pos >> 14;
@@ -318,8 +318,8 @@ unsigned char far speech_over(void)
 {
     int a, b;
     if (!speechok) return 1;
-    a = AIL_sound_buffer_status(sphdriver, 0);
-    b = AIL_sound_buffer_status(sphdriver, 1);
+    a = SND_READ(sphdriver, AIL_sound_buffer_status(sphdriver, 0));
+    b = SND_READ(sphdriver, AIL_sound_buffer_status(sphdriver, 1));
     if (a == 3 && b == 3 && voc_left == 0) return 1;
     return 0;
 }

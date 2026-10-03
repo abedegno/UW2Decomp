@@ -149,12 +149,33 @@ static struct region *region_of(const volatile void *vp)
     return r;
 }
 
+static unsigned char *heap;
+static uint16_t heap_len[PORT_HEAP_END - PORT_HEAP_FIRST];
+
+/* A far heap pointer's block: the paragraph its farmalloc result was made at. Borland's far
+   pointer arithmetic keeps the segment and adds to the offset, so a pointer the C derived
+   from a block (mapdata + 0x7300, MAP.C's critbot) has the block's segment and an offset
+   from it, and code that subtracts two offsets (Map_Save's list counts) relies on that.
+   Returns -1 for a pointer in no block. */
+static long heap_block(size_t d)
+{
+    size_t para = d >> 4, i;
+    for (i = para + 1; i-- > 0;) {
+        if (heap_len[i] && para < i + heap_len[i]) return (long)i;
+        if (para - i > 0x1000) break;           /* 64 KB back: no block that large */
+    }
+    return -1;
+}
+
 unsigned port_fp_seg(const volatile void *p)
 {
     struct region *r = region_of(p);
     size_t d;
+    long b;
     if (!r) return 0;
     d = (size_t)((const unsigned char *)p - r->base);
+    if (r->kind == 1 && (b = heap_block(d)) >= 0 && d - (size_t)b * 16 < 0x10000)
+        return r->seg + (unsigned)b;
     if (r->kind == 1) return r->seg + (unsigned)(d >> 4);
     if (d >= 0x10000) return r->seg + (unsigned)((d - 0xFFF0) >> 4);
     return r->seg;
@@ -164,8 +185,11 @@ unsigned port_fp_off(const volatile void *p)
 {
     struct region *r = region_of(p);
     size_t d;
+    long b;
     if (!r) return 0;
     d = (size_t)((const unsigned char *)p - r->base);
+    if (r->kind == 1 && (b = heap_block(d)) >= 0 && d - (size_t)b * 16 < 0x10000)
+        return (unsigned)(d - (size_t)b * 16);
     if (r->kind == 1) return (unsigned)(d & 15);
     if (d >= 0x10000) return (unsigned)(d - ((d - 0xFFF0) & ~(size_t)15));
     return (unsigned)d;
@@ -186,9 +210,8 @@ void movedata(unsigned srcseg, unsigned srcoff, unsigned dstseg, unsigned dstoff
 
 /* The far heap: first fit over the paragraphs of the emulated conventional memory. A block of
    n bytes takes (n + 4 + 15) / 16 paragraphs; the 4 bytes are Borland's block header. */
-static unsigned char *heap;
 static uint8_t heap_used[PORT_HEAP_END - PORT_HEAP_FIRST];      /* 1 a paragraph in use */
-static uint16_t heap_len[PORT_HEAP_END - PORT_HEAP_FIRST];      /* paragraphs, at a block's first */
+/* heap and heap_len (paragraphs, at a block's first) are declared above port_fp_seg */
 
 static void heap_init(void)
 {
@@ -285,6 +308,11 @@ static void nulls(void)
     memcpy(null_near, port_dgroup_image, sizeof null_near);
     /* DS:0..2, the tail of ovr167's last overlay stub entry while ovr167 is not loaded */
     null_near[0] = 0x27; null_near[1] = 0x06; null_near[2] = 0x00; null_near[3] = 0x00;
+    /* int 1 to 7 as DOSBox (js-dos, where the replays are recorded) sets them up and the game
+       leaves them: a null object pointer reads them as the object's fields after int 0's
+       (OBJUSE.C's checkTrap reads the link word at 0000:0006, int 1's segment, 0070h) */
+    memcpy(null_far + 4, "\xf4\x00\x70\x00\xf4\x00\x70\x00\xf4\x00\x70\x00\xf4\x00\x70\x00"
+                         "\x54\xff\x00\xf0\x60\x10\x00\xf0\x60\x10\x00\xf0", 28);
     /* int 0 -> int0_trap: offset 0019h, segment 1FC7h plus the load segment */
     null_far[0] = 0x19; null_far[1] = 0x00;
     null_far[2] = (unsigned char)((0x1FC7 + PORT_LOAD_SEG) & 0xFF);

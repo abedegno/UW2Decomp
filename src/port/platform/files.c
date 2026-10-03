@@ -162,21 +162,89 @@ static int home_path(char comp[][64], int n, char *out, size_t outsz, int makedi
     return 0;
 }
 
+/* Whiteouts. A file the game deletes from the merged tree must stay deleted even where the
+   data root has one of that name, which the port never touches: the deletion leaves a marker
+   in the home directory, ".wh." and the name, which hides the data root's file until the game
+   creates the file again. (The save code empties SAVE0 and copies a save over it, and the
+   archive code deletes LEV.ARK before renaming its rebuilt copy: without whiteouts the data
+   root's old files came back.) */
+static void marker_of(const char *homefile, char *out, size_t outsz)
+{
+    const char *slash = strrchr(homefile, '/');
+    snprintf(out, outsz, "%.*s/.wh.%s", (int)(slash - homefile), homefile, slash + 1);
+}
+
+static int whited(const char *homefile)
+{
+    char m[MAXP], dir[MAXP], name[256];
+    const char *slash = strrchr(homefile, '/');
+    snprintf(dir, sizeof dir, "%.*s", (int)(slash - homefile), homefile);
+    snprintf(m, sizeof m, ".wh.%s", slash + 1);
+    return find_ci(dir, m, name, sizeof name);
+}
+
+static void unwhite(const char *homefile)
+{
+    char dir[MAXP], m[MAXP], name[256];
+    const char *slash = strrchr(homefile, '/');
+    snprintf(dir, sizeof dir, "%.*s", (int)(slash - homefile), homefile);
+    snprintf(m, sizeof m, ".wh.%s", slash + 1);
+    while (find_ci(dir, m, name, sizeof name)) {
+        char full[MAXP];
+        snprintf(full, sizeof full, "%s/%s", dir, name);
+        if (unlink(full) != 0) break;
+    }
+}
+
 int plat_resolve(const char *dospath, int mode, char *out, size_t outsz)
 {
     char comp[32][64], h[MAXP], d[MAXP];
-    int n = split(dospath, comp, 32);
+    int n = split(dospath, comp, 32), white;
     if (n < 0) return -1;
     if (n == 0) { snprintf(out, outsz, "%s", mode == PLAT_READ && !exists(home_root) ? data_root : home_root); return 0; }
     if (mode == PLAT_READ) {
         if (walk(home_root, comp, n, h, sizeof h)) { snprintf(out, outsz, "%s", h); return 0; }
-        if (walk(data_root, comp, n, d, sizeof d)) { snprintf(out, outsz, "%s", d); return 0; }
-        return home_path(comp, n, out, outsz, 0);
+        if (home_path(comp, n, out, outsz, 0)) return -1;
+        if (!whited(out) && walk(data_root, comp, n, d, sizeof d)) { snprintf(out, outsz, "%s", d); return 0; }
+        return 0;
     }
     if (walk(home_root, comp, n, h, sizeof h)) { snprintf(out, outsz, "%s", h); return 0; }
     if (home_path(comp, n, out, outsz, 1)) return -1;
-    if (mode == PLAT_WRITE && walk(data_root, comp, n, d, sizeof d) && !is_dir(d))
+    white = whited(out);
+    unwhite(out);
+    if (mode == PLAT_WRITE && !white && walk(data_root, comp, n, d, sizeof d) && !is_dir(d))
         copy_file(d, out);
+    return 0;
+}
+
+int plat_remove(const char *dospath)
+{
+    char comp[32][64], h[MAXP], d[MAXP], m[MAXP];
+    int n = split(dospath, comp, 32), any = 0;
+    FILE *f;
+    if (n <= 0) { errno = ENOENT; return -1; }
+    if (walk(home_root, comp, n, h, sizeof h)) {
+        if (is_dir(h) || unlink(h) != 0) return -1;
+        any = 1;
+    }
+    if (home_path(comp, n, h, sizeof h, 1)) return -1;
+    if (!whited(h) && walk(data_root, comp, n, d, sizeof d) && !is_dir(d)) {
+        marker_of(h, m, sizeof m);
+        if ((f = fopen(m, "w")) != NULL) fclose(f);
+        any = 1;
+    }
+    if (!any) { errno = ENOENT; return -1; }
+    return 0;
+}
+
+int plat_rename(const char *from, const char *to)
+{
+    char a[MAXP], b[MAXP];
+    if (plat_resolve(from, PLAT_WRITE, a, sizeof a) || plat_resolve(to, PLAT_CREATE, b, sizeof b)) return -1;
+    if (!exists(a)) { errno = ENOENT; return -1; }
+    if (exists(b)) { errno = EACCES; return -1; }       /* DOS refuses to rename over a file */
+    if (rename(a, b) != 0) return -1;
+    plat_remove(from);                  /* and the data root's copy, if it had one, stays hidden */
     return 0;
 }
 
@@ -205,6 +273,10 @@ static void list_one(const char *dir, struct seen *s,
     while ((e = readdir(dd)) != NULL) {
         if (e->d_name[0] == '.' && (e->d_name[1] == 0 || (e->d_name[1] == '.' && e->d_name[2] == 0)))
             continue;
+        if (!strncmp(e->d_name, ".wh.", 4)) {      /* a whiteout: the data root's file is gone */
+            seen_add(s, e->d_name + 4);
+            continue;
+        }
         snprintf(p, sizeof p, "%s/%s", dir, e->d_name);
         if (stat(p, &st) != 0) continue;
         if (seen_add(s, e->d_name))

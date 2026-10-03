@@ -166,6 +166,71 @@ void far rp_checkpoint(int n);
 #define CHECKPOINT(n)   rp_checkpoint(n)
 #endif
 
+/* The sound hardware's side of the replay (docs/PORT.md, "Sound"). With a sound card the game
+   reads state that time and the card change behind its back: whether the music has ended,
+   whether a digital buffer has played out, which MIDI channel is free to lock, which timbres
+   the driver's cache still holds. SND_READ(drv, x) is such a read of driver drv: in DOS the
+   value x; under REPLAY recorded or replayed like an input (x is still evaluated, so the
+   driver sees the same calls), unless drv is -1, no driver, whose answer is always 0. SLAVE_TIMER(f) is a game callback that AIL ran from the timer interrupt (SOUND.C's
+   16 Hz effects timer): in DOS f itself, so AIL calls it at any instruction; under REPLAY and
+   in the port, REPLAY.C runs it instead, at reads of the game clock, as often as AIL's DDA
+   would have by then, so that its effect on the game's state lands at the same point in two
+   runs. Both are the original tokens under Turbo C. */
+#if defined(__TURBOC__) && !defined(REPLAY)
+#define SND_READ(drv, x) (x)
+#define SLAVE_TIMER(f)  f
+#else
+typedef void (far *RpTimerFn)(void);
+unsigned far rp_sound(int drv, unsigned v);
+RpTimerFn far rp_slave_timer(RpTimerFn f, unsigned hz);
+#define SND_READ(drv, x) rp_sound(drv, x)
+#define SLAVE_TIMER(f)  rp_slave_timer(f, 16)
+#endif
+
+/* FRAME_LEN(dos, host) and FRAME_TAIL(arr, i, var): a local array that the original copies
+   past its end on purpose, into the stack slots Turbo C laid out after it, and a local that
+   is in fact the array's element i (SCROLL.C's scroll_print copies 49 bytes into a 47-byte
+   array and uses the 49th as its terminator, `sentinel`). Under Turbo C the original
+   tokens: the array has its DOS length and the variable is itself, so the bytes are the
+   same. On the host the frame is the compiler's, so the array is given the length the code
+   uses and the variable becomes that element of it. */
+#ifdef __TURBOC__
+#define FRAME_LEN(dos, host) dos
+#define FRAME_TAIL(arr, i, var) var
+#else
+#define FRAME_LEN(dos, host) host
+#define FRAME_TAIL(arr, i, var) ((arr)[i])
+#endif
+
+/* READ_PAIR(fd, a, b): read(fd, &a, 4), where the original reads two words into a one-word
+   local and relies on Turbo C having put local b right after it on the stack (BABL.C reads
+   a bglobals.dat record's slot and size so). The original tokens under Turbo C; on the host
+   the two words go to a and b, whatever the compiler's frame, and the count read is the
+   value. */
+#ifdef __TURBOC__
+#define READ_PAIR(fd, a, b) read(fd, &(a), 4)
+#else
+#define READ_PAIR(fd, a, b) ({ uint16_t rp_w_[2] = { 0, 0 }; int rp_r_ = read(fd, rp_w_, 4); \
+    if (rp_r_ >= 2) (a) = rp_w_[0]; if (rp_r_ >= 4) (b) = rp_w_[1]; rp_r_; })
+#endif
+
+/* WRITE_PAIR(fd, a, b): write(fd, &a, 4), the same two locals written as one record. */
+#ifdef __TURBOC__
+#define WRITE_PAIR(fd, a, b) write(fd, &(a), 4)
+#else
+#define WRITE_PAIR(fd, a, b) ({ uint16_t wp_w_[2]; wp_w_[0] = (uint16_t)(a); wp_w_[1] = (uint16_t)(b); \
+    write(fd, wp_w_, 4); })
+#endif
+
+/* WRITABLE_STR(s): a string literal the code writes into (SOUND.C builds the driver's and the
+   music's file names in place). The literal under Turbo C; on the host a literal is
+   read-only, so it is an array of the same characters, which the code may change. */
+#ifdef __TURBOC__
+#define WRITABLE_STR(s) s
+#else
+#define WRITABLE_STR(s) ((char[]){ s })
+#endif
+
 /* PLANAR_STORE(p, v): store the byte v through p, a far pointer into the VGA's window at
    A000:0000, where the sequencer's map mask (set with outportb beforehand) chooses the planes
    the byte goes to. The original store under Turbo C; on the host a pointer cannot apply the

@@ -130,13 +130,17 @@ static void bitmap_fp(const void *bm, uint16_t *off, uint16_t *seg)
 }
 
 /* show: AX, BX the position, DI:SI the bitmap's offset and segment, BP the height, CX the
-   width, 0DC6 and 0DC8 the offsets into the bitmap. The bitmap is a far pointer, so it goes
-   through the paragraph map as DS:SI did. */
+   width, 0DC6 and 0DC8 the offsets into the bitmap. The bitmap's far pointer is split as its
+   maker made it (bitmap_fp): a picture from GRSPIC.C's seg009_7, an object's or the mouse
+   cursor's, is at offset 0 of a segment in DOS, and seg003 keeps that offset in its row
+   records (the explore session's object cursor showed it). */
 void show(int x, int y, unsigned char *bm, int a, int b, int c, int d)
 {
+    uint16_t off, seg;
+    bitmap_fp(bm, &off, &seg);
     SETW(0x0DC6, c);
     SETW(0x0DC8, d);
-    seg003_0272_21D4((int16_t)x, (int16_t)y, (uint16_t)FP_OFF(bm), (uint16_t)FP_SEG(bm), (int16_t)b, (int16_t)a);
+    seg003_0272_21D4((int16_t)x, (int16_t)y, off, seg, (int16_t)b, (int16_t)a);
 }
 
 /* _49AE: claim n bytes of video memory from the bump pointer (GRLIBF.ASM's _3206); the old
