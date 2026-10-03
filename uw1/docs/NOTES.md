@@ -35,3 +35,11 @@ Things agents found that belong to the shared headers or the map, to settle in t
 - kin false hit: `free_scrgr` at seg036, seg039, ovr105 and ovr109 (a one-call body).
 - Table rows that hide a second function: seg027 A78 (free_critter + AC4), seg027 EEE (EF9 + F23), seg030 899 (flat_move + UW2's static A3F).
 - Inferred, not proven, names: animcount (DS:3656), MoveCamera (DS:0762), nextstep/watertime/water_eff (DS:0779/077F/077E), errmsg (stub 5AA4:0075).
+
+## From wave 2 (B)
+
+- More of UW1's `struct Player`: fps bits 0-2 of byte 0xB6; word 0x62 bit 2 (talisman_ok, mob_to_static); 0x6D talismans left; word 0x6E (bit 3). Bitfield runs declared `uint16` take one byte where only low bits are used. Files keep local structs (CRITTIME Player1Hit, BAGS Player1Bags, BABLHACK Player1Conv, PLAYMOVE Player1Move, INVDATA UW1PlayerHand, PHYSICS UW1PlayerMotion, OBJPHYS UW1PlayerQuest) until player.h is reconciled: they type overlapping bytes differently (BABLHACK's skills[] spans 0x21..0x63).
+- map.h: `int far Anim_Load(char *name, int level)`, `char far Anim_Save(char *name, int level)` live in EFFECT.C in UW1 (UW2: MAP.C). player.h: `player_setup(int x, int y)`. critter.h: control, aligned, didmove signed; add_to_beeline_path and set_next_square_on_path return char; close_to_square(char flag, ...); no set_htx. mts_doanim returns char; Phys.light signed.
+- ovr091 (unmatched, LEV.ARK access): ovr091_61A(char far *, int, void far *) returns int; ovr091_22C(char far *, int, void far *, int) returns char.
+- Two-function table rows: seg006 367 (get_terrain + crit_hndlr_walk), 5FE (crit_hndlr_fly + crit_hndlr_swim), seg044 E9 (+ UW2's seg044_368F_392, static), SpawnClass7Object (+ CreateAnimoForSrcObject, static), phys_affect_player (+ player_sqhandler, public).
+- Spurious kin: DoTrapScreenShake ↔ NotASpellMessage; UW2's `unreferenced_seg008_1B09_160` is called in UW1 (EtherealVoidSpecialEffects_seg008_150).

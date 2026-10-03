@@ -25,3 +25,11 @@ ovr094
 seg027_2861
 seg030_2B26
 seg034_2F89
+seg006_1477
+seg029_29EE
+seg008_1B2A
+seg044
+ovr150
+ovr089
+ovr116
+ovr125
