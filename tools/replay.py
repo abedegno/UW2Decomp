@@ -514,6 +514,18 @@ def run_dos(out, rec=None, steps=(), timeout=900, cfg=None, stage=None, log=None
     return r.returncode
 
 
+def port_exe(path):
+    """The port's program: path, or path.exe on Windows."""
+    return path + '.exe' if not os.path.exists(path) and os.path.exists(path + '.exe') else path
+
+
+def have_toolchain():
+    """Turbo C++ is set up (make setup): the replay DOS build can be made. verify does not need
+    it; without it (a port-only machine, the Windows and macOS verify jobs) the goldens are not
+    checked against the replay build."""
+    return os.path.exists(os.path.join(root, 'TC', 'TCC.EXE'))
+
+
 def run_port(rec, out, extra=(), stage=None, quiet=False):
     extra = list(extra)
     debug = '--debug' in extra
@@ -521,7 +533,7 @@ def run_port(rec, out, extra=(), stage=None, quiet=False):
     cov = '--cov' in extra              # the coverage build (tools/coverage.py), writing LLVM_PROFILE_FILE
     if cov: extra.remove('--cov')
     stage = stage or STAGE
-    exe = os.path.join(root, 'build', 'port-debug' if debug else 'port-cov' if cov else 'port', 'uw2port')
+    exe = port_exe(os.path.join(root, 'build', 'port-debug' if debug else 'port-cov' if cov else 'port', 'uw2port'))
     if not os.path.exists(exe): sys.exit('replay.py: build the port first (make port)')
     home = os.path.join(out, 'home'); shutil.rmtree(home, ignore_errors=True); os.makedirs(home)
     if stage: shutil.copytree(stage, home, dirs_exist_ok=True)

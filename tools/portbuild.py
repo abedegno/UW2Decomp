@@ -74,6 +74,26 @@ def pkg_env():
     return env
 
 
+def strip_rpaths(flags):
+    """Link flags without any run path a .pc file adds (SDL3's sdl3.pc has
+    -Wl,-rpath,${libdir}): the release program must look only beside itself, so a run path
+    into the build tree (tools/libs/lib) cannot come before $ORIGIN/../lib."""
+    out, skip = [], False
+    for f in flags:
+        if skip: skip = False; continue
+        if f == '-Wl,-rpath' or f == '-rpath': skip = True; continue     # the path follows
+        if f.startswith('-Wl,'):
+            parts, keep, i = f[4:].split(','), [], 0
+            while i < len(parts):
+                if parts[i] in ('-rpath', '--rpath', '-R'): i += 2; continue
+                if parts[i].startswith(('-rpath=', '--rpath=')) or parts[i] == '--enable-new-dtags': i += 1; continue
+                keep.append(parts[i]); i += 1
+            if keep: out.append('-Wl,' + ','.join(keep))
+            continue
+        out.append(f)
+    return out
+
+
 def pkg_config(*args):
     r = subprocess.run(['pkg-config'] + list(args) + [BACKEND], capture_output=True, text=True, env=pkg_env())
     if r.returncode:
@@ -119,6 +139,33 @@ def opl_library_name():
     if sys.platform == 'darwin': return 'libnukedopl3.dylib'
     if os.name == 'nt' or sys.platform in ('msys', 'cygwin') or os.environ.get('MSYSTEM'): return 'nukedopl3.dll'
     return 'libnukedopl3.so'
+
+
+ICON = os.path.join(root, 'tools', 'dist', 'icon')
+
+
+def windows_resource(cc):
+    """On Windows, the program's icon (tools/dist/icon/uw2.ico) as a resource object for the
+    link, compiled by llvm-windres (MSYS2 CLANG64's llvm package) or windres; [] elsewhere, or
+    when neither is found (the program then has Windows's default icon)."""
+    if not (os.name == 'nt' or sys.platform in ('msys', 'cygwin') or os.environ.get('MSYSTEM')): return []
+    import shutil
+    tool = shutil.which('llvm-windres') or shutil.which('windres')
+    if not tool:
+        print('portbuild.py: no llvm-windres or windres; the program gets no icon')
+        return []
+    rc, obj = os.path.join(OUT, 'uw2port.rc'), os.path.join(OUT, 'uw2port-res.o')
+    ico = os.path.join(ICON, 'uw2.ico').replace(os.sep, '/').replace('\\', '/')
+    with open(rc, 'w') as f: f.write(f'1 ICON "{ico}"\n')
+    cmd = [tool, '-O', 'coff', '-i', rc, '-o', obj]
+    if 'llvm' in os.path.basename(tool):        # for the compiler's target, not the tool's host
+        m = subprocess.run([cc, '-dumpmachine'], capture_output=True, text=True).stdout.strip()
+        if m: cmd.append('--target=' + m)
+    r = subprocess.run(cmd, capture_output=True, text=True, cwd=root)
+    if r.returncode:
+        print(f'portbuild.py: {os.path.basename(tool)} failed; the program gets no icon\n{r.stderr[-1000:]}')
+        return []
+    return [obj]
 
 
 def compile_port(cc, path, sound_cflags=()):
@@ -210,10 +257,14 @@ def main(argv):
         if sys.platform == 'darwin':
             rpath = ['-Wl,-rpath,@executable_path', '-Wl,-rpath,@executable_path/../Frameworks', '-Wl,-headerpad_max_install_names']
         elif sys.platform.startswith('linux'):
-            rpath = ['-Wl,-rpath,$ORIGIN', '-Wl,-rpath,$ORIGIN/../lib']
+            # only these: RUNPATH (new dtags), so LD_LIBRARY_PATH can still override it
+            rpath = ['-Wl,--enable-new-dtags', '-Wl,-rpath,$ORIGIN', '-Wl,-rpath,$ORIGIN/../lib']
     elif sys.platform.startswith('linux') and any(f.startswith('-L' + LIBS) for f in pkg_config('--libs') + snd_libs):
         rpath = ['-Wl,-rpath,' + os.path.join(LIBS, 'lib')]     # runs without LD_LIBRARY_PATH
-    r = subprocess.run([a.cc, '-o', EXE] + ARCHS + link_extra + objs + pkg_config('--libs') + snd_libs + threads + rpath,
+    libs = pkg_config('--libs') + snd_libs
+    if RELEASE and sys.platform.startswith('linux'): libs = strip_rpaths(libs)
+    objs += windows_resource(a.cc)
+    r = subprocess.run([a.cc, '-o', EXE] + ARCHS + link_extra + objs + libs + threads + rpath,
                        capture_output=True, text=True, cwd=root)
     if not os.path.exists(EXE) and os.path.exists(EXE + '.exe'): EXE += '.exe'     # Windows
     if r.returncode:

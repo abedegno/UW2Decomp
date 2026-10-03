@@ -25,9 +25,11 @@ n=$(grep -c . "$dest/SHA256SUMS")
 if command -v sha256sum >/dev/null 2>&1; then sum="sha256sum"; else sum="shasum -a 256"; fi
 ( cd "$dest" && $sum -c --quiet SHA256SUMS >/dev/null 2>&1 ) || { echo "ci-assets: SHA256SUMS does not verify"; exit 1; }
 echo "ci-assets: $n files verified against SHA256SUMS"
-vars="UW2_EXE=$dest/game/UW2/UW2.EXE
-UW2_DIR=$dest/game/UW2
-TC_DISKS=$dest/tc
-TASM_DISKS=$dest/tasm"
+# on Windows (Git Bash or MSYS2), as C:/... paths, which native programs (Python, the port) read
+out=$dest; if command -v cygpath >/dev/null 2>&1; then out=$(cygpath -m "$dest"); fi
+vars="UW2_EXE=$out/game/UW2/UW2.EXE
+UW2_DIR=$out/game/UW2
+TC_DISKS=$out/tc
+TASM_DISKS=$out/tasm"
 echo "$vars"
 [ -z "${GITHUB_ENV:-}" ] || echo "$vars" >> "$GITHUB_ENV"

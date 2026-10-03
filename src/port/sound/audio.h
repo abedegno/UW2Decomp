@@ -12,6 +12,7 @@
    directory of the user's MT-32 or CM-32L ROMs, and whether to open the audio device */
 void audio_config(const char *wav_path, const char *mt32_roms, int device);
 void audio_start(void);
+int audio_mt32_roms_present(const char *dir);
 void audio_music_device(int kind);
 void audio_opl_write(int chip, unsigned reg, unsigned val);
 void audio_mpu_byte(unsigned b);

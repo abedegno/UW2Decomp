@@ -8,6 +8,8 @@
 	<string>Ultima Underworld II</string>
 	<key>CFBundleExecutable</key>
 	<string>uw2port</string>
+	<key>CFBundleIconFile</key>
+	<string>uw2</string>
 	<key>CFBundleIdentifier</key>
 	<string>io.github.abedegno.uw2port</string>
 	<key>CFBundleInfoDictionaryVersion</key>

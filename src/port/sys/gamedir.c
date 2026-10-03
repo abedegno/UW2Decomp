@@ -4,8 +4,9 @@
    A game directory is one that holds the GOG release's UW2.EXE (checked by size and CRC-32,
    port_check_exe). The search tries, in order: $UW2PORT_DATA; the folder remembered in the
    settings file; the current directory and the executable's directory (and a UW2 folder in
-   either); then GOG's install locations on each host, looking up to four levels into any
-   folder there whose name has "Underworld" or "UW2" in it.
+   either); on Windows, the folders GOG's installers record in the registry; then GOG's install
+   locations on each host, looking up to four levels into any folder there whose name has
+   "Underworld" or "UW2" in it.
 
    GOG's Mac and Windows releases keep the game inside a CD image, game.gog (an ISO 9660 image
    of the Ultima Underworld 1 and 2 CD, which DOSBox mounts as D:), with UW2.EXE and its data
@@ -316,6 +317,33 @@ int port_game_in(const char *dir, const char *home, char *out, size_t outsz)
     return search(dir, 4, 0, home, out, outsz) || search(dir, 4, 1, home, out, outsz) ? 0 : -1;
 }
 
+#ifdef _WIN32
+/* GOG's installers record the games they install in the registry (sys/gogreg.c). 1 with the
+   game directory in out: Ultima Underworld 1+2's own entry first; then any entry whose title
+   or folder looks like the game, searched as the install roots are; then every other entry's
+   folder itself, its UW2 folder or a CD image in it, so that a renamed install is still found
+   without walking every game's folders. */
+struct gog_ctx { int pass; const char *home; char *out; size_t outsz; };
+
+static int gog_entry(const char *id, const char *name, const char *path, void *ctx)
+{
+    struct gog_ctx *c = ctx;
+    int own = !strcmp(id, PORT_GOG_UW12), uw = own || looks_like_uw(name) || looks_like_uw(path);
+    if (c->pass == 0) return own && (search(path, 4, 0, c->home, c->out, c->outsz) || search(path, 4, 1, c->home, c->out, c->outsz));
+    if (c->pass == 1) return !own && uw && (search(path, 4, 0, c->home, c->out, c->outsz) || search(path, 4, 1, c->home, c->out, c->outsz));
+    return !uw && (here_or_uw2(path, c->out, c->outsz) || search(path, 0, 1, c->home, c->out, c->outsz));
+}
+
+static int gog_registry(const char *home, char *out, size_t outsz)
+{
+    struct gog_ctx c;
+    c.home = home; c.out = out; c.outsz = outsz;
+    for (c.pass = 0; c.pass < 3; c.pass++)
+        if (port_gog_registry(gog_entry, &c)) return 1;
+    return 0;
+}
+#endif
+
 int port_find_game(const char *home, char *out, size_t outsz)
 {
     char path[MAXP], cfg[MAXP];
@@ -335,6 +363,9 @@ int port_find_game(const char *home, char *out, size_t outsz)
         if (strlen(path) > 1 && (path[strlen(path) - 1] == '/' || path[strlen(path) - 1] == '\\')) path[strlen(path) - 1] = 0;
         if (here_or_uw2(path, out, outsz)) return 0;
     }
+#ifdef _WIN32
+    if (gog_registry(home, out, outsz)) return 0;
+#endif
     /* GOG's places: a game directory first, then a CD image */
     for (iso = 0; iso < 2; iso++)
         for (i = 0; i < sizeof roots / sizeof roots[0]; i++) {

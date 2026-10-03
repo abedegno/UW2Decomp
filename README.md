@@ -10,15 +10,15 @@ Neither contains any of the game. You need your own copy of UW2 (the GOG release
 ## Play it
 
 1. Get the port: download the package for your system from the [releases](https://github.com/abedegno/UW2Decomp/releases) page, or [build it from source](#build-the-port-from-source).
-2. Install UW2 from GOG. The port finds it in GOG's usual folders, including inside GOG's Mac app and its `game.gog` CD image. If it finds nothing, it asks you to choose the folder that holds `UW2.EXE` (or the GOG install folder), and remembers it. From a command line, `uw2port --data /path/to/UW2` names it.
-3. Start it: `UW2.app` on macOS (unsigned, so the first time right-click it and choose Open), `uw2port.exe` on Windows, `./uw2` on Linux.
+2. Install UW2 from GOG. The port finds it in GOG's usual folders (on Windows, where GOG's installer recorded it in the registry), including inside GOG's Mac app and its `game.gog` CD image. If it finds nothing, it asks you to choose the folder that holds `UW2.EXE` (or the GOG install folder), and remembers it. From a command line, `uw2port --data /path/to/UW2` names it.
+3. Start it: `UW2.app` on macOS (signed and notarised, so it opens like any app; a package whose `README.txt` says it is not notarised needs right-click and Open the first time), `uw2port.exe` on Windows, and on Linux the AppImage (`chmod +x UW2-*.AppImage`, then run it) or `./uw2` from the tarball. The Linux packages need glibc 2.35 or later (Ubuntu 22.04 or newer).
 
 The controls are the game's own: the mouse, and the keys in the game's manual. Saved games and settings go to `~/.uw2port` (`%APPDATA%\uw2port` on Windows), never to the game folder.
 
 Options (`uw2port --help` lists them all):
 
-- `--sound MUSIC,SPEECH` chooses the sound cards, and is remembered. The first run gets a Sound Blaster with its digitised effects (`3,1`). Music: 0 none, 2 Ad Lib, 3 Sound Blaster, 4 Sound Blaster Pro 1, 5 Roland MT-32, 6 Pro Audio Spectrum, 7 Sound Blaster Pro 2. Speech: 0 none, 1 Sound Blaster, 2 Sound Blaster Pro, 3 Pro Audio Spectrum.
-- Roland MT-32 music needs your own MT-32 or CM-32L ROM images, which are not included: `--sound 5,1 --mt32-roms DIR`, with `CM32L_CONTROL.ROM` and `CM32L_PCM.ROM` (or `MT32_CONTROL.ROM` and `MT32_PCM.ROM`) in DIR. The folder is remembered.
+- `--sound MUSIC,SPEECH` chooses the sound cards, and is remembered. The first run gets a Sound Blaster with its FM music and digitised effects (`3,1`), or, when MT-32 ROMs are given (below), the MT-32 for the music and the Sound Blaster for the effects (`5,1`). Music: 0 none, 2 Ad Lib, 3 Sound Blaster, 4 Sound Blaster Pro 1, 5 Roland MT-32, 6 Pro Audio Spectrum, 7 Sound Blaster Pro 2. Speech: 0 none, 1 Sound Blaster, 2 Sound Blaster Pro, 3 Pro Audio Spectrum.
+- Roland MT-32 music needs your own MT-32 or CM-32L ROM images, which are not included: `--mt32-roms DIR` on the first run (or `--sound 5,1 --mt32-roms DIR` later), with `CM32L_CONTROL.ROM` and `CM32L_PCM.ROM` (or `MT32_CONTROL.ROM` and `MT32_PCM.ROM`) in DIR. The folder is remembered.
 - `--scale N` sets the window's starting size, `--no-aspect` shows square pixels instead of a 4:3 CRT's shape, `--no-integer` scales freely.
 
 ## Build the port from source

@@ -72,7 +72,7 @@ jobs:
           msystem: CLANG64
           update: false
           install: make curl
-          pacboy: clang:p pkgconf:p sdl3:p python:p
+          pacboy: clang:p llvm:p pkgconf:p sdl3:p python:p
       - run: make setup-sound
       - run: make PY=python port
       - run: make PY=python port-check

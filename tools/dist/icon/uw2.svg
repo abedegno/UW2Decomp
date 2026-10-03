@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- The port's icon: an original, stylised ankh in gold and bronze on a dark stone tile.
+       Drawn for this project (MIT, like the port's code); not the Ultima logo and no game art.
+       uw2-small.svg is the same design simplified for 16 to 32 pixels. tools/dist/icon/make-icons.py
+       renders both into the PNG, .ico, .icns and C forms (docs/BUILDING.md, "Releases"). -->
+  <defs>
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a443d"/>
+      <stop offset="1" stop-color="#211e1b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.55">
+      <stop offset="0" stop-color="#d9a441" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#d9a441" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffe59a"/>
+      <stop offset="0.45" stop-color="#e2ad4a"/>
+      <stop offset="1" stop-color="#9c6524"/>
+    </linearGradient>
+  </defs>
+  <!-- the tile, on macOS's icon grid (824 of 1024, corner radius 185) -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#stone)"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#glow)"/>
+  <rect x="112" y="112" width="800" height="800" rx="174" fill="none" stroke="#6e655a" stroke-width="10" stroke-opacity="0.55"/>
+  <!-- the ankh: a loop, flared arms and a flared stem, as one shape with its hole -->
+  <g transform="translate(0 6)">
+    <path fill="#000" fill-opacity="0.35" transform="translate(10 16)" fill-rule="evenodd" d="
+      M512 196 C 610 196 668 282 668 372 C 668 432 640 476 604 508
+      L 720 482 C 740 478 752 492 752 512 L 752 584 C 752 604 740 618 720 614 L 568 590
+      L 600 812 C 603 832 592 840 576 840 L 448 840 C 432 840 421 832 424 812 L 456 590
+      L 304 614 C 284 618 272 604 272 584 L 272 512 C 272 492 284 478 304 482 L 420 508
+      C 384 476 356 432 356 372 C 356 282 414 196 512 196 Z
+      M512 268 C 468 268 438 314 438 372 C 438 432 476 478 512 500 C 548 478 586 432 586 372 C 586 314 556 268 512 268 Z"/>
+    <path fill="url(#gold)" stroke="#5a3a12" stroke-width="12" stroke-linejoin="round" fill-rule="evenodd" d="
+      M512 196 C 610 196 668 282 668 372 C 668 432 640 476 604 508
+      L 720 482 C 740 478 752 492 752 512 L 752 584 C 752 604 740 618 720 614 L 568 590
+      L 600 812 C 603 832 592 840 576 840 L 448 840 C 432 840 421 832 424 812 L 456 590
+      L 304 614 C 284 618 272 604 272 584 L 272 512 C 272 492 284 478 304 482 L 420 508
+      C 384 476 356 432 356 372 C 356 282 414 196 512 196 Z
+      M512 268 C 468 268 438 314 438 372 C 438 432 476 478 512 500 C 548 478 586 432 586 372 C 586 314 556 268 512 268 Z"/>
+    <!-- a highlight along the loop's upper left -->
+    <path fill="none" stroke="#fff4c8" stroke-opacity="0.7" stroke-width="10" stroke-linecap="round"
+          d="M392 330 C 404 262 452 222 512 220"/>
+  </g>
+</svg>

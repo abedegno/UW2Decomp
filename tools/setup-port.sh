@@ -39,7 +39,7 @@ MINGW*|MSYS*)
   if [ "$MSYSTEM" != CLANG64 ]; then
     echo "Run this from MSYS2's CLANG64 shell (the 'MSYS2 CLANG64' item in the Start menu)."; exit 1
   fi
-  pacman -S --needed --noconfirm make git curl mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-pkgconf \
+  pacman -S --needed --noconfirm make git curl mingw-w64-clang-x86_64-clang mingw-w64-clang-x86_64-llvm mingw-w64-clang-x86_64-pkgconf \
     mingw-w64-clang-x86_64-sdl3 mingw-w64-clang-x86_64-python mingw-w64-clang-x86_64-cmake mingw-w64-clang-x86_64-ninja
   UW2_LIBS=mt32emu sh "$root/tools/setup-libs.sh"
   ;;

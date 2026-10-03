@@ -5,15 +5,15 @@ This is a native port of Ultima Underworld II: Labyrinth of Worlds (Looking Glas
 
 STARTING IT
 
-macOS: open UW2.app. The app is not signed by Apple, so the first time, right-click (or Control-click) UW2.app and choose Open, then Open again. If macOS still refuses, run this in Terminal once: xattr -dr com.apple.quarantine /path/to/UW2.app
+macOS: open UW2.app (macOS 11 or later, Apple silicon or Intel). @MACOS_OPEN@
 
 Windows: run uw2port.exe. Windows SmartScreen may warn about an unknown publisher; choose "More info" and "Run anyway".
 
-Linux: run ./uw2 from this folder (or bin/uw2port). It needs glibc 2.39 or later (Ubuntu 24.04 or newer, or a distribution of the same age).
+Linux: the AppImage (UW2-...-linux-x86_64.AppImage) is one file: make it executable (chmod +x) and run it. From the tarball, run ./uw2 from its folder (or bin/uw2port); uw2.desktop and uw2.png there are a menu entry and its icon, if you want one (put the folder's path in the Exec line and copy the file to ~/.local/share/applications). Both need glibc 2.35 or later (Ubuntu 22.04 or newer, or a distribution of the same age) and X11 or Wayland.
 
 FINDING THE GAME
 
-On its first run the port looks for the game by itself: GOG's install folders (/Applications on macOS, C:\GOG Games and GOG Galaxy's Games folder on Windows, ~/GOG Games and ~/Games on Linux), the current folder and the program's own folder. If it finds only GOG's CD image (game.gog, as GOG's Mac and Windows installers ship it), it copies the game out of the image once into its home folder. If it finds nothing, it asks you to choose a folder: the one that holds UW2.EXE, the GOG install folder, or the GOG app. The folder is remembered.
+On its first run the port looks for the game by itself: the current folder and the program's own folder, then, on Windows, the folders GOG's installers record in the registry, then GOG's install folders (/Applications on macOS, C:\GOG Games and GOG Galaxy's Games folder on Windows, ~/GOG Games and ~/Games on Linux). If it finds only GOG's CD image (game.gog, as GOG's Mac and Windows installers ship it), it copies the game out of the image once into its home folder. If it finds nothing, it asks you to choose a folder: the one that holds UW2.EXE, the GOG install folder, or the GOG app. The folder is remembered.
 
 From a command line you can name the folder instead: uw2port --data /path/to/UW2. The environment variable UW2PORT_DATA does the same.
 
@@ -23,7 +23,7 @@ PLAYING
 
 The controls are the game's own: the mouse, and the keys the game's manual lists (GOG includes the manual). Closing the window quits.
 
-Sound: the first run sets up a Sound Blaster with its digitised effects. --sound MUSIC,SPEECH chooses other cards and is remembered: music 0 none, 2 Ad Lib, 3 Sound Blaster, 4 Sound Blaster Pro 1, 5 Roland MT-32, 6 Pro Audio Spectrum, 7 Sound Blaster Pro 2; speech 0 none, 1 Sound Blaster, 2 Sound Blaster Pro, 3 Pro Audio Spectrum. For example --sound 7,2 is a Sound Blaster Pro 2.
+Sound: the first run sets up a Sound Blaster, its FM music and its digitised effects (--sound 3,1); or, when you have given MT-32 ROMs (below) by then, the Roland MT-32 for the music and the Sound Blaster for the effects (--sound 5,1). --sound MUSIC,SPEECH chooses other cards and is remembered: music 0 none, 2 Ad Lib, 3 Sound Blaster, 4 Sound Blaster Pro 1, 5 Roland MT-32, 6 Pro Audio Spectrum, 7 Sound Blaster Pro 2; speech 0 none, 1 Sound Blaster, 2 Sound Blaster Pro, 3 Pro Audio Spectrum. For example --sound 7,2 is a Sound Blaster Pro 2.
 
 Roland MT-32 music needs your own MT-32 or CM-32L ROM images, which are not included: --sound 5,1 --mt32-roms DIR, where DIR holds CM32L_CONTROL.ROM and CM32L_PCM.ROM, or MT32_CONTROL.ROM and MT32_PCM.ROM. The folder is remembered.
 

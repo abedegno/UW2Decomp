@@ -166,6 +166,29 @@ void audio_start(void)
     if (use_device && plat_audio_open(AUDIO_RATE, fill)) port_log("audio: no audio device; running silent\n");
 }
 
+/* 1 if this build has the MT-32 emulator and dir holds a CM-32L or an MT-32 pair of ROM
+   files under the names mt_open loads, for the first run's choice of music card (main.c). */
+int audio_mt32_roms_present(const char *dir)
+{
+#ifdef UW2_HAVE_MT32EMU
+    static const char *pairs[2][2] = { { "CM32L_CONTROL.ROM", "CM32L_PCM.ROM" }, { "MT32_CONTROL.ROM", "MT32_PCM.ROM" } };
+    char path[1200];
+    int i, j, n;
+    FILE *f;
+    if (!dir || !*dir) return 0;
+    for (i = 0; i < 2; i++) {
+        for (j = n = 0; j < 2; j++) {
+            snprintf(path, sizeof path, "%s/%s", dir, pairs[i][j]);
+            if ((f = fopen(path, "rb")) != NULL) { fclose(f); n++; }
+        }
+        if (n == 2) return 1;
+    }
+#else
+    (void)dir;
+#endif
+    return 0;
+}
+
 #ifdef UW2_HAVE_MT32EMU
 static void mt_open(void)
 {

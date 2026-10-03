@@ -3,7 +3,9 @@
 # with its read-only deploy key, decrypted with the age key into $RUNNER_TEMP/uw2-assets. Sets
 # UW2_EXE, UW2_DIR, TC_DISKS and TASM_DISKS for the later steps. Nothing is listed or printed.
 # The calling workflow must remove $RUNNER_TEMP/uw2-assets, TC, TASM and build in a final
-# `if: always()` step, and must never cache or upload anything from them.
+# `if: always()` step, and must never cache or upload anything from them. Needs git, ssh, tar
+# and age on the PATH: Linux and macOS runners (age from apt or Homebrew), and Windows, where
+# bash is Git Bash and the job puts the official age build on the PATH first (accuracy.yml).
 name: UW2 assets
 description: Fetch and decrypt the private game and toolchain bundle
 inputs:
@@ -24,12 +26,15 @@ runs:
       run: |
         set -euo pipefail
         umask 077
-        key="$RUNNER_TEMP/uw2-assets-deploy-key"; hosts="$RUNNER_TEMP/uw2-known-hosts"
+        # on Windows (Git Bash) RUNNER_TEMP is D:\a\_temp, whose backslashes GIT_SSH_COMMAND's
+        # shell would eat: use its /d/a/_temp form
+        tmp=$RUNNER_TEMP; if command -v cygpath >/dev/null 2>&1; then tmp=$(cygpath -u "$RUNNER_TEMP"); fi
+        key="$tmp/uw2-assets-deploy-key"; hosts="$tmp/uw2-known-hosts"
         printf '%s\n' "$DEPLOY_KEY" | tr -d '\r' > "$key"
         # GitHub's published host key (api.github.com/meta), so the clone trusts nothing else
         echo 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' > "$hosts"
         GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o UserKnownHostsFile=$hosts -o StrictHostKeyChecking=yes" \
-          git clone -q --depth 1 git@github.com:abedegno/uw2-ci-assets.git "$RUNNER_TEMP/uw2-ci-assets"
+          git clone -q --depth 1 git@github.com:abedegno/uw2-ci-assets.git "$tmp/uw2-ci-assets"
         rm -f "$key" "$hosts"
-        sh tools/ci-assets.sh "$RUNNER_TEMP/uw2-ci-assets/uw2-ci-assets.tar.gz.age" "$RUNNER_TEMP/uw2-assets"
-        rm -rf "$RUNNER_TEMP/uw2-ci-assets"
+        sh tools/ci-assets.sh "$tmp/uw2-ci-assets/uw2-ci-assets.tar.gz.age" "$tmp/uw2-assets"
+        rm -rf "$tmp/uw2-ci-assets"

@@ -1,0 +1,7 @@
+# Files whose bytes are checked by digest or read by sh must not get CR LF line ends on a
+# Windows checkout (core.autocrlf): the replay recordings and their sound configurations
+# (tools/golden.py compares their SHA-256 with the goldens'), and the shell scripts.
+tests/replay/*.rec binary
+tests/replay/*.cfg binary
+*.sh text eol=lf
+tools/dist/uw2 text eol=lf

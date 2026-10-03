@@ -1,9 +1,12 @@
 # make test, the accuracy suite (docs/BUILDING.md, "Testing" and "Continuous integration"):
 # the byte-exact DOS build gate, the port build, the quick routine fuzzing and the eight replay
-# sessions against their goldens. It needs the game and the Borland toolchain, which come from
-# the private bundle (the uw2-assets action), so it runs only where the repository's secrets
-# are given: pushes to main, a manual run, and pull requests from branches of this repository.
-# A pull request from a fork gets port.yml and repocheck.yml, which need no secrets.
+# sessions against their goldens, on Linux. Then the same eight sessions replayed by the port
+# built on Windows (MSYS2 CLANG64) and on macOS against the same goldens (make verify): the
+# goldens are DOS's, so these show the port on each OS runs the game as DOS does. They need
+# the game, and the gate the Borland toolchain, which come from the private bundle (the
+# uw2-assets action), so the jobs run only where the repository's secrets are given: pushes
+# to main, a manual run, and pull requests from branches of this repository. A pull request
+# from a fork gets port.yml and repocheck.yml, which need no secrets.
 name: accuracy
 on:
   push:
@@ -53,3 +56,110 @@ jobs:
       - name: Remove the game data and everything built from it
         if: always()
         run: rm -rf "$RUNNER_TEMP/uw2-assets" "$RUNNER_TEMP/uw2-ci-assets" "$RUNNER_TEMP/uw2-assets-deploy-key" TC TASM build
+
+  # The port only: no DOS and no Borland toolchain (replay.py verify needs neither; without
+  # Turbo C++ it does not check the goldens against the replay DOS build).
+  verify-windows:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      # the recordings and scripts must keep their bytes and LF line ends (also .gitattributes)
+      - run: git config --global core.autocrlf false
+        shell: pwsh
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANG64
+          update: false
+          install: make curl git
+          pacboy: clang:p llvm:p pkgconf:p sdl3:p python:p cmake:p ninja:p
+      # age's own Windows build at a pinned version, checked against its SHA-256, for the
+      # uw2-assets action (which runs in Git Bash)
+      - name: age
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'age.zip'
+          Invoke-WebRequest -Uri 'https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-windows-amd64.zip' -OutFile $zip
+          $sum = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          if ($sum -ne 'f48d8f8f9ebe903ab5027ed067652f2cc1db94bc206976430133b905dcd8e8c7') { throw "age: unexpected SHA-256 $sum" }
+          Expand-Archive $zip -DestinationPath (Join-Path $env:RUNNER_TEMP 'age-bin')
+          Join-Path $env:RUNNER_TEMP 'age-bin\age' | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+      - uses: ./.github/actions/uw2-assets
+        with:
+          deploy-key: ${{ secrets.UW2_ASSETS_DEPLOY_KEY }}
+          age-key: ${{ secrets.UW2_ASSETS_AGE_KEY }}
+      - name: Cache libmt32emu
+        uses: actions/cache@v4
+        with:
+          path: tools/libs
+          key: libs-windows-clang64-${{ hashFiles('tools/setup-libs.sh') }}
+      - name: Build libmt32emu (when not cached), fetch Nuked OPL3
+        run: |
+          UW2_LIBS=mt32emu make setup-libs
+          make setup-sound
+      - run: make PY=python port
+      - name: The sessions against the goldens
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/logs"
+          make PY=python verify 2>&1 | tee "$RUNNER_TEMP/logs/verify-windows.log"
+      - name: Upload the difference pictures and logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-windows-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/logs/*.log
+            build/replay/verify/**/diff_ck*.png
+            build/replay/verify/**/port.log
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Remove the game data and everything built from it
+        if: always()
+        shell: bash
+        run: rm -rf "$RUNNER_TEMP/uw2-assets" "$RUNNER_TEMP/uw2-ci-assets" "$RUNNER_TEMP/uw2-assets-deploy-key" build
+
+  verify-macos:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Homebrew packages
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+        run: brew install sdl3 mt32emu pkgconf age
+      - uses: ./.github/actions/uw2-assets
+        with:
+          deploy-key: ${{ secrets.UW2_ASSETS_DEPLOY_KEY }}
+          age-key: ${{ secrets.UW2_ASSETS_AGE_KEY }}
+      - run: make setup-sound
+      - run: make port
+      - name: The sessions against the goldens
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/logs"
+          make verify 2>&1 | tee "$RUNNER_TEMP/logs/verify-macos.log"
+      - name: Upload the difference pictures and logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-macos-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/logs/*.log
+            build/replay/verify/**/diff_ck*.png
+            build/replay/verify/**/port.log
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Remove the game data and everything built from it
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/uw2-assets" "$RUNNER_TEMP/uw2-ci-assets" "$RUNNER_TEMP/uw2-assets-deploy-key" build

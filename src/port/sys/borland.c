@@ -26,6 +26,11 @@
 #ifdef _WIN32
 #include <direct.h>
 #define mkdir(path, mode) _mkdir(path)  /* Windows's mkdir takes no mode */
+/* The host's handles are always binary: Borland's text mode is bc_read's and bc_write's, and
+   the C library's own (CR LF, and Ctrl-Z as the end) would apply it a second time. */
+#define HOST_BINARY O_BINARY
+#else
+#define HOST_BINARY 0
 #endif
 #include "port.h"
 #include "plat.h"
@@ -63,7 +68,7 @@ int bc_open(const char *path, int access, ...)
         (void)va_arg(ap, int);
         va_end(ap);
     }
-    fl = (access & B_RDWR) ? O_RDWR : (access & B_WRONLY) ? O_WRONLY : O_RDONLY;
+    fl = ((access & B_RDWR) ? O_RDWR : (access & B_WRONLY) ? O_WRONLY : O_RDONLY) | HOST_BINARY;
     if (access & B_CREAT) fl |= O_CREAT;
     if (access & B_TRUNC) fl |= O_TRUNC;
     if (access & B_EXCL) fl |= O_EXCL;
@@ -76,7 +81,7 @@ int bc_open(const char *path, int access, ...)
     if (how == PLAT_WRITE && !(access & B_CREAT) && (fl & O_RDWR)) {
         if (plat_resolve(path, PLAT_READ, host, sizeof host) == 0
             && strncmp(host, plat_home(), strlen(plat_home())) != 0 && stat(host, &st) == 0) {
-            fd = open(host, O_RDONLY);
+            fd = open(host, O_RDONLY | HOST_BINARY);
             port_log("open(\"%s\", %04X) -> %s = %d, copied on its first write\n", path, access, host, fd);
             if (fd >= 0 && fd < MAXFD) {
                 fd_text[fd] = !(access & B_BINARY);
@@ -109,7 +114,7 @@ static int cow_write(int fd)
     if (fd < 0 || fd >= MAXFD || !fd_cow[fd]) return 0;
     pos = lseek(fd, 0, SEEK_CUR);
     if (plat_resolve(fd_cow[fd], PLAT_WRITE, host, sizeof host)) return -1;
-    nfd = open(host, O_RDWR);
+    nfd = open(host, O_RDWR | HOST_BINARY);
     if (nfd < 0) return -1;
     lseek(nfd, pos, SEEK_SET);
     dup2(nfd, fd);
@@ -270,6 +275,9 @@ FILE *bc_fopen(const char *path, const char *mode)
     FILE *fp;
     for (i = 0; mode[i] && k < 6; i++)
         if (mode[i] != 't') m[k++] = mode[i];
+#ifdef _WIN32
+    if (!strchr(m, 'b') && k < 7) m[k++] = 'b';    /* as on a POSIX host: no translation */
+#endif
     m[k] = 0;
     if (strchr(mode, 'w') || strchr(mode, 'a')) how = PLAT_CREATE;
     else if (strchr(mode, '+')) how = PLAT_WRITE;

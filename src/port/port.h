@@ -60,6 +60,11 @@ int port_check_exe(const char *path);     /* 0 if it is the GOG UW2.EXE, else < 
 int port_find_game(const char *home, char *out, size_t outsz);              /* 0 and the game directory */
 int port_game_in(const char *dir, const char *home, char *out, size_t outsz); /* in a folder the user chose */
 const char *port_game_refused(void);                                         /* a UW2.EXE found and refused */
+/* Windows: each game GOG's installers recorded in the registry (sys/gogreg.c), its product id,
+   title and folder, to fn until fn returns non-zero; returns that, or 0. Ultima Underworld 1+2
+   is product PORT_GOG_UW12 (catalog.gog.com). */
+#define PORT_GOG_UW12 "1207658937"
+int port_gog_registry(int (*fn)(const char *id, const char *name, const char *path, void *ctx), void *ctx);
 int port_config_get(const char *home, const char *key, char *out, size_t outsz);
 int port_config_set(const char *home, const char *key, const char *value);
 /* The EXE's DGROUP image (its initialised data, DS:0 on), for the C library's tables and the

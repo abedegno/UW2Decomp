@@ -370,11 +370,14 @@ def _have_dosbox_x():
 def cmd_verify(names, jobs, debug=False, cov=False):
     if jobs is None: jobs = min(8, os.cpu_count() or 4)
     variant = 'port-debug' if debug else 'port-cov' if cov else 'port'
-    port = os.path.join(root, 'build', variant, 'uw2port')
+    port = R.port_exe(os.path.join(root, 'build', variant, 'uw2port'))
     if not os.path.exists(port): sys.exit(f'replay.py verify: build the port first (build/{variant}: make port, '
                                           f'make port-debug or tools/portbuild.py --coverage)')
-    try: R.build(quiet=True)          # the replay DOS build's hash, to flag goldens it did not make
-    except SystemExit as e: say(f'replay.py verify: the replay DOS build failed ({e}); not checking the goldens against it')
+    if not R.have_toolchain():
+        say('replay.py verify: no Turbo C++ (make setup), so no replay DOS build; not checking the goldens against it')
+    else:
+        try: R.build(quiet=True)      # the replay DOS build's hash, to flag goldens it did not make
+        except SystemExit as e: say(f'replay.py verify: the replay DOS build failed ({e}); not checking the goldens against it')
     t0 = time.time()
     need = list(names)
     for n in names:

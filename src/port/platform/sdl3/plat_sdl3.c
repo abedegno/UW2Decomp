@@ -12,6 +12,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "plat.h"
+#ifndef __APPLE__
+#include "icon.h"
+#endif
 
 static const PlatHooks *hooks;
 static SDL_AtomicInt game_done;
@@ -161,6 +164,22 @@ static SDL_FRect place(SDL_Renderer *r, const PlatConfig *cfg, int w, int h)
     return d;
 }
 
+/* The window's icon (tools/dist/icon, built into icon.h). Not on macOS, where the .app's own
+   icon is the Dock's and SDL would put this small one in its place. */
+static void set_icon(SDL_Window *w)
+{
+#ifndef __APPLE__
+    SDL_Surface *s = SDL_CreateSurfaceFrom(PLAT_ICON_W, PLAT_ICON_H, SDL_PIXELFORMAT_RGBA32,
+                                           (void *)plat_icon_rgba, PLAT_ICON_W * 4);
+    if (s) {
+        SDL_SetWindowIcon(w, s);
+        SDL_DestroySurface(s);
+    }
+#else
+    (void)w;
+#endif
+}
+
 int plat_run(const PlatConfig *cfg, const PlatHooks *h, int (*game)(void *), void *arg)
 {
     static uint8_t pix[640 * 480];
@@ -193,6 +212,7 @@ int plat_run(const PlatConfig *cfg, const PlatHooks *h, int (*game)(void *), voi
             return 1;
         }
         SDL_SetRenderVSync(ren, 1);
+        set_icon(win);
     }
     targ[0] = (void *)game;
     targ[1] = arg;

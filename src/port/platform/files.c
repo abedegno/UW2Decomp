@@ -20,6 +20,9 @@
 #ifdef _WIN32
 #include <direct.h>
 #define mkdir(path, mode) _mkdir(path)  /* Windows's mkdir takes no mode */
+#define HOST_BINARY O_BINARY            /* no CR LF translation in the copies */
+#else
+#define HOST_BINARY 0
 #endif
 #include "plat.h"
 
@@ -135,9 +138,9 @@ static int copy_file(const char *from, const char *to)
 {
     char buf[65536];
     ssize_t n;
-    int in = open(from, O_RDONLY), out;
+    int in = open(from, O_RDONLY | HOST_BINARY), out;
     if (in < 0) return -1;
-    out = open(to, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    out = open(to, O_WRONLY | O_CREAT | O_TRUNC | HOST_BINARY, 0644);
     if (out < 0) { close(in); return -1; }
     while ((n = read(in, buf, sizeof buf)) > 0)
         if (write(out, buf, (size_t)n) != n) { n = -1; break; }
