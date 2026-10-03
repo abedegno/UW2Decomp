@@ -19,7 +19,7 @@ Optional, for the map tools and the assembly drafts (see [MAP.md](MAP.md)):
 
 - `make setup TC_DISKS=DIR TASM_DISKS=DIR` extracts Turbo C++ into `TC/` and TASM into `TASM/` from the directories holding their disk images and checks both are the expected builds (by MD5), makes `.venv` with `iced-x86` (for instruction diffs), runs `npm install`, builds emu2 into `tools/emu2` (`make setup-emu2` does only that; a failure there is not fatal, the tools then use DOSBox-X or js-dos), and fetches the port's OPL emulator into `tools/nuked-opl3` (`make setup-sound` does only that, [Sound](#sound)). It skips whatever is already in place, so it is safe to run again, and prints which DOS the toolchain will use.
 - `make` (or `make game`) is the modding build, `tools/link.py --mod`, and prints the path of the EXE. See [LINKING.md](LINKING.md#the-modding-build).
-- `make exact` links the matched objects exactly (`tools/link.py`) and compares the result with your `UW2.EXE` (`tools/exediff.py`); it passes when only the two known bytes differ.
+- `make exact` links the matched objects exactly (`tools/link.py`) and compares the result with your `UW2.EXE` (`tools/exediff.py`); it passes when the two are byte-identical.
 - `make check` is the gate, below. `make check-all` is the same with every source recompiled.
 - `make boot` boots the modding build in headless DOS and saves screenshots of the title, the intro and the main menu under `build/boot/`. Look at them.
 - `make test` is the test every change to the port runs before it is pushed: the gate, the port build, the routine fuzzing's quick run and every replay session in the port against its golden ([Testing](#testing)). `make test-full` is the long tier. `make verify`, `make golden`, `make fuzz` and `make coverage` run one part each.
@@ -156,7 +156,7 @@ The sessions run at once, one per core up to eight (`-j N` changes it; four for 
 
 1. Compiles every source with a `/* target: */` line (eight to a DOS session, one session per core up to 12 at once, or three in js-dos) and requires `match.py` to report WHOLE SEGMENT MATCHES and `verify.py` "fixups and data verified" for each.
 2. Rebuilds `symbols.tsv` from scratch in a scratch directory and requires the same names at the same addresses as the committed file.
-3. Requires the exact link to equal `UW2.EXE` except the bytes at 0x6676C and 0x66774.
+3. Requires the exact link to be byte-identical to `UW2.EXE`.
 4. Requires the modding build with no changes to be byte-identical to the exact link.
 
 It recompiles only the sources whose text, headers or object have changed since they last passed (`build/check/state.json`). With emu2, `make check-all` takes about 7 seconds and `make check` with nothing changed about 4; with js-dos, two and a half minutes and about ten seconds.

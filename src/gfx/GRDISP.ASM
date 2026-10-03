@@ -454,7 +454,7 @@ FD51    segment byte public 'FAR_DATA'
         db      5Ah,5Ch,72h,5Ch,86h,5Ch,90h,5Ch
 FD51    ends
 
-SEG003_TEXT segment word public 'CODE'
+SEG003_TEXT segment word public 'code'
         assume  cs:SEG003_TEXT, ds:DGROUP, ss:DGROUP
         extrn   _seg003_0272_52B7:near
         extrn   _seg003_0272_52E4:far

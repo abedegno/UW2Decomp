@@ -301,7 +301,7 @@ _Transparency label byte
         db      48h,55h
 FD51    ends
 
-SEG003_TEXT segment word public 'CODE'
+SEG003_TEXT segment word public 'code'
         assume  cs:SEG003_TEXT, ds:DGROUP, ss:DGROUP
         public  _ShowClip
         public  _Transparency

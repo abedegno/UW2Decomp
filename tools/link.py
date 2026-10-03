@@ -16,7 +16,8 @@ verified), the sources whose text differs from that run's are compiled into buil
 (the matched objects in build/ are left alone; several to a DOS session and several sessions
 at once, as the gate compiles, tools/dosbatch.py), and the EXE goes to build/MODLINK/out. Nothing
 is compared with your EXE, and an overlay's publics may come in any order (TLINK then numbers
-its stub entries differently, which nothing depends on).
+its stub entries differently, which nothing depends on). The paragraph padding after each
+overlay is set to 0, as UW2.EXE and the exact link have it (clear_overlay_padding).
 
 1. tools/extract.py writes the data-only modules, manifest.json and renames.json under
    build/LINK (skip with --no-extract when they are current). Before it, a far data source
@@ -173,6 +174,31 @@ def changed_sources():
             open(os.path.join(dest(stem), 'SOURCE.SHA1'), 'w').write(shas[stem])
     return out
 
+def clear_overlay_padding(path):
+    """Zero the padding TLINK leaves after each overlay's code and fixup list, up to the next
+    overlay's paragraph (or the end of the FBOV area), and return how many bytes were not 0.
+    Nothing reads those bytes: the overlay manager loads an overlay's code and fixups by the
+    sizes in its stub. TLINK fills them from a buffer it does not clear, so what lands there
+    depends on its heap: in the exact link (and in UW2.EXE) they are all 0, but the modding
+    link, whose XFAR names near code offsets in seg004 (`dw offset NAME`) where the exact
+    link has bytes, leaves 4 bytes of old code after ovr167's fixups once seg003 and seg004
+    have their own class (docs/LINKING.md, "Segment classes"). Only --mod does this; the
+    exact link's EXE is TLINK's own."""
+    import struct
+    d = bytearray(open(path, 'rb').read())
+    w16 = lambda i: struct.unpack_from('<H', d, i)[0]
+    hdr = w16(8) * 16; end = (w16(4) - 1) * 512 + w16(2) if w16(2) else w16(4) * 512
+    if d[end:end + 4] != b'FBOV': return 0
+    size, segtab, nseg = struct.unpack_from('<III', d, end + 4); base = end + 16
+    ovl = sorted((struct.unpack_from('<I', d, hdr + para * 16 + 4)[0], w16(hdr + para * 16 + 8), w16(hdr + para * 16 + 10))
+                 for para, _, fl, _ in (struct.unpack_from('<4H', d, segtab + 8 * i) for i in range(nseg)) if fl == 3)
+    n = 0
+    for k, (at, code, fix) in enumerate(ovl):
+        lo, hi = base + at + code + fix, base + (ovl[k + 1][0] if k + 1 < len(ovl) else size)
+        n += sum(1 for b in d[lo:hi] if b); d[lo:hi] = bytes(hi - lo)
+    if n: open(path, 'wb').write(d)
+    return n
+
 def main():
     global LINKDIR
     a = sys.argv[1:]
@@ -257,6 +283,8 @@ def main():
     if r.returncode: sys.exit(r.returncode)
     if mod:
         if not os.path.exists(os.path.join(out, 'UW2.EXE')) or errs: sys.exit('the modding link failed')
+        n = clear_overlay_padding(os.path.join(out, 'UW2.EXE'))
+        if n: print(f'modding build: {n} stale bytes in the overlays\' paragraph padding set to 0 (clear_overlay_padding)')
         print(f'modding build: {os.path.relpath(os.path.join(out, "UW2.EXE"), root)}, '
               f'{os.path.getsize(os.path.join(out, "UW2.EXE"))} bytes (yours: {os.path.getsize(EXE)})')
         return

@@ -87,7 +87,7 @@ FD51    segment byte public 'FAR_DATA'
         db      0FCh,09h,00h,00h,00h,00h,00h,00h
 FD51    ends
 
-SEG003_TEXT segment word public 'CODE'
+SEG003_TEXT segment word public 'code'
         assume  cs:SEG003_TEXT, ds:DGROUP, ss:DGROUP
         extrn   _cXfer:byte
         public  _DRAW_RELATED_seg003_0272_7F9

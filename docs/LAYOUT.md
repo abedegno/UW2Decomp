@@ -76,7 +76,7 @@ They stay right while each far segment keeps its internal layout: the head extra
 | extract.py | your EXE is the one it was written for (header 0x2C00, 0xAE segments, DGROUP at file 0x68A90); C0's `_DATA` at DS:4..AC; the C library's and the second library's `_DATA` and `_BSS` bounds (DS:204E, 2220, 865C) | still read from your EXE, which is unchanged |
 | extract.py | each object's `_DATA`, `_BSS` and far segments sit where verify.py finds them, by the EXE's bytes; gaps between objects are placed by EXE address; far pieces must run to the end of their segment; overlay publics have stub entries | worked out once, from the matched objects in build/LINK/base, never from changed ones |
 | verify.py | DGROUP at file 0x68A90, paragraph 0x65E9 | not run |
-| link.py | an overlay's publics come in the EXE's stub order; the result equals your EXE but for two bytes (exediff.py) | both skipped: TLINK numbers a changed overlay's stub entries itself, and every call to them is a fixup |
+| link.py | an overlay's publics come in the EXE's stub order; the result is byte-identical to your EXE (exediff.py) | both skipped: TLINK numbers a changed overlay's stub entries itself, and every call to them is a fixup |
 
 ## Limits that still apply
 

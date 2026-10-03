@@ -1,7 +1,7 @@
 """The build driver behind the Makefile: the modding build, the exact link, the full gate, a boot.
 
     python3 tools/uw2.py game            link.py --mod; prints the EXE's path
-    python3 tools/uw2.py exact           link.py, passing when only the two known bytes differ
+    python3 tools/uw2.py exact           link.py, passing when the EXE is byte-identical to UW2.EXE
     python3 tools/uw2.py check [--all]   the gate every change must pass (below)
     python3 tools/uw2.py boot [EXE]      boot the modding build (or EXE): title, intro and menu screenshots
 
@@ -18,8 +18,8 @@ The gate, `check`:
    retrying any that fail until a round adds nothing, into an empty file in a scratch directory) must hold the same names at the same addresses as the committed
    file, in any order. A name the committed file marks 'library' by hand may come out
    'provisional', since the mark is not in any object.
-4. The exact link must equal UW2.EXE except the two known bytes (0x6676C, 0x66774), and the
-   modding build with no source changed must be byte-identical to it.
+4. The exact link must be byte-identical to UW2.EXE, and the modding build with no source
+   changed must be byte-identical to it.
 Exit status 0 only when everything passes.
 
 Sources are found in every directory under src/ but src/include (tools/sources.py).
@@ -33,7 +33,6 @@ EXE = os.path.expanduser(os.environ.get('UW2_EXE', '~/UWGOG/UW2/UW2.EXE'))
 PY = os.path.join(root, '.venv', 'bin', 'python')
 if not os.path.exists(PY): PY = sys.executable
 DEFAULT_OPTS = '-mm -1 -G -O -Z'          # match.py's default for a C file
-KNOWN = {0x6676C: (0x00, 0x01), 0x66774: (0x00, 0x01)}   # the overlay table's code flag for seg003 and seg004
 STATE = os.path.join(root, 'build', 'check', 'state.json')
 
 
@@ -147,14 +146,12 @@ def link(mod):
 
 
 def exact_diff(path):
-    """None when path is UW2.EXE but for the known bytes, else what differs."""
+    """None when path is byte-identical to UW2.EXE, else what differs."""
     a = open(EXE, 'rb').read(); b = open(path, 'rb').read()
     if len(a) != len(b): return f'size {len(b):#x}, UW2.EXE {len(a):#x}'
-    diff = [i for i in range(len(a)) if a[i] != b[i]] if a != b else []
-    extra = [i for i in diff if KNOWN.get(i) != (a[i], b[i])]
-    if extra: return f'{len(extra)} bytes differ beyond the known two, first at {extra[0]:#x}'
-    if len(diff) != len(KNOWN): return f'expected the 2 known bytes to differ, {len(diff)} do (has TLINK or the EXE changed?)'
-    return None
+    if a == b: return None
+    diff = [i for i in range(len(a)) if a[i] != b[i]]
+    return f'{len(diff)} bytes differ from UW2.EXE, the first at {diff[0]:#x} (tools/exediff.py shows where)'
 
 
 def cmd_exact():
@@ -162,7 +159,7 @@ def cmd_exact():
     print(text.rstrip())
     if not exe: print('FAIL: the exact link produced no EXE'); return 1
     d = exact_diff(exe)
-    print(f'{rel(exe)}: ' + ('identical to UW2.EXE except the two known bytes (0x6676C, 0x66774)' if not d else 'FAIL: ' + d))
+    print(f'{rel(exe)}: ' + ('byte-identical to UW2.EXE' if not d else 'FAIL: ' + d))
     return 1 if d else 0
 
 
@@ -245,7 +242,7 @@ def cmd_check(force):
     # 4. links
     exe, text = link(False)
     d = exact_diff(exe) if exe else 'no EXE: ' + '\n    '.join(text.strip().splitlines()[-10:])
-    results['exact link'] = (not d, d or 'UW2.EXE except 0x6676C, 0x66774')
+    results['exact link'] = (not d, d or 'byte-identical to UW2.EXE')
     if d: fails.append('exact link: ' + d)
     if not d:
         mexe, mtext = link(True)

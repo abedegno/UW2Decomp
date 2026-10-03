@@ -84,7 +84,7 @@ _obj_tab label dword
 _DATA   ends
 DGROUP  group   _DATA
 
-SEG004_TEXT segment para public use16 'CODE'
+SEG004_TEXT segment para public use16 'code'
         assume  cs:SEG004_TEXT, ds:DGROUP, ss:DGROUP
         extrn   _exp_4run:near
         extrn   _exp_4str:near

@@ -182,7 +182,10 @@ def opts_of(src):
 def build_plan():
     """What the replay DOS build compiles: [(stem, path, options)] for the hook users (with
     -DREPLAY), the NULLTRAP users (with -DNULLTRAP) and REPLAY.C, and the key of their sources'
-    hashes and options, which names the build."""
+    hashes and options, which names the build. The key also takes the source hashes the last
+    exact link recorded (build/LINK/base/layout.json): the rest of the build is the matched
+    objects of that link, so a change to any other source (an assembly module's segment class,
+    say) makes a new build too."""
     from sources import all_sources, replay_sources, stem
     from srcdeps import source_hash
     todo = []
@@ -193,7 +196,9 @@ def build_plan():
         if HOOKS.search(text) or src in replay_sources(): defs.append('-DREPLAY')
         if 'NULLTRAP(' in text: defs.append('-DNULLTRAP')
         if defs: todo.append((stem(src), src, (opts_of(src) if src not in replay_sources() else '-mm -1 -G -O -Y -d') + ' ' + ' '.join(defs)))
-    key = hashlib.sha1(json.dumps([(s, source_hash(p), o) for s, p, o in todo]).encode()).hexdigest()
+    lay = os.path.join(root, 'build', 'LINK', 'base', 'layout.json')
+    base = json.load(open(lay))['sources'] if os.path.exists(lay) else None
+    key = hashlib.sha1(json.dumps([[(s, source_hash(p), o) for s, p, o in todo], base], sort_keys=True).encode()).hexdigest()
     return todo, key
 
 

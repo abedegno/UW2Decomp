@@ -55,7 +55,10 @@ What is extracted, and the evidence for each piece:
 - XORDER and XSEG020 declare empty code segments early, because TLINK places
   segments in the order it first sees their names: seg000..seg004 must come before C0's
   _TEXT, seg003, seg004, seg021 and seg022 start on paragraphs, and segment table entries 5
-  and 18 are empty code segments that the original link had.
+  and 18 are empty code segments that the original link had. XORDER declares seg000..seg004
+  with their objects' classes (ASMCODE, then code), since TLINK orders segments by class
+  first and sets the code flag only for a class ending in upper-case CODE (docs/LINKING.md,
+  "Segment classes"); the rest are CODE.
 
 Names: every name an object references (its externs, resolved against the EXE by verify.py's
 own code) and every symbols.tsv name is placed. If its address is inside an extracted range,
@@ -126,9 +129,9 @@ for src in all_sources():
     o = fixups(open(obj, 'rb').read())
     hdr = open(os.path.join(root, 'targets', m.group(1) + '.tsv')).readline()
     base = int(re.search(r'base 0x([0-9A-F]+)', hdr).group(1), 16)
-    code = [s for s in o['segs'][1:] if s[1] == 'CODE']
+    code = [s for s in o['segs'][1:] if s[1].upper().endswith('CODE')]
     seglen = lambda n: sum(s[2] for s in o['segs'][1:] if s[0] == n)
-    OBJS[stem] = dict(src=src, obj=obj, target=m.group(1), base=base, codeseg=code[0][0], codelen=code[0][2],
+    OBJS[stem] = dict(src=src, obj=obj, target=m.group(1), base=base, codeseg=code[0][0], codecls=code[0][1], codelen=code[0][2],
                       datalen=seglen('_DATA'), bsslen=seglen('_BSS'), o=o, data=None, bss=None)
 
 # what verify.py resolves for each object: its _DATA and _BSS bases, every extern's address
@@ -230,9 +233,9 @@ for stem, ob in OBJS.items():
     o = ob['o']
     for name, (si, off) in o['pubs'].items():
         sn, cl, ln = o['segs'][si]
-        if cl == 'CODE' and ob['base'] < MZEND:
+        if cl.upper().endswith('CODE') and ob['base'] < MZEND:
             s = seg_at(ob['base']); define(('FAR', s[1], ob['base'] - file_of(s[1], 0) + off), name)
-        elif cl == 'CODE':
+        elif cl.upper().endswith('CODE'):
             ODEF.setdefault(int(ob['target'][3:]), {})[off] = name
         elif sn == '_DATA': define(('DS', ob['data'] + off), name)
         elif sn == '_BSS': define(('DS', ob['bss'] + off), name)
@@ -356,7 +359,7 @@ for n, a in list(REFS.items()):
 # Such a file gets its own alias for the name, at the address its own bytes give.
 PRE = {}; RETARGET = {}
 for stem, ob in OBJS.items():
-    o = ob['o']; code = next(i for i, sg in enumerate(o['segs']) if sg and sg[1] == 'CODE')
+    o = ob['o']; code = next(i for i, sg in enumerate(o['segs']) if sg and sg[1].upper().endswith('CODE'))
     uses = {}
     for f in o['fixups']:
         if f['seg'] != code or f['target'][0] != 2: continue
@@ -595,7 +598,7 @@ for stem, ob in OBJS.items():
 ADDFIX = {}
 for stem, ob in OBJS.items():
     if ob['base'] >= MZEND: continue
-    o = ob['o']; code = next(i for i, sg in enumerate(o['segs']) if sg and sg[1] == 'CODE')
+    o = ob['o']; code = next(i for i, sg in enumerate(o['segs']) if sg and sg[1].upper().endswith('CODE'))
     have = set()
     for f in o['fixups']:
         if f['seg'] == code and f['loc'] == 2: have.add(f['off'])
@@ -745,11 +748,17 @@ m.lines += ['; The code segments that sit before C0\'s _TEXT, in EXE order and w
 # keeps no names): FILE_TEXT for a C file or an assembly module written with .model and
 # .code, which TASM names after the file the same way, and the name in its SEGMENT directive
 # for the others.
+# Each takes its object's class as well: TLINK orders segments in blocks by class, in the
+# order it first sees each class, and sets a segment's code flag in the overlay manager's
+# segment table only when its class ends in upper-case CODE (docs/LINKING.md, "Segment
+# classes"). seg000..seg002 are class ASMCODE, seg003 and seg004 class code, and XEMPTY05,
+# C0's _TEXT and everything after them CODE, so three blocks in that order.
 def codeseg(k): return OBJS[k]['codeseg']
-for name, align, idx in ((codeseg(S('seg000')), 'byte', 0), (codeseg(S('seg001')), 'word', 1),
-                         (codeseg(S('seg002')), 'word', 2), (codeseg(M('seg003', 'A')[0]), 'para', 3),
-                         (codeseg(M('seg004', 'A')[0]), 'para', 4)):
-    m.lines.append(f'{name} segment {align} public \'CODE\'')
+def codecls(k): return OBJS[k]['codecls']
+for k, align, idx in ((S('seg000'), 'byte', 0), (S('seg001'), 'word', 1), (S('seg002'), 'word', 2),
+                      (M('seg003', 'A')[0], 'para', 3), (M('seg004', 'A')[0], 'para', 4)):
+    name = codeseg(k)
+    m.lines.append(f'{name} segment {align} public \'{codecls(k)}\'')
     if idx in (3, 4): m.lines += seg_start_labels(m, SEGS[idx][1], idx)
     m.lines.append(f'{name} ends')
 m.lines += ['; segment table entry 5: an empty code segment on a paragraph, just before _TEXT',

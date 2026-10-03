@@ -45,7 +45,7 @@ _DATA   segment word public use16 'DATA'
 _DATA   ends
 DGROUP  group   _DATA
 
-SEG004_TEXT segment para public use16 'CODE'
+SEG004_TEXT segment para public use16 'code'
         assume  cs:SEG004_TEXT, ds:DGROUP, ss:DGROUP
         extrn   _code_pnt:near
         public  _seg004_0849_644

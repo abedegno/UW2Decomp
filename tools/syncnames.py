@@ -11,7 +11,7 @@ pubs = publics(open(os.path.join(root, 'build', stem, stem + '.OBJ'), 'rb').read
 # only publics in the code segment name functions; a data public can share an offset
 from omf import module_masked
 _, segs, _, _, _ = module_masked(open(os.path.join(root, 'build', stem, stem + '.OBJ'), 'rb').read())
-code = next(i for i, x in enumerate(segs, 1) if x[1] == 'CODE')
+code = next(i for i, x in enumerate(segs, 1) if x[1].upper().endswith('CODE'))
 at = {o: n[1:] if n.startswith('_') else n for n, (s, o) in pubs.items() if s == code}
 t = os.path.join(root, 'targets', seg + '.tsv'); lines = open(t).read().split('\n')
 for j, l in enumerate(lines):

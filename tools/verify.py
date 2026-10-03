@@ -49,7 +49,7 @@ def main(argv=None):
         m = re.match(r'# far (\S+) ([0-9A-F]{4}):([0-9A-F]{4})', l)
         if m: FARHINT[m.group(1)] = (int(m.group(2), 16), int(m.group(3), 16))
     segs = o['segs']
-    code = next(i for i, s in enumerate(segs) if s and s[1] == 'CODE')
+    code = next(i for i, s in enumerate(segs) if s and s[1].upper().endswith('CODE'))
     datas = next(i for i, s in enumerate(segs) if s and s[0] == '_DATA')
     bss = next((i for i, s in enumerate(segs) if s and s[0] == '_BSS'), None)
     fars = {i for i, s in enumerate(segs) if s and s[1] == 'FAR_DATA'}

@@ -200,7 +200,7 @@ _seg052_519C_E4D4 label byte
         db      00h,00h
 FD58    ends
 
-SEG004_TEXT segment para public use16 'CODE'
+SEG004_TEXT segment para public use16 'code'
         assume  cs:SEG004_TEXT, ds:DGROUP, ss:DGROUP
         extrn   _asm_texture_map_from_draw_poly:near
         extrn   _code_pnt:near

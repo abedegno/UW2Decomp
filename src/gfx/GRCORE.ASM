@@ -109,7 +109,7 @@ _Ytab label dword
 _DATA   ends
 DGROUP  group   _DATA
 
-SEG003_TEXT segment word public 'CODE'
+SEG003_TEXT segment word public 'code'
         assume  cs:SEG003_TEXT, ds:DGROUP, ss:DGROUP
         extrn   _seg003_0272_21D4:near
         extrn   _seg003_0272_21ED:near

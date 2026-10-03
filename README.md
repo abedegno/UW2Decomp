@@ -7,7 +7,7 @@ This is a fan research project, not affiliated with or endorsed by the rights ho
 ## Status
 
 - **Every code segment is matched.** All of UW2's C, 337,327 bytes in 99 files, compiles with Turbo C++ 1.01 to the same machine code as `UW2.EXE`, and all of its assembly, 71,920 bytes, assembles to the same bytes with Turbo Assembler 2.0. Each file's fixups and data are verified too. Only Borland's C runtime library has no source here.
-- **The relinked EXE is identical except for two bytes**, two flags in the overlay segment table ([LINKING.md](docs/LINKING.md#the-two-bytes)). It runs.
+- **The relinked EXE is identical to UW2.EXE**, byte for byte ([LINKING.md](docs/LINKING.md#the-exact-link)). It runs.
 - **The game plays from source.** The modding build links sources changed by any size into a working EXE.
 - **The source is readable.** Function and global names are the originals from the FM Towns build wherever it has them. The sources are grouped by subsystem, with shared headers, named constants and struct fields, and every file says what it does in the game.
 
@@ -28,7 +28,7 @@ This repository holds no game data and no Borland software. You need:
 ```sh
 make setup TC_DISKS="/path/to/Turbo C++ 1.01" TASM_DISKS="/path/to/Turbo Assembler 2.0"
 make            # the modding build; prints the path of the EXE
-make check      # the gate: every file matches, and the exact link equals UW2.EXE except the two bytes
+make check      # the gate: every file matches, and the exact link is identical to UW2.EXE
 make boot       # boot the modding build to the main menu and screenshot it
 make test       # the gate, the native port, and the port against DOS's golden replays
 ```
@@ -74,7 +74,7 @@ The rest of the top level:
 - [BUILDING.md](docs/BUILDING.md): requirements, the make targets, the gate, working on one file, and the tools.
 - [CONTRIBUTING.md](docs/CONTRIBUTING.md): the rule every change follows, comments, renaming, shared headers, constants and struct fields.
 - [MATCHING.md](docs/MATCHING.md): the compiler switches, the assembler, and what Turbo C's output reveals about the original source.
-- [LINKING.md](docs/LINKING.md): the exact link, the two bytes, what is taken from your EXE, and the modding build.
+- [LINKING.md](docs/LINKING.md): the exact link, the segment classes, what is taken from your EXE, and the modding build.
 - [LAYOUT.md](docs/LAYOUT.md): every address written as a number, and what still depends on the original layout.
 - [MAP.md](docs/MAP.md): the map, the target tables, `symbols.tsv`, `matched.txt` and the source file names.
 - [PORT.md](docs/PORT.md): the design of a native port built from these sources and its results so far: Milestones 1 to 5 (`make port` builds a binary that plays the game, with its music and effects, and eight sessions recorded in DOS replay in it with DOS's state at every checkpoint) and 6a (`make test` checks the port against golden references from DOS on every push), and the plan for the rest of Milestone 6. [COVERAGE.md](docs/COVERAGE.md) is what the tests reach.

@@ -649,7 +649,7 @@ def check(g, text):
     shutil.rmtree(d, ignore_errors=True)
     if errs: return errs, None
     _, segs, data, mask, _ = module_masked(obj)
-    ci = next(k for k, (sn, cn, ln) in enumerate(segs, 1) if cn == 'CODE')
+    ci = next(k for k, (sn, cn, ln) in enumerate(segs, 1) if cn.upper().endswith('CODE'))
     return [], (bytes(data[ci]), bytes(mask[ci]))
 
 

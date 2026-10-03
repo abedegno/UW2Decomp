@@ -74,7 +74,9 @@ DGROUP  group   _DATA
 _DATA   segment byte public 'DATA'
 _DATA   ends
 
-SEG000_TEXT segment byte public 'CODE'
+; Class ASMCODE: seg000 to seg002 are a class of their own that ends in CODE (docs/LINKING.md,
+; Segment classes).
+SEG000_TEXT segment byte public 'ASMCODE'
         assume  cs:SEG000_TEXT, ds:nothing, es:nothing
 
         public  _create_sprite

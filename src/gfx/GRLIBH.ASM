@@ -28,7 +28,7 @@ _DATA   segment word public 'DATA'
 _DATA   ends
 DGROUP  group   _DATA
 
-SEG003_TEXT segment word public 'CODE'
+SEG003_TEXT segment word public 'code'
         assume  cs:SEG003_TEXT, ds:DGROUP, ss:DGROUP
         public  _seg003_0272_375C
         public  _seg003_0272_37BE

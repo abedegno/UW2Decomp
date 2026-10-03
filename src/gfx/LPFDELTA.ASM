@@ -23,9 +23,11 @@
 ; match: hand-written assembly using only 8086 instructions (every forward jump, none
 ; padded with a nop, is written short).
 
-        .model  medium
-
-        .code
+; Class ASMCODE, as SPRITE.ASM's: seg000 to seg002 are a class of their own that ends in CODE
+; (docs/LINKING.md, Segment classes). TASM keeps a .model segment's class, so the segment
+; and DGROUP are declared here, as .model medium would, under the name it gave.
+LPFDELTA_TEXT segment word public 'ASMCODE'
+        assume  cs:LPFDELTA_TEXT, ds:DGROUP
 
         public  _seg002_2
 
@@ -123,5 +125,11 @@ L008C:
         pop     bp
         retf
 _seg002_2 endp
+
+LPFDELTA_TEXT ends
+
+_DATA   segment word public 'DATA'
+_DATA   ends
+DGROUP  group   _DATA
 
         end

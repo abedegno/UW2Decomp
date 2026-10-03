@@ -82,7 +82,7 @@ _seg_370D_7D0 label word
         db      60h,0A8h,00h,00h,00h,00h,00h,00h
 FD51    ends
 
-SEG003_TEXT segment word public 'CODE'
+SEG003_TEXT segment word public 'code'
         assume  cs:SEG003_TEXT, ds:DGROUP, ss:DGROUP
         extrn   _seg003_0272_7A:word
         extrn   _seg003_0272_7C:word

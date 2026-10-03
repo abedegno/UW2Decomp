@@ -31,7 +31,7 @@ _DATA   segment word public 'DATA'
 _DATA   ends
 DGROUP  group   _DATA
 
-SEG003_TEXT segment word public 'CODE'
+SEG003_TEXT segment word public 'code'
         assume  cs:SEG003_TEXT, ds:nothing, ss:DGROUP     ; DS is seg_370D, set by the caller
         public  _seg003_0272_5B50
         public  _seg003_0272_5D47

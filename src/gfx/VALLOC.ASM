@@ -43,7 +43,6 @@
 ; symbols.tsv name and +112 is a local label. seg_5F5D (the allocator's data) and
 ; seg_370D keep provisional names.
 
-        .model  medium
         .186
 
         extrn   _rectangle:far
@@ -52,7 +51,11 @@
         extrn   seg_370D:far
         extrn   seg_5F5D:far
 
-        .code
+; Class ASMCODE, as SPRITE.ASM's: seg000 to seg002 are a class of their own that ends in CODE
+; (docs/LINKING.md, Segment classes). TASM keeps a .model segment's class, so the segment
+; and DGROUP are declared here, as .model medium would, under the name it gave.
+VALLOC_TEXT segment word public 'ASMCODE'
+        assume  cs:VALLOC_TEXT, ds:DGROUP
 
         public  _seg001_023B_C
         public  _valloc
@@ -414,5 +417,11 @@ L02C9:
         mov     word ptr cs:c_entry,0
         retf
 _restore_rect endp
+
+VALLOC_TEXT ends
+
+_DATA   segment word public 'DATA'
+_DATA   ends
+DGROUP  group   _DATA
 
         end

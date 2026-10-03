@@ -123,7 +123,7 @@ def full16(reg):
 def scan(stem, src, seg, obj, ida, a, dsnames, segname):
     o = fixups(open(obj, 'rb').read())
     base, size, rows, org = load_targets(seg)
-    code = next(i for i, s in enumerate(o['segs']) if s and s[1] == 'CODE')
+    code = next(i for i, s in enumerate(o['segs']) if s and s[1].upper().endswith('CODE'))
     data = bytes(o['data'][code]); mask = bytearray(len(data)); fx = {}
     for f in o['fixups']:
         if f['seg'] == code:

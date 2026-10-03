@@ -157,7 +157,7 @@ FD71    segment byte public use16 'FAR_DATA'
         db      1A6h dup (0)
 FD71    ends
 
-SEG004_TEXT segment para public use16 'CODE'
+SEG004_TEXT segment para public use16 'code'
         assume  cs:SEG004_TEXT, ds:DGROUP, ss:DGROUP
         extrn   _create_matrix:near
         extrn   _do_rod:near
