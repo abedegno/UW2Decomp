@@ -283,6 +283,17 @@ def main(argv):
         print(r.stderr[-3000:])
         return 1
     print(f'linked {os.path.relpath(EXE, root)} ({os.path.getsize(EXE)} bytes)')
+    if portcheck.layout_flags(a.cc):                    # a Windows target: is the icon in?
+        import shutil
+        if r.stderr.strip(): print('portbuild.py: the linker said:\n' + r.stderr[-2000:])
+        ro = shutil.which('llvm-readobj')
+        if ro:
+            res = subprocess.run([ro, '--coff-resources', EXE], capture_output=True, text=True).stdout
+            print(f'portbuild.py: resources in the program: {res.count("Type: ICON")} icon, '
+                  f'{res.count("Type: GROUP_ICON")} icon group')
+            if RELEASE and 'Type: ICON' not in res:
+                print('portbuild.py: link command: ' + ' '.join([a.cc, '-o', EXE] + ARCHS + link_extra + objs[-3:] + libs + threads + rpath))
+                sys.exit('portbuild.py: the Windows release program has no icon')
     if a.run:
         r = subprocess.run([EXE] + os.environ.get('UW2PORT_ARGS', '').split(), cwd=root)
         print(f'exit status {r.returncode}')
