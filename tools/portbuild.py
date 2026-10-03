@@ -153,8 +153,10 @@ def windows_resource(cc):
     if not portcheck.layout_flags(cc): return []
     import shutil
     tool = shutil.which('llvm-windres') or shutil.which('windres')
+    print(f'portbuild.py: Windows target; resource compiler {tool or "none"}')
     if not tool:
         print('portbuild.py: no llvm-windres or windres; the program gets no icon')
+        if RELEASE: sys.exit('portbuild.py: a release build for Windows needs its icon')
         return []
     rc, obj = os.path.join(OUT, 'uw2port.rc'), os.path.join(OUT, 'uw2port-res.o')
     ico = os.path.join(ICON, 'uw2.ico').replace(os.sep, '/').replace('\\', '/')
@@ -166,7 +168,9 @@ def windows_resource(cc):
     r = subprocess.run(cmd, capture_output=True, text=True, cwd=root)
     if r.returncode:
         print(f'portbuild.py: {os.path.basename(tool)} failed; the program gets no icon\n{r.stderr[-1000:]}')
+        if RELEASE: sys.exit('portbuild.py: a release build for Windows needs its icon')
         return []
+    print(f'portbuild.py: icon resource {os.path.relpath(obj, root)}')
     return [obj]
 
 
@@ -246,7 +250,8 @@ def main(argv):
         print(f'{os.path.relpath(p, root)}: does not compile\n' + '\n'.join(l for l in e.split('\n') if 'error' in l)[:2000])
     if bad: return 1
     objs = [o for p, rc, e, o in gres + pres if o != 'opl3-shared']
-    print(f'compiled {len(gres)} game sources and {len(pres)} port sources')
+    print(f'compiled {len(gres)} game sources and {len(pres)} port sources'
+          f' (layout flags: {" ".join(portcheck.layout_flags(a.cc)) or "none"})')
     warn = [(p, e) for p, rc, e, o in pres if o and 'warning' in e]
     for p, e in warn:
         print(f'{os.path.relpath(p, root)}: warnings\n' + '\n'.join(l for l in e.split('\n') if 'warning' in l)[:2000])
