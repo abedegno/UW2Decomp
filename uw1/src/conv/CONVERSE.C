@@ -65,7 +65,7 @@
 #undef grfx_quikfont
 
 /* UW1: declarations the headers do not have (or have in UW2's form). */
-void far ovr143_48D(int how);                   /* talking to a shrine */
+void far mantra_advance(int how);                   /* talking to a shrine */
 int far ovr091_798(char *file, int block);      /* the size of an archive block */
 extern int16 dseg_5c99_720C[];                  /* a word for each texture of the level */
 char far move_convpic(char far *image, int ok, int which);
@@ -121,7 +121,7 @@ char far *conv_buffer = 0;
 static char cnv_file[] = "DATA\\cnv.ark";
 uint16 cnv_id = 0;
 
-/* Start a conversation with thing, if it will talk. Item 0x157 is handed to ovr143_48D
+/* Start a conversation with thing, if it will talk. Item 0x157 is handed to mantra_advance
    (talking to a shrine); item 0x16E gets "There is no reaction from the princess." when
    its texture's entry in dseg_5c99_720C is 8, and nothing otherwise. Anything not a
    creature gets a refusal. Whoami 0x16, 0x8E and 0xE7 always talk; else a critter talks
@@ -133,7 +133,7 @@ void far TalkTo(struct Object far *thing)
 {
     unsigned char who, subclass;
     if (OBJ_ITEM(thing) == 0x157) {
-        ovr143_48D(0);
+        mantra_advance(0);
         return;
     }
     if (OBJ_ITEM(thing) == 0x16E) {

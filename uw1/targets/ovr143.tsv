@@ -1,4 +1,4 @@
-# segment ovr143 base 0x81270 size 0x18CD org 0x0
+# segment ovr143 base 0x81270 size 0x1B01 org 0x0
 # cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
 use_skill	ovr143_0	0x0	0x70
 player_use_skill	ovr143_70	0x70	0x25
@@ -23,3 +23,4 @@ Resurrection_ovr143_1521	Resurrection_ovr143_1521	0x1521	0xD3
 CallBackGateTravel_ovr143_15F4	CallBackGateTravel_ovr143_15F4	0x15F4	0x1C
 DeathAndResurrection_ovr143_1610	DeathAndResurrection_ovr143_1610	0x1610	0x219
 SearchForTrap_ovr143_1829	SearchForTrap_ovr143_1829	0x1829	0xA4
+RemoveTrap	DefuseTrap_ovr143_18CD	0x18CD	0x234
