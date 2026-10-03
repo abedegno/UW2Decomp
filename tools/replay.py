@@ -526,6 +526,21 @@ def have_toolchain():
     return os.path.exists(os.path.join(root, 'TC', 'TCC.EXE'))
 
 
+def port_env():
+    """The environment to run the port in. On Windows a development build finds its DLLs on
+    PATH, and those tools/setup-libs.sh built (libmt32emu) are in tools/libs/bin, which no shell
+    puts there: without it the port exits 0xC0000135 (a DLL not found) before writing anything."""
+    env = dict(os.environ)
+    if os.name == 'nt':
+        dirs = [os.path.join(root, 'tools', 'libs', 'bin'), os.path.join(root, 'tools', 'libs', 'lib')]
+        prefix = os.environ.get('MINGW_PREFIX')     # /clang64 in MSYS2's CLANG64 shell: SDL3 and the C++ runtime
+        if prefix and shutil.which('cygpath'):
+            w = subprocess.run(['cygpath', '-w', prefix + '/bin'], capture_output=True, text=True).stdout.strip()
+            if w: dirs.append(w)
+        extra = [d for d in dirs if os.path.isdir(d)]
+        env['PATH'] = os.pathsep.join(extra + [env.get('PATH', '')])
+    return env
+
 def run_port(rec, out, extra=(), stage=None, quiet=False):
     extra = list(extra)
     debug = '--debug' in extra
@@ -543,7 +558,7 @@ def run_port(rec, out, extra=(), stage=None, quiet=False):
         shutil.copy(cfg, os.path.join(home, 'DATA', 'UW.CFG'))
     cmd = [exe, '--data', DATA, '--home', home, '--hidden', '--exit-on-halt', '--exit-after', '600000',
            '--replay', os.path.abspath(rec)] + list(extra)
-    r = subprocess.run(cmd, capture_output=True, text=True)
+    r = subprocess.run(cmd, capture_output=True, text=True, env=port_env())
     open(os.path.join(out, 'port.log'), 'w').write(r.stdout + r.stderr)
     for f in ('STATE.OUT',):
         if os.path.exists(os.path.join(out, f)): os.remove(os.path.join(out, f))
