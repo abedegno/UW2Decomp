@@ -55,6 +55,13 @@ extern unsigned char dseg062_62a6[];       /* seg021's data (FD71) */
 #define SEG052_519C_SIZE  0xE4D6
 #define DSEG062_62A6_SIZE 0x0C40
 int port_load_exe(const char *path);      /* 0, or -1 with a message */
+int port_check_exe(const char *path);     /* 0 if it is the GOG UW2.EXE, else < 0, no message */
+/* Finding the game and the settings file (sys/gamedir.c). */
+int port_find_game(const char *home, char *out, size_t outsz);              /* 0 and the game directory */
+int port_game_in(const char *dir, const char *home, char *out, size_t outsz); /* in a folder the user chose */
+const char *port_game_refused(void);                                         /* a UW2.EXE found and refused */
+int port_config_get(const char *home, const char *key, char *out, size_t outsz);
+int port_config_set(const char *home, const char *key, const char *value);
 /* The EXE's DGROUP image (its initialised data, DS:0 on), for the C library's tables and the
    null-pointer copies. */
 extern unsigned char port_dgroup_image[0x10000];

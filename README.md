@@ -1,29 +1,57 @@
 # UW2Decomp
 
-A byte-matching decompilation of Ultima Underworld II: Labyrinth of Worlds (DOS, 1993; developed by Looking Glass Technologies, published by Origin Systems). The C and assembly in `src/` rebuild the shipped `UW2.EXE` with the original Borland tools.
+Ultima Underworld II: Labyrinth of Worlds (DOS, 1993; developed by Looking Glass Technologies, published by Origin Systems), as source code. This repository has two products, built from the same sources:
 
-This is a fan research project, not affiliated with or endorsed by the rights holders.
+- **A byte-identical decompilation.** The C and assembly in `src/` rebuild the shipped `UW2.EXE` with the original Borland tools, byte for byte, and the source is readable: original names, shared headers, named constants and notes on what each file does in the game.
+- **A native cross-platform port.** The same C, compiled for macOS, Linux and Windows with SDL3, plays the game in a window with its music and effects. Recorded DOS sessions replay in it with DOS's game state at every checkpoint.
 
-## Status
+Neither contains any of the game. You need your own copy of UW2 (the GOG release). This is a fan research project, not affiliated with or endorsed by the rights holders; see [Licence and legal notice](#licence-and-legal-notice).
 
-- **Every code segment is matched.** All of UW2's C, 337,327 bytes in 99 files, compiles with Turbo C++ 1.01 to the same machine code as `UW2.EXE`, and all of its assembly, 71,920 bytes, assembles to the same bytes with Turbo Assembler 2.0. Each file's fixups and data are verified too. Only Borland's C runtime library has no source here.
-- **The relinked EXE is identical to UW2.EXE**, byte for byte ([LINKING.md](docs/LINKING.md#the-exact-link)). It runs.
-- **The game plays from source.** The modding build links sources changed by any size into a working EXE.
-- **The source is readable.** Function and global names are the originals from the FM Towns build wherever it has them. The sources are grouped by subsystem, with shared headers, named constants and struct fields, and every file says what it does in the game.
+## Play it
 
-The method and tools are generalised in [Exhume](https://github.com/abedegno/Exhume), a toolkit and set of Claude Code skills for byte-matching decompilation of old DOS games. This repository is its first case study.
+1. Get the port: download the package for your system from the [releases](https://github.com/abedegno/UW2Decomp/releases) page, or [build it from source](#build-the-port-from-source).
+2. Install UW2 from GOG. The port finds it in GOG's usual folders, including inside GOG's Mac app and its `game.gog` CD image. If it finds nothing, it asks you to choose the folder that holds `UW2.EXE` (or the GOG install folder), and remembers it. From a command line, `uw2port --data /path/to/UW2` names it.
+3. Start it: `UW2.app` on macOS (unsigned, so the first time right-click it and choose Open), `uw2port.exe` on Windows, `./uw2` on Linux.
 
-## What you need
+The controls are the game's own: the mouse, and the keys in the game's manual. Saved games and settings go to `~/.uw2port` (`%APPDATA%\uw2port` on Windows), never to the game folder.
 
-This repository holds no game data and no Borland software. You need:
+Options (`uw2port --help` lists them all):
 
-- your own copy of UW2 (the GOG release works), with `UW2.EXE` at `~/UWGOG/UW2/UW2.EXE` or named by `UW2_EXE`;
-- the Turbo C++ 1.01 disk images, which Borland released free of charge, and the Turbo Assembler 2.0 disk image;
-- Node 20 or later, Python 3, mtools and 7z.
+- `--sound MUSIC,SPEECH` chooses the sound cards, and is remembered. The first run gets a Sound Blaster with its digitised effects (`3,1`). Music: 0 none, 2 Ad Lib, 3 Sound Blaster, 4 Sound Blaster Pro 1, 5 Roland MT-32, 6 Pro Audio Spectrum, 7 Sound Blaster Pro 2. Speech: 0 none, 1 Sound Blaster, 2 Sound Blaster Pro, 3 Pro Audio Spectrum.
+- Roland MT-32 music needs your own MT-32 or CM-32L ROM images, which are not included: `--sound 5,1 --mt32-roms DIR`, with `CM32L_CONTROL.ROM` and `CM32L_PCM.ROM` (or `MT32_CONTROL.ROM` and `MT32_PCM.ROM`) in DIR. The folder is remembered.
+- `--scale N` sets the window's starting size, `--no-aspect` shows square pixels instead of a 4:3 CRT's shape, `--no-integer` scales freely.
 
-[BUILDING.md](docs/BUILDING.md) has the details and the optional extras.
+## Build the port from source
 
-## Quick start
+The port needs no Borland toolchain, DOS emulator or game data to build.
+
+```sh
+make setup-port     # installs or builds SDL3, libmt32emu and Nuked OPL3 for this OS
+make port           # build/port/uw2port
+build/port/uw2port  # or: build/port/uw2port --data /path/to/UW2
+```
+
+- macOS: the Xcode command line tools and Homebrew.
+- Linux (Debian, Ubuntu): `make setup-port` prints the `apt-get install` line it needs, then builds SDL3 and libmt32emu into `tools/libs`.
+- Windows: MSYS2's CLANG64 shell; then `make PY=python port`.
+
+[BUILDING.md](docs/BUILDING.md#building-the-port) has the details, and [Releases](docs/BUILDING.md#releases) how the packages are made.
+
+## The decompilation
+
+Every code segment is matched. All of UW2's C, 337,327 bytes in 99 files, compiles with Turbo C++ 1.01 to the same machine code as `UW2.EXE`, and all of its assembly, 71,920 bytes, assembles to the same bytes with Turbo Assembler 2.0. Each file's fixups and data are verified too. Only Borland's C runtime library has no source here. The relinked EXE is identical to `UW2.EXE` ([LINKING.md](docs/LINKING.md#the-exact-link)), and the modding build links sources changed by any size into an EXE that runs.
+
+Function and global names are the originals from the FM Towns build wherever it has them. The sources are grouped by subsystem, with shared headers, named constants and struct fields, and every file says what it does in the game. [FINDINGS.md](docs/FINDINGS.md) collects what matching revealed: likely bugs in the original, game rules and engine details.
+
+### How it is verified
+
+- **The gate** (`make check`): every source compiles in DOS to its segment's bytes, with its fixups and data verified; `symbols.tsv` rebuilds from scratch to the committed file; the exact link equals `UW2.EXE`; the modding build with no change equals the exact link.
+- **The port against DOS**: eight recorded sessions (character creation, walking, fighting with three sound cards, the inventory, a conversation, saving and loading) replay in the port and match golden references made from DOS at every checkpoint, the 3D frames and the saved games included. Single routines are fuzzed against the original's bytes in an x86 emulator.
+- `make test` runs the gate, the port build, the fuzzing and the replays in about 20 seconds. CI builds the port on macOS, Linux and Windows on every push and runs `make test` on Linux ([Continuous integration](docs/BUILDING.md#continuous-integration)).
+
+### Building the DOS EXE
+
+This needs your own `UW2.EXE` (at `~/UWGOG/UW2/UW2.EXE`, or named by `UW2_EXE`), the Turbo C++ 1.01 disk images (which Borland released free of charge) and the Turbo Assembler 2.0 disk image, and Node 20 or later, Python 3, mtools and 7z. None of these is in the repository.
 
 ```sh
 make setup TC_DISKS="/path/to/Turbo C++ 1.01" TASM_DISKS="/path/to/Turbo Assembler 2.0"
@@ -33,9 +61,9 @@ make boot       # boot the modding build to the main menu and screenshot it
 make test       # the gate, the native port, and the port against DOS's golden replays
 ```
 
-`make setup` unpacks the toolchain into `TC/` and `TASM/` and installs the Python and Node packages; it is safe to run again. `make exact` links the matched objects and compares the result with your EXE. `make hooks` installs a pre-push hook that runs `make test`.
+`make setup` unpacks the toolchain into `TC/` and `TASM/`, installs the Python and Node packages and builds emu2, the DOS the toolchain runs in by default (DOSBox-X or js-dos otherwise); it is safe to run again. `make hooks` installs a pre-push hook that runs `make test`. [BUILDING.md](docs/BUILDING.md) has the rest.
 
-## The sources
+### The sources
 
 Each DOS code segment is one original source file. A file's DOS segment is its `/* target: */` line.
 
@@ -57,24 +85,45 @@ Each DOS code segment is one original source file. A file's DOS segment is its `
 | `src/sys/` | seg021's 17 system modules, memory and EMS, archives and compression, errors, helpers | [sys.md](docs/subsystems/sys.md) |
 | `src/lib/` | Borland's overlay manager (`OVERLAY.ASM`, from OVERLAY.LIB) | [sys.md](docs/subsystems/sys.md#the-overlay-manager) |
 | `src/include/` | the shared headers, one per subsystem | [CONTRIBUTING.md](docs/CONTRIBUTING.md#shared-headers) |
+| `src/replay/` | the record and replay hooks, shared by the replay DOS build and the port | [PORT.md](docs/PORT.md#the-differential-test-input-record-and-replay) |
 | `src/port/` | the native port: the portability layer (`compat.h`), stand-ins for Borland's headers, the C that replaces the assembly modules, the emulated hardware, the platform layer (SDL3) and the link stubs; never compiled by the DOS build | [PORT.md](docs/PORT.md) |
 
 No UW2 build names its source files, so the file names come from System Shock's source release, the FM Towns names, or what the file does. `map/filenames.tsv` gives the evidence for each ([MAP.md](docs/MAP.md#source-file-names)).
 
-The rest of the top level:
+The rest of the top level: `docs/`; `tools/`, the build, matching, linking, port and packaging tools ([BUILDING.md](docs/BUILDING.md#the-tools)); `tests/`, the recorded sessions and their golden references; and `map/`, `targets/`, `symbols.tsv`, `matched.txt` and `fmtowns/syms.tsv`, what the tools know about `UW2.EXE` and its FM Towns counterpart ([MAP.md](docs/MAP.md)).
 
-- `docs/`: the documents below.
-- `tools/`: the build, matching, linking and map tools ([BUILDING.md](docs/BUILDING.md#the-tools)).
-- `map/`, `targets/`, `symbols.tsv` and `matched.txt`: what the tools know about `UW2.EXE`. That is the map of every function, the target table each source is compared with, every shared name's address, and the list of matched segments ([MAP.md](docs/MAP.md)).
+## Status
+
+- Decompilation: every segment matched (tag `v1.0-matched`), and the exact link identical to `UW2.EXE` (tag `v1.1-identical`).
+- Port ([PORT.md](docs/PORT.md#phases-and-milestones)): Milestones 1 to 5 are done (it compiles, links, boots, plays from the title into the world with the 3D view, music and effects, and replays DOS sessions exactly), and so is 6a (`make test` against DOS goldens on every push). Milestone 6 is under way: Linux and Windows builds and release packages, then longer sessions into more of the game before a faithful release.
+- What no session reaches yet is in [COVERAGE.md](docs/COVERAGE.md): spells, most SCD events and traps, most object uses and conversation built-ins. The port may stop or misbehave there.
 
 ## Documents
 
-- [FINDINGS.md](docs/FINDINGS.md): what matching found in the game: likely bugs in the original, game rules, engine findings, dead code and open questions.
+- [BUILDING.md](docs/BUILDING.md): requirements, building and running the port, the make targets, testing, the gate, CI and releases, working on one file, and the tools.
+- [PORT.md](docs/PORT.md): the port's design, its milestones and their results.
+- [FINDINGS.md](docs/FINDINGS.md): likely bugs in the original, game rules, engine findings, dead code and open questions.
 - [docs/subsystems/](docs/subsystems/): one page per subsystem on its architecture, data, rules and open questions.
-- [BUILDING.md](docs/BUILDING.md): requirements, the make targets, the gate, working on one file, and the tools.
 - [CONTRIBUTING.md](docs/CONTRIBUTING.md): the rule every change follows, comments, renaming, shared headers, constants and struct fields.
 - [MATCHING.md](docs/MATCHING.md): the compiler switches, the assembler, and what Turbo C's output reveals about the original source.
 - [LINKING.md](docs/LINKING.md): the exact link, the segment classes, what is taken from your EXE, and the modding build.
 - [LAYOUT.md](docs/LAYOUT.md): every address written as a number, and what still depends on the original layout.
 - [MAP.md](docs/MAP.md): the map, the target tables, `symbols.tsv`, `matched.txt` and the source file names.
-- [PORT.md](docs/PORT.md): the design of a native port built from these sources and its results so far: Milestones 1 to 5 (`make port` builds a binary that plays the game, with its music and effects, and eight sessions recorded in DOS replay in it with DOS's state at every checkpoint) and 6a (`make test` checks the port against golden references from DOS on every push), and the plan for the rest of Milestone 6. [COVERAGE.md](docs/COVERAGE.md) is what the tests reach.
+- [COVERAGE.md](docs/COVERAGE.md): what the port's tests reach.
+
+## Credits
+
+- Looking Glass Technologies and Origin Systems made Ultima Underworld II.
+- John Miles' Audio Interface Library 2 source, which its author released free for any use (in effect public domain), is what the port's sound drivers are written from.
+- [Nuked OPL3](https://github.com/nukeykt/Nuked-OPL3) emulates the FM chips and [munt's libmt32emu](https://github.com/munt/munt) the Roland MT-32, both under the LGPL 2.1 or later; [SDL3](https://libsdl.org) (zlib licence) is the base of the platform layer.
+- [emu2](https://github.com/dmsc/emu2), [DOSBox-X](https://dosbox-x.com) and [js-dos](https://js-dos.com), through [dos-mcp](https://www.npmjs.com/package/dos-mcp), run the Borland toolchain and the DOS side of the tests.
+- The original names come from the FM Towns release of UW2, through the symbol list and the IDA work in [UWReverseEngineering](https://github.com/hankmorgan/UWReverseEngineering). Some file and function names come from System Shock's source release.
+- The method and tools are generalised in [Exhume](https://github.com/abedegno/Exhume), a toolkit and set of Claude Code skills for byte-matching decompilation of old DOS games; this repository is its first case study.
+
+[THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES) lists every third-party component with its licence.
+
+## Licence and legal notice
+
+This project's own work (the tools, the port's code, the documentation and the tests) is under the [MIT licence](LICENSE), copyright 2026 abedegno.
+
+The decompiled game code is derived from Ultima Underworld II, whose copyright belongs to its owners (Electronic Arts). The MIT licence covers only this project's original work and grants no right in the game. No game data is included in the repository or in any release package; to play or to build the DOS EXE you need your own copy of the game, such as the GOG release. [NOTICE](NOTICE) says which files are which, and covers the two other pieces of code in `src/`: Borland's overlay manager and Miles' AIL API.

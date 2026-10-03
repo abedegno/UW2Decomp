@@ -1,0 +1,4 @@
+#!/bin/sh
+# Starts the port from its package (Linux): bin/uw2port finds its libraries in lib/ by itself.
+here=$(dirname "$(readlink -f "$0")")
+exec "$here/bin/uw2port" "$@"

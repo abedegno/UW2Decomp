@@ -1,43 +1,18 @@
 /* main.c: replaces nothing in the game; it is what DOS and C0 did before the game's main
-   (UWEDIT.C, renamed uw2_main by compat.h): it reads the port's options, maps the user's data
-   (the data root) and the port's home directory, loads and checks the far data from the user's
-   UW2.EXE, starts the PIT, and runs the game on its own thread under the platform layer.
-
-   uw2port [options] [game arguments]
-     --data DIR             the UW2 directory: UW2.EXE, DATA, CRIT, CUTS, SOUND (default: .)
-     --home DIR             where the game's files go (default: $UW2PORT_HOME, else ~/.uw2port)
-     --scale N              initial window scale (3)
-     --no-aspect            square pixels (default: 200 lines shown as 240, as on a 4:3 CRT)
-     --no-integer           scale freely (default: whole multiples)
-     --hidden               no window (tests); the scan-out still runs
-     --screenshot-after MS  write the screen to a PNG MS milliseconds after start
-     --screenshot FILE      that PNG's name (uw2port.png)
-     --window-shot FILE     with --screenshot-after, also the window's scaled contents
-     --shot-at-flip K:FILE  write the screen right after the game's K-th page flip
-     --exit-after MS        quit MS milliseconds after start
-     --exit-on-halt         quit (status 3) where the port stops, at a stub or an unported path,
-                            instead of leaving the window up
-     --record               record the session to RECORD.OUT in the home directory, with the
-                            state dumps in STATE.OUT (src/replay/REPLAY.C; F12 ends it)
-     --replay FILE          replay the recording FILE (copied to the home directory as
-                            REPLAY.IN) instead of reading the clock, keyboard and mouse, writing
-                            the state dumps to STATE.OUT; the game quits at its end
-     --sound CARD[,SPEECH]  the sound cards, as UW.CFG names them (docs/BUILDING.md, "Sound"):
-                            music 0 none, 2 Ad Lib, 3 Sound Blaster, 4 Sound Blaster Pro 1,
-                            5 MT-32, 6 Pro Audio Spectrum, 7 Sound Blaster Pro 2; speech 0
-                            none, 1 Sound Blaster, 2 Sound Blaster Pro, 3 Pro Audio Spectrum.
-                            Written to DATA\UW.CFG in the home directory, which the game reads
-     --mt32-roms DIR        the user's MT-32 or CM-32L ROMs (also UW2PORT_MT32_ROMS)
-     --audio-wav FILE       write everything the sound cards play to a WAV file (44100 Hz)
-     --no-audio             open no audio device
-     --ail-log FILE         log every AIL call and driver service (src/port/sound/ail.c)
-     --hw-log FILE          log every register write and MIDI byte the drivers make
-     -v                     trace (also UW2PORT_TRACE=1)
-   Anything else goes to the game as its own command line (the dungeon file, UWEDIT.C). */
+   (UWEDIT.C, renamed uw2_main by compat.h): it reads the port's options, finds the user's game
+   (the data root, sys/gamedir.c) and maps it and the port's home directory, loads and checks
+   the far data from the user's UW2.EXE, starts the PIT, and runs the game on its own thread
+   under the platform layer. `uw2port --help` lists the options (help_text, below). */
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <unistd.h>
+#endif
 #include "port.h"
 #include "plat.h"
 #include "sound/audio.h"
@@ -161,23 +136,125 @@ static int write_uw_cfg(const char *spec)
     return 0;
 }
 
-static void usage(void)
+static const char help_text[] =
+    "usage: uw2port [options] [game arguments]\n"
+    "\n"
+    "Plays Ultima Underworld II from your own copy of the game (the GOG release's UW2.EXE).\n"
+    "\n"
+    "Game and files:\n"
+    "  --data DIR             the UW2 folder (UW2.EXE, DATA, CRIT, CUTS, SOUND), or a folder\n"
+    "                         holding it or GOG's game.gog; found by itself when not given\n"
+    "                         ($UW2PORT_DATA, the last folder used, GOG's install folders)\n"
+    "  --home DIR             where saved games and settings go ($UW2PORT_HOME, else ~/.uw2port)\n"
+    "Sound:\n"
+    "  --sound MUSIC[,SPEECH] the sound cards, kept until changed (default 3,1 on first run):\n"
+    "                         music 0 none, 2 Ad Lib, 3 Sound Blaster, 4 Sound Blaster Pro 1,\n"
+    "                         5 Roland MT-32, 6 Pro Audio Spectrum, 7 Sound Blaster Pro 2;\n"
+    "                         speech 0 none, 1 Sound Blaster, 2 Sound Blaster Pro,\n"
+    "                         3 Pro Audio Spectrum\n"
+    "  --mt32-roms DIR        your MT-32 or CM-32L ROM images, kept until changed\n"
+    "                         (also $UW2PORT_MT32_ROMS)\n"
+    "  --no-audio             open no audio device\n"
+    "Window:\n"
+    "  --scale N              initial window scale (3)\n"
+    "  --no-aspect            square pixels (default: 200 lines shown as 240, as on a 4:3 CRT)\n"
+    "  --no-integer           scale freely (default: whole multiples)\n"
+    "Testing and debugging:\n"
+    "  --hidden               no window; the scan-out still runs\n"
+    "  --screenshot-after MS  write the screen to a PNG MS milliseconds after start\n"
+    "  --screenshot FILE      that PNG's name (uw2port.png)\n"
+    "  --window-shot FILE     with --screenshot-after, also the window's scaled contents\n"
+    "  --shot-at-flip K:FILE  write the screen right after the game's K-th page flip\n"
+    "  --exit-after MS        quit MS milliseconds after start\n"
+    "  --exit-on-halt         quit (status 3) where the port stops instead of leaving the window up\n"
+    "  --record               record the session to RECORD.OUT in the home directory (F12 ends it)\n"
+    "  --replay FILE          replay a recording instead of reading the clock, keyboard and mouse\n"
+    "  --audio-wav FILE       write everything the sound cards play to a WAV file (44100 Hz)\n"
+    "  --ail-log FILE         log every AIL call and driver service\n"
+    "  --hw-log FILE          log every register write and MIDI byte the drivers make\n"
+    "  -v                     trace (also UW2PORT_TRACE=1)\n"
+    "  -h, --help             this list\n"
+    "\n"
+    "Anything else goes to the game as its own command line.\n";
+
+static void usage(int full)
 {
-    fprintf(stderr, "usage: uw2port [--data DIR] [--home DIR] [--scale N] [--no-aspect] [--no-integer]\n"
-                    "               [--hidden] [--screenshot-after MS] [--screenshot FILE] [--window-shot FILE]\n"
-                    "               [--shot-at-flip K:FILE] [--exit-after MS] [--exit-on-halt]\n"
-                    "               [--record | --replay FILE] [--sound CARD[,SPEECH]] [--mt32-roms DIR]\n"
-                    "               [--audio-wav FILE] [--no-audio] [--ail-log FILE] [--hw-log FILE]\n"
-                    "               [-v] [game arguments]\n");
+    if (full) {
+        fputs(help_text, stdout);
+        exit(0);
+    }
+    fputs("usage: uw2port [options] [game arguments]; uw2port --help lists the options\n", stderr);
     exit(2);
+}
+
+static const char not_found[] =
+    "Ultima Underworld II needs the files of your own copy of the game, and none was found.\n\n"
+    "Install the game from GOG, or choose the folder that holds UW2.EXE, the GOG install "
+    "folder, or the GOG app. The folder is remembered.\n\n"
+    "From a command line: uw2port --data /path/to/UW2";
+
+/* A path as an absolute one, for the settings file. */
+static const char *absolute(const char *p, char *buf, size_t n)
+{
+#ifdef _WIN32
+    return _fullpath(buf, p, n) ? buf : p;
+#else
+    char cwd[1024];
+    if (p[0] == '/' || !getcwd(cwd, sizeof cwd)) return p;
+    if (!strcmp(p, ".")) snprintf(buf, n, "%s", cwd);
+    else snprintf(buf, n, "%s/%s", cwd, p);
+    return buf;
+#endif
+}
+
+/* The game's directory when --data names none: found (sys/gamedir.c), or, with a window,
+   chosen by the user in a folder dialog. NULL if there is none. */
+static const char *find_data(const char *home, int interactive, char *buf, size_t n)
+{
+    char chosen[1024], msg[3000];
+    if (port_find_game(home, buf, n) == 0) return buf;
+    snprintf(msg, sizeof msg, "%s%s", not_found, port_game_refused());
+    if (!interactive) {
+        fprintf(stderr, "uw2port: %s\n", msg);
+        return NULL;
+    }
+    while (plat_choose_folder("Ultima Underworld II: where is the game?", msg, chosen, sizeof chosen) == 0) {
+        if (port_game_in(chosen, home, buf, n) == 0) return buf;
+        snprintf(msg, sizeof msg, "%s holds no copy of Ultima Underworld II that this program can use.%s\n\n%s",
+                 chosen, port_game_refused(), not_found);
+    }
+    return NULL;
+}
+
+static int home_dir(const char *p)
+{
+    char buf[1024];
+    char *s;
+    struct stat st;
+    if (snprintf(buf, sizeof buf, "%s", p) >= (int)sizeof buf) return -1;
+    for (s = buf + 1; ; s++)
+        if (*s == '/' || *s == '\\' || !*s) {
+            char c = *s;
+            *s = 0;
+            if (stat(buf, &st) != 0) {
+#ifdef _WIN32
+                _mkdir(buf);
+#else
+                mkdir(buf, 0755);
+#endif
+            }
+            if (!c) break;
+            *s = c;
+        }
+    return stat(p, &st) == 0 && S_ISDIR(st.st_mode) ? 0 : -1;
 }
 
 int main(int argc, char *argv[])
 {
-    static char home_buf[1024], exe[1200];
-    const char *data = ".", *home = getenv("UW2PORT_HOME"), *replay = NULL;
+    static char home_buf[1024], exe[1200], data_buf[1024], roms_buf[1024], abs_buf[1024];
+    const char *data = NULL, *home = getenv("UW2PORT_HOME"), *replay = NULL;
     const char *sound = NULL, *roms = NULL, *wav = NULL, *ail_log = NULL, *hw_log = NULL;
-    int audio_device = 1;
+    int audio_device = 1, interactive;
     PlatConfig cfg;
     PlatHooks hooks;
     int i;
@@ -216,21 +293,51 @@ int main(int argc, char *argv[])
         else if (!strcmp(a, "--ail-log") && i + 1 < argc) ail_log = argv[++i];
         else if (!strcmp(a, "--hw-log") && i + 1 < argc) hw_log = argv[++i];
         else if (!strcmp(a, "-v")) port_trace = 1;
-        else if (!strcmp(a, "--help") || !strcmp(a, "-h")) usage();
-        else if (a[0] == '-' && a[1] == '-') usage();
+        else if (!strcmp(a, "--help") || !strcmp(a, "-h")) usage(1);
+        else if (a[0] == '-' && a[1] == '-') usage(0);
         else game_argv[game_argc++] = argv[i];
     }
     if (!home) {
         const char *h = getenv("HOME");
+#ifdef _WIN32
+        if (!h && getenv("APPDATA")) {          /* started from Explorer: no HOME */
+            snprintf(home_buf, sizeof home_buf, "%s/uw2port", getenv("APPDATA"));
+        } else
+#endif
         snprintf(home_buf, sizeof home_buf, "%s/.uw2port", h ? h : ".");
         home = home_buf;
     }
-    if (plat_files_init(data, home)) {
-        fprintf(stderr, "uw2port: %s is not a directory (give the UW2 directory with --data), "
-                        "or %s cannot be created\n", data, home);
+    /* A player's run, as opposed to a test's: it may ask with dialogs, remembers the game's
+       folder and the ROMs, and gets a sound card on its first run. */
+    interactive = !cfg.hidden && rp_request != 1 && rp_request != 2;
+    if (home_dir(home)) {
+        fprintf(stderr, "uw2port: cannot create the home directory %s (--home)\n", home);
         return 1;
     }
-    if (plat_resolve("UW2.EXE", PLAT_READ, exe, sizeof exe) || port_load_exe(exe)) return 1;
+    if (!data && !(data = find_data(home, interactive, data_buf, sizeof data_buf))) return 1;
+    if (plat_files_init(data, home)) {
+        fprintf(stderr, "uw2port: %s is not a directory (give the UW2 directory with --data)\n", data);
+        return 1;
+    }
+    if (plat_resolve("UW2.EXE", PLAT_READ, exe, sizeof exe) || port_load_exe(exe)) {
+        if (interactive)
+            plat_message(1, "Ultima Underworld II: the game cannot start",
+                         "The folder given does not hold the GOG release's UW2.EXE, which this program "
+                         "needs. Run it without --data to find or choose the game's folder.");
+        return 1;
+    }
+    if (interactive) port_config_set(home, "data", absolute(data, abs_buf, sizeof abs_buf));
+    if (roms && interactive) port_config_set(home, "mt32-roms", absolute(roms, abs_buf, sizeof abs_buf));
+    else if (!roms && !getenv("UW2PORT_MT32_ROMS") && port_config_get(home, "mt32-roms", roms_buf, sizeof roms_buf) == 0)
+        roms = roms_buf;
+    if (interactive && !sound) {        /* the first run: a Sound Blaster with its effects */
+        char cfgpath[1200];
+        FILE *f = NULL;
+        if (plat_resolve("DATA\\UW.CFG", PLAT_CREATE, cfgpath, sizeof cfgpath) == 0 && !(f = fopen(cfgpath, "rb")))
+            sound = "3,1";
+        else if (f)
+            fclose(f);
+    }
     vga_window_init();
     if (rp_request != 1 && rp_request != 2) rp_request = 0;   /* the port reads the world */
     if (replay && copy_to_home(replay, home, "REPLAY.IN")) return 1;

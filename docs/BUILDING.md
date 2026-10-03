@@ -1,5 +1,7 @@
 # Building
 
+To build only the native port, which needs none of the Borland toolchain, DOS or game data, see [Building the port](#building-the-port).
+
 Everything runs on your own machine: Turbo C++, TASM and TLINK run headless in a DOS emulator (emu2 when `make setup` has built it, else DOSBox-X when it is installed, else js-dos through the [dos-mcp](https://www.npmjs.com/package/dos-mcp) npm package; see [Choosing the DOS](#choosing-the-dos)), and every build is compared with your own `UW2.EXE`. The Makefile only names the entry points; the logic is in `tools/uw2.py`.
 
 ## Requirements
@@ -26,19 +28,30 @@ Optional, for the map tools and the assembly drafts (see [MAP.md](MAP.md)):
 - `make hooks` installs a git pre-push hook that runs `make test` and stops the push when it fails.
 - `make port-check` compiles every C source for the host with clang, compile only, and summarises the errors, warnings and unresolved names ([PORT.md](PORT.md#milestone-1-baseline)). It never touches the DOS build.
 - `make port` compiles every C source for the host, compiles the port's own C (`src/port`) and links them with SDL3 into `build/port/uw2port` ([the native port](#the-native-port), below). It never touches the DOS build either.
+- `make setup-port` installs only what the port needs to build ([Building the port](#building-the-port)); `make port-release` and `make package` build and package it for players ([Releases](#releases)).
 - `make help` prints this list.
 
 Everything built goes under `build/`, which is never committed.
 
 ## The native port
 
-The port ([PORT.md](PORT.md)) is a second build of the same C, for a modern host. It builds on macOS on Apple Silicon, on Linux (Ubuntu 24.04, x86-64 and arm64) and on Windows (MSYS2's CLANG64 environment). The replays and the fuzzing pass on macOS and on Linux; the Windows build is compiled and linked by CI and has not been run ([Continuous integration](#continuous-integration)).
+The port ([PORT.md](PORT.md)) is a second build of the same C, for a modern host. It builds on macOS (Apple Silicon and Intel), on Linux (Ubuntu 24.04, x86-64 and arm64) and on Windows (MSYS2's CLANG64 environment). The replays and the fuzzing pass on macOS and on Linux; the Windows build is compiled, linked and packaged by CI and has not yet been run on Windows ([Continuous integration](#continuous-integration)).
 
-What it needs: clang, Python 3, `pkg-config` and SDL3 (3.4.16 is the version tested); for sound, Nuked OPL3 and libmt32emu ([Sound](#sound)), without which the port builds and those chips are silent. No Turbo C, DOS or game data is needed to build it, only to run it. The tools use `$CC` when it is set, else `clang`, else `cc`; the flags are clang's.
+### Building the port
 
-- macOS: the Xcode command line tools, and `brew install sdl3 mt32emu pkgconf`.
-- Linux: `apt install clang pkg-config cmake ninja-build`, then `make setup-libs`, which builds SDL3 3.4.16 and libmt32emu 2.8.3 from source into `tools/libs` (ignored by git; no Ubuntu release before 25.04 packages SDL3, and none packages libmt32emu). Without the X11 or Wayland development headers SDL3 is built without windows, which is enough for `--hidden`. Then `export PKG_CONFIG_PATH=$PWD/tools/libs/lib/pkgconfig LD_LIBRARY_PATH=$PWD/tools/libs/lib`.
-- Windows: MSYS2's CLANG64 shell with `pacman -S make mingw-w64-clang-x86_64-{clang,pkgconf,sdl3,python}`, then `make PY=python port`. The build has no MT-32 (MSYS2 has no libmt32emu) and links `build/port/uw2port.exe`.
+No Turbo C, DOS or game data is needed to build the port, only to run it.
+
+```sh
+make setup-port     # the compiler check, SDL3, libmt32emu and Nuked OPL3, per OS
+make port           # build/port/uw2port
+```
+
+- macOS: the Xcode command line tools (`xcode-select --install`) and Homebrew; `make setup-port` runs `brew install sdl3 mt32emu pkgconf`.
+- Linux (Debian, Ubuntu): `make setup-port` prints the `apt-get install` line for clang, pkg-config, cmake, ninja and the X11, Wayland, ALSA and PulseAudio headers when any is missing, then builds SDL3 3.4.16 and libmt32emu 2.8.3 from source into `tools/libs` (`tools/setup-libs.sh`; ignored by git; no Ubuntu release before 25.04 packages SDL3, and none packages libmt32emu). `make port` finds `tools/libs` by itself and links the program to load its libraries from there. Without the X11 or Wayland headers SDL3 is built without windows, which is enough for `--hidden`.
+- Windows: install MSYS2 and open its CLANG64 shell; `make setup-port` installs the packages with pacman (`make`, `git`, `curl`, and clang, pkgconf, SDL3, Python, cmake and ninja for CLANG64) and builds libmt32emu into `tools/libs`. Then `make PY=python port` links `build/port/uw2port.exe`, which runs from that shell.
+- Elsewhere: clang, Python 3, `pkg-config` and SDL3 (3.4.16 is the version tested); for sound, Nuked OPL3 (`make setup-sound`) and libmt32emu ([Sound](#sound)), without which the port builds and those chips are silent. The tools use `$CC` when it is set, else `clang`, else `cc`; the flags are clang's.
+
+The port's targets and tools:
 
 - `make port` compiles all 98 C sources the port uses and the port's own C under `src/port` (the SDL3 backend with SDL's flags), and links `build/port/uw2port`. It prints any warning in the port's own C.
 - `make port-check` is the compile-only measurement of the game's C ([PORT.md](PORT.md#milestone-1-baseline)).
@@ -46,13 +59,18 @@ What it needs: clang, Python 3, `pkg-config` and SDL3 (3.4.16 is the version tes
 - `python3 tools/portstubs.py` rewrites the link stubs in `src/port/stubs` after a replacement lands (or after a game source starts using a new name); `--check` reports whether they are up to date. A stub stops the game where it is called and names itself.
 - `python3 tools/portshot.py` is the screen test: it builds DOS EXEs that stop on each of the opening screens, screenshots them in headless DOS, and compares them with the port's screens pixel by pixel. The DOS builds take several minutes the first time and are cached in `build/portshot`.
 
-Running it:
+### Running the port
 
 ```sh
-build/port/uw2port --data ~/UWGOG/UW2
+build/port/uw2port                      # finds the game by itself, or asks
+build/port/uw2port --data ~/UWGOG/UW2   # names it
 ```
 
-`--data` names the directory of your copy of UW2 (`UW2.EXE`, `DATA`, `CRIT`, `CUTS`, `SOUND`); the port reads it and never writes it. Files the game creates or changes (its scratch files, `SAVE0`) go to the home directory, `--home DIR`, else `$UW2PORT_HOME`, else `~/.uw2port`. The port checks that `UW2.EXE` is the GOG release's by its size and CRC-32, and reads the far data no source defines yet from it. Anything on the command line that is not an option goes to the game, as its own command line would.
+The port needs the user's own UW2: a directory with `UW2.EXE`, `DATA`, `CRIT`, `CUTS` and `SOUND`, which it reads and never writes. It checks that `UW2.EXE` is the GOG release's by its size and CRC-32, and reads the far data no source defines yet from it. Without `--data` it looks, in order, at `$UW2PORT_DATA`, the folder it used last, the current directory and its own (and a `UW2` folder in either), and GOG's install folders: `/Applications`, `~/Applications`, `~/GOG Games` and `~/Games` on macOS; `C:\GOG Games`, `D:\GOG Games` and GOG Galaxy's `Games` folder under Program Files on Windows; `~/GOG Games`, `~/Games` (Lutris, Heroic) and Wine's `drive_c` on Linux; and `~/UWGOG` everywhere. In those it searches up to four levels into any folder whose name has "Underworld" or "UW2" in it (`src/port/sys/gamedir.c`).
+
+GOG's Mac and Windows releases keep the game in a CD image, `game.gog` (ISO 9660, the Ultima Underworld 1 and 2 CD, which their DOSBox mounts as D:; on macOS it is in `Ultima™ Underworld II.app/Contents/Resources/game`). When the search finds only such an image, the port copies its `UW2` directory once into `gog-cd/UW2` in its home directory and plays from there. When nothing is found and the port has a window, it shows a message box with a folder picker; the folder chosen may be the game's, the GOG install folder or the GOG app. With `--hidden` it prints the message and exits with status 1.
+
+Files the game creates or changes (its scratch files, `SAVE0`, the saved games, `DATA\UW.CFG`) go to the home directory, `--home DIR`, else `$UW2PORT_HOME`, else `~/.uw2port` (`%APPDATA%\uw2port` on Windows when `HOME` is not set). Its settings file, `uw2port.cfg`, keeps the game folder (`data=`) and the MT-32 ROM folder (`mt32-roms=`) of the last run with a window. The first such run with no `DATA\UW.CFG` in the home directory writes one for a Sound Blaster with its effects (`--sound 3,1`). Runs with `--hidden`, `--record` or `--replay`, which are tests, never show a dialog, write no settings and get no sound card they were not given. Anything on the command line that is not an option goes to the game, as its own command line would. `uw2port --help` lists the options.
 
 Record and replay ([PORT.md](PORT.md#the-differential-test-input-record-and-replay)): `--record` records the session to `RECORD.OUT` in the home directory (F12 ends it), and `--replay FILE` replays a recording instead of reading the clock, keyboard and mouse; both write the state dumps to `STATE.OUT` in the home directory, and the game quits at the end of the recording (`--exit-on-halt` makes it quit where the port stops, too).
 
@@ -66,15 +84,15 @@ The port plays the game's music and effects through C versions of the game's own
 
 | What | Library | License | Where from |
 | --- | --- | --- | --- |
-| the FM chips (Ad Lib, Sound Blaster, Pro Audio Spectrum) | Nuked OPL3, commit `765ec96` | LGPL-2.1 | `make setup-sound` (`tools/setup-sound.sh`) fetches `opl3.c` and `opl3.h` into `tools/nuked-opl3`, ignored by git, and checks them by SHA-256; `make port` compiles them when they are there |
-| the Roland MT-32 and CM-32L | libmt32emu (munt) 2.8.3 | LGPL-2.1-or-later | `brew install mt32emu`, or `make setup-libs` on Linux; `make port` links it when `pkg-config` finds it |
-| the audio output | SDL3 | zlib | `brew install sdl3`, or `make setup-libs` on Linux |
+| the FM chips (Ad Lib, Sound Blaster, Pro Audio Spectrum) | Nuked OPL3, commit `765ec96` | LGPL-2.1 | `make setup-sound` (`tools/setup-sound.sh`) fetches `opl3.c` and `opl3.h` into `tools/nuked-opl3`, ignored by git, and checks them by SHA-256; `make port` compiles them in when they are there, `make port-release` into a shared library of their own |
+| the Roland MT-32 and CM-32L | libmt32emu (munt) 2.8.3 | LGPL-2.1-or-later | `make setup-port` (Homebrew on macOS, built from source into `tools/libs` elsewhere); `make port` links it when `pkg-config` finds it; a shared library in every build |
+| the audio output | SDL3 | zlib | `make setup-port` (Homebrew on macOS, MSYS2 on Windows, built from source on Linux) |
 
 `make port` says which it found (`sound: Nuked OPL3, libmt32emu`).
 
 The game takes its sound cards from `DATA\UW.CFG`, whose two lines the GOG release sets to no card. `--sound CARD[,SPEECH]` writes that file into the port's home directory (where the game looks first): music card 2 Ad Lib, 3 Sound Blaster, 4 Sound Blaster Pro (two OPL2s), 5 MT-32, 6 Pro Audio Spectrum, 7 Sound Blaster Pro (OPL3), 0 none; speech card 1 Sound Blaster, 2 Sound Blaster Pro, 3 Pro Audio Spectrum, 0 none. `--sound 3,1` is a Sound Blaster with its digitised effects; the setting stays in the home directory until changed. The PC speaker (card 1) is not emulated.
 
-The MT-32 needs the user's own ROM images, which the repository never holds: `--mt32-roms DIR` (or `UW2PORT_MT32_ROMS=DIR`), a directory with `CM32L_CONTROL.ROM` and `CM32L_PCM.ROM` (used first) or `MT32_CONTROL.ROM` and `MT32_PCM.ROM`. Without them the MT-32 driver runs and the music is silent; its MIDI stream is still checked against `DM05.ADV`'s (`ailcheck.py`, below), which needs no ROM.
+The MT-32 needs the user's own ROM images, which the repository never holds: `--mt32-roms DIR` (or `UW2PORT_MT32_ROMS=DIR`; a run with a window remembers the folder), a directory with `CM32L_CONTROL.ROM` and `CM32L_PCM.ROM` (used first) or `MT32_CONTROL.ROM` and `MT32_PCM.ROM`. Without them the MT-32 driver runs and the music is silent; its MIDI stream is still checked against `DM05.ADV`'s (`ailcheck.py`, below), which needs no ROM.
 
 `--audio-wav FILE` writes everything the cards play to a 44100 Hz stereo WAV file, in the game's own time (under `--replay` the whole session, however fast the port runs it); `--no-audio` opens no audio device. `--ail-log FILE` and `--hw-log FILE` write every call the game makes to its sound drivers and every register write or MIDI byte the drivers make, and `tools/ailcheck.py AIL_LOG HW_LOG` runs the same calls through the user's real `.ADV` driver in an x86 emulator and compares the writes (it needs Unicorn, 2.1.4 tested, a development tool only: `.venv/bin/pip install unicorn==2.1.4` puts it where `replay.py check` finds it).
 
@@ -169,12 +187,13 @@ The pre-push hook runs the gate before anything leaves your machine, and CI runs
 
 ## Continuous integration
 
-Four workflows run on GitHub's standard hosted runners, in this public repository:
+Five workflows run on GitHub's standard hosted runners, in this public repository:
 
 | Workflow | When | What it runs | Needs the bundle |
 | --- | --- | --- | --- |
 | `port.yml` | every push and pull request, forks included | `make port` and `make port-check` on Ubuntu 24.04, macOS and Windows (MSYS2 CLANG64); nothing is run | no |
 | `repocheck.yml` | every push and pull request, forks included | `tools/repocheck.py` | no |
+| `release.yml` | a tag `v*`, and by hand | the release packages for macOS, Linux and Windows ([Releases](#releases)); for a tag, a draft release with them | no |
 | `accuracy.yml` | pushes to `main`, pull requests from branches of this repository, and by hand | `make setup` and `make test` on Ubuntu 24.04: the gate, the port build, the quick fuzzing and the eight sessions against their goldens | yes |
 | `nightly.yml` | 03:17 UTC each day, and by hand | `make test-full` on Ubuntu 24.04, with DOSBox-X from Ubuntu (2024.03.01, whose goldens are the committed ones); fails if a regenerated golden differs from the committed one, and puts the step times and the coverage totals in the job summary | yes |
 
@@ -202,6 +221,21 @@ Two things differ on Linux, and the tools allow for each. The file system is cas
 x86-64 found one difference of its own. BAGS.C's `OpenTheBag` writes past the end of `SlotToDisplay` into `DisplayToSlot`, the next variable in DGROUP, as DOS does on purpose. On arm64 the host compiler happened to put the two arrays end to end, but x86-64 puts an array of 16 bytes or more on a 16-byte boundary, so the write missed and the `items` session went another way after a bag was opened. The port now keeps the two in one array (`inv.h`, `INVPANEL.C`; the DOS build is unchanged, and the gate proves it).
 
 The Windows build needs the port's few POSIX calls replaced: the EMS frame's double mapping (`mem/frame.c`) uses a file mapping viewed twice, the crash handler prints no call stack, and `mkdir` and `unsetenv` have Windows forms. `src/port/include/io.h` brings in MinGW's own `io.h`, which it would otherwise hide. On Windows `long` is 32 bits, as in DOS, where macOS and Linux have 64.
+
+### Releases
+
+`release.yml` builds the packages players download, from the sources alone: no game data, no Borland toolchain and no secret is involved. On a tag `v*` it attaches them to a draft release with generated notes, which the owner checks and publishes by hand; run by hand, it only keeps them as the run's artifacts.
+
+| Package | Built on | What is in it |
+| --- | --- | --- |
+| `UW2-V-macos.zip` | macOS 15 | `UW2.app`, universal (arm64 and x86_64, macOS 11 on): the program in `Contents/MacOS`, SDL3, libmt32emu and Nuked OPL3 built for both architectures (`UW2_MACOS_ARCHS="arm64;x86_64" make setup-libs`) in `Contents/Frameworks` with `@rpath` install names, ad-hoc signed and not notarised |
+| `UW2-V-linux-x86_64.tar.gz` | Ubuntu 24.04 (so glibc 2.39 or later) | `uw2` (a launcher), `bin/uw2port` (run path `$ORIGIN/../lib`) and `lib/` with SDL3 (built with X11, Wayland, ALSA, PulseAudio and PipeWire, each loaded when present), libmt32emu and Nuked OPL3 |
+| `UW2-V-windows-x86_64.zip` | Windows, MSYS2 CLANG64 | `uw2port.exe` and every DLL it loads that is not Windows's own: SDL3, libmt32emu, Nuked OPL3 and the compiler's runtime |
+| `third-party-sources.tar.gz` | Ubuntu | the source of Nuked OPL3 and libmt32emu at the versions built, for their LGPL |
+
+Each package also holds `README.txt` (`tools/dist/README-dist.txt`: starting it, finding the game, the options), `LICENSE.txt`, `NOTICE.txt`, `THIRD-PARTY-NOTICES.txt` and the libraries' licence texts in `licenses/`. Nuked OPL3 and libmt32emu are separate shared libraries a user can replace, which is how the LGPL is met ([THIRD-PARTY-NOTICES](../THIRD-PARTY-NOTICES)).
+
+The same on your own machine: `make port-release` (`tools/portbuild.py --release`: as `make port`, but Nuked OPL3 is a shared library beside the program, and the program looks for its libraries beside itself, in `../lib` and in `../Frameworks`; `PORT_ARCHS="--arch arm64 --arch x86_64"` for a universal macOS build, which needs universal libraries), then `make package` (`tools/package.py`, into `build/dist`; `PACKAGE_ARGS="--version V --strict"`). The macOS app is not signed with a Developer ID, so a player opens it the first time with right-click and Open, or clears the quarantine with `xattr -dr com.apple.quarantine UW2.app`.
 
 ### Rotating the keys and the bundle
 
@@ -257,7 +291,7 @@ All of them are in `tools/`, and each describes itself at the top.
 | Role | Tools |
 | --- | --- |
 | Make targets and the gate | `uw2.py` (behind the Makefile), `install-hooks.sh`, `repocheck.py` |
-| Toolchain setup | `setup-tc.sh`, `setup-tasm.sh`, `setup-sound.sh` (the port's OPL emulator), `setup-libs.sh` (SDL3 and libmt32emu from source, for Linux), `requirements.txt` (the Python packages), `ci-assets.sh` (CI only: decrypts the asset bundle) |
+| Toolchain setup | `setup-tc.sh`, `setup-tasm.sh`, `setup-port.sh` (only what the port needs, `make setup-port`), `setup-sound.sh` (the port's OPL emulator), `setup-libs.sh` (SDL3 and libmt32emu from source, for Linux, Windows and the macOS release), `requirements.txt` (the Python packages), `ci-assets.sh` (CI only: decrypts the asset bundle) |
 | Building in headless DOS | `tcc.mjs` (compile or assemble), `dosrun.mjs` (batch lines, used by the link), `dosbackend.mjs` (the DOS they run in), `dosbatch.py` (many sources at once, for the gate and `link.py --mod`), `setup-emu2.sh` with `emu2-date.patch`, `rungame.mjs` (boot and screenshot, always js-dos) |
 | Matching one file | `match.py`, `verify.py`, `bssorder.py` (predicts `_BSS` order), `asmgen.py` (first draft of an assembly module), `fmt.py` (FM Towns disassembly) |
 | Object files | `omf.py`, `fixups.py` |
@@ -265,6 +299,6 @@ All of them are in `tools/`, and each describes itself at the top.
 | Linking | `link.py`, `extract.py`, `exediff.py`, `addrscan.py` (numbers that could be addresses) |
 | Target tables and names | `targets.py`, `syncnames.py` |
 | The map | `doslist.py`, `locate.py`, `callgraphs.py`, `callpairs.py`, `anchors.py`, `align.py`, `files.py` |
-| The port | `portcheck.py` (`make port-check`: compiles the C for the host, compile only), `portbuild.py` (`make port`, `make port-debug`: compiles and links it), `portstubs.py` (writes the link stubs), `portshot.py` (the port's screens against DOS's), `replay.py` and `replaydos.mjs` (record and replay sessions, compare the state dumps), `golden.py` (the sessions' golden references and the port against them: `replay.py golden` and `verify`), `fuzzasm.py` with `fuzzhost.c` (the routine fuzzing), `coverage.py` (`make coverage`), `test.py` (`make test`, `make test-full`), `asm2c.py` (translates the renderer's assembly modules to C; `--check` says whether the committed C is up to date), `ailcheck.py` (the port's sound drivers against the real `.ADV` files), `widths.py` (explicit integer widths), `layoutcheck.py` (struct layouts under Turbo C against the host), `intaudit.py` (the promotion and overflow audit) ([PORT.md](PORT.md)) |
+| The port | `portcheck.py` (`make port-check`: compiles the C for the host, compile only), `portbuild.py` (`make port`, `make port-debug`: compiles and links it), `portstubs.py` (writes the link stubs), `portshot.py` (the port's screens against DOS's), `replay.py` and `replaydos.mjs` (record and replay sessions, compare the state dumps), `golden.py` (the sessions' golden references and the port against them: `replay.py golden` and `verify`), `fuzzasm.py` with `fuzzhost.c` (the routine fuzzing), `coverage.py` (`make coverage`), `test.py` (`make test`, `make test-full`), `asm2c.py` (translates the renderer's assembly modules to C; `--check` says whether the committed C is up to date), `ailcheck.py` (the port's sound drivers against the real `.ADV` files), `widths.py` (explicit integer widths), `layoutcheck.py` (struct layouts under Turbo C against the host), `intaudit.py` (the promotion and overflow audit), `package.py` with `dist/` (the release packages) ([PORT.md](PORT.md)) |
 
 The canonical replay sessions are committed as `tests/replay/newgame.rec` (boot, the title, a new character, into the game), `tests/replay/walk.rec` (the same, then walking, turning, looking up and down and a click in the 3D view), `tests/replay/sound.rec`, `soundfm.rec` and `soundmt.rec` with their `.cfg` files (the same way in with a Sound Blaster, an FM chip alone or a Roland MT-32, then fight mode, swings, walking and a minute of music), `items.rec` (handling things, the automap, a save and a restore), `talk.rec` (a conversation with Nystul) and `load.rec` (loading the items session's save from the main menu; replay it with `--stage DIR`, DIR holding that `SAVE1`). They hold only recorded inputs, no game data: replay one with `python3 tools/replay.py dos tests/replay/walk.rec OUT` and `python3 tools/replay.py port tests/replay/walk.rec OUT`, then `compare`, or run `python3 tools/replay.py check tests/replay/walk.rec OUT`.

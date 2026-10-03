@@ -1,0 +1,32 @@
+Third-party software in UW2Decomp and its release packages
+
+None of the libraries below is committed to the repository. The release packages (.github/workflows/release.yml, tools/package.py) contain the first group, each as a separate shared library, with its licence text in the package's licenses/ folder. The rest are used to build, test or write the code and are never shipped.
+
+SHIPPED IN THE RELEASE PACKAGES
+
+SDL3 3.4.16 (https://github.com/libsdl-org/SDL, tag release-3.4.16)
+The window, input and audio output. zlib licence. Copyright (C) 1997-2026 Sam Lantinga. Built from source by tools/setup-libs.sh (macOS and Linux packages) or taken from MSYS2's mingw-w64-clang-x86_64-sdl3 package (Windows).
+
+Nuked OPL3 (https://github.com/nukeykt/Nuked-OPL3, commit 765ec962e473aeb767e4cba74ffdc8f588ffbfe8)
+The emulated Yamaha OPL2 and OPL3 FM chips (Ad Lib, Sound Blaster, Pro Audio Spectrum). GNU Lesser General Public License, version 2.1 or later. Copyright (C) 2013-2020 Nuke.YKT. tools/setup-sound.sh fetches opl3.c and opl3.h unmodified and checks them by SHA-256; the release build compiles them alone into a shared library (libnukedopl3.dylib, libnukedopl3.so or nukedopl3.dll; tools/portbuild.py --release).
+
+libmt32emu 2.8.3 (munt, https://github.com/munt/munt, tag libmt32emu_2_8_3)
+The emulated Roland MT-32 and CM-32L. GNU Lesser General Public License, version 2.1 or later. Copyright (C) 2003-2026 Dean Beeler, Jerome Fisher, Sergey V. Mikayev. Built unmodified from source as a shared library by tools/setup-libs.sh.
+
+Windows packages only: the compiler's runtime from MSYS2's CLANG64 environment (libc++ and libunwind, Apache License 2.0 with LLVM Exceptions; winpthreads, from mingw-w64, MIT-style licences), whichever DLLs the program loads; tools/package.py copies their licence texts from their MSYS2 packages.
+
+HOW THE LGPL IS MET
+
+Nuked OPL3 and libmt32emu are dynamically linked, each a separate shared library in the package (in UW2.app/Contents/Frameworks on macOS, in lib/ on Linux, beside uw2port.exe on Windows), loaded by name. You may replace either with your own build of the same library, or of a modified version with the same interface: the program uses only the library's public functions (OPL3_Reset, OPL3_WriteReg and OPL3_GenerateStream for Nuked OPL3, and libmt32emu's C API through mt32emu.h). On macOS, re-sign the app ad hoc after replacing a library (codesign --force --deep --sign - UW2.app). Neither library is modified. Their complete source, at the versions above, is at the addresses above, and each release on GitHub also carries it as third-party-sources.tar.gz beside the packages. The program's own source is this repository at the release's tag. The licence texts are in each package's licenses/ folder.
+
+USED, NOT SHIPPED
+
+- John Miles' Audio Interface Library (AIL) 2.14 source, as mirrored at https://github.com/dah4k/AIL2 and https://github.com/Tronix286/AIL2. Released by its author on 26 May 2000 as "open-source freeware, usable by anyone for any purpose, commercial or otherwise, without restriction or limitation", in effect public domain. The port's sound drivers (src/port/sound) are written from it and checked against UW2's own driver files; src/sound/AIL.ASM is the game's copy of the AIL API.
+- emu2 (https://github.com/dmsc/emu2, GPL-2.0), DOSBox-X (https://dosbox-x.com, GPL-2.0), DOSBox Staging (GPL-2.0) and js-dos (https://js-dos.com, GPL-2.0, through the emulators npm package and dos-mcp, MIT): DOS emulators that run the Borland toolchain and the game for the build and the tests. emu2 is fetched and built by tools/setup-emu2.sh with a small patch (tools/emu2-date.patch, under emu2's licence); none of them is linked with this project's code.
+- Unicorn 2.1.4 (GPL-2.0) and iced-x86 1.21.0 (MIT), Python packages that the matching tools and tests use (tools/requirements.txt).
+- Borland Turbo C++ 1.01 and Turbo Assembler 2.0: the original toolchain, supplied by the user from their own disk images for the DOS build; never in the repository or a package.
+
+NAMES AND REFERENCES
+
+- The original function and variable names come from the FM Towns release of UW2, through the symbol list published in UWReverseEngineering (https://github.com/hankmorgan/UWReverseEngineering, the UW2 FM Towns folder), whose IDA listings are also the map's starting point.
+- Some source file names and function names come from System Shock's source code (Looking Glass, 1994), released by Night Dive Studios in 2018.

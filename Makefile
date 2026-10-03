@@ -11,10 +11,15 @@
 #   make setup-sound   fetch the port's OPL emulator, Nuked OPL3 (tools/setup-sound.sh)
 #   make setup-libs    build SDL3 and libmt32emu from source into tools/libs, where no package
 #                      has them (Linux; tools/setup-libs.sh)
+#   make setup-port    only what the native port needs, per OS (tools/setup-port.sh): no Borland
+#                      toolchain, DOS or game data
 #   make hooks         install the git pre-push hook that runs make test
 #   make port-check    compile the C for the host, compile only (docs/PORT.md, Milestone 1)
 #   make port          compile the C for the host and link it with the stubs: build/port/uw2port
 #   make port-debug    the same with -g and UBSan's -fsanitize=null: build/port-debug/uw2port
+#   make port-release  the build the release packages use: build/port-release/uw2port, with Nuked
+#                      OPL3 a shared library beside it (tools/portbuild.py --release)
+#   make package       package build/port-release for this OS into build/dist (tools/package.py)
 #   make test          check + port + routine fuzzing (quick) + every session against its golden
 #                      (docs/BUILDING.md, Testing); the pre-push hook runs it
 #   make test-full     check + both port builds + goldens regenerated from DOS (twice each) +
@@ -32,7 +37,8 @@ PY := $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 TC_DISKS ?=
 TASM_DISKS ?=
 
-.PHONY: game exact check check-all boot setup setup-emu2 setup-sound setup-libs hooks port-check port port-debug help \
+.PHONY: game exact check check-all boot setup setup-emu2 setup-sound setup-libs setup-port hooks port-check port port-debug \
+        port-release package help \
         test test-full verify golden fuzz coverage
 .DEFAULT_GOAL := game
 
@@ -80,6 +86,9 @@ setup-sound:
 setup-libs:
 	@sh tools/setup-libs.sh
 
+setup-port:
+	@sh tools/setup-port.sh
+
 hooks:
 	@sh tools/install-hooks.sh
 
@@ -91,6 +100,12 @@ port:
 
 port-debug:
 	@$(PY) tools/portbuild.py --debug
+
+port-release:
+	@$(PY) tools/portbuild.py --release $(PORT_ARCHS)
+
+package:
+	@$(PY) tools/package.py $(PACKAGE_ARGS)
 
 test:
 	@$(PY) tools/test.py fast

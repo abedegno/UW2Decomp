@@ -1,0 +1,185 @@
+# Release packages of the native port (docs/BUILDING.md, "Releases"): on a tag v*, build the port
+# on macOS (one universal app for arm64 and x86_64), Linux (x86-64) and Windows (x86-64, MSYS2
+# CLANG64), package each with tools/package.py, and attach the packages and the source of the
+# LGPL libraries to a DRAFT release, which the owner reviews and publishes by hand. Run by hand
+# (workflow_dispatch), it builds the packages as workflow artifacts and makes no release.
+# Only the sources are needed: no game data, no Borland toolchain and no secrets.
+name: release
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Homebrew packages
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+        run: brew install pkgconf ninja
+      - name: Cache the universal SDL3 and libmt32emu
+        uses: actions/cache@v4
+        with:
+          path: tools/libs
+          key: release-libs-macos-universal-${{ hashFiles('tools/setup-libs.sh') }}
+      - name: Build SDL3 and libmt32emu for arm64 and x86_64, fetch Nuked OPL3
+        env:
+          UW2_MACOS_ARCHS: "arm64;x86_64"
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
+        run: |
+          make setup-libs
+          make setup-sound
+      - name: Build
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
+        run: make port-release PORT_ARCHS="--arch arm64 --arch x86_64"
+      - name: Package
+        run: make package PACKAGE_ARGS=--strict
+      - name: Check the package
+        run: |
+          mkdir check && cd check && unzip -q ../build/dist/UW2-*-macos.zip
+          app=$(echo UW2-*-macos/UW2.app)
+          lipo -archs "$app/Contents/MacOS/uw2port" | grep -q x86_64
+          lipo -archs "$app/Contents/MacOS/uw2port" | grep -q arm64
+          codesign --verify --deep --strict "$app"
+          if otool -L "$app"/Contents/MacOS/uw2port "$app"/Contents/Frameworks/*.dylib | grep -E '/(opt|usr/local)/'; then exit 1; fi
+          "$app/Contents/MacOS/uw2port" --help
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: build/dist/UW2-*-macos.zip
+          if-no-files-found: error
+
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: System packages (the compiler, and the headers SDL3 needs for a window and sound)
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+            clang pkg-config cmake ninja-build libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev wayland-protocols libdecor-0-dev libegl-dev \
+            libgl-dev libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev >/dev/null
+      # not port.yml's cache: that SDL3 is built without windows
+      - name: Cache SDL3 and libmt32emu
+        uses: actions/cache@v4
+        with:
+          path: tools/libs
+          key: release-libs-linux-${{ runner.arch }}-${{ hashFiles('tools/setup-libs.sh') }}
+      - name: Build SDL3 and libmt32emu, fetch Nuked OPL3
+        run: |
+          make setup-libs
+          make setup-sound
+      - name: Build
+        run: make port-release
+      - name: Package
+        run: make package PACKAGE_ARGS=--strict
+      - name: Check the package
+        run: |
+          mkdir check && cd check && tar xzf ../build/dist/UW2-*-linux-*.tar.gz
+          cd UW2-*-linux-*
+          if ldd bin/uw2port | grep -E 'not found|tools/libs'; then exit 1; fi
+          ./uw2 --help
+      - name: The LGPL libraries' source
+        run: |
+          set -e
+          mkdir -p src-out/third-party-sources
+          cd src-out/third-party-sources
+          commit=$(sed -n 's/^commit=//p' ../../tools/setup-sound.sh)
+          tag=$(sed -n 's/^mt_tag=//p' ../../tools/setup-libs.sh)
+          curl -fsSL "https://github.com/nukeykt/Nuked-OPL3/archive/$commit.tar.gz" -o "Nuked-OPL3-$commit.tar.gz"
+          curl -fsSL "https://github.com/munt/munt/archive/refs/tags/$tag.tar.gz" -o "munt-$tag.tar.gz"
+          printf '%s\n' "The complete source of the LGPL libraries in the release packages, as built (unmodified):" \
+            "Nuked-OPL3-$commit.tar.gz: https://github.com/nukeykt/Nuked-OPL3 at commit $commit" \
+            "munt-$tag.tar.gz: https://github.com/munt/munt at tag $tag (libmt32emu, in its mt32emu directory)" \
+            "THIRD-PARTY-NOTICES in each package says how they are built and how to replace them." > README.txt
+          cd .. && tar czf ../build/dist/third-party-sources.tar.gz third-party-sources
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            build/dist/UW2-*-linux-*.tar.gz
+            build/dist/third-party-sources.tar.gz
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      # the scripts must keep their LF line ends for MSYS2's sh
+      - run: git config --global core.autocrlf false
+        shell: pwsh
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANG64
+          update: false
+          install: make curl git unzip
+          pacboy: clang:p pkgconf:p sdl3:p python:p cmake:p ninja:p
+      - name: Cache libmt32emu
+        uses: actions/cache@v4
+        with:
+          path: tools/libs
+          key: release-libs-windows-clang64-${{ hashFiles('tools/setup-libs.sh') }}
+      - name: Build libmt32emu (MSYS2 has no package of it), fetch Nuked OPL3
+        run: |
+          UW2_LIBS=mt32emu make setup-libs
+          make setup-sound
+      - name: Build
+        run: make PY=python port-release
+      - name: Package
+        run: make PY=python package PACKAGE_ARGS=--strict
+      - name: Check the package (with only Windows's own directories on the PATH)
+        run: |
+          mkdir check && cd check && unzip -q ../build/dist/UW2-*-windows-x86_64.zip
+          cd UW2-*-windows-x86_64
+          PATH=/c/Windows/system32:/c/Windows ./uw2port.exe --help
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: build/dist/UW2-*-windows-x86_64.zip
+          if-no-files-found: error
+
+  draft:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [macos, linux, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - run: ls -l dist
+      # a draft only: nothing is published until the owner publishes it on GitHub
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/UW2-*-macos.zip
+            dist/UW2-*-linux-*.tar.gz
+            dist/UW2-*-windows-x86_64.zip
+            dist/third-party-sources.tar.gz

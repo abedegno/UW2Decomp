@@ -120,4 +120,16 @@ int plat_write_png(const char *path, const uint8_t *pixels, int width, int heigh
                    const uint8_t rgb6[768]);
 int plat_write_png_rgb(const char *path, const uint8_t *rgb, int width, int height);
 
+/* Dialogs, for the user with no terminal (a program started from the Finder or Explorer).
+   plat_message shows a message box (and always writes the text to the standard error);
+   error 1 marks it as an error. plat_choose_folder shows text with the buttons "Choose
+   folder..." and "Quit" and then the host's folder picker: 0 with the folder chosen in out,
+   or -1 if the user quit or the host has no dialogs. Both are for before plat_run, on the
+   main thread. */
+void plat_message(int error, const char *title, const char *text);
+int plat_choose_folder(const char *title, const char *text, char *out, size_t outsz);
+
+/* The directory the program's executable is in, with a trailing separator, or NULL. */
+const char *plat_base_dir(void);
+
 #endif

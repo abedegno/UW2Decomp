@@ -171,6 +171,27 @@ static void relocate(const unsigned char *exe)
     }
 }
 
+/* Whether path is the GOG release's UW2.EXE, without a message: 0 if it is, -1 if it cannot be
+   read, -2 if its size is wrong, -3 if its CRC-32 is (sys/gamedir.c, looking for the game). */
+int port_check_exe(const char *path)
+{
+    FILE *f = fopen(path, "rb");
+    unsigned char *exe;
+    long n;
+    int r;
+    if (!f) return -1;
+    fseek(f, 0, SEEK_END);
+    n = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    if (n != EXE_SIZE) { fclose(f); return -2; }
+    exe = malloc((size_t)n);
+    if (!exe || fread(exe, 1, (size_t)n, f) != (size_t)n) { fclose(f); free(exe); return -1; }
+    fclose(f);
+    r = crc32(exe, (size_t)n) == EXE_CRC ? 0 : -3;
+    free(exe);
+    return r;
+}
+
 int port_load_exe(const char *path)
 {
     FILE *f = fopen(path, "rb");

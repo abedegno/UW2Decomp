@@ -8,6 +8,13 @@ link them into build/port/uw2port.
                                         -fsanitize=null, in build/port-debug/uw2port; a null
                                         dereference is reported with its file and line and the
                                         program goes on, so a replay lists every one it meets
+    python3 tools/portbuild.py --release  the build the release packages are made from (make
+                                        port-release), in build/port-release: as make port, but
+                                        Nuked OPL3 is a shared library beside the program (so a
+                                        user can replace it, as its LGPL asks) and the program
+                                        looks for its libraries beside itself and in ../lib and
+                                        ../Frameworks; --arch A (repeatable, macOS) builds for
+                                        each architecture A, a universal binary
     python3 tools/portbuild.py --coverage  clang's source-based coverage, in
                                         build/port-cov/uw2port: each run writes a .profraw
                                         (LLVM_PROFILE_FILE), for llvm-profdata and llvm-cov, to
@@ -22,7 +29,8 @@ untouched.
 The sound hardware's emulators are not in the repository (docs/BUILDING.md, "Sound"): Nuked
 OPL3 is compiled from tools/nuked-opl3 when tools/setup-sound.sh has fetched it, and libmt32emu
 is linked when pkg-config finds it (brew install mt32emu); without either the port builds and
-that chip is silent.
+that chip is silent. Libraries that tools/setup-libs.sh built into tools/libs are found without
+setting PKG_CONFIG_PATH, and on Linux the program is linked to find them there when run.
 """
 import os, re, sys, argparse, subprocess
 from concurrent.futures import ThreadPoolExecutor
@@ -52,8 +60,22 @@ OPT = ['-O2']
 BACKEND = 'sdl3'
 
 
+LIBS = os.path.join(root, 'tools', 'libs')
+RELEASE = False
+ARCHS = []      # -arch flags for a universal macOS build
+
+
+def pkg_env():
+    """The environment for pkg-config: tools/libs (tools/setup-libs.sh) searched first."""
+    env = dict(os.environ)
+    pc = os.path.join(LIBS, 'lib', 'pkgconfig')
+    if os.path.isdir(pc):
+        env['PKG_CONFIG_PATH'] = pc + (os.pathsep + env['PKG_CONFIG_PATH'] if env.get('PKG_CONFIG_PATH') else '')
+    return env
+
+
 def pkg_config(*args):
-    r = subprocess.run(['pkg-config'] + list(args) + [BACKEND], capture_output=True, text=True)
+    r = subprocess.run(['pkg-config'] + list(args) + [BACKEND], capture_output=True, text=True, env=pkg_env())
     if r.returncode:
         raise SystemExit(f'portbuild.py: pkg-config cannot find {BACKEND} (install SDL3: brew install sdl3, or make setup-libs on Linux)')
     return r.stdout.split()
@@ -84,7 +106,7 @@ def sound_deps():
     if os.path.exists(os.path.join(NUKED, 'opl3.c')):
         cflags += ['-DUW2_HAVE_OPL', '-I', NUKED]
         extra.append(os.path.join(NUKED, 'opl3.c'))
-    r = subprocess.run(['pkg-config', '--cflags', '--libs', 'mt32emu'], capture_output=True, text=True)
+    r = subprocess.run(['pkg-config', '--cflags', '--libs', 'mt32emu'], capture_output=True, text=True, env=pkg_env())
     if r.returncode == 0:
         flags = r.stdout.split()
         cflags += ['-DUW2_HAVE_MT32EMU'] + [f for f in flags if f.startswith('-I')]
@@ -92,11 +114,26 @@ def sound_deps():
     return cflags, libs, extra
 
 
+def opl_library_name():
+    """The release build's shared Nuked OPL3, by the host's convention."""
+    if sys.platform == 'darwin': return 'libnukedopl3.dylib'
+    if os.name == 'nt' or sys.platform in ('msys', 'cygwin') or os.environ.get('MSYSTEM'): return 'nukedopl3.dll'
+    return 'libnukedopl3.so'
+
+
 def compile_port(cc, path, sound_cflags=()):
     if path.startswith(NUKED + os.sep):     # third-party: its own flags, optimised
+        if RELEASE:                         # a shared library of its own, beside the program
+            lib = os.path.join(OUT, opl_library_name())
+            cmd = [cc] + ARCHS + ['-x', 'c', '-std=c99', '-O2', '-w', '-shared', '-o', lib, path]
+            if lib.endswith('.dylib'): cmd += ['-dynamiclib', '-install_name', '@rpath/' + os.path.basename(lib)]
+            elif lib.endswith('.so'): cmd += ['-fPIC', '-Wl,-soname,' + os.path.basename(lib)]
+            else: cmd += ['-Wl,--out-implib,' + os.path.join(OUT, 'libnukedopl3.dll.a')]
+            r = subprocess.run(cmd, capture_output=True, text=True, cwd=root)
+            return path, r.returncode, r.stderr if r.returncode else '', 'opl3-shared' if r.returncode == 0 else None
         obj = os.path.join(OUT, 'deps', os.path.basename(path)[:-2] + '.o')
         os.makedirs(os.path.dirname(obj), exist_ok=True)
-        r = subprocess.run([cc, '-x', 'c', '-std=c99', '-O2', '-w', '-c', '-o', obj, path],
+        r = subprocess.run([cc] + ARCHS + ['-x', 'c', '-std=c99', '-O2', '-w', '-c', '-o', obj, path],
                            capture_output=True, text=True, cwd=root)
         return path, r.returncode, r.stderr if r.returncode else '', obj if r.returncode == 0 else None
     obj = os.path.join(OUT, 'port', os.path.relpath(path, PORT).replace(os.sep, '_')[:-2] + '.o')
@@ -104,7 +141,7 @@ def compile_port(cc, path, sound_cflags=()):
     extra = pkg_config('--cflags') if is_backend(path) else []
     if path.endswith(os.path.join('sound', 'audio.c')): extra = list(sound_cflags)
     opt = OPT if any(path.startswith(d) for d in OPTIMISED) else []
-    r = subprocess.run([cc] + opt + PORT_FLAGS + extra + ['-c', '-o', obj, path], capture_output=True, text=True, cwd=root)
+    r = subprocess.run([cc] + ARCHS + opt + PORT_FLAGS + extra + ['-c', '-o', obj, path], capture_output=True, text=True, cwd=root)
     return path, r.returncode, r.stderr, obj if r.returncode == 0 else None
 
 
@@ -114,8 +151,10 @@ def main(argv):
     ap.add_argument('--run', action='store_true')
     ap.add_argument('--debug', action='store_true')
     ap.add_argument('--coverage', action='store_true')
+    ap.add_argument('--release', action='store_true')
+    ap.add_argument('--arch', action='append', default=[])
     a = ap.parse_args(argv)
-    global OUT, EXE
+    global OUT, EXE, RELEASE, ARCHS
     link_extra = []
     global OPT
     if a.debug or a.coverage: OPT = []
@@ -135,6 +174,14 @@ def main(argv):
         portcheck.FLAGS = portcheck.FLAGS + cov
         PORT_FLAGS.extend(cov)
         link_extra = ['-fprofile-instr-generate']
+    if a.release:
+        RELEASE = True
+        OUT = os.path.join(root, 'build', 'port-release')
+        EXE = os.path.join(OUT, 'uw2port')
+        portcheck.OUT = OUT
+    if a.arch:
+        ARCHS = [f for x in a.arch for f in ('-arch', x)]
+        portcheck.FLAGS = portcheck.FLAGS + ARCHS
     os.makedirs(OUT, exist_ok=True)
     game = [p for p in sources.all_sources() if p.upper().endswith('.C') and not portcheck.dos_only(p)]
     game += sources.replay_sources()     # the record and replay hooks' code, shared with the replay DOS build
@@ -146,7 +193,7 @@ def main(argv):
     for p, e in bad:
         print(f'{os.path.relpath(p, root)}: does not compile\n' + '\n'.join(l for l in e.split('\n') if 'error' in l)[:2000])
     if bad: return 1
-    objs = [o for p, rc, e, o in gres + pres]
+    objs = [o for p, rc, e, o in gres + pres if o != 'opl3-shared']
     print(f'compiled {len(gres)} game sources and {len(pres)} port sources')
     warn = [(p, e) for p, rc, e, o in pres if o and 'warning' in e]
     for p, e in warn:
@@ -156,7 +203,17 @@ def main(argv):
     # the sound drivers' threads: in the C library on macOS and on Linux's glibc 2.34 and later,
     # in winpthreads on Windows (MinGW), which -pthread links
     threads = [] if sys.platform == 'darwin' else ['-pthread']
-    r = subprocess.run([a.cc, '-o', EXE] + link_extra + objs + pkg_config('--libs') + snd_libs + threads,
+    rpath = []
+    if RELEASE:
+        # the libraries beside the program, or in the package's lib (Linux) or Frameworks (macOS)
+        if '-DUW2_HAVE_OPL' in snd_cflags: snd_libs = ['-L', OUT, '-lnukedopl3'] + snd_libs
+        if sys.platform == 'darwin':
+            rpath = ['-Wl,-rpath,@executable_path', '-Wl,-rpath,@executable_path/../Frameworks', '-Wl,-headerpad_max_install_names']
+        elif sys.platform.startswith('linux'):
+            rpath = ['-Wl,-rpath,$ORIGIN', '-Wl,-rpath,$ORIGIN/../lib']
+    elif sys.platform.startswith('linux') and any(f.startswith('-L' + LIBS) for f in pkg_config('--libs') + snd_libs):
+        rpath = ['-Wl,-rpath,' + os.path.join(LIBS, 'lib')]     # runs without LD_LIBRARY_PATH
+    r = subprocess.run([a.cc, '-o', EXE] + ARCHS + link_extra + objs + pkg_config('--libs') + snd_libs + threads + rpath,
                        capture_output=True, text=True, cwd=root)
     if not os.path.exists(EXE) and os.path.exists(EXE + '.exe'): EXE += '.exe'     # Windows
     if r.returncode:

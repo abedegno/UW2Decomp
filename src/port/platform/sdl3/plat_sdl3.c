@@ -336,3 +336,59 @@ int plat_run(const PlatConfig *cfg, const PlatHooks *h, int (*game)(void *), voi
     SDL_Quit();
     return game_status;
 }
+
+/* Dialogs (plat.h): SDL's message box and folder picker, before plat_run. */
+void plat_message(int error, const char *title, const char *text)
+{
+    fprintf(stderr, "uw2port: %s\n%s\n", title, text);
+    SDL_ShowSimpleMessageBox(error ? SDL_MESSAGEBOX_ERROR : SDL_MESSAGEBOX_INFORMATION, title, text, NULL);
+}
+
+static struct { SDL_AtomicInt done; char path[1024]; int ok; } picked;
+
+static void SDLCALL folder_cb(void *ud, const char * const *list, int filter)
+{
+    (void)ud; (void)filter;
+    picked.ok = 0;
+    if (list && list[0] && strlen(list[0]) < sizeof picked.path) {
+        strcpy(picked.path, list[0]);
+        picked.ok = 1;
+    } else if (!list) {
+        fprintf(stderr, "uw2port: no folder dialog: %s\n", SDL_GetError());
+    }
+    SDL_SetAtomicInt(&picked.done, 1);
+}
+
+int plat_choose_folder(const char *title, const char *text, char *out, size_t outsz)
+{
+    const SDL_MessageBoxButtonData buttons[] = {
+        { SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 0, "Quit" },
+        { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "Choose folder..." },
+    };
+    SDL_MessageBoxData box;
+    int id = 0;
+    fprintf(stderr, "uw2port: %s\n%s\n", title, text);
+    memset(&box, 0, sizeof box);
+    box.flags = SDL_MESSAGEBOX_INFORMATION;
+    box.title = title;
+    box.message = text;
+    box.numbuttons = 2;
+    box.buttons = buttons;
+    if (!SDL_ShowMessageBox(&box, &id) || id != 1) return -1;
+    if (!SDL_Init(SDL_INIT_VIDEO)) return -1;
+    SDL_SetAtomicInt(&picked.done, 0);
+    SDL_ShowOpenFolderDialog(folder_cb, NULL, NULL, NULL, false);
+    while (!SDL_GetAtomicInt(&picked.done)) {
+        SDL_Event e;
+        SDL_WaitEventTimeout(&e, 50);
+    }
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
+    if (!picked.ok || strlen(picked.path) >= outsz) return -1;
+    strcpy(out, picked.path);
+    return 0;
+}
+
+const char *plat_base_dir(void)
+{
+    return SDL_GetBasePath();
+}

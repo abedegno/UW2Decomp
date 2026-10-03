@@ -3,7 +3,7 @@
 # tools/nuked-opl3 (ignored by git) at a pinned commit, and check the two files by SHA-256. The
 # port's OPL music backend (src/port/sound/opl.c) compiles opl3.c from there; without it the
 # port builds with no OPL chip and plays no FM music (docs/BUILDING.md, "Sound"). Nothing of it
-# is committed: the repository has no license yet and vendors no third-party source.
+# is committed: the repository vendors no third-party source (THIRD-PARTY-NOTICES).
 # Needs curl. Safe to run again.   usage: tools/setup-sound.sh   (make setup-sound)
 #
 # The MT-32 backend uses libmt32emu (LGPL-2.1-or-later): from Homebrew on macOS (brew install
@@ -23,6 +23,7 @@ if ! ok; then
   done
   ok || { echo "nuked-opl3: the files fetched do not match their pinned SHA-256"; exit 1; }
 fi
+pc="$root/tools/libs/lib/pkgconfig"; [ -d "$pc" ] && PKG_CONFIG_PATH="$pc${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" && export PKG_CONFIG_PATH
 echo "nuked-opl3: tools/nuked-opl3 (nukeykt/Nuked-OPL3 at ${commit%"${commit#???????}"}, LGPL-2.1)"
 if pkg-config --exists mt32emu 2>/dev/null; then
   echo "mt32emu: $(pkg-config --modversion mt32emu) (LGPL-2.1-or-later), the MT-32 backend is built"
