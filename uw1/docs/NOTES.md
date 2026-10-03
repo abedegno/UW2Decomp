@@ -59,3 +59,13 @@ Things agents found that belong to the shared headers or the map, to settle in t
 - Externs new to UW1: Bullfrog_ovr107_EA1 (no UW2 relative), cast_trap_spell = ovr153_110A, do_teleport = ovr107_949, do_mstone = ovr143_15F4, DetectedTrap = ovr143_1829, RemoveTrap (j_DefuseTrap stub), LookAt = ovr122_0, creature_obj_init = ovr101_5E (stub101_2A), pretty_panelagain = seg036_1A25, print_path_to and mpos (ovr154), home_cam and attach_eye (ovr134), clearobj (ovr109).
 - DGROUP ownership: DS:234-235 COLCYCLE; COMBAT's _DATA from 236; SPELLS owns inanmMapX/Y at DS:3636 (provisional; 3630-3635 unreferenced); DS:9D9-9DF after SPELLS' sq_type belong to the next file. UW1's do_miss stores the attacker's item into the global fromwho (UW2: a local).
 - SPELLS.C and PLAYTIME.C are resident in UW1 but compile with -Y (UW2's overlay opts) and match.
+
+## From wave 3 (B, conversation and events)
+
+- Renamed for the stub order: ovr107_EA1 `Bullfrog_ovr107_EA1` (SPELLS.C's extern) → `work_bullfrog_tiles` (key 863; the EXE has it 19th). WORLDEV.C's other new names (emerald_trap, talking_door_trap, do_arial_talking) were chosen for the stub order too.
+- A real UW1 bug: BABL.C's bab_free checks the tag against the block's header rather than its data, so it never frees anything.
+- GRDB.C (seg045) compiles with `-mm -Y -d`, no -1, -G or -O (the bytes show `mov ax,0FFECh; push ax`, `pop cx`, `mov sp,bp`, `jmp $+2`). Its table hides grdb_size (0xB8), gr_getpre (0x221), gr_getlab (0x240), and stops short of gr_freelab (0x332..0x37C); its reset_db row is gr_tostrt (kin false hit).
+- Declarations: ovr091 (archive): `char ovr091_0(char far *arc, char *name)`, `char ovr091_153(char far *arc)`, `int ovr091_61A(char far *arc, int block, void far *buf)`, `int ovr091_798(char *file, int block)`. ui: seg039_3495_85A/89D (UW2's seg039_3452_857/89A). gfx: `seg015_1F9B_25A(int x, int y, int color)` plots a pixel. inv: `char EncumCheck(obj)`, `char invRemoveObject(obj, int)`. conv: `char move_convpic(...)`; UseTradeSlot, total_offering, nothing_there take signed `char *` selections; nothing_there returns char. event: `char find_good_x_and_y(...)`, `char death_check(obj, char mode)`. Other: `seg024_24DC_D0A(obj, int)` (resident wrapper calling LookAt), `ovr143_48D(int)`, `seg014_1DC5_15C5(void)`, `extern int16 dseg_5c99_720C[]`.
+- Player record: 0x29 lore, 0x30 charisma, 0x33 appraise, 0x36 maxhealth, 0x3D level; 0x64 body bits 2-4. Items: coin 0xA1, fish 0xB6.
+- Inferred names (not proven): change_music_maybe (seg014 160D), update_sprites (0000:0330), copy_visible_to_hidden (seg003_5350), uhline (5418), grPageFlip (4F2A).
+- Compiler: without -Z, a plain int local takes DI when one explicit register takes SI (`int len; register int id;`).

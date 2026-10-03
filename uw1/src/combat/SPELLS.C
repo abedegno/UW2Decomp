@@ -84,7 +84,7 @@ void far gronk_whoami(int whoami, char all, NEARPTR arg,
 /* UW1: no gtarg argument; the goal's target is always 1. */
 char far hit_critter_goal(char goal, char attitude, struct Object far *npc, int x, int y);
 /* UW1's own routines, at the addresses of their stubs (the listing's names). */
-void far Bullfrog_ovr107_EA1(int a, int b, int c);
+void far work_bullfrog_tiles(int a, int b, int c);
 int far cast_trap_spell(int x, int y, int which);
 void far print_monster(unsigned char dir, unsigned char n);
 char far sp_meteor(int x, int y, struct Object far *target, struct Tile far *tile,
@@ -122,7 +122,7 @@ void far cast(unsigned char spell, struct Object far *who, struct Object far *ta
    objdata) is tested for anti-magic at inanmMapX, inanmMapY, a critter at its own square,
    and nothing works on level 9. Bits 6 and 7 of sub are flags for the active spell classes
    and the area spell's target mode. Levitate and Fly (class 1, minors 3 and 5) give a
-   little upward bounce. Class 13 minor 3 is the bullfrog (Bullfrog_ovr107_EA1), minor 5
+   little upward bounce. Class 13 minor 3 is the bullfrog (work_bullfrog_tiles), minor 5
    makes the player hallucinate (string 0xE4). Returns 0 when the spell did not take:
    anti-magic, an active spell the player could not start, or a heal with no target. */
 char far do_spell(unsigned char cls, unsigned char sub, struct Object far *who,
@@ -183,7 +183,7 @@ char far do_spell(unsigned char cls, unsigned char sub, struct Object far *who,
     case 13:
         switch (sub) {
         case 3:
-            Bullfrog_ovr107_EA1(4, 0, 0);
+            work_bullfrog_tiles(4, 0, 0);
             break;
         case 5:
             game_sprint(0xE4);  /* 'Your vision distorts and you feel light headed.' */
