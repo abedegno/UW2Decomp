@@ -116,6 +116,19 @@ void urectangle(int a, int b, int c, int d)
     seg003_0272_342E((int16_t)a, (int16_t)b, (int16_t)c, (int16_t)d);
 }
 
+/* A bitmap's far pointer split as the DOS caller made it. fbshow's callers pass pictures they
+   made with MK_FP at a paragraph or a page (GRSPIC.C's seg009_7 and cFrmtoRaw, PANELS.C's
+   weapon art), plus the header's few bytes; the paragraph map alone would give offsets from the
+   EMS frame's or cmpbuf's own segment. seg003 keeps the offset in its row records, so it must
+   be DOS's. */
+static void bitmap_fp(const void *bm, uint16_t *off, uint16_t *seg)
+{
+    unsigned s, o;
+    port_fp_split_recent(bm, &s, &o);
+    *off = (uint16_t)o;
+    *seg = (uint16_t)s;
+}
+
 /* show: AX, BX the position, DI:SI the bitmap's offset and segment, BP the height, CX the
    width, 0DC6 and 0DC8 the offsets into the bitmap. The bitmap is a far pointer, so it goes
    through the paragraph map as DS:SI did. */
@@ -211,9 +224,11 @@ void seg003_0272_5025(int off, int x, int y, int w, int h, int xo, int yo)
 
 void fbshow(void *bm, int x, int y, int w, int h)
 {
+    uint16_t o, sg;
+    bitmap_fp(bm, &o, &sg);
     SETW(0x0DC6, 0);
     SETW(0x0DC8, 0);
-    seg003_0272_2214((int16_t)x, (int16_t)y, (uint16_t)FP_OFF(bm), (uint16_t)FP_SEG(bm), (int16_t)w, (int16_t)h);
+    seg003_0272_2214((int16_t)x, (int16_t)y, o, sg, (int16_t)w, (int16_t)h);
 }
 
 void seg003_0272_50E7(int ax, int dx, int bx, int cx)

@@ -89,14 +89,38 @@ __asm__(
     ".p2align 4\n"
 );
 
+/* The code segments seg003 (the graphics library, 0085:0000) to seg004 (the renderer, 065C:FFFF)
+   as one block, as DOS loaded them (the two segments' windows overlap: seg003 reads seg004's
+   bytes at es:6D20h). The translated assembly modules keep data in their code segments, and
+   patch their own immediates, so the bytes are here and the code reads and writes them
+   (x86/asmrt.h). The names the C reaches are labels inside it: cXfer (SCALEBM.ASM's XFER.DAT
+   tables, 0085:0E73), uncmp_pal (EXPAND.ASM's, 065C:0000), PGCACHE.ASM's 16 bytes at
+   065C:6D20 and lightabs (065C:6D3E, to the segment's end and on: a shade row from 16 up
+   reads what follows it in DOS). */
+#define CODE_FIRST 0x00850u
+#define CODE_SIZE  (0x065C0u - CODE_FIRST + 0x10010u)
+#ifdef __APPLE__
+#define HEREC "Lport_code_block"
+#else
+#define HEREC ".Lport_code_block"
+#endif
+#define ATC(n, off) ".globl " S(n) "\n" ALT(n) ".org " HEREC " + " #off "\n" S(n) ":\n"
+__asm__(
+    SECTION
+    ".p2align 4\n"
+    ".globl " S(port_code_block) "\n"
+    S(port_code_block) ":\n" HEREC ":\n"
+    ATC(cXfer, 0xE73)                           /* 0085:0E73 */
+    ATC(uncmp_pal, 0x5D70)                      /* 065C:0000 */
+    ATC(seg004_0849_6D20, 0xCA90)               /* 065C:6D20 */
+    ATC(lightabs, 0xCAAE)                       /* 065C:6D3E */
+    ".org " HEREC " + 0x15D80\n"
+    ".p2align 4\n"
+);
+extern unsigned char port_code_block[];
+
 extern unsigned char port_far_block[];
 unsigned char dseg062_62a6[DSEG062_62A6_SIZE];
-/* PGCACHE.ASM's lightabs, the 16 distance-shading rows of 256 colours, in seg004's code at
-   065C:6D3E; with the rest of seg004 after it, which a shade row from 16 up reads in DOS
-   (the dither in GRENTRY.ASM's smooth spans can reach row 16) */
-unsigned char lightabs[0x10000 - 0x6D3E];
-/* PGCACHE.ASM's 16 bytes at 065C:6D20, whose first is the smooth spans' base colour */
-unsigned char seg004_0849_6D20[0x1E];
 unsigned char port_dgroup_image[0x10000];
 
 /* The DOS segments inside the block, for the paragraph map. */
@@ -136,6 +160,7 @@ static void relocate(const unsigned char *exe)
         unsigned char *w = NULL;
         unsigned v;
         if (lin >= FAR_FIRST && lin + 1 < FAR_END) w = port_far_block + (lin - FAR_FIRST);
+        else if (lin >= CODE_FIRST && lin + 1 < CODE_FIRST + CODE_SIZE) w = port_code_block + (lin - CODE_FIRST);
         else if (lin >= FD71_SEG * 16u && lin + 1 < FD71_SEG * 16u + DSEG062_62A6_SIZE) w = dseg062_62a6 + (lin - FD71_SEG * 16u);
         else if (lin >= DGROUP_SEG * 16u && lin + 1 < DGROUP_SEG * 16u + sizeof port_dgroup_image)
             w = port_dgroup_image + (lin - DGROUP_SEG * 16u);
@@ -173,12 +198,13 @@ int port_load_exe(const char *path)
     hdr = (unsigned)(exe[8] | exe[9] << 8) * 16;
     memcpy(port_far_block, exe + hdr + FAR_FIRST, FAR_SIZE);
     memcpy(dseg062_62a6, exe + hdr + FD71_SEG * 16, DSEG062_62A6_SIZE);
-    memcpy(lightabs, exe + hdr + 0x65C * 16 + 0x6D3E, sizeof lightabs);
+    memcpy(port_code_block, exe + hdr + CODE_FIRST, CODE_SIZE);
     memcpy(port_dgroup_image, exe + hdr + DGROUP_SEG * 16, sizeof port_dgroup_image);
     relocate(exe);
     free(exe);
     for (i = 0; i < sizeof segs / sizeof segs[0]; i++)
         pm_add(segs[i].name, port_far_block + (segs[i].lin - FAR_FIRST), segs[i].size, segs[i].seg + PORT_LOAD_SEG);
     pm_add("FD71 dseg062_62a6", dseg062_62a6, DSEG062_62A6_SIZE, FD71_SEG + PORT_LOAD_SEG);
+    pm_add("seg003-seg004 code", port_code_block, CODE_SIZE, (CODE_FIRST >> 4) + PORT_LOAD_SEG);
     return 0;
 }

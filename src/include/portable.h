@@ -208,6 +208,18 @@ void *port_file_records_end(const void *q);
 #define STACK_JUNK(v) = (v)
 #endif
 
+/* RENDER_TAG(o): DRAWOBJ.C is about to write the sprite opcode (do_uwobj or do_uwcrit) that
+   draws object o, at dbptr. The port records which object it is, so that its per-object
+   sprite hook (src/port/3d/render.h) can name the object the renderer draws; nothing in DOS,
+   so the DOS bytes are the same. Written as a statement, `RENDER_TAG(o);`, which is an empty
+   statement under Turbo C. */
+#ifdef __TURBOC__
+#define RENDER_TAG(o)
+#else
+void port_render_tag(const void *object, const void *db);
+#define RENDER_TAG(o) port_render_tag((const void *)(o), (const void *)dbptr)
+#endif
+
 /* HOST_LAYOUT_BEGIN and HOST_LAYOUT_END, around a struct that holds pointers. The port packs
    every struct as Turbo C does (src/port/compat.h), so that file records and the structs laid
    over buffers keep their DOS layout; a struct with pointer fields cannot keep it, since a

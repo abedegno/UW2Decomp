@@ -66,6 +66,17 @@ SESSIONS = {
     'newgame': ['w:14000', 'k:Escape', 'w:2500', 'k:Escape', 'w:3500', 'k:Enter', 'w:4000'] +
                ['k:Enter', 'w:2000'] * 8 + ['t:Avatar', 'w:1000', 'k:Enter', 'w:2000', 'k:Enter',
                'w:4000', 's:ingame1', 'w:6000', 's:ingame2', 'w:6000'],
+    # newgame's way into the game, then about forty seconds in the 3D view: walk forward
+    # (w held), turn left and right (a, d), look up and down and level again (1, 3, 2), step
+    # back (s), slide (z, c) and click in the view, so that frames from many positions, a
+    # pitched view and a pick frame are compared
+    'walk': ['w:14000', 'k:Escape', 'w:2500', 'k:Escape', 'w:3500', 'k:Enter', 'w:4000'] +
+            ['k:Enter', 'w:2000'] * 8 + ['t:Avatar', 'w:1000', 'k:Enter', 'w:2000', 'k:Enter',
+            'w:6000', 's:ingame1', 'h:w,1200', 'w:800', 'h:a,700', 'w:600', 'h:w,1500', 'w:600',
+            'h:d,1400', 'w:600', 'k:1', 'w:800', 'k:1', 'w:800', 's:lookup', 'k:3', 'w:600', 'k:3',
+            'w:600', 'k:3', 'w:800', 's:lookdown', 'k:2', 'w:800', 'h:s,600', 'w:600', 'h:z,600',
+            'w:600', 'h:c,600', 'w:600', 'h:d,900', 'w:600', 'h:w,2000', 'w:800', 's:ingame2',
+            'c:left,150', 'w:2000', 'h:a,1200', 'w:600', 'h:w,1500', 'w:3000', 's:ingame3'],
 }
 
 

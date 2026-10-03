@@ -4,7 +4,8 @@
 // dos-mcp, as tools/rungame.mjs runs the game. With --replay, FILE goes into the game's
 // directory as REPLAY.IN and the build replays it; otherwise the build records, and the steps
 // drive the session: w:MS wait, k:KEY[,KEY...] keys (dos-mcp's names, 400 ms apart),
-// t:TEXT typed text, s:NAME a screenshot OUTDIR/NAME.png, m:DX,DY a relative mouse move,
+// t:TEXT typed text, h:KEY,MS a key held down MS milliseconds, s:NAME a screenshot
+// OUTDIR/NAME.png, m:DX,DY a relative mouse move,
 // c:BUTTON,MS a click held MS milliseconds, M a corner slam (the pointer to the top left).
 // A recording ends with F12, which the build takes as its stop key; replaydos sends it after
 // the last step.
@@ -51,8 +52,9 @@ async function tryRead(name) {
   try { return await bounded(be.fsRead(name), 20000, `reading ${name}`); } catch (e) { if (/no answer/.test(e.message)) throw e; return null; }
 }
 try {
-  // UWRPCK (hex): the replay build's periodic dump interval in clock ticks (src/replay/REPLAY.C)
-  const env = ["UWRPCK", "UWRPTRACE"].filter(k => process.env[k]).map(k => `set ${k}=${process.env[k]}`);
+  // UWRPCK (hex): the replay build's periodic dump interval in clock ticks, UWRPFB: the 3D
+  // frame buffer in every dump (src/replay/REPLAY.C)
+  const env = ["UWRPCK", "UWRPTRACE", "UWRPFB"].filter(k => process.env[k]).map(k => `set ${k}=${process.env[k]}`);
   await be.loadBundle({ source: stage, autoexec: [...env, "UW2.EXE", "echo done > DONE.TXT"] });
   log(replay ? `replaying ${replay}` : "recording");
   for (const st of steps) {
@@ -60,6 +62,10 @@ try {
     if (op === "w") await be.wait(Number(arg));
     else if (op === "k") { for (const k of arg.split(",")) { await be.sendKeySequence([k]); await be.wait(400); } }
     else if (op === "t") await be.sendKeys(arg, 60);
+    else if (op === "h") {
+      const [k, ms] = arg.split(",");
+      await be.page.keyboard.down(k); await be.wait(Number(ms)); await be.page.keyboard.up(k); await be.wait(200);
+    }
     else if (op === "s") { const r = await be.screenshot("png"); writeFileSync(join(out, `${arg}.png`), r.bytes); log("shot", arg); }
     else if (op === "m") { const [dx, dy] = arg.split(",").map(Number); await be.moveMouseRelative(dx, dy); await be.wait(200); }
     else if (op === "M") { await be.moveMouseRelative(-4000, -4000); await be.wait(200); }

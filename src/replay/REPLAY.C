@@ -60,6 +60,9 @@
      NULL  DS:0..30h, the C0 null-pointer checksum's result (word, 0 when intact), and the
            interrupt vector table (400h); the port's are its stand-ins (port_null_near,
            port_null_far), so tools/replay.py checks this section in each build alone
+     FBUF  with UWRPFB set, once a level is in: the 3D view's frame buffer, stdat's first
+           69D6h bytes, in every dump (the periodic ones too), so that with a short UWRPCK
+           interval every 3D frame is compared, not only those on the screen at an input
      and in a full dump (a CHECKPOINT, a key, a change of buttons, the end):
      GFX   seg003's data, seg_370D, 370D:0000..5E7F
      PAL   the DAC, 768 six-bit values
@@ -142,6 +145,7 @@ static uint32 t_now;                    /* the clock the game last read */
 static uint32 t_last;                   /* TIME: the last run's clock, for the deltas */
 static uint32 last_ck_time;
 static uint32 ck_mask = ~(uint32)0x3FF;   /* periodic dumps every 400h ticks; UWRPCK=n (hex) for n */
+static int dump_fb;                        /* UWRPFB: every dump holds the 3D frame buffer */
 static uint32 calls[NSTREAMS];
 /* UWRPTRACE=lo,hi (hex clock values): every hook call while the clock is in [lo, hi) goes to
    TRACE.OUT as a line: the call count, the stream, the value, and in DOS the caller's return
@@ -356,6 +360,7 @@ static void rp_start(void)
     }
     dump_fd = open("STATE.OUT", O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0x180);
     if (getenv("UWRPCK")) ck_mask = ~(strtoul(getenv("UWRPCK"), 0, 16) - 1);
+    if (getenv("UWRPFB")) dump_fb = 1;
     if (getenv("UWRPTRACE")) {
         char *e = getenv("UWRPTRACE");
         trace_lo = strtoul(e, &e, 16);
@@ -540,7 +545,7 @@ static void rp_dump(int kind, int n, int full)
     dump_dword(events);
     dump_dword(t_now);
     level = mapdata && LEVEL->magic == LEVEL_MAGIC;
-    dump_word((level ? 6 : 5) + (full ? 4 : 0));
+    dump_word((level ? 6 : 5) + (full ? 4 : 0) + (dump_fb && level));
     section("PLYR", sizeof PlayerDat);
     dump_bytes(&PlayerDat, sizeof PlayerDat);
     section("RAND", 4);
@@ -553,6 +558,10 @@ static void rp_dump(int kind, int n, int full)
     dump_segs();
     section("CNTS", 4 * (NSTREAMS - 1));
     for (i = 1; i < NSTREAMS; i++) dump_dword(calls[i]);
+    if (dump_fb && level) {
+        section("FBUF", 0x69D6);
+        dump_far((unsigned char far *)stdat, 0x69D6);
+    }
     if (full)
         dump_screen();
 }

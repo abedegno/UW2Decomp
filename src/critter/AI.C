@@ -149,7 +149,9 @@ void far set_htx(int heading)
    player. */
 void far crit_drunkwalk(void)
 {
-    unsigned char head;
+    unsigned char head STACK_JUNK(0);   /* read before it is set when the critter is not
+                                           sequence 1 and its laziness does not turn it: see
+                                           FINDINGS.md */
     unsigned char seq;
     unsigned char r;
     struct Tile far *tile;

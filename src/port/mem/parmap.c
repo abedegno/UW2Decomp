@@ -82,6 +82,42 @@ static struct region *window_for(const unsigned char *p)
     return &reg[i];
 }
 
+/* The last far pointers MK_FP made, by the host address of their segment's offset 0: a far
+   pointer the C derives from one (a field of a picture made at a paragraph) splits into that
+   segment and an offset as it did in DOS (port_fp_split_recent). */
+#define NRECENT 8
+static struct { const unsigned char *base; unsigned seg; } recent[NRECENT];
+static int recent_next;
+
+void port_fp_split_recent(const void *vp, unsigned *seg, unsigned *off)
+{
+    const unsigned char *p = vp;
+    int i, k;
+    for (i = 0; i < NRECENT; i++) {
+        k = (recent_next - 1 - i + NRECENT) % NRECENT;
+        if (recent[k].base && p >= recent[k].base && p < recent[k].base + 0x10000) {
+            *seg = recent[k].seg;
+            *off = (unsigned)(p - recent[k].base);
+            return;
+        }
+    }
+    *seg = port_fp_seg(vp);
+    *off = port_fp_off(vp);
+}
+
+/* The host address of seg:0000, for the translated code's segment registers (x86/asmrt.c),
+   or NULL; not recorded as a far pointer the C made. */
+void *pm_segbase(unsigned seg)
+{
+    uint32_t lin = (seg & 0xFFFFu) << 4;
+    int i;
+    for (i = 0; i < nreg; i++) {
+        uint32_t start = reg[i].seg << 4;
+        if (lin >= start && lin < start + reg[i].size) return reg[i].base + (lin - start);
+    }
+    return NULL;
+}
+
 void *port_mk_fp(unsigned seg, unsigned off)
 {
     uint32_t lin = ((seg & 0xFFFFu) << 4) + (off & 0xFFFFu);
@@ -89,7 +125,15 @@ void *port_mk_fp(unsigned seg, unsigned off)
     if (seg == 0 && off == 0) return NULL;
     for (i = 0; i < nreg; i++) {
         uint32_t start = reg[i].seg << 4;
-        if (lin >= start && lin < start + reg[i].size) return reg[i].base + (lin - start);
+        if (lin >= start && lin < start + reg[i].size) {
+            unsigned char *p = reg[i].base + (lin - start);
+            if (reg[i].kind == 0) {
+                recent[recent_next].base = p - (off & 0xFFFFu);
+                recent[recent_next].seg = seg & 0xFFFFu;
+                recent_next = (recent_next + 1) % NRECENT;
+            }
+            return p;
+        }
     }
     port_log("parmap: MK_FP(%04X, %04X) is in no region\n", seg, off);
     return NULL;

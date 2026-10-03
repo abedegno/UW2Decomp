@@ -35,7 +35,11 @@ void pm_add(const char *name, void *base, size_t size, unsigned seg);
 void *port_mk_fp(unsigned seg, unsigned off);
 unsigned port_fp_seg(const volatile void *p);
 unsigned port_fp_off(const volatile void *p);
+/* A far pointer's segment and offset as the DOS code made it, when it was derived from one of
+   the last few MK_FP results (a picture's pixels after its header); else FP_SEG and FP_OFF. */
+void port_fp_split_recent(const void *p, unsigned *seg, unsigned *off);
 void pm_remove(void *base);
+void *pm_segbase(unsigned seg);
 /* The program's load segment: far data blocks are at their EXE paragraph plus this. */
 #define PORT_LOAD_SEG 0x0800u
 /* The emulated conventional memory heap that farmalloc hands out (mem/parmap.c). */

@@ -11,12 +11,9 @@
 #include <stdio.h>
 #include "port.h"
 
-/* EXPAND.ASM's _uncmp_pal, at seg004's CS:0: the 32-entry translation of a 4- or 5-bit image */
-unsigned char uncmp_pal[32] = {
-    0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A,
-    0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A,
-};
-
+/* EXPAND.ASM's _uncmp_pal, at seg004's CS:0 (in the code block, mem/fardata.c): the 32-entry
+   translation of a 4- or 5-bit image */
+extern unsigned char uncmp_pal[];
 extern unsigned char cmpbuf1_start[];
 extern unsigned char lightabs[];
 

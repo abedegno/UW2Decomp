@@ -207,6 +207,7 @@ void far do_obj(struct Object far *o)
             return;
         if (frame == 0xFF)
             return;
+        RENDER_TAG(o);
         *dbptr++ = 0x5A;
         *dbptr++ = item & 0x3F;
         *dbptr++ = is15;
@@ -222,6 +223,7 @@ void far do_obj(struct Object far *o)
         *dbptr++ = objzloc;
         *dbptr++ = objyloc;
         *dbptr++ = 0x7F8;
+        RENDER_TAG(o);
         *dbptr++ = 0x3A;
         *dbptr++ = item;
         *dbptr++ = locsqmod * lighton;

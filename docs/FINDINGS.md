@@ -88,6 +88,24 @@ Each entry was re-read against the source before it was written here. The sectio
 - **Effect:** when the third product overflows, the second result is overwritten and the third is left wrapped. Overflow of a 1.15 matrix product is probably rare; no visible effect is known.
 - **For a port:** a port with wider arithmetic does not overflow there at all.
 
+### do_hull culls with the previous handler's DH
+
+- **What happens:** the model opcode `do_hull` (84h) decides whether a model is wholly outside one frustum plane by ANDing its points' clip codes, but it ANDs words, not bytes: BP starts as DX, whose low byte is the first point's codes and whose high byte is whatever DH the previous opcode handler left, and each further point's word adds its shade byte (+7 of the point record) to the high byte. The `je` tests the 16-bit result, so a model is also dropped (the `do_eof` path) when DH and all its later points' shade bytes share a set bit.
+- **Where:** [3d/INTERP.ASM](../src/3d/INTERP.ASM), `do_hull`.
+- **Evidence:** the code; point shade bytes are only set by the Gouraud opcodes (`do_setshade`, `do_uwshade`) and otherwise keep what an earlier model left there.
+- **Confidence:** likely (the code is unambiguous; whether the condition arises in play is not known).
+- **Effect:** a model may vanish for a frame although it is in view. Not seen in the replays so far.
+- **For a port:** the faithful port keeps the registers between handlers as the CPU did (docs/PORT.md, "The 3D renderer"), so it drops the same models; a fix tests the low byte only.
+
+### sphere_check's depth loses its low bit to a compare
+
+- **What happens:** for a negative zoom (24E6h), `sphere_check` divides the object's depth, as a 15-bit fraction, by the zoom: `sar dx,1` puts the depth's low bit in the carry for the `rcr ax,1` that follows, but a `cmp dx,cx` comes between them and replaces the carry with its borrow, which is always set on that path. So bit 15 of the dividend is always 1, and the quotient can come out one more than intended.
+- **Where:** [3d/SPHERE.ASM](../src/3d/SPHERE.ASM), `sphere_check` (both copies of the tail, at L0364 and L0403).
+- **Evidence:** the code.
+- **Confidence:** confirmed (whether a negative zoom is ever set is not known).
+- **Effect:** the distance `do_obj` stores at 25FAh is off by at most one unit; no visible effect is known.
+- **For a port:** reproduced by the faithful port; a fix keeps the carry from the `sar`.
+
 ### do_fetchmap reads tmcolor from the wrong segment
 
 - **What happens:** after mapping a texture, `do_fetchmap` sets `tmcolor` (FD58:2696) from the texture's first byte, but it loads DS from SI (the bitmap slot's address) where it should use the texture's segment, so it reads a byte at segment C8xxh.
@@ -189,7 +207,7 @@ Each entry was re-read against the source before it was written here. The sectio
 
 ### Other locals read before they are set
 
-clang finds six more locals that some path reads before setting (`-Wsometimes-uninitialized`, `-Wuninitialized`), besides the cutscene file number above; none has been reached by a replay yet, and each needs `STACK_JUNK` and a decision when one is: `head` in [critter/AI.C](../src/critter/AI.C) (line 217), `charges` in [obj/OBJUSE.C](../src/obj/OBJUSE.C) (499), `curx` in [ui/AUTOMAP.C](../src/ui/AUTOMAP.C) (544), `count` in [ui/PANELS.C](../src/ui/PANELS.C) (567) and `size` in [conv/BABL.C](../src/conv/BABL.C) (299). Some fifty more are "may be" reports, mostly paths the code cannot take.
+clang finds six more locals that some path reads before setting (`-Wsometimes-uninitialized`, `-Wuninitialized`), besides the cutscene file number above. One has been reached: `head` in [critter/AI.C](../src/critter/AI.C)'s `crit_drunkwalk`, which a wandering critter that is not in sequence 1 and whose laziness does not turn it takes as its new heading, so it snaps to whatever the stack held; the `walk` replay session reaches it (a critter in the first room), and the port, whose stack holds something else, went another way. It now has `STACK_JUNK(0)` (0 in the replay build and the port; DOS's own build still reads the stack). The others have not been reached yet, and each needs `STACK_JUNK` and a decision when one is: `charges` in [obj/OBJUSE.C](../src/obj/OBJUSE.C) (499), `curx` in [ui/AUTOMAP.C](../src/ui/AUTOMAP.C) (544), `count` in [ui/PANELS.C](../src/ui/PANELS.C) (567) and `size` in [conv/BABL.C](../src/conv/BABL.C) (299). Some fifty more are "may be" reports, mostly paths the code cannot take.
 
 ### Smaller slips with no known effect
 
@@ -301,6 +319,8 @@ World rules: mana cannot be restored by magic in the Scintillus Academy (world 5
 - **Screen and frame buffer.** The game runs the VGA in mode X, and every routine reaches a row through a table built from the bottom up, so y counts up from the bottom of the screen. The 3D view is drawn into a linear frame buffer in `stdat`, also bottom-up, and copied to the screen afterwards. ([gfx.md](subsystems/gfx.md#the-screen), [3d.md](subsystems/3d.md#orientation))
 - **The renderer.** Each frame the C turns the map into a bytecode program (the vision grid, then one tile at a time, farthest first), and seg004 runs it as threaded code: every handler jumps to the next through a table holding the same opcodes in the same order as FM Towns. Points are transformed as they are defined, with the eye position patched into the code, and a level view swaps in cheaper handlers. Floors and walls get exact perspective at the ends of each row or column and linear mapping between. Divide overflows are caught by redirecting int 0. A pick frame redraws the scene in identifying colours to find what is under the cursor. ([3d.md](subsystems/3d.md))
 - **Sprite scaler.** Sprites are decoded into a buffer and drawn by a scaler generated as code for each sprite's width. ([3d.md](subsystems/3d.md#sprites-and-critters), [gfx.md](subsystems/gfx.md))
+- **Registers between opcode handlers.** The model interpreter's handlers jump into each other with no central loop, and some read a register the previous handler left: `do_hull` reads DH (above), `do_bcompact_map` AX. A port that runs the renderer has to keep the registers from handler to handler as the CPU did, which is one reason the port translates seg004 instruction by instruction ([PORT.md](PORT.md#the-3d-renderer)).
+- **Divide faults as control flow.** The renderer installs one of nine int 0 handlers before a divide that may overflow (by writing its offset at FD71:05A5): some saturate the quotient and resume after the `idiv`, which only works for the instruction length each assumes; SMOOTH.ASM's halves the dividend and divides again; PROJPOLY.ASM's decodes the faulting instruction and flags the polygon; and three drop the interrupt frame and jump into a clipping path. ([PORT.md](PORT.md#the-3d-renderer))
 - **Critter page cache.** Critter animations are paged from `CRIT\CRnn.0p` into an EMS cache of 32 KB slots, loaded when a frame needs them, aged every frame and evicted least recently used. ([3d.md](subsystems/3d.md#sprites-and-critters), [critters.md](subsystems/critters.md#critter-art))
 - **Keyboard.** The game's own int 9 handler stores raw scan codes in a 64-byte ring and never chains to the BIOS, so the BIOS sees no keys while the game runs. ([sys.md](subsystems/sys.md#input-and-time))
 - **Debug keys.** `init_debug` ([sys/DEBUG.C](../src/sys/DEBUG.C)) runs at start-up in the shipped game and binds Ctrl+J to the joystick calibration and Alt with key code 83h to raising the COM1 interrupt in software ([sys/COM1INT.C](../src/sys/COM1INT.C)).
