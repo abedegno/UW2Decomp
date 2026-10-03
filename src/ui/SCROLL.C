@@ -153,11 +153,13 @@ int far scroll_print(char far *s)
 {
     /* match: 0x31 (49) bytes are copied into this buffer below; it is declared two bytes short
        of that because `found`, as a register variable, still reserves a two-byte spill
-       slot right after it, and the true end of the 49-byte region is that slot, used
-       below as `sentinel`. Matched against the EXE's frame size (sub sp,36h) and the
-       offsets of `sentinel` and `saved`, not guessed. On the host the array is 49 bytes and
-       `sentinel` its last (FRAME_LEN, FRAME_TAIL in portable.h). */
-    char copy[FRAME_LEN(47, 49)];
+       slot right after it, so the 49 bytes run to the end of that slot, and `sentinel` is
+       the byte after them: copy is at bp-36h and the terminator store is to bp-5, offset
+       31h. Matched against the EXE's frame size (sub sp,36h) and the offsets of `sentinel`
+       and `saved`, not guessed. On the host the array is 50 bytes and `sentinel` its last
+       (FRAME_LEN, FRAME_TAIL in portable.h), so that, as in DOS, a space at the 49th byte
+       still counts when the chunk is broken at its last space. */
+    char copy[FRAME_LEN(47, 50)];
     register char *found;
     register int remaining;
     char saved;
@@ -184,10 +186,10 @@ int far scroll_print(char far *s)
     remaining = str_len(s);
     while (remaining > 0x31) {
         FAR_COPY(copy, s, 0x31);
-        FRAME_TAIL(copy, 48, sentinel) = 0;
+        FRAME_TAIL(copy, 49, sentinel) = 0;
         found = strrchr(copy, ' ');
         if (found == 0)
-            found = &FRAME_TAIL(copy, 48, sentinel);
+            found = &FRAME_TAIL(copy, 49, sentinel);
         saved = *found;
         *found = 0;
         chunklen = found - copy;

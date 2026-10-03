@@ -194,7 +194,8 @@ RpTimerFn far rp_slave_timer(RpTimerFn f, unsigned hz);
 /* FRAME_LEN(dos, host) and FRAME_TAIL(arr, i, var): a local array that the original copies
    past its end on purpose, into the stack slots Turbo C laid out after it, and a local that
    is in fact the array's element i (SCROLL.C's scroll_print copies 49 bytes into a 47-byte
-   array and uses the 49th as its terminator, `sentinel`). Under Turbo C the original
+   array and the 2-byte slot after it, and uses the byte after those 49 as its terminator,
+   `sentinel`). Under Turbo C the original
    tokens: the array has its DOS length and the variable is itself, so the bytes are the
    same. On the host the frame is the compiler's, so the array is given the length the code
    uses and the variable becomes that element of it. */
