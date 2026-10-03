@@ -14,9 +14,9 @@
 // the last step.
 //
 // Either way it then waits (up to --timeout seconds, 600 by default) for the game to exit
-// (the batch writes DONE.TXT after UW2.EXE) and copies out RECORD.OUT, STATE.OUT and
-// NULLTRAP.LOG when there are any. Then the null-pointer write check (docs/PORT.md, "Null
-// pointers"): it finds DGROUP by C0's copyright string, which sits at DS:8, and writes
+// (the batch writes DONE.TXT after UW2.EXE) and copies out RECORD.OUT, STATE.OUT,
+// NULLTRAP.LOG and SNDCHECK.OUT when there are any. Then the null-pointer write check
+// (docs/PORT.md, "Null pointers"): it finds DGROUP by C0's copyright string, which sits at DS:8, and writes
 // DS:0..3Fh and the interrupt vector table, read with dos-mcp's read_memory after the game has
 // exited, to OUTDIR/memory.json, with a screenshot of the console the game exited to
 // (OUTDIR/exit.png, where C0's "Null pointer assignment" would show).
@@ -94,7 +94,7 @@ try {
     }
   }
   log(done ? "the game has exited" : "timed out waiting for the game to exit");
-  for (const f of ["RECORD.OUT", "STATE.OUT", "NULLTRAP.LOG", "TRACE.OUT"]) {
+  for (const f of ["RECORD.OUT", "STATE.OUT", "NULLTRAP.LOG", "TRACE.OUT", "SNDCHECK.OUT"]) {
     const b = await tryRead(f);
     if (b) { writeFileSync(join(out, f), b); log(`copied ${f} (${b.length} bytes)`); }
   }

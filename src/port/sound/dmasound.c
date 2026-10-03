@@ -7,7 +7,10 @@
    its samples have played at the rate the .VOC's time constant gives, 1000000 / (256 - tc).
    What the interrupt handler did at that moment (the buffer DONE, the next registered one
    started) is done when the driver is next entered, for the time it happened, so the state
-   the game reads depends only on the clock. */
+   the game reads depends only on the clock. Under replay the driver is asked at the moment
+   within the clock's tick at which DOS read it, and a transfer ends when DOS's did, within
+   the window DOSBox's Sound Blaster allows (digi_sync; docs/PORT.md, "Replays with a sound
+   card"). */
 #include <stdlib.h>
 #include <string.h>
 #include "aildrv.h"
@@ -64,13 +67,6 @@ static void set_volume(Digi *d)
     }
 }
 
-static int lenient;                     /* under replay: see digi_register_sb */
-
-void digi_set_lenient(int on)
-{
-    lenient = on;
-}
-
 static void process_buffer(Digi *d, int n, uint64_t t)
 {
     d->buff_status[n] = DAC_PLAYING;
@@ -100,11 +96,23 @@ static void buffer_ends(Digi *d, uint64_t t)
     if (n >= 0) process_buffer(d, n, t);
 }
 
+/* Under replay, a transfer's end is DOS's (digi_sync): DOS's Sound Blaster, js-dos's DOSBox,
+   raises the interrupt up to win_early us before the samples have played and up to win_late
+   after (docs/PORT.md, "Replays with a sound card"), so a transfer is taken to have ended at
+   its nominal time only once win_late has passed without a read of DOS's showing it end */
+static uint64_t win_early, win_late;
+
+void digi_set_window(uint64_t early, uint64_t late)
+{
+    win_early = early;
+    win_late = late;
+}
+
 /* what the interrupt did up to now: each transfer that has ended, while not paused */
 static void advance(Digi *d)
 {
     uint64_t now = ail_now_us();
-    while (d->playing && d->DAC_status != DAC_PAUSED && now >= d->t_end)
+    while (d->playing && d->DAC_status != DAC_PAUSED && now >= d->t_end + win_late)
         buffer_ends(d, d->t_end);
 }
 
@@ -167,17 +175,11 @@ int digi_index_voc(Digi *d, const uint8_t *file, int block, struct SoundBuffDesc
     return 1;
 }
 
-/* Under replay the game sees DOS's buffer statuses, not these: when it registers again the
-   buffer this driver is still playing (DOS's transfer ended a little earlier than this
-   driver's clock says), the transfer ends now, as it had in DOS, rather than the new data
-   being marked DONE at the end, which is what DMASOUND does with a buffer registered while
-   it plays. The game's state is the same either way (it reads the recorded statuses); this
-   only keeps the port's sound of a replay close to DOS's. */
+/* register_sb: a buffer registered while it plays is STOPPED until its transfer ends, which
+   marks it DONE (IRQ_play_buffer), as in DMASOUND */
 void digi_register_sb(Digi *d, int n, const struct SoundBuffDesc *b)
 {
     advance(d);
-    if (lenient && d->playing && d->current == (n & 1) && d->DAC_status == DAC_PLAYING)
-        buffer_ends(d, ail_now_us());
     if (d->buffer_mode == VOC_MODE) {
         digi_stop(d);
         d->buffer_mode = BUF_MODE;
@@ -188,6 +190,28 @@ void digi_register_sb(Digi *d, int n, const struct SoundBuffDesc *b)
     d->buff_data[n] = b->data;
     d->buff_len[n] = b->len;
     d->buff_status[n] = DAC_STOPPED;
+}
+
+/* Under replay, at a read where DOS's driver gave `recorded` for buffer n and this one had
+   another value: if that is the value buffer n has once the transfer in hand ends, and the
+   transfer is within the window of its end, it ends now, as DOS's did. Returns 1 if so, with
+   *early how long before its nominal end (negative: after) */
+int digi_sync(Digi *d, int n, unsigned recorded, int64_t *early)
+{
+    uint64_t now = ail_now_us();
+    unsigned after[2];
+    advance(d);
+    n &= 1;
+    if (!d->playing || d->DAC_status != DAC_PLAYING || now + win_early < d->t_end) return 0;
+    after[0] = d->buff_status[0];
+    after[1] = d->buff_status[1];
+    after[d->current] = DAC_DONE;           /* buffer_ends, then next_buffer */
+    if (after[0] == DAC_STOPPED) after[0] = DAC_PLAYING;
+    else if (after[1] == DAC_STOPPED) after[1] = DAC_PLAYING;
+    if (after[n] != recorded) return 0;
+    *early = (int64_t)d->t_end - (int64_t)now;
+    buffer_ends(d, now);
+    return 1;
 }
 
 unsigned digi_sb_status(Digi *d, int n)

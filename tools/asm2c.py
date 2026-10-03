@@ -105,6 +105,61 @@ OVERRIDES = {
         'scalebm_run_generated(0x1554);',
         "call near ptr L1554: the scaler the generators wrote is interpreted (gfx/scalebm_code.c)"),
 }
+# Routines of a translated module that the port has as hand-written C instead, by module: the
+# ranges of offsets [lo, hi) not translated, and where the C is (docs/PORT.md, "One
+# implementation per routine"). A jump or fall-through into a range leaves the module
+# (ASM_JMP), and asm_exec sends a call or jump there to its glue (x86/glue.c) or, in seg003, to
+# seg003_call (gfx/grcore.c). The static targets in the ranges that the translated code reaches
+# are listed in modtab.c (asm_hand_calls), and the port checks at start-up that each has C.
+HANDWRITTEN = {
+    'IMATH': [
+        (0x0A30, 0x0B78, 'sys/imath.c: lsqrt (_A78, far _A30), sincos (_A38, far _A34), fast_sincos (_A69)'),
+    ],
+    'EXPAND': [
+        (0x0039, 0x0063, '3d/expand.c: exp_4str'),
+        (0x0063, 0x00CB, '3d/expand.c: build_pal (_63)'),
+        (0x00D9, 0x011C, '3d/expand.c: exp_4run'),
+        (0x018D, 0x0260, '3d/expand.c: run (_18D) and decode (_194)'),
+    ],
+    'GRENTRY': [
+        (0x0729, 0x0764, 'gfx/grentry.c: fbuf_draw_ylrpp_x (_729)'),
+        (0x07A8, 0x09C9, 'gfx/grentry.c: setup_frame_buf (_7A8), cFBtoScreen (_7F9) and its copier (_888)'),
+        (0x09FC, 0x0A7F, 'gfx/grentry.c: fbuf_save_vylr (_9FC)'),
+        (0x0B9B, 0x0BC0, 'gfx/grentry.c: fbuf_setcolor (_B9B)'),
+    ],
+    'VIDMODE': [
+        (0x21D4, 0x222B, 'gfx/vidmode.c: show (_21D4), _21ED, fbshow (_2214)'),
+        (0x2250, 0x249C, 'gfx/vidmode.c: vcopy (_2250) and the row routines L2296, L2373, L243F'),
+        (0x283D, 0x2914, 'gfx/vidmode.c: init_graphics (_283D), the mode (_286C)'),
+        (0x295F, 0x2B62, 'gfx/vidmode.c: the display start, the virtual screen, line compare, page flips, Ytab, edge masks'),
+        (0x2B9B, 0x2C9A, 'gfx/vidmode.c: SetVideoMode (_2B9B), the window guards (_2BF9, _2C44)'),
+        (0x2D83, 0x2E2E, 'gfx/vidmode.c: the solid span writer (_2D83), the group save (_2DF3)'),
+        (0x2F18, 0x2FD1, 'gfx/vidmode.c: the copy span writers (_2F18, _2F96)'),
+        (0x3094, 0x30CF, 'gfx/vidmode.c: plot (_3094, _30AC)'),
+        (0x30FB, 0x3121, 'gfx/vidmode.c: read a pixel (_30FB)'),
+        (0x3195, 0x31E5, 'gfx/vidmode.c: set_the_color (_3195), init_colors (_31BE)'),
+        (0x31E7, 0x3206, 'gfx/vidmode.c: set_the_window (_31E7)'),
+    ],
+    'GRLIBF': [
+        (0x3206, 0x321B, 'gfx/grcore.c: the video memory bump allocator (_3206, through _49AE)'),
+        (0x326D, 0x3299, 'gfx/grlibf.c: the whole screen (_326D), copy_visible_to_hidden (_327D), copy_hidden_to_visible (_328F)'),
+        (0x3324, 0x336E, 'gfx/grlibf.c: uvline (_3324)'),
+        (0x336E, 0x3371, 'gfx/grcore.c: box\'s clip (_336E, clip_rect)'),
+        (0x33BE, 0x3423, 'gfx/grcore.c: clip_rect (_33BE) and rectangle (_3416, _341E)'),
+        (0x3423, 0x347E, 'gfx/grlibf.c: clear_window (_3423), urectangle (_342E)'),
+        (0x34AE, 0x34C2, 'gfx/grlibf.c: uhline (_34AE)'),
+    ],
+    'GRDISP': [
+        (0x5363, 0x536B, 'sys/c3dentry.c: cInit3d\'s view window (_5363)'),
+    ],
+    'GRLIBI': [
+        (0x3B36, 0x3B3E, 'gfx/grlibi.c: string_to_screen (_3B36)'),
+        (0x3BE2, 0x3C2F, 'gfx/grlibi.c: the text masks (_3BE2), setup_font (_3BFD)'),
+        (0x3C61, 0x4126, 'gfx/grlibi.c: the single-colour blitter (_3C61)'),
+        (0x4225, 0x43F0, 'gfx/grlibi.c: the rasteriser (4225h), string_width (_43C5)'),
+    ],
+}
+
 # Instructions whose bytes another instruction writes, handled by OVERRIDES above.
 PATCH_OVERRIDDEN = {(0x065C, 0x058C), (0x065C, 0x01A6), (0x065C, 0x3534)}
 
@@ -542,7 +597,44 @@ def liveness(mod):
 # ---- emission -------------------------------------------------------------------------------
 
 def jtarget(mod, t):
-    return f'goto L{t:04X};' if t in mod['byaddr'] else f'return ASM_JMP(0x{mod["seg"]:04X}, 0x{t:04X});'
+    if t in mod['byaddr']: return f'goto L{t:04X};'
+    note_hand(mod['seg'], t)
+    return f'return ASM_JMP(0x{mod["seg"]:04X}, 0x{t:04X});'
+
+
+HAND_RANGES = []        # (segment, lo, hi, where), from HANDWRITTEN and the modules' segments
+HAND_CALLS = set()      # (segment, offset): the static targets in them the translation reaches
+
+
+def hand_range(mod, a):
+    for lo, hi, where in HANDWRITTEN.get(mod['name'], ()):
+        if lo <= a < hi: return (lo, hi, where)
+    return None
+
+
+def note_hand(seg, a):
+    for sg, lo, hi, where in HAND_RANGES:
+        if sg == seg and lo <= a < hi: HAND_CALLS.add((seg, a))
+
+
+def omit_handwritten(mods, patched):
+    """Drop the instructions of each module's HANDWRITTEN ranges; refuse when a byte the
+    translation still runs is patched by an instruction that is not translated any more."""
+    for mod in mods:
+        for lo, hi, where in HANDWRITTEN.get(mod['name'], ()): HAND_RANGES.append((mod['seg'], lo, hi, where))
+    for mod in mods:
+        if mod['name'] not in HANDWRITTEN: continue
+        keep = [it for it in mod['items'] if not hand_range(mod, it.addr)]
+        gone = [it for it in mod['items'] if hand_range(mod, it.addr)]
+        for it in gone:
+            ins = it.ins
+            if ins is None or ins.op_count == 0 or ins.op_kind(0) != OK_.MEMORY: continue
+            if ins.memory_segment != I.Register.CS: continue
+            a = ins.memory_displacement & 0xFFFF
+            for k in keep:
+                if k.kind == 'ins' and k.ins is not None and k.addr <= a < k.addr + k.len:
+                    die(f"{mod['path']}:{it.line}: hand-written range writes the code at {a:04X}, which is still translated")
+        mod['items'] = keep
 
 
 def emit(mod, it, patched, entries):
@@ -685,8 +777,10 @@ def emit(mod, it, patched, entries):
     elif m == 'call':
         k = ins.op_kind(0)
         if k == OK_.NEAR_BRANCH16:
+            note_hand(seg, ins.near_branch16)
             L.append(f'if ((c = asm_call(ASM_JMP(0x{seg:04X}, 0x{ins.near_branch16:04X}), 0x{nxt:04X})) != 0) return c;')
         elif k == OK_.FAR_BRANCH16:
+            note_hand(ins.far_branch_selector, ins.far_branch16)
             L.append(f'if ((c = asm_callf(ASM_JMP(0x{ins.far_branch_selector:04X}, 0x{ins.far_branch16:04X}), 0x{seg:04X} + PORT_LOAD_SEG, 0x{nxt:04X})) != 0) return c;')
         elif ins.is_call_far_indirect:
             die(f"{mod['path']}:{it.line}: an indirect far call")
@@ -695,7 +789,9 @@ def emit(mod, it, patched, entries):
     elif m == 'jmp':
         k = ins.op_kind(0)
         if k == OK_.NEAR_BRANCH16: L.append(jtarget(mod, ins.near_branch16))
-        elif k == OK_.FAR_BRANCH16: L.append(f'return ASM_JMP(0x{ins.far_branch_selector:04X}, 0x{ins.far_branch16:04X});')
+        elif k == OK_.FAR_BRANCH16:
+            note_hand(ins.far_branch_selector, ins.far_branch16)
+            L.append(f'return ASM_JMP(0x{ins.far_branch_selector:04X}, 0x{ins.far_branch16:04X});')
         else: L.append(f'return ASM_JMP(0x{seg:04X}, {c.rd(0)});')
     elif ins.flow_control == FC.CONDITIONAL_BRANCH:
         t = ins.near_branch16
@@ -845,6 +941,9 @@ def write_module(mod, patched, check):
             if i + 1 < len(items) and items[i + 1].addr == na: continue
             if na in byaddr:
                 o.append(f'    goto L{na:04X};')
+            elif hand_range(mod, na):
+                note_hand(mod['seg'], na)
+                o.append(f'    return ASM_JMP(0x{mod["seg"]:04X}, 0x{na:04X});   /* into hand-written C */')
             else:
                 o.append(f'    asm_halt_at(0x{mod["seg"]:04X}, 0x{na:04X}, "ran off the code into data");')
     o.append('}')
@@ -860,11 +959,12 @@ def build(check=False, only=None):
         mods.append(mod)
     patched = find_patches(mods)
     bad = 0
+    omit_handwritten(mods, patched)
     for mod in mods:
         liveness(mod)
     for mod in mods:
+        text = write_module(mod, patched, check)        # every module, for HAND_CALLS
         if only and mod['name'] != only: continue
-        text = write_module(mod, patched, check)
         path = os.path.join(root, mod['out'])
         old = open(path).read() if os.path.exists(path) else None
         if old != text:
@@ -884,6 +984,21 @@ def build(check=False, only=None):
         t.append(f'    {{ 0x{mod["seg"]:04X}, 0x{lo:04X}, 0x{hi:04X}, asm_mod_{mod["name"]}, "{os.path.basename(mod["path"])}" }},')
     t.append('};')
     t.append(f'const int asm_nmodules = {len(mods)};')
+    t.append('')
+    t.append('/* the ranges of the modules that are hand-written C (asm2c.py\'s HANDWRITTEN) */')
+    t.append('const struct asm_hand asm_hand_ranges[] = {')
+    for sg, lo, hi, where in HAND_RANGES:
+        t.append(f'    {{ 0x{sg:04X}, 0x{lo:04X}, 0x{hi:04X}, "{where}" }},')
+    t.append('    { 0, 0, 0, 0 }')
+    t.append('};')
+    t.append(f'const int asm_nhand_ranges = {len(HAND_RANGES)};')
+    t.append('/* the places in them the translated code calls or jumps to: each needs its C (checked at start-up) */')
+    t.append('const struct asm_hand_call asm_hand_calls[] = {')
+    for sg, a in sorted(HAND_CALLS):
+        t.append(f'    {{ 0x{sg:04X}, 0x{a:04X} }},')
+    t.append('    { 0, 0 }')
+    t.append('};')
+    t.append(f'const int asm_nhand_calls = {len(HAND_CALLS)};')
     text = '\n'.join(t) + '\n'
     path = os.path.join(root, MODTAB)
     old = open(path).read() if os.path.exists(path) else None

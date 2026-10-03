@@ -171,7 +171,10 @@ void far rp_checkpoint(int n);
    whether a digital buffer has played out, which MIDI channel is free to lock, which timbres
    the driver's cache still holds. SND_READ(drv, x) is such a read of driver drv: in DOS the
    value x; under REPLAY recorded or replayed like an input (x is still evaluated, so the
-   driver sees the same calls), unless drv is -1, no driver, whose answer is always 0. SLAVE_TIMER(f) is a game callback that AIL ran from the timer interrupt (SOUND.C's
+   driver sees the same calls), unless drv is -1, no driver, whose answer is always 0; and
+   the moment of the read within the clock tick is recorded with it (rp_sound_at, before x),
+   since a digital buffer ends at any moment of a tick, so that the port's driver is asked
+   at the moment DOS's was. SLAVE_TIMER(f) is a game callback that AIL ran from the timer interrupt (SOUND.C's
    16 Hz effects timer): in DOS f itself, so AIL calls it at any instruction; under REPLAY and
    in the port, REPLAY.C runs it instead, at reads of the game clock, as often as AIL's DDA
    would have by then, so that its effect on the game's state lands at the same point in two
@@ -181,9 +184,10 @@ void far rp_checkpoint(int n);
 #define SLAVE_TIMER(f)  f
 #else
 typedef void (far *RpTimerFn)(void);
+void far rp_sound_at(int drv);
 unsigned far rp_sound(int drv, unsigned v);
 RpTimerFn far rp_slave_timer(RpTimerFn f, unsigned hz);
-#define SND_READ(drv, x) rp_sound(drv, x)
+#define SND_READ(drv, x) (rp_sound_at(drv), rp_sound(drv, x))
 #define SLAVE_TIMER(f)  rp_slave_timer(f, 16)
 #endif
 

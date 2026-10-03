@@ -13,7 +13,12 @@ extern const struct asm_module asm_modules[];
 extern const int asm_nmodules;
 extern const struct asm_glue asm_glues[];
 extern const int asm_nglues;
+extern const struct asm_hand asm_hand_ranges[];
+extern const int asm_nhand_ranges;
+extern const struct asm_hand_call asm_hand_calls[];
+extern const int asm_nhand_calls;
 uint32_t asm_seg003_fallback(uint16_t off);       /* x86/glue.c */
+int seg003_handles(uint16_t off);                 /* gfx/grcore.c */
 
 /* A segment no region holds: what DOS would read there (upper memory, ROM) is not known, so
    the port gives zeros and says so once per segment. Writes land in this page too. */
@@ -209,11 +214,47 @@ static const struct asm_module *find_module(uint16_t seg, uint16_t off)
     return NULL;
 }
 
+static const struct asm_hand *find_hand(uint16_t seg, uint16_t off)
+{
+    int i;
+    for (i = 0; i < asm_nhand_ranges; i++)
+        if (asm_hand_ranges[i].seg == seg && off >= asm_hand_ranges[i].lo && off < asm_hand_ranges[i].hi)
+            return &asm_hand_ranges[i];
+    return NULL;
+}
+
+/* Every place in the hand-written ranges that translated code calls or jumps to has its C:
+   a glue routine, or in seg003 a case of seg003_call. Checked once, before the first call. */
+static void check_hand_calls(void)
+{
+    int i, bad = 0;
+    for (i = 0; i < asm_nhand_calls; i++) {
+        uint16_t seg = asm_hand_calls[i].seg, off = asm_hand_calls[i].off;
+        if (find_glue(seg, off) || (seg == 0x0085 && seg003_handles(off))) continue;
+        fprintf(stderr, "uw2port: %04X:%04X (%s) is hand-written, and has no glue\n", seg, off,
+                find_hand(seg, off) ? find_hand(seg, off)->where : "?");
+        bad = 1;
+    }
+    if (bad) port_halt("translated code reaches hand-written routines with no glue (x86/glue.c)");
+}
+
+/* whether translated code runs at seg:off: a module's, and not in a hand-written range */
+int asm_translated(uint16_t seg, uint16_t off)
+{
+    return find_module(seg, off) && !find_hand(seg, off);
+}
+
 int asm_trace = -1;
+int asm_level;
 
 uint32_t asm_exec(uint32_t target)
 {
     uint16_t seg = ASM_SEG(target), off = ASM_OFF(target);
+    static int checked;
+    if (!checked) {
+        checked = 1;
+        check_hand_calls();
+    }
     if (asm_trace < 0) asm_trace = getenv("UW2PORT_ASMTRACE") != NULL;
     if (asm_trace)
         fprintf(stderr, "asm %04X:%04X ax=%04X bx=%04X cx=%04X dx=%04X si=%04X di=%04X bp=%04X sp=%04X ds=%04X es=%04X ss=%04X\n",
@@ -221,6 +262,10 @@ uint32_t asm_exec(uint32_t target)
     const struct asm_glue *g = find_glue(seg, off);
     const struct asm_module *m;
     if (g) return g->fn();
+    if (find_hand(seg, off)) {
+        if (seg == 0x0085) return asm_seg003_fallback(off);
+        asm_halt_at(seg, off, "hand-written C with no glue");
+    }
     m = find_module(seg, off);
     if (m) return m->fn(off);
     if (seg == 0x0085) return asm_seg003_fallback(off);
@@ -229,7 +274,18 @@ uint32_t asm_exec(uint32_t target)
 
 /* Follow the jumps from target until a return pops the address this call pushed (SP back to
    s plus the address's size), or until the stack says this call's frame is gone. */
+static uint32_t run1(uint32_t target, uint16_t s, unsigned size);
+
 static uint32_t run(uint32_t target, uint16_t s, unsigned size)
+{
+    uint32_t c;
+    asm_level++;
+    c = run1(target, s, size);
+    asm_level--;
+    return c;
+}
+
+static uint32_t run1(uint32_t target, uint16_t s, unsigned size)
 {
     uint32_t c = target;
     for (;;) {
@@ -268,6 +324,27 @@ void asm_run_far(uint16_t seg, uint16_t off)
 {
     uint32_t c = asm_callf(ASM_JMP(seg, off), 0xFFFF, 0xFFFF);
     if (c) port_halt("translated code returned past the C that called it");
+}
+
+void asm_run_near(uint16_t seg, uint16_t off)
+{
+    uint32_t c = asm_call(ASM_JMP(seg, off), 0xFFFF);
+    if (c) port_halt("translated code returned past the C that called it");
+}
+
+void asm_save(struct asm_state *s)
+{
+    s->ax = EAX; s->bx = EBX; s->cx = ECX; s->dx = EDX; s->si = ESI; s->di = EDI; s->bp = EBP;
+    s->sp = SP; s->ds = asm_ds; s->es = asm_es; s->ss = asm_ss; s->fs = asm_fs; s->gs = asm_gs;
+    s->cf = CF; s->zf = ZF; s->sf = SF; s->of = OF; s->df = DF;
+}
+
+void asm_restore(const struct asm_state *s)
+{
+    EAX = s->ax; EBX = s->bx; ECX = s->cx; EDX = s->dx; ESI = s->si; EDI = s->di; EBP = s->bp;
+    SP = s->sp;
+    SET_DS(s->ds); SET_ES(s->es); SET_SS(s->ss); SET_FS(s->fs); SET_GS(s->gs);
+    CF = s->cf; ZF = s->zf; SF = s->sf; OF = s->of; DF = s->df;
 }
 
 uint8_t asm_in8(uint16_t port)

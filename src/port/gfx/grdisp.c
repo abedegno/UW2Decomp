@@ -80,9 +80,6 @@ uint32_t asm_mod_GRDISP(uint16_t entry)
     case 0x535E: goto L535E;
     case 0x5360: goto L5360;
     case 0x5362: goto L5362;
-    case 0x5363: goto L5363;
-    case 0x5366: goto L5366;
-    case 0x5369: goto L5369;
     case 0x536B: goto L536B;
     case 0x536E: goto L536E;
     default: asm_bad_entry("GRDISP.ASM", entry);
@@ -283,20 +280,6 @@ L5360:
 L5362:
     /* 5362  retf */
     SP = (uint16_t)(SP + 4); return ASM_RETF;
-
-    /* seg003_0272_5363  (+5363)
-       _5363: set the clip window from the 4 words (left, top, right, bottom) at the caller's DS:SI,
-       through the dispatcher: CX = 4 words are copied to 370D:558E and the window routine (_52E4,
-       VIDMODE's _31E7) is called with SI pointing at the copy. No caller was found in the sources. */
-L5363: /* _seg003_0272_5363 */
-    /* 5363  mov     cx,4 */
-    CX = 0x4;
-L5366:
-    /* 5366  mov     bp,offset _seg003_0272_52E4 */
-    BP = 0x52E4;
-L5369:
-    /* 5369  jmp     L52EE */
-    goto L52EE;
 
     /* seg003_0272_536B  (+536B)
        _536B (far): call _52B7 (set_the_color's vector, VIDMODE's _3195) with the caller's DS and

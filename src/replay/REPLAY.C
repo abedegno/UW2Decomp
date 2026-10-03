@@ -21,7 +21,8 @@
    in the same order on replay, so the streams need not say how they interleave. Each stream
    is written in chunks as its buffer fills: a stream number (byte), a length (word) and the
    bytes, so the file is one sequence of chunks of the seven streams mixed. RECORD.OUT (and
-   REPLAY.IN, the same), little-endian: "UW2R", version (word, 2), 0 (word), the number of
+   REPLAY.IN, the same), little-endian: "UW2R", version (word, 3; 2 is read too, and differs
+   only in SOUND), 0 (word), the number of
    hook calls at which the recording stopped (dword, 0 if it never did); then the chunks.
      1 TIME     count, then a byte d: the clock is the last run's plus d, or d = FFh and the
                 clock (dword) follows
@@ -38,8 +39,10 @@
                 number (word, checked)
      8 SOUND    count, the value (word) of a read of the sound hardware's state (SND_READ:
                 a sequence's or a digital buffer's status, a locked channel, a timbre's
-                status or request, a device's presence). Sessions with no sound card never
-                read one, so the recordings made before the stream existed hold none.
+                status or request, a device's presence), and (version 3) the moment of the
+                run's first read: PIT input clocks since the start of the tick of the clock
+                the game last read (pit_moment), FFFFh for none. Sessions with no sound card
+                never read one, so the recordings made before the stream existed hold none.
    Recording stops at F12 (scan code 58h), which the game never sees: the call count goes
    into the header. Replay stops at that call, or when a stream runs out, with a last dump;
    then the game shuts down as at the end of main (free_world) and exits, through C0's null
@@ -136,12 +139,14 @@ struct Stream {
     uint16 count;                       /* the run: calls left (replay) or made (record) */
     uint32 v1;                          /* its value */
     int16 v2;
+    uint16 sub;                         /* SOUND: the moment of the run's first call (rp_sound_at) */
     unsigned char kn;                   /* KEY: n */
     unsigned char kd[KSTATE_LEN * 2];   /* KEY: the pairs, or the whole state */
 };
 
 int16 rp_request = RP_AUTO;             /* the port sets it before the game starts */
 static int16 rp_mode = -1;              /* RP_OFF, RP_RECORD or RP_REPLAY once started */
+static int16 rp_version = 3;            /* of the file replayed: 2 has no SOUND moments */
 static int16 log_fd = -1, dump_fd = -1;
 static struct Stream st[NSTREAMS];
 static unsigned char bounce[512];
@@ -166,6 +171,13 @@ static char finishing;
 
 static void rp_finish(int kind);
 static void desync(int want, int got);
+static uint16 snd_moment = 0xFFFF;      /* SOUND: rp_sound_at's moment of the read in hand */
+static char snd_have;                   /* replaying: rp_sound_at has taken the read's value */
+static uint16 snd_value;
+/* replaying in DOS: the reads where DOS's own driver gave another value than the recording's,
+   and the clock ticks they spanned (SNDCHECK.OUT), the noise floor of the port's count */
+static uint32 snd_reads, snd_diffs, snd_diff_ticks, snd_diff_clock;
+static void snd_check_out(void);
 
 /* ---- the recording ------------------------------------------------------------------- */
 
@@ -227,8 +239,11 @@ static void run_out(int s)
         }
         break;
     case S_BUTTONS:
+        put_word(s, (unsigned)p->v1);
+        break;
     case S_SOUND:
         put_word(s, (unsigned)p->v1);
+        put_word(s, p->sub);
         break;
     default:                            /* MOUSE, JOY, JOYB */
         put_word(s, (unsigned)p->v1);
@@ -250,6 +265,7 @@ static void record(int s, uint32 v1, int v2)
     p->v1 = v1;
     p->v2 = v2;
     p->kn = 0;
+    if (s == S_SOUND) p->sub = snd_moment;
     p->count = 1;
 }
 
@@ -322,8 +338,11 @@ static struct Stream *replayed(int s)
                 }
             break;
         case S_BUTTONS:
+            p->v1 = get_word(s);
+            break;
         case S_SOUND:
             p->v1 = get_word(s);
+            p->sub = rp_version >= 3 ? get_word(s) : 0xFFFF;
             break;
         default:
             p->v1 = get_word(s);
@@ -340,7 +359,7 @@ static struct Stream *replayed(int s)
 
 static void rp_start(void)
 {
-    static char hdr[] = "UW2R\2\0\0\0\0\0\0\0";
+    static char hdr[] = "UW2R\3\0\0\0\0\0\0\0";
     int s;
     if (rp_mode >= 0) return;
     rp_mode = RP_OFF;
@@ -349,10 +368,11 @@ static void rp_start(void)
         log_fd = open("REPLAY.IN", O_RDONLY | O_BINARY);
         if (log_fd >= 0) {
             read(log_fd, bounce, HDR_LEN);
-            if (memcmp(bounce, hdr, 6)) {
+            if (memcmp(bounce, hdr, 4) || (bounce[4] != 2 && bounce[4] != 3) || bounce[5]) {
                 close(log_fd);
                 return;
             }
+            rp_version = bounce[4];
             stop_at = bounce[8] | (uint32)bounce[9] << 8 | (uint32)bounce[10] << 16 | (uint32)bounce[11] << 24;
             for (s = 1; s < NSTREAMS; s++) st[s].scan = HDR_LEN;
             rp_mode = RP_REPLAY;
@@ -587,6 +607,7 @@ static void rp_finish(int kind)
     if (finishing) return;
     finishing = 1;
     if (rp_mode == RP_RECORD) record_close();
+    if (rp_mode == RP_REPLAY) snd_check_out();
     if (kind >= 0) rp_dump(kind, 0, 1);
     if (trace_fd >= 0) {
         write(trace_fd, trace_buf, trace_len);
@@ -836,7 +857,61 @@ int far rp_mbuttons(void)
 
 #ifndef __TURBOC__
 void port_sound_read(unsigned own, unsigned recorded, uint32 clock);   /* src/port/sound/ail.c */
+void port_sound_moment(uint32 clock, unsigned moment);
 #endif
+
+#ifdef __TURBOC__
+/* The moment of a read of the sound hardware, in PIT input clocks (1193182 Hz) since the
+   start of the clock tick t_now, the one the game last read: with a sound card a digital
+   buffer ends at any moment of a tick, and a game that polls its status sees it change
+   between two reads of one clock value. AIL runs the PIT in mode 3 at 3906 us for the 256 Hz
+   clock, divisor 3906 * 10000 / 8380 = 4661 (set_PIT_period); each interrupt is one tick of
+   *Time. The read-back command latches channel 0's status (bit 7, the output: high for the
+   first half of the period) and its count (which mode 3 counts down twice a period, by 2);
+   an interrupt the PIC holds but has not yet delivered is a tick *Time does not yet show. */
+#define PIT_DIVISOR 4661u
+static uint16 pit_moment(void)
+{
+    unsigned status, n, e, irr;
+    uint32 now, d;
+    disable();
+    outportb(0x43, 0xC2);
+    status = inportb(0x40);
+    n = inportb(0x40);
+    n |= inportb(0x40) << 8;
+    outportb(0x20, 0x0A);
+    irr = inportb(0x20);
+    now = *Time;
+    enable();
+    e = n < PIT_DIVISOR ? (PIT_DIVISOR - n) / 2 : 0;
+    if (!(status & 0x80)) e += PIT_DIVISOR / 2;
+    d = (now - t_now + (irr & 1)) * PIT_DIVISOR + e;
+    return d > 0xFFFEu ? 0xFFFE : (uint16)d;
+}
+#endif
+
+/* SND_READ's first half, before the read: recording, the moment of the read (in DOS; the
+   port records none); replaying, the read's recorded value is taken here, and the port's
+   drivers are told the moment DOS read it, so that its own driver is asked at that moment */
+void far rp_sound_at(int drv)
+{
+    if (drv < 0) return;
+    rp_start();
+    if (finishing) return;
+    if (rp_mode == RP_RECORD) {
+#ifdef __TURBOC__
+        snd_moment = pit_moment();
+#endif
+    } else if (rp_mode == RP_REPLAY) {
+        struct Stream *p = replayed(S_SOUND);
+        snd_value = (uint16)p->v1;
+        snd_have = 1;
+#ifndef __TURBOC__
+        port_sound_moment(t_now, p->sub);
+#endif
+        p->sub = 0xFFFF;            /* the moment is the run's first call's */
+    }
+}
 
 unsigned far rp_sound(int drv, unsigned v)
 {
@@ -849,13 +924,43 @@ unsigned far rp_sound(int drv, unsigned v)
 #ifndef __TURBOC__
         unsigned own = v;
 #endif
-        v = (uint16)replayed(S_SOUND)->v1;
-#ifndef __TURBOC__
-        port_sound_read(own, v, t_now);
+        if (!snd_have) snd_value = (uint16)replayed(S_SOUND)->v1;
+        snd_have = 0;
+#ifdef __TURBOC__
+        snd_reads++;
+        if ((uint16)v != snd_value) {
+            if (snd_diffs++ == 0 || t_now != snd_diff_clock) snd_diff_ticks++;
+            snd_diff_clock = t_now;
+        }
 #endif
+#ifndef __TURBOC__
+        port_sound_read(own, snd_value, t_now);
+#endif
+        v = snd_value;
     }
     if (trace_fd >= 0) trace(S_SOUND, (uint16)v, CALLER_CS, CALLER_IP);
     return v;
+}
+
+static void snd_check_out(void)
+{
+#ifdef __TURBOC__
+    char line[128], *p = line;
+    int fd;
+    if (!snd_reads) return;
+    strcpy(p, "sound reads: ");
+    ultoa(snd_reads, p + strlen(p), 10);
+    strcat(p, ", ");
+    ultoa(snd_diffs, p + strlen(p), 10);
+    strcat(p, " where DOS's driver differed from the recording (over ");
+    ultoa(snd_diff_ticks, p + strlen(p), 10);
+    strcat(p, " clock ticks)\r\n");
+    fd = open("SNDCHECK.OUT", O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0x180);
+    if (fd >= 0) {
+        write(fd, line, strlen(line));
+        close(fd);
+    }
+#endif
 }
 
 void far rp_joy(void)

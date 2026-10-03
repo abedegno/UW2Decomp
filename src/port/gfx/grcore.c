@@ -3,10 +3,15 @@
    C arguments into what the library routine takes, as the assembly loaded registers, and calls
    the C written for that routine; the switch to seg003's own stack is gone. The jump table at
    _5278 .. _52EA is direct calls here, and seg003_call dispatches the near offsets seg003's
-   data holds (grlib.h). The other entries are still the generated stubs. */
+   data holds (grlib.h). Where the port has the routine only as the translation (docs/PORT.md,
+   "One implementation per routine"), the entry calls it through seg003_asm with the registers
+   the assembly loaded. The other entries are still the generated stubs. */
 #include "compat.h"
 #include "gfx.h"
 #include "grlib.h"
+#include "x86/asmrt.h"
+
+#define SEG370D (0x370Du + PORT_LOAD_SEG)       /* seg003's data, seg_370D */
 
 /* GRCORE.ASM's _DATA: far pointers into seg_370D (the symbol is 370D:0008, so seg_370D + X is
    370D:X+8, as `seg_370D+X` was in the assembly). */
@@ -24,47 +29,93 @@ unsigned char *pixel_color = seg_370D + 0x4109;
 uint16 *dseg_67d6_21F4 = (uint16 *)(seg_370D + 0x3832);
 uint16 *Ytab = (uint16 *)(seg_370D + 0x36A4);
 
-void seg003_call(uint16_t off, uint16_t si)
+/* GRCORE.ASM's jump table entries for the span writers, which some code stores in 4112 in place
+   of the routine itself (copy_visible_to_hidden's 52CC) */
+static uint16_t span_entry(uint16_t off)
 {
-    char why[64];
     switch (off) {
-    /* GRCORE.ASM's jump table entries for the span writers, which some code stores in 4112 in
-       place of the routine itself (copy_visible_to_hidden's 52CC) */
-    case 0x52C9: off = 0x2D83; break;
-    case 0x52CC: off = 0x2F18; break;
-    case 0x52CF: off = 0x2D0D; break;
-    case 0x52D2: off = 0x2E79; break;
-    case 0x52D5: off = 0x2E3A; break;
-    case 0x52D8: off = 0x303B; break;
-    case 0x52DB: off = 0x2FD6; break;
-    case 0x52DE: off = 0x2F96; break;
-    case 0x52E1: off = 0x2DF3; break;
-    case 0x52E7: off = 0x2C9A; break;
-    case 0x52EA: off = 0x283C; break;
-    default: break;
+    case 0x52C9: return 0x2D83;
+    case 0x52CC: return 0x2F18;
+    case 0x52CF: return 0x2D0D;
+    case 0x52D2: return 0x2E79;
+    case 0x52D5: return 0x2E3A;
+    case 0x52D8: return 0x303B;
+    case 0x52DB: return 0x2FD6;
+    case 0x52DE: return 0x2F96;
+    case 0x52E1: return 0x2DF3;
+    case 0x52E7: return 0x2C9A;
+    case 0x52EA: return 0x283C;
+    default: return off;
     }
-    if (seg003_fb_span(off, si)) return;
+}
+
+/* the routines seg003_call has hand-written C for: span writers and transfers taking a list at
+   SI (grentry.c, vidmode.c, grlibl.c, the rasteriser in grlibi.c), and plain rets (_283C,
+   nullsub_1 at 31E5 and 31E6, the five at 2C95 .. 2C99) */
+static int hand_call(uint16_t off, uint16_t si, int run)
+{
     switch (off) {
-    case 0x2C9A: case 0x2D0D: case 0x2DF3: case 0x2E3A: case 0x2E79: case 0x2F18: case 0x2F96:
-        seg003_span(off, si); return;
-    case 0x2D83: seg003_0272_2D83(si); return;
-    case 0x5372: seg003_0272_5372(si); return;
-    case 0x5467: seg003_0272_5467(si); return;
-    case 0x5578: seg003_0272_5578(si); return;
-    case 0x568B: seg003_0272_568B(si); return;
-    case 0x56E3: seg003_0272_56E3(si); return;
-    case 0x581B: seg003_0272_581B(si); return;
-    case 0x586D: seg003_0272_586D(si); return;
-    case 0x58C7: seg003_0272_58C7(si); return;
-    case 0x58F8: seg003_0272_58F8(si); return;
-    /* rets: _283C, nullsub_1 (31E5, 31E6), the five at 2C95 .. 2C99 */
+    case 0x0729: case 0x09FC:
+        return run ? seg003_fb_span(off, si) : 1;
+    case 0x2D83: case 0x2DF3: case 0x2F18: case 0x2F96:
+        if (run) seg003_span(off, si);
+        return 1;
+    case 0x4225: if (run) seg003_text_raster(si); return 1;
+    case 0x5372: if (run) seg003_0272_5372(si); return 1;
+    case 0x5467: if (run) seg003_0272_5467(si); return 1;
+    case 0x5578: if (run) seg003_0272_5578(si); return 1;
+    case 0x568B: if (run) seg003_0272_568B(si); return 1;
+    case 0x56E3: if (run) seg003_0272_56E3(si); return 1;
+    case 0x581B: if (run) seg003_0272_581B(si); return 1;
+    case 0x586D: if (run) seg003_0272_586D(si); return 1;
+    case 0x58C7: if (run) seg003_0272_58C7(si); return 1;
+    case 0x58F8: if (run) seg003_0272_58F8(si); return 1;
     case 0x283C: case 0x31E5: case 0x31E6:
     case 0x2C95: case 0x2C96: case 0x2C97: case 0x2C98: case 0x2C99:
-        return;
+        return 1;
     default:
-        snprintf(why, sizeof why, "seg003 routine at 0085:%04X has no C yet", off);
+        return 0;
+    }
+}
+
+int seg003_handles(uint16_t off)
+{
+    return hand_call(span_entry(off), 0, 0);
+}
+
+void seg003_call(uint16_t off, uint16_t si)
+{
+    struct seg003_regs r = { 0 };
+    off = span_entry(off);
+    if (hand_call(off, si, 1)) return;
+    if (asm_translated(0x0085, off)) {
+        r.si = si;
+        seg003_asm(off, r);
+        return;
+    }
+    {
+        char why[64];
+        snprintf(why, sizeof why, "seg003 routine at 0085:%04X has no C", off);
         port_halt(why);
     }
+}
+
+uint16_t seg003_asm(uint16_t off, struct seg003_regs r)
+{
+    struct asm_state s;
+    uint16_t ax;
+    asm_save(&s);
+    if (asm_ss != SEG370D) {
+        SET_SS(SEG370D);
+        SP = 0x4FA8;
+    }
+    SET_DS(SEG370D);
+    SET_ES(SEG370D);
+    AX = r.ax; BX = r.bx; CX = r.cx; DX = r.dx; SI = r.si; DI = r.di; BP = r.bp;
+    asm_run_near(0x0085, off);
+    ax = AX;
+    asm_restore(&s);
+    return ax;
 }
 
 void setup_font(void) { seg003_0272_3BFD(); }
@@ -165,20 +216,57 @@ void vscreen_focus(int x, int y) { seg003_0272_2A0D((uint16_t)x, (uint16_t)y); }
 void box(int x0, int y0, int x1, int y1)
 {
     int16_t ax = (int16_t)x0, bx = (int16_t)y0, cx = (int16_t)x1, dx = (int16_t)y1;
-    if (clip_rect(&ax, &bx, &cx, &dx)) seg003_0272_3371(ax, bx, cx, dx);
+    struct seg003_regs r = { 0 };
+    if (!clip_rect(&ax, &bx, &cx, &dx)) return;
+    r.ax = (uint16_t)ax; r.bx = (uint16_t)bx; r.cx = (uint16_t)cx; r.dx = (uint16_t)dx;
+    seg003_asm(0x3371, r);                      /* ubox */
 }
 
 void uhline(int x0, int y, int x1) { seg003_0272_34AE((int16_t)x0, (int16_t)y, (int16_t)x1); }
 /* uvline: x, y0, y1 (the wrapper puts the third argument in DX) */
 void uvline(int x, int y0, int y1) { seg003_0272_3324((int16_t)x, (int16_t)y0, (int16_t)y1); }
-void seg003_0272_4B93(int x, int y0, int y1) { seg003_0272_331A((int16_t)x, (int16_t)y0, (int16_t)y1); }
-void seg003_0272_4BDA(int x0, int y, int x1) { seg003_0272_347F((int16_t)x0, (int16_t)y, (int16_t)x1); }
-void seg003_0272_4C64(int x, int y0, int y1) { seg003_0272_3321((int16_t)x, (int16_t)y0, (int16_t)y1); }
+
+/* the vertical lines _331A (clipped, from the other page) and _3321 (clipped) and the clipped
+   hline _347F: the entries load AX, BX and CX, the vertical ones then exchanging CX and DX
+   (DX held seg_370D's paragraph) */
+static void line(uint16_t off, int a, int b, int c, int vertical)
+{
+    struct seg003_regs r = { 0 };
+    r.ax = (uint16_t)a;
+    r.bx = (uint16_t)b;
+    r.cx = vertical ? SEG370D : (uint16_t)c;
+    r.dx = vertical ? (uint16_t)c : SEG370D;
+    seg003_asm(off, r);
+}
+
+void seg003_0272_4B93(int x, int y0, int y1) { line(0x331A, x, y0, y1, 1); }
+void seg003_0272_4BDA(int x0, int y, int x1) { line(0x347F, x0, y, x1, 0); }
+void seg003_0272_4C64(int x, int y0, int y1) { line(0x3321, x, y0, y1, 1); }
+
+/* _3324's direct vertical lines, through GRCORE's 52B1 and 52B4 */
+void seg003_0272_3164(uint16_t ax, uint16_t bx, uint16_t dx)
+{
+    struct seg003_regs r = { 0 };
+    r.ax = ax; r.bx = bx; r.dx = dx;
+    seg003_asm(0x3164, r);
+}
+
+void seg003_0272_3121(uint16_t ax, uint16_t bx, uint16_t dx)
+{
+    struct seg003_regs r = { 0 };
+    r.ax = ax; r.bx = bx; r.dx = dx;
+    seg003_asm(0x3121, r);
+}
 
 /* gr_read_pixel -> 529F (_30FB, unclipped); _47A0 -> 52A2 (_30E3, -1 outside the window);
    plot_pixel -> 52A5 (_3094); _4824 -> 52A8 (_30AC) */
 unsigned char gr_read_pixel(int x, int y) { return (unsigned char)seg003_0272_30FB((uint16_t)x, (uint16_t)y); }
-int seg003_0272_47A0(int x, int y) { return (int16_t)seg003_0272_30E3((int16_t)x, (int16_t)y); }
+int seg003_0272_47A0(int x, int y)
+{
+    struct seg003_regs r = { 0 };
+    r.ax = (uint16_t)x; r.bx = (uint16_t)y;
+    return (int16_t)seg003_asm(0x30E3, r);
+}
 void plot_pixel(int x, int y) { seg003_0272_3094((int16_t)x, (int16_t)y); }
 void seg003_0272_4824(int x, int y) { seg003_0272_30AC((uint16_t)x, (uint16_t)y); }
 
@@ -194,9 +282,6 @@ static uint16_t copy_string(const char *s)
     return 0x4FA8;
 }
 
-uint16_t seg003_0272_43C5(uint16_t si);
-void seg003_0272_3B36(uint16_t ax, uint16_t bx, uint16_t si);
-void seg003_0272_3B8F(uint16_t ax, uint16_t bx, uint16_t si);
 
 /* string_to_screen -> 527E (_3B36); _44DC -> 5287 (_3B8F, shadowed); string_width -> _43C5 */
 void string_to_screen(char *s, int x, int y)
@@ -207,8 +292,10 @@ void string_to_screen(char *s, int x, int y)
 
 void seg003_0272_44DC(char *s, int x, int y)
 {
-    uint16_t si = copy_string(s);
-    seg003_0272_3B8F((uint16_t)x, (uint16_t)y, si);
+    struct seg003_regs r = { 0 };
+    r.si = copy_string(s);
+    r.ax = (uint16_t)x; r.bx = (uint16_t)y;
+    seg003_asm(0x3B8F, r);
 }
 
 int string_width(char *s)
@@ -237,19 +324,29 @@ void fbshow(void *bm, int x, int y, int w, int h)
 
 void seg003_0272_50E7(int ax, int dx, int bx, int cx)
 {
-    seg003_0272_2B62((uint16_t)ax, (uint16_t)bx, (uint16_t)cx, (uint16_t)dx);
+    struct seg003_regs r = { 0 };
+    r.ax = (uint16_t)ax; r.bx = (uint16_t)bx; r.cx = (uint16_t)cx; r.dx = r.di = (uint16_t)dx;
+    seg003_asm(0x2B62, r);
 }
 
 void seg003_0272_511C(unsigned char *bm, int x, int y, int w, int h)
 {
     SETW(0x0DC6, 0);
     SETW(0x0DC8, 0);
-    seg003_0272_222B((int16_t)x, (int16_t)y, (uint16_t)FP_OFF(bm), (uint16_t)FP_SEG(bm), (int16_t)w, (int16_t)h);
+    {
+        struct seg003_regs r = { 0 };
+        r.di = (uint16_t)FP_OFF(bm); r.si = (uint16_t)FP_SEG(bm);
+        r.ax = (uint16_t)x; r.bx = (uint16_t)y; r.cx = (uint16_t)w; r.bp = r.dx = (uint16_t)h;
+        seg003_asm(0x222B, r);
+    }
 }
 
 void vcopyfb(int x, int y, int w, int h, int di)
 {
-    seg003_0272_2242((int16_t)x, (int16_t)y, (int16_t)w, (int16_t)h, (uint16_t)di);
+    struct seg003_regs r = { 0 };
+    r.ax = (uint16_t)x; r.bx = (uint16_t)y; r.cx = (uint16_t)w; r.di = (uint16_t)di;
+    r.bp = r.dx = (uint16_t)h;
+    seg003_asm(0x2242, r);
 }
 
 void vcopy(int x, int y, int w, int h, int x2, int y2)

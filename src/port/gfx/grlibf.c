@@ -1,6 +1,9 @@
 /* grlibf.c: replaces part of src/gfx/GRLIBF.ASM (seg003 module 6): clear_window (_3423) and
    urectangle (_342E), which turn a filled rectangle into one span per row and run the current
-   span writer (4112) on them. clip_rect (_33BE) is in grcore.c with rectangle. */
+   span writer (4112) on them, the whole screen (_326D) and the copies between the pages (_327D,
+   _328F), and the unclipped lines (_3324, _34AE). clip_rect (_33BE) is in grcore.c with
+   rectangle. The rest of the module (the clipped lines, ubox, the pixel, the polygons) is the
+   translation's, gfx/grlibf_x.c (docs/PORT.md, "One implementation per routine"). */
 #include "grlib.h"
 
 /* _3423, clear_window: urectangle over the whole clip window (3DF4 left, 3DF6 top, 3DF8
@@ -39,16 +42,10 @@ void seg003_0272_342E(int16_t ax, int16_t bx, int16_t cx, int16_t dx)
 }
 
 /* _326D: the whole screen, (0, 0) to (3DEC, 3DEE), through urectangle with the current span
-   writer; _326A sets the colour AX first. */
+   writer. */
 void seg003_0272_326D(void)
 {
     seg003_0272_342E(0, SW(0x3DEE), SW(0x3DEC), 0);
-}
-
-void seg003_0272_326A(uint16_t ax)
-{
-    seg003_0272_3195(ax);
-    seg003_0272_326D();
 }
 
 /* _327D, copy_visible_to_hidden: _326D with span writer 52CC (_2F18, the copy from the other
@@ -67,42 +64,6 @@ void seg003_0272_328F(void)
     seg003_0272_2AC1();
     seg003_0272_327D();
     seg003_0272_2AC1();
-}
-
-/* _32B4 (FM pixel): (AX, BX) inside the window: with the solid writer straight to the pixel
-   writer (upixel, _30AC), unless a concave window (5046) excludes it; otherwise a one-span
-   list at 414A through the span writer. */
-void seg003_0272_32B4(int16_t ax, int16_t bx)
-{
-    uint16_t di;
-    if (bx > SW(0x3DF6) || bx < SW(0x3DFA) || ax > SW(0x3DF8) || ax < SW(0x3DF4)) return;
-    if (W(0x4112) == 0x52C9) {
-        /* L329A: the concave window's test compares the same word twice, so it never excludes
-           (as in the assembly) */
-        seg003_0272_30AC((uint16_t)ax, (uint16_t)bx);
-        return;
-    }
-    di = 0x414A;
-    SETW(di, bx);
-    SETW(di + 2, ax);
-    SETW(di + 4, ax);
-    seg003_call(W(0x4112), 0x414A);
-}
-
-/* _32E2: clip a vertical line (x AX, y from BX to DX) to the window: 0 when it is wholly
-   outside (the assembly drops its caller's return address), else BX >= DX inside. */
-static int vclip(int16_t ax, int16_t *bx, int16_t *dx)
-{
-    int16_t t, si;
-    if (ax > SW(0x3DF8) || ax < SW(0x3DF4)) return 0;
-    if (*bx <= *dx) { t = *bx; *bx = *dx; *dx = t; }
-    si = SW(0x3DFA);
-    if (*bx < si) return 0;
-    if (*dx <= si) *dx = si;
-    si = SW(0x3DF6);
-    if (*dx > si) return 0;
-    if (*bx >= si) *bx = si;
-    return 1;
 }
 
 /* _3324, uvline: x AX, y from BX to DX. The solid and copy writers have direct vertical-line
@@ -129,17 +90,6 @@ void seg003_0272_3324(int16_t ax, int16_t bx, int16_t dx)
     seg003_call(W(0x4112), 0x2D42);
 }
 
-/* _3321, vline: clipped, then uvline. _331A: clipped, then the copy line (52B4). */
-void seg003_0272_3321(int16_t ax, int16_t bx, int16_t dx)
-{
-    if (vclip(ax, &bx, &dx)) seg003_0272_3324(ax, bx, dx);
-}
-
-void seg003_0272_331A(int16_t ax, int16_t bx, int16_t dx)
-{
-    if (vclip(ax, &bx, &dx)) seg003_0272_3121((uint16_t)ax, (uint16_t)bx, (uint16_t)dx);
-}
-
 /* _34AE, uhline: one span, y BX, x from AX to CX in either order. */
 void seg003_0272_34AE(int16_t ax, int16_t bx, int16_t cx)
 {
@@ -149,36 +99,4 @@ void seg003_0272_34AE(int16_t ax, int16_t bx, int16_t cx)
     SETW(0x414C, ax);
     SETW(0x414E, cx);
     seg003_call(W(0x4112), 0x414A);
-}
-
-/* _347F, hline: clipped to the window, then as uhline. */
-void seg003_0272_347F(int16_t ax, int16_t bx, int16_t cx)
-{
-    int16_t t, dx;
-    if (bx > SW(0x3DF6) || bx < SW(0x3DFA)) return;
-    if (ax >= cx) { t = ax; ax = cx; cx = t; }
-    dx = SW(0x3DF4);
-    if (cx < dx) return;
-    if (ax <= dx) ax = dx;
-    dx = SW(0x3DF8);
-    if (ax > dx) return;
-    if (cx >= dx) cx = dx;
-    SETW(0x414A, bx);
-    SETW(0x414C, ax);
-    SETW(0x414E, cx);
-    seg003_call(W(0x4112), 0x414A);
-}
-
-/* _3371, ubox: the outline of (AX, BX)-(CX, DX): two uhlines and two uvlines from the corners
-   kept at 4152..4158. */
-void seg003_0272_3371(int16_t ax, int16_t bx, int16_t cx, int16_t dx)
-{
-    SETW(0x4152, ax);
-    SETW(0x4154, bx);
-    SETW(0x4156, cx);
-    SETW(0x4158, dx);
-    seg003_0272_34AE(SW(0x4152), SW(0x4154), SW(0x4156));
-    seg003_0272_34AE(SW(0x4152), SW(0x4158), SW(0x4156));
-    seg003_0272_3324(SW(0x4152), SW(0x4154), SW(0x4158));
-    seg003_0272_3324(SW(0x4156), SW(0x4154), SW(0x4158));
 }

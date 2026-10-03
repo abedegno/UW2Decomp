@@ -59,6 +59,8 @@ static void unlock(void)
 
 static FILE *ail_log_fp, *hw_log_fp;
 static uint64_t vtime;                  /* the AIL clock: microseconds of PIT ticks */
+static uint64_t vclk;                   /* the same in PIT input clocks */
+static uint64_t snd_at;                 /* under replay: the moment of the read in hand */
 static uint32_t ticks;                  /* PIT ticks since AIL_startup */
 
 void ail_log(const char *fmt, ...)
@@ -87,9 +89,11 @@ void ail_set_logs(const char *ail_path, const char *hw_path)
     if (hw_path && !(hw_log_fp = audio_host_fopen(hw_path))) port_fatal("cannot write %s", hw_path);
 }
 
+/* Now, for the drivers: the start of the PIT tick in hand, or, under replay, the moment
+   within it at which DOS made the read in hand (port_sound_moment) */
 uint64_t ail_now_us(void)
 {
-    return vtime;
+    return snd_at > vtime ? snd_at : vtime;
 }
 
 /* ---- the hardware: timestamped and passed on to audio.c ------------------------------- */
@@ -171,12 +175,23 @@ static void program_timers(void)
     }
 }
 
+/* The PIT's divisor for a period, as set_PIT_period computes it (us * 10000 / 8380, 0 for
+   65536), and the PIT's input clock: the PIT really ticks every divisor / 1193182 s, 3906.36
+   us for the 256 Hz clock's 3906, and the digital buffers play in that real time */
+#define PIT_HZ 1193182u
+
+static uint32_t pit_divisor(uint32_t us)
+{
+    return us >= 0xD68Du ? 65536u : us * 10000u / 8380u;
+}
+
 /* API_timer: one PIT tick. Timer 16 is the BIOS's, which the port keeps in pit.c. */
 static void api_timer(void)
 {
     int i;
     if (pit_period == 0xFFFFFFFFu || pit_period == 0) return;
-    vtime += pit_period;
+    vclk += pit_divisor(pit_period);
+    vtime = vclk * 1000000u / PIT_HZ;
     ticks++;
     digi_ticks();
     audio_render_to(vtime);
@@ -208,7 +223,11 @@ void ail_pit_advance(uint64_t ns)
     unlock();
 }
 
-/* under replay: the game read the clock as t (1/256 s); the PIT has run for as long */
+/* under replay: the game read the clock as t. A tick of the clock is a run of cllbck_tst,
+   AIL's 256 Hz timer, period 3906 us in AIL's own units, which, the shortest period of
+   any timer, is the PIT's: one PIT tick per tick of the clock, as in DOS */
+#define CLOCK_PERIOD (1000000u / 256u)
+
 void port_clock_read(uint32_t t)
 {
     static int started;
@@ -222,7 +241,7 @@ void port_clock_read(uint32_t t)
         unlock();
         return;
     }
-    target += (uint64_t)(t - last) * 1000000u / 256u;
+    target += (uint64_t)(t - last) * CLOCK_PERIOD;
     last = t;
     while (pit_period != 0xFFFFFFFFu && pit_period && done + pit_period <= target) {
         done += pit_period;
@@ -237,33 +256,69 @@ void port_clock_read(uint32_t t)
    how closely the drivers follow DOS's timing: the reads where they differ, and the clock
    ticks they spanned, are summed and printed at the end (UW2PORT_SNDCHECK=1 lists each). */
 static uint32_t snd_reads, snd_diff, snd_diff_ticks, snd_last_diff_clock;
+static uint32_t snd_sync;               /* buffers whose end was DOS's */
+static int64_t snd_early_max, snd_late_max;   /* how far from their nominal end, us */
 static int snd_list = -1;
+static int status_h = -1, status_n;     /* the digital buffer status read in hand */
+static int sync_digi(int h, int n, unsigned recorded, int64_t *early);
 
 static void snd_report(void)
 {
     if (snd_reads)
         fprintf(stderr, "uw2port: sound reads: %u, %u where the port's drivers differed from DOS's"
-                " (over %u clock ticks)\n", snd_reads, snd_diff, snd_diff_ticks);
+                " (over %u clock ticks); %u digital transfers ended at DOS's moment, from %lld us"
+                " before their nominal end to %lld after\n",
+                snd_reads, snd_diff, snd_diff_ticks, snd_sync, (long long)snd_early_max, (long long)snd_late_max);
 }
 
 void port_sound_read(unsigned own, unsigned recorded, uint32_t clock)
 {
+    int h = status_h;
+    int64_t early;
+    status_h = -1;
     if (snd_list < 0) {
         snd_list = getenv("UW2PORT_SNDCHECK") != NULL;
         atexit(snd_report);
     }
     snd_reads++;
     if ((own & 0xFFFF) == (recorded & 0xFFFF)) return;
+    if (h >= 0 && sync_digi(h, status_n, recorded & 0xFFFF, &early)) {
+        snd_sync++;
+        if (early > snd_early_max) snd_early_max = early;
+        if (-early > snd_late_max) snd_late_max = -early;
+        if (snd_list) fprintf(stderr, "uw2port: sound read at clock %X: DOS's transfer ended %lld us before its nominal end\n",
+                              clock, (long long)early);
+        return;
+    }
     if (snd_diff == 0 || clock != snd_last_diff_clock) snd_diff_ticks++;
     snd_diff++;
     snd_last_diff_clock = clock;
     if (snd_list) fprintf(stderr, "uw2port: sound read at clock %X: the port %X, DOS %X\n", clock, own, recorded);
 }
 
+/* under replay: DOS made the read in hand moment PIT input clocks after the start of the
+   tick of clock (FFFFh: not known, a later read of a run), so the drivers answer for then */
+/* DOSBox's Sound Blaster (js-dos, DOS's side of the replays) raises a single-cycle transfer's
+   interrupt when the mixer, which pulls the DMA bytes for whole milliseconds and in js-dos
+   ahead of the emulated time by what the host's audio has buffered, finds no more than
+   sb.dma.min, 3 ms of samples, left (sblaster.cpp, GenerateDMASound): so up to 3 ms and the
+   mixer's lead before the samples have played, and up to a mixer tick, 1 ms, after */
+#define SB_WIN_EARLY 5000u
+#define SB_WIN_LATE 1000u
+
+void port_sound_moment(uint32_t clock, unsigned moment)
+{
+    (void)clock;
+    if (!slaved || moment == 0xFFFF) return;
+    lock();
+    snd_at = (vclk + moment) * 1000000u / PIT_HZ;
+    unlock();
+}
+
 void ail_set_slaved(int on)
 {
     slaved = on;
-    digi_set_lenient(on);
+    if (on) digi_set_window(SB_WIN_EARLY, SB_WIN_LATE);
 }
 
 int AIL_register_timer(void (*fn)(void))
@@ -702,10 +757,19 @@ void AIL_register_sound_buffer(int h, int n, struct SoundBuff *buf)
               digi_register_sb(d_->d, n, &o)), );
 }
 
+static int sync_digi(int h, int n, unsigned recorded, int64_t *early)
+{
+    int r = 0;
+    DCALL(h, r = digi_sync(d_->d, n, recorded, early), 0);
+    return r;
+}
+
 unsigned AIL_sound_buffer_status(int h, int n)
 {
     unsigned r = 0;
     DCALL(h, r = digi_sb_status(d_->d, n), 0);
+    status_h = h;
+    status_n = n;
     return r;
 }
 

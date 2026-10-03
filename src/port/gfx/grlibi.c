@@ -1,5 +1,8 @@
-/* grlibi.c: replaces part of src/gfx/GRLIBI.ASM (seg003 module 9): the text masks (_3BE2) and
-   setup_font (_3BFD). The text drawing itself is still the generated stubs. */
+/* grlibi.c: replaces part of src/gfx/GRLIBI.ASM (seg003 module 9): the text masks (_3BE2),
+   setup_font (_3BFD), string_width (_43C5), and string_to_screen (_3B36) with the rasteriser
+   (4225h) and the single-colour blitter (_3C61) it uses. The other text entries (unclipped,
+   shadowed, the bitmap blitter) and the polygon routines are the translation's,
+   gfx/grlibi_x.c (docs/PORT.md, "One implementation per routine"). */
 #include "grlib.h"
 
 /* _3BE2: the 256-entry table at 4A26 from the 16 plane masks at 4A16: for each high nibble,
@@ -148,52 +151,22 @@ static void blit(uint16_t colour)
     } while (--ch);
 }
 
-/* the text routines' two vectors, 4D14 (the rasteriser) and 4D16 (the blitter), by the
-   offsets DOS keeps there */
+/* the rasteriser through its vector, 4D14 (4225h, the only one the game sets) */
 static void text_raster(uint16_t si)
 {
-    if (W(0x4D14) != 0x4225) port_halt("the text rasteriser vector (4D14) is not 4225h");
-    raster(si);
+    struct seg003_regs r = { 0 };
+    if (W(0x4D14) == 0x4225) { raster(si); return; }
+    r.si = si;
+    seg003_asm(W(0x4D14), r);
 }
 
-static void text_blit(uint16_t colour)
-{
-    if (W(0x4D16) == 0x3C61) { blit(colour); return; }
-    port_halt("the bitmap text blitter (L4126, through _222B) has no C yet");
-}
+/* for seg003_call and x86/glue.c: the rasteriser (SI the string) and _3C61 (AX the colour) */
+void seg003_text_raster(uint16_t si) { raster(si); }
+void seg003_text_blit(uint16_t colour) { blit(colour); }
 
-/* _4150 (FM shift_left_1): the text's x back one pixel (a byte back in the buffer when x was
-   a multiple of 4) and y up one, and the whole buffer, 4D02 + 1 bytes ending at 4D00, shifted
-   one bit left as one bit string, the lowest address the most significant (rcl from the end
-   down, 53 bytes a pass through _4186). */
-static void shift_left_1(void)
-{
-    uint16_t si, n, total;
-    unsigned carry = 0;
-    if (!(W(0x4A0E) & 3)) {
-        SETW(0x4D06, W(0x4D06) - 1);
-        SETW(0x4A0E, W(0x4A0E) - 4);
-    }
-    SETW(0x4A10, W(0x4A10) + 1);
-    SETW(0x4A0E, W(0x4A0E) - 1);
-    total = (uint16_t)(W(0x4D02) + 1);
-    /* the passes: whole ones of 53, then the rest through the table at 4C24, whose entry 0 is
-       0 and whose entry 53 is the byte before _4186 (dec sp): DOS would go astray on either */
-    n = total;
-    while (n > 0x35) n -= 0x35;
-    if (n == 0 || n == 0x35) port_halt("shift_left_1: a buffer length that enters the table at 4C24 badly");
-    si = W(0x4D00);
-    for (n = total; n; n--, si--) {
-        uint8_t b = B(si);
-        unsigned c = b >> 7;
-        SETB(si, (uint8_t)((b << 1) | carry));
-        carry = c;
-    }
-}
-
-/* _3B36 (string_to_screen), _3B3E (unclipped), _3B8F (shadowed), _3BC8 (shadowed, unclipped):
-   the string at SI, top-left at (AX, BX). The clipped entries draw nothing unless the whole
-   box, the font's height down from y and x, is inside the window. */
+/* _3B36 (string_to_screen): the string at SI, top-left at (AX, BX), through the single-colour
+   blitter (its vector 4D16 set to _3C61); nothing unless the whole box, the font's height down
+   from y and x, is inside the window. */
 static int text_box(uint16_t ax, uint16_t bx)
 {
     int16_t v;
@@ -214,37 +187,5 @@ void seg003_0272_3B36(uint16_t ax, uint16_t bx, uint16_t si)
     SETW(0x4D16, 0x3C61);
     if (!text_box(ax, bx)) return;
     text_raster(si);
-    text_blit(W(0x2D3A));
-}
-
-void seg003_0272_3B3E(uint16_t ax, uint16_t bx, uint16_t si)
-{
-    SETW(0x4D16, 0x3C61);
-    SETW(0x4A0E, ax);
-    SETW(0x4A10, bx);
-    text_raster(si);
-    text_blit(W(0x2D3A));
-}
-
-static void shadowed(uint16_t si)
-{
-    SETW(0x4A0E, W(0x4A0E) + 1);
-    SETW(0x4A10, W(0x4A10) - 1);
-    text_raster(si);
-    blit(W(0x2D36));
-    shift_left_1();
     blit(W(0x2D3A));
-}
-
-void seg003_0272_3B8F(uint16_t ax, uint16_t bx, uint16_t si)
-{
-    if (!text_box(ax, bx)) return;
-    shadowed(si);
-}
-
-void seg003_0272_3BC8(uint16_t ax, uint16_t bx, uint16_t si)
-{
-    SETW(0x4A0E, ax);
-    SETW(0x4A10, bx);
-    shadowed(si);
 }

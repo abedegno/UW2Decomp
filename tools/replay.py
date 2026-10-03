@@ -15,6 +15,7 @@ r"""Record a session in DOS and replay it in DOS and in the port, comparing the 
     ... --stage DIR                                     with DIR's files (a saved game, SAVE1/) put into the
                                                         game's directory first, in DOS and in the port
     python3 tools/replay.py check REC OUT               replay REC in DOS twice and in the port, compare all
+                                                        (with a sound card, the port's sound drivers too)
 
 The replay DOS build is the modding build with every source that uses the hooks of
 src/include/portable.h compiled with -DREPLAY (and every source with a NULLTRAP mark with
@@ -105,6 +106,10 @@ SESSIONS = {
              's:ingame3', 'w:40000', 's:ingame4'],
 }
 SESSIONS['soundfm'] = SESSIONS['sound']   # the same with every effect on the FM chip (CFGS)
+# the same on a Roland MT-32 (CFGS), with every wait doubled: DM05.ADV uploads each theme's
+# timbres as system exclusive messages with a wait of vertical retraces after each, so the
+# way into the game takes longer in DOS and fixed waits would send the keys too early
+SESSIONS['soundmt'] = [f'w:{2 * int(x[2:])}' if x.startswith('w:') else x for x in SESSIONS['sound']]
 # a saved game loaded from the main menu: run with --stage DIR, DIR holding SAVE1/ (the one the
 # items session saves; DOS's or the port's, which are the same bytes): the title, Escape twice,
 # Journey Onward (Enter, the default when a save exists), slot 1 "first" (Enter), and a step
@@ -144,12 +149,14 @@ SESSIONS['talk'] = _ENTRY + [
     's:talk_end']
 
 
-# DATA\UW.CFG for the sessions with sound: the music card (3, Sound Blaster FM, DM03.ADV) and
-# the speech card (1, Sound Blaster digital, DD01.ADV, or 0 for none, so every effect is played
-# on the FM chip), each with its IRQ, port and DMA (SOUND.C's seg016_1E73_2FCB reads them)
+# DATA\UW.CFG for the sessions with sound: the music card (3, Sound Blaster FM, DM03.ADV, or 5,
+# Roland MT-32, DM05.ADV, on js-dos's MPU-401 at 330h) and the speech card (1, Sound Blaster
+# digital, DD01.ADV, or 0 for none, so every effect is played on the music card), each with its
+# IRQ, port and DMA (SOUND.C's seg016_1E73_2FCB reads them)
 CFGS = {
     'sound': '3 7 220 1 sound\r\n1 7 220 1 speech\r\n',
     'soundfm': '3 7 220 1 sound\r\n0 -1 -1 -1 speech\r\n',
+    'soundmt': '5 2 330 -1 sound\r\n0 -1 -1 -1 speech\r\n',
 }
 
 
@@ -222,9 +229,11 @@ def read_dump(path):
 
 def read_log(path):
     """RECORD.OUT (src/replay/REPLAY.C): the streams' runs decoded. Returns {stream: [runs]},
-    each run (count, value), and the call count the recording stopped at."""
+    each run (count, value), a SOUND run (count, value, moment) in version 3, and the call
+    count the recording stopped at."""
     d = open(path, 'rb').read()
-    if d[:4] != b'UW2R' or d[4] != 2: raise SystemExit(f'{path}: not a version 2 recording')
+    if d[:4] != b'UW2R' or d[4] not in (2, 3): raise SystemExit(f'{path}: not a version 2 or 3 recording')
+    ver = d[4]
     stop = struct.unpack_from('<I', d, 8)[0]
     data = {}; p = 12
     while p + 3 <= len(d):
@@ -249,6 +258,7 @@ def read_log(path):
                 r, n = struct.unpack_from('<HB', b, q); q += 3
                 q += 0x89 if n == 0xFF else 2 * n
                 runs.append((c, r))
+            elif s == 8 and ver >= 3: runs.append((c, *struct.unpack_from('<HH', b, q))); q += 4
             elif s in (4, 8): runs.append((c, struct.unpack_from('<H', b, q)[0])); q += 2
             else: runs.append((c, struct.unpack_from('<hh', b, q))); q += 4
         out[STREAMS.get(s, s)] = runs
@@ -260,7 +270,7 @@ def log_summary(path):
     parts = [f'stopped at call {stop}' if stop else 'never stopped']
     for k, v in runs.items():
         if k == 'MISC': parts.append('MISC ' + ' '.join(f'{a}:{b:X}' for a, b in v)); continue
-        parts.append(f'{k} {sum(c for c, _ in v)} calls in {len(v)} runs')
+        parts.append(f'{k} {sum(r[0] for r in v)} calls in {len(v)} runs')
     keys = [r for c, r in runs.get('KEY', []) if r]
     if keys: parts.append('keys ' + ' '.join(f'{k:04X}' for k in keys))
     if 'TIME' in runs: parts.append(f"clock {runs['TIME'][0][1]:X} to {runs['TIME'][-1][1]:X}")
@@ -502,6 +512,41 @@ def run_port(rec, out, extra=()):
     return r.returncode
 
 
+def sound_check(*dirs):
+    """With a sound card: each run's count of the reads where its own sound driver differed from
+    the recording (DOS's SNDCHECK.OUT, the port's log); the port's must be 0, DOS's are the
+    reference's own timing noise (docs/PORT.md, "Replays with a sound card")."""
+    lines = []
+    for d in dirs:
+        for f, pat in (('SNDCHECK.OUT', 'sound reads'), ('port.log', 'uw2port: sound reads')):
+            fp = os.path.join(d, f)
+            if os.path.exists(fp):
+                lines += [(d, l.strip()) for l in open(fp, errors='replace') if l.strip().startswith(pat)]
+    if not lines: return 0
+    print('\n== sound drivers against the recording')
+    bad = 0
+    for d, l in lines:
+        print(f'{os.path.basename(d)}: {l}')
+        m = re.search(r'sound reads: \d+, (\d+) where the port', l)
+        if m and int(m.group(1)): bad = 1
+    return bad
+
+
+def driver_check(p):
+    """With a music card: tools/ailcheck.py on the port's logs, the real .ADV driver against
+    the port's C driver write for write (needs Unicorn in the .venv; skipped without)."""
+    al, hl = os.path.join(p, 'ail.log'), os.path.join(p, 'hw.log')
+    if not (os.path.exists(al) and os.path.exists(hl)): return 0
+    if 'register_driver' not in open(al, errors='replace').read(200000): return 0
+    print('\n== the port\'s music driver against the real one (tools/ailcheck.py)')
+    r = subprocess.run([PY, os.path.join(here, 'ailcheck.py'), al, hl], capture_output=True, text=True)
+    out = (r.stdout + r.stderr).strip()
+    if 'needs Unicorn' in out:
+        print('skipped: no Unicorn in', PY); return 0
+    print(out)
+    return 1 if r.returncode else 0
+
+
 def main(argv):
     global STAGE
     if '--stage' in argv:
@@ -532,13 +577,15 @@ def main(argv):
         rec, out = a[0], a[1]
         d1, d2, p = os.path.join(out, 'dos1'), os.path.join(out, 'dos2'), os.path.join(out, 'port')
         for d in (d1, d2, p): os.makedirs(d, exist_ok=True)
-        run_dos(d1, rec); run_dos(d2, rec); run_port(rec, p)
+        run_dos(d1, rec); run_dos(d2, rec)
+        logs = ['--ail-log', os.path.join(p, 'ail.log'), '--hw-log', os.path.join(p, 'hw.log')] if cfg_of(rec) else []
+        run_port(rec, p, logs)
         if os.path.exists(os.path.join(root, 'build', 'port-debug', 'uw2port')):
             pd = os.path.join(out, 'port-debug'); os.makedirs(pd, exist_ok=True); run_port(rec, pd, ['--debug'])
         print('\n== DOS against DOS'); r1 = compare(d1, d2, True, quiet=True)
         print('\n== DOS against the port'); r2 = compare(d1, p)
         print('\n== null pointers (DOS)'); r3 = nulls(d1)
-        r4 = 0
+        r4 = max(sound_check(d1, d2, p), driver_check(p))
         if os.path.isdir(os.path.join(d1, 'SAVE1')) or os.path.isdir(os.path.join(p, 'SAVE1')):
             print('\n== saved games, DOS against DOS'); r4 = saves(d1, d2)
             print('\n== saved games, DOS against the port'); r4 = max(r4, saves(d1, p))

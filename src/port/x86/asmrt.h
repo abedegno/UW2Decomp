@@ -392,14 +392,31 @@ struct asm_module { uint16_t seg, lo, hi; asm_module_fn fn; const char *name; };
    the registers and returns as the routine did (it pops what the call pushed itself). */
 typedef uint32_t (*asm_glue_fn)(void);
 struct asm_glue { uint16_t seg, off; asm_glue_fn fn; const char *name; };
+/* A range of a translated module whose routines are hand-written C (tools/asm2c.py's
+   HANDWRITTEN), and a place in one that translated code calls or jumps to. */
+struct asm_hand { uint16_t seg, lo, hi; const char *where; };
+struct asm_hand_call { uint16_t seg, off; };
 uint32_t asm_exec(uint32_t target);
 uint32_t asm_call(uint32_t target, uint16_t retip);
 uint32_t asm_callf(uint32_t target, uint16_t retcs, uint16_t retip);
 uint32_t asm_int(uint8_t n);
 void asm_bad_entry(const char *module, uint16_t entry) __attribute__((noreturn));
 void asm_halt_at(uint16_t seg, uint16_t ip, const char *why) __attribute__((noreturn));
-/* Hand C calling translated code: a far call of seg:off with the registers as they are. */
+/* Hand C calling translated code: a far call of seg:off with the registers as they are, and a
+   near one. */
 void asm_run_far(uint16_t seg, uint16_t off);
+void asm_run_near(uint16_t seg, uint16_t off);
+/* The machine's state, for C that calls translated code from inside other translated code
+   (glue that reaches it again): saved before and put back after, but for what the C returns. */
+struct asm_state {
+    uint32_t ax, bx, cx, dx, si, di, bp;
+    uint16_t sp, ds, es, ss, fs, gs;
+    uint8_t cf, zf, sf, of, df;
+};
+void asm_save(struct asm_state *s);
+void asm_restore(const struct asm_state *s);
+extern int asm_level;                   /* translated calls in progress */
+int asm_translated(uint16_t seg, uint16_t off);   /* translated code runs at seg:off */
 /* The near return of a glue routine (pop the return address) and the far one. */
 static inline uint32_t asm_glue_ret(void) { SP = (uint16_t)(SP + 2); return ASM_RET; }
 static inline uint32_t asm_glue_retf(void) { SP = (uint16_t)(SP + 4); return ASM_RETF; }

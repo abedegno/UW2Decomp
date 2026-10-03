@@ -2,9 +2,14 @@
    mode X (SetVideoMode), the mode's size and pages (_283D, _286C), the row table Ytab (_2AED),
    the edge masks (_2B44), page flips (_2ABE, _2AC1) and the display start (_295F), the window
    and its edge guards (_31E7, _2C44, _2BF9), pens (_3195, _31BE), the solid span writer
-   (_2D83), and show's clipping and row records (_21D4, L2296). Each is written from the
+   (_2D83), the copies and saves of spans (_2F18, _2DF3, _2F96), plotting and reading pixels
+   (_3094, _30AC, _30FB), the virtual screen (_2977, _2A0D), and the bitmap routines' clipping
+   and row records (_21D4, _21ED, _2214, _2250, L2296, L2373, L243F). Each is written from the
    assembly, register for register where it matters; the comments give the assembly's labels.
-   VIDMODE.ASM's header has the data map. y counts up from the bottom of the screen. */
+   VIDMODE.ASM's header has the data map. y counts up from the bottom of the screen. The rest
+   of the module (the concave polygon fill, the other span writers, _222B, _2242, _2B62, _30E3,
+   the vertical lines _3121 and _3164) is the translation's, gfx/vidmode_x.c (docs/PORT.md, "One
+   implementation per routine"). */
 #include <stdio.h>
 #include "grlib.h"
 
@@ -258,7 +263,7 @@ void seg003_0272_2D83(uint16_t si)
    vcopyfb and vcopy, L243F for vcopy upwards.
    In: AX, BX the position, DI and SI the source's offset and segment, CX the width, DX the
    height, 0DC6 and 0DC8 the offsets into the source. */
-static void l2296(int16_t ax, int16_t bx, uint16_t di, uint16_t si, int16_t cx, int16_t dx)
+void seg003_l2296(int16_t ax, int16_t bx, uint16_t di, uint16_t si, int16_t cx, int16_t dx)
 {
     uint16_t src_off = di, rec, rows, stride, srcoff, first;
     int16_t bp, s, width;
@@ -318,7 +323,7 @@ static void l2296(int16_t ax, int16_t bx, uint16_t di, uint16_t si, int16_t cx, 
 
 /* L2373: whole groups of four pixels, (AX, BX) w CX by DX rows, the records' last word DI and
    on by the groups a row (vcopyfb, 0DCA 0) or the screen's stride (vcopy, 0DCA 1) */
-static void l2373(int16_t ax, int16_t bx, int16_t cx, int16_t dx, uint16_t di)
+void seg003_l2373(int16_t ax, int16_t bx, int16_t cx, int16_t dx, uint16_t di)
 {
     int16_t si, bp;
     uint16_t groups, rec, first;
@@ -409,7 +414,7 @@ static void l243f(int16_t ax, int16_t bx, int16_t cx, int16_t dx, uint16_t di)
 void seg003_0272_21D4(int16_t ax, int16_t bx, uint16_t di, uint16_t si, int16_t cx, int16_t dx)
 {
     SETW(0x0DC2, B(0x0DC5) ? 0x5467 : 0x5372);
-    l2296(ax, bx, di, si, cx, dx);
+    seg003_l2296(ax, bx, di, si, cx, dx);
 }
 
 /* _21ED: a bitmap in video memory (SI A000h): _56E3 transparent, else _568B when x is a
@@ -417,29 +422,14 @@ void seg003_0272_21D4(int16_t ax, int16_t bx, uint16_t di, uint16_t si, int16_t 
 void seg003_0272_21ED(int16_t ax, int16_t bx, uint16_t di, uint16_t si, int16_t cx, int16_t dx)
 {
     SETW(0x0DC2, B(0x0DC5) ? 0x56E3 : (ax & 3) ? 0x5578 : 0x568B);
-    l2296(ax, bx, di, si, cx, dx);
+    seg003_l2296(ax, bx, di, si, cx, dx);
 }
 
 /* _2214, fbshow: into the frame buffer, _6F8 or (Transparency) _729 */
 void seg003_0272_2214(int16_t ax, int16_t bx, uint16_t di, uint16_t si, int16_t cx, int16_t dx)
 {
     SETW(0x0DC2, B(0x0DC5) ? 0x729 : 0x6F8);
-    l2296(ax, bx, di, si, cx, dx);
-}
-
-/* _222B: into the linear buffer of _2B62, _58C7 or (Transparency) _58F8 */
-void seg003_0272_222B(int16_t ax, int16_t bx, uint16_t di, uint16_t si, int16_t cx, int16_t dx)
-{
-    SETW(0x0DC2, B(0x0DC5) ? 0x58F8 : 0x58C7);
-    l2296(ax, bx, di, si, cx, dx);
-}
-
-/* _2242, vcopyfb: frame-buffer rows to video memory at DI (GRENTRY's _A7F) */
-void seg003_0272_2242(int16_t ax, int16_t bx, int16_t cx, int16_t dx, uint16_t di)
-{
-    SETW(0x0DC2, 0xA7F);
-    SETB(0x0DCA, 0);
-    l2373(ax, bx, cx, dx, di);
+    seg003_l2296(ax, bx, di, si, cx, dx);
 }
 
 /* _2250, vcopy: screen to screen, (AX, BX) to (SI, DI), CX by DX: upwards (L243F) when the
@@ -456,7 +446,7 @@ void seg003_0272_2250(int16_t ax, int16_t bx, int16_t cx, int16_t dx, uint16_t s
     di = (uint16_t)(W(0x36AC + (uint16_t)(di << 1)) + (si >> 2));
     SETB(0x0DCA, 1);
     if (up) l243f(ax, bx, cx, dx, di);
-    else l2373(ax, bx, cx, dx, di);
+    else seg003_l2373(ax, bx, cx, dx, di);
 }
 
 /* ---- the other span writers (VIDMODE.ASM after _2D83's ret) ------------------------------
@@ -486,38 +476,8 @@ static int span_groups(uint16_t left, uint16_t right, uint8_t *al, uint8_t *ah, 
     return -cx;
 }
 
-/* _2D83's body on the row table at rows (36AC the drawing page, 3840 the displayed one). */
-static void solid_rows(uint16_t si, uint16_t rows)
-{
-    uint8_t bl = B(0x4111), al, ah;
-    uint16_t y, di;
-    int cx;
-    for (;;) {
-        y = W(si);
-        if (y & 0x8000) return;
-        cx = span_groups(W(si + 2), W(si + 4), &al, &ah, &di);
-        si += 6;
-        di = (uint16_t)(di + W(rows + (uint16_t)(y << 1)));
-        vga_outb(SC_DATA, al);
-        vga_write(di++, bl);
-        if (cx < 0) continue;
-        cx--;
-        vga_outb(SC_DATA, 0x0F);
-        while (cx-- > 0) vga_write(di++, bl);
-        vga_outb(SC_DATA, ah);
-        vga_write(di, bl);
-    }
-}
-
-/* _2D0D: the solid fill on the drawing page (_2D83), then the same on the displayed page. */
-static void seg003_0272_2D0D(uint16_t si)
-{
-    seg003_0272_2D83(si);
-    solid_rows(si, 0x3840);
-}
-
-/* a latched copy of the spans (masks and all) from off bytes away, on the row table rows:
-   _2F18 (36AC, from the other page at 410C) and the second half of _2E79 (3840, 410E) */
+/* a latched copy of the spans (masks and all) from off bytes away, on the row table rows: _2F18
+   (36AC, from the other page at 410C) */
 static void copy_rows(uint16_t bx, uint16_t rows, uint16_t off)
 {
     uint8_t al, ah;
@@ -549,16 +509,8 @@ static void seg003_0272_2F18(uint16_t si)
     copy_rows(si, 0x36AC, W(0x410C));
 }
 
-/* _2E79: copy from the other page, then the same onto the displayed page. */
-static void seg003_0272_2E79(uint16_t si)
-{
-    seg003_0272_2F18(si);
-    SETW(0x410E, (uint16_t)(W(0x410C) + W(0x36AC) - W(0x3840)));
-    copy_rows(si, 0x3840, W(0x410E));
-}
-
 /* whole groups of each span between the screen and a run of video memory: _2DF3 saves them to
-   4116 on, _2F96 restores them from there, _2E3A copies them from the other page (410C) */
+   4116 on, _2F96 restores them from there */
 static void groups(uint16_t bx, int how)
 {
     uint16_t bp, s, d, buf = W(0x4116);
@@ -574,8 +526,7 @@ static void groups(uint16_t bx, int how)
         bx += 6;
         s = (uint16_t)(s + W(0x36AC + bp));
         if (how == 0) { d = buf; buf = (uint16_t)(buf + cx); }      /* save: screen to buf */
-        else if (how == 1) { d = s; s = buf; buf = (uint16_t)(buf + cx); }   /* restore */
-        else { d = s; s = (uint16_t)(s + W(0x410C)); }               /* from the other page */
+        else { d = s; s = buf; buf = (uint16_t)(buf + cx); }        /* restore */
         while (cx-- > 0) { vga_write(d, vga_read(s)); d++; s++; }
     }
     vga_outb(GC_DATA, 0xFF);
@@ -583,48 +534,6 @@ static void groups(uint16_t bx, int how)
 
 static void seg003_0272_2DF3(uint16_t si) { groups(si, 0); }
 static void seg003_0272_2F96(uint16_t si) { groups(si, 1); }
-static void seg003_0272_2E3A(uint16_t si) { groups(si, 2); }
-
-/* _2C9A: XOR the spans with 0Fh: the graphics controller's function select (3) set to XOR,
-   each byte read (loading the latches) and written, then back to replace and the index to 8. */
-static void seg003_0272_2C9A(uint16_t si)
-{
-    uint8_t al, ah;
-    uint16_t y, di;
-    int cx;
-    vga_outw(GC_INDEX, 0x1803);
-    for (;;) {
-        y = W(si);
-        if (y & 0x8000) break;
-        /* L2CBA: the same head as the others, but a span within one group or less takes the
-           L2CAD path with no swap */
-        al = B(0x3B64 + W(si + 2));
-        ah = B(0x3CA8 + W(si + 4));
-        di = (uint16_t)((int16_t)W(si + 2) >> 2);
-        cx = (int16_t)(((int16_t)W(si + 4) >> 2) - (int16_t)di);
-        si += 6;
-        di = (uint16_t)(di + W(0x36AC + (uint16_t)(y << 1)));
-        if (cx <= 0) {
-            vga_outb(SC_DATA, al & ah);
-            vga_read(di);
-            vga_write(di, 0x0F);
-            continue;
-        }
-        vga_outb(SC_DATA, al);
-        vga_read(di);
-        vga_write(di++, 0x0F);
-        cx--;
-        if (cx) {
-            vga_outb(SC_DATA, 0x0F);
-            while (cx-- > 0) { vga_read(di); vga_write(di++, 0x0F); }
-        }
-        vga_outb(SC_DATA, ah);
-        vga_read(di);
-        vga_write(di, 0x0F);
-    }
-    vga_outw(GC_INDEX, 0x0003);
-    vga_outb(GC_INDEX, 8);
-}
 
 /* _3094 (plot): (AX, BX) in the colour 4111 if inside the window; _30AC without the test. */
 void seg003_0272_30AC(uint16_t ax, uint16_t bx)
@@ -642,7 +551,7 @@ void seg003_0272_3094(int16_t ax, int16_t bx)
 }
 
 /* _30FB: the pixel at (AX, BX), read through the read map (graphics controller 4), leaving
-   the index at 8; _30E3 the same, or -1 outside the window. */
+   the index at 8. */
 uint16_t seg003_0272_30FB(uint16_t ax, uint16_t bx)
 {
     uint16_t di = ax;
@@ -654,37 +563,6 @@ uint16_t seg003_0272_30FB(uint16_t ax, uint16_t bx)
     return v;
 }
 
-uint16_t seg003_0272_30E3(int16_t ax, int16_t bx)
-{
-    if (bx > SW(0x3DF6) || bx < SW(0x3DFA) || ax > SW(0x3DF8) || ax < SW(0x3DF4)) return 0xFFFF;
-    return seg003_0272_30FB((uint16_t)ax, (uint16_t)bx);
-}
-
-/* _3121 (FM copy_uvline): a vertical line at x AX, rows BX down to DX, from the other page. */
-void seg003_0272_3121(uint16_t ax, uint16_t bx, uint16_t dx)
-{
-    uint16_t di = ax, cx = (uint16_t)(bx - dx + 1), off = W(0x410C);
-    vga_outb(GC_DATA, 0);
-    vga_outb(SC_DATA, (uint8_t)(B(0x3B64 + di) & B(0x3CA8 + di)));
-    di = (uint16_t)((di >> 2) + W(0x36AC + (uint16_t)(bx << 1)));
-    while (cx--) {
-        vga_write(di, vga_read((uint16_t)(off + di)));
-        di = (uint16_t)(di + W(0x36A8));
-    }
-    vga_outb(GC_DATA, 0xFF);
-}
-
-/* _3164 (FM solid_uvline): the same in the colour 4111. */
-void seg003_0272_3164(uint16_t ax, uint16_t bx, uint16_t dx)
-{
-    uint16_t di = ax, cx = (uint16_t)(bx - dx + 1);
-    vga_outb(SC_DATA, (uint8_t)(B(0x3B64 + di) & B(0x3CA8 + di)));
-    di = (uint16_t)((di >> 2) + W(0x36AC + (uint16_t)(bx << 1)));
-    while (cx--) {
-        vga_write(di, B(0x4111));
-        di = (uint16_t)(di + W(0x36A8));
-    }
-}
 
 /* ---- the virtual screen (_2977, vscreen_focus) ------------------------------------------ */
 
@@ -791,28 +669,12 @@ void seg003_0272_2A0D(uint16_t ax, uint16_t bx)
     vga_outb(0x3C0, (uint8_t)((bx & 3) << 1));
 }
 
-/* _2B62: the linear buffer _222B draws into: DX its segment (39D0), a row table at 39D2 for CX
-   rows of stride BX from AX, highest row first. */
-void seg003_0272_2B62(uint16_t ax, uint16_t bx, uint16_t cx, uint16_t dx)
-{
-    uint16_t di = (uint16_t)(0x39D2 + (uint16_t)((cx - 1) << 2));
-    SETW(0x39D0, dx);
-    while (cx--) {
-        SETW(di, ax);
-        di -= 2;
-        ax = (uint16_t)(ax + bx);
-    }
-}
-
 /* the span writers for seg003_call (grcore.c) */
 void seg003_span(uint16_t off, uint16_t si)
 {
     switch (off) {
-    case 0x2C9A: seg003_0272_2C9A(si); return;
-    case 0x2D0D: seg003_0272_2D0D(si); return;
+    case 0x2D83: seg003_0272_2D83(si); return;
     case 0x2DF3: seg003_0272_2DF3(si); return;
-    case 0x2E3A: seg003_0272_2E3A(si); return;
-    case 0x2E79: seg003_0272_2E79(si); return;
     case 0x2F18: seg003_0272_2F18(si); return;
     case 0x2F96: seg003_0272_2F96(si); return;
     default: break;

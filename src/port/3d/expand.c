@@ -1,6 +1,10 @@
-/* expand.c: replaces src/3d/EXPAND.ASM (seg004 module 1), the image decoders, and PGCACHE.ASM's
-   uncmp_tab that chooses one by an image's format byte. Each is written from the assembly; the
-   comments give its labels. EXPAND.ASM's header has the formats.
+/* expand.c: replaces part of src/3d/EXPAND.ASM (seg004 module 1), the image decoders, and
+   PGCACHE.ASM's uncmp_tab that chooses one by an image's format byte, for cFrmtoRaw. Each is
+   written from the assembly; the comments give its labels. EXPAND.ASM's header has the formats.
+   The renderer's decodes (PGCACHE.ASM's do_uwobj and do_uwcrit) reach the same C through
+   x86/glue.c; exp_8str and exp_5run (formats 4 and 6), which no recorded session decodes, are
+   the translation's (3d/expand_x.c), and cFrmtoRaw calls it for them (docs/PORT.md, "One
+   implementation per routine").
 
    The decoders read the image at AX:BP (its size word first) and write one byte per pixel to
    cmpbuf1_start (the uncompressed forms at :0; the run-length forms unpack their words one per
@@ -10,6 +14,7 @@
    64 KB as SI and DI did. The record decoder's self-modifying ret (L01A6) is a flag. */
 #include <stdio.h>
 #include "port.h"
+#include "x86/asmrt.h"
 
 /* EXPAND.ASM's _uncmp_pal, at seg004's CS:0 (in the code block, mem/fardata.c): the 32-entry
    translation of a 4- or 5-bit image */
@@ -46,16 +51,6 @@ static uint16_t start(uint16_t ax, uint16_t bp)
     n = (uint16_t)(LODSB());
     n |= (uint16_t)(LODSB() << 8);
     return n;
-}
-
-/* exp_8str (format 4): each byte through lightabs row DH (exp_8str's xlat reads CS:BX + AL with
-   BX = lightabs + DH * 256: with DH = FFh that is past lightabs, which the port has not got) */
-static uint16_t exp_8str(uint16_t ax, uint16_t bp, uint8_t dh)
-{
-    uint16_t n = start(ax, bp);
-    if (dh >= 0x92) port_halt("exp_8str: a shading row past seg004's end (DOS wraps in the segment)");
-    do STOSB(lightabs[dh * 256 + LODSB()]); while (--n);
-    return port_fp_seg(cmpbuf1_start);
 }
 
 /* exp_4str (format 0Ah): two pixels a byte, high nibble first */
@@ -163,39 +158,27 @@ static uint16_t exp_4run(uint16_t ax, uint16_t bp, const uint8_t *pal, uint8_t d
     return run(n);
 }
 
-static uint16_t ror16(uint16_t v, int n) { return (uint16_t)((v >> n) | (v << (16 - n))); }
-static uint16_t rol16(uint16_t v, int n) { return (uint16_t)((v << n) | (v >> (16 - n))); }
-
-/* exp_5run (format 6): five bytes to eight 5-bit words a pass, (size + 7) / 8 passes, with the
-   assembly's rotates; then decode */
-static uint16_t exp_5run(uint16_t ax, uint16_t bp, const uint8_t *pal, uint8_t dh)
+/* a decoder the translation has (exp_8str at 20h, exp_5run at 11Ch), called as uncmp_tab's
+   callers call it: AX the image, BP its size word, DS:SI the palette, DH the shading row; on
+   seg021's private stack outside the renderer, as cFrmtoRaw is (C3DENTRY.ASM) */
+static uint16_t translated(uint16_t entry, uint16_t ax, uint16_t bp, const uint8_t *pal, uint8_t dh)
 {
-    uint16_t n, cx, a;
-    build_pal(pal, 2, dh);
-    n = start(ax, bp);
-    cx = (uint16_t)((uint16_t)(n + 7) >> 3);
-    do {
-        a = LODSB();                                    /* xor ah,ah */
-        a = ror16(a, 3); STOSB(a);
-        a = (uint16_t)((a & 0xFF00) | LODSB());
-        a = (uint16_t)(((a >> 8) >> 5) << 8 | (a & 0xFF));  /* shr ah,5 */
-        a = ror16(a, 6); STOSB(a);
-        a = (uint16_t)(a >> 3);
-        a = (uint16_t)((a << 8) | (a >> 8)); STOSB(a);  /* xchg ah,al */
-        a = (uint16_t)((a & 0xFF00) | LODSB());
-        a = (uint16_t)(((a >> 8) >> 7) << 8 | (a & 0xFF));  /* shr ah,7 */
-        a = ror16(a, 4); STOSB(a);
-        a = (uint16_t)((a & 0xFF00) | LODSB());
-        a = (uint16_t)(((a >> 8) >> 4) << 8 | (a & 0xFF));  /* shr ah,4 */
-        a = ror16(a, 7); STOSB(a);
-        a = (uint16_t)(a & 0xFF00);                     /* xor al,al */
-        a = rol16(a, 5); STOSB(a);
-        a = (uint16_t)((a & 0xFF00) | LODSB());
-        a = (uint16_t)(((a >> 8) >> 6) << 8 | (a & 0xFF));  /* shr ah,6 */
-        a = ror16(a, 5); STOSB(a);
-        a = (uint16_t)(a >> 11); STOSB(a);
-    } while (--cx);
-    return run(n);
+    struct asm_state s;
+    uint16_t r;
+    asm_save(&s);
+    if (!asm_level) {
+        SET_SS(0x60B9u + PORT_LOAD_SEG);
+        SP = 0x510;
+    }
+    AX = ax;
+    BP = bp;
+    SET_DS(pal ? port_fp_seg(pal) : 0);
+    SI = pal ? (uint16_t)port_fp_off(pal) : 0;
+    DH = dh;
+    asm_run_near(0x065C, entry);
+    r = AX;
+    asm_restore(&s);
+    return r;
 }
 
 /* PGCACHE.ASM's uncmp_tab: the decoder for format byte bx (2 exp_8run, which has no decoder
@@ -205,12 +188,54 @@ uint16_t seg004_uncmp(uint16_t bx, uint16_t ax, uint16_t bp, const uint8_t *pal,
     char why[80];
     switch (bx) {
     case 2: return ax;
-    case 4: return exp_8str(ax, bp, dh);
-    case 6: return exp_5run(ax, bp, pal, dh);
+    case 4: return translated(0x0020, ax, bp, pal, dh);
+    case 6: return translated(0x011C, ax, bp, pal, dh);
     case 8: return exp_4run(ax, bp, pal, dh);
     case 0x0A: return exp_4str(ax, bp, pal, dh);
     default:
         snprintf(why, sizeof why, "uncmp_tab: image format %u (DOS breaks with int 3 or jumps astray)", bx);
         port_halt(why);
     }
+}
+
+/* The renderer's calls (x86/glue.c): the decoders through uncmp_tab (AX the image, BP its size
+   word, DS:SI the palette, DH the row; AX the pixels' paragraph back), and exp_5run's calls of
+   _63 and _18D, with the registers each takes and leaves (EXPAND.ASM). */
+uint32_t glue_expand_4str(void)
+{
+    AX = exp_4str(AX, BP, pDS + SI, DH);
+    return asm_glue_ret();
+}
+
+uint32_t glue_expand_4run(void)
+{
+    AX = exp_4run(AX, BP, pDS + SI, DH);
+    return asm_glue_ret();
+}
+
+/* _63: DS:SI the palette, CX its rows, AX the image, DH the row; out DS the image, BX 0 (the
+   offset of uncmp_pal), SI past the palette, CX 0, ES seg004 */
+uint32_t glue_expand_63(void)
+{
+    build_pal(pDS + SI, CX, DH);
+    SI = (uint16_t)(SI + CX * 16);
+    CX = 0;
+    BX = 0;
+    SET_DS(AX);
+    SET_ES(SEG004_CS);
+    return asm_glue_ret();
+}
+
+/* _18D: CX words at DS:SI (cmpbuf1_start:0) decoded to ES:DI (cmpbuf1_start:5400h), BX 0;
+   out SI and DI past them, BP the input's end, DX 3 */
+uint32_t glue_expand_18d(void)
+{
+    if (pDS != cmpbuf1_start || pES != cmpbuf1_start || SI != 0 || DI != 0x5400)
+        port_halt("the record decoder called on other buffers than exp_4run's and exp_5run's");
+    run(CX);
+    SI = si;
+    DI = di;
+    BP = bp_end;
+    DX = 3;
+    return asm_glue_ret();
 }

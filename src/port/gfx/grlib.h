@@ -32,8 +32,15 @@
 #define INPUT_STATUS 0x3DA
 
 /* Calls the routine at near offset off of SEG003_TEXT, with SI as the span or record list
-   where it takes one. */
+   where it takes one: the hand-written C where the port has it, else the translation. */
 void seg003_call(uint16_t off, uint16_t si);
+int seg003_handles(uint16_t off);               /* seg003_call has hand-written C for off */
+
+/* C calling a seg003 routine the port has only as the translation (the _x.c files): with the
+   registers given (the rest 0), DS and ES seg003's data and, outside translated code, seg003's
+   own stack (370D:4FA8), as GRCORE.ASM's entries called them. Returns AX. */
+struct seg003_regs { uint16_t ax, bx, cx, dx, si, di, bp; };
+uint16_t seg003_asm(uint16_t off, struct seg003_regs r);
 
 /* VIDMODE.ASM */
 void seg003_0272_283D(void);                     /* init_graphics */
@@ -49,42 +56,31 @@ void seg003_0272_2D83(uint16_t si);              /* the solid span writer */
 void seg003_0272_21D4(int16_t ax, int16_t bx, uint16_t di, uint16_t si, int16_t cx, int16_t dx);   /* show */
 void seg003_0272_21ED(int16_t ax, int16_t bx, uint16_t di, uint16_t si, int16_t cx, int16_t dx);
 void seg003_0272_2214(int16_t ax, int16_t bx, uint16_t di, uint16_t si, int16_t cx, int16_t dx);   /* fbshow */
-void seg003_0272_222B(int16_t ax, int16_t bx, uint16_t di, uint16_t si, int16_t cx, int16_t dx);
-void seg003_0272_2242(int16_t ax, int16_t bx, int16_t cx, int16_t dx, uint16_t di);                /* vcopyfb */
 void seg003_0272_2250(int16_t ax, int16_t bx, int16_t cx, int16_t dx, uint16_t si, uint16_t di);   /* vcopy */
+void seg003_l2296(int16_t ax, int16_t bx, uint16_t di, uint16_t si, int16_t cx, int16_t dx);       /* the bitmaps' rows */
+void seg003_l2373(int16_t ax, int16_t bx, int16_t cx, int16_t dx, uint16_t di);                    /* the copies' rows */
 /* GRENTRY.ASM (grentry.c) */
 int seg003_fb_span(uint16_t off, uint16_t si);   /* the frame buffer's span writers, by offset */
-void seg003_0272_6E2(void);                      /* clear_fbuf */
-void seg003_0272_6E4(uint8_t al);                /* fill_fbuf */
-void seg003_0272_764(uint16_t cx);               /* cDimFB */
-void seg003_0272_788(uint16_t cx);               /* cLiteFB */
+void seg003_0272_729(uint16_t si);               /* fbuf_draw_ylrpp_x */
+void seg003_0272_6E4(uint8_t al);                /* fill_fbuf (the translation's) */
+void seg003_0272_764(uint16_t cx);               /* cDimFB (the translation's) */
+void seg003_0272_788(uint16_t cx);               /* cLiteFB (the translation's) */
 void seg003_0272_7A8(uint16_t bx, uint16_t cx);  /* setup_frame_buf */
 void seg003_0272_7F9(void);                      /* cFBtoScreen */
-void seg003_0272_A7F(uint16_t si);
 void seg003_0272_B9B(uint16_t ax);               /* fbuf_setcolor */
-void seg003_0272_C13(uint16_t si);               /* the smooth spans */
-void seg003_smooth_vectors(uint16_t same, uint16_t vary);
 void seg003_span(uint16_t off, uint16_t si);      /* the other span writers, by offset */
 void seg003_0272_30AC(uint16_t ax, uint16_t bx); /* upixel */
 void seg003_0272_3094(int16_t ax, int16_t bx);   /* plot */
 uint16_t seg003_0272_30FB(uint16_t ax, uint16_t bx); /* read a pixel */
-uint16_t seg003_0272_30E3(int16_t ax, int16_t bx);
-void seg003_0272_3121(uint16_t ax, uint16_t bx, uint16_t dx);   /* copy_uvline */
-void seg003_0272_3164(uint16_t ax, uint16_t bx, uint16_t dx);   /* solid_uvline */
+void seg003_0272_3121(uint16_t ax, uint16_t bx, uint16_t dx);   /* copy_uvline (the translation's) */
+void seg003_0272_3164(uint16_t ax, uint16_t bx, uint16_t dx);   /* solid_uvline (the translation's) */
 void seg003_0272_2977(uint16_t ax, uint16_t bx, uint16_t cx);   /* the virtual screen */
 void seg003_0272_2A0D(uint16_t ax, uint16_t bx);                /* vscreen_focus */
-void seg003_0272_2B62(uint16_t ax, uint16_t bx, uint16_t cx, uint16_t dx);
 /* GRLIBF.ASM */
-void seg003_0272_326A(uint16_t ax);
 void seg003_0272_326D(void);
 void seg003_0272_327D(void);                     /* copy_visible_to_hidden */
 void seg003_0272_328F(void);                     /* copy_hidden_to_visible */
-void seg003_0272_32B4(int16_t ax, int16_t bx);   /* pixel */
-void seg003_0272_3321(int16_t ax, int16_t bx, int16_t dx);   /* vline */
 void seg003_0272_3324(int16_t ax, int16_t bx, int16_t dx);   /* uvline */
-void seg003_0272_331A(int16_t ax, int16_t bx, int16_t dx);
-void seg003_0272_3371(int16_t ax, int16_t bx, int16_t cx, int16_t dx);   /* ubox */
-void seg003_0272_347F(int16_t ax, int16_t bx, int16_t cx);   /* hline */
 void seg003_0272_34AE(int16_t ax, int16_t bx, int16_t cx);   /* uhline */
 void seg003_0272_3423(void);                     /* clear_window */
 void seg003_0272_342E(int16_t ax, int16_t bx, int16_t cx, int16_t dx);   /* urectangle */
@@ -101,5 +97,9 @@ void seg003_0272_58F8(uint16_t si);
 /* GRLIBI.ASM */
 void seg003_0272_3BE2(void);                     /* the text masks */
 void seg003_0272_3BFD(void);                     /* setup_font */
+void seg003_0272_3B36(uint16_t ax, uint16_t bx, uint16_t si);   /* string_to_screen */
+uint16_t seg003_0272_43C5(uint16_t si);          /* string_width */
+void seg003_text_raster(uint16_t si);            /* 4225h, the rasteriser */
+void seg003_text_blit(uint16_t colour);          /* _3C61, the single-colour blitter */
 
 #endif
