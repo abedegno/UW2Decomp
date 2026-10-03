@@ -20,7 +20,7 @@
    UW1 against UW2: one moonstone, its level kept in a nibble of the player record; no
    display_inventory_no_show flag (the panel is always redrawn); CloseAllBags leaves
    Inventory[19..27] alone; the rune bag always shows the rune panel; the backpack area
-   picture and the strings differ; grfx_quikfont takes a file name; InvUpArrow and
+   picture and the strings differ; grfx_load_font takes a file name; InvUpArrow and
    InvDownArrow are signed chars.
 
    Data owned: BagSaveHandles, and the font name literal.
@@ -461,7 +461,7 @@ char far PutObjectInBag(struct Object far *obj, int slot)
         FixOpenBag();
         displayInventoryArray(0xC, 0x13);
     } else if (displayEnc(1))
-        grfx_quikfont((int)"font5x6p.sys");  /* UW1: takes the font's file name; gfx.h has UW2's index */
+        grfx_load_font((int)"font5x6p.sys");  /* UW1: takes the font's file name; gfx.h has UW2's index */
     if (OBJ_ITEM(obj) >= FIRST_LIT_LIGHT && OBJ_ITEM(obj) < FIRST_WAND)
         SET_INCLASS(obj, OBJ_INCLASS(obj) - 4);
     return 1;

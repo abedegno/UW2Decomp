@@ -43,3 +43,11 @@ Things agents found that belong to the shared headers or the map, to settle in t
 - ovr091 (unmatched, LEV.ARK access): ovr091_61A(char far *, int, void far *) returns int; ovr091_22C(char far *, int, void far *, int) returns char.
 - Two-function table rows: seg006 367 (get_terrain + crit_hndlr_walk), 5FE (crit_hndlr_fly + crit_hndlr_swim), seg044 E9 (+ UW2's seg044_368F_392, static), SpawnClass7Object (+ CreateAnimoForSrcObject, static), phys_affect_player (+ player_sqhandler, public).
 - Spurious kin: DoTrapScreenShake ↔ NotASpellMessage; UW2's `unreferenced_seg008_1B09_160` is called in UW1 (EtherealVoidSpecialEffects_seg008_150).
+
+## From wave 2 (C)
+
+- Renamed for the stub order (bssorder keys): ovr106_1B `dbg_printf` → `dprintf` (key 452 between init_debug 145 and ovr106_20 575); ovr114's font loader `grfx_quikfont` → `grfx_load_font` (UW2's name, key 343, between fill_FB 342 and fadein 558). BAGS.C and MAINMENU.C still cast its argument to UW2's int: tidy in the readability pass.
+- kin.py now takes UW2 names only where UW2's map anchored or confirmed them (it had passed on rejected candidates: free_speech_stuff for the console printer seg015_1F9B_E8, free_timers for _ld_close ovr115_1AB, grs_plot, destroy/create/change_sprite, grfx_init for ovr113_2A2).
+- gfx.h: fadein/fadeout(src, count); gronk_gr, load_tr_ems return char; font loader (char *name) returning unsigned char; fade_buffer extern far (seg050, 0x3000 bytes). sys.h: ws_active char; EMS functions seg012_B, _A6, _BB (char), _10F (char), _12C; console printer seg015_1F9B_E8(char far *); seg042_19B; seg019_755, _791, _CB7, _CEA. file.h: copy_file(src, dst); LoadBitMap_ovr141_0(int pal, char *name) (UW1's display_screen); GetLevel (ovr140_92), do_level_hacks (ovr140_906); ovr113_0(int) (probably preload_cr). gfx/view3d: seg009_1 and seg009_6D for UW2's seg009_7 and seg009_73; seg015_1F9B_325, seg003_581E; far externs in seg051 (C375..C378, C3EC; C4D7 is UW2's seg052_519C_E4D4); dseg_5c99_10C (UW2 dseg_67d6_120), dseg_5c99_7178. LOADGR's tmpoffs is a near uint32 *.
+- UW1 has UW2's SCROLL.C and SCROLLIO.C in one segment (seg043). valloc is called at seg001:004A (functions.tsv says seg001_5A).
+- Check for WHOLE SEGMENT MATCHES, not only per-function MATCHes: EMS.C matched every function in UW2's order but not the segment (UW1 has the four-page mapper first).

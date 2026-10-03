@@ -12,7 +12,7 @@ seg001	seg001_C	C	3E			0	0
 seg001	seg001_4A	4A	10			0	0
 seg001	seg001_5A	5A	AB	valloc	kin-near	0	0
 seg001	seg001_105	105	D			0	0
-seg001	seg001_112	112	C3	keyboard_interrupt	kin-near	0	0
+seg001	seg001_112	112	C3			0	0
 seg001	seg001_1D5	1D5	1A	save_rect	kin-same	0	0
 seg001	seg001_1EF	1EF	6C			0	0
 seg001	MaybeRedrawSlot_seg001_25B	25B	D			0	0
@@ -26,7 +26,7 @@ seg003	seg003_28	28	38			0	0
 seg003	seg003_60	60	C1			0	0
 seg003	seg003_121	121	925			0	0
 seg003	seg003_A46	A46	2			0	0
-seg003	seg003_A48	A48	80	keyarray	kin-near	0	0
+seg003	seg003_A48	A48	80			0	0
 seg003	seg003_AC8	AC8	24			0	0
 seg003	seg003_AEC	AEC	20			0	0
 seg003	seg003_B0C	B0C	51			0	0
@@ -92,7 +92,7 @@ seg003	seg003_3FDC	3FDC	62			0	0
 seg003	seg003_403E	403E	5E			0	0
 seg003	seg003_409C	409C	98			0	0
 seg003	seg003_4134	4134	A8			0	0
-seg003	seg003_41DC	41DC	2D	_key_set	kin-near	0	0
+seg003	seg003_41DC	41DC	2D			0	0
 seg003	seg003_4209	4209	32			0	0
 seg003	seg003_423B	423B	47			0	0
 seg003	seg003_4282	4282	10B			0	0
@@ -151,7 +151,7 @@ seg003	seg003_5AB4	5AB4	3			0	0
 seg003	seg003_5AB7	5AB7	3			0	0
 seg003	seg003_5ABA	5ABA	24			0	0
 seg003	seg003_5ADE	5ADE	2D			0	0
-seg003	seg003_5B0B	5B0B	52	kq	kin-near	0	0
+seg003	seg003_5B0B	5B0B	52			0	0
 seg003	seg003_5B5D	5B5D	8			0	0
 seg003	seg003_5B65	5B65	7EB			0	0
 seg003	seg003_6350	6350	1F7			0	0
@@ -246,7 +246,7 @@ seg004	seg004_6545	6545	17D			0	0
 seg004	seg004_66C2	66C2	12AC			0	0
 seg004	seg004_796E	796E	D3			0	0
 seg004	seg004_7A41	7A41	C8			0	0
-seg004	seg004_7B09	7B09	2E	conv_comobj	kin-same	0	0
+seg004	seg004_7B09	7B09	2E			0	0
 seg004	seg004_7B37	7B37	6			0	0
 seg004	seg004_7B3D	7B3D	7D			0	0
 seg004	seg004_7BBA	7BBA	D1			0	0
@@ -492,7 +492,7 @@ seg008_1B2A	BouncePlayer_seg008_D9E	D9E	38			0	0
 seg008_1B2A	DoTrapScreenShake_seg008_DD6	DD6	11			0	0
 seg008_1B2A	QuakeTrap_seg008_DE7	DE7	25			0	0
 seg008_1B2A	UpdateMotionStateAndSwimming_seg008_E0C	E0C	135			0	0
-seg009	seg009_1	1	6C	grs_plot	kin-near	0	0
+seg009	seg009_1	1	6C			0	0
 seg009	seg009_6D	6D	DD			0	0
 seg009	seg009_14A	14A	52	grs_unpack	kin-near	0	0
 seg009	seg009_19C	19C	85	grs_fbplot	kin-near	0	0
@@ -602,7 +602,7 @@ seg014_1DC5	seg014_1DC5_1CC6	1CC6	18			0	0
 seg014_1DC5	seg014_1DC5_1CDE	1CDE	2F			0	0
 seg014_1DC5	seg014_1DC5_1D0D	1D0D	60			0	0
 seg015_1F9B	seg015_1F9B_E	E	DA	grab	kin-same	0	0
-seg015_1F9B	seg015_1F9B_E8	E8	10	free_speech_stuff	kin-same	0	0
+seg015_1F9B	seg015_1F9B_E8	E8	10			0	0
 seg015_1F9B	ClearData_seg015_1F9B_F8	F8	16	mem_set	kin-near	0	0
 seg015_1F9B	Strlen_seg015_1F9B_10E	10E	16	str_len	kin-same	0	0
 seg015_1F9B	CopySubstring_seg015_1F9B_124	124	20	str_ncopy	kin-same	0	0
@@ -612,10 +612,10 @@ seg015_1F9B	seg015_1F9B_1A1	1A1	5B	str_str	kin-same	0	0
 seg015_1F9B	seg015_1F9B_1FC	1FC	29	str_cmp	kin-same	0	0
 seg015_1F9B	seg015_1F9B_225	225	35	local_do_palette	kin-same	0	0
 seg015_1F9B	seg015_1F9B_25A	25A	4D	gr_pixel	kin-same	0	0
-seg015_1F9B	seg015_1F9B_2A7	2A7	7E	create_sprite	kin-same	0	0
-seg015_1F9B	seg015_1F9B_325	325	41	destroy_sprite	kin-same	0	0
-seg015_1F9B	seg015_1F9B_366	366	5B	change_sprite	kin-near	0	0
-seg017_1FDD	seg017_1FDD_1	1	35	draw_sprite	kin-same	0	0
+seg015_1F9B	seg015_1F9B_2A7	2A7	7E			0	0
+seg015_1F9B	seg015_1F9B_325	325	41			0	0
+seg015_1F9B	seg015_1F9B_366	366	5B			0	0
+seg017_1FDD	seg017_1FDD_1	1	35			0	0
 seg017_1FDD	seg017_1FDD_36	36	1A	set_pix_xfer	kin-same	0	0
 seg017_1FDD	DetailLevel_seg017_50	50	75			0	0
 seg017_1FDD	seg017_1FDD_C5	C5	27E			0	0
@@ -627,49 +627,49 @@ seg017_1FDD	seg017_1FDD_964	964	E6			0	0
 seg017_1FDD	seg017_1FDD_A4A	A4A	1D1			0	0
 seg017_1FDD	seg017_1FDD_C1B	C1B	1A1			0	0
 seg017_1FDD	seg017_1FDD_DBC	DBC	668	grdb_elem	kin-near	0	0
-seg019	seg019_0	0	17	save_rect	kin-near	0	0
-seg019	seg019_17	17	4E	save_rect	kin-same	0	0
-seg019	seg019_65	65	3C	restore_rect	kin-near	0	0
-seg019	seg019_A1	A1	48	find_proc	kin-near	0	0
-seg019	seg019_E9	E9	29	call_driver	kin-same	0	0
+seg019	seg019_0	0	17			0	0
+seg019	seg019_17	17	4E			0	0
+seg019	seg019_65	65	3C			0	0
+seg019	seg019_A1	A1	48			0	0
+seg019	seg019_E9	E9	29			0	0
 seg019	seg019_112	112	9			0	0
-seg019	seg019_11B	11B	35	init_DDA_arrays	kin-same	0	0
-seg019	seg019_150	150	24	hook_timer_process	kin-same	0	0
-seg019	seg019_174	174	15	unhook_timer_process	kin-same	0	0
-seg019	seg019_189	189	47	_AIL_startup	kin-same	0	0
-seg019	seg019_1D0	1D0	58	_AIL_shutdown	kin-same	0	0
+seg019	seg019_11B	11B	35			0	0
+seg019	seg019_150	150	24			0	0
+seg019	seg019_174	174	15			0	0
+seg019	seg019_189	189	47			0	0
+seg019	seg019_1D0	1D0	58			0	0
 seg019	seg019_228	228	E			0	0
 seg019	seg019_236	236	E			0	0
-seg019	seg019_244	244	72	_AIL_register_timer	kin-near	0	0
+seg019	seg019_244	244	72			0	0
 seg019	seg019_2B6	2B6	7			0	0
-seg019	seg019_2BD	2BD	2F	_AIL_release_timer_handle	kin-same	0	0
-seg019	seg019_2EC	2EC	1E	_AIL_release_all_timers	kin-same	0	0
-seg019	seg019_30A	30A	6B	_AIL_start_timer	kin-same	0	0
+seg019	seg019_2BD	2BD	2F			0	0
+seg019	seg019_2EC	2EC	1E			0	0
+seg019	seg019_30A	30A	6B			0	0
 seg019	seg019_375	375	B			0	0
-seg019	seg019_380	380	F	_AIL_start_all_timers	kin-same	0	0
-seg019	seg019_38F	38F	14	_AIL_stop_timer	kin-same	0	0
-seg019	seg019_3A3	3A3	5A	_AIL_stop_all_timers	kin-same	0	0
-seg019	seg019_3FD	3FD	57	_AIL_set_timer_period	kin-same	0	0
-seg019	seg019_454	454	17	_AIL_set_timer_frequency	kin-same	0	0
-seg019	seg019_46B	46B	3D	_AIL_set_timer_divisor	kin-same	0	0
-seg019	seg019_4A8	4A8	74	_AIL_register_driver	kin-near	0	0
-seg019	seg019_51C	51C	38	_AIL_release_driver_handle	kin-same	0	0
-seg019	seg019_554	554	10	_AIL_describe_driver	kin-same	0	0
-seg019	seg019_564	564	15	_AIL_detect_device	kin-same	0	0
+seg019	seg019_380	380	F			0	0
+seg019	seg019_38F	38F	14			0	0
+seg019	seg019_3A3	3A3	5A			0	0
+seg019	seg019_3FD	3FD	57			0	0
+seg019	seg019_454	454	17			0	0
+seg019	seg019_46B	46B	3D			0	0
+seg019	seg019_4A8	4A8	74			0	0
+seg019	seg019_51C	51C	38			0	0
+seg019	seg019_554	554	10			0	0
+seg019	seg019_564	564	15			0	0
 seg019	seg019_579	579	1F			0	0
-seg019	seg019_598	598	30	_AIL_shutdown_driver	kin-near	0	0
-seg019	seg019_5C8	5C8	21	_AIL_index_VOC_block	kin-same	0	0
+seg019	seg019_598	598	30			0	0
+seg019	seg019_5C8	5C8	21			0	0
 seg019	seg019_5E9	5E9	97			0	0
-seg019	seg019_680	680	12	_AIL_register_sound_buffer	kin-same	0	0
-seg019	seg019_692	692	E	_AIL_format_sound_buffer	kin-same	0	0
+seg019	seg019_680	680	12			0	0
+seg019	seg019_692	692	E			0	0
 seg019	seg019_6A0	6A0	6			0	0
 seg019	seg019_6A6	6A6	22			0	0
-seg019	seg019_6C8	6C8	1F	_AIL_start_digital_playback	kin-same	0	0
-seg019	seg019_6E7	6E7	11	_AIL_stop_digital_playback	kin-same	0	0
+seg019	seg019_6C8	6C8	1F			0	0
+seg019	seg019_6E7	6E7	11			0	0
 seg019	seg019_6F8	6F8	B			0	0
 seg019	seg019_703	703	2D			0	0
-seg019	seg019_730	730	E	_AIL_resume_digital_playback	kin-same	0	0
-seg019	seg019_73E	73E	17	_AIL_set_digital_playback_volume	kin-same	0	0
+seg019	seg019_730	730	E			0	0
+seg019	seg019_73E	73E	17			0	0
 seg019	seg019_755	755	3C			0	0
 seg019	seg019_791	791	1E0			0	0
 seg019	seg019_971	971	3C			0	0
@@ -678,7 +678,7 @@ seg019	seg019_9F0	9F0	40			0	0
 seg019	seg019_A30	A30	4			0	0
 seg019	seg019_A34	A34	4			0	0
 seg019	seg019_A38	A38	31			0	0
-seg019	seg019_A69	A69	F	_AIL_digital_playback_panpot	kin-same	0	0
+seg019	seg019_A69	A69	F			0	0
 seg019	seg019_A78	A78	100			0	0
 seg019	seg019_B78	B78	2A			0	0
 seg019	seg019_BA2	BA2	32			0	0
@@ -1132,14 +1132,14 @@ seg046	seg046_54D	54D	4A			0	0
 seg046	seg046_597	597	7B			0	0
 seg046	seg046_612	612	18			0	0
 seg046	seg046_62A	62A	3B			0	0
-seg046	seg046_665	665	21	animobj_load	kin-same	0	0
+seg046	seg046_665	665	21			0	0
 seg046	seg046_686	686	1E			0	0
 seg046	seg046_6A4	6A4	33			0	0
 seg046	seg046_6D7	6D7	51			0	0
 seg046	seg046_728	728	1E			0	0
 seg046	seg046_746	746	C			0	0
 seg046	seg046_752	752	26			0	0
-seg046	seg046_778	778	1C	animobj_class_data	kin-same	0	0
+seg046	seg046_778	778	1C			0	0
 seg046	seg046_794	794	C			0	0
 seg046	seg046_7A0	7A0	13E			0	0
 seg046	seg046_8DE	8DE	2E4			0	0
@@ -1452,14 +1452,14 @@ ovr110	CanNoLongerRunError_ovr110_C7	C7	8C	pfatal_code	kin-near	0	0
 ovr110	ovr110_153	153	38	pfatal	kin-near	0	0
 ovr112	ovr112_0	0	149	save_screenshot	kin-near	0	0
 ovr112	ovr112_149	149	4B			0	0
-ovr112	ovr112_194	194	2F	pfatal	kin-same	0	0
+ovr112	ovr112_194	194	2F			0	0
 ovr112	ovr112_1C3	1C3	E0			0	0
 ovr112	ovr112_2A3	2A3	17D			0	0
 ovr112	ovr112_420	420	86	GifPixel_ovr116_420	kin-same	0	0
 ovr113	ovr113_0	0	1CE			0	0
 ovr113	ovr113_1CE	1CE	5C			0	0
 ovr113	ovr113_22A	22A	78			0	0
-ovr113	ovr113_2A2	2A2	B9	grfx_init	kin-near	0	0
+ovr113	ovr113_2A2	2A2	B9			0	0
 ovr113	ovr113_35B	35B	72			0	0
 ovr113	ovr113_3CD	3CD	4B			0	0
 ovr114	ovr114_0	0	35	grfx_init	kin-near	0	0
@@ -1730,7 +1730,7 @@ ovr150	SpawnNPCLoot_ovr150_516	516	87	generate_inventory	kin-near	0	0
 ovr152	ovr152_0	0	5			0	0
 ovr152	ovr152_5	5	E			0	0
 ovr152	ovr152_13	13	5			0	0
-ovr153	ovr153_0	0	17	trap_save	kin-near	0	0
+ovr153	ovr153_0	0	17			0	0
 ovr153	ovr153_17	17	24			0	0
 ovr153	Trigger_ovr153_3B	3B	20F			0	0
 ovr153	RunTrap_ovr153_24A	24A	4C	SetOffTrap	kin-same	0	0
@@ -1776,7 +1776,7 @@ ovr145	ovr145_35F	35F	E6			0	0
 ovr145	ovr145_445	445	B6			0	0
 ovr145	ovr145_4FB	4FB	11			0	0
 ovr146	ovr146_0	0	7			0	0
-ovr149	ovr149_0	0	17	trap_save	kin-near	0	0
+ovr149	ovr149_0	0	17			0	0
 ovr150	ovr150_0	0	12E			0	0
 ovr150	ovr150_12E	12E	2C	drop_some_objects	kin-same	0	0
 ovr150	ovr150_15A	15A	161	generate_treasure	kin-near	0	0
@@ -1787,7 +1787,7 @@ ovr150	ovr150_516	516	87	generate_inventory	kin-near	0	0
 ovr152	ovr152_0	0	5			0	0
 ovr152	ovr152_5	5	E			0	0
 ovr152	ovr152_13	13	5			0	0
-ovr153	ovr153_0	0	17	trap_save	kin-near	0	0
+ovr153	ovr153_0	0	17			0	0
 ovr153	ovr153_17	17	24			0	0
 ovr153	ovr153_3B	3B	20F			0	0
 ovr153	ovr153_24A	24A	4C	SetOffTrap	kin-same	0	0

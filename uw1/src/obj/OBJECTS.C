@@ -28,7 +28,7 @@
    UW1 against UW2: no Obj_FindInMapSquare, check_weight or ObjCrunch; instead two
    debugging aids, seg027_2861_EF9 and seg027_2861_F23, which report through errmsg
    whether the lists are consistent, and seg027_2861_10E4, which prints a list as a tree
-   through dbg_printf (flog_list and count_list also print each index found twice).
+   through dprintf (flog_list and count_list also print each index found twice).
    Obj_Rem returns nothing and gives up after 0x401 links; Obj_FreeChain and
    Obj_FreeLinkChain free an object whether or not it was unlinked; Obj_Check has no null
    test and no stray comparison with the player; Obj_Find passes recurse on rather than
@@ -53,7 +53,7 @@
 #include "view3d.h"
 
 /* UW1: the debug printer (DEBUG.C, ovr106_1B), as INPUT.C declares it. */
-void far dbg_printf(char *fmt, ...);
+void far dprintf(char *fmt, ...);
 
 /* An object pointer's index in the object store. */
 #define MEMTPTR(o)      ((o) < (struct Object far *)objdata ? (o) - critdata \
@@ -522,7 +522,7 @@ struct Object far * far Obj_FindInMap(int major, int minor, int index, int16 *x,
 }
 
 /* flog_list (a tile's list) and count_list (any chain) count how often each index is
-   reached, for Obj_ListOkay; an object reached twice is reported through dbg_printf and
+   reached, for Obj_ListOkay; an object reached twice is reported through dprintf and
    makes them return 1 ("bad"). */
 unsigned char far flog_list(int x, int y, unsigned char *counts, union Link far *head)
 {
@@ -533,7 +533,7 @@ unsigned char far flog_list(int x, int y, unsigned char *counts, union Link far 
     for (obj = Obj_PtrTMem(head); obj; obj = Obj_PtrTMem(&obj->qn.link)) {
         i = Obj_MemTPtr(obj);
         if (++counts[i] > 1) {
-            dbg_printf("====ERROR==== @%d,%d: Object %d occured for time #%d.\n", x, y, i,
+            dprintf("====ERROR==== @%d,%d: Object %d occured for time #%d.\n", x, y, i,
                        counts[i]);
             bad = 1;
             if (counts[i] > 10)
@@ -557,7 +557,7 @@ unsigned char far count_list(struct Object far *obj, unsigned char *counts)
     for (; obj; obj = Obj_PtrTMem(&obj->qn.link)) {
         i = Obj_MemTPtr(obj);
         if (++counts[i] > 1) {
-            dbg_printf("====ERROR==== Object %d occured for time #%d.\n", i, counts[i]);
+            dprintf("====ERROR==== Object %d occured for time #%d.\n", i, counts[i]);
             bad = 1;
             if (counts[i] > 10)
                 return 1;
@@ -655,7 +655,7 @@ unsigned char far Obj_ListOkay(char how)
     return !bad;
 }
 
-/* Prints an object list as a tree through dbg_printf, one line per object (index, major,
+/* Prints an object list as a tree through dprintf, one line per object (index, major,
    minor and class, next link, the contents link or quantity, and a mobile object's
    tile), recursing into containers with depth + 1. Nothing in UW1's listing calls it. */
 void far seg027_2861_10E4(union Link far *head, int depth)
@@ -666,20 +666,20 @@ void far seg027_2861_10E4(union Link far *head, int depth)
     for (obj = Obj_PtrTMem(head); obj; obj = Obj_PtrTMem(&obj->qn.link)) {
         if (depth > 0) {
             for (i = 1; i < depth; i++)
-                dbg_printf("\xB3");
+                dprintf("\xB3");
             if (obj->qn.f.next == 0)
-                dbg_printf("\xC0");
+                dprintf("\xC0");
             else
-                dbg_printf("\xC3");
-            dbg_printf("\x10");
+                dprintf("\xC3");
+            dprintf("\x10");
         }
-        dbg_printf("<%4d> %1d|%1d|%2d, Next: %4d, %5s: %4d", Obj_MemTPtr(obj), OBJ_MAJOR(obj),
+        dprintf("<%4d> %1d|%1d|%2d, Next: %4d, %5s: %4d", Obj_MemTPtr(obj), OBJ_MAJOR(obj),
                    OBJ_MINOR(obj), OBJ_INCLASS(obj), obj->qn.f.next,
                    OBJ_ISQUANT(obj) ? ((obj->ol.f.link & 0x200) ? "Other" : "Count") : "Link",
                    obj->ol.f.link);
         if (IsMobElem(obj))
-            dbg_printf("; @%2d,%2d", OBJ_HOMEX(obj), OBJ_HOMEY(obj));
-        dbg_printf(".\n");
+            dprintf("; @%2d,%2d", OBJ_HOMEX(obj), OBJ_HOMEY(obj));
+        dprintf(".\n");
         if (!OBJ_ISQUANT(obj) && obj->ol.f.link > 0)
             seg027_2861_10E4(&obj->ol.link, depth + 1);
     }

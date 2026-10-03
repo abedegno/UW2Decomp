@@ -1,6 +1,6 @@
 # segment seg017_1FDD base 0x21101 size 0x1425 org 0x1
 # cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
-draw_sprite	seg017_1FDD_1	0x0	0x35
+seg017_1FDD_1	seg017_1FDD_1	0x0	0x35
 set_pix_xfer	seg017_1FDD_36	0x35	0x1A
 DetailLevel_seg017_50	DetailLevel_seg017_50	0x4F	0x75
 seg017_1FDD_C5	seg017_1FDD_C5	0xC4	0x27E

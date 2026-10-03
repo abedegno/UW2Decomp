@@ -5,7 +5,7 @@
    the first entry that takes it. The whole of UW1's DOS resident segment seg010, in
    original order. UW1 has no symbol-bearing build; the names are UW2's (the FM Towns
    symbol table), the code being the same routines. The one UW1 difference: input_del
-   reports an unknown key handle through the debug printer dbg_printf (DEBUG.C, ovr106_1B,
+   reports an unknown key handle through the debug printer dprintf (DEBUG.C, ovr106_1B,
    empty in this build), whose string "bad kbd hndl %d\n" is in this file's data.
 
    How it is used: each screen registers its click areas with input_addmouse and its keys
@@ -33,7 +33,7 @@
    printf format; UW2 has no such call. name: descriptive (map/functions.tsv gives
    mous_3d_show by kin with an empty UW2 function, which cannot be right for a function
    taking a format string). */
-void far dbg_printf(char *fmt, ...);
+void far dprintf(char *fmt, ...);
 
 /* A mouse region, 0x12 bytes. Screen y counts up from the bottom row (0) to the top (199)
    in this engine (MOUSE.C: the up key warps the pointer to y 199), so despite the "upper
@@ -167,7 +167,7 @@ void far input_del(int hndl)
         for (kp = key_dispatch; i++ < kdispcnt && kp->hndl != hndl; kp++)
             ;
         if (kdispcnt + 1 == i) {
-            dbg_printf("bad kbd hndl %d\n", hndl);
+            dprintf("bad kbd hndl %d\n", hndl);
             return;
         }
         if (i < kdispcnt)

@@ -33,3 +33,14 @@ ovr150
 ovr089
 ovr116
 ovr125
+seg043_37F0
+ovr138
+ovr114
+seg009
+ovr115
+seg021
+seg013_1CC9
+seg012
+ovr110
+seg042
+ovr106
