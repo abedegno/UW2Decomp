@@ -276,7 +276,8 @@ With a stand-in `ALE.INC` holding DM03's own bytes, 2.14's sources assemble to D
 | --- | --- | --- |
 | `ail.c` | AIL.ASM (seg022) | the matched AIL.ASM (AIL 2.11, see FINDINGS.md): `API_timer`'s DDA, the driver table, the calls the game makes, and the logs below |
 | `xmidi.c` | XMIDI.ASM, the shell of every music driver | 2.14's XMIDI.ASM, with UW2's older beat and bar counting from DM03 |
-| `yamaha.c` | YAMAHA.INC and ALE.INC: the FM drivers | 2.14's YAMAHA.INC, routine by routine, with the YM3812, dual YM3812 and YMF262 variants; TVFX (`TV_switch_voice`, `TV_cmd`, `serve_synth`, `TV_phase`) from DM03.ADV |
+| `yamaha.c`, `yamaha.h` | YAMAHA.INC: the FM drivers | 2.14's YAMAHA.INC, routine by routine, with the YM3812, dual YM3812 and YMF262 variants; where YAMAHA.INC calls ALE.INC (`IFDEF TV_phase`, `IFDEF TV_switch_voice`, XMIDI.ASM's `IFDEF serve_synth`) it calls the hooks of `struct AilFmExt` (yamaha.h), and without one it is YAMAHA.INC without `OSI_ALE`; the same files as Exhume's runtime/port/sound |
+| `tvfx.c` | ALE.INC: the FM drivers' TVFX | DM03.ADV's code at 0530h..0ADAh (`TV_switch_voice`, `TV_cmd`, `serve_synth`, `TV_phase`), plugged into yamaha.c as `uw2_tvfx` (ail.c's `AIL_FM_EXT`) |
 | `mt32.c` | MT32.INC and MPU401.INC: DM05 | 2.14's MT32.INC: the timbre cache, the system exclusive messages that upload `UW.MT`'s timbres and point patches at them, the sysex controllers |
 | `dmasound.c` | DMASOUND.ASM: DD01 to DD03 | 2.14's DMASOUND.ASM for what UW2 uses: `.VOC` block parsing, the double buffer and its statuses, start, stop, pause, resume, volume and pan as each card applies them (SBDIG ignores both, FINDINGS.md) |
 | `audio.c` | the sound card | the chips and the mixer (below) |

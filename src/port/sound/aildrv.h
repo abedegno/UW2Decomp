@@ -10,7 +10,8 @@
      the beat and bar counters are kept as 1.07 to 1.09 kept them;
    - the FM drivers (DM02, DM03, DM04, DM06, DM07) are built with OSI_ALE, Origin's
      time-variant effects (TVFX) for the AdLib family, whose source (ALE.INC) was never
-     released; yamaha.c translates it from DM03.ADV's code (0530h..0ADAh).
+     released; tvfx.c translates it from DM03.ADV's code (0530h..0ADAh), and plugs into
+     yamaha.c, which is YAMAHA.INC, through its hook (yamaha.h, struct AilFmExt).
 
    The digital drivers (DD01..DD03) are AIL 2.14's SBDIG, SBPDIG and PASDIG byte for byte.
    None of the drivers' code is in the repository: the C is written from the source and the
@@ -104,7 +105,8 @@ typedef struct Synth {
 
 /* ---- the XMIDI shell (xmidi.c) ------------------------------------------------------ */
 
-Synth *yamaha_new(int kind);
+struct AilFmExt;
+Synth *yamaha_new(int kind, const struct AilFmExt *ext);   /* ext: yamaha.h, or 0 */
 Synth *mt32_new(void);
 struct Xmidi *xmidi_new(Synth *s);
 void xmidi_init_driver(struct Xmidi *x);

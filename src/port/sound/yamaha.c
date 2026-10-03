@@ -1,11 +1,14 @@
-/* yamaha.c: replaces the synthesiser half of the FM music drivers DM02, DM03, DM04, DM06 and
-   DM07.ADV (docs/PORT.md, "Sound"): the XMIDI interpreter for the Ad Lib family of John Miles'
-   public-domain YAMAHA.INC (AIL 2.14, version 1.02), with Origin's time-variant effects
-   (TVFX), which UW2's drivers include (YAMAHA.INC's OSI_ALE) and whose ALE.INC was never
-   released: the TVFX routines below (TV_switch_voice, TV_cmd, serve_synth, TV_phase) are
-   translated from DM03.ADV's code at 0530h..0ADAh, with YAMAHA.INC's names for its data.
-   With ALE, DM03.ADV assembles from 2.14's YAMAHA.INC byte for byte everywhere else, so the
-   rest is translated from the source, routine by routine, with its names.
+/* yamaha.c: replaces the synthesiser half of an AIL 2 game's FM music drivers (UW2: DM02, DM03,
+   DM04, DM06 and DM07.ADV; docs/PORT.md, "Sound"): the XMIDI interpreter for the Ad Lib family
+   of John Miles' public-domain YAMAHA.INC (AIL 2.14, version 1.02), translated from the source
+   routine by routine, with its names.
+
+   YAMAHA.INC's OSI_ALE assembles Origin's time-variant effects (TVFX, ALE.INC, never released)
+   into the driver. This file holds none of it: where YAMAHA.INC calls ALE.INC (TV_phase,
+   TV_switch_voice, serve_synth) it calls the hooks of a game-specific extension, struct
+   AilFmExt in yamaha.h, which the project supplies from its own decompilation and names to
+   ail.c as AIL_FM_EXT. Without one this is YAMAHA.INC as released, OSI_ALE FALSE: yamaha.h
+   says exactly what that does with a TVFX timbre.
 
    The variants: YM3812 (Ad Lib and Sound Blaster, 9 voices, 16 virtual slots); two YM3812s
    in stereo (Sound Blaster Pro 1, Pro Audio Spectrum: levels are panned per chip); YMF262
@@ -13,32 +16,30 @@
    bits). Register writes go to hw_opl_write (ail.c). */
 #include <stdlib.h>
 #include <string.h>
-#include "aildrv.h"
+#include "yamaha.h"
 
-#define MAX_TIMBS       192
+#define MAX_TIMBS       YAM_MAX_TIMBS
 #define DEF_TC_SIZE     3584
 #define DEF_PITCH_RANGE 12
 #define DEF_AV_DEPTH    0xC0
 #define R_PAN_THRESH    27
 #define L_PAN_THRESH    100
-#define MAXSLOTS        20
-#define MAXVOICES       18
 
-#define FREE            0               /* S_status */
-#define KEYON           1
-#define KEYOFF          2
-#define BNK_INST        0               /* S_type */
-#define TV_INST         1
-#define TV_EFFECT       2
-#define OPL3_INST       3
+#define FREE            YAM_FREE        /* S_status */
+#define KEYON           YAM_KEYON
+#define KEYOFF          YAM_KEYOFF
+#define BNK_INST        YAM_BNK_INST    /* S_type */
+#define TV_INST         YAM_TV_INST
+#define TV_EFFECT       YAM_TV_EFFECT
+#define OPL3_INST       YAM_OPL3_INST
 
-#define U_ALL_REGS      0xF9            /* S_update */
-#define U_AVEKM         0x80
-#define U_KSLTL         0x40
-#define U_ADSR          0x20
-#define U_WS            0x10
-#define U_FBC           0x08
-#define U_FREQ          0x01
+#define U_ALL_REGS      YAM_U_ALL_REGS  /* S_update */
+#define U_AVEKM         YAM_U_AVEKM
+#define U_KSLTL         YAM_U_KSLTL
+#define U_ADSR          YAM_U_ADSR
+#define U_WS            YAM_U_WS
+#define U_FBC           YAM_U_FBC
+#define U_FREQ          YAM_U_FREQ
 
 #define BNK_SIZE        14              /* SIZE BNK, SIZE OPL3BNK */
 #define OPL3BNK_SIZE    25
@@ -139,63 +140,6 @@ static const uint8_t conn_sel[18] = { 1,2,4,1,2,4,0,0,0,8,16,32,8,16,32,0,0,0 };
 static const uint8_t op4_voice[6] = { 0,1,2,9,10,11 };
 static const uint8_t carrier_01[4] = { 0, 1, 2, 1 };
 static const uint8_t carrier_23[4] = { 2, 2, 2, 3 };
-
-/* TVFX: each of the eight time-variant parameters has, per slot, the offset of its next
-   command in the timbre, a countdown to it, a value and an increment (the four word arrays of
-   each 80h-byte block of ALE.INC's data, in the order f, v0, v1, p, fb, m0, m1, ws) */
-enum { TV_F, TV_V0, TV_V1, TV_P, TV_FB, TV_M0, TV_M1, TV_WS, TV_N };
-
-typedef struct Yam {
-    Synth s;
-    int kind, ymf262, stereo, nvoices, nslots;
-    unsigned note_event;
-    uint32_t timb_hist[MAX_TIMBS];
-    uint16_t timb_offsets[MAX_TIMBS];
-    uint8_t timb_bank[MAX_TIMBS], timb_num[MAX_TIMBS], timb_attribs[MAX_TIMBS];
-    uint8_t *cache_base;
-    unsigned cache_size, cache_end;
-    unsigned TV_accum, pri_accum;
-    uint8_t vol_update;
-    int rover_2op, rover_4op;
-    uint8_t conn_shadow;
-
-    uint8_t *S_timbre[MAXSLOTS];
-    uint16_t S_duration[MAXSLOTS];
-    uint8_t S_status[MAXSLOTS], S_type[MAXSLOTS], S_voice[MAXSLOTS], S_channel[MAXSLOTS],
-            S_note[MAXSLOTS], S_keynum[MAXSLOTS], S_transpose[MAXSLOTS], S_velocity[MAXSLOTS],
-            S_sustain[MAXSLOTS], S_update[MAXSLOTS];
-    uint8_t S_KBF_shadow[MAXSLOTS], S_BLOCK[MAXSLOTS], S_FBC[MAXSLOTS],
-            S_KSLTL_0[MAXSLOTS], S_KSLTL_1[MAXSLOTS], S_AVEKM_0[MAXSLOTS], S_AVEKM_1[MAXSLOTS],
-            S_AD_0[MAXSLOTS], S_AD_1[MAXSLOTS], S_SR_0[MAXSLOTS], S_SR_1[MAXSLOTS],
-            S_scale_01[MAXSLOTS];
-    /* the OPL3 second operator pair */
-    uint8_t S_KSLTL_2[MAXSLOTS], S_KSLTL_3[MAXSLOTS], S_AVEKM_2[MAXSLOTS], S_AVEKM_3[MAXSLOTS],
-            S_AD_2[MAXSLOTS], S_AD_3[MAXSLOTS], S_SR_2[MAXSLOTS], S_SR_3[MAXSLOTS],
-            S_scale_23[MAXSLOTS];
-    uint16_t S_ws_val_2[MAXSLOTS], S_m3_val[MAXSLOTS], S_m2_val[MAXSLOTS], S_v3_val[MAXSLOTS],
-             S_v2_val[MAXSLOTS];
-    /* TVFX: ptr, count, val, inc per parameter */
-    uint16_t tv_ptr[TV_N][MAXSLOTS], tv_cnt[TV_N][MAXSLOTS], tv_val[TV_N][MAXSLOTS],
-             tv_inc[TV_N][MAXSLOTS];
-    uint16_t S_V_priority[MAXSLOTS];
-
-    uint8_t MIDI_vol[NUM_CHANS], MIDI_pan[NUM_CHANS], MIDI_pitch_l[NUM_CHANS],
-            MIDI_pitch_h[NUM_CHANS], MIDI_express[NUM_CHANS], MIDI_mod[NUM_CHANS],
-            MIDI_sus[NUM_CHANS], MIDI_vprot[NUM_CHANS], MIDI_timbre[NUM_CHANS],
-            MIDI_bank[NUM_CHANS], MIDI_program[NUM_CHANS];
-    uint8_t RBS_timbres[128];
-    uint8_t MIDI_voices[NUM_CHANS];
-    uint8_t V_channel[MAXVOICES];
-} Yam;
-
-#define S_ws_val tv_val[TV_WS]
-#define S_m1_val tv_val[TV_M1]
-#define S_m0_val tv_val[TV_M0]
-#define S_fb_val tv_val[TV_FB]
-#define S_p_val  tv_val[TV_P]
-#define S_v1_val tv_val[TV_V1]
-#define S_v0_val tv_val[TV_V0]
-#define S_f_val  tv_val[TV_F]
 
 static uint16_t rd16(const uint8_t *p) { return (uint16_t)(p[0] | p[1] << 8); }
 
@@ -442,7 +386,7 @@ static void release_voice(Yam *y, int si)
     y->V_channel[bx] = 0xFF;
     y->S_voice[si] = 0xFF;
     if (y->S_type[si] == OPL3_INST || y->S_type[si] == BNK_INST)
-        y->S_status[si] = FREE;         /* a TVFX slot stays active, unvoiced */
+        y->S_status[si] = FREE;         /* otherwise, slot remains active (a TV slot), unvoiced */
 }
 
 /* the rounding of YAMAHA.INC's level arithmetic: (AX*2)/256, then up by one unless 0 */
@@ -758,202 +702,16 @@ static void OPL_phase(Yam *y, int si)
     y->S_ws_val_2[si] = (uint16_t)(t[24] | t[18] << 8);
 }
 
-/* ---- TVFX (ALE.INC, from DM03.ADV) ------------------------------------------------- */
+/* YAMAHA.INC's procedures, for an extension (yamaha.h) */
+void yam_update_voice(Yam *y, int si) { update_voice(y, si); }
+void yam_update_priority(Yam *y) { update_priority(y); }
+void yam_release_voice(Yam *y, int si) { release_voice(y, si); }
 
-/* TV_switch_voice (DM03 0530h): after a voice was freed, give it to the first active slot
-   that has none, and let update_priority settle the rest */
-static void TV_switch_voice(Yam *y)
-{
-    int si, bx;
-    for (si = 0; si < y->nslots; si++)
-        if (y->S_status[si] != FREE && y->S_voice[si] == 0xFF) break;
-    if (si == y->nslots) return;
-    for (bx = 0; bx < y->nvoices; bx++)
-        if (y->V_channel[bx] == 0xFF) break;
-    if (bx == y->nvoices) return;
-    y->S_voice[si] = (uint8_t)bx;
-    y->MIDI_voices[y->S_channel[si]]++;
-    y->V_channel[bx] = y->S_channel[si];
-    y->S_update[si] = U_ALL_REGS;
-    update_priority(y);
-}
-
-/* TV_cmd (DM03 0581h): reads the next commands of parameter p's list in slot si's timbre, at
-   most ten: 0 n, a jump of n bytes; FFFFh v, the value v; FFFEh v, a register byte (by
-   parameter: AVEKM for m0/m1, KSLTL for v0/v1, the block and KON for f, FBC for fb); any
-   other count n with an increment, which ends the read. Ten without a count leave the value
-   still (increment 0, count FFFFh). */
-static void TV_cmd(Yam *y, int si, int p)
-{
-    const uint8_t *t = y->S_timbre[si];
-    int cx;
-    uint16_t ax, dx;
-    for (cx = 10; cx; cx--) {
-        const uint8_t *di = t + y->tv_ptr[p][si];
-        ax = rd16(di);
-        dx = rd16(di + 2);
-        if (ax == 0) {
-            y->tv_ptr[p][si] = (uint16_t)(y->tv_ptr[p][si] + dx);
-            continue;
-        }
-        y->tv_ptr[p][si] = (uint16_t)(y->tv_ptr[p][si] + 4);
-        if (ax == 0xFFFF) {
-            y->tv_val[p][si] = dx;
-            continue;
-        }
-        if (ax == 0xFFFE) {
-            switch (p) {
-            case TV_M0: y->S_AVEKM_0[si] = (uint8_t)dx; break;
-            case TV_M1: y->S_AVEKM_1[si] = (uint8_t)dx; break;
-            case TV_V0: y->S_KSLTL_0[si] = (uint8_t)dx; break;
-            case TV_V1: y->S_KSLTL_1[si] = (uint8_t)dx; break;
-            case TV_F:
-                y->S_BLOCK[si] = (uint8_t)(dx >> 8);
-                if (y->S_type[si] == TV_INST) y->S_BLOCK[si] &= 0xE0;
-                break;
-            case TV_FB: y->S_FBC[si] = (uint8_t)(dx >> 8); break;
-            }
-            continue;
-        }
-        y->tv_cnt[p][si] = ax;
-        y->tv_inc[p][si] = dx;
-        return;
-    }
-    y->tv_inc[p][si] = 0;
-    y->tv_cnt[p][si] = 0xFFFF;
-}
-
-/* TV_phase (DM03 08CEh): sets slot si up from its TVFX timbre, for the key-on phase or, when
-   the slot is in KEYOFF, the release phase's command lists */
-static void TV_phase(Yam *y, int si)
-{
-    const uint8_t *t = y->S_timbre[si];
-    uint8_t cl = 0x20;
-    uint16_t ax = 0xFF0F, dx = 0xFF0F;
-    int p;
-    y->S_FBC[si] = y->S_KSLTL_0[si] = y->S_KSLTL_1[si] = 0;
-    y->S_AVEKM_0[si] = y->S_AVEKM_1[si] = 0x20;
-    if (t[3] != 1) cl |= 8;
-    y->S_type[si] = t[3];
-    y->S_BLOCK[si] = cl;
-    if ((uint16_t)(rd16(t + 8) + 2) != 0x36) {     /* the timbre has envelope words */
-        ax = rd16(t + 0x36);
-        dx = rd16(t + 0x38);
-        if (y->S_status[si] == KEYOFF) {
-            ax = rd16(t + 0x3A);
-            dx = rd16(t + 0x3C);
-        }
-    }
-    y->S_AD_0[si] = (uint8_t)(dx >> 8);
-    y->S_SR_0[si] = (uint8_t)dx;
-    y->S_AD_1[si] = (uint8_t)(ax >> 8);
-    y->S_SR_1[si] = (uint8_t)ax;
-    if (y->S_status[si] == KEYOFF) {
-        y->tv_ptr[TV_F][si] = (uint16_t)(rd16(t + 0x0A) + 2);
-        y->tv_ptr[TV_V0][si] = (uint16_t)(rd16(t + 0x10) + 2);
-        y->tv_ptr[TV_V1][si] = (uint16_t)(rd16(t + 0x16) + 2);
-        y->tv_ptr[TV_M0][si] = (uint16_t)(rd16(t + 0x28) + 2);
-        y->tv_ptr[TV_M1][si] = (uint16_t)(rd16(t + 0x2E) + 2);
-        y->tv_ptr[TV_FB][si] = (uint16_t)(rd16(t + 0x22) + 2);
-        y->tv_ptr[TV_WS][si] = (uint16_t)(rd16(t + 0x34) + 2);
-        y->tv_ptr[TV_P][si] = (uint16_t)(rd16(t + 0x1C) + 2);
-    } else {
-        y->S_duration[si] = t[3] == 1 ? 0xFFFF : (uint16_t)(rd16(t + 4) + 1);
-        y->tv_val[TV_F][si] = rd16(t + 0x06);
-        y->tv_ptr[TV_F][si] = (uint16_t)(rd16(t + 0x08) + 2);
-        y->tv_val[TV_V0][si] = rd16(t + 0x0C);
-        y->tv_ptr[TV_V0][si] = (uint16_t)(rd16(t + 0x0E) + 2);
-        y->tv_val[TV_V1][si] = rd16(t + 0x12);
-        y->tv_ptr[TV_V1][si] = (uint16_t)(rd16(t + 0x14) + 2);
-        y->tv_val[TV_M0][si] = rd16(t + 0x24);
-        y->tv_ptr[TV_M0][si] = (uint16_t)(rd16(t + 0x26) + 2);
-        y->tv_val[TV_M1][si] = rd16(t + 0x2A);
-        y->tv_ptr[TV_M1][si] = (uint16_t)(rd16(t + 0x2C) + 2);
-        y->tv_val[TV_FB][si] = rd16(t + 0x1E);
-        y->tv_ptr[TV_FB][si] = (uint16_t)(rd16(t + 0x20) + 2);
-        y->tv_val[TV_WS][si] = rd16(t + 0x30);
-        y->tv_ptr[TV_WS][si] = (uint16_t)(rd16(t + 0x32) + 2);
-        y->tv_val[TV_P][si] = rd16(t + 0x18);
-        y->tv_ptr[TV_P][si] = (uint16_t)(rd16(t + 0x1A) + 2);
-    }
-    y->S_update[si] = U_ALL_REGS;
-    for (p = 0; p < TV_N; p++) {
-        y->tv_cnt[p][si] = 1;
-        y->tv_inc[p][si] = 0;
-    }
-}
-
-/* one parameter's step in serve_synth: the increment, then the countdown to the next command */
-static void tv_step(Yam *y, int si, int p, uint8_t flag)
-{
-    if (y->tv_inc[p][si]) {
-        y->tv_val[p][si] = (uint16_t)(y->tv_val[p][si] + y->tv_inc[p][si]);
-        y->S_update[si] |= flag;
-    }
-    if (--y->tv_cnt[p][si] == 0) {
-        TV_cmd(y, si, p);
-        y->S_update[si] |= flag;
-    }
-}
-
-/* a level's step: in the release phase a level that passes through 0 in the increment's
-   direction stops at 0 */
-static void tv_level(Yam *y, int si, int p)
-{
-    uint16_t ax = y->tv_inc[p][si], old, now;
-    if (ax) {
-        old = y->tv_val[p][si];
-        now = (uint16_t)(old + ax);
-        y->tv_val[p][si] = now;
-        if (y->S_status[si] == KEYOFF && ((now ^ old) & 0x8000) && !((now ^ ax) & 0x8000))
-            y->tv_val[p][si] = 0;
-        y->S_update[si] |= y->vol_update;
-    }
-    if (--y->tv_cnt[p][si] == 0) {
-        TV_cmd(y, si, p);
-        y->S_update[si] |= U_KSLTL;
-    }
-}
-
-/* serve_synth (DM03 0647h), after every XMIDI service: the TVFX parameters at 60 Hz, and the
-   voice priorities five times in 120 services */
-static void serve_synth(Synth *s)
+/* XMIDI.ASM's IFDEF serve_synth: only an extension has one */
+static void serve_ext(Synth *s)
 {
     Yam *y = (Yam *)s;
-    int si;
-    y->TV_accum += 60;
-    if (y->TV_accum >= 120) {
-        y->TV_accum -= 120;
-        y->vol_update ^= U_KSLTL;
-        for (si = 0; si < y->nslots; si++) {
-            if (y->S_status[si] == FREE || y->S_type[si] == BNK_INST) continue;
-            tv_step(y, si, TV_F, U_FREQ);
-            tv_step(y, si, TV_FB, U_FBC);
-            tv_step(y, si, TV_M0, U_AVEKM);
-            tv_step(y, si, TV_M1, U_AVEKM);
-            tv_level(y, si, TV_V0);
-            tv_level(y, si, TV_V1);
-            tv_step(y, si, TV_WS, U_WS);
-            y->tv_val[TV_P][si] = (uint16_t)(y->tv_val[TV_P][si] + y->tv_inc[TV_P][si]);
-            if (--y->tv_cnt[TV_P][si] == 0) TV_cmd(y, si, TV_P);
-            if (y->S_update[si] & U_ALL_REGS) update_voice(y, si);
-            if (y->S_status[si] != KEYOFF) {
-                if (--y->S_duration[si] == 0) {
-                    y->S_status[si] = KEYOFF;
-                    TV_phase(y, si);
-                }
-            } else if (y->S_v0_val[si] < 0x400 && y->S_v1_val[si] < 0x400) {
-                release_voice(y, si);
-                y->S_status[si] = FREE;
-                TV_switch_voice(y);
-            }
-        }
-    }
-    y->pri_accum += 5;
-    if (y->pri_accum >= 120) {
-        y->pri_accum -= 120;
-        update_priority(y);
-    }
+    y->ext->serve(y);
 }
 
 /* ---- the MIDI interpreter ---------------------------------------------------------- */
@@ -970,9 +728,10 @@ static void note_off(Yam *y, int chan, int note)
         } else if (y->S_type[si] == OPL3_INST || y->S_type[si] == BNK_INST) {
             release_voice(y, si);
             y->S_status[si] = FREE;
-            TV_switch_voice(y);
+            if (y->ext && y->ext->voice_freed)
+                y->ext->voice_freed(y);     /* IFDEF TV_switch_voice */
         } else
-            y->S_duration[si] = 1;      /* a TVFX note: its last cycle */
+            y->S_duration[si] = 1;      /* a TV note: its last cycle */
     }
 }
 
@@ -1015,8 +774,10 @@ static void note_on(Yam *y, int chan, int note, int vel)
         if (y->ymf262) OPL_phase(y, si);
     } else if (sz == BNK_SIZE)
         BNK_phase(y, si);
+    else if (y->ext)
+        y->ext->phase(y, si);           /* IFDEF TV_phase */
     else
-        TV_phase(y, si);
+        return;                         /* no TVFX: jmp __exit, the slot left KEYON */
     y->S_voice[si] = 0xFF;
     assign_voice(y, si);
 }
@@ -1110,9 +871,11 @@ static void send_MIDI_message(Synth *s, unsigned stat, unsigned d1, unsigned d2)
     flag_updates(y, di, flag);
 }
 
-Synth *yamaha_new(int kind)
+Synth *yamaha_new(int kind, const AilFmExt *ext)
 {
     Yam *y = calloc(1, sizeof *y);
+    y->ext = ext;
+    if (ext && ext->state_size) y->ext_state = calloc(1, ext->state_size);
     y->kind = kind;
     y->ymf262 = kind == DRV_SBPRO2;
     y->stereo = kind == DRV_SBPRO1 || kind == DRV_PASFM;
@@ -1125,7 +888,7 @@ Synth *yamaha_new(int kind)
     y->s.reset = reset_synth;
     y->s.init = init_synth;
     y->s.shutdown = shutdown_synth;
-    y->s.serve = serve_synth;
+    y->s.serve = ext && ext->serve ? serve_ext : 0;
     y->s.send = send_MIDI_message;
     y->s.cache_size = cache_size;
     y->s.define_cache = define_cache;

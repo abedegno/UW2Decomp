@@ -27,6 +27,12 @@
 #include "aildrv.h"
 #include "audio.h"
 
+/* The FM drivers' time-variant effects for yamaha.c (yamaha.h, struct AilFmExt): ALE.INC,
+   translated in tvfx.c. */
+#define AIL_FM_EXT uw2_tvfx
+extern const struct AilFmExt AIL_FM_EXT;
+#define FM_EXT (&AIL_FM_EXT)
+
 #define NTIMERS     17                  /* 0..15 and the BIOS's, 16 */
 #define NDRIVERS    16
 #define API_VERSION 0xD3
@@ -558,7 +564,7 @@ int AIL_register_driver(void *image)
     if (kind >= DRV_DIG_SB)
         drv[h].d = digi_new(kind);
     else {
-        drv[h].s = kind == DRV_MT32 ? mt32_new() : kind == DRV_SPKR ? null_synth() : yamaha_new(kind);
+        drv[h].s = kind == DRV_MT32 ? mt32_new() : kind == DRV_SPKR ? null_synth() : yamaha_new(kind, FM_EXT);
         drv[h].x = xmidi_new(drv[h].s);
     }
     ail_log("C %u register_driver %d kind %d\n", ticks, h, kind);
