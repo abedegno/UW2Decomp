@@ -26,3 +26,12 @@ Things agents found that belong to the shared headers or the map, to settle in t
 - kin.py named short bodies (empty functions, `return 0`) after arbitrary UW2 twins (`mous_3d_show`, `make_stew`, `unbound`, `pfatal`); fixed in Exhume: only unique, six-instruction-or-longer pairings pass a name. Tables regenerated for the segments no agent held.
 - verify.py does not check the order of overlay stub entries (the publics' order in the stub table, which bssorder's key decides); agent C checked it with a script. To add to Exhume.
 - symbols.tsv grows with merges; extern names in early files were checked only for consistency, and are checked properly at the link.
+
+## From wave 2 (A)
+
+- **UW1's `struct Player`** (from the bytes; CRITTIME, BAGS, BABLHACK and PLAYMOVE each declare a local struct and a PLAYER1 macro until player.h is reconciled): skills 0x21; moonstone (4-bit) 0x5E; drawn (word bitfield, bit 1) 0x5F; lefty bit 0, female bit 1 of 0x64; quests (int32) 0x65; quest_bytes[4] 0x69; b6D 0x6D; game_vars[0x40] 0x70; motion_state 0xB8; swim_count 0xB9; crithit, typehit, crithittime, hitx, hity 0xBA..0xC1; game_clock 0xCE; weight 0x4A, max_weight 0x4C.
+- Signed `char` in UW1 where UW2's headers say `unsigned char`: returns of space_to_motion, IsMobElem, drop_around_place, Obj_ListOkay, the Obj_Check callback, set_gridx_and_y_based_on_tile_type; globals TimeStop, InvUpArrow/InvDownArrow, KeybUsed; parameters move_physics's easy, fix_name_string's article.
+- Signatures: Obj_Rem returns nothing; CloseDoor(door) takes one argument; grfx_quikfont takes a file name (char *); clear_paths is in seg006 (PATHFIND) in UW1.
+- kin false hit: `free_scrgr` at seg036, seg039, ovr105 and ovr109 (a one-call body).
+- Table rows that hide a second function: seg027 A78 (free_critter + AC4), seg027 EEE (EF9 + F23), seg030 899 (flat_move + UW2's static A3F).
+- Inferred, not proven, names: animcount (DS:3656), MoveCamera (DS:0762), nextstep/watertime/water_eff (DS:0779/077F/077E), errmsg (stub 5AA4:0075).
