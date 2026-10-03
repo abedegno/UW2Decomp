@@ -284,7 +284,10 @@ jobs:
           PATH=/c/Windows/system32:/c/Windows /usr/bin/ldd uw2port.exe
           if PATH=/c/Windows/system32:/c/Windows /usr/bin/ldd uw2port.exe | grep -viE '=> (/c/windows/|'"$PWD"'/)'; then exit 1; fi
           PATH=/c/Windows/system32:/c/Windows ./uw2port.exe --help
-          llvm-readobj --coff-resources uw2port.exe | grep -q 'Type: ICON' || { echo "::error::uw2port.exe has no icon"; exit 1; }
+          # the whole listing first: grep -q stops at its match, and under pipefail the reader's
+          # broken pipe then failed the check although the icon was there
+          res=$(llvm-readobj --coff-resources uw2port.exe)
+          case "$res" in *'Type: ICON'*) echo "icon: present" ;; *) echo "::error::uw2port.exe has no icon"; exit 1 ;; esac
       - uses: actions/upload-artifact@v4
         with:
           name: windows
