@@ -1,4 +1,8 @@
-/* combat.h: Combat, missiles and spells. */
+/* combat.h: Combat, missiles and spells: the header of src/combat but DAMAGE.C (whose
+   prototypes and damage types are in object.h). The spell table's record and classes, the
+   area spell modes, the rune counts, and the prototypes of COMBAT.C, MISSILE.C, SPELLS.C
+   and RUNES.C. Function names are UW2's FM Towns ones through UW2Decomp, the routines
+   being the same; the constants are named from the code that dispatches on them. */
 #ifndef COMBAT_H
 #define COMBAT_H
 
@@ -11,8 +15,7 @@ struct Tile;
 #include "map.h"
 #include "object.h"
 
-/* One spell's runes, 4 bytes. */
-/* Spell classes, struct Spell's cls >> 3: do_spell's switch (ovr156) sends each class to
+/* Spell classes, struct Spell's cls >> 3: do_spell's switch (SPELLS.C) sends each class to
    the function FM Towns names. Classes 0 to 3 start an active spell (set_curmagic); their
    effects are PLAYDATA.C's player_affected_by. */
 #define SPELLC_LIGHT    0               /* the light level */
@@ -27,7 +30,7 @@ struct Tile;
 #define SPELLC_BACKFIRE 9               /* backfire */
 #define SPELLC_MANA     10              /* restore_mana */
 #define SPELLC_XT       11              /* xt_spells */
-#define SPELLC_SPECIAL  13              /* special_spells */
+#define SPELLC_SPECIAL  13              /* in do_spell itself: the bullfrog, hallucination */
 #define SPELLC_CUTSCENE 14              /* runcutscene */
 
 /* A spell's minor (struct Spell's sub, do_spell's sub): bits 0-5 the minor itself, bits 6
@@ -48,6 +51,7 @@ struct Tile;
 #define NUM_RUNES       0x18            /* An to Ylem, items FIRST_RUNESTONE on */
 #define RUNE_NONE       0x18            /* an empty place on the rune shelf */
 
+/* One entry of spells[], 4 bytes. */
 struct Spell {
     unsigned char cls;                  /* class in bits 3-7 */
     int16 runes;                        /* the three runes, 5 bits each */
@@ -119,7 +123,7 @@ char far sp_confusion(int x, int y, struct Object far *target, struct Tile far *
 char far sp_fear(int x, int y, struct Object far *target, struct Tile far *tile, unsigned char src);
 void far print_monster(unsigned char dir, unsigned char n);
 
-/* SPELLS2.C: spells */
+/* SPELLS.C: the routines UW2 moved to SPELLS2.C */
 char far sp_true_sight(struct Object far *caster, struct Object far *target);
 char far tremor_area(int x, int y, struct Object far *target, struct Tile far *tile,
                      unsigned char src);

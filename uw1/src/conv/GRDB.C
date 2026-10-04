@@ -82,6 +82,7 @@ void far grdb_blank(void)
     prelblnum = 32;
 }
 
+/* The bytes written so far. Not called in UW1. */
 int far grdb_size(void)
 {
     return (dbptr - cDbase) * 2;
@@ -96,11 +97,13 @@ int far Clk(int n)
     return (int)(NEARPTR)((int16 *)(NEARPTR)(FP_OFF(cDbase) - 0x18) + n);
 }
 
+/* Stores dbptr's offset as the database's entry point (*cDbbase). */
 void far gr_entry(void)
 {
     *cDbbase = FP_OFF(dbptr);
 }
 
+/* Moves dbptr to cEntryStrt, where the bytecode starts. */
 void far gr_tostrt(void)
 {
     dbptr = cEntryStrt;
@@ -129,6 +132,7 @@ void far Ref(unsigned char lab, int rel)
     }
 }
 
+/* The next of labels 32..95, in sequence. Not called in UW1. */
 unsigned char far gr_getpre(void)
 {
     if (prelblnum == 0x60)
@@ -136,6 +140,8 @@ unsigned char far gr_getpre(void)
     return prelblnum++;
 }
 
+/* A free label from the stack (0..31). Not called in UW1. freelblptr is unsigned, so
+   the test for an empty stack can never be true. */
 unsigned char far gr_getlab(void)
 {
     if (freelblptr < 0)
@@ -158,6 +164,8 @@ void far gr_putlab(unsigned char lab)
     }
 }
 
+/* Forgets label lab's place and, for a free label, pushes it back. Not called in UW1; the
+   push is bounded at 0x5F, not at the 32 entries of freelbls. */
 void far gr_freelab(register unsigned char lab)
 {
     loc[lab] = -1;

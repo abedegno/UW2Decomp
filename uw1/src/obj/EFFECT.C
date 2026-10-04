@@ -415,6 +415,7 @@ int far find_anim(struct Object far *obj)
     return i;
 }
 
+/* The frames left in obj's animation, -1 for ever, or -2 when it has none. */
 int far get_animlen(struct Object far *obj)
 {
     int i;
@@ -425,6 +426,7 @@ int far get_animlen(struct Object far *obj)
     return animlist[i].len;
 }
 
+/* Sets the frames left in obj's animation, if it has one. */
 void far set_animlen(struct Object far *obj, int len)
 {
     int i;

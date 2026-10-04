@@ -23,6 +23,8 @@
    word; talisman_desc is new; item ids and string numbers differ.
    UW1 has no symbol-bearing build: the names are UW2's (the FM Towns symbol table), the
    routines being the same; talisman_desc is descriptive, chosen for the stub order.
+   Data owned: none; the words come from the string blocks (get_string, GAMESTRN.C),
+   gravestone pictures from DATA\GRAVE.DAT, and the shaft and grave views from PANELS.C.
    Name: descriptive (looking at things: LookAt). */
 
 #include <string.h>
@@ -434,7 +436,8 @@ void far SpecialLook(struct Object far *obj, register int print)
 /* At lore 3, a talisman (an object whose COMOBJ fate is 10) is described as 'You see '
    (string 0x104) and its own text, 0x105 + which (0 to 8, by item: 0x136, 0x93, 0x97,
    0xBF, 0x11F, 0x37, 0xAE, 0x0A, 0x36). An item not in the list leaves which unset.
-   Returns 1 when it described one, and LookAt then prints nothing else.
+   Returns 1 when it described one, and LookAt then prints nothing else. The shipped
+   COMOBJ.DAT gives fate 10 to exactly these nine items, so which is always set.
    Name: descriptive, chosen so its bssorder key (76) falls between do_mods (68) and
    CritterLook (123), where its stub entry is. */
 char far talisman_desc(struct Object far *obj, struct ComObj *com)

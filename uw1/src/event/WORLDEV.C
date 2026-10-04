@@ -18,9 +18,14 @@
    UW1 against UW2: do_teleport has no jail, sleep or Pits rules; change_terrain moves the
    objects on the tile itself (no raise_up, put_down or filter, no neighbours) and takes
    heights up to 13; go_fish ignores the Track skill; the poison and quest fields are in
-   UW1's player record (Player1World below); repair_item shows the anvil, adds the time to
+   UW1's player record (player.h); repair_item shows the anvil, adds the time to
    the game clock itself (there is no pass_time) and has no default name. UW1 has none of
    UW2's later quest hacks.
+
+   Callers: TRIGGER.C (the trap actions and hack traps), USEITEMS.C (fishing, the anvil,
+   the exploding book), SPELLS.C (gate travel, the bullfrog), SKILLS.C, AI.C (death_check),
+   UWEDIT.C. It calls back into SPELLS.C, DAMAGE.C, OBJPHYS.C and COLLIDE.C (placing
+   objects), CONVERSE.C (TalkTo) and CUTS.C (cutscenes).
 
    Data owned: tyball_allies and the exploding book's message.
    Function names are UW2's (the FM Towns originals) where the routine is the same; the
@@ -66,6 +71,8 @@ unsigned char far IsMobElem(struct Object far *obj);
         nnext++; \
         visited[(tx) - xmin] |= 1 << ((ty) - ymin); \
     }
+/* Finds where obj fits near (x, y), searching outward (the comment and macros above);
+   the tile found goes to *nx, *ny. Returns 0 when there is none. */
 char far find_good_x_and_y(struct Object far *obj, int x, int y,
                                     int16 *nx, int16 *ny, char clear)
 {
@@ -470,7 +477,7 @@ void far ExplodingBook_ovr107_1259(struct Object far *trap, int x, int y)
     book = Obj_InList(&head, 1, 4, 1, 4);
     if (book) {
         scroll_print("The book explodes in your face!\n");
-        player->quests |= 0x100L;
+        player->quests |= QUEST_BIT(QUEST_BRONUS_BOOK);
         backfire(ThePlayer, 3);
         InvRemoveOneObject(book);
         Obj_Punt(0L, book, 1);
@@ -518,6 +525,7 @@ unsigned char far remove_whoami(struct Object far *obj)
 static unsigned char tyball_allies[10] = {
     0xDE, 0xD1, 0xDB, 0xD2, 0xDC, 0xD5, 0xD8, 0xD4, 0xD3, 0xDD
 };
+/* Tyball's death (see above). */
 void far TyballDeath_ovr107_13D1(void)
 {
     char i;
@@ -575,13 +583,13 @@ char far death_check(struct Object far *obj, char mode)
         }
         break;
     case 0x6E:
-        if (mode) player->quests |= 0x10L;
+        if (mode) player->quests |= QUEST_BIT(QUEST_GAZER);
         break;
     case 0x8E:
-        if (mode) player->quests |= 0x800L;
+        if (mode) player->quests |= QUEST_BIT(QUEST_RODRICK);
         break;
     case 0x18:
-        if (mode) player->quests |= 0x40L;
+        if (mode) player->quests |= QUEST_BIT(QUEST_LIZARDMEN);
         break;
     }
     return 1;

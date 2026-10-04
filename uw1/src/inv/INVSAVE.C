@@ -142,12 +142,14 @@ void far replaceInInv(union Link far *old, union Link far *new)
             invSlots[i].f.index = new->f.index;
 }
 
+/* The next free record of the save area (numbered from 1). */
 struct Object far * far allocSaveObj(void)
 {
     ++saveNum;
     return (struct Object far *)(saveObjs + saveNum);
 }
 
+/* Saved object n of the save area, or 0 for n 0. */
 struct Object far * far getSaveObj(int n)
 {
     if (n == 0)

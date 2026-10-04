@@ -26,7 +26,14 @@
    check_ammo prints its message from literals, a weapon enchantment adds (effect & 7) + 1
    to damage or to hit, critters poison the player without the armour roll, do_miss stores
    the attacker's item id into fromwho, and a kill makes the dragons nod and plays music 9.
-   struct Player differs (Player1Combat below).
+   struct Player differs (player.h has UW1's record).
+
+   Callers: INTERACT.C and PLAYER.C (the player's swing, player_attack, clear_fight_state),
+   AI.C (critter_attack, player_killed_a), MISSILE.C, OBJPHYS.C (missile_thwack), SKILLS.C,
+   GAMEWRAP.C, WORLDEV.C. It calls COLLIDE.C's ObjectCheck and TerrainCheck to find what a
+   blow meets, SKILLCHK.C's skill_check, DAMAGE.C's damage_item, INVDATA.C for the
+   player's weapon and armour, EFFECT.C for blood and sparks, and PANELS.C and SOUND.C for
+   the feedback.
 
    Data owned: the attack globals shared by these steps (fromwho attacker, hitobj target,
    towhere and swing, askill attack skill, damage, power, hitloc, hitangle, criti) and the
@@ -431,7 +438,10 @@ char far do_miss(int hit)
     if (hit == 0)
         play_effect_on_mobile(10, Obj_IntTMem(fromwho), 0);
     else {
-        /* UW1: the attacker's item id goes into fromwho itself (UW2 a local) */
+        /* UW1: the attacker's item id goes into fromwho itself (UW2 a local), so the
+           tests below compare an item id: fromwho == 1 is item 1 (the battle axe), never
+           the player; the player's blocked blows take their weapon kind from his Creature
+           record (0x3F), not from what he wields as in UW2 */
         fromwho = OBJ_ITEM(Obj_IntTMem(fromwho));
         if (fromwho == 1)
             weapon = 1;
@@ -451,6 +461,8 @@ char far do_miss(int hit)
             else
                 victim = 1;
         } else if (hitobj < NUM_MOBILE)
+            /* the attacker's armour kind, not the defender's (UW2's do_miss does the same
+               through its attitem): probably meant hitobj's */
             victim = Creature[fromwho & ID_INMAJOR].armour_kind;
         else
             victim = 0;
@@ -571,9 +583,9 @@ void far DoPlayerWeapon(register struct Weapon *wd, struct Object far *weap, int
     if (player->easy)
         askill += 7;
     if (skill == SKILL_BAREHAND)
-        damage = player->skills[SKILL_BAREHAND] * 2 / 5 + Creature[ThePlayer->id & ID_INMAJOR].attr[0] / 6 + 4;
+        damage = player->skills[SKILL_BAREHAND] * 2 / 5 + Creature[ThePlayer->id & ID_INMAJOR].attr[ATTR_STR] / 6 + 4;
     else
-        damage = wd->damage[swing_kind[swing - 1]] + Creature[ThePlayer->id & ID_INMAJOR].attr[0] / 9;
+        damage = wd->damage[swing_kind[swing - 1]] + Creature[ThePlayer->id & ID_INMAJOR].attr[ATTR_STR] / 9;
     fromwho = 1;
     towhere = swing;
     if (weap != 0) {
@@ -600,6 +612,8 @@ void far missile_finish(void)
     fire_mode = 0;
 }
 
+/* Ends a blow: the weapon picture goes back to the drawn (frame 4) or sheathed (frame 6)
+   pose and the power bar to empty. */
 void far fin_attack(void)
 {
     if (player->drawn)
@@ -609,6 +623,8 @@ void far fin_attack(void)
     set_screen_frame(3, 0);
 }
 
+/* Cancels any attack in progress (also leaving the aiming mode of a bow) and clears
+   fromwho. */
 void far clear_fight_state(void)
 {
     if (fire_mode != 0 && swing_state == 0) {
@@ -625,8 +641,9 @@ void far clear_fight_state(void)
    3D view clicked (1..9; 0 for none). pQatt < 0 is a swing in
    progress, its value -1 - swing kind. The weapon animation frame (weap_frame: 0..2 the
    wind-up, 3 the hold, 6 the strike) drives it: while the button or key is held the power
-   bar (play_pow, up by the weapon's wd[4] every 16 ticks to at most 100) charges; at the
-   strike frame the power becomes wd[3] plus the charged share of wd[5] - wd[3] and the
+   bar (play_pow, up by the weapon's speed every 16 ticks to at most 100) charges; at the
+   strike frame the power becomes min_charge plus the charged share of max_charge -
+   min_charge and the
    blow is struck. A bow or sling instead switches the cursor to aim and fires on release
    (player_fire). Making a blow sets the player's noise (10 charging, 15 striking), which
    critters hear. */
@@ -780,7 +797,7 @@ char far critter_attack(struct Object far *npc, int swing, unsigned char charge,
     power = charge;
     cr = &Creature[npc->id & ID_INMAJOR];
     damage = cr->attacks[type].damage;
-    damage += Creature[npc->id & ID_INMAJOR].attr[0] / 5;
+    damage += Creature[npc->id & ID_INMAJOR].attr[ATTR_STR] / 5;
     askill = cr->attacks[type].chance + (cr->equip >> 1);
     if (OBJ_POWERFUL(npc)) {
         askill += rand() % 6 + 7;

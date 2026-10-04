@@ -23,6 +23,11 @@
    picture and the strings differ; grfx_load_font takes a file name; InvUpArrow and
    InvDownArrow are signed chars.
 
+   Callers: INVPANEL.C (DoInventoryMouse and the put-down paths), INVDATA.C (refilling and
+   redrawing the open bag), USEITEMS.C (UseCont opens a bag), INTERACT.C, INVSAVE.C,
+   COMBINE.C and SPELLS.C (closing bags). It calls MISSILE.C's ReturnObject to drop into
+   the world, RUNES.C's add_rune for runestones, and BARTER.C's conv_inv_special.
+
    Data owned: BagSaveHandles, and the font name literal.
    UW1 has no symbol-bearing build: the function and global names are UW2's (the FM Towns
    symbol table), the routines being the same.
@@ -115,6 +120,8 @@ void far MakeBagClose(struct Bag far *bag)
         SET_INCLASS(obj, cls - 1);
 }
 
+/* Closes every open bag, innermost first, turning each back into its closed item and
+   freeing its record. Inventory[19..27] are left as they were (UW1). */
 void far CloseAllBags(void)
 {
     struct Bag far *prev;
@@ -339,6 +346,8 @@ void far OpenTheBag(int slot)
         DisplayInvObject(SlotToDisplay[slot]);
 }
 
+/* Shows the next row of four of the open bag (when InvUpArrow is set: the arrow names are
+   the other way round from the direction the list moves, inferred). */
 void far ScrollItemsUp(void)
 {
     if (OpenBagList == 0 || !(char)InvUpArrow)      /* UW1: a signed char (cbw) */

@@ -22,7 +22,12 @@
    source with a height; push_missile always moves it (no launch argument). ReturnObject
    does not check pressure plates and plays effect 0xF when there is no room. The aiming
    area of the 3D view differs (player_settr's constants), and struct Player differs
-   (Player1Swim below).
+   (player.h has UW1's record).
+
+   Callers: COMBAT.C (player_fire for a drawn bow or sling), AI.C (critter_fire),
+   SPELLS.C (spell_fire for missile spells), TRIGGER.C (trap_fire for arrow traps), BAGS.C
+   (ReturnObject, dropping or throwing from the cursor). The flight itself is OBJPHYS.C's;
+   missile_fire places the object with COLLIDE.C's checks and mob_init.
 
    Data owned: the launch parameters below. Missile[] (combat.h) gives each launcher its
    ammunition and each missile its damage and type.
@@ -212,6 +217,8 @@ char far ReturnObject(struct Object far *obj, char message)
             SET_FINEX_UNSIGNED(obj, x & 7);
             SET_FINEY(obj, y & 7);
             Obj_AddEnd(&tile->objects, obj);
+            /* lit lights 4..6 go out; a lit taper (7, the Taper of Sacrifice is one) stays
+               lit, where PutObjectInBag (BAGS.C) puts out 4..7 */
             if (OBJ_CLASS(obj) == CLASS_LIGHT && OBJ_INCLASS(obj) >= 4 && OBJ_INCLASS(obj) <= 6)
                 SET_INCLASS(obj, OBJ_INCLASS(obj) - 4);
             obj_deal(obj, tx, ty, 1);

@@ -9,8 +9,10 @@
    (UseBook, USEITEMS.C, reading the recipe) turns a bowl of the right ingredients into
    rotworm stew; UW2 kept only an empty stub of it.
    The whole of UW1's DOS overlay ovr099 (UW2's ovr102), in original order.
+   Data owned: ObjectCombinations, the rules as loaded.
    UW1 has no symbol-bearing build: the names are UW2's (descriptive there: combining
-   objects, init_combinables and CombineObjs), the routines being the same. */
+   objects, init_combinables and CombineObjs), the routines being the same.
+   Name: UW2Decomp's (combining objects). */
 
 #include "file.h"
 #include "inv.h"
@@ -33,6 +35,7 @@ struct Combination {
 /* name: UW2's FM Towns build has no name for it, so it was static. */
 static struct Combination ObjectCombinations[NUM_COMBINATIONS];
 
+/* Reads DATA\CMB.DAT into ObjectCombinations (UWEDIT.C, at start-up). */
 void far init_combinables(void)
 {
     bltfromdrive("DATA\\cmb.dat", ObjectCombinations, sizeof(ObjectCombinations));
@@ -74,6 +77,8 @@ int far ObjsBeCombinable(struct Object far *a, struct Object far *b)
 }
 
 /* Creates a new static object of rule combo's output item; returns 0 if none is free. */
+/* match: indexed through a word pointer; ObjectCombinations[combo].output compiles two
+   bytes shorter (the offset folds into the displacement). */
 struct Object far * far CombineObjs(int combo)
 {
     return CreateObj(((uint16 *)ObjectCombinations)[combo * 3 + 2], 0);

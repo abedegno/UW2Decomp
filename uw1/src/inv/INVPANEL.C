@@ -17,12 +17,17 @@
    can still carry.
 
    UW1 against UW2: the panel and its slots sit a few pixels differently (InvDisplay);
-   the paperdoll pictures start at 0x2091; DisplayInvSpecial walks display positions 1..5
+   the paperdoll pictures start at 0x2091 (ICON_INV); DisplayInvSpecial walks display positions 1..5
    (no ArmorSlots table); no click-versus-drag test when picking up, no use of a bag's
    arrows by a look click, no void check when dragging in; AskHowMany returns 0 at once for
    Escape; ItemFitsSlot tries a light's lit form in the light slots first and has no key
    ring, and its 'is too full' message is a literal; no storage crystal; fonts are loaded by
    file name; string numbers, item ids and colours differ.
+
+   Callers: INTERACT.C (the panel's mouse region, the look and use commands), BAGS.C,
+   INVDATA.C, BARTER.C and CONVERSE.C (the trade slots), INVSAVE.C, USEITEMS.C, COMBINE.C,
+   WORLDEV.C. It calls COMBINE.C for drops onto another object and USEITEMS.C's UseFood
+   for food dropped on the head.
 
    Data owned: the slot tables (InvDisplay, a rectangle per display position;
    SlotToDisplay and DisplayToSlot between Inventory[] slots and display positions, see
@@ -162,6 +167,7 @@ void far EndInventory(void)
 {
 }
 
+/* Empties every slot and the cursor, forgets the paperdoll pictures and the open bags. */
 void far ClearInventory(void)
 {
     register int i;
@@ -386,6 +392,8 @@ void far DisplayInvSpecial(void)
     }
 }
 
+/* Redraws display position slot: the paperdoll for the body and armour (below 6), a slot's
+   object (to 20), or a scroll arrow. */
 void far DisplayInvObject(int slot)
 {
     int pic;
@@ -489,17 +497,16 @@ struct Object far * far AskHowMany(struct Object far *obj)
 
 /* Whether obj may go into slot: 1 yes, 0 no, -1 it was eaten (food dropped on slot 0, the
    head, inferred: UseFood took it). The armour slots take armour of the matching wearable
-   type (cls[3]: 8 head, 1 torso, 4 gloves, 3 legs, 5 boots; Guide, "Armour and Wearables
+   type (cls->category: 8 head, 1 torso, 4 gloves, 3 legs, 5 boots; Guide, "Armour and Wearables
    Table"), the ring slots type 9. The weapon hand refuses a stack of weapons. A light
    source (MAJOR_MISC minor 1 class 4..7) is tested as its unlit form and stays lit only in
    a shoulder or hand slot (ValidLightSlots); elsewhere it is put out. Into a container (a
    bag slot or the open bag) the weight must fit the capacity of the container and every
    open bag around it ('The <bag> is too full.'), and a container with a mask takes only
-   that item or kind: 0x200 runes (rune bag), 0x201 sling stones, bolts, arrows and wands
-   (items 0x98..0x9F), 0x202 scrolls and maps (0x134..0x137, 0x139, 0x13A), 0x203 food and
-   reagents but not drinks, 0x204 keys (or a key container); by what they accept, probably
-   the rune bag, quiver, map case, bowl and key ring (items 0x8F, 0x8D, 0x88, 0x8E, 0x8C;
-   inferred). Otherwise the item's ComObjData pickup flag decides. */
+   that item or kind (CONT_* in object.h): the rune bag runestones, the quiver sling
+   stones, bolts and arrows, the map case scrolls and the map, the bowl food and drink and
+   a few edible items; any other mask refuses. Otherwise the item's ComObjData pickup
+   flag decides. */
 int far ItemFitsSlot(struct Object far *obj, int slot)
 {
     struct ComObj *com;
@@ -662,6 +669,8 @@ void far RearrangeInventory(int slot)
         CursorObjPtr = 0;
 }
 
+/* Puts obj in the empty slot (not the open bag's own slot 19) and redraws it. Returns 1
+   when it went in. */
 char far AddToEmptySlot(struct Object far *obj, int slot)
 {
     char ok;
@@ -793,6 +802,8 @@ char far AddToOccupiedSlot(struct Object far *obj, register int slot)
     return ok;
 }
 
+/* Redraws the backpack area, or the open bag's background, and every slot from position
+   6 on. */
 void far DisplayInventory(void)
 {
     if (RightPanel == 0) {

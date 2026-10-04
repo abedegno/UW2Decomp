@@ -22,12 +22,21 @@
    zanium stack and rotworm stew are UW1's own; locks open with checkTrap's how 6 and doors
    with 7; CloseDoor takes only the door and fires no trap; switches are flipped in
    UseRect; checkSpell prints nothing when it is too soon and spends one charge
-   (useNSpellCharges has no count); food makes no sounds and item 0xB9 poisons; string
+   (useNSpellCharges has no count); food makes no sounds and the toadstool poisons; string
    numbers and item ids differ.
+
+   Callers: INTERACT.C (the use command and the world), BAGS.C (a use click in the
+   inventory), DAMAGE.C (doors and containers that break), TRIGGER.C (door traps),
+   PATHFIND.C (critters opening doors), BABLHACK.C, COMBAT.C, SPELLS.C, LOOK.C. It calls
+   into the inventory (INVDATA.C, BAGS.C), SPELLS.C (inanimate spells), TRIGGER.C
+   (UseTrigger, SetOffTrap), EFFECT.C (moving doors), SKILLS.C and WORLDEV.C (fishing,
+   seeds, shrines).
 
    Data owned: nextSpellTime and always_decode, and the literals.
    UW1 has no symbol-bearing build: the names are UW2's (the FM Towns symbol table) where
-   the routine is the same, else the listing's. */
+   the routine is the same, else the listing's.
+   Name: UW2Decomp's (OBJUSE.C and USEITEMS.C; the segment is one file in UW1, named after
+   the larger part). */
 
 #include <string.h>
 #include <stdlib.h>
@@ -61,6 +70,12 @@ extern int16 w64_types[];
 int32 nextSpellTime = 0;
 char always_decode = 0;
 
+/* Uses obj for who; how is passed on to the class handler (the player's use command passes
+   1, a use from the world 0). In barter mode (input mode 4) only a container can be used.
+   Afterwards a trap or trigger the object holds is set off (checkTrap, kind 4) and any spell
+   it carries is cast (checkSpell), except after a wand, food or a book, which do that
+   themselves. An animated object of class 0xA (the silver tree, 0x1CA) gives the player a
+   silver seed in the hand and returns 0; otherwise obj is returned. */
 struct Object far * far UseObj(struct Object far *who, struct Object far *obj, char how)
 {
     int minor;
@@ -161,6 +176,9 @@ struct Object far * far UseObj(struct Object far *who, struct Object far *obj, c
     return obj;
 }
 
+/* Uses up obj: from the inventory (inv set) through InvRemoveOneObject and Obj_Punt, or
+   from its tile (MapObj_X, MapObj_Y). An object that is in neither place is freed with its
+   contents. Returns 1 when the object is gone. */
 int far using_punt(struct Object far *obj, char inv, char how)
 {
     struct Tile far *tile;
@@ -183,6 +201,8 @@ int far using_punt(struct Object far *obj, char inv, char how)
     return obj == 0;
 }
 
+/* Puts obj, or a new object of item, on the mouse cursor (input mode 1). Returns 0 when the
+   cursor already holds something. */
 struct Object far * far place_new(struct Object far *obj, register int item)
 {
     if (CursorObjPtr != 0)
@@ -197,6 +217,8 @@ struct Object far * far place_new(struct Object far *obj, register int item)
     return obj;
 }
 
+/* The second half of using the lockpick: checkLock with the negated Pick Lock skill.
+   Messages 3 (no lock), 0x78 (failed), 0x7A (not locked) and 0x79 with sound 0x13 (picked). */
 void far UseLockpickOn(struct Object far *obj, char how)
 {
     int result;
@@ -226,6 +248,8 @@ void far UseLockpickOn(struct Object far *obj, char how)
     }
 }
 
+/* The second half of using a key: checkLock with the key's owner field (the lock it opens),
+   and message result + 2. */
 void far UseKeyOn(struct Object far *obj, char how)
 {
     int result;
@@ -239,6 +263,8 @@ void far UseKeyOn(struct Object far *obj, char how)
     game_sprint(result + 2);
 }
 
+/* Class 0x10: the lockpick and the keys ask for a target (UseThing); the lock (0x10F) does
+   nothing. */
 void far UseKey(struct Object far *obj, char how)
 {
     if (!how)
@@ -249,6 +275,8 @@ void far UseKey(struct Object far *obj, char how)
         UseThing(obj, (void (far *)())UseKeyOn);
 }
 
+/* Starts a two-object use: prints "Use <name> on what?", puts obj on the cursor and records
+   the second half fn in ObjectActor, with obj as ObjectActing (input mode 2). */
 void far UseThing(struct Object far *obj, void (far *fn)())
 {
     char buf[40];
@@ -282,6 +310,7 @@ void far SpikeDoor_seg040_662(struct Object far *door)
     GameInputMode = 0;
 }
 
+/* Using the spike (0x127): asks for the door to spike. */
 void far SpikeDoor_seg040_352B_6F9(struct Object far *obj, char how)
 {
     if (!how)
@@ -289,6 +318,12 @@ void far SpikeDoor_seg040_352B_6F9(struct Object far *obj, char how)
     UseThing(obj, (void (far *)())SpikeDoor_seg040_662);
 }
 
+/* Bones used on something. On a gravestone (0x165), Garamon's bones (owner 0x3E) on the
+   grave with the special link 0x21 bury him: the player record's talisman and Garamon bits
+   are set, the grave's link becomes 0x222, Garamon's conversation (whoami 0x1B) runs from a
+   temporary object (item 0x7E, goal 7, friendly), and the trigger at tile (0x36, 0x34) is set
+   off; other bones on a grave get message 0x86. Bones are used up when they did something;
+   anything else gets message 0x84. */
 void far UseBonesOn(struct Object far *obj, char how)
 {
     char used;
@@ -330,6 +365,8 @@ void far UseBonesOn(struct Object far *obj, char how)
         using_punt(ObjectActing, how, 1);
 }
 
+/* The pole used on something: a switch (class 0x17) is used from afar (message 0x9D),
+   anything else gets 0x9E. */
 void far UsePoleOn(struct Object far *obj)
 {
     UsingPole = 0;
@@ -341,6 +378,7 @@ void far UsePoleOn(struct Object far *obj)
         game_sprint(0x9E);
 }
 
+/* The anvil used on an item: repair it with the Repair skill (repair_item, WORLDEV.C). */
 void far UseAnvilOn(struct Object far *obj, char how, char other)
 {
     if (!how || !other)
@@ -351,6 +389,9 @@ void far UseAnvilOn(struct Object far *obj, char how, char other)
     repair_item(obj, player->skills[SKILL_REPAIR], 1);
 }
 
+/* Scenery (classes 0x0C and 0x0D): skulls, bones and piles of bones (0xC2..0xC6) ask for a
+   target, the anvil and the pole too (the pole also sets UsingPole); the dead rotworm and
+   the two edible plants are eaten. */
 void far UseUtil(struct Object far *obj, char how)
 {
     if (OBJ_ITEM(obj) >= ITEM_SKULL_C2 && OBJ_ITEM(obj) <= ITEM_PILE_OF_BONES_C6) {
@@ -418,6 +459,10 @@ void far seg040_352B_AFF(struct Object far *obj, char how)
         game_sprint(0x84);
 }
 
+/* Class 0x11: burning incense plays one of the dream cutscenes 0xB..0xD (the first three
+   in turn, counted in the player record, then at random) and becomes debris; the orb rock
+   asks for a target (or, used from the world, strikes the orb at once); the exploding book
+   blows up (WORLDEV.C); rotworm stew is eaten. */
 void far UseUnique(struct Object far *who, struct Object far *obj, char how)
 {
     register int n;
@@ -452,6 +497,10 @@ void far UseUnique(struct Object far *who, struct Object far *obj, char how)
     }
 }
 
+/* Lights (0x90..0x97): toggles lit and unlit (the item +- 4). A light that is not already
+   alone in a shoulder or hand slot is first moved to a free one there (message 0xF6 when
+   there is none). Messages 0x7B for a use from the world, 0x7C for a light that is burnt
+   out (quality 0). */
 void far UseLight(struct Object far *obj, char how)
 {
     int slot;
@@ -510,6 +559,9 @@ void far UseLight(struct Object far *obj, char how)
     RedisplayInvSlot(slot);
 }
 
+/* Wands (0x98..0x9B; broken wands 0x9C..0x9F do nothing): sets off the wand's trap and
+   casts its spell; a wand left with no spell object becomes the broken wand (message
+   0x7D). */
 void far UseWand(struct Object far *wand, char how)
 {
     union Link far *link;
@@ -532,6 +584,14 @@ void far UseWand(struct Object far *wand, char how)
     }
 }
 
+/* Eating and drinking. nutrition comes from the Food table (class 0x0B) or the item's case
+   below; 0xFF means not food (returns -1). A positive value is eaten (player_eat, refused
+   with message 0x7E when full) and a taste message printed: by item, or from the quality
+   and chance, "That <name>" and strings 0xAC..0xB0. A negative value is a drink: below -1
+   it is alcohol and raises the drunk level, with a Strength check that can put the player
+   to sleep (0xF1, 0xF3) or restore 2 hit points (0xF2). The toadstool poisons. A stack on the cursor
+   cannot be eaten (0x77, returns -2), nor anything from the world without how. Returns 1
+   when eaten, 0 when refused. */
 int far UseFood(struct Object far *who, struct Object far *food, char how)
 {
     int qty;
@@ -559,7 +619,7 @@ int far UseFood(struct Object far *who, struct Object far *food, char how)
         game_sprint(0x7F);
         return 0;
     case ITEM_MUSHROOM:
-        if (skill_check(playerdat->attr[2], 20))
+        if (skill_check(playerdat->attr[ATTR_INT], 20))
             restore_mana(ThePlayer, -(rand() * 3L / 0x8000L));
         if (player->shrooms < 3)
             player->shrooms = player->shrooms + 1;
@@ -631,7 +691,7 @@ int far UseFood(struct Object far *who, struct Object far *food, char how)
                 player->drunk = 0x3F;
             else
                 player->drunk = player->drunk - nutrition;
-            switch (skill_check(playerdat->attr[0], player->drunk)) {
+            switch (skill_check(playerdat->attr[ATTR_STR], player->drunk)) {
             case -1:
                 game_sprint(0xF1);
                 player_sleep(-2);
@@ -658,6 +718,9 @@ int far UseFood(struct Object far *who, struct Object far *food, char how)
     return 1;
 }
 
+/* The rock hammer used on a boulder on the floor (0x153..0x156): it breaks into up to four
+   pieces, each one or two sizes smaller (below the small boulder, a stack of 3..8 sling
+   stones), placed where it lay; anything else gets message 0x84. */
 void far UseRockHammerOn(struct Object far *obj, char how, char other)
 {
     int id;
@@ -699,6 +762,9 @@ void far UseRockHammerOn(struct Object far *obj, char how, char other)
         game_sprint(0x84);
 }
 
+/* The oil flask used on something: on a piece of wood (0xCC, 0xCD) it makes a torch; on an
+   unlit lantern or torch it adds 32 to the quality (at most 63); lit lights and anything
+   else get messages. */
 void far UseOilOn(struct Object far *obj, char how, char other)
 {
     register int id;
@@ -733,6 +799,13 @@ void far UseOilOn(struct Object far *obj, char how, char other)
         game_sprint(0xB1);
 }
 
+/* Class 0x12. Used by the player: the bedroll sleeps (in the 3D view only), the mandolin
+   and flute play, leeches cure poison at the cost of a backfire of 2, the spike, rock
+   hammer and oil flask ask for a target, the silver seed is planted (plant_seed, SKILLS.C;
+   messages 9..0xB), the fishing pole fishes (a fish of quality 63 in the hand on a catch).
+   Used from the world: the fountain casts its spell (message 0xF9 for spell 4, else 0xED),
+   a glowing rock used by the player from the world adds its quantity to the first glowing
+   rock he carries (on the cursor, in a slot or in a bag) and is used up, and the cauldron prints 0x112. */
 void far UseMagic(struct Object far *who, struct Object far *obj, char how)
 {
     struct Object far *o;
@@ -841,6 +914,10 @@ void far UseMagic(struct Object far *who, struct Object far *obj, char how)
     }
 }
 
+/* Books and scrolls: the map (0x13B) opens the map screen; an enchanted scroll casts its
+   spell and is used up; one with ID_FLAG10 plays cutscene 0x100 + its text number; text
+   numbers below 0x100 are read from string block 3, and 0x100 and above are the stew
+   recipe (make_stew, COMBINE.C). */
 void far UseBook(struct Object far *obj, char how)
 {
     char far *str;
@@ -872,6 +949,12 @@ void far UseBook(struct Object far *obj, char how)
     }
 }
 
+/* Major class 5. Minor 0, doors: a locked door says so to the player, a closed one opens
+   (a critter cannot open one whose owner bit 0, the spike, is set), an open one closes.
+   Minor 1, furniture: the shrine (0x157) is a mantra (mantra_advance, SKILLS.C), a barrel or
+   chest that is not a quantity is a container. Minor 2: the lever and switch (0x161, 0x162)
+   step through 8 states, anything else is looked at. Minor 3, buttons and switches: flipped
+   (the item +- 8) with sound 0x13. */
 void far UseRect(struct Object far *who, struct Object far *obj)
 {
     char name[20];
@@ -961,6 +1044,9 @@ int far checkLock(struct Object far *who, struct Object far *door, register int 
     return 3;
 }
 
+/* Casts the spell obj carries (decode_obj_spell), at most once every 0x2FD clock ticks for
+   a use (how set; sound 0x15 when too soon). The player touching a wand from the world casts
+   nothing. One charge is spent. Returns 1 when a spell was cast. */
 char far checkSpell(int x, int y, struct Object far *who, struct Object far *obj, char how)
 {
     int16 major;
@@ -988,6 +1074,8 @@ char far checkSpell(int x, int y, struct Object far *who, struct Object far *obj
     return 0;
 }
 
+/* Sets off what obj holds: a trigger (minor 2 and up) with UseTrigger and kind how, or a
+   trap that is not yet set off (flags 0) for kind 4, which is then deleted. */
 void far checkTrap(struct Object far *who, struct Object far *obj, int how, int x, int y)
 {
     union Link far *link;
@@ -1007,6 +1095,8 @@ void far checkTrap(struct Object far *who, struct Object far *obj, int how, int 
     }
 }
 
+/* Turns a door into a moving door (0x1CF, the door's own item kept in the owner field) and
+   starts its animation: 5 frames, 4 for a portcullis (inclass 6). */
 void far moveDoor(struct Object far *door)
 {
     register int len = 5;
@@ -1018,6 +1108,7 @@ void far moveDoor(struct Object far *door)
     add_animobj(Obj_MemTPtr(door), len, 0, MapObj_X, MapObj_Y);
 }
 
+/* Reverses a moving door (flag 8 is the direction) and its remaining frames. */
 void far changeDoor(struct Object far *door)
 {
     register int cur;
@@ -1035,6 +1126,9 @@ void far changeDoor(struct Object far *door)
         set_animlen(door, len - cur);
 }
 
+/* Opens a closed door (raising it 0x18 unless a portcullis, setting off its traps with kind
+   7) or turns a closing door round, with the door sound (0x14 portcullis, 0xB door).
+   Clears the spike bit. */
 void far OpenDoor(struct Object far *who, struct Object far *door)
 {
     unsigned char type;
@@ -1062,6 +1156,8 @@ void far OpenDoor(struct Object far *who, struct Object far *door)
                 (MapObj_Y << 3) + OBJ_FINEY(door), 0);
 }
 
+/* Closes an open door, or turns an opening door round, with the door sound. UW1: no
+   trap. */
 void far CloseDoor(struct Object far *door)
 {
     unsigned char type;
@@ -1086,6 +1182,7 @@ void far CloseDoor(struct Object far *door)
                 (MapObj_Y << 3) + OBJ_FINEY(door), 0);
 }
 
+/* Opens a closed door or closes an open one. */
 void far ToggleDoor(struct Object far *who, struct Object far *door)
 {
     if (OBJ_INCLASS(door) < 8)
@@ -1094,6 +1191,8 @@ void far ToggleDoor(struct Object far *who, struct Object far *door)
         CloseDoor(door);
 }
 
+/* Empties a container onto the floor (drop_link_chain, TREASURE.C), the contents keeping
+   its owner if it can have one; tells the player when it was empty. */
 void far DumpTheBag(struct Object far *bag, char to_player)
 {
     char text[80];
@@ -1110,6 +1209,8 @@ void far DumpTheBag(struct Object far *bag, char to_player)
     editchng(2);
 }
 
+/* Containers: locked ones say so; the player opens one in the inventory panel
+   (OpenTheBag, BAGS.C); from the world it is emptied onto the floor. */
 void far UseCont(struct Object far *who, struct Object far *obj, char how)
 {
     char name[20];
@@ -1126,6 +1227,8 @@ void far UseCont(struct Object far *who, struct Object far *obj, char how)
         DumpTheBag(obj, who == ThePlayer);
 }
 
+/* The aimed half of a missile spell (ObjectActor in input mode 3): releases the missile
+   with the spell's minor in ObjectActorArg. */
 void far BlastFunction(void)
 {
     release_missile(ObjectActing, ObjectActorArg);
@@ -1134,6 +1237,11 @@ void far BlastFunction(void)
     mouse_release(1);
 }
 
+/* The spell an object carries: a spell object (MAJOR_SPEC minor 2) in its contents, or for
+   an enchanted is_quant object its own link. With ID_FLAG11 (a charged spell) major is the
+   link's bits 6-8 plus 12 (-1 for 0) and effect bits 0-5; otherwise major is bits 4-8 and
+   effect bits 0-3. A spell object of quality 0 is not recognised four times in ten unless
+   always_decode is set. Traps carry none. Returns 1 when there is a spell. */
 char far decode_obj_spell(struct Object far *obj, register int16 *major, register int16 *effect, char *flag)
 {
     union Link far *link;
@@ -1165,12 +1273,15 @@ char far decode_obj_spell(struct Object far *obj, register int16 *major, registe
     return 1;
 }
 
+/* Clears the enchantment of an enchanted is_quant object. */
 void far remove_spell(struct Object far *obj)
 {
     if (OBJ_ISQUANT(obj) && (obj->id & ID_ENCHANT) && OBJ_MAJOR(obj) != MAJOR_RECT)
         SET_ENCHANTED(obj, 0);
 }
 
+/* Spends one charge of obj's charged spell object; with none left it is removed four
+   times in ten. */
 void far useNSpellCharges(struct Object far *obj)
 {
     union Link far *link;

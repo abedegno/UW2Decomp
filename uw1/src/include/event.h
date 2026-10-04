@@ -1,5 +1,9 @@
-/* event.h: World events: teleports and quest hacks, SCD scheduled events, triggers and
-   traps. */
+/* event.h: World events: teleports, the hack traps and plot deaths (WORLDEV.C), and
+   triggers and traps (TRIGGER.C). The header of src/event: the tile wall table's bits and
+   the prototypes of those files. UW1 has no SCD schedules: the SCD records and the
+   SCHEDULE.C and SCDEVENT.C sections below are UW2's, inherited with the header, and no
+   UW1 source uses them. Names are UW2's FM Towns ones through UW2Decomp, or chosen for
+   UW1's stub order (WORLDEV.C, TRIGGER.C). */
 #ifndef EVENT_H
 #define EVENT_H
 

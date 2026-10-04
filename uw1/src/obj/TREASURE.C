@@ -17,6 +17,10 @@
    (-(33 - 3l) to 6, l the level; UW2 uses the world) and has no type 1 exception;
    generate_equipment has no fixed quality for quality type 0xF.
 
+   Callers: AI.C (a critter's death and loot), USEITEMS.C (DumpTheBag), CONVERSE.C and
+   BARTER.C (an NPC's inventory before trading). The loot table is Creature[]
+   (critter.h); objects are made with CreateObj (MAPADDR.C) and placed with put_at.
+
    Data owned: LootCreature (DS:736C), the Creature record being looted.
    Function and global names are UW2's (the FM Towns originals); UW1 has no symbols of
    its own. drop_link_chain is the table's ovr150_0.
@@ -103,6 +107,9 @@ void far generate_treasure(struct Object far *npc)
     type = rand() % (40 - PlayerLevel * 3) - (33 - PlayerLevel * 3);
     if (type < 0)
         type = 0;
+    /* value is a char: values from 25 up overflow below (ruby 25, large blue gem 30,
+       sapphire 40 go negative), so for those types the chance test is skipped and rollem,
+       given no sides, makes the quantity 1 */
     if ((value = (unsigned char)ComObjData[type + FIRST_TREASURE].value) == 0)
         value = 1;
     if (value >= 12)

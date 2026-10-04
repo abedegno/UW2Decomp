@@ -591,6 +591,7 @@ static void far ovr093_E4B(char far *text)
     dprintf("NPC says - %Fs\n", text);
 }
 
+/* The text-mode debugging "respond": prints the player's line through dprintf. */
 static void far ovr093_E61(char far *text)
 {
     char buf[800];
@@ -697,6 +698,8 @@ int far conv_length_ovr095_E8D(int16 far *args)
     return str_len(get_string(getmem(args[-1])));
 }
 
+/* The script's "val": the number a string holds (inferred from the name; seg039_3495_89D
+   does the reading). */
 int far DoVal_ovr095_EB2(int16 far *args)
 {
     return seg039_3495_89D(get_string(getmem(args[-1])));
@@ -891,7 +894,7 @@ static void far ExitConversation_ovr095_14D4(void)
     bab_put_globals(mem, babl_nvars);
 }
 
-/* Run the loaded script from word 0, which must be START (0x22, else -1). It stops at
+/* Run the loaded script from word 0, which must be OP_START (else -1). It stops at
    EXIT_OP, at a RET with nothing on the stack, or at an unknown opcode, then saves the
    globals and returns 1. Branch operands (BEQ, BNE, BRA) are relative to the operand
    word; JMP and CALL take absolute word addresses. Nothing checks the stack or pc
@@ -907,7 +910,7 @@ int far babl_run(void)
     running = 1;
     while (running) {
         switch (code[pc]) {
-        case OP_NOP:      /* NOP */
+        case OP_NOP:
             pc++;
             break;
         case OP_ADD:
@@ -934,10 +937,10 @@ int far babl_run(void)
             babl_neg_ovr095_1908();
             pc++;
             break;
-        case OP_JMP:      /* JMP */
+        case OP_JMP:
             pc = code[pc + 1];
             break;
-        case OP_BRA:      /* BRA */
+        case OP_BRA:
             pc = code[pc + 1] + pc + 1;
             break;
         case OP_OR:
@@ -948,7 +951,7 @@ int far babl_run(void)
             babl_and_ovr095_1A83();
             pc++;
             break;
-        case OP_NOT:      /* OPNOT */
+        case OP_NOT:
             stack[sp] = !stack[sp];
             pc++;
             break;
@@ -976,7 +979,7 @@ int far babl_run(void)
             opcode_tstne_ovr095_1C12();
             pc++;
             break;
-        case OP_BEQ:      /* BEQ */
+        case OP_BEQ:
             if (stack[sp--] == 0)
                 pc = code[pc + 1] + pc + 1;
             else
@@ -988,13 +991,13 @@ int far babl_run(void)
         case OP_RET:
             running = bab_ret_ovr095_1C82();
             break;
-        case OP_BNE:      /* BNE */
+        case OP_BNE:
             if (stack[sp--] != 0)
                 pc = code[pc + 1] + pc + 1;
             else
                 pc += 2;
             break;
-        case OP_POP:      /* POP */
+        case OP_POP:
             sp--;
             pc++;
             break;
@@ -1006,38 +1009,38 @@ int far babl_run(void)
             vmOffset_ovr095_1CD7();
             pc++;
             break;
-        case OP_START:      /* START */
+        case OP_START:
             pc++;
             break;
-        case OP_SWAP:      /* SWAP */
+        case OP_SWAP:
             tmp = stack[sp];
             stack[sp] = stack[sp - 1];
             stack[sp - 1] = tmp;
             pc++;
             break;
-        case OP_PUSHBP:      /* PUSHBP */
+        case OP_PUSHBP:
             sp++;
             stack[sp] = bp;
             pc++;
             break;
-        case OP_POPBP:      /* POPBP */
+        case OP_POPBP:
             bp = stack[sp];
             sp--;
             pc++;
             break;
-        case OP_SPTOBP:      /* SPTOBP */
+        case OP_SPTOBP:
             bp = sp;
             pc++;
             break;
-        case OP_BPTOSP:      /* BPTOSP */
+        case OP_BPTOSP:
             sp = bp;
             pc++;
             break;
-        case OP_ADDSP:      /* ADDSP: pop n and reserve n words */
+        case OP_ADDSP:      /* pop n and reserve n words */
             sp += stack[sp] - 1;
             pc++;
             break;
-        case OP_PUSHI:      /* PUSHI */
+        case OP_PUSHI:
             sp++;
             stack[sp] = code[pc + 1];
             pc += 2;
@@ -1046,19 +1049,19 @@ int far babl_run(void)
             BABL_STORE_ovr095_1D11();
             pc++;
             break;
-        case OP_PUSHI_EFF:      /* PUSHI_EFF: the mem address of frame slot bp + n */
+        case OP_PUSHI_EFF:  /* the mem address of frame slot bp + n */
             sp++;
             stack[sp] = stack_base + code[pc + 1] + bp;
             pc += 2;
             break;
-        case OP_CALLI:      /* CALLI */
+        case OP_CALLI:
             talk_calli_ovr095_1D44();
             break;
-        case OP_SAVE_REG:      /* SAVE_REG */
+        case OP_SAVE_REG:
             reg = stack[sp];
             pc++;
             break;
-        case OP_PUSH_REG:      /* PUSH_REG */
+        case OP_PUSH_REG:
             sp++;
             stack[sp] = reg;
             pc++;
@@ -1067,7 +1070,7 @@ int far babl_run(void)
             vm_strcmp_ovr095_1DC1();
             pc++;
             break;
-        case OP_EXIT:      /* EXIT_OP */
+        case OP_EXIT:
             running = 0;
             break;
         case OP_SAY:
@@ -1086,6 +1089,8 @@ int far babl_run(void)
     return 1;
 }
 
+/* The arithmetic and comparison opcodes (OP_ADD .. OP_TSTNE, OP_NEG): each pops its
+   operands and pushes the result, s[1] op s[0] for the ordered ones (UW-Formats 7.4). */
 void far vmAdd_ovr095_18CF(void)
 {
     int result = stack[sp] + stack[sp - 1];
@@ -1184,6 +1189,7 @@ void far babl_call_ovr095_1C54(void)
     stack[++sp] = pc + 2;
     pc = code[pc + 1];
 }
+/* RET: pops the return address into pc; with nothing on the stack it returns 0, which ends the script. */
 int far bab_ret_ovr095_1C82(void)
 {
     if (sp > 0) {
@@ -1193,6 +1199,7 @@ int far bab_ret_ovr095_1C82(void)
     }
     return 0;
 }
+/* FETCHM: replaces the address on top of the stack with the variable there. */
 void far exec_fetchm_ovr095_1CAA(void)
 {
     stack[sp] = mem[stack[sp]];
@@ -1204,6 +1211,7 @@ void far vmOffset_ovr095_1CD7(void)
     sp--;
     stack[sp] = result;
 }
+/* STO: stores s[0] in the variable at address s[1] and pops both. */
 void far BABL_STORE_ovr095_1D11(void)
 {
     mem[stack[sp - 1]] = stack[sp];
@@ -1265,6 +1273,7 @@ void far vmSay_ovr095_1EA2(void)
     }
     if (text != source) bab_free(text);
 }
+/* RESPOND_OP: as SAY_OP, through the built-in imported as "respond". */
 void far babl_respond_ovr095_1F4A(void)
 {
     struct BablImport far *entry;
@@ -1283,6 +1292,7 @@ void far babl_respond_ovr095_1F4A(void)
     }
     if (text != source) bab_free(text);
 }
+/* Script memory for the built-ins: the address of variable addr, its value, and setting it. */
 int16 far * far getmem_addr(int addr)
 {
     return mem + addr;
@@ -1295,6 +1305,7 @@ void far babl_setmem(int addr, int value)
 {
     mem[addr] = value;
 }
+/* The frame slot bp + addr of the script stack. */
 int far conv_local_ovr095_2030(int addr)
 {
     return stack[bp + addr];
@@ -1340,6 +1351,8 @@ void far bab_var(char *name, int16 *values, int count)
         entry++;
     }
 }
+/* Reads imported variable name back into values (count at most, and no more than it has).
+   Does nothing when the script does not import it. */
 void far bab_var_out(char *name, int16 *values, int count)
 {
     struct BablImport far *entry;

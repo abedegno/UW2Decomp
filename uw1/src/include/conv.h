@@ -1,5 +1,9 @@
-/* conv.h: Conversations: the babl interpreter, its built-ins, bartering, and the bytecode
-   assembler's label table. */
+/* conv.h: Conversations: the babl interpreter, its built-ins, bartering, and (by UW2's
+   placement) the 3D view's render database labels. The header of src/conv: the trade slot
+   count, the script item-group base, the bytecode opcodes and import kinds (UW-Formats 7),
+   the conversation clock, and the prototypes of BABL.C, BABLHACK.C, BARTER.C, CONVERSE.C,
+   CONVVARS.C and GRDB.C. Function names are UW2's FM Towns ones through UW2Decomp, or the
+   listing's (name_ovrNNN_XXX) where FM Towns has no name. */
 #ifndef CONV_H
 #define CONV_H
 
@@ -109,8 +113,6 @@ void far x_obj_stuff(int16 far *args);
 void far x_obj_pos(int16 far *args);
 
 /* BARTER.C: bartering in conversations */
-/* A trade adjustment set by a conversation, read when bartering. Defined in ovr097: it is
-   the byte at DS:BFE, and ovr097's word-aligned _DATA starts there. */
 void far drawTradeSlot_ovr097_A91(int side, int slot);
 void far showSelection_ovr097_E83(int side, int slot);
 void far UseTradeSlot_ovr097_6E8(int16 side, int16 slot, int16 *content, char *active);
@@ -187,7 +189,8 @@ int far set_inv_quality(int16 far *stack);
 void far setup_converse_data(struct Object far *npc);
 char far update_converse_data(struct Object far *npc);
 
-/* GRDB.C: the label table of the conversation (babl) bytecode assembler */
+/* GRDB.C: the label table of the 3D view's render database (nothing to do with
+   conversations; see GRDB.C) */
 extern int16 far *dbptr;
 void far grdb_blank(void);
 int far Clk(int n);

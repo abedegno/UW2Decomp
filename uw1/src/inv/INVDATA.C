@@ -17,6 +17,10 @@
    game asks it what the player carries (FindObj, AskInventory) and wears out armour and
    weapons through DamageInventory.
 
+   Callers: nearly every subsystem that touches what the player carries: INVPANEL.C and
+   BAGS.C, USEITEMS.C, COMBAT.C (weapon and armour wear), PLAYTIME.C and PLAYDATA.C,
+   INTERACT.C, SKILLS.C, TRIGGER.C, WORLDEV.C, CONVERSE.C, BARTER.C, MISSILE.C.
+
    Data owned: none for certain (its _DATA is the string pool at DS:16F4). OpenBag and the
    slot tables are probably the panel's, as in UW2.
    Function and global names are UW2's (FM Towns originals) except FindEmptySlot, which has
@@ -47,11 +51,13 @@ unsigned char far invRemoveObject(struct Object far *obj, int qty);
    union (player.h). */
 extern union PlayerStore PlayerDat;
 
+/* Redraws the display position of Inventory[] slot slot. */
 void far RedisplayInvSlot(int slot)
 {
     DisplayInvObject(SlotToDisplay[slot]);
 }
 
+/* The object in Inventory[] slot slot, or 0. */
 struct Object far * far AskInventory(int slot)
 {
     return Obj_PtrTMem(&Inventory[slot]);
@@ -227,11 +233,13 @@ struct Object far * far WhatsInSlot(int slot)
     return Obj_PtrTMem(&Inventory[slot]);
 }
 
+/* Takes all of obj out of the inventory. */
 char far InvRemoveObject(struct Object far *obj)
 {
     return invRemoveObject(obj, -1);
 }
 
+/* Takes one of obj (one of a stack) out of the inventory. */
 char far InvRemoveOneObject(struct Object far *obj)
 {
     return invRemoveObject(obj, 1);
@@ -283,6 +291,8 @@ unsigned char far invRemoveObject(struct Object far *obj, int qty)
     return 1;
 }
 
+/* Takes the whole object in slot (or the first match inside it, by major, minor and class)
+   out of the inventory, and redraws the slot, or the open bag when one is open. */
 struct Object far * far RemoveAllFromSlot(int major, int minor, int cls, register int slot)
 {
     struct Object far *taken;
@@ -298,6 +308,7 @@ struct Object far * far RemoveAllFromSlot(int major, int minor, int cls, registe
     return taken;
 }
 
+/* As RemoveAllFromSlot, taking one of a stack. */
 struct Object far * far RemoveOneFromSlot(int major, int minor, int cls, register int slot)
 {
     struct Object far *taken;
@@ -313,6 +324,7 @@ struct Object far * far RemoveOneFromSlot(int major, int minor, int cls, registe
     return taken;
 }
 
+/* takeFromSlot, then the equipment effects are worked out again (FixPlayerEquips). */
 struct Object far * far removeFromSlot(int major, int minor, int cls, int slot, int qty)
 {
     struct Object far *obj;

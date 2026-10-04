@@ -169,6 +169,7 @@ unsigned char far Obj_Elem_Fate(int range, struct Object far *obj)
     return 0;
 }
 
+/* Obj_Elem_Fate for the first object of the list head (0 for an empty list). */
 unsigned char far Obj_Fate(int range, union Link far *head)
 {
     struct Object far *obj;
@@ -269,6 +270,7 @@ void far Obj_Add(union Link far *head, struct Object far *obj)
     head->f.index = MEMTPTR(obj);
 }
 
+/* Appends obj to the end of the list head. */
 void far Obj_AddEnd(union Link far *head, struct Object far *obj)
 {
     union Link far *p;
@@ -340,6 +342,7 @@ void far Obj_FreeChain(union Link far *head)
     }
 }
 
+/* Frees obj and its contents, unlinking it from head first when head is given. */
 void far Obj_FreeLinkChain(union Link far *head, struct Object far *obj)
 {
     if (!OBJ_ISQUANT(obj) && obj->ol.f.link > 0)
@@ -349,6 +352,8 @@ void far Obj_FreeLinkChain(union Link far *head, struct Object far *obj)
     Obj_Free(obj);
 }
 
+/* The object a link names (0 for none): indices below NUM_MOBILE are in critdata, the
+   rest in objdata. */
 struct Object far * far Obj_PtrTMem(union Link far *link)
 {
     if (link == 0 || link->f.index == 0)
@@ -358,6 +363,7 @@ struct Object far * far Obj_PtrTMem(union Link far *link)
     return (struct Object far *)(objdata + (link->f.index - NUM_MOBILE));
 }
 
+/* An object's index (0 for a null pointer). */
 int far Obj_MemTPtr(struct Object far *obj)
 {
     if (obj == 0)
@@ -365,6 +371,7 @@ int far Obj_MemTPtr(struct Object far *obj)
     return MEMTPTR(obj);
 }
 
+/* The object with index index (0 for none). */
 struct Object far * far Obj_IntTMem(int index)
 {
     if (index == 0)
@@ -397,6 +404,7 @@ struct Object far * far Obj_Find(union Link far *head, char recurse, int index)
     return obj;
 }
 
+/* True for a mobile object (one in critdata, below objdata). */
 unsigned char far IsMobElem(struct Object far *obj)
 {
     if (obj == 0)
@@ -549,6 +557,11 @@ unsigned char far flog_list(int x, int y, unsigned char *counts, union Link far 
     return bad;
 }
 
+/* A debugging aid: counts each index met in the list from obj and in the contents of its
+   objects, printing (dprintf) any index met twice and giving up after a tenth time;
+   mobcount and objcount count the objects. Returns 1 for a bad list. The result of a
+   container's contents replaces the flag, so a duplicate seen earlier in the same list is
+   forgotten when the contents after it are clean. */
 unsigned char far count_list(struct Object far *obj, unsigned char *counts)
 {
     unsigned char bad = 0;

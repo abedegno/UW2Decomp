@@ -19,8 +19,12 @@
    message when casting too soon, no circle limit for the first world, the skill check is
    Casting + 5 against 2 * circle, the delay is (2 * circle - level) * 4 + 0x40, only
    missile spells keep their cost unpaid, and every successful cast plays effect 0x10. The
-   panel's rune positions and the strings differ, and struct Player differs (Player1Runes
-   below).
+   panel's rune positions and the strings differ, and struct Player differs (player.h
+   has UW1's record).
+
+   Callers: INTERACT.C (the rune bag panel, the cast button and the active spell icons),
+   BAGS.C (add_rune for a runestone dropped in the rune bag), SPELLS.C (Armageddon clears
+   the bag and shelf), PANELS.C, PLAYER.C. Spells go to SPELLS.C's do_spell.
 
    Data owned: spell_delay and lstime (the time between casts), and a flag that clears the
    shelf on the next rune click after a cast.
@@ -54,6 +58,8 @@ char far add_rune(struct Object far *obj)
     int rune;
 
     rune = OBJ_ITEM(obj) - FIRST_RUNESTONE;
+    /* > rather than >=: item 0x100 (a key) would count as a 25th rune, but the rune bag's
+       container rule (ItemFitsSlot) lets only runestones this far */
     if (rune < 0 || rune > NUM_RUNES)
         return 0;
     Obj_Free(obj);
@@ -61,6 +67,9 @@ char far add_rune(struct Object far *obj)
     return 1;
 }
 
+/* Empties the rune bag. The loop clears 8 bytes from runebag, so also the shelf and the
+   carried weight that follow it in the player record; its one caller, Armageddon, clears
+   both anyway. */
 void far clear_runes(void)
 {
     int i;
@@ -69,6 +78,7 @@ void far clear_runes(void)
         player->runebag[i] = 0;
 }
 
+/* Draws rune's picture in its place in the rune bag panel, four to a row. */
 void far ShowRune(int rune)
 {
     mouse_hide();
@@ -77,6 +87,7 @@ void far ShowRune(int rune)
     mouse_show();
 }
 
+/* Draws every rune the bag holds. */
 void far RedispRune(void)
 {
     int i;
@@ -91,6 +102,7 @@ void far RedispRune(void)
     mouse_show();
 }
 
+/* Empties the shelf of runes to cast. */
 void far clear_shelf(void)
 {
     memset(player->shelf, RUNE_NONE, 3);

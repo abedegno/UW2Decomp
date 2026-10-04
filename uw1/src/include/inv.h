@@ -1,4 +1,8 @@
-/* inv.h: The inventory: its slots and panel, open bags. */
+/* inv.h: The inventory: its slots and panel, open bags. The header of src/inv: the
+   panel's rectangles and the open-bag chain, the slot and display numbering (named below,
+   from the code of the three files), and the prototypes of BAGS.C, INVDATA.C and
+   INVPANEL.C (INVSAVE.C's are in file.h, with the saving code). Names are
+   UW2's FM Towns ones through UW2Decomp; the slot names are descriptive. */
 #ifndef INV_H
 #define INV_H
 

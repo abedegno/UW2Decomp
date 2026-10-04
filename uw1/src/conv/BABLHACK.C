@@ -13,7 +13,7 @@
    value pushed before the count), args[-2] arg2, and so on. Each argument is the address
    of a conversation variable, which getmem reads and getmem_addr points at.
 
-   UW1 against UW2: the player record is laid out differently (Player1Conv below); x_skills
+   UW1 against UW2: the player record is laid out differently (player.h has UW1's); x_skills
    has no skill-point advance; x_traps keeps its 64 variables in the player record rather
    than going through set_numbered_variable; quests 0..31 are the bits of one long, 32..35
    bytes; place_object ignores Obj_Rem's result; CloseDoor takes the door alone;
@@ -48,6 +48,8 @@ char far set_mob_att(struct Object far *npc, int att)
     return 0;
 }
 
+/* set_attitude(arg2 whoami, arg1 attitude): the first active critter with that whoami
+   takes the attitude (set_mob_att). */
 void far set_attitude(int16 far *args)
 {
     int att;
@@ -179,6 +181,7 @@ int far take_from_npc_inv(int16 far *args)
     return link->f.index;
 }
 
+/* add_to_npc_inv(arg1 object index): appends the object to the talker's inventory. */
 void far add_to_npc_inv(int16 far *args)
 {
     int index;
@@ -207,13 +210,13 @@ void far set_quest(int16 far *args)
     quest = getmem(args[-2]);
     val = getmem(args[-1]);
     if (quest >= 0) {
-        if (quest < 0x20) {
+        if (quest < FIRST_QUEST_BYTE) {
             if (val)
                 player->quests |= 1 << quest;
             else
                 player->quests &= ~(1 << quest);
-        } else if (quest < 0x24)
-            player->quest_bytes[quest - 0x20] = val;
+        } else if (quest < FIRST_QUEST_BYTE + 4)
+            player->quest_bytes[quest - FIRST_QUEST_BYTE] = val;
     }
 }
 
@@ -226,10 +229,10 @@ int far get_quest(int16 far *args)
     quest = getmem(args[-1]);
     if (quest < 0)
         return 0;
-    if (quest < 0x20)
+    if (quest < FIRST_QUEST_BYTE)
         return (player->quests & (1 << getmem(args[-1]))) != 0;
-    if (quest < 0x24)
-        return player->quest_bytes[quest - 0x20];
+    if (quest < FIRST_QUEST_BYTE + 4)
+        return player->quest_bytes[quest - FIRST_QUEST_BYTE];
     return player->talismans;
 }
 

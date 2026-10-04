@@ -28,6 +28,11 @@
    UW2 shows the player's.
 
    Data owned here: talking_to, cnv_id, conv_buffer and the screen and menu state below.
+   Neighbours: started from INTERACT.C's talk command, USEITEMS.C (Garamon's bones),
+   WORLDEV.C and TRIGGER.C (talking doors and waiting critters), AI.C (critters that come
+   to talk); BABL.C runs the script, BARTER.C and BABLHACK.C supply most built-ins,
+   CONVVARS.C hands the variables over, and UWEDIT.C's screen table calls strt_converse and
+   free_converse.
 
    Name: UW2's (map/filenames.tsv: conversations, TalkTo, strt_converse, Converse). */
 /* name: The function names are UW2's (the FM Towns originals, or UW2Decomp's
@@ -632,8 +637,8 @@ int far find_barter(int16 far *stack)
 /* find_barter_total(arg4 item, arg3 count out, arg2 indices out, arg1 total out): the
    player's selected trade items of type item, and their total quantity; 1 when any.
    A class search (1000 and up) is coded in the test but the enclosing check skips it,
-   so it always finds nothing. Its arrays hold 5 entries, but player_barter_items can
-   write 6 when all six player slots are selected. */
+   so it always finds nothing. Its arrays hold 5 entries; UW1's player_barter_items
+   writes at most four (UW2's six could overrun them). */
 int far find_barter_total(int16 far *stack)
 {
     int16 wanted, matches, ids[5], indices[5], matching[5], count;

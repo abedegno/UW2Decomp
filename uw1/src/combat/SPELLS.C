@@ -27,7 +27,13 @@
    (obj_spells). hit_critter_goal has no gtarg (always 1), sp_charm (UW1's Ally) makes the
    critter an ally, Flame Wind (sp_meteor) blasts a cross of five squares, Detect Monster
    names no creature, summoning has only food, the runes of warding (a trap, cast_trap_spell)
-   and Summon Monster. struct Player differs (Player1Spells below).
+   and Summon Monster. struct Player differs (player.h has UW1's record).
+
+   Callers: RUNES.C (player_cast), USEITEMS.C and WORLDEV.C (spells objects carry,
+   inanimate_spell), AI.C and CRITTIME.C (critters casting), TRIGGER.C (spell traps),
+   SKILLS.C, PLAYTIME.C, PLAYDATA.C, BABLHACK.C, EFFECT.C. It reaches into most of the
+   game: PLAYTIME.C (set_curmagic), MISSILE.C, DAMAGE.C, EFFECT.C, TRIGGER.C
+   (cast_trap_spell), WORLDEV.C, AI.C and CRITTIME.C (critter goals), CUTS.C.
 
    Data owned: spells[] (far), mspell_mused, the mana a missile spell will cost;
    area_spells and area1_spells, the per-square handlers; the dice of damage_square; and

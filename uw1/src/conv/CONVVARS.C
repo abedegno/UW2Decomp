@@ -39,6 +39,7 @@
 #include "player.h"
 #include "ui.h"
 
+/* Hands the NPC's and the player's state to the script (the list is in the file comment). */
 void far setup_converse_data(struct Object far *npc)
 {
     int16 val;
@@ -59,7 +60,7 @@ void far setup_converse_data(struct Object far *npc)
     bab_var("npc_hp", &val, 1);
     val = crit->attacks[0].chance;
     bab_var("npc_arms", &val, 1);
-    val = crit->attr[0] + crit->caster;
+    val = crit->attr[ATTR_STR] + crit->caster;
     bab_var("npc_power", &val, 1);
     val = OBJ_GOAL(npc);
     bab_var("npc_goal", &val, 1);

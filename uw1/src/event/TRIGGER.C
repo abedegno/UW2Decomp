@@ -20,7 +20,12 @@
    handled inside UseTrap; a variable check that fails runs the else chain only through a
    trigger; a missing inventory item ends the chain; the hack traps are UW1's own;
    gronkify_talkto_player (new) starts a conversation with a waiting critter. UW1's player
-   record differs (Player1Trap below).
+   record differs (player.h has UW1's).
+
+   Callers: USEITEMS.C (checkTrap: use, lock and door triggers), SKILLS.C (look and search
+   triggers, wandering monsters and closing doors on sleep and level change), SPELLS.C
+   (cast_trap_spell, Remove Trap), OBJCLASS.C (trap_init), PHYSICS.C and OBJPHYS.C (move
+   triggers), CRITTIME.C, OBJECTS.C, PLAYTIME.C. Most hack traps are WORLDEV.C's.
 
    Data owned: Triggers[16] (the trigger modes, read by trap_init), the trigger that is
    running (CharacterThatTriggeredTrap, TriggeringButton), the removal state, and
@@ -166,7 +171,7 @@ int far SetOffTrap(struct Object far *who, struct Object far *context,
      not when another created object is within four squares.
    - 8 opens (1), closes (2) or toggles (3) the door on the square, replacing its lock by
      a copy of the trap's linked lock.
-   - 9 and 10 a rune of warding: hits the critter that steps on it, of class quality (0x3F
+   - 9 and 10 (the ward and tell trap items) a rune of warding: hits the critter that steps on it, of class quality (0x3F
      any), for 3 + rand * Casting, and tells the player. 11 deletes its linked object from
      square (quality, owner).
    - 12 ends the chain unless the player has the item quality * 32 + owner (with z: at
@@ -442,7 +447,8 @@ void far kill_triggers(union Link far *head)
             obj->ol.f.link == RemoveTrapIndex) {
             Obj_Rem(head, obj);
             Obj_Free(obj);
-            obj->ol.word &= 0x3F;
+            obj->ol.word &= 0x3F;       /* freed, but clearing its link stops the descent
+                                           into it below; its next link is still read */
             RemoveTrapFlags--;
         }
         if (!OBJ_ISQUANT(obj)) {

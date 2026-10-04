@@ -20,6 +20,11 @@
    quality, every object with id bit 13 set is indestructible (UW2 excepts doors), and
    damaging an owned object does not anger its owner.
 
+   Callers: COMBAT.C, SPELLS.C, WORLDEV.C (traps), INVDATA.C (worn equipment), and the
+   motion and game code for falls, collisions, drowning, poison and hunger (OBJPHYS.C,
+   PLAYMOVE.C, PHYSICS.C, PATHFIND.C, SKILLS.C, PLAYTIME.C). Critters go on to AI.C's
+   damage_critter; broken doors and containers to USEITEMS.C.
+
    Data owned: none; the per-item table is ComObjData (object.h).
    Name: UW2Decomp's (damage_object is in System Shock's DAMAGE.C, the damage to objects in
    both). */
@@ -122,7 +127,7 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
     {
         if (type & DMG_FIRE)
         {
-            /* UW1: 0xD5 and 0xD6 are both piles of debris (items.h has UW2's ids) */
+            /* UW1: 0xD5 and 0xD6 are both piles of debris */
             if (OBJ_ITEM(obj) == ITEM_PILE_OF_DEBRIS_D5 || OBJ_ITEM(obj) == ITEM_PILE_OF_DEBRIS_D6)
             {
                 if (try_remove(&Map_GetAddr(x, y)->objects, obj))

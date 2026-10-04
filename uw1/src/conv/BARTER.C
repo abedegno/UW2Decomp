@@ -31,6 +31,14 @@
    frees one object; assess_value computes in 16 bits and has no coin rule; barter_init
    reseeds the generator from the clock.
 
+   Data owned: the slot tables and the trade state below (the objects in the slots, the
+   selections, the valuations, greed, patience, npc_assess); the screen saves under the
+   slots.
+   Neighbours: CONVERSE.C binds the built-ins and calls barter_init and end_barter;
+   INVPANEL.C's DoInventoryMouse and BAGS.C's DoSpecialActions hand clicks in the trade
+   area here; TREASURE.C generates an NPC's inventory before it trades; BABL.C gives the
+   script memory (getmem) and the npc_attitude variable.
+
    Name: UW2's (map/filenames.tsv: bartering, setup_to_barter, npc_barter).
 
    The two sides of a trade are indexed 0 for the NPC and 1 for the player. */
@@ -310,6 +318,7 @@ void far conv_inv_special(void)
     set_workspace();
 }
 
+/* The mouse handler for the NPC's slot area: a click there (UseTradeSlot). */
 void far npc_barter(void)
 {
     int x;
@@ -1032,6 +1041,7 @@ int far npc_inv_create(int item)
     return Obj_MemTPtr(obj);
 }
 
+/* Removes and frees the first object of item in the NPC's inventory; 1 if there was one. */
 int far npc_inv_delete(int item)
 {
     struct Object far *obj;
