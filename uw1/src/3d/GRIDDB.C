@@ -209,7 +209,7 @@ void far process_grid(void)
     gr_fcall = gftab[tmapson];
     gr_ccall = gctab[tmapson];
     gr_wcall = gwtab[tmapson];
-    *dbptr++ = 0x38;
+    *dbptr++ = OP_OBJ;
     Ref(0xA0, 1);
     *dbptr++ = 0;
     *dbptr++ = 0x2200;
@@ -222,23 +222,23 @@ void far process_grid(void)
     *dbptr++ = 0;
     *dbptr++ = 0;
     *dbptr++ = 0x3300;
-    *dbptr++ = 2;
+    *dbptr++ = OP_MOVEC;
     *dbptr++ = Clk(9);
     *dbptr++ = 0;
-    *dbptr++ = 2;
+    *dbptr++ = OP_MOVEC;
     *dbptr++ = Clk(8);
     *dbptr++ = tmapson ? 0 : 1;
     if (PlayerLevel != 9) {
-        *dbptr++ = 2;
+        *dbptr++ = OP_MOVEC;
         *dbptr++ = Clk(4);
         *dbptr++ = SpecShadeMode;
     } else {
-        *dbptr++ = 2;
+        *dbptr++ = OP_MOVEC;
         *dbptr++ = Clk(4);
         *dbptr++ = 0;
         lighton = 0;
     }
-    *dbptr++ = 0xD0;
+    *dbptr++ = OP_SET_GMAP_CTXT;
     *dbptr++ = flat_case;
     set_pix_xfer(1);
     pipeexp = 0;
@@ -261,7 +261,7 @@ void far do_3d_pickup(void)
 {
     PickUp = 1;
     flat_case = cPlayer->pitch == 0 && cPlayer->bank == 0;
-    *dbptr++ = 0x38;
+    *dbptr++ = OP_OBJ;
     Ref(0xA0, 1);
     *dbptr++ = 0;
     *dbptr++ = 0x2200;
@@ -274,16 +274,16 @@ void far do_3d_pickup(void)
     *dbptr++ = 0;
     *dbptr++ = 0;
     *dbptr++ = 0x3300;
-    *dbptr++ = 2;
+    *dbptr++ = OP_MOVEC;
     *dbptr++ = Clk(9);
     *dbptr++ = 1;
-    *dbptr++ = 2;
+    *dbptr++ = OP_MOVEC;
     *dbptr++ = Clk(8);
     *dbptr++ = 1;
-    *dbptr++ = 2;
+    *dbptr++ = OP_MOVEC;
     *dbptr++ = Clk(4);
     *dbptr++ = 0;
-    *dbptr++ = 0xD0;
+    *dbptr++ = OP_SET_GMAP_CTXT;
     *dbptr++ = flat_case;
     gr_fcall = gftab[0];
     gr_ccall = gctab[0];
@@ -341,7 +341,7 @@ void far subprocess(void)
         sort_setup(0);
         if (!(i & 0xF000))
             grdb_elem(PlayersMap[0] + i);
-        *dbptr++ = 0xB0;
+        *dbptr++ = OP_MOUSEQ;
         gloc -= 33;
         row -= dy;
         idx -= dy;
@@ -363,14 +363,14 @@ void far polyflr(unsigned char *pts, unsigned char shade, unsigned char tex)
     unsigned char far *col;
 
     if (PickUp)
-        cWCol = tex + 0xF0;
+        cWCol = tex + PICK_FLOOR;
     else {
         col = MK_FP(seg009_38C(tex + 0x6A), 0);
         cWCol = cLightTabs[(shade * lighton << 8) + *col];
     }
-    *dbptr++ = 0x2E;
+    *dbptr++ = OP_SETCOLOR;
     *dbptr++ = cWCol;
-    *dbptr++ = 0x7E;
+    *dbptr++ = OP_POLYRES;
     *dbptr++ = 4;
     *dbptr++ = pts[0] << 3;
     *dbptr++ = pts[1] << 3;
@@ -383,14 +383,14 @@ void far polycie(unsigned char *pts, unsigned char shade, unsigned char tex)
     unsigned char far *col;
 
     if (PickUp)
-        cWCol = 0xFA;
+        cWCol = PICK_CEILING;
     else {
         col = MK_FP(seg009_38C(tex + 0x6A), 0);
         cWCol = cLightTabs[(shade * lighton << 8) + *col];
     }
-    *dbptr++ = 0x2E;
+    *dbptr++ = OP_SETCOLOR;
     *dbptr++ = cWCol;
-    *dbptr++ = 0x7E;
+    *dbptr++ = OP_POLYRES;
     *dbptr++ = 4;
     *dbptr++ = pts[0] << 3;
     *dbptr++ = pts[1] << 3;
@@ -403,14 +403,14 @@ void far polywal(unsigned char *pts, unsigned char shade, unsigned char height, 
     unsigned char far *col;
 
     if (PickUp)
-        cWCol = tex + 0xC0;
+        cWCol = tex + PICK_WALL;
     else {
         col = MK_FP(seg009_38C(tex + 0x3A), 0);
         cWCol = cLightTabs[(shade * lighton << 8) + *col];
     }
-    *dbptr++ = 0x2E;
+    *dbptr++ = OP_SETCOLOR;
     *dbptr++ = cWCol;
-    *dbptr++ = 0x7E;
+    *dbptr++ = OP_POLYRES;
     *dbptr++ = 4;
     *dbptr++ = pts[0] << 3;
     *dbptr++ = pts[1] << 3;
@@ -448,15 +448,15 @@ void far txtflr(unsigned char *pts, unsigned char shade, unsigned char tex)
         cTmHg = 0x3FF;
         tex = tex + 0x30;
     }
-    *dbptr++ = 0x3E;
+    *dbptr++ = OP_FETCHMAP;
     *dbptr++ = cTmBm;
     *dbptr++ = tex;
     *dbptr++ = cTmSz;
-    *dbptr++ = 2;
+    *dbptr++ = OP_MOVEC;
     *dbptr++ = bmhgtoff + (cTmBm << 3);
     *dbptr++ = cTmHg;
     if (pts) {
-        *dbptr++ = 0x36;
+        *dbptr++ = OP_TMAP;
         *dbptr++ = cTmBm;
         *dbptr++ = pts[0] << 3;
         *dbptr++ = qdec[3];
@@ -492,19 +492,19 @@ void far txtwal(unsigned char *pts, unsigned char shade, unsigned char height, u
         cTmHg = (height << 4 << 6) - 1;
     }
     if (tCacheOK++ < 1) {
-        *dbptr++ = 0x3E;
+        *dbptr++ = OP_FETCHMAP;
         *dbptr++ = cTmBm;
         *dbptr++ = tex;
         *dbptr++ = cTmSz;
     }
-    *dbptr++ = 2;
+    *dbptr++ = OP_MOVEC;
     *dbptr++ = bmhgtoff + (cTmBm << 3);
     *dbptr++ = cTmHg;
     if (pts) {
         if (flat_case)
-            *dbptr++ = 0xA2;
+            *dbptr++ = OP_COMPACT_WTMAP;
         else
-            *dbptr++ = 0xA0;
+            *dbptr++ = OP_COMPACT_TMAP;
         *dbptr++ = cTmBm;
         *dbptr++ = (pts[1] << 8) + (pts[0] & 0xFF);
         *dbptr++ = (pts[3] << 8) + (pts[2] & 0xFF);
@@ -545,7 +545,7 @@ void far grdb_elem(unsigned char *automap)
     register unsigned char *p;
     register unsigned char *wm;
 
-    if (!((flags = p_gloc->flags) & 0x80)) {
+    if (!((flags = p_gloc->flags) & GLOC_SEEN)) {
         if (*automap == 0) {
             *automap = tile_mapcode[tmptr->type];
             pipeexp++;
@@ -561,7 +561,7 @@ void far grdb_elem(unsigned char *automap)
         code = code | TxmTerr[tmptr->floor];
     } else if ((code = *automap) == 0)
         code = tile_mapcode[tmptr->type];
-    if ((flags & 0x44) == 4)
+    if ((flags & (GLOC_DIAG | GLOC_SHAPED)) == GLOC_SHAPED)
         hq = flags & 3;
     else
         hq = 4;
@@ -591,7 +591,7 @@ void far grdb_elem(unsigned char *automap)
         *p++ = SetPnt(loopx, loopy + 1, 0x10);
         (*gr_ccall)(pts, sqmod, 9);
     }
-    bit = 0x40;
+    bit = GLOC_STEP_RIGHT;
     w = 0;
     tCacheOK = 0;
     do {
@@ -621,7 +621,7 @@ void far grdb_elem(unsigned char *automap)
             (*gr_wcall)(pts, sqmod, sh, TILE_WALL(tmptr));
         }
     } while (++w < 3);
-    if ((flags & 0x44) == 0x44) {
+    if ((flags & (GLOC_DIAG | GLOC_SHAPED)) == (GLOC_DIAG | GLOC_SHAPED)) {
         dxp = dxtab[flags & 3];
         if ((((loopx + dxp[0] - 0x10) << 8) - cPlayer->x) * dxp[4]
             + (((loopy + dxp[1]) << 8) - cPlayer->y) * dxp[5] < 0) {

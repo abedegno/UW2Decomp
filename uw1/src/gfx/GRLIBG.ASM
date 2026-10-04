@@ -26,6 +26,13 @@
 ; word-aligned module), as in UW2.
 ; It has no relocations.
 
+; The graphics library's data in seg048 (DS while the library runs), as GRLIBF.ASM's
+; and VIDMODE.ASM's headers describe it. The names are ours.
+WIN_LEFT        equ     3DF2h   ; the clip window (y counts up, so bottom < top)
+WIN_TOP         equ     3DF4h
+WIN_RIGHT       equ     3DF6h
+WIN_BOTTOM      equ     3DF8h
+
         .186
 
 _DATA   segment word public 'DATA'
@@ -71,36 +78,36 @@ L3F24:
         mov     si,bx
         mov     bp,dx
         mov     bh,0
-        cmp     cx,word ptr ds:[3DF2h]
+        cmp     cx,word ptr ds:[WIN_LEFT]
         jge     L3F39
         or      bh,2
 L3F39:
-        cmp     cx,word ptr ds:[3DF6h]
+        cmp     cx,word ptr ds:[WIN_RIGHT]
         jle     L3F42
         or      bh,4
 L3F42:
-        cmp     bp,word ptr ds:[3DF8h]
+        cmp     bp,word ptr ds:[WIN_BOTTOM]
         jge     L3F4B
         or      bh,8
 L3F4B:
-        cmp     bp,word ptr ds:[3DF4h]
+        cmp     bp,word ptr ds:[WIN_TOP]
         jle     L3F54
         or      bh,10h
 L3F54:
         mov     al,0
-        cmp     di,word ptr ds:[3DF2h]
+        cmp     di,word ptr ds:[WIN_LEFT]
         jge     L3F5E
         or      al,2
 L3F5E:
-        cmp     di,word ptr ds:[3DF6h]
+        cmp     di,word ptr ds:[WIN_RIGHT]
         jle     L3F66
         or      al,4
 L3F66:
-        cmp     si,word ptr ds:[3DF8h]
+        cmp     si,word ptr ds:[WIN_BOTTOM]
         jge     L3F6E
         or      al,8
 L3F6E:
-        cmp     si,word ptr ds:[3DF4h]
+        cmp     si,word ptr ds:[WIN_TOP]
         jle     L3F76
         or      al,10h
 L3F76:
@@ -125,9 +132,9 @@ L3F94:
         mov     byte ptr ds:[44C4h],bh
         mov     bh,0
         jmp     word ptr [bx+44A4h]
-        mov     ax,word ptr ds:[3DF2h]
+        mov     ax,word ptr ds:[WIN_LEFT]
         jmp     short L3FA6
-        mov     ax,word ptr ds:[3DF6h]
+        mov     ax,word ptr ds:[WIN_RIGHT]
 L3FA6:
         mov     bx,ax
         sub     ax,di
@@ -137,9 +144,9 @@ L3FA6:
         add     si,ax
         mov     bh,byte ptr ds:[44C4h]
         jmp     L3F54
-        mov     ax,word ptr ds:[3DF8h]
+        mov     ax,word ptr ds:[WIN_BOTTOM]
         jmp     short L3FC4
-        mov     ax,word ptr ds:[3DF4h]
+        mov     ax,word ptr ds:[WIN_TOP]
 L3FC4:
         mov     bx,ax
         sub     ax,si

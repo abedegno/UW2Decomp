@@ -21,6 +21,7 @@
 ; It has no relocations.
 
 ; The BIOS video (int 10h) functions used here.
+VID_SET_MODE    equ     00h
 VID_GET_MODE    equ     0Fh
 
         .186
@@ -56,7 +57,7 @@ _seg019_680 endp
 _seg019_692 proc near
         mov     al,byte ptr ds:[355h]
         call    _seg019_6A6
-        mov     ah,0
+        mov     ah,VID_SET_MODE
         mov     al,byte ptr ds:[350h]
         int     10h
         ret

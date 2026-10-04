@@ -142,7 +142,7 @@ _seg019_65 endp
 _seg019_A1 proc near
         push    si
         push    di
-        mov     ax,1002h
+        mov     ax,(VID_PALETTE shl 8) + 2
         mov     dx,SEG019_TEXT
         push    es
         mov     es,dx
@@ -155,7 +155,7 @@ _seg019_A1 proc near
         mov     di,0
         mov     bx,0
 L00C3:
-        mov     ax,1010h
+        mov     ax,(VID_PALETTE shl 8) + 10h
         mov     bl,byte ptr cs:L0054[si]
         mov     dh,byte ptr cs:L0024[di]
         mov     ch,byte ptr cs:L0025[di]

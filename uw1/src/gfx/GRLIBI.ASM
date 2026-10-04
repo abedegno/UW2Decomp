@@ -46,6 +46,23 @@
 ; The VGA ports used here.
 SC_DATA         equ     3C5h  ; sequencer data
 
+; The graphics library's data in seg048 (DS while the library runs), as GRLIBF.ASM's
+; and VIDMODE.ASM's headers describe it. The names are ours.
+ROW_BYTES       equ     36A6h   ; bytes per screen row (width / 4)
+YTAB            equ     36AAh   ; the drawing page's row addresses (Ytab; row 0 the bottom line)
+WIN_LEFT        equ     3DF2h   ; the clip window (y counts up, so bottom < top)
+WIN_TOP         equ     3DF4h
+WIN_RIGHT       equ     3DF6h
+WIN_BOTTOM      equ     3DF8h
+SCREEN_SEG      equ     3DFAh   ; the screen's segment
+PEN_COLOR       equ     410Fh   ; the colour
+SPAN_WRITER     equ     4110h   ; the current span writer (set_the_color, fbuf_setcolor)
+PEN_WORD2       equ     4114h   ; the pen's second word
+VERTS           equ     415Ch   ; the polygon vertices; and the second buffer the clippers
+TEXT_X          equ     4A0Ch   ; the text's x
+TEXT_Y          equ     4A0Eh   ; and y (its top row)
+TEXT_MASKS      equ     4A24h   ; the 256 plane-mask bytes _4462 builds for text
+
         .186
 
         extrn   seg048:far
@@ -166,7 +183,7 @@ L41CD:
         stosw
         mov     word ptr ds:[49AAh],di
         or      word ptr [di],8000h
-        jmp     word ptr ds:[4110h]
+        jmp     word ptr ds:[SPAN_WRITER]
 _seg003_4134 endp
 
 ; seg003_41DC  (+41DC)
@@ -415,7 +432,7 @@ L437B:
         mov     si,415Ch
         jmp     _seg003_3F06
 L4383:
-        mov     ax,word ptr ds:[415Ch]
+        mov     ax,word ptr ds:[VERTS]
         mov     bx,word ptr ds:[415Eh]
         jmp     _seg003_3B34
 _seg003_4282 endp
@@ -463,24 +480,24 @@ _seg003_43BE:
 L43C6:
         mov     word ptr ds:[2D38h],dx
 L43CA:
-        mov     word ptr ds:[4A0Ch],ax
-        mov     word ptr ds:[4A0Eh],bx
-        mov     ax,word ptr ds:[4A0Eh]
-        cmp     ax,word ptr ds:[3DF8h]
+        mov     word ptr ds:[TEXT_X],ax
+        mov     word ptr ds:[TEXT_Y],bx
+        mov     ax,word ptr ds:[TEXT_Y]
+        cmp     ax,word ptr ds:[WIN_BOTTOM]
         jl      L440E
-        cmp     ax,word ptr ds:[3DF4h]
+        cmp     ax,word ptr ds:[WIN_TOP]
         jg      L440E
         sub     ax,word ptr ds:[4D0Ch]
         inc     ax
         mov     word ptr ds:[4A12h],ax
-        cmp     ax,word ptr ds:[3DF8h]
+        cmp     ax,word ptr ds:[WIN_BOTTOM]
         jl      L440E
-        cmp     ax,word ptr ds:[3DF4h]
+        cmp     ax,word ptr ds:[WIN_TOP]
         jg      L440E
-        mov     ax,word ptr ds:[4A0Ch]
-        cmp     ax,word ptr ds:[3DF2h]
+        mov     ax,word ptr ds:[TEXT_X]
+        cmp     ax,word ptr ds:[WIN_LEFT]
         jl      L440E
-        cmp     ax,word ptr ds:[3DF6h]
+        cmp     ax,word ptr ds:[WIN_RIGHT]
         jg      L440E
 L4403:
         call    word ptr ds:[4D12h]
@@ -496,28 +513,28 @@ _seg003_43B6 endp
 ; (_49D0), and the string drawn again at (x, y) in the text colour (2D38). _4448 is the
 ; unclipped entry.
 _seg003_440F proc near
-        mov     word ptr ds:[4A0Ch],ax
-        mov     word ptr ds:[4A0Eh],bx
-        mov     ax,word ptr ds:[4A0Eh]
-        cmp     ax,word ptr ds:[3DF8h]
+        mov     word ptr ds:[TEXT_X],ax
+        mov     word ptr ds:[TEXT_Y],bx
+        mov     ax,word ptr ds:[TEXT_Y]
+        cmp     ax,word ptr ds:[WIN_BOTTOM]
         jl      L440E
-        cmp     ax,word ptr ds:[3DF4h]
+        cmp     ax,word ptr ds:[WIN_TOP]
         jg      L440E
         sub     ax,word ptr ds:[4D0Ch]
         inc     ax
         mov     word ptr ds:[4A12h],ax
-        cmp     ax,word ptr ds:[3DF8h]
+        cmp     ax,word ptr ds:[WIN_BOTTOM]
         jl      L440E
-        cmp     ax,word ptr ds:[3DF4h]
+        cmp     ax,word ptr ds:[WIN_TOP]
         jg      L440E
-        mov     ax,word ptr ds:[4A0Ch]
-        cmp     ax,word ptr ds:[3DF2h]
+        mov     ax,word ptr ds:[TEXT_X]
+        cmp     ax,word ptr ds:[WIN_LEFT]
         jl      L440E
-        cmp     ax,word ptr ds:[3DF6h]
+        cmp     ax,word ptr ds:[WIN_RIGHT]
         jg      L440E
 _seg003_4448:
-        inc     word ptr ds:[4A0Ch]
-        dec     word ptr ds:[4A0Eh]
+        inc     word ptr ds:[TEXT_X]
+        dec     word ptr ds:[TEXT_Y]
         call    word ptr ds:[4D12h]
         mov     ax,word ptr ds:[2D34h]
         call    _seg003_44E1
@@ -581,8 +598,8 @@ L4496:
         ret
         mov     bx,offset _seg003_5AC6
 L44B2:
-        mov     word ptr ds:[4114h],ax
-        mov     word ptr ds:[4110h],bx
+        mov     word ptr ds:[PEN_WORD2],ax
+        mov     word ptr ds:[SPAN_WRITER],bx
         mov     word ptr ds:[4112h],0FFFFh
         jmp     _seg003_3C96
         mov     bx,offset _seg003_5AD5
@@ -609,34 +626,34 @@ _seg003_447D endp
 _seg003_44E1 proc near
         mov     word ptr ds:[4A0Ah],ax
         jmp     short L4504
-        mov     byte ptr ds:[410Fh],ah
+        mov     byte ptr ds:[PEN_COLOR],ah
         mov     ax,word ptr ds:[4D02h]
         dec     ax
         shl     ax,1
         shl     ax,1
         shl     ax,1
-        add     ax,word ptr ds:[4A0Ch]
+        add     ax,word ptr ds:[TEXT_X]
         mov     word ptr ds:[4A10h],ax
         mov     bx,5AC3h
         mov     si,4A0Ch
         call    L44B2
 L4504:
-        mov     di,word ptr ds:[4A0Ch]
+        mov     di,word ptr ds:[TEXT_X]
         shr     di,1
         shr     di,1
-        mov     bp,word ptr ds:[4A0Eh]
+        mov     bp,word ptr ds:[TEXT_Y]
         shl     bp,1
-        add     di,word ptr [bp+36AAh]
+        add     di,word ptr [bp+YTAB]
         mov     bx,word ptr ds:[4D02h]
         shl     bx,1
-        mov     bp,word ptr ds:[36A6h]
+        mov     bp,word ptr ds:[ROW_BYTES]
         sub     bp,bx
         mov     ax,word ptr [bx+4C8Ch]
         mov     word ptr ds:[4CF8h],ax
         mov     ch,byte ptr ds:[4D0Ch]
         mov     si,word ptr ds:[4D04h]
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
         mov     cl,byte ptr ds:[4A0Ah]
         mov     dx,SC_DATA
 L453D:
@@ -646,7 +663,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -658,7 +675,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -670,7 +687,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -682,7 +699,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -694,7 +711,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -706,7 +723,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -718,7 +735,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -730,7 +747,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -742,7 +759,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -754,7 +771,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -766,7 +783,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -778,7 +795,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -790,7 +807,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -802,7 +819,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -814,7 +831,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -826,7 +843,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -838,7 +855,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -850,7 +867,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -862,7 +879,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -874,7 +891,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -886,7 +903,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -898,7 +915,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -910,7 +927,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -922,7 +939,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -934,7 +951,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -946,7 +963,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -958,7 +975,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -970,7 +987,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -982,7 +999,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -994,7 +1011,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1006,7 +1023,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1018,7 +1035,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1030,7 +1047,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1042,7 +1059,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1054,7 +1071,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1066,7 +1083,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1078,7 +1095,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1090,7 +1107,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1102,7 +1119,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1114,7 +1131,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1126,7 +1143,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1138,7 +1155,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1150,7 +1167,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1162,7 +1179,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1174,7 +1191,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1186,7 +1203,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1198,7 +1215,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1210,7 +1227,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1222,7 +1239,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1234,7 +1251,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1246,7 +1263,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1258,7 +1275,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1270,7 +1287,7 @@ L453D:
         sub     bx,bx
         mov     bl,al
         shl     bx,1
-        mov     ax,word ptr [bx+4A24h]
+        mov     ax,word ptr [bx+TEXT_MASKS]
         out     dx,al
         mov     al,cl
         stosb
@@ -1289,8 +1306,8 @@ L49A6:
         mov     ax,seg seg048
         mov     si,ax
         mov     di,word ptr ds:[4D04h]
-        mov     ax,word ptr ds:[4A0Ch]
-        mov     bx,word ptr ds:[4A0Eh]
+        mov     ax,word ptr ds:[TEXT_X]
+        mov     bx,word ptr ds:[TEXT_Y]
         mov     cx,word ptr ds:[4D02h]
         mov     dx,word ptr ds:[4D0Ch]
         jmp     _seg003_2C11
@@ -1312,13 +1329,13 @@ _seg003_44E1 endp
 _seg003_49D0 proc near
         clc
         pushf
-        test    word ptr ds:[4A0Ch],3
+        test    word ptr ds:[TEXT_X],3
         jne     L49E3
         dec     word ptr ds:[4D04h]
-        sub     word ptr ds:[4A0Ch],4
+        sub     word ptr ds:[TEXT_X],4
 L49E3:
-        inc     word ptr ds:[4A0Eh]
-        dec     word ptr ds:[4A0Ch]
+        inc     word ptr ds:[TEXT_Y]
+        dec     word ptr ds:[TEXT_X]
         mov     ax,35h
         mov     bx,word ptr ds:[4D00h]
         inc     bx
@@ -1399,7 +1416,7 @@ _seg003_4A06 proc near
         mov     di,si
         call    _seg003_4C45
         mov     si,di
-        mov     ax,word ptr ds:[4A0Ch]
+        mov     ax,word ptr ds:[TEXT_X]
         and     ax,3
         add     dx,ax
         shr     dx,1
@@ -1429,7 +1446,7 @@ _seg003_4A06 proc near
         mov     ax,word ptr cs:L4C25[bx-2]
         mov     word ptr ds:[4CF8h],ax
         mov     bx,si
-        mov     cx,word ptr ds:[4A0Ch]
+        mov     cx,word ptr ds:[TEXT_X]
         and     cx,3
         jmp     short L4B21
 L4AFE:

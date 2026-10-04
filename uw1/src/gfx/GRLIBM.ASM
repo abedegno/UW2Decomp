@@ -30,6 +30,10 @@
 ; word-aligned module), as in UW2.
 ; It has no relocations.
 
+; The graphics library's data in seg048 (DS while the library runs), as GRLIBF.ASM's
+; and VIDMODE.ASM's headers describe it. The names are ours.
+VERTS           equ     415Ch   ; the polygon vertices; and the second buffer the clippers
+
         .186
 
 _DATA   segment word public 'DATA'
@@ -52,7 +56,7 @@ L6134:
         mov     si,415Ch
         jmp     _seg003_3F06
 L613C:
-        mov     ax,word ptr ds:[415Ch]
+        mov     ax,word ptr ds:[VERTS]
         mov     bx,word ptr ds:[415Eh]
         jmp     _seg003_3B34
 _seg003_6146:

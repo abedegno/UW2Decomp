@@ -46,6 +46,13 @@ SC_DATA         equ     3C5h  ; sequencer data
 GC_INDEX        equ     3CEh  ; graphics controller index
 GC_DATA         equ     3CFh  ; graphics controller data
 
+; The graphics library's data in seg048 (DS while the library runs), as GRLIBF.ASM's
+; and VIDMODE.ASM's headers describe it. The names are ours.
+YTAB            equ     36AAh   ; the drawing page's row addresses (Ytab; row 0 the bottom line)
+LMASKS          equ     3B62h   ; the left-edge plane masks, by x
+RMASKS          equ     3CA6h   ; the right-edge plane masks, by x
+SCREEN_SEG      equ     3DFAh   ; the screen's segment
+
         .186
 
 _DATA   segment word public 'DATA'
@@ -73,13 +80,13 @@ L5B6A:
 _seg003_5B6C:
         mov     dx,SC_DATA
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
 L5B74:
         lodsw
         shl     ax,1
         jb      L5B6A
         mov     bp,ax
-        mov     ax,word ptr [bp+36AAh]
+        mov     ax,word ptr [bp+YTAB]
         mov     word ptr ds:[55E0h],ax
         lodsw
         mov     bx,ax
@@ -92,8 +99,8 @@ L5B74:
         mov     ds,word ptr ds:[55EAh]
         mov     bp,bx
         mov     di,bp
-        mov     al,byte ptr [bp+3B62h]
-        and     al,byte ptr [bp+3CA6h]
+        mov     al,byte ptr [bp+LMASKS]
+        and     al,byte ptr [bp+RMASKS]
         out     dx,al
         sar     di,1
         sar     di,1
@@ -116,8 +123,8 @@ L5BBC:
 L5BC4:
         mov     bp,bx
         mov     di,bp
-        mov     al,byte ptr [bp+3B62h]
-        and     al,byte ptr [bp+3CA6h]
+        mov     al,byte ptr [bp+LMASKS]
+        and     al,byte ptr [bp+RMASKS]
         out     dx,al
         sar     di,1
         sar     di,1
@@ -140,8 +147,8 @@ L5BEE:
 L5BF6:
         mov     bp,bx
         mov     di,bp
-        mov     al,byte ptr [bp+3B62h]
-        and     al,byte ptr [bp+3CA6h]
+        mov     al,byte ptr [bp+LMASKS]
+        and     al,byte ptr [bp+RMASKS]
         out     dx,al
         sar     di,1
         sar     di,1
@@ -164,8 +171,8 @@ L5C20:
 L5C28:
         mov     bp,bx
         mov     di,bp
-        mov     al,byte ptr [bp+3B62h]
-        and     al,byte ptr [bp+3CA6h]
+        mov     al,byte ptr [bp+LMASKS]
+        and     al,byte ptr [bp+RMASKS]
         out     dx,al
         sar     di,1
         sar     di,1
@@ -196,13 +203,13 @@ L5C5F:
 _seg003_5C61:
         mov     dx,SC_DATA
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
 L5C69:
         lodsw
         shl     ax,1
         jb      L5C5F
         mov     bp,ax
-        mov     ax,word ptr [bp+36AAh]
+        mov     ax,word ptr [bp+YTAB]
         mov     word ptr ds:[55E0h],ax
         lodsw
         mov     bx,ax
@@ -216,8 +223,8 @@ L5C69:
         mov     ds,word ptr ds:[55EAh]
         mov     bp,bx
         mov     di,bp
-        mov     al,byte ptr [bp+3B62h]
-        and     al,byte ptr [bp+3CA6h]
+        mov     al,byte ptr [bp+LMASKS]
+        and     al,byte ptr [bp+RMASKS]
         out     dx,al
         sar     di,1
         sar     di,1
@@ -246,8 +253,8 @@ L5CBD:
 L5CC2:
         mov     bp,bx
         mov     di,bp
-        mov     al,byte ptr [bp+3B62h]
-        and     al,byte ptr [bp+3CA6h]
+        mov     al,byte ptr [bp+LMASKS]
+        and     al,byte ptr [bp+RMASKS]
         out     dx,al
         sar     di,1
         sar     di,1
@@ -276,8 +283,8 @@ L5CF6:
 L5CFB:
         mov     bp,bx
         mov     di,bp
-        mov     al,byte ptr [bp+3B62h]
-        and     al,byte ptr [bp+3CA6h]
+        mov     al,byte ptr [bp+LMASKS]
+        and     al,byte ptr [bp+RMASKS]
         out     dx,al
         sar     di,1
         sar     di,1
@@ -306,8 +313,8 @@ L5D2F:
 L5D34:
         mov     bp,bx
         mov     di,bp
-        mov     al,byte ptr [bp+3B62h]
-        and     al,byte ptr [bp+3CA6h]
+        mov     al,byte ptr [bp+LMASKS]
+        and     al,byte ptr [bp+RMASKS]
         out     dx,al
         sar     di,1
         sar     di,1
@@ -342,7 +349,7 @@ L5D6D:
 ; setting the bit mask back to 0FFh.
 _seg003_5D72:
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
         mov     bp,si
 L5D79:
         mov     bx,word ptr [bp]
@@ -350,7 +357,7 @@ L5D79:
         jae     L5D83
         jmp     L5E7C
 L5D83:
-        mov     di,word ptr [bx+36AAh]
+        mov     di,word ptr [bx+YTAB]
         mov     word ptr ds:[55E0h],di
         mov     bx,word ptr [bp+2]
         mov     di,word ptr [bp+4]
@@ -365,8 +372,8 @@ L5D83:
         mov     dx,GC_INDEX
         mov     al,4
         out     dx,al
-        mov     al,byte ptr [bx+3B62h]
-        and     al,byte ptr [bx+3CA6h]
+        mov     al,byte ptr [bx+LMASKS]
+        and     al,byte ptr [bx+RMASKS]
         mov     dx,SC_DATA
         out     dx,al
         mov     al,ah
@@ -386,8 +393,8 @@ L5D83:
         jne     L5DDF
         jmp     L5E78
 L5DDF:
-        mov     al,byte ptr [bx+3B62h]
-        and     al,byte ptr [bx+3CA6h]
+        mov     al,byte ptr [bx+LMASKS]
+        and     al,byte ptr [bx+RMASKS]
         mov     dx,SC_DATA
         out     dx,al
         mov     al,ah
@@ -405,8 +412,8 @@ L5DDF:
         inc     ah
         dec     word ptr ds:[55E6h]
         je      L5E78
-        mov     al,byte ptr [bx+3B62h]
-        and     al,byte ptr [bx+3CA6h]
+        mov     al,byte ptr [bx+LMASKS]
+        and     al,byte ptr [bx+RMASKS]
         mov     dx,SC_DATA
         out     dx,al
         mov     al,ah
@@ -424,8 +431,8 @@ L5DDF:
         inc     ah
         dec     word ptr ds:[55E6h]
         je      L5E78
-        mov     al,byte ptr [bx+3B62h]
-        and     al,byte ptr [bx+3CA6h]
+        mov     al,byte ptr [bx+LMASKS]
+        and     al,byte ptr [bx+RMASKS]
         mov     dx,SC_DATA
         out     dx,al
         mov     al,ah
@@ -461,13 +468,13 @@ _seg003_5E85:
         out     dx,al
         mov     dx,SC_DATA
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
         mov     bx,si
 L5E95:
         mov     bp,word ptr [bx]
         shl     bp,1
         jb      L5ED5
-        mov     di,word ptr [bp+36AAh]
+        mov     di,word ptr [bp+YTAB]
         mov     ax,word ptr [bx+2]
         mov     cx,word ptr [bx+4]
         mov     bp,cx
@@ -488,7 +495,7 @@ L5E95:
         sub     cx,3
         je      L5E95
 L5ECC:
-        mov     al,byte ptr [bp+3CA6h]
+        mov     al,byte ptr [bp+RMASKS]
         out     dx,al
         movs    byte ptr es:[di],byte ptr es:[si]
         jmp     L5E95
@@ -501,7 +508,7 @@ L5ED5:
 ; _5EDD: as _5D72, skipping colour 0.
 _seg003_5EDD:
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
 L5EE2:
         lodsw
         shl     ax,1
@@ -509,7 +516,7 @@ L5EE2:
         jmp     L600C
 L5EEA:
         mov     bx,ax
-        mov     di,word ptr [bx+36AAh]
+        mov     di,word ptr [bx+YTAB]
         mov     word ptr ds:[55E0h],di
         lodsw
         mov     bx,ax
@@ -525,8 +532,8 @@ L5EEA:
         mov     dx,GC_INDEX
         mov     al,4
         out     dx,al
-        mov     al,byte ptr [bx+3B62h]
-        and     al,byte ptr [bx+3CA6h]
+        mov     al,byte ptr [bx+LMASKS]
+        and     al,byte ptr [bx+RMASKS]
         mov     dx,SC_DATA
         out     dx,al
         mov     al,ah
@@ -555,8 +562,8 @@ L5F3C:
         jne     L5F4E
         jmp     L6008
 L5F4E:
-        mov     al,byte ptr [bx+3B62h]
-        and     al,byte ptr [bx+3CA6h]
+        mov     al,byte ptr [bx+LMASKS]
+        and     al,byte ptr [bx+RMASKS]
         mov     dx,SC_DATA
         out     dx,al
         mov     al,ah
@@ -583,8 +590,8 @@ L5F7D:
         and     ah,3
         dec     word ptr ds:[55E6h]
         je      L6008
-        mov     al,byte ptr [bx+3B62h]
-        and     al,byte ptr [bx+3CA6h]
+        mov     al,byte ptr [bx+LMASKS]
+        and     al,byte ptr [bx+RMASKS]
         mov     dx,SC_DATA
         out     dx,al
         mov     al,ah
@@ -611,8 +618,8 @@ L5FBB:
         and     ah,3
         dec     word ptr ds:[55E6h]
         je      L6008
-        mov     al,byte ptr [bx+3B62h]
-        and     al,byte ptr [bx+3CA6h]
+        mov     al,byte ptr [bx+LMASKS]
+        and     al,byte ptr [bx+RMASKS]
         mov     dx,SC_DATA
         out     dx,al
         mov     al,ah
@@ -656,13 +663,13 @@ _seg003_6015:
         out     dx,al
         mov     dx,SC_DATA
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
         mov     bx,si
 L6025:
         mov     bp,word ptr [bx]
         shl     bp,1
         jb      L6065
-        mov     si,word ptr [bp+36AAh]
+        mov     si,word ptr [bp+YTAB]
         mov     ax,word ptr [bx+2]
         mov     cx,word ptr [bx+4]
         mov     bp,cx
@@ -683,7 +690,7 @@ L6025:
         sub     cx,3                    ; CX (= BP) for 0; UW2 has neither and jumps on the flags of shr
         je      L6025
 L605C:
-        mov     al,byte ptr [bp+3CA6h]
+        mov     al,byte ptr [bp+RMASKS]
         out     dx,al
         movs    byte ptr es:[di],byte ptr es:[si]
         jmp     L6025
@@ -704,14 +711,14 @@ _seg003_606D:
         out     dx,al
         mov     dx,SC_DATA
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
         mov     bx,si
         std
 L607E:
         mov     bp,word ptr [bx]
         shl     bp,1
         jb      L60BE
-        mov     si,word ptr [bp+36AAh]
+        mov     si,word ptr [bp+YTAB]
         mov     ax,word ptr [bx+2]
         mov     cx,word ptr [bx+4]
         mov     di,word ptr [bx+6]
@@ -727,7 +734,7 @@ L607E:
         add     di,cx
         test    bp,3
         je      L60B5
-        mov     al,byte ptr [bp+3CA6h]
+        mov     al,byte ptr [bp+RMASKS]
         out     dx,al
         movs    byte ptr es:[di],byte ptr es:[si]
         jcxz    L607E

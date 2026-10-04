@@ -24,6 +24,10 @@
 ; word-aligned module), as in UW2.
 ; It has no relocations.
 
+; The graphics library's data in seg048 (DS while the library runs), as GRLIBF.ASM's
+; and VIDMODE.ASM's headers describe it. The names are ours.
+SPAN_WRITER     equ     4110h   ; the current span writer (set_the_color, fbuf_setcolor)
+
         .186
 
 _DATA   segment word public 'DATA'
@@ -72,7 +76,7 @@ L4016:
         mov     si,word ptr ds:[49B4h]
         sub     si,2
         sub     si,word ptr ds:[49AEh]
-        jmp     word ptr ds:[4110h]
+        jmp     word ptr ds:[SPAN_WRITER]
 L4035:
         sub     bx,bx
         sub     cx,cx

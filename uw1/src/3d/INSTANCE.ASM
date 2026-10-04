@@ -62,6 +62,26 @@
 ; (INTERP.ASM), in seg051, the data segment while interpreting (UW2: 24F4h).
 OPCODE_TABLE    equ     2738h
 
+; The renderer's data in seg051 (DS while interpreting), as INTERP.ASM's header
+; describes it. The names are ours, from the routines that use the data.
+MAT_XX          equ     1602h   ; the view matrix, 1.15 fixed point: MAT_ab is input a's
+MAT_XY          equ     1604h   ; coefficient in output b (mxmul: x' = x*MAT_XX + y*MAT_YX
+MAT_XZ          equ     1606h   ; + z*MAT_ZX, and so on; z' is the depth)
+MAT_YX          equ     1608h
+MAT_YY          equ     160Ah
+MAT_YZ          equ     160Ch
+MAT_ZX          equ     160Eh
+MAT_ZY          equ     1610h
+MAT_ZZ          equ     1612h
+PROJ_Y          equ     26B0h   ; the y projection scale (half the window height)
+PROJ_X          equ     26B2h   ; the x projection scale (half the window width)
+CENTRE_X        equ     26B4h   ; the screen centre
+CENTRE_Y        equ     26B6h
+OBJ_SHIFT       equ     2880h   ; the current object's coordinate shift
+OBJ_X           equ     2886h   ; the current object's origin, eye-relative and negated
+OBJ_Y           equ     2888h
+OBJ_Z           equ     288Ah
+
         .186
 
         extrn   seg048:far
@@ -1522,17 +1542,17 @@ L49AE:
         sub     ax,word ptr ss:[0AA0h]
         inc     ax
         shr     ax,1
-        mov     word ptr ds:[26B2h],ax
+        mov     word ptr ds:[PROJ_X],ax
         mov     ax,word ptr ss:[0AA2h]
         sub     ax,word ptr ss:[0AA6h]
         inc     ax
         shr     ax,1
-        mov     word ptr ds:[26B0h],ax
+        mov     word ptr ds:[PROJ_Y],ax
         mov     ax,word ptr ss:[0AA4h]
         add     ax,word ptr ss:[0AA0h]
         inc     ax
         shr     ax,1
-        mov     word ptr ds:[26B4h],ax
+        mov     word ptr ds:[CENTRE_X],ax
         mov     word ptr cs:[2A5h],ax
         mov     word ptr cs:[313h],ax
         mov     word ptr cs:[modify_biasx+1],ax
@@ -1542,7 +1562,7 @@ L49AE:
         mov     ax,word ptr ss:[0AA2h]
         add     ax,word ptr ss:[0AA6h]
         shr     ax,1
-        mov     word ptr ds:[26B6h],ax
+        mov     word ptr ds:[CENTRE_Y],ax
         mov     word ptr cs:[2B0h],ax
         mov     word ptr cs:[323h],ax
         mov     word ptr cs:[modify_biasy+1],ax
@@ -1550,7 +1570,7 @@ L49AE:
         mov     word ptr cs:[_seg004_21DA+1],ax
         mov     word ptr cs:[_seg004_2181+1],ax
         inc     word ptr ds:[15FAh]
-        mov     byte ptr ds:[2880h],0
+        mov     byte ptr ds:[OBJ_SHIFT],0
         call    _create_matrix
         call    _seg004_51A3
         call    _scale_matrix
@@ -1674,14 +1694,14 @@ L4B42   dw      0                       ; render_3d's copy of seg048:2CECh
 _scale_matrix proc near
         mov     word ptr ds:[2728h],7FFFh
         mov     word ptr ds:[272Ah],7FFFh
-        mov     ax,word ptr ds:[1608h]
+        mov     ax,word ptr ds:[MAT_YX]
         mov     word ptr ds:[1614h],ax
-        mov     ax,word ptr ds:[160Ah]
+        mov     ax,word ptr ds:[MAT_YY]
         mov     word ptr ds:[1616h],ax
-        mov     ax,word ptr ds:[160Ch]
+        mov     ax,word ptr ds:[MAT_YZ]
         mov     word ptr ds:[1618h],ax
-        mov     bx,word ptr ds:[26B0h]
-        mov     cx,word ptr ds:[26B2h]
+        mov     bx,word ptr ds:[PROJ_Y]
+        mov     cx,word ptr ds:[PROJ_X]
         mov     ax,word ptr ds:[15F4h]
         or      ax,ax
         js      short L4B7B
@@ -1712,21 +1732,21 @@ L4B92:
         idiv    bx
         mov     cx,ax
         mov     word ptr ds:[2728h],cx
-        mov     ax,word ptr ds:[1602h]
+        mov     ax,word ptr ds:[MAT_XX]
         imul    cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[1602h],dx
-        mov     ax,word ptr ds:[1608h]
+        mov     word ptr ds:[MAT_XX],dx
+        mov     ax,word ptr ds:[MAT_YX]
         imul    cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[1608h],dx
-        mov     ax,word ptr ds:[160Eh]
+        mov     word ptr ds:[MAT_YX],dx
+        mov     ax,word ptr ds:[MAT_ZX]
         imul    cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[160Eh],dx
+        mov     word ptr ds:[MAT_ZX],dx
         mov     ax,word ptr ds:[1616h]
         imul    cx
         shl     ax,1
@@ -1744,21 +1764,21 @@ L4BE6:
         idiv    bx
         mov     cx,ax
         mov     word ptr ds:[272Ah],cx
-        mov     ax,word ptr ds:[1604h]
+        mov     ax,word ptr ds:[MAT_XY]
         imul    cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[1604h],dx
-        mov     ax,word ptr ds:[160Ah]
+        mov     word ptr ds:[MAT_XY],dx
+        mov     ax,word ptr ds:[MAT_YY]
         imul    cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[160Ah],dx
-        mov     ax,word ptr ds:[1610h]
+        mov     word ptr ds:[MAT_YY],dx
+        mov     ax,word ptr ds:[MAT_ZY]
         imul    cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[1610h],dx
+        mov     word ptr ds:[MAT_ZY],dx
         mov     ax,word ptr ds:[1614h]
         imul    cx
         shl     ax,1
@@ -1776,21 +1796,21 @@ L4C33:
         jmp     L4CC6
 L4C3E:
         mov     word ptr ds:[2730h],cx
-        mov     ax,word ptr ds:[1606h]
+        mov     ax,word ptr ds:[MAT_XZ]
         imul    cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[1606h],dx
-        mov     ax,word ptr ds:[160Ch]
+        mov     word ptr ds:[MAT_XZ],dx
+        mov     ax,word ptr ds:[MAT_YZ]
         imul    cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[160Ch],dx
-        mov     ax,word ptr ds:[1612h]
+        mov     word ptr ds:[MAT_YZ],dx
+        mov     ax,word ptr ds:[MAT_ZZ]
         imul    cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[1612h],dx
+        mov     word ptr ds:[MAT_ZZ],dx
         mov     ax,word ptr ds:[1616h]
         imul    cx
         shl     ax,1
@@ -1831,36 +1851,36 @@ L4C3E:
 L4CC6:
         mov     word ptr ds:[2730h],7FFFh
         neg     cx
-        mov     ax,word ptr ds:[1602h]
+        mov     ax,word ptr ds:[MAT_XX]
         imul    cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[1602h],dx
-        mov     ax,word ptr ds:[1608h]
+        mov     word ptr ds:[MAT_XX],dx
+        mov     ax,word ptr ds:[MAT_YX]
         imul    cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[1608h],dx
-        mov     ax,word ptr ds:[160Eh]
+        mov     word ptr ds:[MAT_YX],dx
+        mov     ax,word ptr ds:[MAT_ZX]
         imul    cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[160Eh],dx
-        mov     ax,word ptr ds:[1604h]
+        mov     word ptr ds:[MAT_ZX],dx
+        mov     ax,word ptr ds:[MAT_XY]
         imul    cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[1604h],dx
-        mov     ax,word ptr ds:[160Ah]
+        mov     word ptr ds:[MAT_XY],dx
+        mov     ax,word ptr ds:[MAT_YY]
         imul    cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[160Ah],dx
-        mov     ax,word ptr ds:[1610h]
+        mov     word ptr ds:[MAT_YY],dx
+        mov     ax,word ptr ds:[MAT_ZY]
         imul    cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[1610h],dx
+        mov     word ptr ds:[MAT_ZY],dx
         mov     ax,word ptr ds:[1618h]
         imul    cx
         shl     ax,1
@@ -1905,18 +1925,18 @@ L4CC6:
         mov     word ptr ds:[272Ah],ax
 L4D85:
         mov     word ptr ss:[4D5h],offset _overflow_handler_reg
-        mov     ax,word ptr ds:[1606h]
-        imul    word ptr ds:[1606h]
+        mov     ax,word ptr ds:[MAT_XZ]
+        imul    word ptr ds:[MAT_XZ]
         mov     cx,dx
         mov     bx,ax
-        mov     ax,word ptr ds:[1612h]
-        imul    word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
+        imul    word ptr ds:[MAT_ZZ]
         add     bx,ax
         adc     cx,dx
         or      ch,ch
         je      short L4DD7
         call    far ptr _SquareRoot_seg019_A30
-        mov     dx,word ptr ds:[1606h]
+        mov     dx,word ptr ds:[MAT_XZ]
         xor     ax,ax
         sar     dx,1
         rcr     ax,1
@@ -1926,7 +1946,7 @@ L4D85:
         inc     ax
 L4DBD:
         mov     word ptr ds:[26CCh],ax
-        mov     dx,word ptr ds:[1612h]
+        mov     dx,word ptr ds:[MAT_ZZ]
         xor     ax,ax
         sar     dx,1
         rcr     ax,1
@@ -1938,16 +1958,16 @@ L4DD2:
         mov     word ptr ds:[26CEh],ax
         jmp     short L4E2B
 L4DD7:
-        mov     ax,word ptr ds:[1604h]
-        imul    word ptr ds:[1604h]
+        mov     ax,word ptr ds:[MAT_XY]
+        imul    word ptr ds:[MAT_XY]
         mov     cx,dx
         mov     bx,ax
-        mov     ax,word ptr ds:[1610h]
-        imul    word ptr ds:[1610h]
+        mov     ax,word ptr ds:[MAT_ZY]
+        imul    word ptr ds:[MAT_ZY]
         add     bx,ax
         adc     cx,dx
         call    far ptr _SquareRoot_seg019_A30
-        mov     dx,word ptr ds:[1604h]
+        mov     dx,word ptr ds:[MAT_XY]
         xor     ax,ax
         sar     dx,1
         rcr     ax,1
@@ -1957,7 +1977,7 @@ L4DD7:
         inc     ax
 L4E04:
         mov     bx,ax
-        mov     dx,word ptr ds:[1610h]
+        mov     dx,word ptr ds:[MAT_ZY]
         xor     ax,ax
         sar     dx,1
         rcr     ax,1
@@ -1966,7 +1986,7 @@ L4E04:
         jne     short L4E18
         inc     ax
 L4E18:
-        test    word ptr ds:[160Ch],0FFFFh
+        test    word ptr ds:[MAT_YZ],0FFFFh
         js      short L4E24
         neg     bx
         neg     ax
@@ -1975,12 +1995,12 @@ L4E24:
         mov     word ptr ds:[26CEh],ax
 L4E2B:
         mov     ax,word ptr ds:[26CEh]
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[26CCh]
         neg     ax
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     ax,bx
         adc     dx,cx
         shl     ax,1
@@ -1989,12 +2009,12 @@ L4E2B:
         adc     dx,0
         mov     word ptr ds:[26D0h],dx
         mov     ax,word ptr ds:[26CEh]
-        imul    word ptr ds:[1604h]
+        imul    word ptr ds:[MAT_XY]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[26CCh]
         neg     ax
-        imul    word ptr ds:[1610h]
+        imul    word ptr ds:[MAT_ZY]
         add     ax,bx
         adc     dx,cx
         shl     ax,1
@@ -2013,15 +2033,15 @@ _scale_matrix endp
 ; records which set is in, so the copy is done only on a change. A level view is probably the
 ; common case: the view pitches only while the player looks up or down.
 _check_flat proc near
-        test    word ptr ds:[1608h],0FFFFh
+        test    word ptr ds:[MAT_YX],0FFFFh
         jne     short L4EA1
-        test    word ptr ds:[1604h],0FFFFh
+        test    word ptr ds:[MAT_XY],0FFFFh
         jne     short L4EA1
-        test    word ptr ds:[1610h],0FFFFh
+        test    word ptr ds:[MAT_ZY],0FFFFh
         jne     short L4EA1
-        test    word ptr ds:[160Ch],0FFFFh
+        test    word ptr ds:[MAT_YZ],0FFFFh
         jne     short L4EA1
-        cmp     word ptr ds:[160Ah],7FFBh
+        cmp     word ptr ds:[MAT_YY],7FFBh
         jl      short L4EA1
         jmp     L4F72
 L4EA1:
@@ -2165,16 +2185,16 @@ _set_accept endp
 ; point shift (2880) into the immediates of mini_xlate_rotate_pnt and load_xlate_rotate_pnt, so
 ; that turning a model point into view space needs no memory reads for them.
 _self_modify proc near
-        mov     ax,word ptr ds:[2886h]
+        mov     ax,word ptr ds:[OBJ_X]
         mov     word ptr cs:[modify_mex+1],ax
         mov     word ptr cs:[L509D+1],ax
-        mov     ax,word ptr ds:[2888h]
+        mov     ax,word ptr ds:[OBJ_Y]
         mov     word ptr cs:[modify_mey+1],ax
         mov     word ptr cs:[L50B5+1],ax
-        mov     ax,word ptr ds:[288Ah]
+        mov     ax,word ptr ds:[OBJ_Z]
         mov     word ptr cs:[modify_mez+1],ax
         mov     word ptr cs:[L50A9+1],ax
-        mov     al,byte ptr ds:[2880h]
+        mov     al,byte ptr ds:[OBJ_SHIFT]
         mov     byte ptr cs:[modify_mes+1],al
         mov     byte ptr cs:[_mini_xlate_rotate_pnt+1],al
         ret
@@ -2240,32 +2260,32 @@ _load_xlate_rotate_pnt endp
 ; halved.
 _mxmul proc near
         mov     ax,bx
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     di,dx
         mov     ax,cx
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         add     di,dx
         mov     ax,bp
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     di,dx
         mov     word ptr ds:[2708h],di
         mov     ax,bx
-        imul    word ptr ds:[1604h]
+        imul    word ptr ds:[MAT_XY]
         mov     di,dx
         mov     ax,cx
-        imul    word ptr ds:[160Ah]
+        imul    word ptr ds:[MAT_YY]
         add     di,dx
         mov     ax,bp
-        imul    word ptr ds:[1610h]
+        imul    word ptr ds:[MAT_ZY]
         add     di,dx
         mov     ax,bp
-        imul    word ptr ds:[1612h]
+        imul    word ptr ds:[MAT_ZZ]
         mov     bp,dx
         mov     ax,bx
-        imul    word ptr ds:[1606h]
+        imul    word ptr ds:[MAT_XZ]
         add     bp,dx
         mov     ax,cx
-        imul    word ptr ds:[160Ch]
+        imul    word ptr ds:[MAT_YZ]
         add     bp,dx
         mov     cx,di
         mov     bx,word ptr ds:[2708h]
@@ -2273,49 +2293,49 @@ _mxmul proc near
 ; L512B and L517E: the two bodies check_flat and is_flat copy over the one above
 L512B:
         mov     ax,bx
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     di,dx
         mov     ax,cx
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         add     di,dx
         mov     ax,bp
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     di,dx
         mov     word ptr ds:[2708h],di
         mov     ax,bx
-        imul    word ptr ds:[1604h]
+        imul    word ptr ds:[MAT_XY]
         mov     di,dx
         mov     ax,cx
-        imul    word ptr ds:[160Ah]
+        imul    word ptr ds:[MAT_YY]
         add     di,dx
         mov     ax,bp
-        imul    word ptr ds:[1610h]
+        imul    word ptr ds:[MAT_ZY]
         add     di,dx
         mov     ax,bp
-        imul    word ptr ds:[1612h]
+        imul    word ptr ds:[MAT_ZZ]
         mov     bp,dx
         mov     ax,bx
-        imul    word ptr ds:[1606h]
+        imul    word ptr ds:[MAT_XZ]
         add     bp,dx
         mov     ax,cx
-        imul    word ptr ds:[160Ch]
+        imul    word ptr ds:[MAT_YZ]
         add     bp,dx
         mov     cx,di
         mov     bx,word ptr ds:[2708h]
         ret
 L517E:
         mov     ax,bx
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     di,dx
         mov     ax,bp
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     di,dx
         mov     ax,bx
         mov     bx,di
-        imul    word ptr ds:[1606h]
+        imul    word ptr ds:[MAT_XZ]
         mov     ax,bp
         mov     bp,dx
-        imul    word ptr ds:[1612h]
+        imul    word ptr ds:[MAT_ZZ]
         add     bp,dx
         sar     cx,1
         ret
@@ -2327,7 +2347,7 @@ _mxmul endp
 ; the view looks along more. Patches the instruction to add or subtract (by the sign) the eye's
 ; coordinate on that axis (2886 + offset).
 _seg004_51A3 proc near
-        mov     ax,word ptr ds:[160Ch]
+        mov     ax,word ptr ds:[MAT_YZ]
         cwd
         xor     ax,dx
         sub     ax,dx
@@ -2336,13 +2356,13 @@ _seg004_51A3 proc near
         mov     ax,2
         jmp     short L51D7
 L51B5:
-        mov     ax,word ptr ds:[1606h]
+        mov     ax,word ptr ds:[MAT_XZ]
         cwd
         xor     ax,dx
         sub     ax,dx
         mov     bx,ax
         mov     cx,dx
-        mov     ax,word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
         cwd
         xor     ax,dx
         sub     ax,dx
@@ -2367,7 +2387,7 @@ L51E1:
         mov     word ptr cs:[1878h],ax
         mov     word ptr cs:[1683h],ax
         sub     ax,1C8h
-        add     ax,2886h
+        add     ax,OBJ_X
         mov     word ptr cs:[modify_axis2+2],ax
         mov     word ptr cs:[1B6Eh],ax
         ret
@@ -2506,43 +2526,43 @@ _seg004_520F endp
 _seg004_52FF proc near
         push    si
         mov     ax,bx
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     si,ax
         mov     di,dx
         mov     ax,cx
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         add     si,ax
         adc     di,dx
         mov     ax,bp
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     si,ax
         adc     di,dx
         mov     word ptr ds:[26D4h],si
         mov     word ptr ds:[26D6h],di
         mov     ax,bx
-        imul    word ptr ds:[1604h]
+        imul    word ptr ds:[MAT_XY]
         mov     si,ax
         mov     di,dx
         mov     ax,cx
-        imul    word ptr ds:[160Ah]
+        imul    word ptr ds:[MAT_YY]
         add     si,ax
         adc     di,dx
         mov     ax,bp
-        imul    word ptr ds:[1610h]
+        imul    word ptr ds:[MAT_ZY]
         add     si,ax
         adc     di,dx
         mov     word ptr ds:[26D8h],si
         mov     word ptr ds:[26DAh],di
         mov     ax,bx
-        imul    word ptr ds:[1606h]
+        imul    word ptr ds:[MAT_XZ]
         mov     si,ax
         mov     di,dx
         mov     ax,cx
-        imul    word ptr ds:[160Ch]
+        imul    word ptr ds:[MAT_YZ]
         add     si,ax
         adc     di,dx
         mov     ax,bp
-        imul    word ptr ds:[1612h]
+        imul    word ptr ds:[MAT_ZZ]
         add     si,ax
         adc     di,dx
         mov     word ptr ds:[26DCh],si
@@ -2556,43 +2576,43 @@ _seg004_52FF endp
 _seg004_5374 proc near
         push    si
         mov     ax,bx
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     si,ax
         mov     di,dx
         mov     ax,cx
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         add     si,ax
         adc     di,dx
         mov     ax,bp
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     si,ax
         adc     di,dx
         mov     word ptr ds:[26E0h],si
         mov     word ptr ds:[26E2h],di
         mov     ax,bx
-        imul    word ptr ds:[1604h]
+        imul    word ptr ds:[MAT_XY]
         mov     si,ax
         mov     di,dx
         mov     ax,cx
-        imul    word ptr ds:[160Ah]
+        imul    word ptr ds:[MAT_YY]
         add     si,ax
         adc     di,dx
         mov     ax,bp
-        imul    word ptr ds:[1610h]
+        imul    word ptr ds:[MAT_ZY]
         add     si,ax
         adc     di,dx
         mov     word ptr ds:[26E4h],si
         mov     word ptr ds:[26E6h],di
         mov     ax,bx
-        imul    word ptr ds:[1606h]
+        imul    word ptr ds:[MAT_XZ]
         mov     si,ax
         mov     di,dx
         mov     ax,cx
-        imul    word ptr ds:[160Ch]
+        imul    word ptr ds:[MAT_YZ]
         add     si,ax
         adc     di,dx
         mov     ax,bp
-        imul    word ptr ds:[1612h]
+        imul    word ptr ds:[MAT_ZZ]
         add     si,ax
         adc     di,dx
         mov     word ptr ds:[26E8h],si
@@ -2605,28 +2625,28 @@ _seg004_5374 endp
 ; instance_vvars_head: rotate the eye position in the object's frame (2886 x, 288A z) by the
 ; instance heading in 270A..270E, so later points can be taken relative to the rotated object.
 _instance_vvars_head proc near
-        mov     ax,word ptr ds:[2886h]
+        mov     ax,word ptr ds:[OBJ_X]
         imul    word ptr ds:[270Ah]
         mov     cx,dx
         mov     bx,ax
-        mov     ax,word ptr ds:[288Ah]
+        mov     ax,word ptr ds:[OBJ_Z]
         imul    word ptr ds:[270Eh]
         add     bx,ax
         adc     cx,dx
         shl     bx,1
         rcl     cx,1
-        mov     ax,word ptr ds:[2886h]
-        mov     word ptr ds:[2886h],cx
+        mov     ax,word ptr ds:[OBJ_X]
+        mov     word ptr ds:[OBJ_X],cx
         imul    word ptr ds:[270Ch]
         mov     bx,ax
         mov     cx,dx
-        mov     ax,word ptr ds:[288Ah]
+        mov     ax,word ptr ds:[OBJ_Z]
         imul    word ptr ds:[270Ah]
         add     ax,bx
         adc     dx,cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[288Ah],dx
+        mov     word ptr ds:[OBJ_Z],dx
         ret
 _instance_vvars_head endp
 
@@ -2648,11 +2668,11 @@ _instance_head proc near
         mov     word ptr ds:[270Eh],ax
         call    _instance_vvars_head
         mov     ax,word ptr ds:[270Ah]
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[270Eh]
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -2666,11 +2686,11 @@ L5465:
 L5468:
         mov     word ptr ds:[26D4h],cx
         mov     ax,word ptr ds:[270Ah]
-        imul    word ptr ds:[1604h]
+        imul    word ptr ds:[MAT_XY]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[270Eh]
-        imul    word ptr ds:[1610h]
+        imul    word ptr ds:[MAT_ZY]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -2684,11 +2704,11 @@ L548F:
 L5492:
         mov     word ptr ds:[26D6h],cx
         mov     ax,word ptr ds:[270Ah]
-        imul    word ptr ds:[1606h]
+        imul    word ptr ds:[MAT_XZ]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[270Eh]
-        imul    word ptr ds:[1612h]
+        imul    word ptr ds:[MAT_ZZ]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -2702,11 +2722,11 @@ L54B9:
 L54BC:
         mov     word ptr ds:[26D8h],cx
         mov     ax,word ptr ds:[270Ch]
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[270Ah]
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -2718,13 +2738,13 @@ L54BC:
 L54E3:
         mov     cx,7FFFh
 L54E6:
-        mov     word ptr ds:[160Eh],cx
+        mov     word ptr ds:[MAT_ZX],cx
         mov     ax,word ptr ds:[270Ch]
-        imul    word ptr ds:[1604h]
+        imul    word ptr ds:[MAT_XY]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[270Ah]
-        imul    word ptr ds:[1610h]
+        imul    word ptr ds:[MAT_ZY]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -2736,13 +2756,13 @@ L54E6:
 L550D:
         mov     cx,7FFFh
 L5510:
-        mov     word ptr ds:[1610h],cx
+        mov     word ptr ds:[MAT_ZY],cx
         mov     ax,word ptr ds:[270Ch]
-        imul    word ptr ds:[1606h]
+        imul    word ptr ds:[MAT_XZ]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[270Ah]
-        imul    word ptr ds:[1612h]
+        imul    word ptr ds:[MAT_ZZ]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -2754,13 +2774,13 @@ L5510:
 L5537:
         mov     cx,7FFFh
 L553A:
-        mov     word ptr ds:[1612h],cx
+        mov     word ptr ds:[MAT_ZZ],cx
         mov     ax,word ptr ds:[26D4h]
-        mov     word ptr ds:[1602h],ax
+        mov     word ptr ds:[MAT_XX],ax
         mov     ax,word ptr ds:[26D6h]
-        mov     word ptr ds:[1604h],ax
+        mov     word ptr ds:[MAT_XY],ax
         mov     ax,word ptr ds:[26D8h]
-        mov     word ptr ds:[1606h],ax
+        mov     word ptr ds:[MAT_XZ],ax
         ret
 _instance_head endp
 
@@ -2768,28 +2788,28 @@ _instance_head endp
 ; instance_vvars_pitch and instance_pitch, instance_vvars_bank and instance_bank: as
 ; instance_vvars_head and instance_head for rotations about the other two axes (pitch and bank).
 _instance_vvars_pitch proc near
-        mov     ax,word ptr ds:[2888h]
+        mov     ax,word ptr ds:[OBJ_Y]
         imul    word ptr ds:[2716h]
         mov     cx,dx
         mov     bx,ax
-        mov     ax,word ptr ds:[288Ah]
+        mov     ax,word ptr ds:[OBJ_Z]
         imul    word ptr ds:[271Ah]
         add     ax,bx
         adc     dx,cx
         shl     ax,1
         rcl     dx,1
-        mov     ax,word ptr ds:[2888h]
-        mov     word ptr ds:[2888h],dx
+        mov     ax,word ptr ds:[OBJ_Y]
+        mov     word ptr ds:[OBJ_Y],dx
         imul    word ptr ds:[2718h]
         mov     bx,ax
         mov     cx,dx
-        mov     ax,word ptr ds:[288Ah]
+        mov     ax,word ptr ds:[OBJ_Z]
         imul    word ptr ds:[2716h]
         add     ax,bx
         adc     dx,cx
         shl     ax,1
         rcl     dx,1
-        mov     word ptr ds:[288Ah],dx
+        mov     word ptr ds:[OBJ_Z],dx
         ret
 _instance_vvars_pitch endp
 
@@ -2806,11 +2826,11 @@ _instance_pitch proc near
         mov     word ptr ds:[271Ah],ax
         call    _instance_vvars_pitch
         mov     ax,word ptr ds:[2716h]
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[271Ah]
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -2824,11 +2844,11 @@ L55CD:
 L55D0:
         mov     word ptr ds:[26D4h],cx
         mov     ax,word ptr ds:[2716h]
-        imul    word ptr ds:[160Ah]
+        imul    word ptr ds:[MAT_YY]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[271Ah]
-        imul    word ptr ds:[1610h]
+        imul    word ptr ds:[MAT_ZY]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -2842,11 +2862,11 @@ L55F7:
 L55FA:
         mov     word ptr ds:[26D6h],cx
         mov     ax,word ptr ds:[2716h]
-        imul    word ptr ds:[160Ch]
+        imul    word ptr ds:[MAT_YZ]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[271Ah]
-        imul    word ptr ds:[1612h]
+        imul    word ptr ds:[MAT_ZZ]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -2860,11 +2880,11 @@ L5621:
 L5624:
         mov     word ptr ds:[26D8h],cx
         mov     ax,word ptr ds:[2718h]
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[2716h]
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -2876,13 +2896,13 @@ L5624:
 L564B:
         mov     cx,7FFFh
 L564E:
-        mov     word ptr ds:[160Eh],cx
+        mov     word ptr ds:[MAT_ZX],cx
         mov     ax,word ptr ds:[2718h]
-        imul    word ptr ds:[160Ah]
+        imul    word ptr ds:[MAT_YY]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[2716h]
-        imul    word ptr ds:[1610h]
+        imul    word ptr ds:[MAT_ZY]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -2894,13 +2914,13 @@ L564E:
 L5675:
         mov     cx,7FFFh
 L5678:
-        mov     word ptr ds:[1610h],cx
+        mov     word ptr ds:[MAT_ZY],cx
         mov     ax,word ptr ds:[2718h]
-        imul    word ptr ds:[160Ch]
+        imul    word ptr ds:[MAT_YZ]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[2716h]
-        imul    word ptr ds:[1612h]
+        imul    word ptr ds:[MAT_ZZ]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -2912,40 +2932,40 @@ L5678:
 L569F:
         mov     cx,7FFFh
 L56A2:
-        mov     word ptr ds:[1612h],cx
+        mov     word ptr ds:[MAT_ZZ],cx
         mov     ax,word ptr ds:[26D4h]
-        mov     word ptr ds:[1608h],ax
+        mov     word ptr ds:[MAT_YX],ax
         mov     ax,word ptr ds:[26D6h]
-        mov     word ptr ds:[160Ah],ax
+        mov     word ptr ds:[MAT_YY],ax
         mov     ax,word ptr ds:[26D8h]
-        mov     word ptr ds:[160Ch],ax
+        mov     word ptr ds:[MAT_YZ],ax
         ret
 _instance_pitch endp
 
 ; seg004_56B9  (+56B9)
 _instance_vvars_bank proc near
-        mov     ax,word ptr ds:[2888h]
+        mov     ax,word ptr ds:[OBJ_Y]
         imul    word ptr ds:[2710h]
         mov     bx,ax
         mov     cx,dx
-        mov     ax,word ptr ds:[2886h]
+        mov     ax,word ptr ds:[OBJ_X]
         imul    word ptr ds:[2714h]
         add     ax,bx
         adc     dx,cx
         shl     ax,1
         rcl     dx,1
-        mov     ax,word ptr ds:[2888h]
-        mov     word ptr ds:[2888h],dx
+        mov     ax,word ptr ds:[OBJ_Y]
+        mov     word ptr ds:[OBJ_Y],dx
         imul    word ptr ds:[2712h]
         mov     cx,dx
         mov     bx,ax
-        mov     ax,word ptr ds:[2886h]
+        mov     ax,word ptr ds:[OBJ_X]
         imul    word ptr ds:[2710h]
         add     bx,ax
         adc     cx,dx
         shl     bx,1
         rcl     cx,1
-        mov     word ptr ds:[2886h],cx
+        mov     word ptr ds:[OBJ_X],cx
         ret
 _instance_vvars_bank endp
 
@@ -2962,11 +2982,11 @@ _instance_bank proc near
         mov     word ptr ds:[2714h],ax
         call    _instance_vvars_bank
         mov     ax,word ptr ds:[2710h]
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[2712h]
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -2980,11 +3000,11 @@ L5735:
 L5738:
         mov     word ptr ds:[26D4h],cx
         mov     ax,word ptr ds:[2710h]
-        imul    word ptr ds:[1604h]
+        imul    word ptr ds:[MAT_XY]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[2712h]
-        imul    word ptr ds:[160Ah]
+        imul    word ptr ds:[MAT_YY]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -2998,11 +3018,11 @@ L575F:
 L5762:
         mov     word ptr ds:[26D6h],cx
         mov     ax,word ptr ds:[2710h]
-        imul    word ptr ds:[1606h]
+        imul    word ptr ds:[MAT_XZ]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[2712h]
-        imul    word ptr ds:[160Ch]
+        imul    word ptr ds:[MAT_YZ]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -3016,11 +3036,11 @@ L5789:
 L578C:
         mov     word ptr ds:[26D8h],cx
         mov     ax,word ptr ds:[2714h]
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[2710h]
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -3032,13 +3052,13 @@ L578C:
 L57B3:
         mov     cx,7FFFh
 L57B6:
-        mov     word ptr ds:[1608h],cx
+        mov     word ptr ds:[MAT_YX],cx
         mov     ax,word ptr ds:[2714h]
-        imul    word ptr ds:[1604h]
+        imul    word ptr ds:[MAT_XY]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[2710h]
-        imul    word ptr ds:[160Ah]
+        imul    word ptr ds:[MAT_YY]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -3050,13 +3070,13 @@ L57B6:
 L57DD:
         mov     cx,7FFFh
 L57E0:
-        mov     word ptr ds:[160Ah],cx
+        mov     word ptr ds:[MAT_YY],cx
         mov     ax,word ptr ds:[2714h]
-        imul    word ptr ds:[1606h]
+        imul    word ptr ds:[MAT_XZ]
         mov     bx,ax
         mov     cx,dx
         mov     ax,word ptr ds:[2710h]
-        imul    word ptr ds:[160Ch]
+        imul    word ptr ds:[MAT_YZ]
         add     bx,ax
         adc     cx,dx
         add     bx,bx
@@ -3068,13 +3088,13 @@ L57E0:
 L5807:
         mov     cx,7FFFh
 L580A:
-        mov     word ptr ds:[160Ch],cx
+        mov     word ptr ds:[MAT_YZ],cx
         mov     ax,word ptr ds:[26D4h]
-        mov     word ptr ds:[1602h],ax
+        mov     word ptr ds:[MAT_XX],ax
         mov     ax,word ptr ds:[26D6h]
-        mov     word ptr ds:[1604h],ax
+        mov     word ptr ds:[MAT_XY],ax
         mov     ax,word ptr ds:[26D8h]
-        mov     word ptr ds:[1606h],ax
+        mov     word ptr ds:[MAT_XZ],ax
         ret
 _instance_bank endp
 
@@ -3082,11 +3102,11 @@ _instance_bank endp
 ; UW1 only: the object origin (2886h, 2888h, 288Ah) times the matrix at BP (seg004_5937),
 ; stored back.
 _seg004_5821 proc near
-        mov     si,2886h
+        mov     si,OBJ_X
         call    _seg004_5937
-        mov     word ptr ds:[2886h],bx
-        mov     word ptr ds:[2888h],cx
-        mov     word ptr ds:[288Ah],di
+        mov     word ptr ds:[OBJ_X],bx
+        mov     word ptr ds:[OBJ_Y],cx
+        mov     word ptr ds:[OBJ_Z],di
         ret
 _seg004_5821 endp
 
@@ -3102,19 +3122,19 @@ _seg004_5834 proc near
         mov     ax,ss
         mov     ds,ax
         call    _seg004_5A83
-        mov     word ptr es:[1602h],bx
-        mov     word ptr es:[1604h],cx
-        mov     word ptr es:[1606h],di
+        mov     word ptr es:[MAT_XX],bx
+        mov     word ptr es:[MAT_XY],cx
+        mov     word ptr es:[MAT_XZ],di
         add     si,2
         call    _seg004_5A83
-        mov     word ptr es:[1608h],bx
-        mov     word ptr es:[160Ah],cx
-        mov     word ptr es:[160Ch],di
+        mov     word ptr es:[MAT_YX],bx
+        mov     word ptr es:[MAT_YY],cx
+        mov     word ptr es:[MAT_YZ],di
         add     si,2
         call    _seg004_5A83
-        mov     word ptr es:[160Eh],bx
-        mov     word ptr es:[1610h],cx
-        mov     word ptr es:[1612h],di
+        mov     word ptr es:[MAT_ZX],bx
+        mov     word ptr es:[MAT_ZY],cx
+        mov     word ptr es:[MAT_ZZ],di
         pop     ds
         ret
 _seg004_5834 endp
@@ -3220,19 +3240,19 @@ _code_pnt endp
 ; by row through mm3x9_bpsi. BP is advanced by 18 bytes.
 _mm9x9 proc near
         call    _mm3x9_bpsi
-        mov     word ptr es:[1602h],bx
-        mov     word ptr es:[1604h],cx
-        mov     word ptr es:[1606h],di
+        mov     word ptr es:[MAT_XX],bx
+        mov     word ptr es:[MAT_XY],cx
+        mov     word ptr es:[MAT_XZ],di
         add     bp,6
         call    _mm3x9_bpsi
-        mov     word ptr es:[1608h],bx
-        mov     word ptr es:[160Ah],cx
-        mov     word ptr es:[160Ch],di
+        mov     word ptr es:[MAT_YX],bx
+        mov     word ptr es:[MAT_YY],cx
+        mov     word ptr es:[MAT_YZ],di
         add     bp,6
         call    _mm3x9_bpsi
-        mov     word ptr es:[160Eh],bx
-        mov     word ptr es:[1610h],cx
-        mov     word ptr es:[1612h],di
+        mov     word ptr es:[MAT_ZX],bx
+        mov     word ptr es:[MAT_ZY],cx
+        mov     word ptr es:[MAT_ZZ],di
         ret
 _mm9x9 endp
 

@@ -96,17 +96,17 @@ static int16 map_mouse;
 void far AutoMap(void)
 {
     if (!registered) {
-        _input_addkey(KEY_ESC, 1, 2, (InputFn)newscr);
+        _input_addkey(KEY_ESC, MODE_GAME, MODE_MAP, (InputFn)newscr);
         registered = 1;
     }
-    set_new_music(0xD);
+    set_new_music(MUSIC_MAPS);
     change_music_maybe();
     SaveAutoMapLevel(0, PlayerLevel);
     ShowAutoMapLevel(PlayerLevel);
-    map_mouse = input_addmouse(0, 0, 0x13F, 0xC7, 0, 2, (InputFn)ManageDungeonMap);
+    map_mouse = input_addmouse(0, 0, 0x13F, 0xC7, 0, MODE_MAP, (InputFn)ManageDungeonMap);
     mouse_constrain(0x16, 7, 0x13F, 0xC7);
     mouse_hide();
-    force_mouse_cursor(0x1078);
+    force_mouse_cursor(ICON_CURSORS + 0xC);
     mouse_show();
     notes_dirty = 0;
 }
@@ -123,7 +123,7 @@ unsigned char far SaveAutoMapLevel(struct Arc *arcp, int lev)
             return 0;
     } else
         arc = *arcp;
-    ok = put_arc((char far *)&arc, lev + 0x1A, (char far *)PlayersMap, MAP_TILES);
+    ok = put_arc((char far *)&arc, LEVARK_AUTOMAP(lev), (char far *)PlayersMap, MAP_TILES);
     if (arcp == 0)
         close_arc((char far *)&arc);
     else
@@ -138,7 +138,7 @@ unsigned char far GetAutoMapLevel(struct Arc *arc, int lev)
 {
     register int n;
 
-    n = get_arc((char far *)arc, lev + 0x1A, (char far *)PlayersMap);
+    n = get_arc((char far *)arc, LEVARK_AUTOMAP(lev), (char far *)PlayersMap);
     if (n != 0 && n != MAP_TILES)
         return 0;
     return 1;
@@ -161,7 +161,7 @@ void far ExitAutoMap(void)
     }
     seg014_1DC5_15C5();
     grfx_clear();
-    grfx_quikpal(0);
+    grfx_quikpal(PAL_GAME);
     mouse_freereign();
     mouse_show();
 }
@@ -420,12 +420,12 @@ void far ManageDungeonMap(void)
     mouse_release(1);
     if (mx > 0x104 && mx < 0x140 && my > 0x13 && my < 0x33) {
         cmd = 0xFF;
-        newscr(1);
+        newscr(MODE_GAME);
     } else if (mx > 0x104 && mx < 0x140 && my > 0x33 && my < 0x52) {
         cmd = 0xFD;
         mouse_constrain(0, 0, 0x13F, 0xC7);
         mouse_hide();
-        force_mouse_cursor(0x1079);
+        force_mouse_cursor(ICON_CURSORS + 0xD);
         mouse_show();
         while (mouse_get_input() != 1)
             ;
@@ -444,7 +444,7 @@ void far ManageDungeonMap(void)
         if (num_words != 100) {
             note = &ATM_Strings[num_words];
             grfx_load_font("font4x5p.sys");
-            force_mouse_cursor(0x107A);
+            force_mouse_cursor(ICON_CURSORS + 0xE);
             note->x = mx;
             note->y = my + 4;
             text[0] = 0;
@@ -455,7 +455,7 @@ void far ManageDungeonMap(void)
                 while ((cmd = do_keyboard_input(0)) < 0)
                     if ((cmd = mouse_getbut(&but)) > 0)
                         break;
-                if (cmd == 0xD || cmd == 0x1B || cmd < 4)
+                if (cmd == KEY_ENTER || cmd == KEY_ESC || cmd < 4)
                     break;
                 if (cmd >= 0x20 && cmd <= 0x7A) {
                     ch[0] = toupper(cmd);
@@ -469,7 +469,7 @@ void far ManageDungeonMap(void)
                         len = 0x2D;
                     } else
                         text[len] = ch[0];
-                } else if (cmd == 8) {
+                } else if (cmd == KEY_BACKSPACE) {
                     if (--len < -1)
                         len = -1;
                     w = string_width(text);
@@ -571,7 +571,7 @@ void far SaveTheWords(int lev)
         }
     }
     if (open_arc((char far *)&arc, "SAVE0\\lev.ark")) {
-        if (!put_arc((char far *)&arc, lev + 0x23, (char far *)ATM_Strings, num_words * sizeof(struct ATM)))
+        if (!put_arc((char far *)&arc, LEVARK_NOTES(lev), (char far *)ATM_Strings, num_words * sizeof(struct ATM)))
             ;
         close_arc((char far *)&arc);
     }
@@ -584,7 +584,7 @@ void far GetTheWords(int lev)
 
     old_strings = num_words = 0;
     if (open_arc((char far *)&arc, "SAVE0\\lev.ark")) {
-        old_strings = num_words = get_arc((char far *)&arc, lev + 0x23, (char far *)ATM_Strings) / sizeof(struct ATM);
+        old_strings = num_words = get_arc((char far *)&arc, LEVARK_NOTES(lev), (char far *)ATM_Strings) / sizeof(struct ATM);
         RedisplayStrings();
         close_arc((char far *)&arc);
     }
@@ -615,11 +615,11 @@ void far ShowAutoMapLevel(register int lev)
             px = (OBJ_HOMEX(ThePlayer) - 1) * 3 + 10 - 1;
             py = (OBJ_HOMEY(ThePlayer) - 1) * 3 + 12;
             Transparency = 1;
-            pic_to_screen(0x103F, px, py, 5, 8);
+            pic_to_screen(ICON_BUTTONS + 0x3F, px, py, 5, 8);
             Transparency = 0;
         }
         level = lev;
-        grfx_quikpal(1);
+        grfx_quikpal(PAL_MAP);
         grPageFlip();
         grSoftPageFlip();
         copy_hidden_to_visible();

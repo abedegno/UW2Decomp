@@ -37,10 +37,15 @@
 ; The model interpreter's opcode table: a word per opcode, the offset of its handler
 ; (INTERP.ASM), in seg051, the data segment while interpreting (UW2: 24F4h).
 OPCODE_TABLE    equ     2738h
+
+; The renderer's data in seg051 (DS while interpreting), as INTERP.ASM's header
+; describes it. The names are ours, from the routines that use the data.
+PNT_X           equ     1620h   ; the point table, 8 bytes a point: view x
 DOS_OPEN        equ     3Dh
 DOS_CLOSE       equ     3Eh
 DOS_READ        equ     3Fh
 ; The EMS (int 67h) functions used here.
+EMS_MAP_PAGE    equ     44h     ; map one logical page into a physical page
 EMS_MAP_PAGES   equ     50h
 
         .186
@@ -406,7 +411,7 @@ _do_fetchmap proc near
         mov     byte ptr ds:[0C374h],al         ; map that EMS page into physical page 3
         xor     bh,bh
         mov     bl,al
-        mov     ah,44h
+        mov     ah,EMS_MAP_PAGE
         mov     al,3
         mov     dx,word ptr ds:[0C4D7h]
         int     67h
@@ -570,7 +575,7 @@ L7A7C:
         pop     si
         lodsw
         mov     di,ax
-        add     di,1620h
+        add     di,PNT_X
         mov     ax,1Ch
         db      0EAh                     ; match: jmp far ptr in_scalebm as bytes, as in UW2
         dw      offset in_scalebm
@@ -642,7 +647,7 @@ _seg004_7B09 proc near
         je      short L7B28
         mov     byte ptr ds:[0C4D4h],al
         mov     bx,ax
-        mov     ah,44h
+        mov     ah,EMS_MAP_PAGE
         mov     al,2
         mov     dx,word ptr ds:[0C4D7h]
         int     67h
@@ -980,7 +985,7 @@ L7D13:
         mov     ds,ax
         lodsw
         mov     di,ax
-        add     di,1620h
+        add     di,PNT_X
         mov     ax,0Eh
         db      0EAh                     ; match: jmp far ptr in_scalebm as bytes, as in UW2
         dw      offset in_scalebm

@@ -125,7 +125,7 @@ int far init_mouse(void)
     con_x0 = con_y0 = 0;
     max_x = 0x13F;
     max_y = 0xC7;
-    set_mouse_data(0x106C);
+    set_mouse_data(ICON_CURSORS);
     if ((Color_data_ptr[0x100] = valloc(0x28, 0x28)) == 0)
         return -1;
     Color_data_ptr[0x101] = Color_data_ptr[0x100];
@@ -201,7 +201,7 @@ void far mous_3d_hide(void)
             m3dt = 2;
         else {
             m3dt = 1;
-            if (inplist->mode != 1) {   /* UW1: outside mode 1 the cursor is hidden instead */
+            if (inplist->mode != MODE_GAME) {   /* UW1: outside mode 1 the cursor is hidden instead */
                 wl = *wleft;
                 wt = *wtop;
                 wr = *wright;
@@ -222,7 +222,7 @@ void far mous_3d_show(void)
 {
     int wl, wt, wr, wb;
 
-    if (m3dt == 1 && inplist->mode != 1) {
+    if (m3dt == 1 && inplist->mode != MODE_GAME) {
         wl = *wleft;
         wt = *wtop;
         wr = *wright;
@@ -525,7 +525,7 @@ void far unforce_mouse_cursor(int how)
     if (how & 1)
         mouse_hide();
     if (--force_depth < 0) {
-        curs_stack[0] = 0x106C;
+        curs_stack[0] = ICON_CURSORS;
         force_depth = 0;
     }
     set_mouse_data(curs_stack[force_depth]);
@@ -591,7 +591,7 @@ void far checkMouse(void)
     }
     if (in_x0 != -1 && i == num_regions) {
         in_x0 = -1;
-        set_mouse_data(0x106C);
+        set_mouse_data(ICON_CURSORS);
     }
 }
 
@@ -716,7 +716,7 @@ void far MousReSave3d(void)
         fbuf_setcolor(0x100);
         rectangle(mouse_x - hotspot_x - m3dx, mouse_y + hotspot_y - m3dy + m3dh,
                   mouse_x + curs_w - hotspot_x - m3dx - 1, mouse_y - cur_h + hotspot_y - m3dy + m3dh);
-    } else if (m3dt == 1 && inplist->mode == 1) {     /* UW1: in mode 1 only */
+    } else if (m3dt == 1 && inplist->mode == MODE_GAME) {     /* UW1: in mode 1 only */
         ShowClip = 1;
         vcopyfb(mouse_x - hotspot_x - m3dx, mouse_y + hotspot_y - m3dy + m3dh, curs_w, cur_h + 1,
                 Color_data_ptr[0x100]);

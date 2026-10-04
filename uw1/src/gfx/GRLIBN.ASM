@@ -29,6 +29,13 @@
 ; word-aligned module), as in UW2.
 ; Its relocation is entry 2861 of UW.EXE's relocation table (+642C).
 
+; The graphics library's data in seg048 (DS while the library runs), as GRLIBF.ASM's
+; and VIDMODE.ASM's headers describe it. The names are ours.
+WIN_LEFT        equ     3DF2h   ; the clip window (y counts up, so bottom < top)
+WIN_TOP         equ     3DF4h
+WIN_RIGHT       equ     3DF6h
+WIN_BOTTOM      equ     3DF8h
+
         .186
 
 
@@ -58,8 +65,8 @@ _seg003_6350 proc near
         movsw
         movsw
         sub     si,6
-        mov     bx,word ptr ds:[3DF4h]
-        mov     dx,word ptr ds:[3DF8h]
+        mov     bx,word ptr ds:[WIN_TOP]
+        mov     dx,word ptr ds:[WIN_BOTTOM]
         mov     si,415Eh
         push    cx
 L6372:
@@ -80,17 +87,17 @@ L6380:
         mov     si,415Ch
         mov     di,42ECh
         mov     al,7Ch
-        mov     dx,word ptr ds:[3DF4h]
+        mov     dx,word ptr ds:[WIN_TOP]
         call    L6416
         mov     word ptr ds:[4484h],offset L64EC
         mov     si,42ECh
         mov     di,415Ch
         mov     al,7Fh
-        mov     dx,word ptr ds:[3DF8h]
+        mov     dx,word ptr ds:[WIN_BOTTOM]
         call    L6416
 L63BB:
-        mov     bx,word ptr ds:[3DF6h]
-        mov     dx,word ptr ds:[3DF2h]
+        mov     bx,word ptr ds:[WIN_RIGHT]
+        mov     dx,word ptr ds:[WIN_LEFT]
         mov     si,415Ch
         push    cx
 L63C7:
@@ -111,13 +118,13 @@ L63D5:
         mov     si,415Ch
         mov     di,42ECh
         mov     al,7Fh
-        mov     dx,word ptr ds:[3DF2h]
+        mov     dx,word ptr ds:[WIN_LEFT]
         call    L6416
         mov     word ptr ds:[4484h],offset L6498
         mov     si,42ECh
         mov     di,415Ch
         mov     al,7Ch
-        mov     dx,word ptr ds:[3DF6h]
+        mov     dx,word ptr ds:[WIN_RIGHT]
         call    L6416
 L6410:
         jcxz    L6414
@@ -208,9 +215,9 @@ L64B7:
         imul    dx
         idiv    cx
         add     ax,bx
-        cmp     ax,word ptr ds:[3DF4h]
+        cmp     ax,word ptr ds:[WIN_TOP]
         jge     L64CF
-        cmp     ax,word ptr ds:[3DF8h]
+        cmp     ax,word ptr ds:[WIN_BOTTOM]
         jle     L64CF
         add     ax,word ptr ds:[4486h]
 L64CF:
@@ -258,9 +265,9 @@ L650F:
         imul    dx
         idiv    cx
         add     ax,bx
-        cmp     ax,word ptr ds:[3DF2h]
+        cmp     ax,word ptr ds:[WIN_LEFT]
         jle     L6527
-        cmp     ax,word ptr ds:[3DF6h]
+        cmp     ax,word ptr ds:[WIN_RIGHT]
         jge     L6527
         add     ax,word ptr ds:[4486h]
 L6527:

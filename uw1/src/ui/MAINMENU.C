@@ -161,7 +161,7 @@ void far real_start(int intro)
     n = found == 0 ? 3 : 4;
     sel = found == 0 ? 1 : 3;
     do_intro_scene(intro);
-    force_mouse_cursor(0x106C);
+    force_mouse_cursor(ICON_CURSORS);
     mouse_show();
     done = 0;
     while (!done) {
@@ -178,7 +178,7 @@ void far real_start(int intro)
                 pfatal_code(ERR_READ | 0x00D);
             if (choice != 3) {
                 draw_start_buttons(n, buttons, 0, sel);
-                read_quikpal(2, pal);
+                read_quikpal(PAL_OPENING, pal);
                 fadein(pal, 2);
             }
         }
@@ -235,7 +235,7 @@ void far real_start(int intro)
     }
     unforce_mouse_cursor(3);
     mouse_show();
-    change_screen(1);
+    change_screen(MODE_GAME);
     editchng(0x7FFE);
     LeftPanel = 0;
 }
@@ -325,19 +325,19 @@ int far parse_start_input(register int n, struct Button far *b, int text, int se
             else if (hit >= n)
                 cur = hit - n;
             break;
-        case KEY_RIGHT: case KEY_DOWN: case 0xA9: case 0xAB: case KEY_CTRL | 'f': case KEY_CTRL | 'n':
+        case KEY_RIGHT: case KEY_DOWN: case KEY_GRIGHT: case KEY_GDOWN: case KEY_CTRL | 'f': case KEY_CTRL | 'n':
             cur++;
             break;
-        case KEY_UP: case KEY_LEFT: case 0xA6: case 0xA8: case KEY_CTRL | 'b': case KEY_CTRL | 'p':
+        case KEY_UP: case KEY_LEFT: case KEY_GUP: case KEY_GLEFT: case KEY_CTRL | 'b': case KEY_CTRL | 'p':
             cur--;
             break;
-        case 0x0D:
+        case KEY_ENTER:
             result = cur;
             break;
-        case KEY_HOME: case KEY_PGUP: case 0xA5: case 0xA7: case KEY_ALT | '<':
+        case KEY_HOME: case KEY_PGUP: case KEY_GHOME: case KEY_GPGUP: case KEY_ALT | '<':
             cur = 0;
             break;
-        case KEY_END: case KEY_PGDN: case 0xAA: case 0xAC: case KEY_ALT | '>':
+        case KEY_END: case KEY_PGDN: case KEY_GEND: case KEY_GPGDN: case KEY_ALT | '>':
             cur = n - 1;
             break;
         case KEY_ESC:

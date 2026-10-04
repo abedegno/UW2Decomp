@@ -136,6 +136,31 @@ struct Bitmap {
 #define BM_4BIT_RLE     8               /* 4-bit, run-length */
 #define BM_4BIT         0xA             /* 4-bit, uncompressed */
 
+/* Icon numbers, the game's names for its 2D pictures (grs_which1): below 1000h an object's
+   picture (through obj_tab); from 1000h the screen art LOADGR.C's load_all_gr keeps in EMS
+   (first_button + n - 1000h); from 2000h the pictures it keeps in video memory (first_vram
+   + n - 2000h). Each .GR file's pictures follow the previous file's, in load_all_gr's
+   order, so the bases come from that order and the picture counts in the headers of UW1's
+   own files (buttons 108, cursors 19, 3dwin 4; lfti 12, flasks 77, compass 20, dragons 36,
+   inv 7, power 14, eyes 10, chains 16, spells 21, scrledge 22, optb 3). The names are the
+   files'. */
+#define ICON_ART        0x1000          /* the first EMS screen art picture */
+#define ICON_BUTTONS    0x1000          /* buttons.gr */
+#define ICON_CURSORS    0x106C          /* cursors.gr; the first is the usual pointer */
+#define ICON_3DWIN      0x107F          /* 3dwin.gr, drawn over the 3D view's frame */
+#define ICON_VRAM       0x2000          /* the first video memory picture */
+#define ICON_LFTI       0x2000          /* lfti.gr, the interaction icons on the left */
+#define ICON_FLASKS     0x200C          /* flasks.gr */
+#define ICON_COMPASS    0x2059          /* compass.gr: four faces, then the needle */
+#define ICON_DRAGONS    0x206D          /* dragons.gr, the dragons beside the view */
+#define ICON_INV        0x2091          /* inv.gr */
+#define ICON_POWER      0x2098          /* power.gr, the power gem */
+#define ICON_EYES       0x20A6          /* eyes.gr, the gargoyle's eyes */
+#define ICON_CHAINS     0x20B0          /* chains.gr */
+#define ICON_SPELLS     0x20C0          /* spells.gr, the active spell icons */
+#define ICON_SCRLEDGE   0x20D5          /* scrledge.gr, the message scroll's edges */
+#define ICON_OPTB       0x20EB          /* optb.gr, the options panel's places */
+
 /* GRSPIC.C: graphic resource lookup, decoding, cursor drawing and image scaling */
 void far * far grs_unpack(void far *data);
 void far grs_fbplot(int icon, int x, int y);
@@ -171,7 +196,10 @@ enum Font {
    chargen.byt palette 3). */
 #define PAL_GAME        0               /* the game's palette (main, the automap's exit) */
 #define PAL_MAP         1               /* the automap (ovr094) */
+#define PAL_OPENING     2               /* the opening screen, opscr.byt (MAINMENU.C) */
 #define PAL_CHARGEN     3               /* character creation (ovr101) */
+#define PAL_PRESENTS    5               /* the "presents" screens, pres1.byt */
+#define PAL_WIN         7               /* the winning screens, win1.byt */
 
 /* GRFX.C: graphics start-up, fonts and palettes */
 /* name: IDA OpenFont, ovr118. FM Towns game_stats calls a set_font_size_ wrapper here, but
@@ -237,6 +265,31 @@ void far value_cuts(unsigned n, int value);
 void far cuts_skipline(FILE *fp);
 
 /* PANELS.C: the screen furniture around the 3D view */
+/* The display elements of set_screen_frame(which, value), by index into PANELS.C's adjust,
+   goal and setting tables; the names are ours, from what each adjust_ function draws.
+   SCR_DRAGON2 is never asked for: set_screen_frame(SCR_DRAGON, n) gives the animation to
+   whichever dragon is free. */
+#define SCR_VITALITY    0               /* the vitality flask: hit points */
+#define SCR_MANA        1               /* the mana flask */
+#define SCR_COMPASS     2               /* the heading, 0 to 15 */
+#define SCR_POWER       3               /* the power gem: a blow's charge, 9 pulsing */
+#define SCR_DRAGON      4               /* the dragons: an animation, 1 to 3 */
+#define SCR_DRAGON2     5
+#define SCR_PANEL       6               /* the right-hand panel (PANEL_*) */
+#define SCR_EYES        7               /* the gargoyle's eyes */
+#define SCR_WEAPON      8               /* the first-person weapon (WEAP_*) */
+/* The weapon element's values: 0 to 2 a swing of that kind, then: */
+#define WEAP_DRAWING    3
+#define WEAP_READY      4
+#define WEAP_SHEATHING  5
+#define WEAP_SHEATHED   6
+/* RightPanel, the right-hand panel showing, which is also its picture in PANELS.GR
+   (picture 3 is the panel's edge, shown while it turns over). */
+#define PANEL_INV       0               /* the inventory */
+#define PANEL_RUNES     1               /* the rune bag */
+#define PANEL_STATS     2               /* the statistics page */
+#define PANEL_EDGE      3
+#define PANEL_TURNING   4               /* while it turns over (adjust_panel) */
 void far adjust_flasks(int which);
 void far adjust_compass(void);
 void far adjust_power(void);

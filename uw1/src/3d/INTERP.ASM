@@ -56,6 +56,42 @@
 ; (INTERP.ASM), in seg051, the data segment while interpreting (UW2: 24F4h).
 OPCODE_TABLE    equ     2738h
 
+; The renderer's data in seg051 (DS while interpreting), as INTERP.ASM's header
+; describes it. The names are ours, from the routines that use the data.
+MAT_XX          equ     1602h   ; the view matrix, 1.15 fixed point: MAT_ab is input a's
+MAT_XY          equ     1604h   ; coefficient in output b (mxmul: x' = x*MAT_XX + y*MAT_YX
+MAT_XZ          equ     1606h   ; + z*MAT_ZX, and so on; z' is the depth)
+MAT_YX          equ     1608h
+MAT_YY          equ     160Ah
+MAT_YZ          equ     160Ch
+MAT_ZX          equ     160Eh
+MAT_ZY          equ     1610h
+MAT_ZZ          equ     1612h
+POLY_FILL       equ     15F6h   ; the seg003 polygon routine the next polygon is drawn with
+POLY_UFILL      equ     15F8h   ; its unclipped twin (do_setcolor: polygon, upolygon)
+CLIP_OR         equ     161Ah   ; the OR of the current polygon's clip codes
+CLIP_AND        equ     161Bh   ; and their AND
+PNT_X           equ     1620h   ; the point table, 8 bytes a point: view x
+PNT_Y           equ     1622h   ; y
+PNT_Z           equ     1624h   ; z, the depth
+PNT_CODES       equ     1626h   ; the clip codes (code_pnt)
+PNT_SHADE       equ     1627h   ; the shade
+VB_END          equ     305h    ; the end of the current polygon vertex buffer
+VB_START        equ     307h    ; and its start
+VBUF0           equ     309h    ; the two vertex buffers (8 bytes a vertex: x, y, z, codes),
+VBUF1           equ     0C69h   ; which the clippers copy between
+PROJ_Y          equ     26B0h   ; the y projection scale (half the window height)
+PROJ_X          equ     26B2h   ; the x projection scale (half the window width)
+CENTRE_X        equ     26B4h   ; the screen centre
+CENTRE_Y        equ     26B6h
+EYE_X           equ     26BAh   ; the eye position, three 32-bit coordinates
+EYE_Y           equ     26BEh
+EYE_Z           equ     26C2h
+OBJ_SHIFT       equ     2880h   ; the current object's coordinate shift
+OBJ_X           equ     2886h   ; the current object's origin, eye-relative and negated
+OBJ_Y           equ     2888h
+OBJ_Z           equ     288Ah
+
         .186
 
         extrn   _seg003_0:far
@@ -208,7 +244,7 @@ _do_eof endp
 _do_pntres proc near
         lodsw
         mov     di,ax
-        add     di,1620h
+        add     di,PNT_X
         test    byte ptr ds:[286Eh],0FFh
         jne     short L27ED
         test    byte ptr [di+6],0FFh
@@ -216,14 +252,14 @@ _do_pntres proc near
 L27ED:
         mov     cx,word ptr [di+4]
         mov     ax,word ptr [di+2]
-        imul    word ptr ds:[26B0h]
+        imul    word ptr ds:[PROJ_Y]
         idiv    cx
-        add     ax,word ptr ds:[26B6h]
+        add     ax,word ptr ds:[CENTRE_Y]
         mov     bx,ax
         mov     ax,word ptr [di]
-        imul    word ptr ds:[26B2h]
+        imul    word ptr ds:[PROJ_X]
         idiv    cx
-        add     ax,word ptr ds:[26B4h]
+        add     ax,word ptr ds:[CENTRE_X]
         push    si
         call    far ptr _seg003_0
         pop     si
@@ -246,34 +282,34 @@ _do_lnres proc near
         mov     di,ax
         lodsw
         mov     bx,ax
-        mov     al,byte ptr [di+1626h]
-        test    byte ptr [bx+1626h],al
+        mov     al,byte ptr [di+PNT_CODES]
+        test    byte ptr [bx+PNT_CODES],al
         jne     short L287F
         push    si
-        or      al,byte ptr [bx+1626h]
+        or      al,byte ptr [bx+PNT_CODES]
         jne     short L2885
-        mov     bp,word ptr [di+1624h]
-        mov     ax,word ptr [di+1620h]
-        imul    word ptr ds:[26B2h]
+        mov     bp,word ptr [di+PNT_Z]
+        mov     ax,word ptr [di+PNT_X]
+        imul    word ptr ds:[PROJ_X]
         idiv    bp
-        add     ax,word ptr ds:[26B4h]
+        add     ax,word ptr ds:[CENTRE_X]
         mov     cx,ax
-        mov     ax,word ptr [di+1622h]
-        imul    word ptr ds:[26B0h]
+        mov     ax,word ptr [di+PNT_Y]
+        imul    word ptr ds:[PROJ_Y]
         idiv    bp
-        add     ax,word ptr ds:[26B6h]
+        add     ax,word ptr ds:[CENTRE_Y]
         mov     si,ax
         mov     di,bx
-        mov     bp,word ptr [di+1624h]
-        mov     ax,word ptr [di+1622h]
-        imul    word ptr ds:[26B0h]
+        mov     bp,word ptr [di+PNT_Z]
+        mov     ax,word ptr [di+PNT_Y]
+        imul    word ptr ds:[PROJ_Y]
         idiv    bp
-        add     ax,word ptr ds:[26B6h]
+        add     ax,word ptr ds:[CENTRE_Y]
         mov     bx,ax
-        mov     ax,word ptr [di+1620h]
-        imul    word ptr ds:[26B2h]
+        mov     ax,word ptr [di+PNT_X]
+        imul    word ptr ds:[PROJ_X]
         idiv    bp
-        add     ax,word ptr ds:[26B4h]
+        add     ax,word ptr ds:[CENTRE_X]
         mov     dx,si
         call    far ptr _seg003_8
 L287E:
@@ -283,34 +319,34 @@ L287F:
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
 L2885:
-        add     bx,1620h
-        add     di,1620h
+        add     bx,PNT_X
+        add     di,PNT_X
         or      al,al
         js      short L2909
 L2891:
         mov     word ptr ss:[4D5h],28EBh
         mov     bp,word ptr [bx+4]
         mov     ax,word ptr [bx]
-        imul    word ptr ds:[26B2h]
+        imul    word ptr ds:[PROJ_X]
         idiv    bp
-        add     ax,word ptr ds:[26B4h]
+        add     ax,word ptr ds:[CENTRE_X]
         mov     cx,ax
         mov     ax,word ptr [bx+2]
-        imul    word ptr ds:[26B0h]
+        imul    word ptr ds:[PROJ_Y]
         idiv    bp
-        add     ax,word ptr ds:[26B6h]
+        add     ax,word ptr ds:[CENTRE_Y]
         mov     si,ax
         mov     word ptr ss:[4D5h],28EDh
         mov     bp,word ptr [di+4]
         mov     ax,word ptr [di+2]
-        imul    word ptr ds:[26B0h]
+        imul    word ptr ds:[PROJ_Y]
         idiv    bp
-        add     ax,word ptr ds:[26B6h]
+        add     ax,word ptr ds:[CENTRE_Y]
         mov     bx,ax
         mov     ax,word ptr [di]
-        imul    word ptr ds:[26B2h]
+        imul    word ptr ds:[PROJ_X]
         idiv    bp
-        add     ax,word ptr ds:[26B4h]
+        add     ax,word ptr ds:[CENTRE_X]
         mov     dx,si
         call    far ptr _seg003_10
         pop     si
@@ -634,7 +670,7 @@ _do_multires proc near
         mov     word ptr ds:[271Ch],ax
         lodsw
         mov     di,ax
-        add     di,1620h
+        add     di,PNT_X
         mov     word ptr ds:[271Eh],di
 L2B4C:
         call    _load_xlate_rotate_pnt
@@ -663,7 +699,7 @@ _do_minimulti proc near
         xor     ah,ah
         shl     ax,3
         mov     di,ax
-        add     di,1620h
+        add     di,PNT_X
         mov     word ptr ds:[271Eh],di
 L2B88:
         call    _mini_xlate_rotate_pnt
@@ -687,7 +723,7 @@ _do_minimulti endp
 _do_setshade proc near
         lodsw
         mov     cx,ax
-        mov     di,1620h
+        mov     di,PNT_X
 L2BB4:
         lodsw
         mov     bx,ax
@@ -714,7 +750,7 @@ _do_uwshade proc near
         mov     dx,word ptr [bx]
         mov     byte ptr cs:[6950h],dl
         mov     dx,word ptr ds:[2934h]
-        mov     di,1620h
+        mov     di,PNT_X
 L2BDB:
         lodsw
         mov     bx,ax
@@ -733,7 +769,7 @@ L2BE7:
         jmp     word ptr [bx+OPCODE_TABLE]
         lodsw
         mov     bx,word ptr [si+6]
-        mov     byte ptr [bx+1627h],al
+        mov     byte ptr [bx+PNT_SHADE],al
 _do_uwshade endp
 
 ; seg004_2BFE  (+2BFE)
@@ -745,11 +781,11 @@ _do_defres proc near
         call    _load_xlate_rotate_pnt
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         call    _code_pnt
-        mov     byte ptr [di+1626h],al
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -764,11 +800,11 @@ _do_minires proc near
         xor     ah,ah
         shl     ax,3
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         call    _code_pnt
-        mov     byte ptr [di+1626h],al
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -781,16 +817,16 @@ _do_strres proc near
         lodsw
         mov     dx,si
         mov     si,ax
-        add     si,1620h
-        mov     di,309h
+        add     si,PNT_X
+        mov     di,VBUF0
         movsw
         movsw
         movsw
         lodsb
         stosw
-        mov     byte ptr ds:[161Bh],al
-        mov     byte ptr ds:[161Ah],al
-        mov     word ptr ds:[305h],di
+        mov     byte ptr ds:[CLIP_AND],al
+        mov     byte ptr ds:[CLIP_OR],al
+        mov     word ptr ds:[VB_END],di
         mov     si,dx
         lodsw
         xchg    bx,ax
@@ -804,16 +840,16 @@ _do_cntres proc near
         lodsw
         mov     dx,si
         mov     si,ax
-        add     si,1620h
-        mov     di,word ptr ds:[305h]
+        add     si,PNT_X
+        mov     di,word ptr ds:[VB_END]
         movsw
         movsw
         movsw
         lodsb
         stosw
-        and     byte ptr ds:[161Bh],al
-        or      byte ptr ds:[161Ah],al
-        mov     word ptr ds:[305h],di
+        and     byte ptr ds:[CLIP_AND],al
+        or      byte ptr ds:[CLIP_OR],al
+        mov     word ptr ds:[VB_END],di
         mov     si,dx
 L2C84:
         lodsw
@@ -827,38 +863,38 @@ _do_cntres endp
 ; point (two vertices, offset sideways by the width rotated through 26D0h/26D2h, which
 ; scale_matrix computes). Then draws it with do_closure.
 _do_rod proc near
-        mov     byte ptr ds:[161Bh],0FFh
-        mov     byte ptr ds:[161Ah],0
+        mov     byte ptr ds:[CLIP_AND],0FFh
+        mov     byte ptr ds:[CLIP_OR],0
         lodsw
         or      ax,ax
         jne     short L2CB4
-        mov     di,309h
+        mov     di,VBUF0
         lodsw
         push    si
         mov     si,ax
-        add     si,1620h
+        add     si,PNT_X
         movsw
         movsw
         movsw
         lodsw
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         stosw
         pop     si
         jmp     short L2D11
 L2CB4:
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
         mov     cx,ax
         imul    word ptr ds:[26D2h]
         mov     ax,cx
         mov     cx,dx
         imul    word ptr ds:[26D0h]
-        mov     di,309h
+        mov     di,VBUF0
         lodsw
         push    si
         mov     si,ax
-        add     si,1620h
+        add     si,PNT_X
         lodsw
         add     ax,dx
         mov     bx,ax
@@ -872,8 +908,8 @@ L2CB4:
         mov     bp,ax
         stosw
         call    _code_pnt
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         stosw
         pop     cx
         sub     si,6
@@ -889,8 +925,8 @@ L2CB4:
         mov     bp,ax
         stosw
         call    _code_pnt
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         stosw
         pop     si
 L2D11:
@@ -900,18 +936,18 @@ L2D11:
         lodsw
         push    si
         mov     si,ax
-        add     si,1620h
+        add     si,PNT_X
         movsw
         movsw
         movsw
         lodsw
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         stosw
         pop     si
         jmp     short L2D88
 L2D2E:
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
         mov     cx,ax
         imul    word ptr ds:[26D2h]
@@ -921,7 +957,7 @@ L2D2E:
         lodsw
         push    si
         mov     si,ax
-        add     si,1620h
+        add     si,PNT_X
         lodsw
         sub     ax,dx
         mov     bx,ax
@@ -935,8 +971,8 @@ L2D2E:
         mov     bp,ax
         stosw
         call    _code_pnt
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         stosw
         pop     cx
         sub     si,6
@@ -952,12 +988,12 @@ L2D2E:
         mov     bp,ax
         stosw
         call    _code_pnt
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         stosw
         pop     si
 L2D88:
-        mov     word ptr ds:[305h],di
+        mov     word ptr ds:[VB_END],di
         jmp     _do_closure
 _do_rod endp
 
@@ -965,34 +1001,34 @@ _do_rod endp
 ; do_rod for a level view (check_flat installs it in the opcode table): the sideways
 ; offset is along x only, using 272Ch.
 _flat_rod proc near
-        mov     byte ptr ds:[161Bh],0FFh
-        mov     byte ptr ds:[161Ah],0
+        mov     byte ptr ds:[CLIP_AND],0FFh
+        mov     byte ptr ds:[CLIP_OR],0
         lodsw
         or      ax,ax
         jne     short L2DB9
-        mov     di,309h
+        mov     di,VBUF0
         lodsw
         push    si
         mov     si,ax
-        add     si,1620h
+        add     si,PNT_X
         movsw
         movsw
         movsw
         lodsw
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         stosw
         pop     si
         jmp     short L2E06
 L2DB9:
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
         imul    word ptr ds:[272Ch]
-        mov     di,309h
+        mov     di,VBUF0
         lodsw
         push    si
         mov     si,ax
-        add     si,1620h
+        add     si,PNT_X
         lodsw
         add     ax,dx
         mov     bx,ax
@@ -1004,8 +1040,8 @@ L2DB9:
         mov     bp,ax
         stosw
         call    _code_pnt
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         stosw
         sub     si,6
         lodsw
@@ -1019,8 +1055,8 @@ L2DB9:
         mov     bp,ax
         stosw
         call    _code_pnt
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         stosw
         pop     si
 L2E06:
@@ -1030,24 +1066,24 @@ L2E06:
         lodsw
         push    si
         mov     si,ax
-        add     si,1620h
+        add     si,PNT_X
         movsw
         movsw
         movsw
         lodsw
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         stosw
         pop     si
         jmp     short L2E6D
 L2E23:
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
         imul    word ptr ds:[272Ch]
         lodsw
         push    si
         mov     si,ax
-        add     si,1620h
+        add     si,PNT_X
         lodsw
         sub     ax,dx
         mov     bx,ax
@@ -1059,8 +1095,8 @@ L2E23:
         mov     bp,ax
         stosw
         call    _code_pnt
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         stosw
         sub     si,6
         lodsw
@@ -1074,12 +1110,12 @@ L2E23:
         mov     bp,ax
         stosw
         call    _code_pnt
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         stosw
         pop     si
 L2E6D:
-        mov     word ptr ds:[305h],di
+        mov     word ptr ds:[VB_END],di
         jmp     short _do_closure
 _flat_rod endp
 
@@ -1090,10 +1126,10 @@ _flat_rod endp
 _do_polyres proc near
         lodsw
         mov     cx,ax
-        mov     di,309h
+        mov     di,VBUF0
         xor     bx,bx
         not     bl
-        mov     bp,1620h
+        mov     bp,PNT_X
 L2E80:
         lodsw
         xchg    si,ax
@@ -1113,9 +1149,9 @@ L2E80:
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
 L2EA0:
-        mov     byte ptr ds:[161Ah],bh
-        mov     byte ptr ds:[161Bh],bl
-        mov     word ptr ds:[305h],di
+        mov     byte ptr ds:[CLIP_OR],bh
+        mov     byte ptr ds:[CLIP_AND],bl
+        mov     word ptr ds:[VB_END],di
 _do_polyres endp
 
 ; seg004_2EAC  (+2EAC)
@@ -1128,27 +1164,27 @@ _do_polyres endp
 ; coordinate overflows. The labels inside are FM names; the add immediates at modify_biasx,
 ; modify_biasy, modify_bx2 and modify_by2 are the screen centre, patched by render_3d.
 _do_closure proc near
-        mov     di,309h
-        mov     word ptr ds:[307h],di
-        cmp     word ptr ds:[15F6h],offset _seg003_6146
+        mov     di,VBUF0
+        mov     word ptr ds:[VB_START],di
+        cmp     word ptr ds:[POLY_FILL],offset _seg003_6146
         jne     short draw_poly_buf_ptr
         jmp     _smooth_closure
 draw_poly_buf_ptr:
         mov     word ptr ds:[2884h],0
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         je      short L2ECE
         jmp     L2C84
 L2ECE:
-        test    byte ptr ds:[161Ah],0FFh
+        test    byte ptr ds:[CLIP_OR],0FFh
         jne     short clip_needed
 L2ED5:
         push    si
         mov     ax,seg seg048
         mov     es,ax
         mov     di,415Ch
-        mov     bx,word ptr ds:[305h]
-        mov     si,word ptr ds:[307h]
-        mov     cx,word ptr ds:[26B2h]
+        mov     bx,word ptr ds:[VB_END]
+        mov     si,word ptr ds:[VB_START]
+        mov     cx,word ptr ds:[PROJ_X]
 L2EEA:
         lodsw
         mov     bp,word ptr [si+2]
@@ -1158,7 +1194,7 @@ modify_biasx:
         add     ax,4D2h
         stosw
         mov     ax,word ptr [si]
-        imul    word ptr ds:[26B0h]
+        imul    word ptr ds:[PROJ_Y]
         idiv    bp
 modify_biasy:
         add     ax,4D2h
@@ -1166,13 +1202,13 @@ modify_biasy:
         add     si,6
         cmp     si,bx
         jne     L2EEA
-        sub     bx,word ptr ds:[307h]
+        sub     bx,word ptr ds:[VB_START]
         shr     bx,1
         shr     bx,1
         shr     bx,1
         mov     cx,bx
         inc     word ptr ds:[2884h]
-        mov     bp,word ptr ds:[15F6h]
+        mov     bp,word ptr ds:[POLY_FILL]
         call    far ptr _seg003_5B0B
         mov     ax,ds
         mov     es,ax
@@ -1188,9 +1224,9 @@ L2F30:
         mov     ax,seg seg048
         mov     es,ax
         mov     di,415Ch
-        mov     bx,word ptr ds:[305h]
-        mov     si,word ptr ds:[307h]
-        mov     cx,word ptr ds:[26B2h]
+        mov     bx,word ptr ds:[VB_END]
+        mov     si,word ptr ds:[VB_START]
+        mov     cx,word ptr ds:[PROJ_X]
 L2F4B:
         lodsw
         mov     bp,word ptr [si+2]
@@ -1203,7 +1239,7 @@ modify_bx2:
 L2F5B:
         stosw
         mov     ax,word ptr [si]
-        imul    word ptr ds:[26B0h]
+        imul    word ptr ds:[PROJ_Y]
         idiv    bp
 modify_by2:
         add     ax,4D2h
@@ -1215,12 +1251,12 @@ L2F6C:
         cmp     si,bx
         jne     L2F4B
         mov     cx,bx
-        sub     cx,word ptr ds:[307h]
+        sub     cx,word ptr ds:[VB_START]
         shr     cx,1
         shr     cx,1
         shr     cx,1
         inc     word ptr ds:[2884h]
-        mov     bp,word ptr ds:[15F6h]
+        mov     bp,word ptr ds:[POLY_FILL]
         call    far ptr _seg003_5B0B
         mov     ax,ds
         mov     es,ax
@@ -1230,56 +1266,56 @@ L2F6C:
         jmp     word ptr [bx+OPCODE_TABLE]
 must_clip_3d:
         mov     word ptr ss:[4D5h],offset _overflow_handler_reg
-        test    byte ptr ds:[161Ah],4
+        test    byte ptr ds:[CLIP_OR],4
         je      short L2FC1
         push    si
         call    _clip_top
         pop     si
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         jne     short L3027
-        test    byte ptr ds:[161Ah],0FFh
+        test    byte ptr ds:[CLIP_OR],0FFh
         js      short L2FC1
         jne     short L2FBE
         jmp     L2ED5
 L2FBE:
         jmp     clip_needed
 L2FC1:
-        test    byte ptr ds:[161Ah],8
+        test    byte ptr ds:[CLIP_OR],8
         je      short L2FE3
         push    si
         call    _clip_bot
         pop     si
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         jne     short L3027
-        test    byte ptr ds:[161Ah],0FFh
+        test    byte ptr ds:[CLIP_OR],0FFh
         js      short L2FE3
         jne     short L2FE0
         jmp     L2ED5
 L2FE0:
         jmp     clip_needed
 L2FE3:
-        test    byte ptr ds:[161Ah],1
+        test    byte ptr ds:[CLIP_OR],1
         je      short L3005
         push    si
         call    _clip_left
         pop     si
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         jne     short L3027
-        test    byte ptr ds:[161Ah],0FFh
+        test    byte ptr ds:[CLIP_OR],0FFh
         js      short L3005
         jne     short L3002
         jmp     L2ED5
 L3002:
         jmp     clip_needed
 L3005:
-        test    byte ptr ds:[161Ah],2
+        test    byte ptr ds:[CLIP_OR],2
         je      short L3027
         push    si
         call    _clip_right
         pop     si
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         jne     short L3027
-        test    byte ptr ds:[161Ah],0FFh
+        test    byte ptr ds:[CLIP_OR],0FFh
         js      short L3027
         jne     short L3024
         jmp     L2ED5
@@ -1410,21 +1446,21 @@ _do_sortnorm proc near
         lodsw
         mov     cx,ax
         lodsw
-        add     ax,word ptr ds:[2886h]
+        add     ax,word ptr ds:[OBJ_X]
         imul    cx
         mov     cx,dx
         mov     bp,ax
         lodsw
         mov     di,ax
         lodsw
-        add     ax,word ptr ds:[2888h]
+        add     ax,word ptr ds:[OBJ_Y]
         imul    di
         add     bp,ax
         adc     cx,dx
         lodsw
         mov     di,ax
         lodsw
-        add     ax,word ptr ds:[288Ah]
+        add     ax,word ptr ds:[OBJ_Z]
         imul    di
         add     bp,ax
         adc     cx,dx
@@ -1454,14 +1490,14 @@ _do_sortnorm_x0 proc near
         lodsw
         mov     di,ax
         lodsw
-        add     ax,word ptr ds:[2888h]
+        add     ax,word ptr ds:[OBJ_Y]
         imul    di
         mov     bp,ax
         mov     cx,dx
         lodsw
         mov     di,ax
         lodsw
-        add     ax,word ptr ds:[288Ah]
+        add     ax,word ptr ds:[OBJ_Z]
         imul    di
         add     bp,ax
         adc     cx,dx
@@ -1493,14 +1529,14 @@ _do_sortnorm_y0 proc near
         lodsw
         mov     di,ax
         lodsw
-        add     ax,word ptr ds:[2886h]
+        add     ax,word ptr ds:[OBJ_X]
         imul    di
         mov     bp,ax
         mov     cx,dx
         lodsw
         mov     di,ax
         lodsw
-        add     ax,word ptr ds:[288Ah]
+        add     ax,word ptr ds:[OBJ_Z]
         imul    di
         add     bp,ax
         adc     cx,dx
@@ -1532,14 +1568,14 @@ _do_sortnorm_z0 proc near
         lodsw
         mov     di,ax
         lodsw
-        add     ax,word ptr ds:[2886h]
+        add     ax,word ptr ds:[OBJ_X]
         imul    di
         mov     bp,ax
         mov     cx,dx
         lodsw
         mov     di,ax
         lodsw
-        add     ax,word ptr ds:[2888h]
+        add     ax,word ptr ds:[OBJ_Y]
         imul    di
         add     bp,ax
         adc     cx,dx
@@ -1573,38 +1609,38 @@ _do_sortnorm_z0 endp
 _do_org proc near
         mov     word ptr ds:[2882h],0
         lodsw
-        sub     ax,word ptr ds:[26BAh]
+        sub     ax,word ptr ds:[EYE_X]
         mov     bx,word ptr [si]
         inc     si
         inc     si
-        sbb     bx,word ptr ds:[26BCh]
+        sbb     bx,word ptr ds:[EYE_X+2]
         cwd
         cmp     bx,dx
         jne     short L3201
         neg     ax
-        mov     word ptr ds:[2886h],ax
+        mov     word ptr ds:[OBJ_X],ax
         lodsw
-        sub     ax,word ptr ds:[26BEh]
+        sub     ax,word ptr ds:[EYE_Y]
         mov     bx,word ptr [si]
         inc     si
         inc     si
-        sbb     bx,word ptr ds:[26C0h]
+        sbb     bx,word ptr ds:[EYE_Y+2]
         cwd
         cmp     bx,dx
         jne     short L3201
         neg     ax
-        mov     word ptr ds:[2888h],ax
+        mov     word ptr ds:[OBJ_Y],ax
         lodsw
-        sub     ax,word ptr ds:[26C2h]
+        sub     ax,word ptr ds:[EYE_Z]
         mov     bx,word ptr [si]
         inc     si
         inc     si
-        sbb     bx,word ptr ds:[26C4h]
+        sbb     bx,word ptr ds:[EYE_Z+2]
         cwd
         cmp     bx,dx
         jne     short L3201
         neg     ax
-        mov     word ptr ds:[288Ah],ax
+        mov     word ptr ds:[OBJ_Z],ax
         call    _self_modify
         lodsw
         xchg    bx,ax
@@ -1624,7 +1660,7 @@ _do_hull proc near
         lodsw
         mov     cx,ax
         dec     cx
-        mov     bx,1626h
+        mov     bx,PNT_CODES
         lodsw
         mov     di,ax
         mov     dl,byte ptr [bx+di]
@@ -1655,13 +1691,13 @@ _flat_y_rel proc near
         lodsw
         mov     bp,ax
         lodsw
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
         sar     ax,1
         mov     cx,ax
         lodsw
         xchg    bp,si
-        mov     di,1620h
+        mov     di,PNT_X
         add     si,di
         add     di,ax
         movsw
@@ -1717,27 +1753,27 @@ _do_y_rel proc near
         lodsw
         mov     di,ax
         lodsw
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         mov     di,ax
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         add     bx,dx
-        mov     ax,word ptr ds:[160Ah]
+        mov     ax,word ptr ds:[MAT_YY]
         imul    di
         add     cx,dx
-        mov     ax,word ptr ds:[160Ch]
+        mov     ax,word ptr ds:[MAT_YZ]
         imul    di
         add     bp,dx
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         call    _code_pnt
-        mov     byte ptr [di+1626h],al
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -1791,28 +1827,28 @@ L3305:
 L3319:
         mov     word ptr [di+2],bx
 L331C:
-        push    word ptr ds:[2886h]
-        push    word ptr ds:[2888h]
-        push    word ptr ds:[288Ah]
+        push    word ptr ds:[OBJ_X]
+        push    word ptr ds:[OBJ_Y]
+        push    word ptr ds:[OBJ_Z]
         lodsw
-        sub     word ptr ds:[2886h],ax
+        sub     word ptr ds:[OBJ_X],ax
         lodsw
-        sub     word ptr ds:[2888h],ax
+        sub     word ptr ds:[OBJ_Y],ax
         lodsw
-        sub     word ptr ds:[288Ah],ax
+        sub     word ptr ds:[OBJ_Z],ax
         push    si
         mov     si,word ptr [di+6]
         or      bx,bx
         je      short L33AD
-        push    word ptr ds:[1602h]
-        push    word ptr ds:[1608h]
-        push    word ptr ds:[160Eh]
-        push    word ptr ds:[1604h]
-        push    word ptr ds:[160Ah]
-        push    word ptr ds:[1610h]
-        push    word ptr ds:[1606h]
-        push    word ptr ds:[160Ch]
-        push    word ptr ds:[1612h]
+        push    word ptr ds:[MAT_XX]
+        push    word ptr ds:[MAT_YX]
+        push    word ptr ds:[MAT_ZX]
+        push    word ptr ds:[MAT_XY]
+        push    word ptr ds:[MAT_YY]
+        push    word ptr ds:[MAT_ZY]
+        push    word ptr ds:[MAT_XZ]
+        push    word ptr ds:[MAT_YZ]
+        push    word ptr ds:[MAT_ZZ]
         call    bp
         push    si
         call    _check_flat
@@ -1821,19 +1857,19 @@ L331C:
         lodsw
         xchg    bx,ax
         call    word ptr [bx+OPCODE_TABLE]
-        pop     word ptr ds:[1612h]
-        pop     word ptr ds:[160Ch]
-        pop     word ptr ds:[1606h]
-        pop     word ptr ds:[1610h]
-        pop     word ptr ds:[160Ah]
-        pop     word ptr ds:[1604h]
-        pop     word ptr ds:[160Eh]
-        pop     word ptr ds:[1608h]
-        pop     word ptr ds:[1602h]
+        pop     word ptr ds:[MAT_ZZ]
+        pop     word ptr ds:[MAT_YZ]
+        pop     word ptr ds:[MAT_XZ]
+        pop     word ptr ds:[MAT_ZY]
+        pop     word ptr ds:[MAT_YY]
+        pop     word ptr ds:[MAT_XY]
+        pop     word ptr ds:[MAT_ZX]
+        pop     word ptr ds:[MAT_YX]
+        pop     word ptr ds:[MAT_XX]
         pop     si
-        pop     word ptr ds:[288Ah]
-        pop     word ptr ds:[2888h]
-        pop     word ptr ds:[2886h]
+        pop     word ptr ds:[OBJ_Z]
+        pop     word ptr ds:[OBJ_Y]
+        pop     word ptr ds:[OBJ_X]
         call    _self_modify
         lodsw
         xchg    bx,ax
@@ -1844,9 +1880,9 @@ L33AD:
         xchg    bx,ax
         call    word ptr [bx+OPCODE_TABLE]
         pop     si
-        pop     word ptr ds:[288Ah]
-        pop     word ptr ds:[2888h]
-        pop     word ptr ds:[2886h]
+        pop     word ptr ds:[OBJ_Z]
+        pop     word ptr ds:[OBJ_Y]
+        pop     word ptr ds:[OBJ_X]
         call    _self_modify
         lodsw
         xchg    bx,ax
@@ -1861,8 +1897,8 @@ _do_movres proc near
         mov     di,ax
         lodsw
         xchg    si,ax
-        add     di,1620h
-        add     si,1620h
+        add     di,PNT_X
+        add     si,PNT_X
         movsw
         movsw
         movsw
@@ -1880,23 +1916,23 @@ _flat_x_rel proc near
         lodsw
         mov     di,ax
         lodsw
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         mov     di,ax
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         add     bx,dx
         mov     ax,di
-        imul    word ptr ds:[1606h]
+        imul    word ptr ds:[MAT_XZ]
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
         xor     al,al
         add     bp,dx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_Z],bp
         jg      short L3420
         mov     al,80h
 L3420:
@@ -1917,7 +1953,7 @@ L3431:
         jge     short L3437
         add     al,8
 L3437:
-        mov     byte ptr [di+1626h],al
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -1930,27 +1966,27 @@ _do_x_rel proc near
         lodsw
         mov     di,ax
         lodsw
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         mov     di,ax
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         add     bx,dx
-        mov     ax,word ptr ds:[1604h]
+        mov     ax,word ptr ds:[MAT_XY]
         imul    di
         add     cx,dx
-        mov     ax,word ptr ds:[1606h]
+        mov     ax,word ptr ds:[MAT_XZ]
         imul    di
         add     bp,dx
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         call    _code_pnt
-        mov     byte ptr [di+1626h],al
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -1962,23 +1998,23 @@ _flat_z_rel proc near
         lodsw
         mov     di,ax
         lodsw
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         mov     di,ax
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     bx,dx
-        mov     ax,word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
         imul    di
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
         xor     al,al
         add     bp,dx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_Z],bp
         jg      short L34C3
         mov     al,80h
 L34C3:
@@ -1999,7 +2035,7 @@ L34D4:
         jge     short L34DA
         add     al,8
 L34DA:
-        mov     byte ptr [di+1626h],al
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -2011,27 +2047,27 @@ _do_z_rel proc near
         lodsw
         mov     di,ax
         lodsw
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         mov     di,ax
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     bx,dx
-        mov     ax,word ptr ds:[1610h]
+        mov     ax,word ptr ds:[MAT_ZY]
         imul    di
         add     cx,dx
-        mov     ax,word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
         imul    di
         add     bp,dx
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         call    _code_pnt
-        mov     byte ptr [di+1626h],al
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -2040,41 +2076,41 @@ _do_z_rel endp
 ; seg004_352C  (+352C)
 ; Opcode 92h, operands: dx, dz, source point, destination point. Offset along two axes.
 _do_xz_rel proc near
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         lodsw
         shl     ax,cl
         mov     di,ax
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     bx,dx
-        mov     ax,word ptr ds:[1606h]
+        mov     ax,word ptr ds:[MAT_XZ]
         imul    di
         mov     bp,dx
-        mov     ax,word ptr ds:[1604h]
+        mov     ax,word ptr ds:[MAT_XY]
         imul    di
         lodsw
         shl     ax,cl
         mov     cx,dx
         mov     di,ax
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     bx,dx
-        mov     ax,word ptr ds:[1610h]
+        mov     ax,word ptr ds:[MAT_ZY]
         imul    di
         add     cx,dx
-        mov     ax,word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
         imul    di
         add     bp,dx
         lodsw
         mov     di,ax
-        add     bx,word ptr [di+1620h]
-        add     cx,word ptr [di+1622h]
-        add     bp,word ptr [di+1624h]
+        add     bx,word ptr [di+PNT_X]
+        add     cx,word ptr [di+PNT_Y]
+        add     bp,word ptr [di+PNT_Z]
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         call    _code_pnt
-        mov     byte ptr [di+1626h],al
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -2083,41 +2119,41 @@ _do_xz_rel endp
 ; seg004_358D  (+358D)
 ; Opcode 90h, operands: dx, dy, source point, destination point.
 _do_xy_rel proc near
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         lodsw
         shl     ax,cl
         mov     di,ax
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     bx,dx
-        mov     ax,word ptr ds:[1606h]
+        mov     ax,word ptr ds:[MAT_XZ]
         imul    di
         mov     bp,dx
-        mov     ax,word ptr ds:[1604h]
+        mov     ax,word ptr ds:[MAT_XY]
         imul    di
         lodsw
         shl     ax,cl
         mov     cx,dx
         mov     di,ax
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         add     bx,dx
-        mov     ax,word ptr ds:[160Ah]
+        mov     ax,word ptr ds:[MAT_YY]
         imul    di
         add     cx,dx
-        mov     ax,word ptr ds:[160Ch]
+        mov     ax,word ptr ds:[MAT_YZ]
         imul    di
         add     bp,dx
         lodsw
         mov     di,ax
-        add     bx,word ptr [di+1620h]
-        add     cx,word ptr [di+1622h]
-        add     bp,word ptr [di+1624h]
+        add     bx,word ptr [di+PNT_X]
+        add     cx,word ptr [di+PNT_Y]
+        add     bp,word ptr [di+PNT_Z]
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         call    _code_pnt
-        mov     byte ptr [di+1626h],al
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -2127,41 +2163,41 @@ _do_xy_rel endp
 ; Opcode 94h, operands: dy, dz, source point, destination point. (Note the operand order: the
 ; first operand is multiplied by the z row and the second by the y row, as in the code.)
 _do_yz_rel proc near
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         lodsw
         shl     ax,cl
         mov     di,ax
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         mov     bx,dx
-        mov     ax,word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
         imul    di
         mov     bp,dx
-        mov     ax,word ptr ds:[1610h]
+        mov     ax,word ptr ds:[MAT_ZY]
         imul    di
         lodsw
         shl     ax,cl
         mov     cx,dx
         mov     di,ax
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         add     bx,dx
-        mov     ax,word ptr ds:[160Ah]
+        mov     ax,word ptr ds:[MAT_YY]
         imul    di
         add     cx,dx
-        mov     ax,word ptr ds:[160Ch]
+        mov     ax,word ptr ds:[MAT_YZ]
         imul    di
         add     bp,dx
         lodsw
         mov     di,ax
-        add     bx,word ptr [di+1620h]
-        add     cx,word ptr [di+1622h]
-        add     bp,word ptr [di+1624h]
+        add     bx,word ptr [di+PNT_X]
+        add     cx,word ptr [di+PNT_Y]
+        add     bp,word ptr [di+PNT_Z]
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         call    _code_pnt
-        mov     byte ptr [di+1626h],al
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -2170,35 +2206,35 @@ _do_yz_rel endp
 ; seg004_364F  (+364F)
 ; flat_ variant of do_xz_rel.
 _flat_xz_rel proc near
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         lodsw
         shl     ax,cl
         mov     di,ax
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     bx,dx
-        mov     ax,word ptr ds:[1606h]
+        mov     ax,word ptr ds:[MAT_XZ]
         imul    di
         mov     bp,dx
         lodsw
         shl     ax,cl
         mov     di,ax
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     bx,dx
-        mov     ax,word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
         imul    di
         add     bp,dx
         lodsw
         mov     di,ax
-        add     bx,word ptr [di+1620h]
-        add     bp,word ptr [di+1624h]
-        mov     cx,word ptr [di+1622h]
+        add     bx,word ptr [di+PNT_X]
+        add     bp,word ptr [di+PNT_Z]
+        mov     cx,word ptr [di+PNT_Y]
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         call    _code_pnt
-        mov     byte ptr [di+1626h],al
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -2207,13 +2243,13 @@ _flat_xz_rel endp
 ; seg004_36A2  (+36A2)
 ; flat_ variant of do_xy_rel.
 _flat_xy_rel proc near
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         lodsw
         shl     ax,cl
         mov     di,ax
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     bx,dx
-        mov     ax,word ptr ds:[1606h]
+        mov     ax,word ptr ds:[MAT_XZ]
         imul    di
         mov     bp,dx
         lodsw
@@ -2222,16 +2258,16 @@ _flat_xy_rel proc near
         mov     cx,ax
         lodsw
         mov     di,ax
-        add     bx,word ptr [di+1620h]
-        add     cx,word ptr [di+1622h]
-        add     bp,word ptr [di+1624h]
+        add     bx,word ptr [di+PNT_X]
+        add     cx,word ptr [di+PNT_Y]
+        add     bp,word ptr [di+PNT_Z]
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         call    _code_pnt
-        mov     byte ptr [di+1626h],al
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -2240,13 +2276,13 @@ _flat_xy_rel endp
 ; seg004_36EA  (+36EA)
 ; flat_ variant of do_yz_rel.
 _flat_yz_rel proc near
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         lodsw
         shl     ax,cl
         mov     di,ax
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         mov     bx,dx
-        mov     ax,word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
         imul    di
         mov     bp,dx
         lodsw
@@ -2255,16 +2291,16 @@ _flat_yz_rel proc near
         mov     cx,ax
         lodsw
         mov     di,ax
-        add     bx,word ptr [di+1620h]
-        add     cx,word ptr [di+1622h]
-        add     bp,word ptr [di+1624h]
+        add     bx,word ptr [di+PNT_X]
+        add     cx,word ptr [di+PNT_Y]
+        add     bp,word ptr [di+PNT_Z]
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         call    _code_pnt
-        mov     byte ptr [di+1626h],al
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -2278,9 +2314,9 @@ _do_setcolor proc near
         lodsw
 setcol_common:
         mov     bx,438Dh
-        mov     word ptr ds:[15F6h],bx
+        mov     word ptr ds:[POLY_FILL],bx
         mov     bx,4134h
-        mov     word ptr ds:[15F8h],bx
+        mov     word ptr ds:[POLY_UFILL],bx
         mov     bx,seg seg048
         mov     ds,bx
         call    far ptr _seg003_5B65
@@ -2313,10 +2349,10 @@ _seg004_375E proc near
         stosw
         lodsw
         mov     di,ax
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
-        mov     al,byte ptr [di+1626h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
+        mov     al,byte ptr [di+PNT_CODES]
         mov     byte ptr ds:[286Dh],al
         lodsw
         mov     di,ax
@@ -2325,7 +2361,7 @@ _seg004_375E proc near
         lodsw
         push    si
         mov     si,ax
-        mov     ax,word ptr [di+1620h]
+        mov     ax,word ptr [di+PNT_X]
         sub     ax,bx
         cwd
         idiv    si
@@ -2335,7 +2371,7 @@ _seg004_375E proc near
         cwd
         mov     word ptr ds:[26EEh],ax
         add     word ptr ds:[26ECh],dx
-        mov     ax,word ptr [di+1624h]
+        mov     ax,word ptr [di+PNT_Z]
         sub     ax,di
         cwd
         idiv    si
@@ -2345,7 +2381,7 @@ _seg004_375E proc near
         cwd
         mov     word ptr ds:[26F6h],ax
         add     word ptr ds:[26F4h],dx
-        mov     ax,word ptr [di+1622h]
+        mov     ax,word ptr [di+PNT_Y]
         sub     ax,cx
         cwd
         idiv    si
@@ -2355,7 +2391,7 @@ _seg004_375E proc near
         cwd
         mov     word ptr ds:[26F2h],ax
         add     word ptr ds:[26F0h],dx
-        mov     al,byte ptr [di+1626h]
+        mov     al,byte ptr [di+PNT_CODES]
         cmp     al,byte ptr ds:[286Dh]
         je      short L3833
         mov     di,word ptr ds:[26F8h]
@@ -2376,10 +2412,10 @@ L37DD:
         add     word ptr ds:[26FEh],ax
         adc     bp,0
         call    _code_pnt
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
-        mov     byte ptr [di+1626h],al
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
+        mov     byte ptr [di+PNT_CODES],al
         add     di,8
         dec     si
         jne     L37DD
@@ -2407,10 +2443,10 @@ L383B:
         adc     bp,word ptr ds:[26F4h]
         add     word ptr ds:[26FEh],ax
         adc     bp,0
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],si
-        mov     word ptr [di+1624h],bx
-        mov     byte ptr [di+1626h],dl
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],si
+        mov     word ptr [di+PNT_Z],bx
+        mov     byte ptr [di+PNT_CODES],dl
         add     di,8
         loop    L383B
         pop     si
@@ -2442,8 +2478,8 @@ _do_goursurf proc near
         mov     al,byte ptr es:[bx+21Fh]
         pop     es
         mov     byte ptr ds:[300h],al
-        mov     word ptr ds:[15F6h],offset _seg003_6146
-        mov     word ptr ds:[15F8h],offset _seg003_6156
+        mov     word ptr ds:[POLY_FILL],offset _seg003_6146
+        mov     word ptr ds:[POLY_UFILL],offset _seg003_6156
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -2456,8 +2492,8 @@ _do_goursurf endp
 _do_uwsurf proc near
         test    word ptr ds:[2932h],0FFh
         jne     short L38EA
-        mov     word ptr ds:[15F6h],offset _seg003_6146
-        mov     word ptr ds:[15F8h],offset _seg003_6156
+        mov     word ptr ds:[POLY_FILL],offset _seg003_6146
+        mov     word ptr ds:[POLY_UFILL],offset _seg003_6156
         mov     bx,es
         mov     ax,seg seg003
         mov     es,ax
@@ -2481,8 +2517,8 @@ _do_uwsurf endp
 ; Opcode D8h: a translucent surface. Gouraud filling with seg003's handler pair at
 ; 0F27h/0F29h pointed at 0F56h/103Dh (the same pair smooth_over uses).
 _do_transsurf proc near
-        mov     word ptr ds:[15F6h],offset _seg003_6146
-        mov     word ptr ds:[15F8h],offset _seg003_6156
+        mov     word ptr ds:[POLY_FILL],offset _seg003_6146
+        mov     word ptr ds:[POLY_UFILL],offset _seg003_6156
         mov     bx,es
         mov     ax,seg seg003
         mov     es,ax
@@ -2497,8 +2533,8 @@ _do_transsurf endp
 ; seg004_3925  (+3925)
 ; Opcode 44h: selects flat filling (438Dh, 4134h) without setting a colour.
 _do_vexsurf proc near
-        mov     word ptr ds:[15F6h],438Dh
-        mov     word ptr ds:[15F8h],4134h
+        mov     word ptr ds:[POLY_FILL],438Dh
+        mov     word ptr ds:[POLY_UFILL],4134h
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -2512,8 +2548,8 @@ _do_vexsurf endp
 ; do_usepat place points from such a table at a rotated offset (do_putpat then runs a
 ; sub-program); not traced further.
 _do_cavesurf proc near
-        mov     word ptr ds:[15F6h],2E7Ch
-        mov     word ptr ds:[15F8h],2E7Ch
+        mov     word ptr ds:[POLY_FILL],2E7Ch
+        mov     word ptr ds:[POLY_UFILL],2E7Ch
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -2558,23 +2594,23 @@ _do_setpat endp
 ; seg004_3989  (+3989)
 ; do_putpat (FM name), opcode 98h in UW1: see do_cavesurf's comment.
 _do_putpat proc near
-        push    word ptr ds:[2886h]
-        push    word ptr ds:[2888h]
-        push    word ptr ds:[288Ah]
+        push    word ptr ds:[OBJ_X]
+        push    word ptr ds:[OBJ_Y]
+        push    word ptr ds:[OBJ_Z]
         call    _load_xlate_rotate_pnt
         mov     word ptr ds:[15FCh],bx
         mov     word ptr ds:[15FEh],cx
         mov     word ptr ds:[1600h],bp
-        mov     ax,word ptr ds:[2886h]
+        mov     ax,word ptr ds:[OBJ_X]
         sub     ax,word ptr [si-6]
-        mov     word ptr ds:[2886h],ax
-        mov     ax,word ptr ds:[2888h]
+        mov     word ptr ds:[OBJ_X],ax
+        mov     ax,word ptr ds:[OBJ_Y]
         sub     ax,word ptr [si-2]
-        mov     word ptr ds:[2888h],ax
-        mov     ax,word ptr ds:[288Ah]
+        mov     word ptr ds:[OBJ_Y],ax
+        mov     ax,word ptr ds:[OBJ_Z]
         sub     ax,word ptr [si-4]
-        mov     word ptr ds:[288Ah],ax
-        mov     bp,1620h
+        mov     word ptr ds:[OBJ_Z],ax
+        mov     bp,PNT_X
         lodsw
         add     di,ax
         lodsw
@@ -2583,7 +2619,7 @@ _do_putpat proc near
         lodsw
         mov     dx,ax
         lodsw
-        sub     al,byte ptr ds:[2880h]
+        sub     al,byte ptr ds:[OBJ_SHIFT]
         mov     dh,al
         shr     dl,1
         jae     short L3A05
@@ -2654,9 +2690,9 @@ L3A05:
         xchg    bx,ax
         call    word ptr [bx+OPCODE_TABLE]
         pop     si
-        pop     word ptr ds:[288Ah]
-        pop     word ptr ds:[2888h]
-        pop     word ptr ds:[2886h]
+        pop     word ptr ds:[OBJ_Z]
+        pop     word ptr ds:[OBJ_Y]
+        pop     word ptr ds:[OBJ_X]
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -2665,14 +2701,14 @@ _do_putpat endp
 ; seg004_3A81  (+3A81)
 ; do_usepat (FM name), opcode 9Ah in UW1: see do_cavesurf's comment.
 _do_usepat proc near
-        mov     cl,byte ptr ds:[2880h]
-        mov     bx,word ptr ds:[2886h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
+        mov     bx,word ptr ds:[OBJ_X]
         neg     bx
         shl     bx,cl
-        mov     bp,word ptr ds:[288Ah]
+        mov     bp,word ptr ds:[OBJ_Z]
         neg     bp
         shl     bp,cl
-        mov     ax,word ptr ds:[2888h]
+        mov     ax,word ptr ds:[OBJ_Y]
         neg     ax
         shl     ax,cl
         mov     cx,ax
@@ -2680,7 +2716,7 @@ _do_usepat proc near
         mov     word ptr ds:[15FCh],bx
         mov     word ptr ds:[15FEh],cx
         mov     word ptr ds:[1600h],bp
-        mov     di,1620h
+        mov     di,PNT_X
         lodsw
         add     di,ax
         lodsw
@@ -2689,7 +2725,7 @@ _do_usepat proc near
         lodsw
         mov     cx,ax
         lodsw
-        sub     al,byte ptr ds:[2880h]
+        sub     al,byte ptr ds:[OBJ_SHIFT]
         mov     dl,al
         shr     cl,1
         mov     dh,cl
@@ -2785,11 +2821,11 @@ _do_ijmp_i endp
 ; from 2886h..288Ah) and calls self_modify.
 _do_rorg proc near
         lodsw
-        sub     word ptr ds:[2886h],ax
+        sub     word ptr ds:[OBJ_X],ax
         lodsw
-        sub     word ptr ds:[2888h],ax
+        sub     word ptr ds:[OBJ_Y],ax
         lodsw
-        sub     word ptr ds:[288Ah],ax
+        sub     word ptr ds:[OBJ_Z],ax
         call    _self_modify
         lodsw
         xchg    bx,ax
@@ -2801,7 +2837,7 @@ _do_rorg endp
 ; clip
 ; code) as a point, for do_addres and do_subres.
 _do_defdelta proc near
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         lodsw
         shl     ax,cl
         mov     bx,ax
@@ -2814,9 +2850,9 @@ _do_defdelta proc near
         call    _mxmul
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -2829,19 +2865,19 @@ _do_addres proc near
         mov     bp,ax
         lodsw
         mov     di,ax
-        mov     bx,word ptr ds:[bp+1620h]
-        add     bx,word ptr [di+1620h]
-        mov     cx,word ptr ds:[bp+1622h]
-        add     cx,word ptr [di+1622h]
-        mov     bp,word ptr ds:[bp+1624h]
-        add     bp,word ptr [di+1624h]
+        mov     bx,word ptr ds:[bp+PNT_X]
+        add     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr ds:[bp+PNT_Y]
+        add     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr ds:[bp+PNT_Z]
+        add     bp,word ptr [di+PNT_Z]
         lodsw
         mov     di,ax
         call    _code_pnt
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
-        mov     byte ptr [di+1626h],al
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -2854,19 +2890,19 @@ _do_subres proc near
         mov     bp,ax
         lodsw
         mov     di,ax
-        mov     bx,word ptr ds:[bp+1620h]
-        sub     bx,word ptr [di+1620h]
-        mov     cx,word ptr ds:[bp+1622h]
-        sub     cx,word ptr [di+1622h]
-        mov     bp,word ptr ds:[bp+1624h]
-        sub     bp,word ptr [di+1624h]
+        mov     bx,word ptr ds:[bp+PNT_X]
+        sub     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr ds:[bp+PNT_Y]
+        sub     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr ds:[bp+PNT_Z]
+        sub     bp,word ptr [di+PNT_Z]
         lodsw
         mov     di,ax
         call    _code_pnt
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
-        mov     byte ptr [di+1626h],al
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -2889,18 +2925,18 @@ _do_ihcall proc near
         lodsw
         mov     bx,ax
 L3C35:
-        push    word ptr ds:[1602h]
-        push    word ptr ds:[1608h]
-        push    word ptr ds:[160Eh]
-        push    word ptr ds:[1604h]
-        push    word ptr ds:[160Ah]
-        push    word ptr ds:[1610h]
-        push    word ptr ds:[1606h]
-        push    word ptr ds:[160Ch]
-        push    word ptr ds:[1612h]
-        push    word ptr ds:[2886h]
-        push    word ptr ds:[2888h]
-        push    word ptr ds:[288Ah]
+        push    word ptr ds:[MAT_XX]
+        push    word ptr ds:[MAT_YX]
+        push    word ptr ds:[MAT_ZX]
+        push    word ptr ds:[MAT_XY]
+        push    word ptr ds:[MAT_YY]
+        push    word ptr ds:[MAT_ZY]
+        push    word ptr ds:[MAT_XZ]
+        push    word ptr ds:[MAT_YZ]
+        push    word ptr ds:[MAT_ZZ]
+        push    word ptr ds:[OBJ_X]
+        push    word ptr ds:[OBJ_Y]
+        push    word ptr ds:[OBJ_Z]
         call    _instance_head
         push    si
         call    _check_flat
@@ -2913,18 +2949,18 @@ L3C35:
         xchg    bx,ax
         call    word ptr [bx+OPCODE_TABLE]
         pop     si
-        pop     word ptr ds:[288Ah]
-        pop     word ptr ds:[2888h]
-        pop     word ptr ds:[2886h]
-        pop     word ptr ds:[1612h]
-        pop     word ptr ds:[160Ch]
-        pop     word ptr ds:[1606h]
-        pop     word ptr ds:[1610h]
-        pop     word ptr ds:[160Ah]
-        pop     word ptr ds:[1604h]
-        pop     word ptr ds:[160Eh]
-        pop     word ptr ds:[1608h]
-        pop     word ptr ds:[1602h]
+        pop     word ptr ds:[OBJ_Z]
+        pop     word ptr ds:[OBJ_Y]
+        pop     word ptr ds:[OBJ_X]
+        pop     word ptr ds:[MAT_ZZ]
+        pop     word ptr ds:[MAT_YZ]
+        pop     word ptr ds:[MAT_XZ]
+        pop     word ptr ds:[MAT_ZY]
+        pop     word ptr ds:[MAT_YY]
+        pop     word ptr ds:[MAT_XY]
+        pop     word ptr ds:[MAT_ZX]
+        pop     word ptr ds:[MAT_YX]
+        pop     word ptr ds:[MAT_XX]
         call    _self_modify
         lodsw
         xchg    bx,ax
@@ -2946,18 +2982,18 @@ _do_ibcall proc near
         lodsw
         mov     bx,ax
 L3CBE:
-        push    word ptr ds:[1602h]
-        push    word ptr ds:[1608h]
-        push    word ptr ds:[160Eh]
-        push    word ptr ds:[1604h]
-        push    word ptr ds:[160Ah]
-        push    word ptr ds:[1610h]
-        push    word ptr ds:[1606h]
-        push    word ptr ds:[160Ch]
-        push    word ptr ds:[1612h]
-        push    word ptr ds:[2886h]
-        push    word ptr ds:[2888h]
-        push    word ptr ds:[288Ah]
+        push    word ptr ds:[MAT_XX]
+        push    word ptr ds:[MAT_YX]
+        push    word ptr ds:[MAT_ZX]
+        push    word ptr ds:[MAT_XY]
+        push    word ptr ds:[MAT_YY]
+        push    word ptr ds:[MAT_ZY]
+        push    word ptr ds:[MAT_XZ]
+        push    word ptr ds:[MAT_YZ]
+        push    word ptr ds:[MAT_ZZ]
+        push    word ptr ds:[OBJ_X]
+        push    word ptr ds:[OBJ_Y]
+        push    word ptr ds:[OBJ_Z]
         call    _instance_bank
         push    si
         call    _check_flat
@@ -2970,18 +3006,18 @@ L3CBE:
         xchg    bx,ax
         call    word ptr [bx+OPCODE_TABLE]
         pop     si
-        pop     word ptr ds:[288Ah]
-        pop     word ptr ds:[2888h]
-        pop     word ptr ds:[2886h]
-        pop     word ptr ds:[1612h]
-        pop     word ptr ds:[160Ch]
-        pop     word ptr ds:[1606h]
-        pop     word ptr ds:[1610h]
-        pop     word ptr ds:[160Ah]
-        pop     word ptr ds:[1604h]
-        pop     word ptr ds:[160Eh]
-        pop     word ptr ds:[1608h]
-        pop     word ptr ds:[1602h]
+        pop     word ptr ds:[OBJ_Z]
+        pop     word ptr ds:[OBJ_Y]
+        pop     word ptr ds:[OBJ_X]
+        pop     word ptr ds:[MAT_ZZ]
+        pop     word ptr ds:[MAT_YZ]
+        pop     word ptr ds:[MAT_XZ]
+        pop     word ptr ds:[MAT_ZY]
+        pop     word ptr ds:[MAT_YY]
+        pop     word ptr ds:[MAT_XY]
+        pop     word ptr ds:[MAT_ZX]
+        pop     word ptr ds:[MAT_YX]
+        pop     word ptr ds:[MAT_XX]
         call    _self_modify
         lodsw
         xchg    bx,ax
@@ -3003,18 +3039,18 @@ _do_ipcall proc near
         lodsw
         mov     bx,ax
 L3D47:
-        push    word ptr ds:[1602h]
-        push    word ptr ds:[1608h]
-        push    word ptr ds:[160Eh]
-        push    word ptr ds:[1604h]
-        push    word ptr ds:[160Ah]
-        push    word ptr ds:[1610h]
-        push    word ptr ds:[1606h]
-        push    word ptr ds:[160Ch]
-        push    word ptr ds:[1612h]
-        push    word ptr ds:[2886h]
-        push    word ptr ds:[2888h]
-        push    word ptr ds:[288Ah]
+        push    word ptr ds:[MAT_XX]
+        push    word ptr ds:[MAT_YX]
+        push    word ptr ds:[MAT_ZX]
+        push    word ptr ds:[MAT_XY]
+        push    word ptr ds:[MAT_YY]
+        push    word ptr ds:[MAT_ZY]
+        push    word ptr ds:[MAT_XZ]
+        push    word ptr ds:[MAT_YZ]
+        push    word ptr ds:[MAT_ZZ]
+        push    word ptr ds:[OBJ_X]
+        push    word ptr ds:[OBJ_Y]
+        push    word ptr ds:[OBJ_Z]
         call    _instance_pitch
         push    si
         call    _check_flat
@@ -3027,18 +3063,18 @@ L3D47:
         xchg    bx,ax
         call    word ptr [bx+OPCODE_TABLE]
         pop     si
-        pop     word ptr ds:[288Ah]
-        pop     word ptr ds:[2888h]
-        pop     word ptr ds:[2886h]
-        pop     word ptr ds:[1612h]
-        pop     word ptr ds:[160Ch]
-        pop     word ptr ds:[1606h]
-        pop     word ptr ds:[1610h]
-        pop     word ptr ds:[160Ah]
-        pop     word ptr ds:[1604h]
-        pop     word ptr ds:[160Eh]
-        pop     word ptr ds:[1608h]
-        pop     word ptr ds:[1602h]
+        pop     word ptr ds:[OBJ_Z]
+        pop     word ptr ds:[OBJ_Y]
+        pop     word ptr ds:[OBJ_X]
+        pop     word ptr ds:[MAT_ZZ]
+        pop     word ptr ds:[MAT_YZ]
+        pop     word ptr ds:[MAT_XZ]
+        pop     word ptr ds:[MAT_ZY]
+        pop     word ptr ds:[MAT_YY]
+        pop     word ptr ds:[MAT_XY]
+        pop     word ptr ds:[MAT_ZX]
+        pop     word ptr ds:[MAT_YX]
+        pop     word ptr ds:[MAT_XX]
         call    _self_modify
         lodsw
         xchg    bx,ax
@@ -3053,21 +3089,21 @@ _seg004_3DC6 proc near
         mov     di,26ECh
         mov     cx,6
         rep stosw
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         lodsw
-        sub     ax,word ptr ds:[2886h]
+        sub     ax,word ptr ds:[OBJ_X]
         shl     ax,cl
         mov     bx,ax
         lodsw
-        sub     ax,word ptr ds:[288Ah]
+        sub     ax,word ptr ds:[OBJ_Z]
         shl     ax,cl
         mov     bp,ax
         lodsw
-        sub     ax,word ptr ds:[2888h]
+        sub     ax,word ptr ds:[OBJ_Y]
         shl     ax,cl
         mov     cx,ax
         call    _seg004_52FF
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         lodsw
         sub     ax,word ptr [si-8]
         shl     ax,cl
@@ -3124,7 +3160,7 @@ _seg004_3DC6 proc near
         add     word ptr ds:[26EAh],dx
         lodsw
         mov     di,ax
-        add     di,1620h
+        add     di,PNT_X
         push    si
         mov     si,cx
 L3E7B:
@@ -3166,10 +3202,10 @@ _seg004_3DC6 endp
 ; Opcode 54h: pushes the object origin and the coordinate shift on the stack (the interpreter's
 ; own stack, SS = seg063).
 _do_pushc proc near
-        push    word ptr ds:[2886h]
-        push    word ptr ds:[2888h]
-        push    word ptr ds:[288Ah]
-        push    word ptr ds:[2880h]
+        push    word ptr ds:[OBJ_X]
+        push    word ptr ds:[OBJ_Y]
+        push    word ptr ds:[OBJ_Z]
+        push    word ptr ds:[OBJ_SHIFT]
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -3178,10 +3214,10 @@ _do_pushc endp
 ; seg004_3EE7  (+3EE7)
 ; Opcode 56h: pops what do_pushc pushed and calls self_modify.
 _do_popc proc near
-        pop     word ptr ds:[2880h]
-        pop     word ptr ds:[288Ah]
-        pop     word ptr ds:[2888h]
-        pop     word ptr ds:[2886h]
+        pop     word ptr ds:[OBJ_SHIFT]
+        pop     word ptr ds:[OBJ_Z]
+        pop     word ptr ds:[OBJ_Y]
+        pop     word ptr ds:[OBJ_X]
         call    _self_modify
         lodsw
         xchg    bx,ax
@@ -3196,14 +3232,14 @@ _do_jnorm_x0 proc near
         lodsw
         mov     di,ax
         lodsw
-        add     ax,word ptr ds:[2888h]
+        add     ax,word ptr ds:[OBJ_Y]
         imul    di
         mov     bp,ax
         mov     cx,dx
         lodsw
         mov     di,ax
         lodsw
-        add     ax,word ptr ds:[288Ah]
+        add     ax,word ptr ds:[OBJ_Z]
         imul    di
         add     bp,ax
         adc     cx,dx
@@ -3223,14 +3259,14 @@ _do_jnorm_y0 proc near
         lodsw
         mov     cx,ax
         lodsw
-        add     ax,word ptr ds:[2886h]
+        add     ax,word ptr ds:[OBJ_X]
         imul    cx
         mov     cx,dx
         mov     bp,ax
         lodsw
         mov     di,ax
         lodsw
-        add     ax,word ptr ds:[288Ah]
+        add     ax,word ptr ds:[OBJ_Z]
         imul    di
         add     bp,ax
         adc     cx,dx
@@ -3250,14 +3286,14 @@ _do_jnorm_z0 proc near
         lodsw
         mov     cx,ax
         lodsw
-        add     ax,word ptr ds:[2886h]
+        add     ax,word ptr ds:[OBJ_X]
         imul    cx
         mov     cx,dx
         mov     bp,ax
         lodsw
         mov     di,ax
         lodsw
-        add     ax,word ptr ds:[2888h]
+        add     ax,word ptr ds:[OBJ_Y]
         imul    di
         add     bp,ax
         adc     cx,dx
@@ -3278,7 +3314,7 @@ _do_jnorm_yz0 proc near
         lodsw
         mov     cx,ax
         lodsw
-        add     ax,word ptr ds:[2886h]
+        add     ax,word ptr ds:[OBJ_X]
         xor     ax,cx
         jns     short L3F8C
         add     si,bx
@@ -3296,7 +3332,7 @@ _do_jnorm_xz0 proc near
         lodsw
         mov     di,ax
         lodsw
-        add     ax,word ptr ds:[2888h]
+        add     ax,word ptr ds:[OBJ_Y]
         xor     ax,di
         jns     short L3FA3
         add     si,bx
@@ -3314,7 +3350,7 @@ _do_jnorm_xy0 proc near
         lodsw
         mov     di,ax
         lodsw
-        add     ax,word ptr ds:[288Ah]
+        add     ax,word ptr ds:[OBJ_Z]
         xor     ax,di
         jns     short L3FBA
         add     si,bx
@@ -3335,21 +3371,21 @@ _do_jnorm proc near
         lodsw
         mov     cx,ax
         lodsw
-        add     ax,word ptr ds:[2886h]
+        add     ax,word ptr ds:[OBJ_X]
         imul    cx
         mov     cx,dx
         mov     bp,ax
         lodsw
         mov     di,ax
         lodsw
-        add     ax,word ptr ds:[2888h]
+        add     ax,word ptr ds:[OBJ_Y]
         imul    di
         add     bp,ax
         adc     cx,dx
         lodsw
         mov     di,ax
         lodsw
-        add     ax,word ptr ds:[288Ah]
+        add     ax,word ptr ds:[OBJ_Z]
         imul    di
         add     bp,ax
         adc     cx,dx
@@ -3378,28 +3414,28 @@ _do_3d_clip proc near
         mov     word ptr ss:[4D5h],offset _overflow_handler_reg
         mov     ax,ds
         mov     es,ax
-        test    byte ptr ds:[161Ah],2
+        test    byte ptr ds:[CLIP_OR],2
         je      short L4017
         call    _clip_right
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         jne     short L404D
 L4017:
-        test    byte ptr ds:[161Ah],1
+        test    byte ptr ds:[CLIP_OR],1
         je      short L4028
         call    _clip_left
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         jne     short L404D
 L4028:
-        test    byte ptr ds:[161Ah],4
+        test    byte ptr ds:[CLIP_OR],4
         je      short L4039
         call    _clip_top
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         jne     short L404D
 L4039:
-        test    byte ptr ds:[161Ah],8
+        test    byte ptr ds:[CLIP_OR],8
         je      short L404A
         call    _clip_bot
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         jne     short L404D
 L404A:
         jmp     L2F30
@@ -3420,32 +3456,32 @@ _do_3d_clip endp
 ; The intersection uses fixed-point interpolation with rounding (sar ax,1; adc). The other
 ; three are the same for the other planes.
 _clip_top proc near
-        mov     byte ptr ds:[161Ah],0
-        mov     byte ptr ds:[161Bh],0FFh
-        mov     si,word ptr ds:[307h]
-        mov     di,word ptr ds:[305h]
+        mov     byte ptr ds:[CLIP_OR],0
+        mov     byte ptr ds:[CLIP_AND],0FFh
+        mov     si,word ptr ds:[VB_START]
+        mov     di,word ptr ds:[VB_END]
         mov     cx,8
         rep movsw
-        add     word ptr ds:[305h],8
-        mov     si,word ptr ds:[307h]
-        mov     di,0C69h
-        cmp     si,309h
+        add     word ptr ds:[VB_END],8
+        mov     si,word ptr ds:[VB_START]
+        mov     di,VBUF1
+        cmp     si,VBUF0
         je      short L4087
-        mov     di,309h
+        mov     di,VBUF0
 L4087:
-        mov     word ptr ds:[307h],di
+        mov     word ptr ds:[VB_START],di
 L408B:
         add     si,8
 L408E:
-        cmp     si,word ptr ds:[305h]
+        cmp     si,word ptr ds:[VB_END]
         jne     short L4097
         jmp     L415F
 L4097:
         mov     al,byte ptr [si+6]
         test    al,4
         jne     short L40AD
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         mov     cx,4
         rep movsw
         jmp     L408E
@@ -3489,8 +3525,8 @@ L40F0:
         mov     bp,ax
         call    _code_pnt
         stosw
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
 L4105:
         test    byte ptr [si+0Eh],4
         jne     L408B
@@ -3531,43 +3567,43 @@ L4147:
         mov     bp,ax
         call    _code_pnt
         stosw
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         jmp     L408B
 L415F:
-        mov     word ptr ds:[305h],di
+        mov     word ptr ds:[VB_END],di
         ret
 _clip_top endp
 
 ; seg004_4164  (+4164)
 ; Clips against y = -z (code bit 8). See clip_top.
 _clip_bot proc near
-        mov     byte ptr ds:[161Ah],0
-        mov     byte ptr ds:[161Bh],0FFh
-        mov     si,word ptr ds:[307h]
-        mov     di,word ptr ds:[305h]
+        mov     byte ptr ds:[CLIP_OR],0
+        mov     byte ptr ds:[CLIP_AND],0FFh
+        mov     si,word ptr ds:[VB_START]
+        mov     di,word ptr ds:[VB_END]
         mov     cx,8
         rep movsw
-        add     word ptr ds:[305h],8
-        mov     si,word ptr ds:[307h]
-        mov     di,0C69h
-        cmp     si,309h
+        add     word ptr ds:[VB_END],8
+        mov     si,word ptr ds:[VB_START]
+        mov     di,VBUF1
+        cmp     si,VBUF0
         je      short L4190
-        mov     di,309h
+        mov     di,VBUF0
 L4190:
-        mov     word ptr ds:[307h],di
+        mov     word ptr ds:[VB_START],di
 L4194:
         add     si,8
 L4197:
-        cmp     si,word ptr ds:[305h]
+        cmp     si,word ptr ds:[VB_END]
         jne     short L41A0
         jmp     L426F
 L41A0:
         mov     al,byte ptr [si+6]
         test    al,8
         jne     short L41B6
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         mov     cx,4
         rep movsw
         jmp     L4197
@@ -3612,8 +3648,8 @@ L41F9:
         mov     bp,ax
         call    _code_pnt
         stosw
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
 L4210:
         test    byte ptr [si+0Eh],8
         je      short L4219
@@ -3657,43 +3693,43 @@ L4255:
         mov     bp,ax
         call    _code_pnt
         stosw
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         jmp     L4194
 L426F:
-        mov     word ptr ds:[305h],di
+        mov     word ptr ds:[VB_END],di
         ret
 _clip_bot endp
 
 ; seg004_4274  (+4274)
 ; Clips against x = z (code bit 2). See clip_top.
 _clip_right proc near
-        mov     byte ptr ds:[161Ah],0
-        mov     byte ptr ds:[161Bh],0FFh
-        mov     si,word ptr ds:[307h]
-        mov     di,word ptr ds:[305h]
+        mov     byte ptr ds:[CLIP_OR],0
+        mov     byte ptr ds:[CLIP_AND],0FFh
+        mov     si,word ptr ds:[VB_START]
+        mov     di,word ptr ds:[VB_END]
         mov     cx,8
         rep movsw
-        add     word ptr ds:[305h],8
-        mov     si,word ptr ds:[307h]
-        mov     di,0C69h
-        cmp     si,309h
+        add     word ptr ds:[VB_END],8
+        mov     si,word ptr ds:[VB_START]
+        mov     di,VBUF1
+        cmp     si,VBUF0
         je      short L42A0
-        mov     di,309h
+        mov     di,VBUF0
 L42A0:
-        mov     word ptr ds:[307h],di
+        mov     word ptr ds:[VB_START],di
 L42A4:
         add     si,8
 L42A7:
-        cmp     si,word ptr ds:[305h]
+        cmp     si,word ptr ds:[VB_END]
         jne     short L42B0
         jmp     L437D
 L42B0:
         mov     al,byte ptr [si+6]
         test    al,2
         jne     short L42C6
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         mov     cx,4
         rep movsw
         jmp     L42A7
@@ -3738,8 +3774,8 @@ L4308:
         mov     bp,ax
         call    _code_pnt
         stosw
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
 L431F:
         test    byte ptr [si+0Eh],2
         je      short L4328
@@ -3783,43 +3819,43 @@ L4363:
         mov     bp,ax
         call    _code_pnt
         stosw
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         jmp     L42A4
 L437D:
-        mov     word ptr ds:[305h],di
+        mov     word ptr ds:[VB_END],di
         ret
 _clip_right endp
 
 ; seg004_4382  (+4382)
 ; Clips against x = -z (code bit 1). See clip_top.
 _clip_left proc near
-        mov     byte ptr ds:[161Ah],0
-        mov     byte ptr ds:[161Bh],0FFh
-        mov     si,word ptr ds:[307h]
-        mov     di,word ptr ds:[305h]
+        mov     byte ptr ds:[CLIP_OR],0
+        mov     byte ptr ds:[CLIP_AND],0FFh
+        mov     si,word ptr ds:[VB_START]
+        mov     di,word ptr ds:[VB_END]
         mov     cx,8
         rep movsw
-        add     word ptr ds:[305h],8
-        mov     si,word ptr ds:[307h]
-        mov     di,0C69h
-        cmp     si,309h
+        add     word ptr ds:[VB_END],8
+        mov     si,word ptr ds:[VB_START]
+        mov     di,VBUF1
+        cmp     si,VBUF0
         je      short L43AE
-        mov     di,309h
+        mov     di,VBUF0
 L43AE:
-        mov     word ptr ds:[307h],di
+        mov     word ptr ds:[VB_START],di
 L43B2:
         add     si,8
 L43B5:
-        cmp     si,word ptr ds:[305h]
+        cmp     si,word ptr ds:[VB_END]
         jne     short L43BE
         jmp     L448F
 L43BE:
         mov     al,byte ptr [si+6]
         test    al,1
         jne     short L43D4
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         mov     cx,4
         rep movsw
         jmp     L43B5
@@ -3865,8 +3901,8 @@ L4416:
         mov     bp,ax
         call    _code_pnt
         stosw
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
 L442F:
         test    byte ptr [si+0Eh],1
         je      short L4438
@@ -3911,11 +3947,11 @@ L4473:
         mov     bp,ax
         call    _code_pnt
         stosw
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         jmp     L43B2
 L448F:
-        mov     word ptr ds:[305h],di
+        mov     word ptr ds:[VB_END],di
         ret
 _clip_left endp
 
@@ -3929,48 +3965,48 @@ _clip_left endp
 _do_parapiped proc near
         lodsw
         mov     di,ax
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         lodsw
         shl     ax,cl
         mov     bx,ax
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     word ptr ds:[15D9h],dx
         mov     ax,bx
-        imul    word ptr ds:[1604h]
+        imul    word ptr ds:[MAT_XY]
         mov     word ptr ds:[15DBh],dx
         mov     ax,bx
-        imul    word ptr ds:[1606h]
+        imul    word ptr ds:[MAT_XZ]
         mov     word ptr ds:[15DDh],dx
         lodsw
         shl     ax,cl
         mov     bx,ax
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         mov     word ptr ds:[15DFh],dx
         mov     ax,bx
-        imul    word ptr ds:[160Ah]
+        imul    word ptr ds:[MAT_YY]
         mov     word ptr ds:[15E1h],dx
         mov     ax,bx
-        imul    word ptr ds:[160Ch]
+        imul    word ptr ds:[MAT_YZ]
         mov     word ptr ds:[15E3h],dx
         lodsw
         shl     ax,cl
         mov     bx,ax
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         mov     word ptr ds:[15E5h],dx
         mov     ax,bx
-        imul    word ptr ds:[1610h]
+        imul    word ptr ds:[MAT_ZY]
         mov     word ptr ds:[15E7h],dx
         mov     ax,bx
-        imul    word ptr ds:[1612h]
+        imul    word ptr ds:[MAT_ZZ]
         mov     word ptr ds:[15E9h],dx
-        mov     al,byte ptr [di+1626h]
+        mov     al,byte ptr [di+PNT_CODES]
         or      al,al
         je      short L4509
         jmp     L479B
 L4509:
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         add     bx,word ptr ds:[15D9h]
         add     cx,word ptr ds:[15DBh]
         add     bp,word ptr ds:[15DDh]
@@ -4000,9 +4036,9 @@ L4555:
         jge     short L455C
         jmp     L4792
 L455C:
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         sub     bx,word ptr ds:[15D9h]
         sub     cx,word ptr ds:[15DBh]
         sub     bp,word ptr ds:[15DDh]
@@ -4032,9 +4068,9 @@ L45A8:
         jge     short L45AF
         jmp     L4792
 L45AF:
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         add     bx,word ptr ds:[15D9h]
         add     cx,word ptr ds:[15DBh]
         add     bp,word ptr ds:[15DDh]
@@ -4064,9 +4100,9 @@ L45FB:
         jge     short L4602
         jmp     L4792
 L4602:
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         sub     bx,word ptr ds:[15D9h]
         sub     cx,word ptr ds:[15DBh]
         sub     bp,word ptr ds:[15DDh]
@@ -4096,9 +4132,9 @@ L464E:
         jge     short L4655
         jmp     L4792
 L4655:
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         add     bx,word ptr ds:[15D9h]
         add     cx,word ptr ds:[15DBh]
         add     bp,word ptr ds:[15DDh]
@@ -4128,9 +4164,9 @@ L46A1:
         jge     short L46A8
         jmp     L4792
 L46A8:
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         sub     bx,word ptr ds:[15D9h]
         sub     cx,word ptr ds:[15DBh]
         sub     bp,word ptr ds:[15DDh]
@@ -4160,9 +4196,9 @@ L46F4:
         jge     short L46FB
         jmp     L4792
 L46FB:
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         add     bx,word ptr ds:[15D9h]
         add     cx,word ptr ds:[15DBh]
         add     bp,word ptr ds:[15DDh]
@@ -4182,9 +4218,9 @@ L46FB:
         jl      short L4792
         cmp     cx,bp
         jl      short L4792
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         sub     bx,word ptr ds:[15D9h]
         sub     cx,word ptr ds:[15DBh]
         sub     bp,word ptr ds:[15DDh]
@@ -4217,9 +4253,9 @@ L4792:
         jmp     word ptr [bx+OPCODE_TABLE]
 L479B:
         mov     dl,al
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         add     bx,word ptr ds:[15D9h]
         add     cx,word ptr ds:[15DBh]
         add     bp,word ptr ds:[15DDh]
@@ -4232,9 +4268,9 @@ L479B:
         call    _code_pnt
         and     dl,al
         je      L4792
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         sub     bx,word ptr ds:[15D9h]
         sub     cx,word ptr ds:[15DBh]
         sub     bp,word ptr ds:[15DDh]
@@ -4247,9 +4283,9 @@ L479B:
         call    _code_pnt
         and     dl,al
         je      L4792
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         add     bx,word ptr ds:[15D9h]
         add     cx,word ptr ds:[15DBh]
         add     bp,word ptr ds:[15DDh]
@@ -4264,9 +4300,9 @@ L479B:
         jne     short L4845
         jmp     L4792
 L4845:
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         sub     bx,word ptr ds:[15D9h]
         sub     cx,word ptr ds:[15DBh]
         sub     bp,word ptr ds:[15DDh]
@@ -4281,9 +4317,9 @@ L4845:
         jne     short L487F
         jmp     L4792
 L487F:
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         add     bx,word ptr ds:[15D9h]
         add     cx,word ptr ds:[15DBh]
         add     bp,word ptr ds:[15DDh]
@@ -4298,9 +4334,9 @@ L487F:
         jne     short L48B9
         jmp     L4792
 L48B9:
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         sub     bx,word ptr ds:[15D9h]
         sub     cx,word ptr ds:[15DBh]
         sub     bp,word ptr ds:[15DDh]
@@ -4315,9 +4351,9 @@ L48B9:
         jne     short L48F3
         jmp     L4792
 L48F3:
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         add     bx,word ptr ds:[15D9h]
         add     cx,word ptr ds:[15DBh]
         add     bp,word ptr ds:[15DDh]
@@ -4332,9 +4368,9 @@ L48F3:
         jne     short L492D
         jmp     L4792
 L492D:
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         sub     bx,word ptr ds:[15D9h]
         sub     cx,word ptr ds:[15DBh]
         sub     bp,word ptr ds:[15DDh]

@@ -97,10 +97,10 @@ int16 GameInputMode;
    (4). PANELS.C's adjust_panel animates the flip. The argument is not read. */
 void far pull_chain(int how)
 {
-    if (RightPanel == 0)
-        set_screen_frame(6, 2);
-    else if (RightPanel != 4)
-        set_screen_frame(6, 0);
+    if (RightPanel == PANEL_INV)
+        set_screen_frame(SCR_PANEL, PANEL_STATS);
+    else if (RightPanel != PANEL_TURNING)
+        set_screen_frame(SCR_PANEL, PANEL_INV);
 }
 
 /* A click on the compass: prints how hungry and how tired the player is, the level
@@ -169,11 +169,11 @@ void far flask_info(void)
 void far start_gameinp(void)
 {
     LeftPanel = 0;
-    iconsMshandle = input_addmouse(8, 0x54, 0x20, 0xCE, (NEARPTR)-1, 1, (InputFn)deal_with_icons);
-    spellMshandle = input_addmouse(0xB0, 0x2D, 0xDE, 0x3D, 0, 1, (InputFn)try_cast);
-    actspMshandle = input_addmouse(0x34, 0x2F, 0x66, 0x3F, 0, 1, (InputFn)try_clear);
-    inforMshandle = input_addmouse(0x7A, 0x31, 0x98, 0x40, 0, 1, (InputFn)print_info);
-    flaskMshandle = input_addmouse(0xF4, 0x2C, 0x135, 0x50, 0, 1, (InputFn)flask_info);
+    iconsMshandle = input_addmouse(8, 0x54, 0x20, 0xCE, (NEARPTR)-1, MODE_GAME, (InputFn)deal_with_icons);
+    spellMshandle = input_addmouse(0xB0, 0x2D, 0xDE, 0x3D, 0, MODE_GAME, (InputFn)try_cast);
+    actspMshandle = input_addmouse(0x34, 0x2F, 0x66, 0x3F, 0, MODE_GAME, (InputFn)try_clear);
+    inforMshandle = input_addmouse(0x7A, 0x31, 0x98, 0x40, 0, MODE_GAME, (InputFn)print_info);
+    flaskMshandle = input_addmouse(0xF4, 0x2C, 0x135, 0x50, 0, MODE_GAME, (InputFn)flask_info);
 }
 
 void far clear_gameinp(void)
@@ -192,7 +192,7 @@ void far init_gamedisp(void)
     play_music();
     start_gameinp();
     if (LeftPanel == 0) {
-        if (RightButtonThing != 0)
+        if (RightButtonThing != IMODE_DEFAULT)
             new_IconSelect(RightButtonThing);
     } else
         run_options_panel(1);
@@ -220,17 +220,17 @@ void far display_scr(void)
 
     player_attack(0);
     v = ThePlayer->hp;
-    set_screen_frame(0, v);
+    set_screen_frame(SCR_VITALITY, v);
     dam = OBJ_DAMAGE(ThePlayer);
     if ((dam << 2) > Creature[63].avghit || v < 0x10 && dam > 0)
-        set_screen_frame(4, 3);
+        set_screen_frame(SCR_DRAGON, 3);
     ThePlayer->b11 = 0;
     v = player->play_mana;
-    set_screen_frame(1, v);
+    set_screen_frame(SCR_MANA, v);
     if (PlayerLevel != 9) {
         v = (OBJ_HEADING(ThePlayer) << 5) + OBJ_FINEHEAD(ThePlayer);
         v = (v + 8 & 0xFF) >> 4;
-        set_screen_frame(2, v);
+        set_screen_frame(SCR_COMPASS, v);
     }
     cycle_colors(GAME_TIME() & 0xFF);
     if (ThePlayer->hp == 0)
@@ -255,7 +255,7 @@ void far display_scr(void)
 
 void far RedispInv(void)
 {
-    if (RightPanel == 0 || inplist->mode == 4) {
+    if (RightPanel == PANEL_INV || inplist->mode == MODE_CONV) {
         load_inventory_pix();
         DisplayInvSpecial();
         DisplayInventory();
@@ -386,7 +386,7 @@ struct Object far * far pick_3d(int how)
     if (*p >= 1 && *p < *(int16 *)&PickUp) {
         idx = color_to_obj[*p - 1];
         PickMap = mlowptr + color_to_map[*p - 1];
-    } else if (*p >= 0xC0 && *p <= 0xFA)
+    } else if (*p >= PICK_WALL && *p <= PICK_CEILING)
         pTxtId = *p - 0xBF;
     if (idx == 0)
         return 0;
@@ -461,7 +461,7 @@ void far player_3dget(void)
                 player->moonstone = 0;
             player_grabbed(newPlObj, 0);
             release_3d(newPlObj);
-            GameInputMode = 1;
+            GameInputMode = GIM_CARRY;
             DoInventoryDrag(newPlObj);
         }
     } else if (releaseable) {
@@ -473,7 +473,7 @@ void far player_3dget(void)
         else
             player_3duse();
     } else {
-        if (OBJ_ITEM(newPlObj) == 0x1CA) {
+        if (OBJ_ITEM(newPlObj) == ITEM_SILVER_TREE) {
             if (inrange && clear)
                 UseObj(ThePlayer, newPlObj, 0);
         } else
@@ -506,7 +506,7 @@ void far player_3dlook(void)
         seg024_24DC_D0A(newPlObj, 1);
     else
         seg024_24DC_D0A(newPlObj, 0);
-    if (RightButtonThing == 3) {
+    if (RightButtonThing == IMODE_LOOK) {
         if (DetectedTrap(newPlObj, player->skills[SKILL_SEARCH]) > 0) {
             yes = 1;
             r = wyorn(0, 0xF4, &yes);
@@ -519,7 +519,7 @@ void far player_3dlook(void)
     } else
         def_mode = 1;
     checkTrap(ThePlayer, newPlObj, 5, MapObj_X, MapObj_Y);
-    if (RightButtonThing != 3) {
+    if (RightButtonThing != IMODE_LOOK) {
         if (mouse_dragged(1))
             player_3dget();
     } else
@@ -534,7 +534,7 @@ void far player_3duse(void)
     mouse_release(1);
     if (InPickRange(PickDist, newPlObj, PickMap) && !BlockingTerrain(PickDist, newPlObj))
         UseObj(ThePlayer, newPlObj, 0);
-    else if ((newPlObj->id & 0x1FE) != 0x16E)
+    else if ((newPlObj->id & 0x1FE) != ITEM_TMAP_C)
         game_sprint(0xB9);  /* 'You are unable to use that from here.' */
 }
 
@@ -561,12 +561,12 @@ void far mous_in_3d(void)
 
     if (inplist->cmd & 1)
         player_mous_move();
-    if (inplist->mode == 1) {
+    if (inplist->mode == MODE_GAME) {
         newPlObj = 0;
         if (inplist->cmd & 2) {
             switch (GameInputMode) {
-            case 0:
-                if (RightButtonThing == 0)
+            case GIM_NONE:
+                if (RightButtonThing == IMODE_DEFAULT)
                     how = 2;
                 else
                     how = RightButtonThing - 1;
@@ -582,11 +582,11 @@ void far mous_in_3d(void)
                 }
                 (*player_disp[how])();
                 break;
-            case 1:
+            case GIM_CARRY:
                 DoSpecialActions(0x17);
                 mouse_release(1);
                 break;
-            case 2:
+            case GIM_TARGET:
                 if ((newPlObj = pick_3d(2)) != 0) {
                     if (InPickRange(PickDist, newPlObj, PickMap) && !BlockingTerrain(PickDist, newPlObj))
                         (*ObjectActor)(newPlObj, 1, 0);
@@ -596,11 +596,11 @@ void far mous_in_3d(void)
                 if (CursorObjPtr) {
                     unforce_mouse_cursor(3);
                     CursorObjPtr = 0;
-                    GameInputMode = 0;
+                    GameInputMode = GIM_NONE;
                 }
                 mouse_release(1);
                 break;
-            case 3:
+            case GIM_AIM:
                 BlastFunction();
                 break;
             }
@@ -671,7 +671,7 @@ void far mous_in_inv(void)
 
     newPlObj = 0;
     switch (GameInputMode) {
-    case 0:
+    case GIM_NONE:
         if (CursorObjPtr)
             DoInventoryMouse(0);
         else
@@ -681,17 +681,17 @@ void far mous_in_inv(void)
                 DoInventoryMouse(0);
                 break;
             case 2:
-                if (RightButtonThing == 1 && inplist->mode != 4)
+                if (RightButtonThing == IMODE_USE && inplist->mode != MODE_CONV)
                     DoInventoryMouse(0);
                 else
                     DoInventoryMouse(-2);
                 break;
             }
         break;
-    case 1:
+    case GIM_CARRY:
         DoInventoryMouse(4);
         break;
-    case 2:
+    case GIM_TARGET:
         x = inplist->x + 0xF0;
         y = inplist->y + 0x52;
         hit = FindInventoryHit(x, y);
@@ -703,7 +703,7 @@ void far mous_in_inv(void)
         } else {
             unforce_mouse_cursor(3);
             CursorObjPtr = 0;
-            GameInputMode = 0;
+            GameInputMode = GIM_NONE;
         }
         break;
     }
@@ -713,13 +713,13 @@ void far mous_in_inv(void)
 void far mous_in_panel(void)
 {
     switch (RightPanel) {
-    case 0:
+    case PANEL_INV:
         mous_in_inv();
         break;
-    case 1:
+    case PANEL_RUNES:
         mous_in_rune();
         break;
-    case 2:
+    case PANEL_STATS:
         mous_in_stat();
         break;
     }
@@ -736,7 +736,7 @@ void far new_IconSelect(register int mode)
     x = icon_x[mode];
     y = icon_y[mode];
     mouse_hide();
-    pic_to_screen(0x200B - mode * 2, x, y, 1, 1);
+    pic_to_screen(ICON_LFTI + 0xB - mode * 2, x, y, 1, 1);
     mouse_show();
 }
 
@@ -750,7 +750,7 @@ void far new_IconUnselect(register int mode)
     x = icon_x[mode];
     y = icon_y[mode];
     mouse_hide();
-    pic_to_screen(0x200A - mode * 2, x, y, 1, 1);
+    pic_to_screen(ICON_LFTI + 0xA - mode * 2, x, y, 1, 1);
     mouse_show();
 }
 
@@ -761,7 +761,7 @@ void far new_IconUnselect(register int mode)
    starts the combat music; use, look and get change the pointer. */
 void far deal_with_icons(register int mode)
 {
-    if (GameInputMode != 0)
+    if (GameInputMode != GIM_NONE)
         return;
     if (mode == -1) {
         if (LeftPanel != 0)
@@ -772,34 +772,34 @@ void far deal_with_icons(register int mode)
     if (mode == 5)
         run_options_panel(1);
     else {
-        set_screen_frame(8, 6);
+        set_screen_frame(SCR_WEAPON, WEAP_SHEATHED);
         player->drawn = 0;
-        if (RightButtonThing == 1 || RightButtonThing == 3 || RightButtonThing == 4)
+        if (RightButtonThing == IMODE_USE || RightButtonThing == IMODE_LOOK || RightButtonThing == IMODE_GET)
             unforce_mouse_cursor(3);
         if (++mode == RightButtonThing) {
             new_IconUnselect(RightButtonThing);
-            RightButtonThing = 0;
+            RightButtonThing = IMODE_DEFAULT;
         } else {
-            if (RightButtonThing != 0)
+            if (RightButtonThing != IMODE_DEFAULT)
                 new_IconUnselect(RightButtonThing);
             RightButtonThing = mode;
-            if (RightButtonThing == 2) {
+            if (RightButtonThing == IMODE_FIGHT) {
                 if ((player->motion_state & 1) == 0) {
                     player->drawn = 1;
-                    set_screen_frame(8, 4);
+                    set_screen_frame(SCR_WEAPON, WEAP_READY);
                     new_IconSelect(RightButtonThing);
-                    if (get_current_music() < 5 || get_current_music() > 7)
-                        set_new_music(8);
+                    if (get_current_music() < MUSIC_FOE_HURT || get_current_music() > MUSIC_DANGER)
+                        set_new_music(MUSIC_ARMED);
                 } else
-                    RightButtonThing = 0;
+                    RightButtonThing = IMODE_DEFAULT;
             } else
                 new_IconSelect(RightButtonThing);
         }
-        if (!player->drawn && get_current_music() == 8)
+        if (!player->drawn && get_current_music() == MUSIC_ARMED)
             seg014_1DC5_15C5();
         mouse_release(1);
-        if (RightButtonThing == 1 || RightButtonThing == 3 || RightButtonThing == 4)
-            force_mouse_cursor(0x1077);
+        if (RightButtonThing == IMODE_USE || RightButtonThing == IMODE_LOOK || RightButtonThing == IMODE_GET)
+            force_mouse_cursor(ICON_CURSORS + 0xB);
     }
 }
 
@@ -810,27 +810,27 @@ void far pick_fightmode(void)
         return;
     if (player->motion_state & 1)
         return;
-    if (RightButtonThing == 1 || RightButtonThing == 3 || RightButtonThing == 4)
+    if (RightButtonThing == IMODE_USE || RightButtonThing == IMODE_LOOK || RightButtonThing == IMODE_GET)
         unforce_mouse_cursor(3);
-    if (RightButtonThing != 0)
+    if (RightButtonThing != IMODE_DEFAULT)
         new_IconUnselect(RightButtonThing);
-    RightButtonThing = 2;
+    RightButtonThing = IMODE_FIGHT;
     player->drawn = 1;
-    set_screen_frame(8, 4);
+    set_screen_frame(SCR_WEAPON, WEAP_READY);
     new_IconSelect(RightButtonThing);
-    if (get_current_music() < 5 || get_current_music() > 7)
-        set_new_music(8);
+    if (get_current_music() < MUSIC_FOE_HURT || get_current_music() > MUSIC_DANGER)
+        set_new_music(MUSIC_ARMED);
 }
 
 /* Sheathes the weapon and leaves fight mode, back to the level's music. */
 void far punt_fightmode(void)
 {
     if (player->drawn) {
-        set_screen_frame(8, 6);
+        set_screen_frame(SCR_WEAPON, WEAP_SHEATHED);
         player->drawn = 0;
         if (LeftPanel == 0)
-            new_IconUnselect(2);
-        RightButtonThing = 0;
+            new_IconUnselect(IMODE_FIGHT);
+        RightButtonThing = IMODE_DEFAULT;
         clear_fight_state();
         seg014_1DC5_15C5();
     }
@@ -871,7 +871,7 @@ char far check_save(void)
 char far check_rest(void)
 {
     if (GameInputMode) {
-        GameInputMode = 0;
+        GameInputMode = GIM_NONE;
         unforce_mouse_cursor(0);
     }
     return 1;

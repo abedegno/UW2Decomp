@@ -43,6 +43,16 @@
 ; word-aligned module), as in UW2; it ends at the zero byte at +3F05.
 ; Its relocation is entry 2766 of UW.EXE's relocation table (+3E25).
 
+; The graphics library's data in seg048 (DS while the library runs), as GRLIBF.ASM's
+; and VIDMODE.ASM's headers describe it. The names are ours.
+SCR_LASTX       equ     3DEAh   ; the screen's last x
+SCR_LASTY       equ     3DECh   ; and last y
+WIN_LEFT        equ     3DF2h   ; the clip window (y counts up, so bottom < top)
+WIN_TOP         equ     3DF4h
+WIN_RIGHT       equ     3DF6h
+WIN_BOTTOM      equ     3DF8h
+SPAN_WRITER     equ     4110h   ; the current span writer (set_the_color, fbuf_setcolor)
+
         .186
 
 _DATA   segment word public 'DATA'
@@ -120,20 +130,20 @@ L3AA3:
         mov     word ptr ds:[4108h],ax
         clc
         ret
-        push    word ptr ds:[4110h]
-        mov     word ptr ds:[4110h],offset _seg003_5AC6
+        push    word ptr ds:[SPAN_WRITER]
+        mov     word ptr ds:[SPAN_WRITER],offset _seg003_5AC6
         call    _seg003_3F0E
-        pop     word ptr ds:[4110h]
+        pop     word ptr ds:[SPAN_WRITER]
         ret
-        push    word ptr ds:[4110h]
-        mov     word ptr ds:[4110h],offset _seg003_5ACC
+        push    word ptr ds:[SPAN_WRITER]
+        mov     word ptr ds:[SPAN_WRITER],offset _seg003_5ACC
         call    _seg003_3F0E
-        pop     word ptr ds:[4110h]
+        pop     word ptr ds:[SPAN_WRITER]
         ret
-        push    word ptr ds:[4110h]
-        mov     word ptr ds:[4110h],offset _seg003_5AC9
+        push    word ptr ds:[SPAN_WRITER]
+        mov     word ptr ds:[SPAN_WRITER],offset _seg003_5AC9
         call    _seg003_3FDC
-        pop     word ptr ds:[4110h]
+        pop     word ptr ds:[SPAN_WRITER]
         ret
         push    ax
         call    _seg003_5A93
@@ -154,8 +164,8 @@ _seg003_3AEA endp
 ; urectangle.
 _seg003_3AED proc near
         sub     ax,ax
-        mov     bx,word ptr ds:[3DECh]
-        mov     cx,word ptr ds:[3DEAh]
+        mov     bx,word ptr ds:[SCR_LASTY]
+        mov     cx,word ptr ds:[SCR_LASTX]
         sub     dx,dx
         call    _seg003_3CAE
         ret
@@ -165,10 +175,10 @@ _seg003_3AED endp
 ; copy_visible_to_hidden: run _3AED with span writer 5AC6, a whole-screen copy from the visible
 ; page to the hidden one (GRCORE's copy_visible_to_hidden wrapper).
 _seg003_3AFD proc near
-        push    word ptr ds:[4110h]
-        mov     word ptr ds:[4110h],offset _seg003_5AC6
+        push    word ptr ds:[SPAN_WRITER]
+        mov     word ptr ds:[SPAN_WRITER],offset _seg003_5AC6
         call    _seg003_3AED
-        pop     word ptr ds:[4110h]
+        pop     word ptr ds:[SPAN_WRITER]
         ret
 _seg003_3AFD endp
 
@@ -200,15 +210,15 @@ L3B2F:
 L3B31:
         jmp     _seg003_5AA2
 _seg003_3B34:
-        cmp     bx,word ptr ds:[3DF4h]
+        cmp     bx,word ptr ds:[WIN_TOP]
         jg      L3B19
-        cmp     bx,word ptr ds:[3DF8h]
+        cmp     bx,word ptr ds:[WIN_BOTTOM]
         jl      L3B19
-        cmp     ax,word ptr ds:[3DF6h]
+        cmp     ax,word ptr ds:[WIN_RIGHT]
         jg      L3B19
-        cmp     ax,word ptr ds:[3DF2h]
+        cmp     ax,word ptr ds:[WIN_LEFT]
         jl      L3B19
-        cmp     word ptr ds:[4110h],offset _seg003_5AC3
+        cmp     word ptr ds:[SPAN_WRITER],offset _seg003_5AC3
         je      L3B1A
         mov     di,4148h
         mov     si,di
@@ -217,7 +227,7 @@ _seg003_3B34:
         xchg    bx,ax
         stosw
         stosw
-        jmp     word ptr ds:[4110h]
+        jmp     word ptr ds:[SPAN_WRITER]
 _seg003_3B0F endp
 
 ; seg003_3B62  (+3B62)
@@ -226,22 +236,22 @@ _seg003_3B0F endp
 ; at once when the line is wholly outside. The code after it is a clipped vertical line through
 ; vector 5AAB.
 _seg003_3B62 proc near
-        cmp     ax,word ptr ds:[3DF6h]
+        cmp     ax,word ptr ds:[WIN_RIGHT]
         jg      L3B91
-        cmp     ax,word ptr ds:[3DF2h]
+        cmp     ax,word ptr ds:[WIN_LEFT]
         jl      L3B91
         cmp     bx,dx
         jg      L3B74
         xchg    bx,dx
 L3B74:
-        mov     si,word ptr ds:[3DF8h]
+        mov     si,word ptr ds:[WIN_BOTTOM]
         cmp     bx,si
         jl      L3B91
         cmp     dx,si
         jg      L3B82
         mov     dx,si
 L3B82:
-        mov     si,word ptr ds:[3DF4h]
+        mov     si,word ptr ds:[WIN_TOP]
         cmp     dx,si
         jg      L3B91
         cmp     bx,si
@@ -279,7 +289,7 @@ _seg003_3BA1 endp
 _seg003_3BA4 proc near
         cmp     word ptr ds:[5044h],0
         jne     L3BC1
-        mov     si,word ptr ds:[4110h]
+        mov     si,word ptr ds:[SPAN_WRITER]
         cmp     si,offset _seg003_5AC3
         jne     L3BB8
         jmp     _seg003_5AAB
@@ -307,7 +317,7 @@ L3BD1:
         loop    L3BD1
         mov     word ptr [di],0FFFFh
         mov     si,2D40h
-        jmp     word ptr ds:[4110h]
+        jmp     word ptr ds:[SPAN_WRITER]
         lodsw
         xchg    dx,ax
         lodsw
@@ -375,7 +385,7 @@ L3C46:
         jl      L3C4B
         xchg    cx,ax
 L3C4B:
-        mov     si,word ptr ds:[3DF2h]
+        mov     si,word ptr ds:[WIN_LEFT]
         cmp     cx,si
         jl      L3C94
         cmp     ax,si
@@ -383,7 +393,7 @@ L3C4B:
         mov     ax,si
         add     bp,8
 L3C5C:
-        mov     si,word ptr ds:[3DF6h]
+        mov     si,word ptr ds:[WIN_RIGHT]
         cmp     ax,si
         jg      L3C94
         cmp     cx,si
@@ -391,7 +401,7 @@ L3C5C:
         mov     cx,si
         add     bp,2
 L3C6D:
-        mov     si,word ptr ds:[3DF8h]
+        mov     si,word ptr ds:[WIN_BOTTOM]
         cmp     bx,si
         jl      L3C94
         cmp     dx,si
@@ -399,7 +409,7 @@ L3C6D:
         mov     dx,si
         add     bp,1
 L3C7E:
-        mov     si,word ptr ds:[3DF4h]
+        mov     si,word ptr ds:[WIN_TOP]
         cmp     dx,si
         jg      L3C94
         cmp     bx,si
@@ -486,7 +496,7 @@ L3CE8:
         mov     word ptr ds:[49AAh],di
         or      word ptr [di],8000h
         pop     si
-        jmp     word ptr ds:[4110h]
+        jmp     word ptr ds:[SPAN_WRITER]
 L3CFE:
         retn
 _seg003_3CAE endp
@@ -495,22 +505,22 @@ _seg003_3CAE endp
 ; hline: clip a horizontal line (y BX, x from AX to CX) to the window and draw it as one span;
 ; returns at once when it is outside.
 _seg003_3CFF proc near
-        cmp     bx,word ptr ds:[3DF4h]
+        cmp     bx,word ptr ds:[WIN_TOP]
         jg      L3CFE
-        cmp     bx,word ptr ds:[3DF8h]
+        cmp     bx,word ptr ds:[WIN_BOTTOM]
         jl      L3CFE
         cmp     ax,cx
         jl      L3D10
         xchg    cx,ax
 L3D10:
-        mov     dx,word ptr ds:[3DF2h]
+        mov     dx,word ptr ds:[WIN_LEFT]
         cmp     cx,dx
         jl      L3CFE
         cmp     ax,dx
         jg      L3D1E
         mov     ax,dx
 L3D1E:
-        mov     dx,word ptr ds:[3DF6h]
+        mov     dx,word ptr ds:[WIN_RIGHT]
         cmp     ax,dx
         jg      L3CFE
         cmp     cx,dx
@@ -535,7 +545,7 @@ L3D33:
         stosw
         xchg    cx,ax
         stosw
-        jmp     word ptr ds:[4110h]
+        jmp     word ptr ds:[SPAN_WRITER]
 _seg003_3D2E endp
 
 ; seg003_3D42  (+3D42)
@@ -572,8 +582,8 @@ L3D4A:
         movsw
         movsw
         sub     si,4
-        mov     bx,word ptr ds:[3DF4h]
-        mov     dx,word ptr ds:[3DF8h]
+        mov     bx,word ptr ds:[WIN_TOP]
+        mov     dx,word ptr ds:[WIN_BOTTOM]
         mov     si,415Eh
         push    cx
 L3D6D:
@@ -595,17 +605,17 @@ L3D7A:
         mov     si,415Ch
         mov     di,42ECh
         mov     al,7Ch
-        mov     dx,word ptr ds:[3DF4h]
+        mov     dx,word ptr ds:[WIN_TOP]
         call    L3E0F
         mov     word ptr ds:[4484h],offset L3EC8
         mov     si,42ECh
         mov     di,415Ch
         mov     al,7Fh
-        mov     dx,word ptr ds:[3DF8h]
+        mov     dx,word ptr ds:[WIN_BOTTOM]
         call    L3E0F
 L3DB5:
-        mov     bx,word ptr ds:[3DF6h]
-        mov     dx,word ptr ds:[3DF2h]
+        mov     bx,word ptr ds:[WIN_RIGHT]
+        mov     dx,word ptr ds:[WIN_LEFT]
         mov     si,415Ch
         push    cx
 L3DC1:
@@ -627,13 +637,13 @@ L3DCE:
         mov     si,415Ch
         mov     di,42ECh
         mov     al,7Fh
-        mov     dx,word ptr ds:[3DF2h]
+        mov     dx,word ptr ds:[WIN_LEFT]
         call    L3E0F
         mov     word ptr ds:[4484h],offset L3E8D
         mov     si,42ECh
         mov     di,415Ch
         mov     al,7Ch
-        mov     dx,word ptr ds:[3DF6h]
+        mov     dx,word ptr ds:[WIN_RIGHT]
         call    L3E0F
 L3E09:
         jcxz    L3E0D
@@ -719,9 +729,9 @@ L3EA9:
         imul    dx
         idiv    cx
         add     ax,bx
-        cmp     ax,word ptr ds:[3DF4h]
+        cmp     ax,word ptr ds:[WIN_TOP]
         jge     L3EBF
-        cmp     ax,word ptr ds:[3DF8h]
+        cmp     ax,word ptr ds:[WIN_BOTTOM]
         jle     L3EBF
         add     ax,word ptr ds:[4486h]
 L3EBF:
@@ -755,9 +765,9 @@ L3EE4:
         imul    dx
         idiv    cx
         add     ax,bx
-        cmp     ax,word ptr ds:[3DF2h]
+        cmp     ax,word ptr ds:[WIN_LEFT]
         jle     L3EFA
-        cmp     ax,word ptr ds:[3DF6h]
+        cmp     ax,word ptr ds:[WIN_RIGHT]
         jge     L3EFA
         add     ax,word ptr ds:[4486h]
 L3EFA:

@@ -30,6 +30,10 @@
 ; module. Its relocations (entries 2724-2725, +1DD and +375) come after seg004's and seg019's
 ; and before POLYFILL's far data entry (2726), so a module boundary lies between it and POLYFILL.
 
+; The graphics library's data in seg048 (DS while the library runs), as GRLIBF.ASM's
+; and VIDMODE.ASM's headers describe it. The names are ours.
+PEN_COLOR       equ     410Fh   ; the colour
+
         .186
 
         extrn   seg048:far
@@ -389,7 +393,7 @@ L0363:
         mov     al,0B0h
         mov     byte ptr es:[658h],al
 L0394:
-        mov     byte ptr es:[410Fh],al
+        mov     byte ptr es:[PEN_COLOR],al
 L0398:
         pop     ax
         pop     di

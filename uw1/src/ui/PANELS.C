@@ -83,7 +83,7 @@ static int16 dstate[2] = { 0, 0 };      /* DS:78B */
 static int16 dspr[2] = { 0, 0 };        /* DS:78F */
 char weapid = -1;                       /* DS:793 */
 char last_weap = -1;
-char wlstate = 6;
+char wlstate = WEAP_SHEATHED;
 int16 weap_frame = -1;                  /* DS:796 */
 int16 wxo = 0;
 int16 wfo = 1;
@@ -105,11 +105,11 @@ static int16 danim_w[2][3] = { { 0x21, 0x18, 0x25 }, { 0x22, 0x18, 0x26 } };
 static int16 danim_h[2][3] = { { 0x0E, 0x10, 0x17 }, { 0x0E, 0x10, 0x17 } };
 static int16 dtail_x[2] = { 0x28, 0xE0 };      /* DS:854 */
 static int16 dtail_seq[2][7] = {
-    { 0x207B, 0x207C, 0x207D, 0x207E, 0x207D, 0x207C, 0x207B },
-    { 0x208D, 0x208E, 0x208F, 0x2090, 0x208F, 0x208E, 0x208D }
+    { ICON_DRAGONS + 0xE, ICON_DRAGONS + 0xF, ICON_DRAGONS + 0x10, ICON_DRAGONS + 0x11, ICON_DRAGONS + 0x10, ICON_DRAGONS + 0xF, ICON_DRAGONS + 0xE },
+    { ICON_DRAGONS + 0x20, ICON_DRAGONS + 0x21, ICON_DRAGONS + 0x22, ICON_DRAGONS + 0x23, ICON_DRAGONS + 0x22, ICON_DRAGONS + 0x21, ICON_DRAGONS + 0x20 }
 };
-static int16 dpart1_pic[2] = { 0x206D, 0x207F };   /* DS:874 */
-static int16 dpart2_pic[2] = { 0x206E, 0x2080 };   /* DS:878 */
+static int16 dpart1_pic[2] = { ICON_DRAGONS, ICON_DRAGONS + 0x12 };   /* DS:874 */
+static int16 dpart2_pic[2] = { ICON_DRAGONS + 0x1, ICON_DRAGONS + 0x13 };   /* DS:878 */
 /* UW1: the turning panel's height and width in percent, by step (flip_scale). */
 static int16 flip_hpct[8] = { 0x64, 0x67, 0x69, 0x6A, 0x6A, 0x6A, 0x69, 0x67 };
 static int16 flip_wpct[8] = { 0x64, 0x5C, 0x47, 0x26, 0x00, 0x26, 0x47, 0x5C };
@@ -125,7 +125,7 @@ struct {
 unsigned char far *wbuf = 0;            /* DS:8A4 */
 /* UW1: bit 0 set when the EMS handles are there and the panel turns. */
 static char flip_flags = 0;             /* DS:8A8 */
-int16 eyes_seq[5] = { 0x20A7, 0x20A8, 0x20A9, 0x20A8, 0x20A7 };
+int16 eyes_seq[5] = { ICON_EYES + 0x1, ICON_EYES + 0x2, ICON_EYES + 0x3, ICON_EYES + 0x2, ICON_EYES + 0x1 };
 int16 eyes = 0;                         /* DS:8B3 */
 int16 eyes_frame = 0;
 int16 rune_x[3] = { 0xB0, 0xBF, 0xCE };
@@ -148,12 +148,12 @@ void far set_flask(register int which)
     register int i;
 
     if (which == 0)
-        frame = player->poison ? 0x203E : 0x200C;
+        frame = player->poison ? ICON_FLASKS + 0x32 : ICON_FLASKS;
     else if (which == 1)
-        frame = 0x2025;
+        frame = ICON_FLASKS + 0x19;
     else
         return;
-    pic_to_screen(0x2057, FL_X[which], 0x4A, 1, 1);
+    pic_to_screen(ICON_FLASKS + 0x4B, FL_X[which], 0x4A, 1, 1);
     for (i = 0; i < goal[which]; i++) {
         move_sprite(level[which], FL_X[which], liquid_y[i + 1]);
         draw_sprite(level[which], frame + i);
@@ -167,10 +167,10 @@ void far set_compass(void)
 {
     register int dir;
 
-    dir = goal[2];
-    draw_sprite(level[2], (dir & 3) + 0x2059);
+    dir = goal[SCR_COMPASS];
+    draw_sprite(level[2], (dir & 3) + ICON_COMPASS);
     move_sprite(level[3], nedl_x[dir], nedl_y[dir]);
-    draw_sprite(level[3], dir + 0x205D);
+    draw_sprite(level[3], dir + (ICON_COMPASS + 0x4));
     update_sprites();
 }
 
@@ -185,12 +185,12 @@ void far reset_scrgr(void)
     erase_sprite(dspr[0]);
     erase_sprite(dspr[1]);
     dstate[0] = dstate[1] = 0;
-    RightPanel = 0;
+    RightPanel = PANEL_INV;
     eyes_frame = 0;
-    slow_adjust &= ~0x80;
-    goal[7] = 4;
-    setting[8] = goal[8] = 6;
-    wlstate = 6;
+    slow_adjust &= ~(1 << SCR_EYES);
+    goal[SCR_EYES] = 4;
+    setting[SCR_WEAPON] = goal[SCR_WEAPON] = WEAP_SHEATHED;
+    wlstate = WEAP_SHEATHED;
     weap_frame = 0;
     update_sprites();
 }
@@ -223,7 +223,7 @@ void far init_scrgr(void)
         change_sprite(level[3], nedl_x[0], nedl_y[0], 3, 4);
         eyes = create_sprite(0);
         change_sprite(eyes, 0x80, 0xC3, 1, 1);
-        goal[8] = setting[8] = 6;
+        goal[SCR_WEAPON] = setting[SCR_WEAPON] = WEAP_SHEATHED;
         inited = 1;
     }
     grSoftPageFlip();
@@ -232,10 +232,10 @@ void far init_scrgr(void)
         set_flask(i);
         draw_sprite(dpart1_spr[i], dpart1_pic[i]);
         draw_sprite(dpart2_spr[i], dpart2_pic[i]);
-        draw_sprite(dtail_spr[i], (i ? 0x12 : 0) + 0x207B);
+        draw_sprite(dtail_spr[i], (i ? 0x12 : 0) + (ICON_DRAGONS + 0xE));
     }
     set_compass();
-    draw_sprite(eyes, 0x20A6);
+    draw_sprite(eyes, ICON_EYES);
     set_runes(player->shelf);
     read_gr_far("panels", RightPanel, stdat);
     show(0xEC, 0xC0, stdat, 0x72, 0x53, 0, 0);
@@ -248,7 +248,7 @@ void far init_scrgr(void)
 /* Stops a panel turn where it is, taking the target panel at once. */
 void far hold_scrgr(void)
 {
-    RightPanel = goal[6] = setting[6];
+    RightPanel = goal[SCR_PANEL] = setting[SCR_PANEL];
     pbuf.frame = 0;
     pbuf.flag = 0;
 }
@@ -267,9 +267,9 @@ void far set_screen_frame(char which, int val)
     register int max;
 
     switch (which) {
-    case 0:
-    case 1:
-        max = which == 1 ? player->max_mana : playerdat->avghit;
+    case SCR_VITALITY:
+    case SCR_MANA:
+        max = which == SCR_MANA ? player->max_mana : playerdat->avghit;
         if (max)
             goal[which] = val * 12 / max;
         else
@@ -278,20 +278,20 @@ void far set_screen_frame(char which, int val)
             goal[which] = 12;
         slow_adjust |= 1 << which;
         break;
-    case 2:
-        if (setting[2] != val) {
+    case SCR_COMPASS:
+        if (setting[SCR_COMPASS] != val) {
             slow_adjust |= 1 << which;
-            goal[2] = val;
+            goal[SCR_COMPASS] = val;
         }
         break;
-    case 3:
+    case SCR_POWER:
         if (val != 9)
             now_adjust |= 1 << which;
         else
             slow_adjust |= 1 << which;
         goal[which] = val;
         break;
-    case 4:
+    case SCR_DRAGON:
         if (goal[4] == val)
             break;
         if (goal[5] == val)
@@ -313,14 +313,14 @@ void far set_screen_frame(char which, int val)
         goal[which] = val;
         slow_adjust |= 1 << which;
         break;
-    case 8:
-        if (weapid != last_weap && goal[8] == 6)
+    case SCR_WEAPON:
+        if (weapid != last_weap && goal[SCR_WEAPON] == WEAP_SHEATHED)
             break;
         fast_adjust |= 1 << which;
-        goal[8] = val;
+        goal[SCR_WEAPON] = val;
         break;
-    case 6:
-        if (RightPanel == 4)
+    case SCR_PANEL:
+        if (RightPanel == PANEL_TURNING)
             break;
     default:
         slow_adjust |= 1 << which;
@@ -382,7 +382,7 @@ void far update_screen(void)
    bubbles; the vitality flask switches to the green set while the player is poisoned. */
 void far adjust_flasks(int which)
 {
-    static int16 bub_frame[2] = { 0x2019, 0x2032 };
+    static int16 bub_frame[2] = { ICON_FLASKS + 0xD, ICON_FLASKS + 0x26 };
     static int16 bub_spr[2] = { 0, 0 };
     static int16 drain_spr[2] = { 0, 0 };
     static int16 mask_spr[2] = { 0, 0 };
@@ -398,27 +398,27 @@ void far adjust_flasks(int which)
     switch (f) {
     case 0:
         if (player->poison) {
-            base = 0x203E;
-            bub_first = 0x204B;
-            bub_last = 0x2056;
-            if (bub_frame[0] >= 0x2019 && bub_frame[0] <= 0x2024) {
+            base = ICON_FLASKS + 0x32;
+            bub_first = ICON_FLASKS + 0x3F;
+            bub_last = ICON_FLASKS + 0x4A;
+            if (bub_frame[0] >= ICON_FLASKS + 0xD && bub_frame[0] <= ICON_FLASKS + 0x18) {
                 set_flask(0);
                 bub_frame[0] += 0x32;
             }
         } else {
-            base = 0x200C;
-            bub_first = 0x2019;
-            bub_last = 0x2024;
-            if (bub_frame[0] >= 0x204B && bub_frame[0] <= 0x2056) {
+            base = ICON_FLASKS;
+            bub_first = ICON_FLASKS + 0xD;
+            bub_last = ICON_FLASKS + 0x18;
+            if (bub_frame[0] >= ICON_FLASKS + 0x3F && bub_frame[0] <= ICON_FLASKS + 0x4A) {
                 set_flask(0);
                 bub_frame[0] -= 0x32;
             }
         }
         break;
     case 1:
-        base = 0x2025;
-        bub_first = 0x2032;
-        bub_last = 0x203D;
+        base = ICON_FLASKS + 0x19;
+        bub_first = ICON_FLASKS + 0x26;
+        bub_last = ICON_FLASKS + 0x31;
         break;
     default:
         return;
@@ -441,7 +441,7 @@ void far adjust_flasks(int which)
         y = liquid_y[n + 1];
         change_sprite(drain_spr[f], FL_X[f], y, 0x18, liquid_h[n + 1]);
         set_yoff(drain_spr[f], 0x4A - y);
-        draw_sprite(drain_spr[f], 0x2057);
+        draw_sprite(drain_spr[f], ICON_FLASKS + 0x4B);
         if (n > 0) {
             move_sprite(level[f], FL_X[f], liquid_y[n]);
             draw_sprite(level[f], base + n - 1);
@@ -461,7 +461,7 @@ void far adjust_flasks(int which)
             draw_sprite(bub_spr[f], ++bub_frame[f]);
             set_yoff(mask_spr[f], 0x4A - liquid_y[n]);
             move_sprite(mask_spr[f], FL_X[f], liquid_y[n]);
-            draw_mask(mask_spr[f], 0x2058);
+            draw_mask(mask_spr[f], ICON_FLASKS + 0x4C);
         }
     }
 }
@@ -474,8 +474,8 @@ void far adjust_dragons(int which)
     static int16 frame[2] = { 0, 0 };
     static int16 tail = 0;
     static int16 dcount[2];
-    int16 first[2][3] = { { 0x206F, 0x2073, 0x2077 }, { 0x2081, 0x2085, 0x2089 } };
-    int16 last[2][3] = { { 0x2072, 0x2076, 0x207A }, { 0x2084, 0x2088, 0x208C } };
+    int16 first[2][3] = { { ICON_DRAGONS + 0x2, ICON_DRAGONS + 0x6, ICON_DRAGONS + 0xA }, { ICON_DRAGONS + 0x14, ICON_DRAGONS + 0x18, ICON_DRAGONS + 0x1C } };
+    int16 last[2][3] = { { ICON_DRAGONS + 0x5, ICON_DRAGONS + 0x9, ICON_DRAGONS + 0xD }, { ICON_DRAGONS + 0x17, ICON_DRAGONS + 0x1B, ICON_DRAGONS + 0x1F } };
     register int d;
     register int a;
 
@@ -609,10 +609,10 @@ void far adjust_compass(void)
     int cur;
     register int diff;
 
-    cur = setting[2];
-    diff = goal[2] - cur;
+    cur = setting[SCR_COMPASS];
+    diff = goal[SCR_COMPASS] - cur;
     if (diff == 0) {
-        slow_adjust &= ~4;
+        slow_adjust &= ~(1 << SCR_COMPASS);
         return;
     }
     if (diff < 0)
@@ -622,10 +622,10 @@ void far adjust_compass(void)
     else
         cur--;
     cur &= 0xF;
-    draw_sprite(level[2], (cur & 3) + 0x2059);
+    draw_sprite(level[2], (cur & 3) + ICON_COMPASS);
     move_sprite(level[3], nedl_x[cur], nedl_y[cur]);
-    draw_sprite(level[3], cur + 0x205D);
-    setting[2] = cur;
+    draw_sprite(level[3], cur + (ICON_COMPASS + 0x4));
+    setting[SCR_COMPASS] = cur;
 }
 
 /* Shows the power gem: frame p (0 at rest, a blow's charge while it charges); 9 pulses
@@ -637,22 +637,22 @@ void far adjust_power(void)
     static int16 frame = 9;
     char p;
 
-    p = goal[3];
+    p = goal[SCR_POWER];
     if (p >= 0 && p <= 13) {
         if (spr == 0) {
             spr = create_sprite(0);
             change_sprite(spr, 4, 0x3C, 1, 1);
         }
         if (p == 9) {
-            draw_sprite(spr, frame++ + 0x2098);
+            draw_sprite(spr, frame++ + ICON_POWER);
             if (frame > 13)
                 frame = 9;
-            slow_adjust |= 8;
+            slow_adjust |= 1 << SCR_POWER;
         } else {
             if (last == 9)
                 frame = 9;
-            draw_sprite(spr, p + 0x2098);
-            slow_adjust &= ~8;
+            draw_sprite(spr, p + ICON_POWER);
+            slow_adjust &= ~(1 << SCR_POWER);
         }
         last = p;
     }
@@ -662,16 +662,16 @@ void far adjust_power(void)
    (do_panel_frame), with RightPanel 4 while it turns. */
 void far adjust_panel(void)
 {
-    if (setting[6] != goal[6]) {
+    if (setting[SCR_PANEL] != goal[SCR_PANEL]) {
         if (pbuf.flag == 0) {
             pbuf.flag = 1;
-            init_panelflip(goal[6], 0xEC, 0xC0, 0x53, 0x72);
-            RightPanel = 4;
+            init_panelflip(goal[SCR_PANEL], 0xEC, 0xC0, 0x53, 0x72);
+            RightPanel = PANEL_TURNING;
         }
         if (do_panel_frame() == 1) {
-            RightPanel = setting[6] = goal[6];
+            RightPanel = setting[SCR_PANEL] = goal[SCR_PANEL];
             pbuf.flag = 0;
-            slow_adjust &= ~0x40;
+            slow_adjust &= ~(1 << SCR_PANEL);
         }
     }
 }
@@ -682,26 +682,26 @@ void far adjust_eyes(void)
 {
     static unsigned char wait = 0;
 
-    if (setting[7] == goal[7]) {
-        goal[7] += 4;
+    if (setting[SCR_EYES] == goal[SCR_EYES]) {
+        goal[SCR_EYES] += 4;
         eyes_frame = 2;
         wait = 0;
-    } else if (setting[7] != goal[7] - 4) {
+    } else if (setting[SCR_EYES] != goal[SCR_EYES] - 4) {
         if (wait != 0) {
             eyes_frame = 2;
             wait = 0;
         }
-        setting[7] = goal[7];
-        goal[7] += 4;
+        setting[SCR_EYES] = goal[SCR_EYES];
+        goal[SCR_EYES] += 4;
     }
     if (eyes_frame == 3 && wait < 0x10)
         wait++;
     else
-        draw_sprite(eyes, eyes_seq[eyes_frame++] + (setting[7] - 1) * 3);
+        draw_sprite(eyes, eyes_seq[eyes_frame++] + (setting[SCR_EYES] - 1) * 3);
     if (eyes_frame > 5) {
-        setting[7] = eyes_frame = wait = 0;
-        draw_sprite(eyes, 0x20A6);
-        slow_adjust &= ~0x80;
+        setting[SCR_EYES] = eyes_frame = wait = 0;
+        draw_sprite(eyes, ICON_EYES);
+        slow_adjust &= ~(1 << SCR_EYES);
     }
 }
 
@@ -734,7 +734,7 @@ void far load_weapon(char id)
 {
     weapid = id;
     if (id >= 0 && id <= 3 || last_weap != weapid)
-        fast_adjust |= 0x100;
+        fast_adjust |= 1 << SCR_WEAPON;
 }
 
 /* Loads the pictures of the weapon kind weapid for the player's hand (lefty) from
@@ -795,56 +795,56 @@ void far adjust_weapon(void)
     static char swung = 0;
 
     editchng(2);
-    if (goal[8] > 6)
-        goal[8] = 6;
-    if (goal[8] == 6) {
-        if (setting[8] != 6 && setting[8] != 5) {
-            setting[8] = 5;
+    if (goal[SCR_WEAPON] > WEAP_SHEATHED)
+        goal[SCR_WEAPON] = WEAP_SHEATHED;
+    if (goal[SCR_WEAPON] == WEAP_SHEATHED) {
+        if (setting[SCR_WEAPON] != WEAP_SHEATHED && setting[SCR_WEAPON] != WEAP_SHEATHING) {
+            setting[SCR_WEAPON] = WEAP_SHEATHING;
             weap_frame = -1;
         }
-    } else if (goal[8] == 4) {
-        if (setting[8] == 6 || setting[8] == 5) {
-            setting[8] = 3;
+    } else if (goal[SCR_WEAPON] == WEAP_READY) {
+        if (setting[SCR_WEAPON] == WEAP_SHEATHED || setting[SCR_WEAPON] == WEAP_SHEATHING) {
+            setting[SCR_WEAPON] = WEAP_DRAWING;
             weap_frame = 3;
         } else if (swung) {
-            setting[8] = 4;
+            setting[SCR_WEAPON] = WEAP_READY;
             weap_frame = -1;
-        } else if (setting[8] >= 0 && setting[8] <= 2) {
+        } else if (setting[SCR_WEAPON] >= 0 && setting[SCR_WEAPON] <= 2) {
             if ((weap_frame -= 2) < -1)
-                setting[8] = 4;
-        } else if (setting[8] == 4 && weapid == last_weap) {
-            fast_adjust &= ~0x100;
+                setting[SCR_WEAPON] = WEAP_READY;
+        } else if (setting[SCR_WEAPON] == WEAP_READY && weapid == last_weap) {
+            fast_adjust &= ~(1 << SCR_WEAPON);
             return;
         }
     } else
-        setting[8] = goal[8];
-    switch (setting[8]) {
-    case 5:
+        setting[SCR_WEAPON] = goal[SCR_WEAPON];
+    switch (setting[SCR_WEAPON]) {
+    case WEAP_SHEATHING:
         if (++weap_frame > 2)
-            setting[8] = 6;
+            setting[SCR_WEAPON] = WEAP_SHEATHED;
         break;
-    case 3:
+    case WEAP_DRAWING:
         if (--weap_frame < 0)
-            setting[8] = 4;
+            setting[SCR_WEAPON] = WEAP_READY;
         break;
-    case 6:
+    case WEAP_SHEATHED:
         if (weapid != last_weap) {
             do_weapload();
-            goal[8] = wlstate;
-            wlstate = 6;
+            goal[SCR_WEAPON] = wlstate;
+            wlstate = WEAP_SHEATHED;
             break;
         }
         weap_frame = -1;
-        fast_adjust &= ~0x100;
+        fast_adjust &= ~(1 << SCR_WEAPON);
         break;
-    case 4:
+    case WEAP_READY:
         if (weapid != last_weap) {
-            goal[8] = 6;
-            wlstate = 4;
+            goal[SCR_WEAPON] = WEAP_SHEATHED;
+            wlstate = WEAP_READY;
             break;
         }
         weap_frame = -1;
-        fast_adjust &= ~0x100;
+        fast_adjust &= ~(1 << SCR_WEAPON);
         break;
     default:
         switch (++weap_frame) {
@@ -855,13 +855,13 @@ void far adjust_weapon(void)
         case 2:
             break;
         case 3:
-            fast_adjust &= ~0x100;
+            fast_adjust &= ~(1 << SCR_WEAPON);
             swung = 1;
             break;
         case 9:
-            goal[8] = setting[8] = 4;
+            goal[SCR_WEAPON] = setting[SCR_WEAPON] = WEAP_READY;
             weap_frame = -1;
-            fast_adjust &= ~0x100;
+            fast_adjust &= ~(1 << SCR_WEAPON);
             break;
         }
         break;
@@ -915,7 +915,7 @@ void far active_spells(register unsigned char *spells)
     static int16 spr[3] = { 0, 0, 0 };
     register int i;
 
-    if (inplist->mode == 1) {
+    if (inplist->mode == MODE_GAME) {
         if (spr[0] == 0) {
             Transparency = 1;
             for (i = 0; i < 3; i++) {
@@ -926,7 +926,7 @@ void far active_spells(register unsigned char *spells)
         }
         for (i = 0; i < 3; i++) {
             if (spells[i] >= 0 && spells[i] < 0x15)
-                draw_sprite(spr[i], spells[i] + 0x20C0);
+                draw_sprite(spr[i], spells[i] + ICON_SPELLS);
             else
                 erase_sprite(spr[i]);
         }
@@ -961,9 +961,9 @@ void far init_panelflip(int panel, int x, int y, int w, int h)
     }
     if (flip_flags & 1) {
         ok &= (char)read_gr_far("panels", panel, seg012_15E(flip_handle[1]));
-        ok &= (char)read_gr_far("panels", 3, (unsigned char far *)seg012_15E(flip_handle[0]) + 0x2800);
+        ok &= (char)read_gr_far("panels", PANEL_EDGE, (unsigned char far *)seg012_15E(flip_handle[0]) + 0x2800);
         if (!ok)
-            pfatal_code(0x300E);
+            pfatal_code(ERR_READ | 0x00E);
         mouse_hide();
         grSoftPageFlip();
         show(0xEC, 0xC0, seg012_15E(flip_handle[1]), 0x72, 0x53, 0, 0);
@@ -1021,12 +1021,12 @@ char far do_panel_frame(void)
         switch (pbuf.frame) {
         case 3:
             src = stdat;
-            read_gr_far("panels", 3, src);
+            read_gr_far("panels", PANEL_EDGE, src);
             mouse_hide();
             set_the_color(0xF1);
             rectangle(0xEC, 0xC0, 0x13F, 0x4E);
-            pic_to_screen(0x20BC, 0x110, 0xC4, 1, 1);
-            pic_to_screen(0x20B4, 0x110, 0x4E, 1, 1);
+            pic_to_screen(ICON_CHAINS + 0xC, 0x110, 0xC4, 1, 1);
+            pic_to_screen(ICON_CHAINS + 0x4, 0x110, 0x4E, 1, 1);
             show(0x114, 0xC3, src, 0x78, 3, 0, 0);
             mouse_show();
             break;
@@ -1043,8 +1043,8 @@ char far do_panel_frame(void)
             panel_dispatch[flip_page]();
             grSoftPageFlip();
             RightPanel = old;
-            pic_to_screen(0x20B8, 0x110, 0xC4, 1, 1);
-            pic_to_screen(0x20B0, 0x110, 0x4E, 1, 1);
+            pic_to_screen(ICON_CHAINS + 0x8, 0x110, 0xC4, 1, 1);
+            pic_to_screen(ICON_CHAINS, 0x110, 0x4E, 1, 1);
             set_the_color(0x106);
             rectangle(0xEC, 0xC0, 0x13E, 0x4F);
             mouse_show();
@@ -1109,8 +1109,8 @@ char far do_panel_frame(void)
             pbuf.frame = 0;
             break;
         }
-        pic_to_screen(pbuf.frame + 0x20B8, 0x110, 0xC4, 1, 1);
-        pic_to_screen(pbuf.frame + 0x20B0, 0x110, 0x4E, 1, 1);
+        pic_to_screen(pbuf.frame + (ICON_CHAINS + 0x8), 0x110, 0xC4, 1, 1);
+        pic_to_screen(pbuf.frame + ICON_CHAINS, 0x110, 0x4E, 1, 1);
         mouse_show();
         return pbuf.frame == 0;
     }
@@ -1260,12 +1260,12 @@ void far do_fbuf_bms(void)
     register int jig;
 
     Transparency = 1;
-    if (setting[8] != 6 && weap_frame < 0x1C && last_weap > -1 && ShowStupidFirstPersonWeapon) {
+    if (setting[SCR_WEAPON] != WEAP_SHEATHED && weap_frame < 0x1C && last_weap > -1 && ShowStupidFirstPersonWeapon) {
         jig = PN.speed ? PN.speed * 2 / 0x31F + 1 : 0;
         jiggle_weapon(jig);
-        if (setting[8] == 3 || setting[8] == 5)
+        if (setting[SCR_WEAPON] == WEAP_DRAWING || setting[SCR_WEAPON] == WEAP_SHEATHING)
             n = weap_frame + 0x12;
-        else if (weap_frame < 0 || setting[8] == 4)
+        else if (weap_frame < 0 || setting[SCR_WEAPON] == WEAP_READY)
             n = 0x1C - wfo;
         else {
             n = setting[8] * 9 + weap_frame;
@@ -1277,9 +1277,9 @@ void far do_fbuf_bms(void)
         p = grs_unpack(wbuf);
         fbshow(p, weap_x[n] + wxo, weap_y[n], wbuf[1], wbuf[2]);
     }
-    pic_to_fbuf(0x107F, 0x3E, 3);
-    pic_to_fbuf(0x1080, 0, 0xD);
-    pic_to_fbuf(0x1081, 0xAB, 0xD);
+    pic_to_fbuf(ICON_3DWIN, 0x3E, 3);
+    pic_to_fbuf(ICON_3DWIN + 0x1, 0, 0xD);
+    pic_to_fbuf(ICON_3DWIN + 0x2, 0xAB, 0xD);
     Transparency = 0;
 }
 

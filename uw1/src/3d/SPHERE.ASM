@@ -40,6 +40,29 @@
 ; (INTERP.ASM), in seg051, the data segment while interpreting (UW2: 24F4h).
 OPCODE_TABLE    equ     2738h
 
+; The renderer's data in seg051 (DS while interpreting), as INTERP.ASM's header
+; describes it. The names are ours, from the routines that use the data.
+MAT_XX          equ     1602h   ; the view matrix, 1.15 fixed point: MAT_ab is input a's
+MAT_XY          equ     1604h   ; coefficient in output b (mxmul: x' = x*MAT_XX + y*MAT_YX
+MAT_XZ          equ     1606h   ; + z*MAT_ZX, and so on; z' is the depth)
+MAT_YX          equ     1608h
+MAT_YY          equ     160Ah
+MAT_YZ          equ     160Ch
+MAT_ZX          equ     160Eh
+MAT_ZY          equ     1610h
+MAT_ZZ          equ     1612h
+PNT_X           equ     1620h   ; the point table, 8 bytes a point: view x
+PNT_Y           equ     1622h   ; y
+PNT_Z           equ     1624h   ; z, the depth
+PNT_CODES       equ     1626h   ; the clip codes (code_pnt)
+EYE_X           equ     26BAh   ; the eye position, three 32-bit coordinates
+EYE_Y           equ     26BEh
+EYE_Z           equ     26C2h
+OBJ_SHIFT       equ     2880h   ; the current object's coordinate shift
+OBJ_X           equ     2886h   ; the current object's origin, eye-relative and negated
+OBJ_Y           equ     2888h
+OBJ_Z           equ     288Ah
+
         .186
 
 _DATA   segment word public 'DATA'
@@ -94,13 +117,13 @@ _sphere_check proc near
         neg     ax
         mov     cx,ax
         mov     ax,bx
-        imul    word ptr ds:[1606h]
+        imul    word ptr ds:[MAT_XZ]
         mov     di,dx
         mov     ax,cx
-        imul    word ptr ds:[160Ch]
+        imul    word ptr ds:[MAT_YZ]
         add     di,dx
         mov     ax,bp
-        imul    word ptr ds:[1612h]
+        imul    word ptr ds:[MAT_ZZ]
         add     di,dx
         mov     word ptr ds:[1CEh],di
         jns     short L13AC
@@ -111,13 +134,13 @@ L13A9:
         jmp     L147F
 L13AC:
         mov     ax,bx
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     di,dx
         mov     ax,cx
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         add     di,dx
         mov     ax,bp
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     di,dx
         mov     ax,si
         mul     word ptr ds:[2728h]
@@ -147,13 +170,13 @@ L13F2:
         jmp     L14B2
 L13F9:
         mov     ax,bx
-        imul    word ptr ds:[1604h]
+        imul    word ptr ds:[MAT_XY]
         mov     di,dx
         mov     ax,cx
-        imul    word ptr ds:[160Ah]
+        imul    word ptr ds:[MAT_YY]
         add     di,dx
         mov     ax,bp
-        imul    word ptr ds:[1610h]
+        imul    word ptr ds:[MAT_ZY]
         add     di,dx
         mov     ax,si
         mul     word ptr ds:[272Ah]
@@ -211,13 +234,13 @@ L1478:
         ret
 L147F:
         mov     ax,bx
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     di,dx
         mov     ax,cx
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         add     di,dx
         mov     ax,bp
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     di,dx
         mov     ax,si
         mul     word ptr ds:[2728h]
@@ -233,13 +256,13 @@ L14A8:
         js      short L151D
 L14B2:
         mov     ax,bx
-        imul    word ptr ds:[1604h]
+        imul    word ptr ds:[MAT_XY]
         mov     di,dx
         mov     ax,cx
-        imul    word ptr ds:[160Ah]
+        imul    word ptr ds:[MAT_YY]
         add     di,dx
         mov     ax,bp
-        imul    word ptr ds:[1610h]
+        imul    word ptr ds:[MAT_ZY]
         add     di,dx
         mov     ax,si
         mul     word ptr ds:[272Ah]
@@ -382,11 +405,11 @@ _seg004_15AC proc near
         mov     di,ax
         add     di,si
         mov     es,word ptr [di-8]
-        mov     dx,word ptr ds:[26BAh]
+        mov     dx,word ptr ds:[EYE_X]
         lodsw
         sub     dx,ax
         mov     word ptr ds:[1D6h],dx
-        mov     bx,word ptr ds:[26BCh]
+        mov     bx,word ptr ds:[EYE_X+2]
         lodsw
         sbb     bx,ax
         mov     word ptr ds:[1D8h],bx
@@ -416,11 +439,11 @@ L15EF:
         xor     ax,dx
         sub     ax,dx
         mov     bp,ax
-        mov     dx,word ptr ds:[26BEh]
+        mov     dx,word ptr ds:[EYE_Y]
         lodsw
         sub     dx,ax
         mov     word ptr ds:[1DAh],dx
-        mov     bx,word ptr ds:[26C0h]
+        mov     bx,word ptr ds:[EYE_Y+2]
         lodsw
         sbb     bx,ax
         mov     word ptr ds:[1DCh],bx
@@ -449,11 +472,11 @@ L1630:
         xor     ax,dx
         sub     ax,dx
         or      bp,ax
-        mov     dx,word ptr ds:[26C2h]
+        mov     dx,word ptr ds:[EYE_Z]
         lodsw
         sub     dx,ax
         mov     word ptr ds:[1DEh],dx
-        mov     bx,word ptr ds:[26C4h]
+        mov     bx,word ptr ds:[EYE_Z+2]
         lodsw
         sbb     bx,ax
         mov     word ptr ds:[1E0h],bx
@@ -588,20 +611,20 @@ L170F:
         mov     word ptr ds:[2882h],0
         mov     word ptr ds:[1C4h],1
         mov     si,dx
-        mov     word ptr ds:[2886h],bx
+        mov     word ptr ds:[OBJ_X],bx
         mov     ax,bx
         cwd
         xor     bx,dx
         sub     bx,dx
         add     bx,word ptr [si-6]
-        mov     word ptr ds:[2888h],cx
+        mov     word ptr ds:[OBJ_Y],cx
         xchg    cx,ax
         cwd
         xor     ax,dx
         sub     ax,dx
         add     ax,word ptr [si-4]
         or      bx,ax
-        mov     word ptr ds:[288Ah],bp
+        mov     word ptr ds:[OBJ_Z],bp
         xchg    bp,ax
         cwd
         xor     ax,dx
@@ -619,7 +642,7 @@ L1788:
         xlatb
         add     al,8
 L178B:
-        mov     byte ptr ds:[2880h],al
+        mov     byte ptr ds:[OBJ_SHIFT],al
         call    _self_modify
         mov     ax,di
         call    _seg004_5040
@@ -646,10 +669,10 @@ _seg004_17AB proc near
         add     bp,2
         mov     di,word ptr [bp]
         mov     es,word ptr [di-8]
-        mov     ax,word ptr ds:[26BAh]
+        mov     ax,word ptr ds:[EYE_X]
         sub     ax,word ptr [bp+2]
         mov     word ptr ds:[1D6h],ax
-        mov     bx,word ptr ds:[26BCh]
+        mov     bx,word ptr ds:[EYE_X+2]
         sbb     bx,word ptr [bp+4]
         mov     word ptr ds:[1D8h],bx
         mov     cx,es
@@ -676,10 +699,10 @@ L17EC:
         xor     ax,dx
         sub     ax,dx
         mov     si,ax
-        mov     ax,word ptr ds:[26BEh]
+        mov     ax,word ptr ds:[EYE_Y]
         sub     ax,word ptr [bp+6]
         mov     word ptr ds:[1DAh],ax
-        mov     bx,word ptr ds:[26C0h]
+        mov     bx,word ptr ds:[EYE_Y+2]
         sbb     bx,word ptr [bp+8]
         mov     word ptr ds:[1DCh],bx
         mov     cx,es
@@ -706,10 +729,10 @@ L1829:
         xor     ax,dx
         sub     ax,dx
         or      si,ax
-        mov     ax,word ptr ds:[26C2h]
+        mov     ax,word ptr ds:[EYE_Z]
         sbb     ax,word ptr [bp+0Ah]
         mov     word ptr ds:[1DEh],ax
-        mov     bx,word ptr ds:[26C4h]
+        mov     bx,word ptr ds:[EYE_Z+2]
         sbb     bx,word ptr [bp+0Ch]
         mov     word ptr ds:[1E0h],bx
         mov     cx,es
@@ -806,19 +829,19 @@ L18F7:
         push    si
         push    di
         push    cx
-        push    word ptr ds:[288Ah]
-        push    word ptr ds:[2888h]
-        push    word ptr ds:[2886h]
+        push    word ptr ds:[OBJ_Z]
+        push    word ptr ds:[OBJ_Y]
+        push    word ptr ds:[OBJ_X]
         mov     si,di
         add     si,6
         lodsw
         mov     bp,ax
         lodsw
-        mov     word ptr es:[2886h],ax
+        mov     word ptr es:[OBJ_X],ax
         lodsw
-        mov     word ptr es:[2888h],ax
+        mov     word ptr es:[OBJ_Y],ax
         lodsw
-        mov     word ptr es:[288Ah],ax
+        mov     word ptr es:[OBJ_Z],ax
         lodsw
         mov     word ptr es:[289Ah],ax
         lodsw
@@ -830,15 +853,15 @@ L18F7:
         mov     word ptr ds:[2882h],0
         mov     word ptr ds:[1C4h],2
         call    _seg004_5040
-        push    word ptr ds:[1612h]
-        push    word ptr ds:[1610h]
-        push    word ptr ds:[160Eh]
-        push    word ptr ds:[160Ch]
-        push    word ptr ds:[160Ah]
-        push    word ptr ds:[1608h]
-        push    word ptr ds:[1606h]
-        push    word ptr ds:[1604h]
-        push    word ptr ds:[1602h]
+        push    word ptr ds:[MAT_ZZ]
+        push    word ptr ds:[MAT_ZY]
+        push    word ptr ds:[MAT_ZX]
+        push    word ptr ds:[MAT_YZ]
+        push    word ptr ds:[MAT_YY]
+        push    word ptr ds:[MAT_YX]
+        push    word ptr ds:[MAT_XZ]
+        push    word ptr ds:[MAT_XY]
+        push    word ptr ds:[MAT_XX]
         mov     word ptr ds:[1C6h],bp
         mov     ax,word ptr [bp]
         mov     word ptr ds:[1C0h],ax
@@ -874,7 +897,7 @@ L19AB:
         je      short L19B5
         call    _instance_bank
 L19B5:
-        mov     ax,word ptr ds:[2886h]
+        mov     ax,word ptr ds:[OBJ_X]
         cwd
         xor     ax,dx
         sub     ax,dx
@@ -883,14 +906,14 @@ L19B5:
         jno     short L19C7
         jmp     L1A52
 L19C7:
-        mov     ax,word ptr ds:[2888h]
+        mov     ax,word ptr ds:[OBJ_Y]
         cwd
         xor     ax,dx
         sub     ax,dx
         add     ax,word ptr [si-4]
         jo      short L1A52
         or      bp,ax
-        mov     ax,word ptr ds:[288Ah]
+        mov     ax,word ptr ds:[OBJ_Z]
         cwd
         xor     ax,dx
         sub     ax,dx
@@ -909,7 +932,7 @@ L19F4:
         xlatb
         add     al,8
 L19F7:
-        mov     byte ptr ds:[2880h],al
+        mov     byte ptr ds:[OBJ_SHIFT],al
         push    si
         call    _check_flat
         call    _self_modify
@@ -925,18 +948,18 @@ L1A13:
         lodsw
         xchg    bx,ax
         call    word ptr [bx+OPCODE_TABLE]
-        pop     word ptr ds:[1602h]
-        pop     word ptr ds:[1604h]
-        pop     word ptr ds:[1606h]
-        pop     word ptr ds:[1608h]
-        pop     word ptr ds:[160Ah]
-        pop     word ptr ds:[160Ch]
-        pop     word ptr ds:[160Eh]
-        pop     word ptr ds:[1610h]
-        pop     word ptr ds:[1612h]
-        pop     word ptr ds:[2886h]
-        pop     word ptr ds:[2888h]
-        pop     word ptr ds:[288Ah]
+        pop     word ptr ds:[MAT_XX]
+        pop     word ptr ds:[MAT_XY]
+        pop     word ptr ds:[MAT_XZ]
+        pop     word ptr ds:[MAT_YX]
+        pop     word ptr ds:[MAT_YY]
+        pop     word ptr ds:[MAT_YZ]
+        pop     word ptr ds:[MAT_ZX]
+        pop     word ptr ds:[MAT_ZY]
+        pop     word ptr ds:[MAT_ZZ]
+        pop     word ptr ds:[OBJ_X]
+        pop     word ptr ds:[OBJ_Y]
+        pop     word ptr ds:[OBJ_Z]
         call    _self_modify
         pop     cx
         pop     di
@@ -945,18 +968,18 @@ L1A13:
         ret
 L1A52:
         mov     word ptr ds:[2882h],0FFFFh
-        pop     word ptr ds:[1602h]
-        pop     word ptr ds:[1604h]
-        pop     word ptr ds:[1606h]
-        pop     word ptr ds:[1608h]
-        pop     word ptr ds:[160Ah]
-        pop     word ptr ds:[160Ch]
-        pop     word ptr ds:[160Eh]
-        pop     word ptr ds:[1610h]
-        pop     word ptr ds:[1612h]
-        pop     word ptr ds:[2886h]
-        pop     word ptr ds:[2888h]
-        pop     word ptr ds:[288Ah]
+        pop     word ptr ds:[MAT_XX]
+        pop     word ptr ds:[MAT_XY]
+        pop     word ptr ds:[MAT_XZ]
+        pop     word ptr ds:[MAT_YX]
+        pop     word ptr ds:[MAT_YY]
+        pop     word ptr ds:[MAT_YZ]
+        pop     word ptr ds:[MAT_ZX]
+        pop     word ptr ds:[MAT_ZY]
+        pop     word ptr ds:[MAT_ZZ]
+        pop     word ptr ds:[OBJ_X]
+        pop     word ptr ds:[OBJ_Y]
+        pop     word ptr ds:[OBJ_Z]
         pop     cx
         pop     di
         pop     si
@@ -971,10 +994,10 @@ _seg004_1A8D proc near
         lodsw
         add     ax,si
         mov     di,ax
-        mov     ax,word ptr ds:[26BAh]
+        mov     ax,word ptr ds:[EYE_X]
         sub     ax,word ptr [si]
         mov     word ptr ds:[1D6h],ax
-        mov     bx,word ptr ds:[26BCh]
+        mov     bx,word ptr ds:[EYE_X+2]
         sbb     bx,word ptr [si+2]
         mov     word ptr ds:[1D8h],bx
         mov     cx,word ptr [di-8]
@@ -997,7 +1020,7 @@ L1AC4:
         je      short L1ACC
         jmp     L1BCD
 L1ACC:
-        mov     word ptr ds:[2886h],ax
+        mov     word ptr ds:[OBJ_X],ax
         xor     ax,dx
         sub     ax,dx
         mov     bp,word ptr [di-6]
@@ -1005,10 +1028,10 @@ L1ACC:
         jno     short L1ADD
         jmp     L1BCD
 L1ADD:
-        mov     ax,word ptr ds:[26BEh]
+        mov     ax,word ptr ds:[EYE_Y]
         sub     ax,word ptr [si+4]
         mov     word ptr ds:[1DAh],ax
-        mov     bx,word ptr ds:[26C0h]
+        mov     bx,word ptr ds:[EYE_Y+2]
         sbb     bx,word ptr [si+6]
         mov     word ptr ds:[1DCh],bx
         mov     cx,word ptr [di-8]
@@ -1031,7 +1054,7 @@ L1B0A:
         je      short L1B12
         jmp     L1BCD
 L1B12:
-        mov     word ptr ds:[2888h],ax
+        mov     word ptr ds:[OBJ_Y],ax
         xor     ax,dx
         sub     ax,dx
         add     ax,word ptr [di-4]
@@ -1039,10 +1062,10 @@ L1B12:
         jmp     L1BCD
 L1B21:
         or      bp,ax
-        mov     ax,word ptr ds:[26C2h]
+        mov     ax,word ptr ds:[EYE_Z]
         sub     ax,word ptr [si+8]
         mov     word ptr ds:[1DEh],ax
-        mov     bx,word ptr ds:[26C4h]
+        mov     bx,word ptr ds:[EYE_Z+2]
         sbb     bx,word ptr [si+0Ah]
         mov     word ptr ds:[1E0h],bx
         mov     cx,word ptr [di-8]
@@ -1063,7 +1086,7 @@ L1B50:
         cwd
         cmp     bx,dx
         jne     short L1BCD
-        mov     word ptr ds:[288Ah],ax
+        mov     word ptr ds:[OBJ_Z],ax
         xor     bx,ax
         sub     bx,dx
         add     bx,word ptr [di-2]
@@ -1073,7 +1096,7 @@ L1B50:
         push    si
         mov     si,word ptr [di-0Ah]
         mov     ax,si
-        add     ax,word ptr ds:[2886h]
+        add     ax,word ptr ds:[OBJ_X]
         js      short L1BDD
         mov     word ptr ds:[1C4h],1
         push    bx
@@ -1089,7 +1112,7 @@ L1B87:
         add     al,8
 L1B8A:
         pop     bx
-        mov     byte ptr ds:[2880h],al
+        mov     byte ptr ds:[OBJ_SHIFT],al
         or      bx,si
         mov     ax,bx
         mov     bx,1E2h
@@ -1104,9 +1127,9 @@ L1B9E:
 L1BA1:
         mov     cl,al
         push    di
-        mov     bx,word ptr ds:[2886h]
-        mov     bp,word ptr ds:[288Ah]
-        mov     ax,word ptr ds:[2888h]
+        mov     bx,word ptr ds:[OBJ_X]
+        mov     bp,word ptr ds:[OBJ_Z]
+        mov     ax,word ptr ds:[OBJ_Y]
         call    _sphere_check
         jb      short L1BDC
         mov     word ptr ds:[289Ah],ax
@@ -1163,12 +1186,12 @@ do_obj proc near
         lodsw
         mov     bp,ax
         lodsw
-        sub     ax,word ptr ds:[26BAh]
+        sub     ax,word ptr ds:[EYE_X]
         mov     word ptr ds:[1D6h],ax
         xchg    bx,ax
         lodsw
         xchg    bx,ax
-        sbb     bx,word ptr ds:[26BCh]
+        sbb     bx,word ptr ds:[EYE_X+2]
         mov     word ptr ds:[1D8h],bx
         jcxz    L1C21
         or      cx,cx
@@ -1190,7 +1213,7 @@ L1C21:
         jmp     L1D2B
 L1C29:
         neg     ax
-        mov     word ptr ds:[2886h],ax
+        mov     word ptr ds:[OBJ_X],ax
         cwd
         xor     ax,dx
         sub     ax,dx
@@ -1201,12 +1224,12 @@ L1C3A:
         lodsw
         mov     dx,ax
         lodsw
-        sub     ax,word ptr ds:[26BEh]
+        sub     ax,word ptr ds:[EYE_Y]
         mov     word ptr ds:[1DAh],ax
         xchg    bx,ax
         lodsw
         xchg    bx,ax
-        sbb     bx,word ptr ds:[26C0h]
+        sbb     bx,word ptr ds:[EYE_Y+2]
         mov     word ptr ds:[1DCh],bx
         mov     cx,word ptr ds:[2708h]
         jcxz    L1C6A
@@ -1230,7 +1253,7 @@ L1C6A:
         jmp     L1D2B
 L1C74:
         neg     ax
-        mov     word ptr ds:[2888h],ax
+        mov     word ptr ds:[OBJ_Y],ax
         cwd
         xor     ax,dx
         sub     ax,dx
@@ -1242,12 +1265,12 @@ L1C85:
         lodsw
         mov     dx,ax
         lodsw
-        sub     ax,word ptr ds:[26C2h]
+        sub     ax,word ptr ds:[EYE_Z]
         mov     word ptr ds:[1DEh],ax
         xchg    bx,ax
         lodsw
         xchg    bx,ax
-        sbb     bx,word ptr ds:[26C4h]
+        sbb     bx,word ptr ds:[EYE_Z+2]
         mov     word ptr ds:[1E0h],bx
         mov     cx,word ptr ds:[2708h]
         jcxz    L1CB7
@@ -1269,7 +1292,7 @@ L1CB7:
         cmp     bx,dx
         jne     short L1D2B
         neg     ax
-        mov     word ptr ds:[288Ah],ax
+        mov     word ptr ds:[OBJ_Z],ax
         cwd
         xor     ax,dx
         sub     ax,dx
@@ -1282,7 +1305,7 @@ L1CB7:
         xchg    si,ax
         mov     ax,si
 modify_axis2:
-        add     ax,word ptr ds:[2886h]
+        add     ax,word ptr ds:[OBJ_X]
         js      short L1D39
         mov     word ptr ds:[1C4h],0
         mov     ax,bp
@@ -1296,7 +1319,7 @@ L1CEE:
         xlatb
         add     al,8
 L1CF1:
-        mov     byte ptr ds:[2880h],al
+        mov     byte ptr ds:[OBJ_SHIFT],al
         or      bp,si
         mov     ax,bp
         mov     bx,1E2h
@@ -1310,9 +1333,9 @@ L1D04:
         add     al,8
 L1D07:
         mov     cl,al
-        mov     bx,word ptr ds:[2886h]
-        mov     bp,word ptr ds:[288Ah]
-        mov     ax,word ptr ds:[2888h]
+        mov     bx,word ptr ds:[OBJ_X]
+        mov     bp,word ptr ds:[OBJ_Z]
+        mov     ax,word ptr ds:[OBJ_Y]
         call    _sphere_check
         pop     di
         jb      short L1D3A
@@ -1348,43 +1371,43 @@ do_obj endp
 _seg004_1D43 proc near
         mov     di,si
         lodsw
-        sub     ax,word ptr ds:[26BAh]
+        sub     ax,word ptr ds:[EYE_X]
         xchg    bx,ax
         lodsw
         xchg    bx,ax
-        sbb     bx,word ptr ds:[26BCh]
+        sbb     bx,word ptr ds:[EYE_X+2]
         cwd
         cmp     bx,dx
         je      short L1D59
         jmp     L1DDB
 L1D59:
-        mov     word ptr ds:[2886h],ax
+        mov     word ptr ds:[OBJ_X],ax
         xor     ax,dx
         sub     ax,dx
         mov     bp,ax
         lodsw
-        sub     ax,word ptr ds:[26BEh]
+        sub     ax,word ptr ds:[EYE_Y]
         xchg    bx,ax
         lodsw
         xchg    bx,ax
-        sbb     bx,word ptr ds:[26C0h]
+        sbb     bx,word ptr ds:[EYE_Y+2]
         cwd
         cmp     bx,dx
         jne     short L1DDB
-        mov     word ptr ds:[2888h],ax
+        mov     word ptr ds:[OBJ_Y],ax
         xor     ax,dx
         sub     ax,dx
         or      bp,ax
         lodsw
-        sub     ax,word ptr ds:[26C2h]
+        sub     ax,word ptr ds:[EYE_Z]
         xchg    bx,ax
         lodsw
         xchg    bx,ax
-        sbb     bx,word ptr ds:[26C4h]
+        sbb     bx,word ptr ds:[EYE_Z+2]
         cwd
         cmp     bx,dx
         jne     short L1DDB
-        mov     word ptr ds:[288Ah],ax
+        mov     word ptr ds:[OBJ_Z],ax
         xor     ax,dx
         sub     ax,dx
         or      bp,ax
@@ -1400,45 +1423,45 @@ L1DA4:
         add     al,8
 L1DA7:
         mov     cl,al
-        mov     bx,word ptr ds:[2886h]
+        mov     bx,word ptr ds:[OBJ_X]
         shl     bx,cl
-        mov     bp,word ptr ds:[288Ah]
+        mov     bp,word ptr ds:[OBJ_Z]
         shl     bp,cl
-        mov     ax,word ptr ds:[2888h]
+        mov     ax,word ptr ds:[OBJ_Y]
         shl     ax,cl
         mov     cx,ax
 L1DBC:
         call    _mxmul
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         call    _code_pnt
-        mov     byte ptr [di+1626h],al
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
 L1DDB:
         mov     si,di
         lodsw
-        sub     ax,word ptr ds:[26BAh]
+        sub     ax,word ptr ds:[EYE_X]
         lodsw
-        sbb     ax,word ptr ds:[26BCh]
+        sbb     ax,word ptr ds:[EYE_X+2]
         cwd
         xor     ax,dx
         mov     bp,ax
         lodsw
-        sub     ax,word ptr ds:[26BEh]
+        sub     ax,word ptr ds:[EYE_Y]
         lodsw
-        sbb     ax,word ptr ds:[26C0h]
+        sbb     ax,word ptr ds:[EYE_Y+2]
         cwd
         xor     ax,dx
         or      bp,ax
         lodsw
-        sub     ax,word ptr ds:[26C2h]
+        sub     ax,word ptr ds:[EYE_Z]
         lodsw
-        sbb     ax,word ptr ds:[26C4h]
+        sbb     ax,word ptr ds:[EYE_Z+2]
         cwd
         xor     ax,dx
         or      bp,ax
@@ -1459,41 +1482,41 @@ L1E1B:
         mov     bp,ax
         mov     si,di
         lodsw
-        sub     ax,word ptr ds:[26BAh]
+        sub     ax,word ptr ds:[EYE_X]
         xchg    bx,ax
         lodsw
-        sbb     ax,word ptr ds:[26BCh]
+        sbb     ax,word ptr ds:[EYE_X+2]
         mov     cx,bp
 L1E32:
         sar     ax,1
         rcr     bx,1
         loop    L1E32
-        mov     word ptr ds:[2886h],bx
+        mov     word ptr ds:[OBJ_X],bx
         lodsw
-        sub     ax,word ptr ds:[26BEh]
+        sub     ax,word ptr ds:[EYE_Y]
         xchg    bx,ax
         lodsw
-        sbb     ax,word ptr ds:[26C0h]
+        sbb     ax,word ptr ds:[EYE_Y+2]
         mov     cx,bp
 L1E49:
         sar     ax,1
         rcr     bx,1
         loop    L1E49
-        mov     word ptr ds:[2888h],bx
+        mov     word ptr ds:[OBJ_Y],bx
         lodsw
-        sub     ax,word ptr ds:[26C2h]
+        sub     ax,word ptr ds:[EYE_Z]
         xchg    bx,ax
         lodsw
-        sbb     ax,word ptr ds:[26C4h]
+        sbb     ax,word ptr ds:[EYE_Z+2]
         mov     cx,bp
 L1E60:
         sar     ax,1
         rcr     bx,1
         loop    L1E60
-        mov     word ptr ds:[288Ah],bx
-        mov     bx,word ptr ds:[2886h]
-        mov     cx,word ptr ds:[2888h]
-        mov     bp,word ptr ds:[288Ah]
+        mov     word ptr ds:[OBJ_Z],bx
+        mov     bx,word ptr ds:[OBJ_X]
+        mov     cx,word ptr ds:[OBJ_Y]
+        mov     bp,word ptr ds:[OBJ_Z]
         jmp     L1DBC
 _seg004_1D43 endp
 
@@ -1516,11 +1539,11 @@ _seg004_1E84 proc near
         mov     word ptr ds:[1D4h],si
         mov     si,ax
 L1E8B:
-        mov     ax,word ptr ds:[2886h]
+        mov     ax,word ptr ds:[OBJ_X]
         mov     word ptr ds:[1C8h],ax
-        mov     ax,word ptr ds:[2888h]
+        mov     ax,word ptr ds:[OBJ_Y]
         mov     word ptr ds:[1CAh],ax
-        mov     ax,word ptr ds:[288Ah]
+        mov     ax,word ptr ds:[OBJ_Z]
         mov     word ptr ds:[1CCh],ax
         mov     bp,word ptr [si-8]
         mov     ax,word ptr ds:[1D6h]
@@ -1545,7 +1568,7 @@ L1EBF:
         je      short L1EC7
         jmp     L1FAA
 L1EC7:
-        mov     word ptr ds:[2886h],ax
+        mov     word ptr ds:[OBJ_X],ax
         mov     ax,word ptr ds:[1DAh]
         mov     bx,word ptr ds:[1DCh]
         mov     cx,bp
@@ -1568,7 +1591,7 @@ L1EE9:
         je      short L1EF1
         jmp     L1FAA
 L1EF1:
-        mov     word ptr ds:[2888h],ax
+        mov     word ptr ds:[OBJ_Y],ax
         mov     ax,word ptr ds:[1DEh]
         mov     bx,word ptr ds:[1E0h]
         mov     cx,bp
@@ -1591,7 +1614,7 @@ L1F13:
         je      short L1F1B
         jmp     L1FAA
 L1F1B:
-        mov     word ptr ds:[288Ah],ax
+        mov     word ptr ds:[OBJ_Z],ax
         cmp     word ptr ds:[1C4h],2
         jne     short L1F5F
         push    si
@@ -1624,21 +1647,21 @@ L1F54:
 L1F5E:
         pop     si
 L1F5F:
-        mov     ax,word ptr ds:[2886h]
+        mov     ax,word ptr ds:[OBJ_X]
         cwd
         xor     ax,dx
         sub     ax,dx
         mov     bp,word ptr [si-6]
         add     bp,ax
         jo      short L1FAA
-        mov     ax,word ptr ds:[2888h]
+        mov     ax,word ptr ds:[OBJ_Y]
         cwd
         xor     ax,dx
         sub     ax,dx
         add     ax,word ptr [si-4]
         jo      short L1FAA
         or      bp,ax
-        mov     ax,word ptr ds:[288Ah]
+        mov     ax,word ptr ds:[OBJ_Z]
         cwd
         xor     ax,dx
         sub     ax,dx
@@ -1657,18 +1680,18 @@ L1F9B:
         xlatb
         add     al,8
 L1F9E:
-        mov     byte ptr ds:[2880h],al
+        mov     byte ptr ds:[OBJ_SHIFT],al
         call    _self_modify
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
 L1FAA:
         mov     ax,word ptr ds:[1C8h]
-        mov     word ptr ds:[2886h],ax
+        mov     word ptr ds:[OBJ_X],ax
         mov     ax,word ptr ds:[1CAh]
-        mov     word ptr ds:[2888h],ax
+        mov     word ptr ds:[OBJ_Y],ax
         mov     ax,word ptr ds:[1CCh]
-        mov     word ptr ds:[288Ah],ax
+        mov     word ptr ds:[OBJ_Z],ax
         mov     si,word ptr ds:[1D4h]
         lodsw
         xchg    bx,ax

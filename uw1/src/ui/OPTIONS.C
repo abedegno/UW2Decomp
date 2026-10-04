@@ -112,18 +112,18 @@ void far run_options_panel(int show)
                 options_mouse_click(x, y);
             break;
         case ' ':
-        case 0x93:
-        case 0xAB:
+        case KEY_DOWN:
+        case KEY_GDOWN:
             options_handle_key(0);
             break;
         case '\r':
             options_handle_key(1);
             break;
-        case 0xA6:
-        case 0x8D:
+        case KEY_GUP:
+        case KEY_UP:
             options_handle_key(2);
             break;
-        case 0x1B:
+        case KEY_ESC:
             close_option_panel();
             break;
         }
@@ -133,15 +133,15 @@ void far run_options_panel(int show)
 /* Draws picture pic of OPTBTNS.GR as the panel's background. */
 void far draw_options_back(int pic)
 {
-    reload_gr_vpic(0x20EB, "optbtns", pic);
-    pic_to_screen(0x20EB, 4, 0xBD, 0x6C, 0x23);
+    reload_gr_vpic(ICON_OPTB, "optbtns", pic);
+    pic_to_screen(ICON_OPTB, 4, 0xBD, 0x6C, 0x23);
 }
 
 /* Draws picture pic as the button of row row. */
 void far draw_options_btn(int row, int pic)
 {
-    reload_gr_vpic(0x20EC, "optbtns", pic);
-    pic_to_screen(0x20EC, 5, 0xBD - (6 - row) * 15 - 2, 0x0E, 0x1F);
+    reload_gr_vpic(ICON_OPTB + 0x1, "optbtns", pic);
+    pic_to_screen(ICON_OPTB + 0x1, 5, 0xBD - (6 - row) * 15 - 2, 0x0E, 0x1F);
 }
 
 /* Puts out the lit button and lights button pic at row row. */
@@ -160,9 +160,9 @@ void far close_option_panel(void)
     mouse_hide();
     LeftPanel = 0;
     options_page = 7;
-    reload_gr_vpic(0x20EB, "optbtns", 0);
-    pic_to_screen(0x20EB, 4, 0xBD, 0x6C, 0x23);
-    if (RightButtonThing > 0)
+    reload_gr_vpic(ICON_OPTB, "optbtns", 0);
+    pic_to_screen(ICON_OPTB, 4, 0xBD, 0x6C, 0x23);
+    if (RightButtonThing > IMODE_DEFAULT)
         new_IconSelect(RightButtonThing);
     gameopts_done = 1;
     mouse_show();
@@ -226,8 +226,8 @@ void far draw_detail_page(void)
     level = player->detail;
     hilite_pic = -1;
     draw_options_back(5);
-    reload_gr_vpic(0x20ED, "optbtns", level + 0x35);
-    pic_to_screen(0x20ED, 5, 0xBC, 0x12, 0x22);
+    reload_gr_vpic(ICON_OPTB + 0x2, "optbtns", level + 0x35);
+    pic_to_screen(ICON_OPTB + 0x2, 5, 0xBC, 0x12, 0x22);
     hilite(4 - level, level * 2 + 0x26);
 }
 
@@ -289,8 +289,8 @@ void far choose_detail(int row)
         render_FB();
         send_FB();
         grSoftPageFlip();
-        reload_gr_vpic(0x20ED, "optbtns", level + 0x35);
-        pic_to_screen(0x20ED, 5, 0xBC, 0x12, 0x22);
+        reload_gr_vpic(ICON_OPTB + 0x2, "optbtns", level + 0x35);
+        pic_to_screen(ICON_OPTB + 0x2, 5, 0xBC, 0x12, 0x22);
         hilite(4 - level, level * 2 + 0x26);
     }
     if (row)
@@ -355,7 +355,7 @@ void far choose_save(int row)
         case 2:
             DoSaveRest(options_page == 1, slot);
             if (options_page == 1) {
-                RightButtonThing = 0;
+                RightButtonThing = IMODE_DEFAULT;
                 punt_fightmode();
             }
         case 1:

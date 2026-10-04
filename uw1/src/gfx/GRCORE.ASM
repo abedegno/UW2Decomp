@@ -47,6 +47,10 @@
 ; is DS:23B4..242B (relocation entries 2768-2797), defined before the code because those
 ; entries come before the code's.
 
+; The graphics library's data in seg048 (DS while the library runs), as GRLIBF.ASM's
+; and VIDMODE.ASM's headers describe it. The names are ours.
+SPAN_WRITER     equ     4110h   ; the current span writer (set_the_color, fbuf_setcolor)
+
         .186
 
         extrn   seg048:far
@@ -1618,10 +1622,10 @@ _seg003_564F proc far
         mov     sp,4FA6h
         sti
         mov     dx,bp
-        push    word ptr ds:[4110h]
-        mov     word ptr ds:[4110h],offset _seg003_5AC6
+        push    word ptr ds:[SPAN_WRITER]
+        mov     word ptr ds:[SPAN_WRITER],offset _seg003_5AC6
         call    _seg003_3CAE
-        pop     word ptr ds:[4110h]
+        pop     word ptr ds:[SPAN_WRITER]
         cli
         mov     dx,word ptr cs:L4C70
         mov     ss,dx

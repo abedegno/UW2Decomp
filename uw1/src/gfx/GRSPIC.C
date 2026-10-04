@@ -104,10 +104,10 @@ int far grs_which1(int icon)
 {
     register int result;
     int id = icon;
-    if (id >= 0x2000)
-        result = id - 0x2000 + first_vram;
-    else if (id >= 0x1000)
-        result = id - 0x1000 + first_button;
+    if (id >= ICON_VRAM)
+        result = id - ICON_VRAM + first_vram;
+    else if (id >= ICON_ART)
+        result = id - ICON_ART + first_button;
     else
         result = obj_tab[2 * id] & 0x3ff;
     result = result;
@@ -117,7 +117,7 @@ int far grs_which1(int icon)
 /* Draws icon on the screen; icons 101Bh..101Eh are always drawn with Transparency set. */
 void far pic_to_screen(int icon, int x, int y, int height, int width)
 {
-    unsigned char special = icon >= 0x101b && icon <= 0x101e;
+    unsigned char special = icon >= ICON_BUTTONS + 0x1B && icon <= ICON_BUTTONS + 0x1E;
     if (special) Transparency = 1;
     icon = grs_which1(icon);
     seg009_6D(icon, x, y, height, width);

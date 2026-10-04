@@ -39,6 +39,10 @@
 ; (3963:07D2..0958) holds entry 2726, the far pointer at 07D2, which comes right before the
 ; code's; it runs to the next module's first far pointer (GRENTRY's, 0958), as in UW2.
 
+; The graphics library's data in seg048 (DS while the library runs), as GRLIBF.ASM's
+; and VIDMODE.ASM's headers describe it. The names are ours.
+PEN_COLOR       equ     410Fh   ; the colour
+
         .186
 
         extrn   seg048:far
@@ -587,7 +591,7 @@ L0898:
         mov     al,0A0h
         mov     byte ptr es:[658h],al
 L08C9:
-        mov     byte ptr es:[410Fh],al
+        mov     byte ptr es:[PEN_COLOR],al
 L08CD:
         pop     ax
         pop     di

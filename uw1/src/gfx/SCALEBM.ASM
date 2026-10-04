@@ -43,6 +43,14 @@
 ; pointer (5588), as in UW2; how the original divided those bytes between the modules is not
 ; known.
 
+; The graphics library's data in seg048 (DS while the library runs), as GRLIBF.ASM's
+; and VIDMODE.ASM's headers describe it. The names are ours.
+WIN_LEFT        equ     3DF2h   ; the clip window (y counts up, so bottom < top)
+WIN_TOP         equ     3DF4h
+WIN_RIGHT       equ     3DF6h
+WIN_BOTTOM      equ     3DF8h
+PEN_COLOR       equ     410Fh   ; the colour
+
         .186
 
         extrn   _checkerboard1:far
@@ -357,7 +365,7 @@ L10CE:
         mov     ax,word ptr ds:[0B22h]
         add     ax,cx
         dec     ax
-        sub     ax,word ptr ds:[3DF6h]
+        sub     ax,word ptr ds:[WIN_RIGHT]
         dec     ax
         jle     L10ED
         sub     cx,ax
@@ -367,7 +375,7 @@ L10E9:
         mov     word ptr ds:[0B28h],cx
 L10ED:
         mov     ax,word ptr ds:[0B22h]
-        mov     si,word ptr ds:[3DF2h]
+        mov     si,word ptr ds:[WIN_LEFT]
         sub     ax,si
         jge     L110F
         neg     ax
@@ -395,22 +403,22 @@ L111A:
         xor     dx,dx
         mov     cx,word ptr ds:[0B26h]
         mov     bp,word ptr ds:[0B24h]
-        cmp     bp,word ptr ds:[3DF4h]
+        cmp     bp,word ptr ds:[WIN_TOP]
         jle     L1158
-        sub     bp,word ptr ds:[3DF4h]
+        sub     bp,word ptr ds:[WIN_TOP]
         sub     cx,bp
         jle     L11C8
         mov     ax,bp
         mul     word ptr ds:[0B3Ch]
         mov     dx,ax
-        mov     bp,word ptr ds:[3DF4h]
+        mov     bp,word ptr ds:[WIN_TOP]
 L1158:
         mov     bx,bp
         sub     bx,cx
         inc     bx
-        cmp     bx,word ptr ds:[3DF8h]
+        cmp     bx,word ptr ds:[WIN_BOTTOM]
         jge     L116B
-        sub     bx,word ptr ds:[3DF8h]
+        sub     bx,word ptr ds:[WIN_BOTTOM]
         add     cx,bx
         jle     L11C8
 L116B:
@@ -471,7 +479,7 @@ L11C8:
         mov     al,60h
         mov     byte ptr es:[658h],al
 L11F9:
-        mov     byte ptr es:[410Fh],al
+        mov     byte ptr es:[PEN_COLOR],al
 L11FD:
         pop     ax
         pop     di

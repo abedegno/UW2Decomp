@@ -173,8 +173,8 @@ void far check_dirs(void)
    key. */
 void far memcheck(void)
 {
-    if (coreleft() < 0x898) first_punt(0x1004);
-    if (farcoreleft() < 0x5DCL) first_punt(0x1004);
+    if (coreleft() < 0x898) first_punt(ERR_LOWMEM | 4);
+    if (farcoreleft() < 0x5DCL) first_punt(ERR_LOWMEM | 4);
 }
 
 /* Start-up check that eight files can be open at once (a.tmp to h.tmp are created and

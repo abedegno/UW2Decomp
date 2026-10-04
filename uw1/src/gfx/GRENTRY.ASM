@@ -46,6 +46,14 @@
 SC_DATA         equ     3C5h  ; sequencer data
 GC_INDEX        equ     3CEh  ; graphics controller index
 
+; The graphics library's data in seg048 (DS while the library runs), as GRLIBF.ASM's
+; and VIDMODE.ASM's headers describe it. The names are ours.
+WIN_LEFT        equ     3DF2h   ; the clip window (y counts up, so bottom < top)
+SCREEN_SEG      equ     3DFAh   ; the screen's segment
+PEN_COLOR       equ     410Fh   ; the colour
+SPAN_WRITER     equ     4110h   ; the current span writer (set_the_color, fbuf_setcolor)
+PEN_WORD2       equ     4114h   ; the pen's second word
+
         .186
 
         extrn   _stdat:far
@@ -532,7 +540,7 @@ _seg003_BEC endp
 ; span record (y, left, right; either order) with the colour in 410F.
 _seg003_D2D proc near
         push    es
-        mov     bx,word ptr ds:[3DF2h]
+        mov     bx,word ptr ds:[WIN_LEFT]
         mov     es,word ptr ds:[95Ah]
 L0D36:
         lodsw
@@ -546,7 +554,7 @@ L0D36:
         lodsw
         sub     cx,ax
         neg     cx
-        mov     al,byte ptr ds:[410Fh]
+        mov     al,byte ptr ds:[PEN_COLOR]
         inc     cx
         js      L0D57
         rep stosb
@@ -569,10 +577,10 @@ _seg003_D2D endp
 _seg003_D60 proc near
         mov     dx,SC_DATA
         mov     bp,si
-        mov     di,word ptr ds:[4114h]
+        mov     di,word ptr ds:[PEN_WORD2]
         push    ds
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
         mov     ds,word ptr ds:[95Ah]
 L0D73:
         mov     bx,word ptr [bp]
@@ -644,7 +652,7 @@ _seg003_D60 endp
 _seg003_DE3 proc near
         push    ds
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
         mov     ds,word ptr ds:[95Ah]
         mov     bp,si
 L0DEF:
@@ -801,12 +809,12 @@ _seg003_EFF proc near
         mov     ax,word ptr [bx+21Eh]
         mov     word ptr ds:[410Eh],ax
         mov     ax,word ptr [bx+434h]
-        mov     word ptr ds:[4114h],ax
+        mov     word ptr ds:[PEN_WORD2],ax
         db      8Bh,9Fh,8h,0h                   ; match: mov bx,word ptr [bx+8]: disp16, the table at seg048:0008 (TASM gives disp8 for a number, and a label there would need that segment)
         cmp     bx,14h
         jae     L0F23
         mov     ax,word ptr [bx+0AF4h]
-        mov     word ptr ds:[4110h],ax
+        mov     word ptr ds:[SPAN_WRITER],ax
 L0F23:
         ret
 L0F24:
@@ -824,7 +832,7 @@ L0F2B:
         mov     ax,seg seg004
         mov     es,ax
         mov     al,byte ptr es:[bx+696Eh]
-        mov     byte ptr ds:[410Fh],al
+        mov     byte ptr ds:[PEN_COLOR],al
         or      byte ptr [si-3],80h
         sub     si,0Ah
         call    _seg003_D2D

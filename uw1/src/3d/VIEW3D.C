@@ -136,7 +136,7 @@ void far place_3d_view(int x, int y, int w, int h)
     mous_player(x, y - h + 1, w, h);
     if (inplist->mode & 8)
         curZoom = 0x6062;
-    else if (inplist->mode & 1) {
+    else if (inplist->mode & MODE_GAME) {
         demo_mode = 1;
         curZoom = 0x61A8;
     }
@@ -457,31 +457,31 @@ char far enc_n_chk(register struct Gvec *v, char dir, char want)
     if ((code = enc_dat[here][sel]) == 0)
         v->loc->flags = 0;
     else {
-        if (code & 0x10) {
+        if (code & GLOC_FAR) {
             if ((tile_walls[other = trans_grid[quad][v->map[chgtable[quad][1]].type]] & TW_SOUTH) == 0) {
                 if ((uint16)(v->map[chgtable[quad][1]].height + ((tile_walls[other] & TW_SLOPE) == TW_SLOPE) - (other == TILE_SLOPE_N))
                     <= v->map->height + (here == 6) + (other == here && here != 1))
-                    code -= 0x10;
+                    code -= GLOC_FAR;
                 else
-                    shade += 0x20;
+                    shade += GLOC_STEP_FAR;
             }
         }
-        if (code & 0x20) {
+        if (code & GLOC_RIGHT) {
             if ((tile_walls[other = trans_grid[quad][v->map[chgtable[quad][0]].type]] & TW_WEST) == 0) {
                 if ((uint16)(v->map[chgtable[quad][0]].height + ((tile_walls[other] & TW_SLOPE) == TW_SLOPE) - (other == TILE_SLOPE_E))
                     <= v->map->height + (here == 8) + (other == here && here != 1))
-                    code -= 0x20;
+                    code -= GLOC_RIGHT;
                 else
-                    shade += 0x40;
+                    shade += GLOC_STEP_RIGHT;
             }
         }
-        if (code & 8) {
+        if (code & GLOC_LEFT) {
             if ((tile_walls[other = trans_grid[quad][(v->map - chgtable[quad][0])->type]] & TW_EAST) == 0) {
                 if ((uint16)((v->map - chgtable[quad][0])->height + ((tile_walls[other] & TW_SLOPE) == TW_SLOPE) - (other == TILE_SLOPE_W))
                     <= v->map->height + (here == 9) + (other == here && here != 1))
-                    code -= 8;
+                    code -= GLOC_LEFT;
                 else
-                    shade += 0x10;
+                    shade += GLOC_STEP_LEFT;
             }
         }
         v->loc->flags = code;

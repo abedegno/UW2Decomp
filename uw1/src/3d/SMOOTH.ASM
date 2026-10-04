@@ -41,6 +41,19 @@
 ; (INTERP.ASM), in seg051, the data segment while interpreting.
 OPCODE_TABLE    equ     2738h
 
+; The renderer's data in seg051 (DS while interpreting), as INTERP.ASM's header
+; describes it. The names are ours, from the routines that use the data.
+POLY_FILL       equ     15F6h   ; the seg003 polygon routine the next polygon is drawn with
+POLY_UFILL      equ     15F8h   ; its unclipped twin (do_setcolor: polygon, upolygon)
+CLIP_OR         equ     161Ah   ; the OR of the current polygon's clip codes
+CLIP_AND        equ     161Bh   ; and their AND
+VB_END          equ     305h    ; the end of the current polygon vertex buffer
+VB_START        equ     307h    ; and its start
+VBUF0           equ     309h    ; the two vertex buffers (8 bytes a vertex: x, y, z, codes),
+VBUF1           equ     0C69h   ; which the clippers copy between
+PROJ_Y          equ     26B0h   ; the y projection scale (half the window height)
+PROJ_X          equ     26B2h   ; the x projection scale (half the window width)
+
         .186
 
         extrn   _seg003_5B0B:far
@@ -78,18 +91,18 @@ SEG004_TEXT segment para public 'code'
 ; Otherwise projected with overflow checks (immediates at 312 and 322), drawn with BP =
 ; ds:[15F6h], or clipped on overflow (L03FC). Continues with the next opcode.
 _smooth_closure proc near
-        cmp     word ptr ds:[305h],0C69h
+        cmp     word ptr ds:[VB_END],VBUF1
         jle     short L026A
         int     2
 L026A:
         mov     word ptr ds:[2884h],0
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         je      short L027A
         jmp     L03F2
 L027A:
-        mov     di,309h
-        mov     word ptr ds:[307h],di
-        test    byte ptr ds:[161Ah],0FFh
+        mov     di,VBUF0
+        mov     word ptr ds:[VB_START],di
+        test    byte ptr ds:[CLIP_OR],0FFh
         jne     short L02ED
 L0288:
         push    si
@@ -97,8 +110,8 @@ L0288:
         mov     es,ax
         mov     di,415Ch
         mov     bx,55ECh
-        mov     si,word ptr ds:[307h]
-        mov     cx,word ptr ds:[26B2h]
+        mov     si,word ptr ds:[VB_START]
+        mov     cx,word ptr ds:[PROJ_X]
 L029C:
         lodsw
         mov     bp,word ptr [si+2]
@@ -108,7 +121,7 @@ _seg004_2A4:
         add     ax,1234h
         stosw
         lodsw
-        imul    word ptr ds:[26B0h]
+        imul    word ptr ds:[PROJ_Y]
         idiv    bp
 _seg004_2AF:
         add     ax,1234h
@@ -117,16 +130,16 @@ _seg004_2AF:
         mov     byte ptr es:[bx],al
         add     si,4
         add     bx,2
-        cmp     si,word ptr ds:[305h]
+        cmp     si,word ptr ds:[VB_END]
         jne     L029C
-        mov     bx,word ptr ds:[305h]
-        sub     bx,word ptr ds:[307h]
+        mov     bx,word ptr ds:[VB_END]
+        sub     bx,word ptr ds:[VB_START]
         shr     bx,1
         shr     bx,1
         shr     bx,1
         mov     cx,bx
         inc     word ptr ds:[2884h]
-        mov     bp,word ptr ds:[15F8h]
+        mov     bp,word ptr ds:[POLY_UFILL]
         call    far ptr _seg003_5B0B
         mov     ax,ds
         mov     es,ax
@@ -143,8 +156,8 @@ L02F0:
         mov     es,ax
         mov     di,415Ch
         mov     bx,55ECh
-        mov     si,word ptr ds:[307h]
-        mov     cx,word ptr ds:[26B2h]
+        mov     si,word ptr ds:[VB_START]
+        mov     cx,word ptr ds:[PROJ_X]
 L030A:
         lodsw
         mov     bp,word ptr [si+2]
@@ -157,7 +170,7 @@ _seg004_312:
 L031A:
         stosw
         lodsw
-        imul    word ptr ds:[26B0h]
+        imul    word ptr ds:[PROJ_Y]
         idiv    bp
 _seg004_322:
         add     ax,1234h
@@ -169,15 +182,15 @@ L032A:
         mov     byte ptr es:[bx],al
         add     si,4
         add     bx,2
-        cmp     si,word ptr ds:[305h]
+        cmp     si,word ptr ds:[VB_END]
         jne     L030A
-        mov     cx,word ptr ds:[305h]
-        sub     cx,word ptr ds:[307h]
+        mov     cx,word ptr ds:[VB_END]
+        sub     cx,word ptr ds:[VB_START]
         shr     cx,1
         shr     cx,1
         shr     cx,1
         inc     word ptr ds:[2884h]
-        mov     bp,word ptr ds:[15F6h]
+        mov     bp,word ptr ds:[POLY_FILL]
         call    far ptr _seg003_5B0B
         mov     ax,ds
         mov     es,ax
@@ -187,56 +200,56 @@ L032A:
         jmp     word ptr [bx+OPCODE_TABLE]
 L0363:
         mov     word ptr ss:[4D5h],offset _seg004_9E5
-        test    byte ptr ds:[161Ah],4
+        test    byte ptr ds:[CLIP_OR],4
         je      short L038C
         push    si
         call    _seg004_45C
         pop     si
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         jne     short L03F2
-        test    byte ptr ds:[161Ah],0FFh
+        test    byte ptr ds:[CLIP_OR],0FFh
         js      short L038C
         jne     short L0389
         jmp     L0288
 L0389:
         jmp     L02ED
 L038C:
-        test    byte ptr ds:[161Ah],8
+        test    byte ptr ds:[CLIP_OR],8
         je      short L03AE
         push    si
         call    _seg004_58E
         pop     si
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         jne     short L03F2
-        test    byte ptr ds:[161Ah],0FFh
+        test    byte ptr ds:[CLIP_OR],0FFh
         js      short L03AE
         jne     short L03AB
         jmp     L0288
 L03AB:
         jmp     L02ED
 L03AE:
-        test    byte ptr ds:[161Ah],1
+        test    byte ptr ds:[CLIP_OR],1
         je      short L03D0
         push    si
         call    _seg004_7F8
         pop     si
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         jne     short L03F2
-        test    byte ptr ds:[161Ah],0FFh
+        test    byte ptr ds:[CLIP_OR],0FFh
         js      short L03D0
         jne     short L03CD
         jmp     L0288
 L03CD:
         jmp     L02ED
 L03D0:
-        test    byte ptr ds:[161Ah],2
+        test    byte ptr ds:[CLIP_OR],2
         je      short L03F2
         push    si
         call    _seg004_6C4
         pop     si
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         jne     short L03F2
-        test    byte ptr ds:[161Ah],0FFh
+        test    byte ptr ds:[CLIP_OR],0FFh
         js      short L03F2
         jne     short L03EF
         jmp     L0288
@@ -261,28 +274,28 @@ L03FC:
         mov     word ptr ss:[4D5h],offset _seg004_9E5
         mov     ax,ds
         mov     es,ax
-        test    byte ptr ds:[161Ah],2
+        test    byte ptr ds:[CLIP_OR],2
         je      short L0418
         call    _seg004_6C4
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         jne     short L044E
 L0418:
-        test    byte ptr ds:[161Ah],1
+        test    byte ptr ds:[CLIP_OR],1
         je      short L0429
         call    _seg004_7F8
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         jne     short L044E
 L0429:
-        test    byte ptr ds:[161Ah],4
+        test    byte ptr ds:[CLIP_OR],4
         je      short L043A
         call    _seg004_45C
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         jne     short L044E
 L043A:
-        test    byte ptr ds:[161Ah],8
+        test    byte ptr ds:[CLIP_OR],8
         je      short L044B
         call    _seg004_58E
-        test    byte ptr ds:[161Bh],0FFh
+        test    byte ptr ds:[CLIP_AND],0FFh
         jne     short L044E
 L044B:
         jmp     L02F0
@@ -300,32 +313,32 @@ _seg004_3F8 endp
 ; Clips the Gouraud polygon against y = z (code bit 4), like INTERP's clip_top, also
 ; interpolating each new vertex's shade (+7).
 _seg004_45C proc near
-        mov     byte ptr ds:[161Ah],0
-        mov     byte ptr ds:[161Bh],0FFh
-        mov     si,word ptr ds:[307h]
-        mov     di,word ptr ds:[305h]
+        mov     byte ptr ds:[CLIP_OR],0
+        mov     byte ptr ds:[CLIP_AND],0FFh
+        mov     si,word ptr ds:[VB_START]
+        mov     di,word ptr ds:[VB_END]
         mov     cx,8
         rep movsw
-        add     word ptr ds:[305h],8
-        mov     si,word ptr ds:[307h]
-        mov     di,0C69h
-        cmp     si,309h
+        add     word ptr ds:[VB_END],8
+        mov     si,word ptr ds:[VB_START]
+        mov     di,VBUF1
+        cmp     si,VBUF0
         je      short L0488
-        mov     di,309h
+        mov     di,VBUF0
 L0488:
-        mov     word ptr ds:[307h],di
+        mov     word ptr ds:[VB_START],di
 L048C:
         add     si,8
 L048F:
-        cmp     si,word ptr ds:[305h]
+        cmp     si,word ptr ds:[VB_END]
         jne     short L0498
         jmp     L0589
 L0498:
         mov     al,byte ptr [si+6]
         test    al,4
         jne     short L04AE
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         mov     cx,4
         rep movsw
         jmp     L048F
@@ -377,8 +390,8 @@ L0503:
         call    _code_pnt
         stosb
         inc     di
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
 L0519:
         test    byte ptr [si+0Eh],4
         je      short L0522
@@ -429,43 +442,43 @@ L0570:
         call    _code_pnt
         stosb
         inc     di
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         jmp     L048C
 L0589:
-        mov     word ptr ds:[305h],di
+        mov     word ptr ds:[VB_END],di
         ret
 _seg004_45C endp
 
 ; seg004_58E  (+58E)
 ; Gouraud clip against y = -z (code bit 8), like clip_bot.
 _seg004_58E proc near
-        mov     byte ptr ds:[161Ah],0
-        mov     byte ptr ds:[161Bh],0FFh
-        mov     si,word ptr ds:[307h]
-        mov     di,word ptr ds:[305h]
+        mov     byte ptr ds:[CLIP_OR],0
+        mov     byte ptr ds:[CLIP_AND],0FFh
+        mov     si,word ptr ds:[VB_START]
+        mov     di,word ptr ds:[VB_END]
         mov     cx,8
         rep movsw
-        add     word ptr ds:[305h],8
-        mov     si,word ptr ds:[307h]
-        mov     di,0C69h
-        cmp     si,309h
+        add     word ptr ds:[VB_END],8
+        mov     si,word ptr ds:[VB_START]
+        mov     di,VBUF1
+        cmp     si,VBUF0
         je      short L05BA
-        mov     di,309h
+        mov     di,VBUF0
 L05BA:
-        mov     word ptr ds:[307h],di
+        mov     word ptr ds:[VB_START],di
 L05BE:
         add     si,8
 L05C1:
-        cmp     si,word ptr ds:[305h]
+        cmp     si,word ptr ds:[VB_END]
         jne     short L05CA
         jmp     L06BF
 L05CA:
         mov     al,byte ptr [si+6]
         test    al,8
         jne     short L05E0
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         mov     cx,4
         rep movsw
         jmp     L05C1
@@ -518,8 +531,8 @@ L0635:
         call    _code_pnt
         stosb
         inc     di
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
 L064D:
         test    byte ptr [si+0Eh],8
         je      short L0656
@@ -571,43 +584,43 @@ L06A4:
         call    _code_pnt
         stosb
         inc     di
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         jmp     L05BE
 L06BF:
-        mov     word ptr ds:[305h],di
+        mov     word ptr ds:[VB_END],di
         ret
 _seg004_58E endp
 
 ; seg004_6C4  (+6C4)
 ; Gouraud clip against x = z (code bit 2), like clip_right.
 _seg004_6C4 proc near
-        mov     byte ptr ds:[161Ah],0
-        mov     byte ptr ds:[161Bh],0FFh
-        mov     si,word ptr ds:[307h]
-        mov     di,word ptr ds:[305h]
+        mov     byte ptr ds:[CLIP_OR],0
+        mov     byte ptr ds:[CLIP_AND],0FFh
+        mov     si,word ptr ds:[VB_START]
+        mov     di,word ptr ds:[VB_END]
         mov     cx,8
         rep movsw
-        add     word ptr ds:[305h],8
-        mov     si,word ptr ds:[307h]
-        mov     di,0C69h
-        cmp     si,309h
+        add     word ptr ds:[VB_END],8
+        mov     si,word ptr ds:[VB_START]
+        mov     di,VBUF1
+        cmp     si,VBUF0
         je      short L06F0
-        mov     di,309h
+        mov     di,VBUF0
 L06F0:
-        mov     word ptr ds:[307h],di
+        mov     word ptr ds:[VB_START],di
 L06F4:
         add     si,8
 L06F7:
-        cmp     si,word ptr ds:[305h]
+        cmp     si,word ptr ds:[VB_END]
         jne     short L0700
         jmp     L07F3
 L0700:
         mov     al,byte ptr [si+6]
         test    al,2
         jne     short L0716
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         mov     cx,4
         rep movsw
         jmp     L06F7
@@ -660,8 +673,8 @@ L076A:
         call    _code_pnt
         stosb
         inc     di
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
 L0782:
         test    byte ptr [si+0Eh],2
         je      short L078B
@@ -713,43 +726,43 @@ L07D8:
         call    _code_pnt
         stosb
         inc     di
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         jmp     L06F4
 L07F3:
-        mov     word ptr ds:[305h],di
+        mov     word ptr ds:[VB_END],di
         ret
 _seg004_6C4 endp
 
 ; seg004_7F8  (+7F8)
 ; Gouraud clip against x = -z (code bit 1), like clip_left.
 _seg004_7F8 proc near
-        mov     byte ptr ds:[161Ah],0
-        mov     byte ptr ds:[161Bh],0FFh
-        mov     si,word ptr ds:[307h]
-        mov     di,word ptr ds:[305h]
+        mov     byte ptr ds:[CLIP_OR],0
+        mov     byte ptr ds:[CLIP_AND],0FFh
+        mov     si,word ptr ds:[VB_START]
+        mov     di,word ptr ds:[VB_END]
         mov     cx,8
         rep movsw
-        add     word ptr ds:[305h],8
-        mov     si,word ptr ds:[307h]
-        mov     di,0C69h
-        cmp     si,309h
+        add     word ptr ds:[VB_END],8
+        mov     si,word ptr ds:[VB_START]
+        mov     di,VBUF1
+        cmp     si,VBUF0
         je      short L0824
-        mov     di,309h
+        mov     di,VBUF0
 L0824:
-        mov     word ptr ds:[307h],di
+        mov     word ptr ds:[VB_START],di
 L0828:
         add     si,8
 L082B:
-        cmp     si,word ptr ds:[305h]
+        cmp     si,word ptr ds:[VB_END]
         jne     short L0834
         jmp     L092B
 L0834:
         mov     al,byte ptr [si+6]
         test    al,1
         jne     short L084A
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         mov     cx,4
         rep movsw
         jmp     L082B
@@ -803,8 +816,8 @@ L089E:
         call    _code_pnt
         stosb
         inc     di
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
 L08B8:
         test    byte ptr [si+0Eh],1
         je      short L08C1
@@ -857,11 +870,11 @@ L090E:
         call    _code_pnt
         stosb
         inc     di
-        or      byte ptr ds:[161Ah],al
-        and     byte ptr ds:[161Bh],al
+        or      byte ptr ds:[CLIP_OR],al
+        and     byte ptr ds:[CLIP_AND],al
         jmp     L0828
 L092B:
-        mov     word ptr ds:[305h],di
+        mov     word ptr ds:[VB_END],di
         ret
 _seg004_7F8 endp
 

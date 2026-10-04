@@ -186,6 +186,6 @@ void far mous_in_stat(void)
 /* name: symbols.tsv's (SKILLS.C calls it); UW2's panel_check, the same routine. */
 void far ovr145_4FB(void)
 {
-    if (RightPanel == 2)
+    if (RightPanel == PANEL_STATS)
         pretty_panelagain();
 }

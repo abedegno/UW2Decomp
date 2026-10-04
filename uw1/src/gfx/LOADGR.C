@@ -368,7 +368,7 @@ unsigned char far GrLoadAt_ovr119_949(int offset, char *art, int start, int coun
 {
     register int old = gr_index;
     unsigned char ok;
-    gr_index = (offset - 0x2000) + first_vram;
+    gr_index = (offset - ICON_VRAM) + first_vram;
     ok = gronk_gr(art, start, count, (void far *(far *)(int))adrnew_vram,
                    (ArtMoveFn)move_vram);
     gr_index = old;
@@ -379,7 +379,7 @@ unsigned char far GrLoadAt_ovr119_949(int offset, char *art, int start, int coun
 void far reload_gr_vpic(int offset, char *art, int image)
 {
     register int old = gr_index;
-    gr_index = (offset - 0x2000) + first_vram;
+    gr_index = (offset - ICON_VRAM) + first_vram;
     gronk_gr(art, image, 1, (void far *(far *)(int))adrnew_vram,
                    (ArtMoveFn)move_vram);
     gr_index = old;

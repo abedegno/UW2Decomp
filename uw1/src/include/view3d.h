@@ -45,10 +45,61 @@ struct Grs3d {
 /* One cell of the vision grid (seg032's glocs), 33 cells to a row and 17 rows, the eye at
    row 0 column 16: which faces of the tile are seen and drawn. */
 struct Gloc {
-    unsigned char flags;                /* 0x80 visible, 0x44 slope, 0x20/0x10/0x08 walls */
-    unsigned char shade;                /* bits 0-3 the distance shade; the high bits wall
-                                           faces (seg019) */
+    unsigned char flags;                /* GLOC_*: seen, shape, the faces to draw */
+    unsigned char shade;                /* bits 0-3 the distance shade (15: out of range);
+                                           GLOC_STEP_*: a face only as high as the
+                                           neighbour's floor */
 };
+/* A cell's flags, as VIEW3D.C's enc_dat gives them and enc_n_chk refines them, and as
+   GRIDDB.C's grdb_elem reads them. Everything is in the turned grid (setup_vars): rows
+   run away from the eye, columns to the right. The names are ours. */
+#define GLOC_SEEN       0x80            /* in the vision arc: draw the cell */
+#define GLOC_DIAG       0x40            /* with GLOC_SHAPED, a diagonal tile */
+#define GLOC_RIGHT      0x20            /* the face towards the next column */
+#define GLOC_FAR        0x10            /* the face towards the next row */
+#define GLOC_LEFT       0x08            /* the face towards the previous column */
+#define GLOC_SHAPED     0x04            /* a slope, or with GLOC_DIAG a diagonal; the low
+                                           two bits say which way */
+/* In the shade byte: the face of the same side reaches only the neighbour's floor (the
+   neighbour is open and higher); without it the face reaches the ceiling. */
+#define GLOC_STEP_RIGHT 0x40
+#define GLOC_STEP_FAR   0x20
+#define GLOC_STEP_LEFT  0x10
+
+/* Render database opcodes: the words GRIDDB.C, DRAWOBJ.C and GAMESORT.C write for the
+   model interpreter (INTERP.ASM). An opcode is the byte offset of its handler in the
+   opcode table at seg051:2738h, so the numbers are the table's, and the names its
+   handlers' (FM Towns names, through UW2). Only the opcodes the C writes are here. The
+   operands follow inline: a point number is premultiplied by 8; Clk(n) is the address
+   of model variable n. */
+#define OP_MOVEC        0x02            /* do_movec: address, value */
+#define OP_SFCAL        0x12            /* do_sfcal: call a label */
+#define OP_ORG          0x18            /* do_org: an origin, three 32-bit words */
+#define OP_SETCOLOR     0x2E            /* do_setcolor: colour */
+#define OP_TMAP         0x36            /* do_tmap: slot, four points and corners */
+#define OP_OBJ          0x38            /* do_obj: the view header (SPHERE.ASM) */
+#define OP_UWOBJ        0x3A            /* do_uwobj: an object's picture */
+#define OP_FETCHMAP     0x3E            /* do_fetchmap: slot, texture, size */
+#define OP_DEFDELTA     0x4C            /* do_defdelta: x, y, z, scale */
+#define OP_IHCALL       0x50            /* do_ihcall: heading, label */
+#define OP_UWCRIT       0x5A            /* do_uwcrit: a critter's frame */
+#define OP_DEFRES       0x7A            /* do_defres: a point x, z, y and its number */
+#define OP_POLYRES      0x7E            /* do_polyres: count, then the points */
+#define OP_COMPACT_TMAP 0xA0            /* do_compact_tmap: a textured wall */
+#define OP_COMPACT_WTMAP 0xA2           /* do_compact_wtmap: the same, level view */
+#define OP_SETBMCOL     0xAE            /* do_setbmcol: the pick colour */
+#define OP_MOUSEQ       0xB0            /* do_mouseq: service the mouse queue */
+#define OP_SET_TMCTXT   0xB2            /* do_set_tmctxt: texture slot */
+#define OP_SETTMOBJ     0xC0            /* do_settmobj: texture, shade */
+#define OP_SET_GMAP_CTXT 0xD0           /* do_set_gmap_ctxt: flat_case */
+
+/* Pick colours: in a pick frame (PickUp set, GRIDDB.C's do_3d_pickup) every face and
+   object is drawn in a colour that names it, which INTERACT.C's pick_3d reads under the
+   pointer. Objects take 1 up to PICK_WALL - 1, wrapping round; walls PICK_WALL + texture,
+   floors PICK_FLOOR + texture, ceilings PICK_CEILING. The names are ours. */
+#define PICK_WALL       0xC0
+#define PICK_FLOOR      0xF0
+#define PICK_CEILING    0xFA
 
 /* GRIDDB.C: building the 3D view's render database from the map. The face routines take
    four point numbers from SetPnt, the distance shade and the texture. */

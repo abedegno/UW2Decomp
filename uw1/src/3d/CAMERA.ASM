@@ -40,6 +40,21 @@
 ; (INTERP.ASM), in seg051, the data segment while interpreting (UW2: 24F4h).
 OPCODE_TABLE    equ     2738h
 
+; The renderer's data in seg051 (DS while interpreting), as INTERP.ASM's header
+; describes it. The names are ours, from the routines that use the data.
+MAT_XX          equ     1602h   ; the view matrix, 1.15 fixed point: MAT_ab is input a's
+MAT_XY          equ     1604h   ; coefficient in output b (mxmul: x' = x*MAT_XX + y*MAT_YX
+MAT_XZ          equ     1606h   ; + z*MAT_ZX, and so on; z' is the depth)
+MAT_YX          equ     1608h
+MAT_YY          equ     160Ah
+MAT_YZ          equ     160Ch
+MAT_ZX          equ     160Eh
+MAT_ZY          equ     1610h
+MAT_ZZ          equ     1612h
+EYE_X           equ     26BAh   ; the eye position, three 32-bit coordinates
+EYE_Y           equ     26BEh
+EYE_Z           equ     26C2h
+
         .186
 
         extrn   seg051:far
@@ -215,40 +230,40 @@ L0ABC:
         add     ax,bx
         adc     dx,si
         mov     word ptr ds:[2726h],dx
-        mov     ax,word ptr ds:[26BAh]
+        mov     ax,word ptr ds:[EYE_X]
         sub     ax,word ptr ds:[19Ch]
         imul    bx
         shl     ax,1
         rcl     dx,1
-        sub     word ptr ds:[26BAh],dx
+        sub     word ptr ds:[EYE_X],dx
         mov     ax,dx
         cwd
-        sbb     word ptr ds:[26BCh],dx
-        mov     ax,word ptr ds:[26BEh]
+        sbb     word ptr ds:[EYE_X+2],dx
+        mov     ax,word ptr ds:[EYE_Y]
         sub     ax,word ptr ds:[1A0h]
         imul    bx
         shl     ax,1
         rcl     dx,1
-        sub     word ptr ds:[26BEh],dx
+        sub     word ptr ds:[EYE_Y],dx
         mov     ax,dx
         cwd
-        sbb     word ptr ds:[26C0h],dx
-        mov     ax,word ptr ds:[26C2h]
+        sbb     word ptr ds:[EYE_Y+2],dx
+        mov     ax,word ptr ds:[EYE_Z]
         sub     ax,word ptr ds:[1A4h]
         imul    bx
         shl     ax,1
         rcl     dx,1
-        sub     word ptr ds:[26C2h],dx
+        sub     word ptr ds:[EYE_Z],dx
         mov     ax,dx
         cwd
-        sbb     word ptr ds:[26C4h],dx
+        sbb     word ptr ds:[EYE_Z+2],dx
         mov     ax,word ptr ds:[1A8h]
         imul    bx
         shl     ax,1
         rcl     dx,1
         mov     si,dx
         mov     bp,ax
-        mov     ax,word ptr ds:[1606h]
+        mov     ax,word ptr ds:[MAT_XZ]
         sub     bx,7FFFh
         neg     bx
         imul    bx
@@ -258,14 +273,14 @@ L0ABC:
         neg     bx
         add     ax,bx
         adc     dx,si
-        mov     word ptr ds:[1606h],dx
+        mov     word ptr ds:[MAT_XZ],dx
         mov     ax,word ptr ds:[1AAh]
         imul    bx
         shl     ax,1
         rcl     dx,1
         mov     si,dx
         mov     bp,ax
-        mov     ax,word ptr ds:[160Ch]
+        mov     ax,word ptr ds:[MAT_YZ]
         sub     bx,7FFFh
         neg     bx
         imul    bx
@@ -275,14 +290,14 @@ L0ABC:
         neg     bx
         add     ax,bx
         adc     dx,si
-        mov     word ptr ds:[160Ch],dx
+        mov     word ptr ds:[MAT_YZ],dx
         mov     ax,word ptr ds:[1ACh]
         imul    bx
         shl     ax,1
         rcl     dx,1
         mov     si,dx
         mov     bp,ax
-        mov     ax,word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
         sub     bx,7FFFh
         neg     bx
         imul    bx
@@ -292,12 +307,12 @@ L0ABC:
         neg     bx
         add     ax,bx
         adc     dx,si
-        mov     word ptr ds:[1612h],dx
-        mov     ax,word ptr ds:[1606h]
+        mov     word ptr ds:[MAT_ZZ],dx
+        mov     ax,word ptr ds:[MAT_XZ]
         mov     word ptr ds:[15Eh],ax
-        mov     ax,word ptr ds:[160Ch]
+        mov     ax,word ptr ds:[MAT_YZ]
         mov     word ptr ds:[162h],ax
-        mov     ax,word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
         mov     word ptr ds:[166h],ax
         call    _seg004_EFE
         mov     ax,0FFFFh
@@ -305,15 +320,15 @@ L0ABC:
 L0BD4:
         mov     ax,word ptr ds:[104h]
         mov     word ptr ds:[106h],ax
-        mov     si,26BAh
+        mov     si,EYE_X
         mov     di,19Ch
         mov     cx,6
         rep movsw
-        mov     ax,word ptr ds:[1606h]
+        mov     ax,word ptr ds:[MAT_XZ]
         stosw
-        mov     ax,word ptr ds:[160Ch]
+        mov     ax,word ptr ds:[MAT_YZ]
         stosw
-        mov     ax,word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
         stosw
         mov     ax,word ptr ds:[2726h]
         stosw
@@ -373,20 +388,20 @@ L0C47:
         cwd
         add     ax,word ptr [bp-0Ch]
         adc     dx,word ptr [bp-0Ah]
-        mov     word ptr ds:[26BAh],ax
-        mov     word ptr ds:[26BCh],dx
+        mov     word ptr ds:[EYE_X],ax
+        mov     word ptr ds:[EYE_X+2],dx
         mov     ax,cx
         cwd
         add     ax,word ptr [bp-8]
         adc     dx,word ptr [bp-6]
-        mov     word ptr ds:[26BEh],ax
-        mov     word ptr ds:[26C0h],dx
+        mov     word ptr ds:[EYE_Y],ax
+        mov     word ptr ds:[EYE_Y+2],dx
         mov     ax,di
         cwd
         add     ax,word ptr [bp-4]
         adc     dx,word ptr [bp-2]
-        mov     word ptr ds:[26C2h],ax
-        mov     word ptr ds:[26C4h],dx
+        mov     word ptr ds:[EYE_Z],ax
+        mov     word ptr ds:[EYE_Z+2],dx
         add     si,0Ch
         call    _mm9x9
         ret
@@ -432,7 +447,7 @@ _seg004_CAB proc near
         lodsw
         mov     cx,ax
         call    _seg004_D70
-        mov     di,26BAh
+        mov     di,EYE_X
         mov     cx,6
         rep movsw
         lodsw
@@ -472,7 +487,7 @@ _seg004_CAB endp
 ; (seg004_EFE), the flag word is set to -1 and the matrix is stored after it, so that later
 ; frames copy it.
 _seg004_CF4 proc near
-        mov     di,26BAh
+        mov     di,EYE_X
         mov     cx,6
         rep movsw
 L0CFC:
@@ -481,7 +496,7 @@ L0CFC:
         lodsw
         or      ax,ax
         je      short L0D0E
-        mov     di,1602h
+        mov     di,MAT_XX
         mov     cx,9
         rep movsw
         ret
@@ -496,7 +511,7 @@ L0D0E:
         call    _seg004_EFE
         pop     di
         mov     word ptr [di-2],0FFFFh
-        mov     si,1602h
+        mov     si,MAT_XX
         mov     cx,9
         rep movsw
         ret
@@ -516,7 +531,7 @@ _seg004_D2D proc near
         mov     si,ax
         sub     ax,0Ah
         mov     word ptr ds:[15Ch],ax
-        mov     di,26BAh
+        mov     di,EYE_X
         mov     ax,ss
         mov     ds,ax
         mov     cx,6
@@ -528,7 +543,7 @@ _seg004_D2D proc near
         or      ax,ax
         jne     short L0D6A
         push    si
-        mov     si,26BAh
+        mov     si,EYE_X
         call    _seg004_DBA
         pop     si
         jb      short L0D61
@@ -634,46 +649,46 @@ _seg004_E02 proc near
         mov     si,ax
         mov     ax,ss
         mov     ds,ax
-        mov     di,26BAh
+        mov     di,EYE_X
         mov     cx,6
         rep movsw
         mov     ax,es
         mov     ds,ax
         call    _seg004_E88
         mov     ax,5DCh
-        imul    word ptr ds:[1606h]
+        imul    word ptr ds:[MAT_XZ]
         add     ax,ax
         adc     dx,dx
         mov     ax,dx
         cwd
-        sub     word ptr ds:[26BAh],ax
-        sbb     word ptr ds:[26BCh],dx
+        sub     word ptr ds:[EYE_X],ax
+        sbb     word ptr ds:[EYE_X+2],dx
         mov     ax,5DCh
-        imul    word ptr ds:[1612h]
+        imul    word ptr ds:[MAT_ZZ]
         add     ax,ax
         adc     dx,dx
         mov     ax,dx
         cwd
-        sub     word ptr ds:[26C2h],ax
-        sbb     word ptr ds:[26C4h],dx
-        mov     ax,word ptr ds:[160Ch]
+        sub     word ptr ds:[EYE_Z],ax
+        sbb     word ptr ds:[EYE_Z+2],dx
+        mov     ax,word ptr ds:[MAT_YZ]
         cwd
         mov     ax,64h
         xor     ax,dx
         sub     ax,dx
-        add     ax,word ptr ds:[26BEh]
-        adc     dx,word ptr ds:[26C0h]
-        mov     word ptr ds:[26BEh],ax
-        mov     word ptr ds:[26C0h],dx
+        add     ax,word ptr ds:[EYE_Y]
+        adc     dx,word ptr ds:[EYE_Y+2]
+        mov     word ptr ds:[EYE_Y],ax
+        mov     word ptr ds:[EYE_Y+2],dx
         mov     di,0C8h
         mov     word ptr ds:[104h],di
         add     di,2
-        mov     si,26BAh
+        mov     si,EYE_X
         mov     cx,6
         rep movsw
         mov     ax,1
         stosw
-        mov     si,1602h
+        mov     si,MAT_XX
         mov     cx,9
         rep movsw
         mov     ax,7ED2h
@@ -694,22 +709,22 @@ _seg004_E87 endp
 ; the matrix is built from it (seg004_EFE).
 _seg004_E88 proc near
         mov     ax,word ptr [bp]
-        sub     ax,word ptr ds:[26BAh]
+        sub     ax,word ptr ds:[EYE_X]
         mov     word ptr ds:[15Eh],ax
         mov     ax,word ptr [bp+2]
-        sbb     ax,word ptr ds:[26BCh]
+        sbb     ax,word ptr ds:[EYE_X+2]
         mov     word ptr ds:[160h],ax
         mov     bx,word ptr [bp+4]
-        sub     bx,word ptr ds:[26BEh]
+        sub     bx,word ptr ds:[EYE_Y]
         mov     word ptr ds:[162h],bx
         mov     ax,word ptr [bp+6]
-        sbb     ax,word ptr ds:[26C0h]
+        sbb     ax,word ptr ds:[EYE_Y+2]
         mov     word ptr ds:[164h],ax
         mov     cx,word ptr [bp+8]
-        sub     cx,word ptr ds:[26C2h]
+        sub     cx,word ptr ds:[EYE_Z]
         mov     word ptr ds:[166h],cx
         mov     ax,word ptr [bp+0Ah]
-        sbb     ax,word ptr ds:[26C4h]
+        sbb     ax,word ptr ds:[EYE_Z+2]
         mov     word ptr ds:[168h],ax
 L0EC6:
         mov     ax,word ptr ds:[15Eh]
@@ -755,7 +770,7 @@ _seg004_EFE proc near
         jne     short L0F27
         mov     ax,8001h
 L0F27:
-        mov     word ptr ds:[1606h],ax
+        mov     word ptr ds:[MAT_XZ],ax
         mov     dx,word ptr ds:[162h]
         xor     ax,ax
         sar     dx,1
@@ -765,7 +780,7 @@ L0F27:
         jne     short L0F3E
         mov     ax,8001h
 L0F3E:
-        mov     word ptr ds:[160Ch],ax
+        mov     word ptr ds:[MAT_YZ],ax
         mov     dx,word ptr ds:[166h]
         xor     ax,ax
         sar     dx,1
@@ -775,7 +790,7 @@ L0F3E:
         jne     short L0F55
         mov     ax,8001h
 L0F55:
-        mov     word ptr ds:[1612h],ax
+        mov     word ptr ds:[MAT_ZZ],ax
         mov     ax,word ptr ds:[15Eh]
         or      ax,word ptr ds:[166h]
         je      short L0FAD
@@ -790,7 +805,7 @@ L0F55:
         call    far ptr _SquareRoot_seg019_A30
         mov     dx,word ptr ds:[166h]
         xor     ax,ax
-        mov     word ptr ds:[1608h],ax
+        mov     word ptr ds:[MAT_YX],ax
         sar     dx,1
         rcr     ax,1
         idiv    di
@@ -798,7 +813,7 @@ L0F55:
         jne     short L0F8F
         mov     ax,8001h
 L0F8F:
-        mov     word ptr ds:[1602h],ax
+        mov     word ptr ds:[MAT_XX],ax
         mov     dx,word ptr ds:[15Eh]
         xor     ax,ax
         sar     dx,1
@@ -809,22 +824,22 @@ L0F8F:
         mov     ax,8001h
 L0FA6:
         neg     ax
-        mov     word ptr ds:[160Eh],ax
+        mov     word ptr ds:[MAT_ZX],ax
         jmp     short L0FBD
 L0FAD:
-        mov     ax,word ptr ds:[160Ch]
+        mov     ax,word ptr ds:[MAT_YZ]
         neg     ax
-        mov     word ptr ds:[1602h],ax
+        mov     word ptr ds:[MAT_XX],ax
         xor     ax,ax
-        mov     word ptr ds:[1608h],ax
-        mov     word ptr ds:[160Eh],ax
+        mov     word ptr ds:[MAT_YX],ax
+        mov     word ptr ds:[MAT_ZX],ax
 L0FBD:
-        mov     ax,word ptr ds:[1608h]
-        imul    word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_YX]
+        imul    word ptr ds:[MAT_ZZ]
         mov     bx,ax
         mov     cx,dx
-        mov     ax,word ptr ds:[160Eh]
-        imul    word ptr ds:[160Ch]
+        mov     ax,word ptr ds:[MAT_ZX]
+        imul    word ptr ds:[MAT_YZ]
         sub     ax,bx
         sbb     dx,cx
         shl     ax,1
@@ -833,13 +848,13 @@ L0FBD:
         jne     short L0FE0
         mov     dx,8001h
 L0FE0:
-        mov     word ptr ds:[1604h],dx
-        mov     ax,word ptr ds:[1606h]
-        imul    word ptr ds:[160Eh]
+        mov     word ptr ds:[MAT_XY],dx
+        mov     ax,word ptr ds:[MAT_XZ]
+        imul    word ptr ds:[MAT_ZX]
         mov     bx,ax
         mov     cx,dx
-        mov     ax,word ptr ds:[1602h]
-        imul    word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_XX]
+        imul    word ptr ds:[MAT_ZZ]
         sub     ax,bx
         sbb     dx,cx
         shl     ax,1
@@ -852,13 +867,13 @@ L1005:
         jne     short L100E
         mov     dx,8001h
 L100E:
-        mov     word ptr ds:[160Ah],dx
-        mov     ax,word ptr ds:[1602h]
-        imul    word ptr ds:[160Ch]
+        mov     word ptr ds:[MAT_YY],dx
+        mov     ax,word ptr ds:[MAT_XX]
+        imul    word ptr ds:[MAT_YZ]
         mov     bx,ax
         mov     cx,dx
-        mov     ax,word ptr ds:[1608h]
-        imul    word ptr ds:[1606h]
+        mov     ax,word ptr ds:[MAT_YX]
+        imul    word ptr ds:[MAT_XZ]
         sub     ax,bx
         sbb     dx,cx
         shl     ax,1
@@ -867,7 +882,7 @@ L100E:
         jne     short L1035
         mov     dx,8001h
 L1035:
-        mov     word ptr ds:[1610h],dx
+        mov     word ptr ds:[MAT_ZY],dx
         ret
 _seg004_EFE endp
 

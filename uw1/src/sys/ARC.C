@@ -48,11 +48,11 @@ unsigned char far open_arc(struct Arc far *arc, char *name)
         *p = 0;
     } else path[0] = 0;
     strcat(path, "_arc.tmp");
-    ok = (fd = open(name, 0x8004)) != -1;
+    ok = (fd = open(name, O_RDWR | O_BINARY)) != -1;
     if (ok) {
         ok &= intoFarBuffer_ovr167_5DA(fd, &count, 2) == 2;
         ok &= intoFarBuffer_ovr167_5DA(fd, offtab, count << 2) == count << 2;
-        tmpfd = open(path, 0x8302, 0x80);
+        tmpfd = open(path, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0x80);
         ok &= tmpfd != -1;
         arc->fd = fd;
         arc->tmpfd = tmpfd;
@@ -144,8 +144,8 @@ unsigned char far put_arc(struct Arc far *arc, unsigned blk, void far *buf, unsi
     close(arc->tmpfd);
     unlink(arcname);
     rename(tmpname, arcname);
-    arc->fd = open(arcname, 0x8004);
-    arc->tmpfd = open(tmpname, 0x8302, 0x80);
+    arc->fd = open(arcname, O_RDWR | O_BINARY);
+    arc->tmpfd = open(tmpname, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, 0x80);
     return 1;
 }
 
@@ -178,7 +178,7 @@ int far count_arc(char *name)
     unsigned char ok;
     register int fd;
 
-    if ((fd = open(name, 0x8001)) == -1)
+    if ((fd = open(name, O_RDONLY | O_BINARY)) == -1)
         return -1;
     ok = read(fd, &count, 2) == 2;
     ok &= close(fd) == 0;
@@ -195,7 +195,7 @@ int far check_arc(char *name, unsigned blk)
     unsigned char ok;
     register int fd;
 
-    if ((fd = open(name, 0x8001)) == -1)
+    if ((fd = open(name, O_RDONLY | O_BINARY)) == -1)
         return -1;
     pos = blk * 4 + 2;
     ok = lseek(fd, pos, 0) == pos;

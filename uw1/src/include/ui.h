@@ -95,9 +95,11 @@ void far do_option_shortcut(int keycode);
 #define KEY_CTRL        0x100
 #define KEY_ALT         0x200
 #define KEY_SHIFT       0x400           /* added to special keys only */
-/* The special keys' codes: seg021's scan code table (Asc, dseg062_62a6:0010) gives F1 to
-   F10 (scan codes 3Bh..44h) 0x80..0x89 and the keypad (47h..53h) 0x8C..0x96; shifted Tab
-   is 0xA3. Ordinary keys give their character, Escape 0x1B. */
+/* The special keys' codes: seg019's scan code table (Asc, seg063:0010; UW2's seg021) gives
+   F1 to F10 (scan codes 3Bh..44h) 0x80..0x89 and the keypad (47h..53h) 0x8C..0x96; shifted
+   Tab is 0xA3. Ordinary keys give their character: Backspace 8, Enter 0x0D, Escape 0x1B. */
+#define KEY_BACKSPACE   0x08
+#define KEY_ENTER       0x0D
 #define KEY_ESC         0x1B
 #define KEY_F1          0x80
 #define KEY_F2          0x81
@@ -121,6 +123,17 @@ void far do_option_shortcut(int keycode);
 #define KEY_INS         0x95
 #define KEY_DEL         0x96
 #define KEY_BACKTAB     0xA3            /* Shift+Tab */
+/* The separate cursor keys (E0-prefixed scan codes): KEYQUEUE.ASM turns the 16 codes of
+   its table at seg063:0288 into 60h..6Fh, and Asc gives Home, Up, PgUp, Left, Right, End,
+   Down and PgDn (60h + 6..13) these codes; Ins and Del give KEY_INS and KEY_DEL. */
+#define KEY_GHOME       0xA5
+#define KEY_GUP         0xA6
+#define KEY_GPGUP       0xA7
+#define KEY_GLEFT       0xA8
+#define KEY_GRIGHT      0xA9
+#define KEY_GEND        0xAA
+#define KEY_GDOWN       0xAB
+#define KEY_GPGDN       0xAC
 
 /* MOUSE.C: the mouse */
 char far mouse_check_reg(int x0, int y0, int x1, int y1);
@@ -212,6 +225,21 @@ int far do_journey(void);
 void far real_start(int intro);
 
 /* INTERACT.C: the player's interaction with the 3D view and the panels */
+/* RightButtonThing, the interaction mode the icons on the left choose (deal_with_icons:
+   icon n, from the top, selects mode n + 1); a click in the 3D view runs player_disp[mode -
+   1], or in the default mode looks, and gets on a drag. The names are ours, from
+   player_disp's FM Towns names. */
+#define IMODE_DEFAULT   0
+#define IMODE_USE       1               /* player_3duse */
+#define IMODE_FIGHT     2               /* player_3dattack, the weapon drawn */
+#define IMODE_LOOK      3               /* player_3dlook */
+#define IMODE_GET       4               /* player_3dget */
+#define IMODE_TALK      5               /* player_3dtalk */
+/* GameInputMode: what owns the pointer (mous_in_3d, mous_in_inv). The names are ours. */
+#define GIM_NONE        0
+#define GIM_CARRY       1               /* an object is on the cursor */
+#define GIM_TARGET      2               /* a spell or object wants a target (ObjectActor) */
+#define GIM_AIM         3               /* a missile spell is being aimed (BlastFunction) */
 extern unsigned char TimeStop;
 extern unsigned char Hasted;
 extern unsigned char WizEye;

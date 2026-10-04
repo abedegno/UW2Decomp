@@ -637,7 +637,7 @@ restart:
                                 st.flags.bit.b1 = 1;
                                 input_time = GAME_TIME();
                             }
-                            if (key == 0x1B && st.flags.bit.b4) {
+                            if (key == KEY_ESC && st.flags.bit.b4) {
                                 close(anm_fd);
                                 goto done;
                             }
@@ -724,7 +724,7 @@ restart:
                         }
                         while ((in = mouse_get_input()) > 3) key = in;
                         if (in > -1 && in < 4) key = in;
-                        if (key == 0x1B && st.flags.bit.b4) {
+                        if (key == KEY_ESC && st.flags.bit.b4) {
                             close(anm_fd);
                             goto done;
                         }
@@ -796,7 +796,7 @@ void far runcutscene(register unsigned n)
     grfx_load_font("font5x6p.sys");
     if (in_game) load_txtmaps();
     if (n < 0x100) {
-        if (inplist->mode == 1) newscr(1);
+        if (inplist->mode == MODE_GAME) newscr(MODE_GAME);
         else if (inplist->mode != 0) {
             grfx_quikpal(PAL_GAME);
             editchng(0x7FFE);

@@ -77,6 +77,26 @@ INPUT_STATUS    equ     3DAh  ; input status 1 (vertical retrace)
 _ShowClip       equ     0DC6h           ; seg048:0DC8, symbols.tsv (UW2 0DC6)
 _Transparency   equ     0DC7h           ; seg048:0DC7, symbols.tsv (UW2 0DC7)
 
+; The graphics library's data in seg048 (DS while the library runs), as GRLIBF.ASM's
+; and VIDMODE.ASM's headers describe it. The names are ours.
+XFER_RTN        equ     0DC4h   ; the bitmap row transfer routine (GRLIBL.ASM, GRENTRY.ASM)
+ROW_BYTES       equ     36A6h   ; bytes per screen row (width / 4)
+YTAB            equ     36AAh   ; the drawing page's row addresses (Ytab; row 0 the bottom line)
+YTAB2           equ     383Eh   ; the other page's
+LMASKS          equ     3B62h   ; the left-edge plane masks, by x
+RMASKS          equ     3CA6h   ; the right-edge plane masks, by x
+SCR_LASTX       equ     3DEAh   ; the screen's last x
+SCR_LASTY       equ     3DECh   ; and last y
+WIN_LEFT        equ     3DF2h   ; the clip window (y counts up, so bottom < top)
+WIN_TOP         equ     3DF4h
+WIN_RIGHT       equ     3DF6h
+WIN_BOTTOM      equ     3DF8h
+SCREEN_SEG      equ     3DFAh   ; the screen's segment
+PAGE_DIFF       equ     410Ah   ; the offset from the drawing page to the other one
+PEN_COLOR       equ     410Fh   ; the colour
+SPAN_WRITER     equ     4110h   ; the current span writer (set_the_color, fbuf_setcolor)
+PEN_WORD2       equ     4114h   ; the pen's second word
+
         .186
 
         extrn   seg063:far
@@ -171,48 +191,48 @@ SEG003_TEXT segment word public 'code'
 _seg003_2BBA proc near
         cmp     byte ptr ds:[_Transparency],0
         jne     L2BCA
-        mov     word ptr ds:[0DC4h],offset _seg003_5B6C
+        mov     word ptr ds:[XFER_RTN],offset _seg003_5B6C
         jmp     L2C7C
 L2BCA:
-        mov     word ptr ds:[0DC4h],offset _seg003_5C61
+        mov     word ptr ds:[XFER_RTN],offset _seg003_5C61
         jmp     L2C7C
 _seg003_2BD3:
         cmp     byte ptr ds:[_Transparency],0
         jne     L2BF1
         test    ax,3
         je      L2BE8
-        mov     word ptr ds:[0DC4h],offset _seg003_5D72
+        mov     word ptr ds:[XFER_RTN],offset _seg003_5D72
         jmp     L2C7C
 L2BE8:
-        mov     word ptr ds:[0DC4h],offset _seg003_5E85
+        mov     word ptr ds:[XFER_RTN],offset _seg003_5E85
         jmp     L2C7C
 L2BF1:
-        mov     word ptr ds:[0DC4h],offset _seg003_5EDD
+        mov     word ptr ds:[XFER_RTN],offset _seg003_5EDD
         jmp     L2C7C
 _seg003_2BFA:
         cmp     byte ptr ds:[_Transparency],0
         jne     L2C09
-        mov     word ptr ds:[0DC4h],offset _seg003_A5C
+        mov     word ptr ds:[XFER_RTN],offset _seg003_A5C
         jmp     short L2C7C
 L2C09:
-        mov     word ptr ds:[0DC4h],offset _seg003_A8D
+        mov     word ptr ds:[XFER_RTN],offset _seg003_A8D
         jmp     short L2C7C
 _seg003_2C11:
         cmp     byte ptr ds:[_Transparency],0
         jne     L2C20
-        mov     word ptr ds:[0DC4h],offset _seg003_60C7
+        mov     word ptr ds:[XFER_RTN],offset _seg003_60C7
         jmp     short L2C7C
 L2C20:
-        mov     word ptr ds:[0DC4h],offset _seg003_60F8
+        mov     word ptr ds:[XFER_RTN],offset _seg003_60F8
         jmp     short L2C7C
 _seg003_2C28:
-        mov     word ptr ds:[0DC4h],offset _seg003_DE3
+        mov     word ptr ds:[XFER_RTN],offset _seg003_DE3
         mov     byte ptr ds:[0DCCh],0
         jmp     L2D59
 _seg003_2C36:
         cmp     bx,di
         je      L2C4C
-        mov     word ptr ds:[0DC4h],offset _seg003_606D
+        mov     word ptr ds:[XFER_RTN],offset _seg003_606D
         jg      L2C47
         mov     bp,offset L2D59
         jmp     short L2C61
@@ -223,10 +243,10 @@ L2C4C:
         mov     bp,offset L2D59
         cmp     ax,si
         jg      L2C5B
-        mov     word ptr ds:[0DC4h],offset _seg003_6015
+        mov     word ptr ds:[XFER_RTN],offset _seg003_6015
         jmp     short L2C61
 L2C5B:
-        mov     word ptr ds:[0DC4h],offset _seg003_606D
+        mov     word ptr ds:[XFER_RTN],offset _seg003_606D
 L2C61:
         cmp     bp,offset L2E24
         jne     L2C6A
@@ -234,7 +254,7 @@ L2C61:
         inc     di
 L2C6A:
         shl     di,1
-        mov     di,word ptr [di+36AAh]
+        mov     di,word ptr [di+YTAB]
         shr     si,2
         add     di,si
         mov     byte ptr ds:[0DCCh],1
@@ -256,18 +276,18 @@ L2C9F:
         mov     si,ax
         add     si,cx
         dec     si
-        sub     si,word ptr ds:[3DF2h]
+        sub     si,word ptr ds:[WIN_LEFT]
         jge     L2CAD
         jmp     L2D55
 L2CAD:
-        mov     si,word ptr ds:[3DF2h]
+        mov     si,word ptr ds:[WIN_LEFT]
         sub     si,ax
         jle     L2CBB
         add     ax,si
         sub     cx,si
         add     bp,si
 L2CBB:
-        mov     si,word ptr ds:[3DF6h]
+        mov     si,word ptr ds:[WIN_RIGHT]
         sub     si,ax
         jge     L2CC6
         jmp     L2D55
@@ -280,9 +300,9 @@ L2CCD:
         mov     si,bx
         sub     si,dx
         inc     si
-        sub     si,word ptr ds:[3DF4h]
+        sub     si,word ptr ds:[WIN_TOP]
         jg      L2D55
-        mov     si,word ptr ds:[3DF4h]
+        mov     si,word ptr ds:[WIN_TOP]
         sub     si,bx
         jge     L2CE6
         sub     di,si
@@ -290,7 +310,7 @@ L2CCD:
         add     bx,si
 L2CE6:
         mov     si,bx
-        sub     si,word ptr ds:[3DF8h]
+        sub     si,word ptr ds:[WIN_BOTTOM]
         jle     L2D55
         cmp     dx,si
         jle     L2CF4
@@ -337,7 +357,7 @@ L2D37:
         or      word ptr [bx],8000h
         mov     word ptr ds:[141Dh],bx
         mov     si,ax
-        jmp     word ptr ds:[0DC4h]
+        jmp     word ptr ds:[XFER_RTN]
 L2D55:
         add     sp,4
         retn
@@ -353,7 +373,7 @@ L2D59:
         push    si
         cmp     byte ptr ds:[_ShowClip],0
         je      L2DDD
-        mov     si,word ptr ds:[3DF4h]
+        mov     si,word ptr ds:[WIN_TOP]
         mov     bp,bx
         sub     bp,dx
         inc     bp
@@ -377,13 +397,13 @@ L2D84:
         pop     ax
 L2D9D:
         mov     si,bx
-        sub     si,word ptr ds:[3DF8h]
+        sub     si,word ptr ds:[WIN_BOTTOM]
         jle     L2E20
         cmp     dx,si
         jle     L2DAB
         mov     dx,si
 L2DAB:
-        mov     si,word ptr ds:[3DF6h]
+        mov     si,word ptr ds:[WIN_RIGHT]
         sub     si,ax
         jl      L2E20
         inc     si
@@ -391,7 +411,7 @@ L2DAB:
         jle     L2DBA
         mov     cx,si
 L2DBA:
-        mov     si,word ptr ds:[3DF2h]
+        mov     si,word ptr ds:[WIN_LEFT]
         mov     bp,ax
         add     bp,cx
         dec     bp
@@ -431,7 +451,7 @@ L2E03:
         jne     L2E03
         or      word ptr [bx],8000h
         mov     word ptr ds:[141Dh],bx
-        jmp     word ptr ds:[0DC4h]
+        jmp     word ptr ds:[XFER_RTN]
 L2E20:
         add     sp,2
         retn
@@ -465,7 +485,7 @@ L2E49:
         or      word ptr [si],8000h
         mov     word ptr ds:[141Dh],si
         mov     si,0DCDh
-        call    word ptr ds:[0DC4h]
+        call    word ptr ds:[XFER_RTN]
         pop     dx
         mov     bx,0DCDh
         xor     ax,ax                   ; UW1 numbers the records 0 up (UW2 0C7h down)
@@ -884,7 +904,7 @@ L320D:
         mov     si,2D40h
         mov     bx,word ptr ds:[1B88h]
         mov     word ptr [bx],0FFFFh
-        jmp     word ptr ds:[4110h]
+        jmp     word ptr ds:[SPAN_WRITER]
 _seg003_321C:
         retn
 _seg003_2BBA endp
@@ -964,29 +984,29 @@ L328E:
         out     dx,al
 L3299:
         sub     ax,ax
-        mov     word ptr ds:[3DF2h],ax
-        mov     word ptr ds:[3DF8h],ax
-        mov     ax,word ptr ds:[3DEAh]
-        mov     word ptr ds:[3DF6h],ax
-        mov     ax,word ptr ds:[3DECh]
-        mov     word ptr ds:[3DF4h],ax
+        mov     word ptr ds:[WIN_LEFT],ax
+        mov     word ptr ds:[WIN_BOTTOM],ax
+        mov     ax,word ptr ds:[SCR_LASTX]
+        mov     word ptr ds:[WIN_RIGHT],ax
+        mov     ax,word ptr ds:[SCR_LASTY]
+        mov     word ptr ds:[WIN_TOP],ax
         mov     si,3DF2h
         call    _seg003_3A68
-        mov     ax,word ptr ds:[3DEAh]
+        mov     ax,word ptr ds:[SCR_LASTX]
         inc     ax
         shr     ax,1
         shr     ax,1
-        mov     word ptr ds:[36A6h],ax
-        mov     ax,word ptr ds:[3DECh]
+        mov     word ptr ds:[ROW_BYTES],ax
+        mov     ax,word ptr ds:[SCR_LASTY]
         inc     ax
-        mul     word ptr ds:[36A6h]
+        mul     word ptr ds:[ROW_BYTES]
         mov     bx,ax
         add     ax,0FFh
         sub     al,al
         mov     word ptr ds:[2CD6h],ax
         add     ax,bx
         mov     word ptr ds:[2CD8h],ax
-        add     ax,word ptr ds:[36A6h]
+        add     ax,word ptr ds:[ROW_BYTES]
         mov     word ptr ds:[4104h],ax
         mov     word ptr ds:[4108h],ax
         sub     ax,ax
@@ -1055,9 +1075,9 @@ _seg003_3325 endp
 ; _333F: set the CRTC display start (registers 0Ch, 0Dh) to the drawing page, Ytab of the
 ; highest row.
 _seg003_333F proc near
-        mov     bx,word ptr ds:[3DECh]
+        mov     bx,word ptr ds:[SCR_LASTY]
         shl     bx,1
-        mov     ax,word ptr [bx+36AAh]
+        mov     ax,word ptr [bx+YTAB]
         mov     bx,ax
         mov     dx,CRTC_INDEX
         mov     al,0Ch
@@ -1078,18 +1098,18 @@ _seg003_3357 proc near
 _seg003_335A:
         mov     si,36AAh
         mov     di,383Eh
-        mov     cx,word ptr ds:[3DECh]
+        mov     cx,word ptr ds:[SCR_LASTY]
         inc     cx
         rep movsw
         mov     ax,word ptr ds:[2CD6h]
-        mov     bx,word ptr ds:[3DECh]
+        mov     bx,word ptr ds:[SCR_LASTY]
         shl     bx,1
-        sub     ax,word ptr [bx+36AAh]
+        sub     ax,word ptr [bx+YTAB]
         mov     bx,ax
         shl     bx,1
         neg     bx
         add     bx,word ptr ds:[2CD6h]
-        mov     word ptr ds:[410Ah],bx
+        mov     word ptr ds:[PAGE_DIFF],bx
         call    _seg003_3386
         ret
 _seg003_3357 endp
@@ -1098,11 +1118,11 @@ _seg003_3357 endp
 ; _3386: build Ytab from AX: the highest row (3DEC) gets AX and each lower row 36A6 more (ten
 ; rows a pass). Marks 2D1A as -1.
 _seg003_3386 proc near
-        mov     di,word ptr ds:[3DECh]
+        mov     di,word ptr ds:[SCR_LASTY]
         shl     di,1
         add     di,36AAh
-        mov     bx,word ptr ds:[36A6h]
-        mov     cx,word ptr ds:[3DECh]
+        mov     bx,word ptr ds:[ROW_BYTES]
+        mov     cx,word ptr ds:[SCR_LASTY]
         inc     cx
         std
 L339A:
@@ -1240,7 +1260,7 @@ _seg003_341C proc near
         mov     ax,0F02h
         out     dx,ax
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
         sub     di,di
         mov     ax,di
         mov     cx,8000h
@@ -1279,20 +1299,20 @@ _seg003_341C endp
 ;          first), probably for a highlight or cursor
 ;   _358E  solid fill on the drawing page (_3604), then the same on the other page (383E)
 _seg003_347A proc near
-        mov     ax,word ptr ds:[3DF4h]
+        mov     ax,word ptr ds:[WIN_TOP]
         shl     ax,1
         add     ax,36ACh
         mov     bx,ax
         mov     ax,word ptr ds:[2CD8h]
         xchg    ax,word ptr [bx]
-        mov     ax,word ptr ds:[3DF8h]
+        mov     ax,word ptr ds:[WIN_BOTTOM]
         shl     ax,1
         add     ax,36A8h
         mov     bx,ax
         mov     ax,word ptr ds:[2CD8h]
         xchg    ax,word ptr [bx]
         mov     ax,3B62h
-        mov     bx,word ptr ds:[3DF2h]
+        mov     bx,word ptr ds:[WIN_LEFT]
         dec     bx
         add     ax,bx
         mov     bp,ax
@@ -1300,7 +1320,7 @@ _seg003_347A proc near
         mov     al,byte ptr [bx+2D2Bh]
         mov     byte ptr [bp],al
         mov     ax,3CA6h
-        mov     bx,word ptr ds:[3DF6h]
+        mov     bx,word ptr ds:[WIN_RIGHT]
         inc     bx
         add     ax,bx
         mov     bp,ax
@@ -1313,7 +1333,7 @@ _seg003_347A endp
 ; seg003_34C5  (+34C5)
 _seg003_34C5 proc near
         mov     ax,3B62h
-        mov     bx,word ptr ds:[3DF2h]
+        mov     bx,word ptr ds:[WIN_LEFT]
         dec     bx
         add     ax,bx
         mov     bp,ax
@@ -1321,22 +1341,22 @@ _seg003_34C5 proc near
         mov     al,byte ptr [bx+2D2Ah]
         mov     byte ptr [bp],al
         mov     ax,3CA6h
-        mov     bx,word ptr ds:[3DF6h]
+        mov     bx,word ptr ds:[WIN_RIGHT]
         inc     bx
         add     ax,bx
         mov     bp,ax
         and     bx,3
         mov     al,byte ptr [bx+2D2Fh]
         mov     byte ptr [bp],al
-        mov     bx,word ptr ds:[3DF4h]
+        mov     bx,word ptr ds:[WIN_TOP]
         shl     bx,1
-        mov     ax,word ptr [bx+36AAh]
-        sub     ax,word ptr ds:[36A6h]
+        mov     ax,word ptr [bx+YTAB]
+        sub     ax,word ptr ds:[ROW_BYTES]
         mov     word ptr [bx+36ACh],ax
-        mov     bx,word ptr ds:[3DF8h]
+        mov     bx,word ptr ds:[WIN_BOTTOM]
         shl     bx,1
-        mov     ax,word ptr [bx+36AAh]
-        add     ax,word ptr ds:[36A6h]
+        mov     ax,word ptr [bx+YTAB]
+        add     ax,word ptr ds:[ROW_BYTES]
         mov     word ptr [bx+36A8h],ax
         ret
         ret
@@ -1351,10 +1371,10 @@ _seg003_351B:
         mov     dx,SC_DATA
         mov     bl,0Fh
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
         jmp     short L353B
 L352E:
-        add     di,word ptr [bp+36AAh]
+        add     di,word ptr [bp+YTAB]
         and     al,bh
         out     dx,al
         mov     al,bl
@@ -1369,8 +1389,8 @@ L353B:
         mov     di,ax
         lodsw
         mov     bp,ax
-        mov     bh,byte ptr [bp+3CA6h]
-        mov     al,byte ptr [di+3B62h]
+        mov     bh,byte ptr [bp+RMASKS]
+        mov     al,byte ptr [di+LMASKS]
         xchg    cx,bp
         sar     di,1
         sar     di,1
@@ -1379,7 +1399,7 @@ L353B:
         sub     cx,di
         jle     L352E
         out     dx,al
-        add     di,word ptr [bp+36AAh]
+        add     di,word ptr [bp+YTAB]
         mov     al,bl
         test    byte ptr es:[di],al
         stosb
@@ -1418,9 +1438,9 @@ L3595:
         call    _seg003_4C74
 L359A:
         mov     dx,SC_DATA
-        mov     bl,byte ptr ds:[410Fh]
+        mov     bl,byte ptr ds:[PEN_COLOR]
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
         jmp     short L35C4
 L35A8:
         shl     al,1
@@ -1433,7 +1453,7 @@ L35A8:
         jmp     short L35E7
 L35B8:
         jl      L35A8
-        add     di,word ptr [bp+383Eh]
+        add     di,word ptr [bp+YTAB2]
         and     al,bh
         out     dx,al
         mov     al,bl
@@ -1447,8 +1467,8 @@ L35C4:
         mov     di,ax
         lodsw
         mov     bp,ax
-        mov     bh,byte ptr [bp+3CA6h]
-        mov     al,byte ptr [di+3B62h]
+        mov     bh,byte ptr [bp+RMASKS]
+        mov     al,byte ptr [di+LMASKS]
         xchg    cx,bp
         sar     di,1
         sar     di,1
@@ -1458,7 +1478,7 @@ L35C4:
         jle     L35B8
 L35E7:
         out     dx,al
-        add     di,word ptr [bp+383Eh]
+        add     di,word ptr [bp+YTAB2]
         mov     al,bl
         stosb
         dec     cx
@@ -1484,9 +1504,9 @@ _seg003_34C5 endp
 ;   _36FA  copy from the other page (_3799), then the same onto the displayed page (410C)
 _seg003_3604 proc near
         mov     dx,SC_DATA
-        mov     bl,byte ptr ds:[410Fh]
+        mov     bl,byte ptr ds:[PEN_COLOR]
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
         jmp     short L362E
 L3612:
         shl     al,1
@@ -1499,7 +1519,7 @@ L3612:
         jmp     short L3651
 L3622:
         jl      L3612
-        add     di,word ptr [bp+36AAh]
+        add     di,word ptr [bp+YTAB]
         and     al,bh
         out     dx,al
         mov     al,bl
@@ -1513,8 +1533,8 @@ L362E:
         mov     di,ax
         lodsw
         mov     bp,ax
-        mov     bh,byte ptr [bp+3CA6h]
-        mov     al,byte ptr [di+3B62h]
+        mov     bh,byte ptr [bp+RMASKS]
+        mov     al,byte ptr [di+LMASKS]
         xchg    cx,bp
         sar     di,1
         sar     di,1
@@ -1524,7 +1544,7 @@ L362E:
         jle     L3622
 L3651:
         out     dx,al
-        add     di,word ptr [bp+36AAh]
+        add     di,word ptr [bp+YTAB]
         mov     al,bl
         stosb
         dec     cx
@@ -1552,9 +1572,9 @@ _seg003_3674:
         mov     al,0Fh
         out     dx,al
         mov     bx,si
-        mov     di,word ptr ds:[4114h]
+        mov     di,word ptr ds:[PEN_WORD2]
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
 L368C:
         mov     bp,word ptr [bx]
         shl     bp,1
@@ -1568,7 +1588,7 @@ L368C:
         sar     cx,1
         sub     cx,si
         inc     cx
-        add     si,word ptr [bp+36AAh]
+        add     si,word ptr [bp+YTAB]
         rep movs byte ptr es:[di],byte ptr es:[si]
         jmp     L368C
 L36AF:
@@ -1586,9 +1606,9 @@ _seg003_36BB:
         mov     al,0Fh
         out     dx,al
         mov     bx,si
-        mov     dx,word ptr ds:[410Ah]
+        mov     dx,word ptr ds:[PAGE_DIFF]
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
 L36D3:
         mov     bp,word ptr [bx]
         shl     bp,1
@@ -1602,7 +1622,7 @@ L36D3:
         sar     cx,1
         sub     cx,si
         inc     cx
-        add     si,word ptr [bp+36AAh]
+        add     si,word ptr [bp+YTAB]
         mov     di,si
         add     si,dx
         rep movs byte ptr es:[di],byte ptr es:[si]
@@ -1611,9 +1631,9 @@ _seg003_36FA:
         push    si
         call    _seg003_3799
         pop     si
-        mov     ax,word ptr ds:[410Ah]
-        add     ax,word ptr ds:[36AAh]
-        sub     ax,word ptr ds:[383Eh]
+        mov     ax,word ptr ds:[PAGE_DIFF]
+        add     ax,word ptr ds:[YTAB]
+        sub     ax,word ptr ds:[YTAB2]
         mov     word ptr ds:[410Ch],ax
         jmp     short L371B
 L370F:
@@ -1630,7 +1650,7 @@ L371B:
         mov     dx,SC_DATA
         mov     bx,si
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
         jmp     short L374D
 L372E:
         shl     al,1
@@ -1642,7 +1662,7 @@ L372E:
         jmp     short L3772
 L373C:
         jl      L372E
-        add     di,word ptr [si+383Eh]
+        add     di,word ptr [si+YTAB2]
         mov     bp,word ptr ds:[410Ch]
         and     al,ah
         out     dx,al
@@ -1655,8 +1675,8 @@ L374D:
         mov     di,word ptr [bx+2]
         mov     bp,word ptr [bx+4]
         add     bx,6
-        mov     al,byte ptr [di+3B62h]
-        mov     ah,byte ptr [bp+3CA6h]
+        mov     al,byte ptr [di+LMASKS]
+        mov     ah,byte ptr [bp+RMASKS]
         sar     di,1
         sar     di,1
         mov     cx,bp
@@ -1665,7 +1685,7 @@ L374D:
         sub     cx,di
         jle     L373C
 L3772:
-        add     di,word ptr [si+383Eh]
+        add     di,word ptr [si+YTAB2]
         mov     si,di
         add     si,word ptr ds:[410Ch]
         out     dx,al
@@ -1701,7 +1721,7 @@ _seg003_3799 proc near
         mov     dx,SC_DATA
         mov     bx,si
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
         jmp     short L37CB
 L37AC:
         shl     al,1
@@ -1713,8 +1733,8 @@ L37AC:
         jmp     short L37F0
 L37BA:
         jl      L37AC
-        add     di,word ptr [si+36AAh]
-        mov     bp,word ptr ds:[410Ah]
+        add     di,word ptr [si+YTAB]
+        mov     bp,word ptr ds:[PAGE_DIFF]
         and     al,ah
         out     dx,al
         mov     al,byte ptr es:[bp+di]
@@ -1726,8 +1746,8 @@ L37CB:
         mov     di,word ptr [bx+2]
         mov     bp,word ptr [bx+4]
         add     bx,6
-        mov     al,byte ptr [di+3B62h]
-        mov     ah,byte ptr [bp+3CA6h]
+        mov     al,byte ptr [di+LMASKS]
+        mov     ah,byte ptr [bp+RMASKS]
         sar     di,1
         sar     di,1
         mov     cx,bp
@@ -1736,9 +1756,9 @@ L37CB:
         sub     cx,di
         jle     L37BA
 L37F0:
-        add     di,word ptr [si+36AAh]
+        add     di,word ptr [si+YTAB]
         mov     si,di
-        add     si,word ptr ds:[410Ah]
+        add     si,word ptr ds:[PAGE_DIFF]
         out     dx,al
         movs    byte ptr es:[di],byte ptr es:[si]
         dec     cx
@@ -1764,9 +1784,9 @@ _seg003_3817:
         mov     al,0Fh
         out     dx,al
         mov     bx,si
-        mov     si,word ptr ds:[4114h]
+        mov     si,word ptr ds:[PEN_WORD2]
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
 L382F:
         mov     bp,word ptr [bx]
         shl     bp,1
@@ -1780,7 +1800,7 @@ L382F:
         sar     cx,1
         sub     cx,di
         inc     cx
-        add     di,word ptr [bp+36AAh]
+        add     di,word ptr [bp+YTAB]
         rep movs byte ptr es:[di],byte ptr es:[si]
         jmp     L382F
 L3852:
@@ -1796,9 +1816,9 @@ _seg003_3857:
         out     dx,al
         inc     dx
         mov     bp,si
-        mov     di,word ptr ds:[4114h]
+        mov     di,word ptr ds:[PEN_WORD2]
         push    ds
-        mov     ds,word ptr ds:[3DFAh]
+        mov     ds,word ptr ds:[SCREEN_SEG]
 L386F:
         mov     bx,word ptr [bp]
         shl     bx,1
@@ -1849,9 +1869,9 @@ _seg003_38BC:
         out     dx,al
         inc     dx
         mov     bp,si
-        mov     si,word ptr ds:[4114h]
+        mov     si,word ptr ds:[PEN_WORD2]
         push    ds
-        mov     ds,word ptr ds:[3DFAh]
+        mov     ds,word ptr ds:[SCREEN_SEG]
 L38D4:
         mov     bx,word ptr [bp]
         shl     bx,1
@@ -1893,27 +1913,27 @@ _seg003_3799 endp
 ; unclipped entry: map mask from the edge tables, address from Ytab. _3950 and _3958 read a
 ; pixel (clipped or not) and compare it with CL, leaving the flags.
 _seg003_3915 proc near
-        cmp     bx,word ptr ds:[3DF4h]
+        cmp     bx,word ptr ds:[WIN_TOP]
         jg      L394F
-        cmp     bx,word ptr ds:[3DF8h]
+        cmp     bx,word ptr ds:[WIN_BOTTOM]
         jl      L394F
-        cmp     ax,word ptr ds:[3DF6h]
+        cmp     ax,word ptr ds:[WIN_RIGHT]
         jg      L394F
-        cmp     ax,word ptr ds:[3DF2h]
+        cmp     ax,word ptr ds:[WIN_LEFT]
         jl      L394F
 _seg003_392D:
         mov     dx,SC_DATA
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
         mov     di,ax
-        mov     al,byte ptr [di+3B62h]
-        and     al,byte ptr [di+3CA6h]
+        mov     al,byte ptr [di+LMASKS]
+        and     al,byte ptr [di+RMASKS]
         shr     di,1
         shr     di,1
         shl     bx,1
-        add     di,word ptr [bx+36AAh]
+        add     di,word ptr [bx+YTAB]
         out     dx,al
-        mov     al,byte ptr ds:[410Fh]
+        mov     al,byte ptr ds:[PEN_COLOR]
         stosb
         pop     es
 L394F:
@@ -1936,13 +1956,13 @@ _seg003_3915 endp
 ; seg003_3964  (+3964)
 ; _3964: read the pixel at (AX, BX), or AX = -1 outside the window; falls into _397C.
 _seg003_3964 proc near
-        cmp     bx,word ptr ds:[3DF4h]
+        cmp     bx,word ptr ds:[WIN_TOP]
         jg      L3960
-        cmp     bx,word ptr ds:[3DF8h]
+        cmp     bx,word ptr ds:[WIN_BOTTOM]
         jl      L3960
-        cmp     ax,word ptr ds:[3DF6h]
+        cmp     ax,word ptr ds:[WIN_RIGHT]
         jg      L3960
-        cmp     ax,word ptr ds:[3DF2h]
+        cmp     ax,word ptr ds:[WIN_LEFT]
         jl      L3960
 _seg003_3964 endp
 
@@ -1957,11 +1977,11 @@ _seg003_397C proc near
         mov     dx,GC_INDEX
         out     dx,ax
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
         shr     di,1
         shr     di,1
         shl     bx,1
-        add     di,word ptr [bx+36AAh]
+        add     di,word ptr [bx+YTAB]
         mov     ah,byte ptr es:[di]
         pop     es
         mov     al,8
@@ -1981,19 +2001,19 @@ _seg003_39A2 proc near
         mov     ax,0
         mov     dx,GC_DATA
         out     dx,al
-        mov     al,byte ptr [di+3B62h]
-        and     al,byte ptr [di+3CA6h]
+        mov     al,byte ptr [di+LMASKS]
+        and     al,byte ptr [di+RMASKS]
         mov     dx,SC_DATA
         out     dx,al
         shr     di,1
         shr     di,1
         shl     bx,1
-        add     di,word ptr [bx+36AAh]
-        mov     bx,word ptr ds:[410Ah]
-        mov     dx,word ptr ds:[36A6h]
+        add     di,word ptr [bx+YTAB]
+        mov     bx,word ptr ds:[PAGE_DIFF]
+        mov     dx,word ptr ds:[ROW_BYTES]
         dec     dx
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
 L39D4:
         mov     al,byte ptr es:[bx+di]
         stosb
@@ -2013,19 +2033,19 @@ _seg003_39E5 proc near
         mov     cx,bx
         sub     cx,dx
         inc     cx
-        mov     al,byte ptr [di+3B62h]
-        and     al,byte ptr [di+3CA6h]
+        mov     al,byte ptr [di+LMASKS]
+        and     al,byte ptr [di+RMASKS]
         mov     dx,SC_DATA
         out     dx,al
         shr     di,1
         shr     di,1
         shl     bx,1
-        add     di,word ptr [bx+36AAh]
-        mov     bx,word ptr ds:[36A6h]
+        add     di,word ptr [bx+YTAB]
+        mov     bx,word ptr ds:[ROW_BYTES]
         dec     bx
-        mov     al,byte ptr ds:[410Fh]
+        mov     al,byte ptr ds:[PEN_COLOR]
         push    es
-        mov     es,word ptr ds:[3DFAh]
+        mov     es,word ptr ds:[SCREEN_SEG]
 L3A0F:
         stosb
         add     di,bx
@@ -2045,13 +2065,13 @@ _seg003_3A16 proc near
         mov     ax,word ptr [bx+21Eh]
         mov     word ptr ds:[410Eh],ax
         mov     ax,word ptr [bx+434h]
-        mov     word ptr ds:[4114h],ax
+        mov     word ptr ds:[PEN_WORD2],ax
         db      8Bh,9Fh,8h,0h                   ; match: mov bx,word ptr [bx+8]: disp16, the table at seg048:0008 (TASM gives disp8 for a number, and a label there would need that segment)
         cmp     bx,14h
         jae     L3A3E
         mov     ax,word ptr [bx+2CECh]
         sub     ax,word ptr ds:[5044h]
-        mov     word ptr ds:[4110h],ax
+        mov     word ptr ds:[SPAN_WRITER],ax
 L3A3E:
         ret
 _seg003_3A16 endp

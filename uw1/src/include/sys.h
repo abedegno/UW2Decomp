@@ -14,6 +14,14 @@ struct Camera;
 #include "view3d.h"
 
 /* UWEDIT.C: the program's main and its startup and shutdown */
+/* Screen modes (scrmode and inplist->mode, set by change_screen; the masks the input
+   tables are registered with): each is one bit, and change_screen maps it to the screen
+   number scrnum (0, 1 and 2), which picks the change handlers in editor_dispatch. The
+   names are ours. 8 sets another zoom in VIEW3D.C's place_3d_view and 0x10 is what the
+   empty overlays ovr090 and ovr152 switch to; neither is known to be used. */
+#define MODE_GAME       1               /* the 3D view, scrnum 0 */
+#define MODE_MAP        2               /* the automap, scrnum 1 */
+#define MODE_CONV       4               /* a conversation, scrnum 2 */
 extern char HomeDir[0x42];
 /* DS:5D60, FM Towns _scrmode.
    name: IDA's label "InGameMode" here is wrong: a different global, DS:2506, exists

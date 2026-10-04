@@ -123,8 +123,8 @@ void far scroll_wait(int ticks, char mouse)
    five animation frames (pictures 0x20D5.. and 0x20DA..). */
 void far draw_edges(void)
 {
-    pic_to_screen(edge_phase + 0x20D5, 0x0B, 0x1E, 0x1C, 4);
-    pic_to_screen(edge_phase + 0x20DA, 0x132, 0x1E, 0x1C, 4);
+    pic_to_screen(edge_phase + ICON_SCRLEDGE, 0x0B, 0x1E, 0x1C, 4);
+    pic_to_screen(edge_phase + (ICON_SCRLEDGE + 0x5), 0x132, 0x1E, 0x1C, 4);
     edge_phase++;
     if (edge_phase == 5)
         edge_phase = 0;
@@ -136,8 +136,8 @@ void far draw_conv_edges(void)
     register int i;
 
     for (i = 0; i < 3; i++) {
-        pic_to_screen(conv_edge_phase + 0x20DF, 0x34, 0x94 - i * 0x1B, 0x1B, 5);
-        pic_to_screen(conv_edge_phase + 0x20E5, 0xDC, 0x94 - i * 0x1B, 0x1B, 5);
+        pic_to_screen(conv_edge_phase + (ICON_SCRLEDGE + 0xA), 0x34, 0x94 - i * 0x1B, 0x1B, 5);
+        pic_to_screen(conv_edge_phase + (ICON_SCRLEDGE + 0x10), 0xDC, 0x94 - i * 0x1B, 0x1B, 5);
     }
     conv_edge_phase++;
     if (conv_edge_phase == 6)
@@ -154,7 +154,7 @@ void far scroll_up(int n)
     set_the_color(0x2A);
     rectangle(scroll->top, scroll->cur_y, scroll->bottom, n + 1);
     if (scroll == &main_scroll) {
-        set_screen_frame(4, 1);
+        set_screen_frame(SCR_DRAGON, 1);
         draw_edges();
     } else
         draw_conv_edges();
@@ -425,10 +425,10 @@ void far draw_scroll(int x, int y, int w, int h, char flag)
 static void far seg043_3619_669(int x, int y, int r, int b)
 {
     Transparency = 1;
-    pic_to_screen(0x1068, x, y, 10, 0x28);
-    pic_to_screen(0x106A, r - 0x28, y, 10, 0x28);
-    pic_to_screen(0x1069, x, b + 10, 10, 0x28);
-    pic_to_screen(0x106B, r - 0x28, b + 10, 10, 0x28);
+    pic_to_screen(ICON_BUTTONS + 0x68, x, y, 10, 0x28);
+    pic_to_screen(ICON_BUTTONS + 0x6A, r - 0x28, y, 10, 0x28);
+    pic_to_screen(ICON_BUTTONS + 0x69, x, b + 10, 10, 0x28);
+    pic_to_screen(ICON_BUTTONS + 0x6B, r - 0x28, b + 10, 10, 0x28);
     Transparency = 0;
     set_the_color(0x2D);
     box(x + 0xD, y, r - 0xD, b);
@@ -454,7 +454,7 @@ void far scroll_clear(char redraw)
     scroll->more_pending = 0;
     scroll->start_line = 0;
     if (scroll == &main_scroll) {
-        set_screen_frame(4, 1);
+        set_screen_frame(SCR_DRAGON, 1);
         draw_edges();
     } else
         draw_conv_edges();
@@ -560,25 +560,25 @@ int far wdialog(char *prompt, char *initial, char *result, char anychar, int max
                 pos = -pos;
             text[pos] = 0;
             break;
-        case KEY_HOME: case 0xA5: case KEY_CTRL | 'a':
+        case KEY_HOME: case KEY_GHOME: case KEY_CTRL | 'a':
             pos = 0;
             break;
-        case KEY_END: case 0xAA: case KEY_CTRL | 'e':
+        case KEY_END: case KEY_GEND: case KEY_CTRL | 'e':
             pos = strlen(text);
             break;
-        case KEY_RIGHT: case 0xA9: case KEY_CTRL | 'f':
+        case KEY_RIGHT: case KEY_GRIGHT: case KEY_CTRL | 'f':
             if (pos < 0)
                 pos = -pos;
             if (strlen(text) > pos)
                 pos++;
             break;
-        case KEY_LEFT: case 0xA8: case KEY_CTRL | 'b':
+        case KEY_LEFT: case KEY_GLEFT: case KEY_CTRL | 'b':
             if (pos < 0)
                 pos = -pos;
             if (pos > 0)
                 pos--;
             break;
-        case 8:
+        case KEY_BACKSPACE:
             if (pos < 0)
                 pos = -pos;
             if (pos > 0) {
@@ -622,7 +622,7 @@ int far wdialog(char *prompt, char *initial, char *result, char anychar, int max
             string_to_screen(text, answer_start, scroll->cur_y);
     }
     mouse_show();
-    if (key == 27) {
+    if (key == KEY_ESC) {
         strcpy(result, NULLTRAP(initial));  /* initial is 0 for a conversation's answer */
         set_the_color(0x2A);
         rectangle(answer_start, scroll->cur_y, scroll->bottom, scroll->cur_y - cur_font->height + 1);
@@ -674,7 +674,7 @@ int far wyorn(char *question, int id, char *answer)
         }
     }
     mouse_show();
-    if (key == 27) {
+    if (key == KEY_ESC) {
         wd_bool(0);
         *answer = 0;
         return -1;

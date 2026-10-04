@@ -44,6 +44,33 @@
 ; (INTERP.ASM), in seg051, the data segment while interpreting (UW2: 24F4h).
 OPCODE_TABLE    equ     2738h
 
+; The renderer's data in seg051 (DS while interpreting), as INTERP.ASM's header
+; describes it. The names are ours, from the routines that use the data.
+MAT_XX          equ     1602h   ; the view matrix, 1.15 fixed point: MAT_ab is input a's
+MAT_XY          equ     1604h   ; coefficient in output b (mxmul: x' = x*MAT_XX + y*MAT_YX
+MAT_XZ          equ     1606h   ; + z*MAT_ZX, and so on; z' is the depth)
+MAT_YX          equ     1608h
+MAT_YY          equ     160Ah
+MAT_YZ          equ     160Ch
+MAT_ZX          equ     160Eh
+MAT_ZY          equ     1610h
+MAT_ZZ          equ     1612h
+POLY_FILL       equ     15F6h   ; the seg003 polygon routine the next polygon is drawn with
+PNT_X           equ     1620h   ; the point table, 8 bytes a point: view x
+PNT_Y           equ     1622h   ; y
+PNT_Z           equ     1624h   ; z, the depth
+PNT_CODES       equ     1626h   ; the clip codes (code_pnt)
+VB_END          equ     305h    ; the end of the current polygon vertex buffer
+VBUF0           equ     309h    ; the two vertex buffers (8 bytes a vertex: x, y, z, codes),
+PROJ_Y          equ     26B0h   ; the y projection scale (half the window height)
+PROJ_X          equ     26B2h   ; the x projection scale (half the window width)
+CENTRE_X        equ     26B4h   ; the screen centre
+CENTRE_Y        equ     26B6h
+OBJ_SHIFT       equ     2880h   ; the current object's coordinate shift
+OBJ_X           equ     2886h   ; the current object's origin, eye-relative and negated
+OBJ_Y           equ     2888h
+OBJ_Z           equ     288Ah
+
         .186
 
         extrn   seg048:far
@@ -95,9 +122,9 @@ _seg004_1FD0 proc near
         call    _load_xlate_rotate_pnt
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -109,14 +136,14 @@ _seg004_1FE8 proc near
         lodsw
         mov     dx,si
         mov     si,ax
-        add     si,1620h
-        mov     di,309h
+        add     si,PNT_X
+        mov     di,VBUF0
         movsw
         movsw
         movsw
         inc     di
         inc     di
-        mov     word ptr ds:[305h],di
+        mov     word ptr ds:[VB_END],di
         mov     si,dx
         lodsw
         xchg    bx,ax
@@ -129,14 +156,14 @@ _seg004_2005 proc near
         lodsw
         mov     dx,si
         mov     si,ax
-        add     si,1620h
-        mov     di,word ptr ds:[305h]
+        add     si,PNT_X
+        mov     di,word ptr ds:[VB_END]
         movsw
         movsw
         movsw
         inc     di
         inc     di
-        mov     word ptr ds:[305h],di
+        mov     word ptr ds:[VB_END],di
         mov     si,dx
         lodsw
         xchg    bx,ax
@@ -149,11 +176,11 @@ _seg004_2023 proc near
         lodsw
         or      ax,ax
         jne     short L203C
-        mov     di,309h
+        mov     di,VBUF0
         lodsw
         push    si
         mov     si,ax
-        add     si,1620h
+        add     si,PNT_X
         movsw
         movsw
         movsw
@@ -161,18 +188,18 @@ _seg004_2023 proc near
         pop     si
         jmp     short L2077
 L203C:
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
         mov     cx,ax
         imul    word ptr ds:[26D2h]
         mov     ax,cx
         mov     cx,dx
         imul    word ptr ds:[26D0h]
-        mov     di,309h
+        mov     di,VBUF0
         lodsw
         push    si
         mov     si,ax
-        add     si,1620h
+        add     si,PNT_X
         lodsw
         add     ax,dx
         stosw
@@ -198,7 +225,7 @@ L2077:
         lodsw
         push    si
         mov     si,ax
-        add     si,1620h
+        add     si,PNT_X
         movsw
         movsw
         movsw
@@ -206,7 +233,7 @@ L2077:
         pop     si
         jmp     short L20C5
 L208D:
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
         mov     cx,ax
         imul    word ptr ds:[26D2h]
@@ -216,7 +243,7 @@ L208D:
         lodsw
         push    si
         mov     si,ax
-        add     si,1620h
+        add     si,PNT_X
         lodsw
         sub     ax,dx
         stosw
@@ -236,7 +263,7 @@ L208D:
         add     di,2
         pop     si
 L20C5:
-        mov     word ptr ds:[305h],di
+        mov     word ptr ds:[VB_END],di
         jmp     _seg004_21A3
 _seg004_2023 endp
 
@@ -246,11 +273,11 @@ _seg004_20CC proc near
         lodsw
         or      ax,ax
         jne     short L20E5
-        mov     di,309h
+        mov     di,VBUF0
         lodsw
         push    si
         mov     si,ax
-        add     si,1620h
+        add     si,PNT_X
         movsw
         movsw
         movsw
@@ -258,14 +285,14 @@ _seg004_20CC proc near
         pop     si
         jmp     short L2110
 L20E5:
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
         imul    word ptr ds:[272Ch]
-        mov     di,309h
+        mov     di,VBUF0
         lodsw
         push    si
         mov     si,ax
-        add     si,1620h
+        add     si,PNT_X
         lodsw
         add     ax,dx
         stosw
@@ -287,7 +314,7 @@ L2110:
         lodsw
         push    si
         mov     si,ax
-        add     si,1620h
+        add     si,PNT_X
         movsw
         movsw
         movsw
@@ -295,13 +322,13 @@ L2110:
         pop     si
         jmp     short L2150
 L2126:
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
         imul    word ptr ds:[272Ch]
         lodsw
         push    si
         mov     si,ax
-        add     si,1620h
+        add     si,PNT_X
         lodsw
         sub     ax,dx
         stosw
@@ -318,7 +345,7 @@ L2126:
         add     di,2
         pop     si
 L2150:
-        mov     word ptr ds:[305h],di
+        mov     word ptr ds:[VB_END],di
         jmp     short _seg004_21A3
 _seg004_20CC endp
 
@@ -334,15 +361,15 @@ _seg004_2156 proc near
 L2162:
         lodsw
         mov     bx,ax
-        mov     bp,word ptr [bx+1624h]
-        mov     ax,word ptr [bx+1620h]
-        imul    word ptr ds:[26B2h]
+        mov     bp,word ptr [bx+PNT_Z]
+        mov     ax,word ptr [bx+PNT_X]
+        imul    word ptr ds:[PROJ_X]
         idiv    bp
 _seg004_2173:                           ; biasx or biasy, patched in by render_3d
         add     ax,4D2h
         stosw
-        mov     ax,word ptr [bx+1622h]
-        imul    word ptr ds:[26B0h]
+        mov     ax,word ptr [bx+PNT_Y]
+        imul    word ptr ds:[PROJ_Y]
         idiv    bp
 _seg004_2181:                           ; biasx or biasy, patched in by render_3d
         add     ax,4D2h
@@ -351,7 +378,7 @@ _seg004_2181:                           ; biasx or biasy, patched in by render_3
         mov     word ptr ds:[2884h],1
         pop     cx
         push    si
-        mov     bp,word ptr ds:[15F6h]
+        mov     bp,word ptr ds:[POLY_FILL]
         call    far ptr _seg003_5B0B
         mov     ax,ds
         mov     es,ax
@@ -366,16 +393,16 @@ _seg004_2156 endp
 _seg004_21A3 proc near
         mov     word ptr ds:[2884h],1
         push    si
-        mov     si,309h
+        mov     si,VBUF0
         mov     ax,seg seg048
         mov     es,ax
         mov     di,415Ch
-        mov     cx,word ptr ds:[305h]
+        mov     cx,word ptr ds:[VB_END]
         sub     cx,si
         shr     cx,1
         shr     cx,1
         shr     cx,1
-        mov     bx,word ptr ds:[26B2h]
+        mov     bx,word ptr ds:[PROJ_X]
         push    cx
 L21C6:
         lodsw
@@ -386,7 +413,7 @@ _seg004_21CE:                           ; biasx or biasy, patched in by render_3
         add     ax,4D2h
         stosw
         mov     ax,word ptr [si]
-        imul    word ptr ds:[26B0h]
+        imul    word ptr ds:[PROJ_Y]
         idiv    bp
 _seg004_21DA:                           ; biasx or biasy, patched in by render_3d
         add     ax,4D2h
@@ -394,7 +421,7 @@ _seg004_21DA:                           ; biasx or biasy, patched in by render_3
         add     si,6
         loop    L21C6
         pop     cx
-        mov     bp,word ptr ds:[15F6h]
+        mov     bp,word ptr ds:[POLY_FILL]
         call    far ptr _seg003_5B0B
         mov     ax,ds
         mov     es,ax
@@ -411,7 +438,7 @@ _seg004_21F8 proc near
         mov     word ptr ds:[271Ch],ax
         lodsw
         mov     di,ax
-        add     di,1620h
+        add     di,PNT_X
         mov     word ptr ds:[271Eh],di
 L2207:
         call    _load_xlate_rotate_pnt
@@ -453,25 +480,25 @@ _seg004_223B proc near
         lodsw
         mov     di,ax
         lodsw
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         mov     di,ax
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         add     bx,dx
-        mov     ax,word ptr ds:[1604h]
+        mov     ax,word ptr ds:[MAT_XY]
         imul    di
         add     cx,dx
-        mov     ax,word ptr ds:[1606h]
+        mov     ax,word ptr ds:[MAT_XZ]
         imul    di
         add     bp,dx
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -483,25 +510,25 @@ _seg004_227C proc near
         lodsw
         mov     di,ax
         lodsw
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         mov     di,ax
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         add     bx,dx
-        mov     ax,word ptr ds:[160Ah]
+        mov     ax,word ptr ds:[MAT_YY]
         imul    di
         add     cx,dx
-        mov     ax,word ptr ds:[160Ch]
+        mov     ax,word ptr ds:[MAT_YZ]
         imul    di
         add     bp,dx
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -513,25 +540,25 @@ _seg004_22BD proc near
         lodsw
         mov     di,ax
         lodsw
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         mov     di,ax
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     bx,dx
-        mov     ax,word ptr ds:[1610h]
+        mov     ax,word ptr ds:[MAT_ZY]
         imul    di
         add     cx,dx
-        mov     ax,word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
         imul    di
         add     bp,dx
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -545,8 +572,8 @@ _seg004_22FE proc near
         lodsw
         mov     di,ax
         xchg    bp,si
-        lea     si,[si+1620h]
-        lea     di,[di+1620h]
+        lea     si,[si+PNT_X]
+        lea     di,[di+PNT_X]
         lodsw
         add     bx,word ptr [di]
         stosw
@@ -568,13 +595,13 @@ _seg004_2322 proc near
         lodsw
         mov     bp,ax
         lodsw
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
         sar     ax,1
         mov     cx,ax
         lodsw
         xchg    bp,si
-        mov     di,1620h
+        mov     di,PNT_X
         add     si,di
         add     di,ax
         movsw
@@ -594,22 +621,22 @@ _seg004_2348 proc near
         lodsw
         mov     di,ax
         lodsw
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         mov     di,ax
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         add     bx,dx
         mov     ax,di
-        imul    word ptr ds:[1606h]
+        imul    word ptr ds:[MAT_XZ]
         add     bp,dx
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -621,22 +648,22 @@ _seg004_2383 proc near
         lodsw
         mov     di,ax
         lodsw
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         shl     ax,cl
-        mov     bx,word ptr [di+1620h]
-        mov     cx,word ptr [di+1622h]
-        mov     bp,word ptr [di+1624h]
+        mov     bx,word ptr [di+PNT_X]
+        mov     cx,word ptr [di+PNT_Y]
+        mov     bp,word ptr [di+PNT_Z]
         mov     di,ax
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     bx,dx
-        mov     ax,word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
         imul    di
         add     bp,dx
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -645,40 +672,40 @@ _seg004_2383 endp
 ; seg004_23BD  (+23BD)
 ; Opcode 92h in the no-clip set: INTERP.ASM's do_xz_rel without the clip codes.
 _seg004_23BD proc near
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         lodsw
         shl     ax,cl
         mov     di,ax
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     bx,dx
-        mov     ax,word ptr ds:[1606h]
+        mov     ax,word ptr ds:[MAT_XZ]
         imul    di
         mov     bp,dx
-        mov     ax,word ptr ds:[1604h]
+        mov     ax,word ptr ds:[MAT_XY]
         imul    di
         lodsw
         shl     ax,cl
         mov     cx,dx
         mov     di,ax
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     bx,dx
-        mov     ax,word ptr ds:[1610h]
+        mov     ax,word ptr ds:[MAT_ZY]
         imul    di
         add     cx,dx
-        mov     ax,word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
         imul    di
         add     bp,dx
         lodsw
         mov     di,ax
-        add     bx,word ptr [di+1620h]
-        add     cx,word ptr [di+1622h]
-        add     bp,word ptr [di+1624h]
+        add     bx,word ptr [di+PNT_X]
+        add     cx,word ptr [di+PNT_Y]
+        add     bp,word ptr [di+PNT_Z]
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
-        mov     byte ptr [di+1626h],al
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -687,40 +714,40 @@ _seg004_23BD endp
 ; seg004_241B  (+241B)
 ; Opcode 90h in the no-clip set: INTERP.ASM's do_xy_rel without the clip codes.
 _seg004_241B proc near
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         lodsw
         shl     ax,cl
         mov     di,ax
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     bx,dx
-        mov     ax,word ptr ds:[1606h]
+        mov     ax,word ptr ds:[MAT_XZ]
         imul    di
         mov     bp,dx
-        mov     ax,word ptr ds:[1604h]
+        mov     ax,word ptr ds:[MAT_XY]
         imul    di
         lodsw
         shl     ax,cl
         mov     cx,dx
         mov     di,ax
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         add     bx,dx
-        mov     ax,word ptr ds:[160Ah]
+        mov     ax,word ptr ds:[MAT_YY]
         imul    di
         add     cx,dx
-        mov     ax,word ptr ds:[160Ch]
+        mov     ax,word ptr ds:[MAT_YZ]
         imul    di
         add     bp,dx
         lodsw
         mov     di,ax
-        add     bx,word ptr [di+1620h]
-        add     cx,word ptr [di+1622h]
-        add     bp,word ptr [di+1624h]
+        add     bx,word ptr [di+PNT_X]
+        add     cx,word ptr [di+PNT_Y]
+        add     bp,word ptr [di+PNT_Z]
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
-        mov     byte ptr [di+1626h],al
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -729,40 +756,40 @@ _seg004_241B endp
 ; seg004_2479  (+2479)
 ; Opcode 94h in the no-clip set: INTERP.ASM's do_yz_rel without the clip codes.
 _seg004_2479 proc near
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         lodsw
         shl     ax,cl
         mov     di,ax
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         mov     bx,dx
-        mov     ax,word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
         imul    di
         mov     bp,dx
-        mov     ax,word ptr ds:[1610h]
+        mov     ax,word ptr ds:[MAT_ZY]
         imul    di
         lodsw
         shl     ax,cl
         mov     cx,dx
         mov     di,ax
-        imul    word ptr ds:[1608h]
+        imul    word ptr ds:[MAT_YX]
         add     bx,dx
-        mov     ax,word ptr ds:[160Ah]
+        mov     ax,word ptr ds:[MAT_YY]
         imul    di
         add     cx,dx
-        mov     ax,word ptr ds:[160Ch]
+        mov     ax,word ptr ds:[MAT_YZ]
         imul    di
         add     bp,dx
         lodsw
         mov     di,ax
-        add     bx,word ptr [di+1620h]
-        add     cx,word ptr [di+1622h]
-        add     bp,word ptr [di+1624h]
+        add     bx,word ptr [di+PNT_X]
+        add     cx,word ptr [di+PNT_Y]
+        add     bp,word ptr [di+PNT_Z]
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
-        mov     byte ptr [di+1626h],al
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -771,34 +798,34 @@ _seg004_2479 endp
 ; seg004_24D7  (+24D7)
 ; The level-view variant of the no-clip do_xz_rel (as flat_xz_rel in INTERP.ASM), installed by check_flat.
 _seg004_24D7 proc near
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         lodsw
         shl     ax,cl
         mov     di,ax
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     bx,dx
-        mov     ax,word ptr ds:[1606h]
+        mov     ax,word ptr ds:[MAT_XZ]
         imul    di
         mov     bp,dx
         lodsw
         shl     ax,cl
         mov     di,ax
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         add     bx,dx
-        mov     ax,word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
         imul    di
         add     bp,dx
         lodsw
         mov     di,ax
-        add     bx,word ptr [di+1620h]
-        add     bp,word ptr [di+1624h]
-        mov     cx,word ptr [di+1622h]
+        add     bx,word ptr [di+PNT_X]
+        add     bp,word ptr [di+PNT_Z]
+        mov     cx,word ptr [di+PNT_Y]
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
-        mov     byte ptr [di+1626h],al
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -807,13 +834,13 @@ _seg004_24D7 endp
 ; seg004_2527  (+2527)
 ; The level-view variant of the no-clip do_xy_rel (as flat_xy_rel in INTERP.ASM), installed by check_flat.
 _seg004_2527 proc near
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         lodsw
         shl     ax,cl
         mov     di,ax
-        imul    word ptr ds:[1602h]
+        imul    word ptr ds:[MAT_XX]
         mov     bx,dx
-        mov     ax,word ptr ds:[1606h]
+        mov     ax,word ptr ds:[MAT_XZ]
         imul    di
         mov     bp,dx
         lodsw
@@ -822,15 +849,15 @@ _seg004_2527 proc near
         mov     cx,ax
         lodsw
         mov     di,ax
-        add     bx,word ptr [di+1620h]
-        add     cx,word ptr [di+1622h]
-        add     bp,word ptr [di+1624h]
+        add     bx,word ptr [di+PNT_X]
+        add     cx,word ptr [di+PNT_Y]
+        add     bp,word ptr [di+PNT_Z]
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
-        mov     byte ptr [di+1626h],al
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -839,13 +866,13 @@ _seg004_2527 endp
 ; seg004_256C  (+256C)
 ; The level-view variant of the no-clip do_yz_rel (as flat_yz_rel in INTERP.ASM), installed by check_flat.
 _seg004_256C proc near
-        mov     cl,byte ptr ds:[2880h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
         lodsw
         shl     ax,cl
         mov     di,ax
-        imul    word ptr ds:[160Eh]
+        imul    word ptr ds:[MAT_ZX]
         mov     bx,dx
-        mov     ax,word ptr ds:[1612h]
+        mov     ax,word ptr ds:[MAT_ZZ]
         imul    di
         mov     bp,dx
         lodsw
@@ -854,15 +881,15 @@ _seg004_256C proc near
         mov     cx,ax
         lodsw
         mov     di,ax
-        add     bx,word ptr [di+1620h]
-        add     cx,word ptr [di+1622h]
-        add     bp,word ptr [di+1624h]
+        add     bx,word ptr [di+PNT_X]
+        add     cx,word ptr [di+PNT_Y]
+        add     bp,word ptr [di+PNT_Z]
         lodsw
         mov     di,ax
-        mov     word ptr [di+1620h],bx
-        mov     word ptr [di+1622h],cx
-        mov     word ptr [di+1624h],bp
-        mov     byte ptr [di+1626h],al
+        mov     word ptr [di+PNT_X],bx
+        mov     word ptr [di+PNT_Y],cx
+        mov     word ptr [di+PNT_Z],bp
+        mov     byte ptr [di+PNT_CODES],al
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]
@@ -876,28 +903,28 @@ _seg004_25B1 proc near
         lodsw
         mov     bx,ax
         push    si
-        mov     bp,word ptr [di+1624h]
-        mov     ax,word ptr [di+1620h]
-        imul    word ptr ds:[26B2h]
+        mov     bp,word ptr [di+PNT_Z]
+        mov     ax,word ptr [di+PNT_X]
+        imul    word ptr ds:[PROJ_X]
         idiv    bp
-        add     ax,word ptr ds:[26B4h]
+        add     ax,word ptr ds:[CENTRE_X]
         mov     cx,ax
-        mov     ax,word ptr [di+1622h]
-        imul    word ptr ds:[26B0h]
+        mov     ax,word ptr [di+PNT_Y]
+        imul    word ptr ds:[PROJ_Y]
         idiv    bp
-        add     ax,word ptr ds:[26B6h]
+        add     ax,word ptr ds:[CENTRE_Y]
         mov     si,ax
         mov     di,bx
-        mov     bp,word ptr [di+1624h]
-        mov     ax,word ptr [di+1622h]
-        imul    word ptr ds:[26B0h]
+        mov     bp,word ptr [di+PNT_Z]
+        mov     ax,word ptr [di+PNT_Y]
+        imul    word ptr ds:[PROJ_Y]
         idiv    bp
-        add     ax,word ptr ds:[26B6h]
+        add     ax,word ptr ds:[CENTRE_Y]
         mov     bx,ax
-        mov     ax,word ptr [di+1620h]
-        imul    word ptr ds:[26B2h]
+        mov     ax,word ptr [di+PNT_X]
+        imul    word ptr ds:[PROJ_X]
         idiv    bp
-        add     ax,word ptr ds:[26B4h]
+        add     ax,word ptr ds:[CENTRE_X]
         mov     dx,si
         call    far ptr _seg003_8
         pop     si
@@ -909,14 +936,14 @@ _seg004_25B1 endp
 ; seg004_260E  (+260E)
 ; Opcode 9Ah in the no-clip set: INTERP.ASM's do_usepat without the clip codes.
 _seg004_260E proc near
-        mov     cl,byte ptr ds:[2880h]
-        mov     bx,word ptr ds:[2886h]
+        mov     cl,byte ptr ds:[OBJ_SHIFT]
+        mov     bx,word ptr ds:[OBJ_X]
         neg     bx
         shl     bx,cl
-        mov     bp,word ptr ds:[288Ah]
+        mov     bp,word ptr ds:[OBJ_Z]
         neg     bp
         shl     bp,cl
-        mov     ax,word ptr ds:[2888h]
+        mov     ax,word ptr ds:[OBJ_Y]
         neg     ax
         shl     ax,cl
         mov     cx,ax
@@ -924,7 +951,7 @@ _seg004_260E proc near
         mov     word ptr ds:[15FCh],bx
         mov     word ptr ds:[15FEh],cx
         mov     word ptr ds:[1600h],bp
-        mov     di,1620h
+        mov     di,PNT_X
         lodsw
         add     di,ax
         lodsw
@@ -933,7 +960,7 @@ _seg004_260E proc near
         lodsw
         mov     dx,ax
         lodsw
-        sub     al,byte ptr ds:[2880h]
+        sub     al,byte ptr ds:[OBJ_SHIFT]
         mov     dh,al
         shr     dl,1
         jae     short L267D
@@ -1002,23 +1029,23 @@ _seg004_260E endp
 ; seg004_26DC  (+26DC)
 ; Opcode 98h in the no-clip set: INTERP.ASM's do_putpat without the clip codes.
 _seg004_26DC proc near
-        push    word ptr ds:[2886h]
-        push    word ptr ds:[2888h]
-        push    word ptr ds:[288Ah]
+        push    word ptr ds:[OBJ_X]
+        push    word ptr ds:[OBJ_Y]
+        push    word ptr ds:[OBJ_Z]
         call    _load_xlate_rotate_pnt
         mov     word ptr ds:[15FCh],bx
         mov     word ptr ds:[15FEh],cx
         mov     word ptr ds:[1600h],bp
-        mov     ax,word ptr ds:[2886h]
+        mov     ax,word ptr ds:[OBJ_X]
         sub     ax,word ptr [si-6]
-        mov     word ptr ds:[2886h],ax
-        mov     ax,word ptr ds:[2888h]
+        mov     word ptr ds:[OBJ_X],ax
+        mov     ax,word ptr ds:[OBJ_Y]
         sub     ax,word ptr [si-2]
-        mov     word ptr ds:[2888h],ax
-        mov     ax,word ptr ds:[288Ah]
+        mov     word ptr ds:[OBJ_Y],ax
+        mov     ax,word ptr ds:[OBJ_Z]
         sub     ax,word ptr [si-4]
-        mov     word ptr ds:[288Ah],ax
-        mov     bp,1620h
+        mov     word ptr ds:[OBJ_Z],ax
+        mov     bp,PNT_X
         lodsw
         add     di,ax
         lodsw
@@ -1027,7 +1054,7 @@ _seg004_26DC proc near
         lodsw
         mov     dx,ax
         lodsw
-        sub     al,byte ptr ds:[2880h]
+        sub     al,byte ptr ds:[OBJ_SHIFT]
         mov     dh,al
         shr     dl,1
         jae     short L2755
@@ -1095,9 +1122,9 @@ L2755:
         xchg    bx,ax
         call    word ptr [bx+OPCODE_TABLE]
         pop     si
-        pop     word ptr ds:[288Ah]
-        pop     word ptr ds:[2888h]
-        pop     word ptr ds:[2886h]
+        pop     word ptr ds:[OBJ_Z]
+        pop     word ptr ds:[OBJ_Y]
+        pop     word ptr ds:[OBJ_X]
         lodsw
         xchg    bx,ax
         jmp     word ptr [bx+OPCODE_TABLE]

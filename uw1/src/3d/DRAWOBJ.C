@@ -143,9 +143,9 @@ void far do_obj(struct Object far *o)
     if (PickUp) {
         color_to_map[PickUp - 1] = (int)(tmptr - mlowptr) + mptrmod;
         color_to_obj[PickUp - 1] = Obj_MemTPtr(o);
-        *dbptr++ = 0xAE;
+        *dbptr++ = OP_SETBMCOL;
         *dbptr++ = PickUp;
-        if (++PickUp >= 0xC0)
+        if (++PickUp >= PICK_WALL)
             PickUp = 1;
     }
     if (IsMobElem(o) && OBJ_MAJOR(o) != MAJOR_CREATURE) {
@@ -203,7 +203,7 @@ void far do_obj(struct Object far *o)
         do_door(item, o);
         return;
     case 1:
-        *dbptr++ = 0x7A;
+        *dbptr++ = OP_DEFRES;
         *dbptr++ = objxloc;
         *dbptr++ = objzloc;
         *dbptr++ = objyloc;
@@ -216,7 +216,7 @@ void far do_obj(struct Object far *o)
         else if (frame != 0xC && (dir + 5 & 7) >= 3)
             frame = dir + 0x20;
         RENDER_TAG(o);
-        *dbptr++ = 0x5A;
+        *dbptr++ = OP_UWCRIT;
         *dbptr++ = item & 0x3F;
         *dbptr++ = locsqmod * lighton;
         *dbptr++ = frame;
@@ -226,13 +226,13 @@ void far do_obj(struct Object far *o)
     case 0:
         if ((item & 0x1E0) == 0xE0 && (item & 0x18))
             item = ITEM_RUNESTONE;
-        *dbptr++ = 0x7A;
+        *dbptr++ = OP_DEFRES;
         *dbptr++ = objxloc;
         *dbptr++ = objzloc;
         *dbptr++ = objyloc;
         *dbptr++ = 0x7F8;
         RENDER_TAG(o);
-        *dbptr++ = 0x3A;
+        *dbptr++ = OP_UWOBJ;
         *dbptr++ = item;
         *dbptr++ = locsqmod * lighton;
         *dbptr++ = 0x7F8;
@@ -240,21 +240,21 @@ void far do_obj(struct Object far *o)
     case 3:
         if (OBJ_MINOR(o) == 3) {
             if ((tmapson | PickUp) == 0) {
-                *dbptr++ = 2;
+                *dbptr++ = OP_MOVEC;
                 *dbptr++ = Clk(8);
                 *dbptr++ = 0;
             }
             do_rect(0x14, o, -1, first_tmobj + (item & 0xF));
             if (tmapson | PickUp)
                 return;
-            *dbptr++ = 2;
+            *dbptr++ = OP_MOVEC;
             *dbptr++ = Clk(8);
             *dbptr++ = 1;
         }
         else {
             tCacheOK = 0xE0;
             txtwal(0, sqmod, 4, o->ol.f.owner);
-            *dbptr++ = 0xB2;
+            *dbptr++ = OP_SET_TMCTXT;
             *dbptr++ = cTmBm;
             tm = w64_types[o->ol.f.owner] & 0xFF;
             if (tm == 3 || tm == 4) {
@@ -265,13 +265,13 @@ void far do_obj(struct Object far *o)
                 tm = tm == 8 || tm == 0xB;
             tm = tm && (tmapson | PickUp) == 0;
             if (tm) {
-                *dbptr++ = 2;
+                *dbptr++ = OP_MOVEC;
                 *dbptr++ = Clk(8);
                 *dbptr++ = 0;
             }
             do_rect(0x16, o, -1, o->ol.f.owner);
             if (tm) {
-                *dbptr++ = 2;
+                *dbptr++ = OP_MOVEC;
                 *dbptr++ = Clk(8);
                 *dbptr++ = 1;
             }
@@ -298,7 +298,7 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
 
     hilite = -1;
     flags = rect_cols[model][0];
-    *dbptr++ = 2;
+    *dbptr++ = OP_MOVEC;
     *dbptr++ = Clk(0xA);
     *dbptr++ = locsqmod * lighton;
     if (flags & 0x20) {
@@ -306,10 +306,10 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
 
         pix = MK_FP(seg009_38C(tex + 0x3A), 0);
         val = *pix;
-        *dbptr++ = 2;
+        *dbptr++ = OP_MOVEC;
         *dbptr++ = Clk(0);
         *dbptr++ = val;
-        *dbptr++ = 2;
+        *dbptr++ = OP_MOVEC;
         *dbptr++ = Clk(0xA);
         *dbptr++ = sqmod * lighton;
     }
@@ -319,14 +319,14 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
         if (val & 4)
             val = 3 - (val & 3);
         for (i = 0; i < (flags & 7); i++) {
-            *dbptr++ = 2;
+            *dbptr++ = OP_MOVEC;
             *dbptr++ = Clk(i);
             *dbptr++ = (o->ol.f.link & 0x1FF) + val + rect_cols[model][i + 1];
         }
     }
     else
         for (i = 0; i < (flags & 7); i++) {
-            *dbptr++ = 2;
+            *dbptr++ = OP_MOVEC;
             *dbptr++ = Clk(i);
             *dbptr++ = rect_cols[model][i + 1];
         }
@@ -339,17 +339,17 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
                 if (OBJ_FLAGS(o) >= (first >> 5) + 1) {
                     tex = OBJ_FLAGS(o) - ((first >> 5) + 1);
                     txtflr(0, sqmod, tex);
-                    *dbptr++ = 0xB2;
+                    *dbptr++ = OP_SET_TMCTXT;
                     *dbptr++ = cTmBm;
                     tex = -1;
                 }
                 else {
                     curautocode = 2;
                     tex = (int)((first & 0x1F) + first_tmobj + 0x10) + OBJ_FLAGS(o) % ((first >> 5) + 1);
-                    *dbptr++ = 2;
+                    *dbptr++ = OP_MOVEC;
                     *dbptr++ = Clk(0xB);
                     *dbptr++ = rect_flagcol[OBJ_FLAGS(o)];
-                    *dbptr++ = 0xB2;
+                    *dbptr++ = OP_SET_TMCTXT;
                     *dbptr++ = 6;
                 }
             }
@@ -357,7 +357,7 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
                 tex = (int)((first & 0x1F) + first_tmobj + 0x10) + OBJ_FLAGS(o) % ((first >> 5) + 1);
         }
         if (tex >= 0) {
-            *dbptr++ = 0xC0;
+            *dbptr++ = OP_SETTMOBJ;
             *dbptr++ = tex;
             *dbptr++ = locsqmod * lighton;
         }
@@ -365,16 +365,16 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
     }
     if (flags & 8) {
         i = 0x400 - objyloc;
-        *dbptr++ = 0x4C;
+        *dbptr++ = OP_DEFDELTA;
         *dbptr++ = 0;
         *dbptr++ = 0;
         *dbptr++ = i;
         *dbptr++ = 0x800;
-        *dbptr++ = 2;
+        *dbptr++ = OP_MOVEC;
         *dbptr++ = bmhgtoff + 0x30;
         *dbptr++ = i * 2 - 1;
     }
-    *dbptr++ = 0x18;
+    *dbptr++ = OP_ORG;
     *dbptr++ = objxloc & 0xFFFF;
     *dbptr++ = objxloc >> 16;
     *dbptr++ = objyloc & 0xFFFF;
@@ -394,7 +394,7 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
             j = (OBJ_PITCH(o) - 0x10) * 0x266;
             head = (((OBJ_HEADING(o) << 5) + OBJ_FINEHEAD(o) + 0x100 - quad * 64) % 0x100) << 8;
         }
-        *dbptr++ = 2;
+        *dbptr++ = OP_MOVEC;
         *dbptr++ = Clk(5);
         *dbptr++ = j;
     }
@@ -403,23 +403,23 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
     else if (PickUp == 0 && player->detail == 1 && model == 2)
         hilite = 1;
     if (hilite != -1) {
-        *dbptr++ = 2;
+        *dbptr++ = OP_MOVEC;
         *dbptr++ = Clk(8);
         *dbptr++ = hilite;
     }
     if (head) {
-        *dbptr++ = 0x50;
+        *dbptr++ = OP_IHCALL;
         *dbptr++ = head;
     }
     else
-        *dbptr++ = 0x12;
+        *dbptr++ = OP_SFCAL;
     Ref(model + 0x60, 1);
     if (hilite != -1) {
-        *dbptr++ = 2;
+        *dbptr++ = OP_MOVEC;
         *dbptr++ = Clk(8);
         *dbptr++ = (hilite + 1) & 1;
     }
-    *dbptr++ = 0x18;
+    *dbptr++ = OP_ORG;
     *dbptr++ = 0;
     *dbptr++ = 0;
     *dbptr++ = 0;
@@ -460,10 +460,10 @@ void far do_door(unsigned char item, struct Object far *o)
         h = 0x400 - oldz - 0xD0;
         first = 1;
         step = -1;
-        *dbptr++ = 2;
+        *dbptr++ = OP_MOVEC;
         *dbptr++ = Clk(5);
         *dbptr++ = OBJ_FLAGS(o) & 7;
-        *dbptr++ = 0x4C;
+        *dbptr++ = OP_DEFDELTA;
         *dbptr++ = 0;
         *dbptr++ = 0;
         *dbptr++ = 0xD0 - (OBJ_FLAGS(o) & 7) * 0x30;
@@ -474,13 +474,13 @@ void far do_door(unsigned char item, struct Object far *o)
             objyloc -= 0xC0;
         dir = (OBJ_FLAGS(o) & 7) * (OBJ_DOORDIR(o) * 2 - 1);
         h = 0x400 - objyloc - 0xD0;
-        *dbptr++ = 2;
+        *dbptr++ = OP_MOVEC;
         *dbptr++ = Clk(5);
         *dbptr++ = dir << 12;
     }
     /* a portcullis gets this after its own 0x4C block.
        match: the 0x400 store jumps into the shared tail here */
-    *dbptr++ = 0x4C;
+    *dbptr++ = OP_DEFDELTA;
     *dbptr++ = 0;
     *dbptr++ = 0;
     *dbptr++ = h;
@@ -522,33 +522,33 @@ void far do_door(unsigned char item, struct Object far *o)
             step = -1;
         }
     }
-    *dbptr++ = 2;
+    *dbptr++ = OP_MOVEC;
     *dbptr++ = Clk(3);
     *dbptr++ = (OBJ_FLAGS(o) & 7) + (z >= 0);
     for (pass = first; pass <= 1 && pass >= 0; pass += step) {
         if (pass == 0) {
             if (tCacheOK < 1)
                 txtwal(0, locsqmod, objyloc >> 6, TILE_WALL(tmptr));
-            *dbptr++ = 2;
+            *dbptr++ = OP_MOVEC;
             *dbptr++ = bmhgtoff + (cTmBm << 3);
             *dbptr++ = (cTmDm * cTmDm >> 8) * h - 1;
-            *dbptr++ = 2;
+            *dbptr++ = OP_MOVEC;
             *dbptr++ = Clk(7);
             *dbptr++ = cTmDm * cTmDm - 1;
-            *dbptr++ = 2;
+            *dbptr++ = OP_MOVEC;
             *dbptr++ = Clk(6);
             *dbptr++ = bmhgtoff + (cTmBm << 3);
             if (PickUp) {
-                *dbptr++ = 0xAE;
-                *dbptr++ = TILE_WALL(tmptr) + 0xC0;
+                *dbptr++ = OP_SETBMCOL;
+                *dbptr++ = TILE_WALL(tmptr) + PICK_WALL;
             }
-            *dbptr++ = 0xB2;
+            *dbptr++ = OP_SET_TMCTXT;
             *dbptr++ = cTmBm;
             do_rect(1, o, OBJ_HEADING(o) << 1, TILE_WALL(tmptr));
         }
         else {
             if (PickUp) {
-                *dbptr++ = 0xAE;
+                *dbptr++ = OP_SETBMCOL;
                 *dbptr++ = PickUp - 1;
             }
             if (z >= 0) {
@@ -563,9 +563,9 @@ void far do_door(unsigned char item, struct Object far *o)
                 if (k == 7) {
                     if (tCacheOK < 1)
                         txtwal(0, locsqmod, objyloc >> 6, TILE_WALL(tmptr));
-                    *dbptr++ = 0xB2;
+                    *dbptr++ = OP_SET_TMCTXT;
                     *dbptr++ = cTmBm;
-                    *dbptr++ = 2;
+                    *dbptr++ = OP_MOVEC;
                     *dbptr++ = bmhgtoff + (cTmBm << 3);
                     *dbptr++ = cTmDm * cTmDm - 1;
                     do_rect(0xF, o, OBJ_HEADING(o) << 1, TILE_WALL(tmptr));
