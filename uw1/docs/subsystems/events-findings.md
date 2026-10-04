@@ -7,7 +7,7 @@ Candidates from `src/event` for the project's findings page; [events.md](events.
 - UW1's trap and trigger items differ from UW2's: 17 traps (0x180..0x190) and 7 triggers (0x1A0..0x1A6), all of minor class 2; `items.h` names them from UW1's string block 4 (`enum TrapType`, `enum TriggerType`).
 - The ward trap (0x189) and the tell trap (0x18A) are handled by the same case of `UseTrap`: both hit the critter that set them off. Why the tell trap does so is not known.
 - A trap is deleted with every trigger that points at it: the trap's flags count its triggers, and `delete_trap` searches the whole map (4096 tiles) until the count reaches 0.
-- `kill_triggers` writes to a trigger after freeing it, clearing its link so the search does not descend into it, and then reads its next link. With UW1's allocator a freed record keeps its contents, so this works; UW2 reads the next link before freeing.
+- `kill_triggers` writes to a trigger after freeing it, clearing its link so the search does not descend into it, and then reads its next link. This was first noted here as harmless, on the grounds that a freed record keeps its contents, but `Obj_Rem` clears the next link first, so the search stops at the first trigger removed in each list; UW2 reads the next link before freeing. It is a bug entry in [FINDINGS.md](../FINDINGS.md).
 - The variable traps work on the player record: z 0 the 32 quest bits (`1L << d`), else game variable z of 64, kept to six bits after each operation.
 
 ## Recovered rules

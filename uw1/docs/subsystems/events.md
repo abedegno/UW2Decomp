@@ -33,4 +33,4 @@ The hack traps (`do_trap_hack`) are UW1's special cases: the crystal ball, the e
 ## Open questions
 
 - Why the tell trap (0x18A) acts as a ward trap.
-- `kill_triggers` writes to a trigger after freeing it (to stop the search descending into it); harmless with UW1's allocator, which keeps a freed record as it was.
+- `kill_triggers` writes to a trigger after freeing it (to stop the search descending into it). That is not harmless: `Obj_Rem` clears the record's next link first, so the search stops at the first trigger it removes in each list; UW2 reads the next link before freeing ([FINDINGS.md](../FINDINGS.md)).

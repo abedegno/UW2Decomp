@@ -18,7 +18,7 @@ Still to do ([docs/PLAN.md](docs/PLAN.md)):
 2. The layout audit for the modding build, and the readability pass: shared headers that match UW1 (the matched files still declare some of UW1's differences from UW2 locally), named constants and struct fields, and notes on what each file does in the game.
 3. A port, on the same port layer as UW2Decomp's.
 
-[docs/NOTES.md](docs/NOTES.md) collects what matching found: where UW1 differs from UW2 (an earlier sound library, a graphics library of 18 modules where UW2 has 14, a 3D renderer of 9 modules with no 386 code, an options panel and screen-frame dragons of its own), the module boundaries, and items for the readability pass.
+[docs/NOTES.md](docs/NOTES.md) collects what matching found: where UW1 differs from UW2 (an earlier sound library, a graphics library of 18 modules where UW2 has 14, a 3D renderer of 9 modules with no 386 code, an options panel and screen-frame dragons of its own), the module boundaries, and items for the readability pass. [docs/FINDINGS.md](docs/FINDINGS.md) collects what it revealed about the game: likely bugs in the shipped program, the game rules the code implements, engine findings, dead code and open questions.
 
 ## Names
 
