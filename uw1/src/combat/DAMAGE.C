@@ -120,10 +120,10 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
     }
     else
     {
-        if (type & 8)
+        if (type & DMG_FIRE)
         {
             /* UW1: 0xD5 and 0xD6 are both piles of debris (items.h has UW2's ids) */
-            if (OBJ_ITEM(obj) == 0xD5 || OBJ_ITEM(obj) == ITEM_PILE_OF_DEBRIS_D6)
+            if (OBJ_ITEM(obj) == ITEM_PILE_OF_DEBRIS_D5 || OBJ_ITEM(obj) == ITEM_PILE_OF_DEBRIS_D6)
             {
                 if (try_remove(&Map_GetAddr(x, y)->objects, obj))
                     return 1;
@@ -132,7 +132,7 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
             else if (!(rand() & 3))
             {
                 put_effect(obj, 8, rollem(6, 10), 0, 0, x, y);
-                debris = (int)(rand() * 2L / 0x8000L) + 0xD5;
+                debris = (int)(rand() * 2L / 0x8000L) + ITEM_PILE_OF_DEBRIS_D5;
             }
         }
         if (!OBJ_ISQUANT(obj) && OBJ_LINK(obj) > 0)
@@ -142,7 +142,7 @@ char far remove_object(struct Object far *obj, struct Object far *who, char type
         }
     }
     if (debris < -1)
-        debris = (int)(rand() * 2L / 0x8000L) + 0xD5;
+        debris = (int)(rand() * 2L / 0x8000L) + ITEM_PILE_OF_DEBRIS_D5;
     if (debris >= 0)
     {
         SET_ITEM(obj, debris);
@@ -164,7 +164,7 @@ unsigned char far check_res(struct Object far *obj, unsigned char damage, unsign
 
     if (type & res)
     {
-        if (type & 3)
+        if (type & DMG_MAGIC)
         {
             if (rand() % 3 < (res & 3))
                 return 0;

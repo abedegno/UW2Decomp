@@ -100,7 +100,7 @@ void far Map_ObjFix(void)
     critptr = crittop = critbot + 0xFD;
     objbot = crittop + 1;
     objptr = objtop = objbot + 0x2FF;
-    for (p = critbot, i = 2; i < 0x400; i++, p++)
+    for (p = critbot, i = 2; i < NUM_OBJECTS; i++, p++)
         *p = i;
     if (ThePlayer) {
         ThePlayer->ol.f.link = ThePlayer->qn.f.next = 0;
@@ -617,7 +617,7 @@ unsigned char far Obj_ListOkay(char how)
     int x;
     unsigned char *counts;
 
-    if ((counts = calloc(1, 0x400)) == 0)
+    if ((counts = calloc(1, NUM_OBJECTS)) == 0)
         return 1;
     bad = 0;
     nmobile = GrSq < 0;
@@ -673,7 +673,7 @@ void far seg027_2861_10E4(union Link far *head, int depth)
         }
         dprintf("<%4d> %1d|%1d|%2d, Next: %4d, %5s: %4d", Obj_MemTPtr(obj), OBJ_MAJOR(obj),
                    OBJ_MINOR(obj), OBJ_INCLASS(obj), obj->qn.f.next,
-                   OBJ_ISQUANT(obj) ? ((obj->ol.f.link & 0x200) ? "Other" : "Count") : "Link",
+                   OBJ_ISQUANT(obj) ? ((obj->ol.f.link & LINK_SPECIAL) ? "Other" : "Count") : "Link",
                    obj->ol.f.link);
         if (IsMobElem(obj))
             dprintf("; @%2d,%2d", OBJ_HOMEX(obj), OBJ_HOMEY(obj));

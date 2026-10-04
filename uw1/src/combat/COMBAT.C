@@ -177,7 +177,7 @@ int far set_hitobj(struct MotionCalc *c)
 }
 
 /* A blow that met a wall: steps along the heading in 1/16-square steps for dist + 1
-   steps until the terrain check reports a wall, and puts a short-lived ITEM_FLASH animation
+   steps until the terrain check reports a wall, and puts a short-lived ITEM_DAMAGE animation
    object there (the spark). For the player it also plays the wall hit sound, effect 7. */
 void far find_wall_coll(int heading, int dist, struct MotionCalc *c)
 {
@@ -196,7 +196,7 @@ void far find_wall_coll(int heading, int dist, struct MotionCalc *c)
     do {
         TerrainCheck(0);
         if ((curP->hits0 | curP->hits1) & 0x300) {
-            if ((obj = CreateObj(ITEM_FLASH, 0)) == 0)
+            if ((obj = CreateObj(ITEM_DAMAGE, 0)) == 0)
                 return;
             SET_FINEX_UNSIGNED(obj, curP->x & 7);
             SET_FINEY(obj, curP->y & 7);
@@ -283,7 +283,7 @@ int far frp_check(int attacker, int defender)
     if (OBJ_MAJOR(def) != MAJOR_CREATURE) {
         if (attacker == 1 && OBJ_CLASS(def) == CLASS_DOOR
             && (int)(rand() * 12L / 0x8000L) < (def->id & 7) << 1) {
-            slot = 8 - player->lefty;
+            slot = INV_WEAPON_HAND - player->lefty;
             DamageInventory(slot, rollem(2, 4), 4, 0, 1);
         }
         return 0;
@@ -301,14 +301,14 @@ int far frp_check(int attacker, int defender)
             if ((slot = hitloc + 1 & 3) == 3)
                 slot += rand() % 5 == 0;
             else if (slot != 0 && slot <= 2)
-                slot = player->lefty + 7;
+                slot = player->lefty + INV_HAND;
             DamageInventory(slot, rollem(2, 4), 4, 1, 1);
         }
         return 0;
     }
     if (result == -1 && attacker == 1
         && !Creature[Obj_IntTMem(hitobj)->id & ID_INMAJOR].passive) {
-        slot = 8 - player->lefty;
+        slot = INV_WEAPON_HAND - player->lefty;
         DamageInventory(slot, rollem(2, 3), 4, 0, 1);
     }
     return 1 - result;
@@ -487,10 +487,10 @@ char far do_attack(void)
         return 0;
     compute_hitangle();
     if ((result = frp_check(fromwho, hitobj)) != 0) {
-        damage_item(Obj_IntTMem(hitobj), Obj_IntTMem(fromwho), targx, targy, 0, 4);
+        damage_item(Obj_IntTMem(hitobj), Obj_IntTMem(fromwho), targx, targy, 0, DMG_PHYSICAL);
         return do_miss(result);
     }
-    do_damage(4);
+    do_damage(DMG_PHYSICAL);
     return 1;
 }
 
@@ -528,7 +528,7 @@ int far GetPlayerWeapon(unsigned char **wd, struct Object far **weap)
     register int item;
 
     *wd = 0;
-    *weap = AskInventory(8 - player->lefty);
+    *weap = AskInventory(INV_WEAPON_HAND - player->lefty);
     if (*weap != 0) {
         if (((item = OBJ_ITEM(*weap)) >> 4) == CLASS_MISSILE) {
             if (Missile[item & ID_INCLASS].ammo >= 0 && Missile[item & ID_INCLASS].ammo < 0x10) {
@@ -545,8 +545,8 @@ int far GetPlayerWeapon(unsigned char **wd, struct Object far **weap)
         }
     }
     if (*wd == 0) {
-        *wd = (unsigned char *)&Weapons[15];
-        wsize = ComObjData[15].radius;
+        *wd = (unsigned char *)&Weapons[ITEM_FIST];
+        wsize = ComObjData[ITEM_FIST].radius;
     }
     return 1;
 }
@@ -788,7 +788,7 @@ char far critter_attack(struct Object far *npc, int swing, unsigned char charge,
     }
     result = do_attack();
     if (result && hitobj == 1 && player->poison < poison) {
-        if (check_res(ThePlayer, 1, 0x10))
+        if (check_res(ThePlayer, 1, DMG_POISON))
             player->poison = poison;
     }
     return result;

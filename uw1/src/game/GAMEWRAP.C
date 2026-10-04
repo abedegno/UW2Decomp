@@ -424,7 +424,7 @@ void far do_level_hacks(int level, register int mode)
     else if (mode == 1)
         update_all_critters_whilst_player_snoozes();
     switch (level) {
-    case 7:
+    case LEVEL_TYBAL:
         if (!player->orb) {
             if (mode == 0) {
                 player->saved_mana = player->max_mana;
@@ -437,7 +437,7 @@ void far do_level_hacks(int level, register int mode)
             }
         }
         break;
-    case 9:
+    case LEVEL_VOID:
         if (mode == 0) {
             player->saved_mana = ProbablyAutomapEnabled_dseg_5c99_546;
             ProbablyAutomapEnabled_dseg_5c99_546 = 0;

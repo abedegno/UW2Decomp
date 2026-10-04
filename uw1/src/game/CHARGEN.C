@@ -204,7 +204,7 @@ void far show_skills(void)
     row = 0;
     for (i = 0; i < 20 && row <= 5; i++) {
         if (player->skills[i] != 0) {
-            name = get_string((i + 0x1F) | STR_CHARGEN);
+            name = get_string((i + STRN_SKILLS) | STR_CHARGEN);
             itoa(player->skills[i], buf, 10);
             string_to_screen(name, 0x1E, 0x43 - row * 11);
             string_to_screen(buf, 0x7D - string_width(buf), 0x43 - row * 11);

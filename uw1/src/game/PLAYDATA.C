@@ -115,14 +115,14 @@ void far save_player_data(int fd)
     player->music = (unsigned)music_is_on();
     player->terrain = PN.terrain;
     write(fd, &key, 1);
-    xorwrite(fd, key, (unsigned char far *)player, 0xD2);
+    xorwrite(fd, key, (unsigned char far *)player, sizeof(struct Player));
 }
 
 void far read_player_data(int fd)
 {
     unsigned char key;
     read(fd, &key, 1);
-    xorread(fd, key, (unsigned char far *)player, 0xD2);
+    xorread(fd, key, (unsigned char far *)player, sizeof(struct Player));
     playerdat->attr[0] = player->strength;
     playerdat->attr[1] = player->dexterity;
     playerdat->attr[2] = player->intelligence;
@@ -147,7 +147,7 @@ void far read_player_data(int fd)
    to notice), and the pick-up distance 0x90 (0x190 while UsingPole). */
 void far init_spells(void)
 {
-    ComObjData[127].resist = 0;         /* item 127 is the player's own object type */
+    ComObjData[ITEM_ADVENTURER].resist = 0;         /* item 127 is the player's own object type */
     plyNotice[0] = 13 - player->skills[SKILL_STEALTH] / 3;
     plyNotice[1] = 15 - player->skills[SKILL_STEALTH] / 5;
     motionbits = 0;
@@ -233,7 +233,7 @@ unsigned char far player_affected_by(unsigned char major, unsigned char minor,
         } else if (minor <= 4)
             *bonuses |= 1 << (minor - 1);
         else if (minor <= 9)
-            ComObjData[127].resist |= damage_protection_flags[minor - 5];
+            ComObjData[ITEM_ADVENTURER].resist |= damage_protection_flags[minor - 5];
         break;
     case SPELLC_MOTION:
         motionbits = motionbits | (1 << (minor - 1));
@@ -255,7 +255,7 @@ unsigned char far player_affected_by(unsigned char major, unsigned char minor,
     case SPELLC_BACKFIRE:
         backfire(ThePlayer, minor);
         break;
-    case 13:
+    case SPELLC_SPECIAL:
         switch (minor) {
         case 4: MazeSpell = 1; break;
         }
@@ -310,7 +310,7 @@ void far parse_aspells(unsigned char *out)
 void far set_maze(char on)
 {
     char tex;
-    if (PlayerLevel == 7) {
+    if (PlayerLevel == LEVEL_TYBAL) {
         tex = 0xFF;
         if (on && floor_IDs[4] != 0x0C)
             tex = 0x0C;
@@ -440,7 +440,7 @@ void far FixPlayerEquips(void)
             if (decode_obj_spell(ActiveObj, &major, &effect, &flag) && !flag) {
                 if (player_affected_by(major, effect, &bonuses, slot))
                     remove_spell(ActiveObj);
-            } else if (OBJ_ITEM(ActiveObj) == 0x2F)
+            } else if (OBJ_ITEM(ActiveObj) == ITEM_DRAGON_SKIN_BOOTS)
                 DragonSkinBoots_dseg_5c99_1B01 = 1;
         }
     }

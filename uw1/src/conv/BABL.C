@@ -401,7 +401,7 @@ int far load_script(char *name, char far *work)
         size = get_arc(arc, cnv_id, arc_buffer);
         close_arc(arc);
         if (size <= 0) {
-            scroll_print(get_string(0xe01));  /* "You get no response.\n" */
+            scroll_print(get_string(STR_CONV | 1));  /* "You get no response.\n" */
             return 1;
         }
     } else
@@ -866,7 +866,7 @@ int far DoReadHeader_ovr095_12C3(void)
         babl_import_table[i].count = count;
         babl_import_table[i].type = type;
         babl_import_table[i].kind = kind;
-        if (kind == 0x111) func_count++;
+        if (kind == IMPORT_FUNC) func_count++;
     }
     babl_import_table[i].name[0] = 0;
     babl_import_table[i].count = 0;
@@ -903,178 +903,178 @@ int far babl_run(void)
     sp = 0;
     bp = 0;
     pc = 0;
-    if (code[pc] != 0x22) return -1;
+    if (code[pc] != OP_START) return -1;
     running = 1;
     while (running) {
         switch (code[pc]) {
-        case 0x00:      /* NOP */
+        case OP_NOP:      /* NOP */
             pc++;
             break;
-        case 0x01:
+        case OP_ADD:
             vmAdd_ovr095_18CF();
             pc++;
             break;
-        case 0x02:
+        case OP_MUL:
             MUL_OPCODE_ovr095_192C();
             pc++;
             break;
-        case 0x03:
+        case OP_SUB:
             subOpcode_ovr095_1965();
             pc++;
             break;
-        case 0x04:
+        case OP_DIV:
             BABL_DIV_ovr095_199E();
             pc++;
             break;
-        case 0x05:
+        case OP_MOD:
             BablMod_ovr095_19EE();
             pc++;
             break;
-        case 0x29:
+        case OP_NEG:
             babl_neg_ovr095_1908();
             pc++;
             break;
-        case 0x0F:      /* JMP */
+        case OP_JMP:      /* JMP */
             pc = code[pc + 1];
             break;
-        case 0x12:      /* BRA */
+        case OP_BRA:      /* BRA */
             pc = code[pc + 1] + pc + 1;
             break;
-        case 0x06:
+        case OP_OR:
             babBitOr_ovr095_1A3E();
             pc++;
             break;
-        case 0x07:
+        case OP_AND:
             babl_and_ovr095_1A83();
             pc++;
             break;
-        case 0x08:      /* OPNOT */
+        case OP_NOT:      /* OPNOT */
             stack[sp] = !stack[sp];
             pc++;
             break;
-        case 0x09:
+        case OP_TSTGT:
             VM_GT_ovr095_1AC8();
             pc++;
             break;
-        case 0x0A:
+        case OP_TSTGE:
             vmTstge_ovr095_1B0A();
             pc++;
             break;
-        case 0x0B:
+        case OP_TSTLT:
             vmTstlt_ovr095_1B4C();
             pc++;
             break;
-        case 0x0C:
+        case OP_TSTLE:
             VmTstle_ovr095_1B8E();
             pc++;
             break;
-        case 0x0D:
+        case OP_TSTEQ:
             ExecTsteq_ovr095_1BD0();
             pc++;
             break;
-        case 0x0E:
+        case OP_TSTNE:
             opcode_tstne_ovr095_1C12();
             pc++;
             break;
-        case 0x10:      /* BEQ */
+        case OP_BEQ:      /* BEQ */
             if (stack[sp--] == 0)
                 pc = code[pc + 1] + pc + 1;
             else
                 pc += 2;
             break;
-        case 0x13:
+        case OP_CALL:
             babl_call_ovr095_1C54();
             break;
-        case 0x15:
+        case OP_RET:
             running = bab_ret_ovr095_1C82();
             break;
-        case 0x11:      /* BNE */
+        case OP_BNE:      /* BNE */
             if (stack[sp--] != 0)
                 pc = code[pc + 1] + pc + 1;
             else
                 pc += 2;
             break;
-        case 0x18:      /* POP */
+        case OP_POP:      /* POP */
             sp--;
             pc++;
             break;
-        case 0x1F:
+        case OP_FETCHM:
             exec_fetchm_ovr095_1CAA();
             pc++;
             break;
-        case 0x21:
+        case OP_OFFSET:
             vmOffset_ovr095_1CD7();
             pc++;
             break;
-        case 0x22:      /* START */
+        case OP_START:      /* START */
             pc++;
             break;
-        case 0x19:      /* SWAP */
+        case OP_SWAP:      /* SWAP */
             tmp = stack[sp];
             stack[sp] = stack[sp - 1];
             stack[sp - 1] = tmp;
             pc++;
             break;
-        case 0x1A:      /* PUSHBP */
+        case OP_PUSHBP:      /* PUSHBP */
             sp++;
             stack[sp] = bp;
             pc++;
             break;
-        case 0x1B:      /* POPBP */
+        case OP_POPBP:      /* POPBP */
             bp = stack[sp];
             sp--;
             pc++;
             break;
-        case 0x1C:      /* SPTOBP */
+        case OP_SPTOBP:      /* SPTOBP */
             bp = sp;
             pc++;
             break;
-        case 0x1D:      /* BPTOSP */
+        case OP_BPTOSP:      /* BPTOSP */
             sp = bp;
             pc++;
             break;
-        case 0x1E:      /* ADDSP: pop n and reserve n words */
+        case OP_ADDSP:      /* ADDSP: pop n and reserve n words */
             sp += stack[sp] - 1;
             pc++;
             break;
-        case 0x16:      /* PUSHI */
+        case OP_PUSHI:      /* PUSHI */
             sp++;
             stack[sp] = code[pc + 1];
             pc += 2;
             break;
-        case 0x20:
+        case OP_STO:
             BABL_STORE_ovr095_1D11();
             pc++;
             break;
-        case 0x17:      /* PUSHI_EFF: the mem address of frame slot bp + n */
+        case OP_PUSHI_EFF:      /* PUSHI_EFF: the mem address of frame slot bp + n */
             sp++;
             stack[sp] = stack_base + code[pc + 1] + bp;
             pc += 2;
             break;
-        case 0x14:      /* CALLI */
+        case OP_CALLI:      /* CALLI */
             talk_calli_ovr095_1D44();
             break;
-        case 0x23:      /* SAVE_REG */
+        case OP_SAVE_REG:      /* SAVE_REG */
             reg = stack[sp];
             pc++;
             break;
-        case 0x24:      /* PUSH_REG */
+        case OP_PUSH_REG:      /* PUSH_REG */
             sp++;
             stack[sp] = reg;
             pc++;
             break;
-        case 0x25:
+        case OP_STRCMP:
             vm_strcmp_ovr095_1DC1();
             pc++;
             break;
-        case 0x26:      /* EXIT_OP */
+        case OP_EXIT:      /* EXIT_OP */
             running = 0;
             break;
-        case 0x27:
+        case OP_SAY:
             vmSay_ovr095_1EA2();
             pc++;
             break;
-        case 0x28:
+        case OP_RESPOND:
             babl_respond_ovr095_1F4A();
             pc++;
             break;
@@ -1368,7 +1368,7 @@ void far bab_var_clear(void)
     register int i;
     entry = babl_import_table;
     while (entry->count != 0) {
-        if (entry->kind == 0x111) {
+        if (entry->kind == IMPORT_FUNC) {
             entry++;
             continue;
         }

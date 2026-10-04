@@ -72,7 +72,7 @@ char far water_set(int terr)
     char swimming;
 
     swimming = 0;
-    if (terr & 2)
+    if (terr & FOOT_WATER)
     {
         swimming = 1;
         player->swim_count = 0x60;
@@ -96,34 +96,34 @@ void far parse_player_terr(int terr, char force)
     if (lastTerr != terr || force)
     {
         swimming = 0;
-        state = 0;
+        state = FPS_WALK;
         lastTerr = terr;
-        if (terr & 0x22)
+        if (terr & (FOOT_WATER | FOOT_SHORE))
         {
-            if ((motionbits & 8) == 0)
+            if ((motionbits & MB_WATER_WALK) == 0)
             {
                 swimming = water_set(terr);
-                state = 1;
+                state = FPS_SWIM;
             }
         }
-        else if (terr & 4)
-            state = 2;
-        else if (terr & 0x10)
+        else if (terr & FOOT_LAVA)
+            state = FPS_LAVA;
+        else if (terr & FOOT_AIR)
         {
-            if (motionbits & 4)
-                state = 4;
-            else if (motionbits & 0x10)
-                state = 5;
-            else if (motionbits & 2)
-                state = 6;
+            if (motionbits & MB_LEVITATE)
+                state = FPS_LEVITATE;
+            else if (motionbits & MB_FLY)
+                state = FPS_FLY;
+            else if (motionbits & MB_SLOW_FALL)
+                state = FPS_SLOW_FALL;
         }
         newFPS(state);
         if (!swimming)
             player->swim_count = 0;
     }
-    if (terr & 0x10)
+    if (terr & FOOT_AIR)
     {
-        if (motionbits & 0x14)
+        if (motionbits & (MB_LEVITATE | MB_FLY))
         {
             PN.acc[2] = 0;
             if (abs(PN.vel[2]) > 10)
@@ -135,7 +135,7 @@ void far parse_player_terr(int terr, char force)
         {
             if (PN.acc[2] == 0)
                 PN.acc[2] = -4;
-            if (motionbits & 2 && PN.vel[2] <= -94)
+            if (motionbits & MB_SLOW_FALL && PN.vel[2] <= -94)
             {
                 PN.vel[2] = -94;
                 if (PN.speed > 20)
@@ -217,15 +217,15 @@ char far simple_fizix(int turn)
             SET_FINEHEAD(ThePlayer, PlayerFacing >> 8);
             return 1;
         }
-        if (motionbits & 0x14)
+        if (motionbits & (MB_LEVITATE | MB_FLY))
             flying = 1;
         x = PN.x;
         y = PN.y;
         move_along(heading, dist, &x, &y);
         if (can_place(ITEM_ADVENTURER, 1, x / 32, y / 32, ThePlayer->pos & POS_Z, backwards | flying, 8))
         {
-            if (!backwards && nvokTerr != 1 && nvokTerr != lastTerr
-                && (nvokTerr != 0x10 || !flying))
+            if (!backwards && nvokTerr != FOOT_FLOOR && nvokTerr != lastTerr
+                && (nvokTerr != FOOT_AIR || !flying))
                 return 0;
             {
                 PN.x = x;
@@ -254,8 +254,8 @@ char far simple_fizix(int turn)
                 oldP = curP;
                 curP = &calc;
                 curP->index = 1;
-                curP->radius = ComObjData[0x7F].radius;
-                curP->height = ComObjData[0x7F].height;
+                curP->radius = ComObjData[ITEM_ADVENTURER].radius;
+                curP->height = ComObjData[ITEM_ADVENTURER].height;
                 curP->x = x / 32;
                 curP->y = y / 32;
                 curP->z = ThePlayer->pos & POS_Z;
@@ -312,7 +312,7 @@ void far set_player_phys_params(register int rate)
         PlayerHeading = PlayerFacing;
     PN.heading = PlayerHeading;
     PT.ignore = 0;
-    if (motionbits & 0x14)
+    if (motionbits & (MB_LEVITATE | MB_FLY))
     {
         PT.ignore = 0x1000;
         PN.flags = 0x80;
@@ -353,8 +353,8 @@ void far player_setup(register int x, register int y)
     ThePlayer->qn.f.next = ThePlayer->qn.f.quality = 0;
     curP = &calc;
     curP->index = Obj_MemTPtr(ThePlayer);
-    curP->radius = ComObjData[0x7F].radius;
-    curP->height = ComObjData[0x7F].height;
+    curP->radius = ComObjData[ITEM_ADVENTURER].radius;
+    curP->height = ComObjData[ITEM_ADVENTURER].height;
     curP->x = (x << 3) + 3;
     curP->y = (y << 3) + 3;
     curP->z = PN.z >> 3;
@@ -422,7 +422,7 @@ void far phys_affect_player(void)
                 dmg = dmg * (30 - player->skills[SKILL_ACROBAT]) / 30;
             if (dmg > 3)
                 damage_item(ThePlayer, 0L, 0, 0, dmg, 0);
-            if (dmg > 1 || (PN.terrain & 0x10))
+            if (dmg > 1 || (PN.terrain & FOOT_AIR))
             {
                 vol = (dmg << 2) - 60;
                 play_effect_here(0xF, 0x40, vol);
@@ -461,34 +461,34 @@ void far do_player_input(int input, int rate, register int16 *speed)
     h = PlayerFacing;
     switch (input)
     {
-    case 1:
+    case PIN_FORWARD:
         PlayerFacing += rate * PlayerTurn * (TurnInpRate / 4) / 4;
         PlayerHeading = h = PlayerFacing;
         *speed = pFPS[0] * (ForwInpRate >> 2) / 32;
         plyMoType = 0;
         break;
-    case 10:
+    case PIN_RIGHT:
         h += 0x4000;
         *speed = pFPS[1];
         plyMoType = 1;
         break;
-    case 9:
+    case PIN_LEFT:
         h -= 0x4000;
         *speed = pFPS[1];
         plyMoType = -1;
         break;
-    case 8:
+    case PIN_BACK:
         h -= 0x8000;
         *speed = pFPS[2];
         plyMoType = -2;
         break;
-    case 6:
+    case PIN_RUN_JUMP:
         if (PN.vel[2] != 0 || PN.acc[2] != 0 || PN.speed != 0)
             break;
         PlayerHeading = h = PlayerFacing;
         PN.speed = *speed = pFPS[0] / 2;
         plyMoType = 0;
-    case 7:
+    case PIN_JUMP:
         PN.vel[2] = 0x263;
         if (PN.z > 0x280)
         {
@@ -496,22 +496,22 @@ void far do_player_input(int input, int rate, register int16 *speed)
             if (PN.z > 0x2C0)
                 PN.vel[2] = (PN.vel[2] << 1) / 3;
         }
-        if (motionbits & 1)
+        if (motionbits & MB_LEAP)
             PN.acc[2] = -2;
         else
             PN.acc[2] = -4;
         return;
-    case 12:
+    case PIN_UP:
         plyMoType = 0;
         PN.vel[2] = 0x8D;
         PN.acc[2] = 0;
         break;
-    case 13:
+    case PIN_DOWN:
         plyMoType = 0;
         PN.vel[2] = -0x8D;
         PN.acc[2] = 0;
         break;
-    case 0:
+    case PIN_NONE:
         *speed = 0;
         return;
     }
@@ -524,7 +524,7 @@ void far phys_bounce_up(struct Object far *obj)
 {
     if (obj == ThePlayer)
     {
-        if ((PN.terrain & 0x10) == 0)
+        if ((PN.terrain & FOOT_AIR) == 0)
             PN.vel[2] = 0x8D;
         PN.acc[2] = 0;
     }
@@ -573,7 +573,7 @@ void far QuakeTrap_seg008_DE7(int type, int intensity)
 void far newFPS(char state)
 {
     unsigned char ratios[7] = { 10, 3, 5, 10, 1, 7, 2 };
-    unsigned char trans[7] = { 0, 1, 2, 4, 8, 8, 0 };
+    unsigned char trans[7] = { 0, MS_SWIM, MS_LAVA, MS_ICE, MS_FLOAT, MS_FLOAT, 0 };
 
     if (state == -1)
         state = player->fps;

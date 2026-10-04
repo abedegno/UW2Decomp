@@ -51,7 +51,7 @@ unsigned char MapDirty = 0;             /* DS:19B8 */
 char far Map_Init(void)
 {
     if (mapdata == 0) {
-        if ((mapdata = farmalloc(0x7C08L)) == 0)
+        if ((mapdata = farmalloc(LEVEL_SIZE)) == 0)
             first_punt(ERR_LOWMEM | 2);
     }
     Map_ObjFix();
@@ -66,7 +66,7 @@ void far OverwriteAllTiles_ovr128_37(uint32 *tile)
     unsigned i;
 
     p = (uint32 far *)mapdata;
-    for (i = 0; i < 0x1000; i++) {
+    for (i = 0; i < MAP_TILES; i++) {
         *p = *tile;
         p++;
     }
@@ -91,7 +91,7 @@ char far Map_Load(struct Arc *arc, int level)
         a = *arc;
     end = &LEVEL->magic;
     *end = 0;
-    get_arc((char far *)&a, level - 1, mapdata);
+    get_arc((char far *)&a, LEVARK_MAP(level), mapdata);
     if (*end != LEVEL_MAGIC) {
         pfatal_code(3);
     } else {
@@ -128,7 +128,7 @@ char far Map_Save(struct Arc *arc, int level)
         - (int32)FP_OFF(objbot)) / 2L;
     *end = LEVEL_MAGIC;
     MapDirty = 0;
-    if ((result = put_arc((char far *)&a, level - 1, mapdata, 0x7C08)) != 0)
+    if ((result = put_arc((char far *)&a, LEVARK_MAP(level), mapdata, LEVEL_SIZE)) != 0)
         result = Anim_Save((char *)&a, level);
     if (arc == 0)
         close_arc((char far *)&a);

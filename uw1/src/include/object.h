@@ -122,6 +122,16 @@ struct AnimClass {
     char start;
     unsigned char count;
 };
+/* The flags of struct AnimClass, as EFFECT.C's do_animobj and toast_animobj test them. */
+#define ANIMF_CYCLE     0x01            /* step to the next frame, wrapping */
+#define ANIMF_RANDOM    0x02            /* pick a random frame */
+#define ANIMF_DOOR      0x04            /* a moving door: swing, or a portcullis rises */
+#define ANIMF_REMOVE    0x20            /* remove the object from the map at the end */
+#define ANIMF_FINISH    0x80            /* play the frames left before ending */
+/* animlist's size, and its size in bytes as its own LEV.ARK block (EFFECT.C's Anim_Load
+   and Anim_Save: MAX_ANIMS entries of 6 bytes). */
+#define MAX_ANIMS       0x40
+#define ANIM_BLOCK_LEN  0x180
 
 /* The fields of an object's first four words (UW-Formats 4.2, "general object info").
    The id word: */
@@ -154,6 +164,9 @@ struct AnimClass {
 /* An is_quant object's link field: below this a quantity, from it a special property
    (the link less 0x200: an enchantment, a string, ...). */
 #define LINK_SPECIAL    0x200
+/* Two stacks of the same item merge only while their total stays below this (INVPANEL.C's
+   AddTogether, BARTER.C's trade slots and coin piles). */
+#define STACK_LIMIT     999
 /* A mobile object's home word: */
 #define HOME_Y          0x3F0           /* bits 4-9 */
 #define HOME_X          0xFC00          /* bits 10-15 */
@@ -403,6 +416,15 @@ struct Armour {
     unsigned char category;             /* 0x03: 0 shield, 1 body armour, 3 leggings,
                                            4 gloves, 5 boots, 8 hat, 9 ring */
 };
+/* struct Armour's category (UW-Formats, the Underworld Adventures document, "Armour and
+   wearables table"), which INVPANEL.C's ItemFitsSlot matches to the paperdoll's slots. */
+#define ARMOUR_SHIELD   0
+#define ARMOUR_BODY     1
+#define ARMOUR_LEGGINGS 3
+#define ARMOUR_GLOVES   4
+#define ARMOUR_BOOTS    5
+#define ARMOUR_HAT      8
+#define ARMOUR_RING     9
 
 extern struct MissileInfo Missile[16];
 extern struct Weapon Weapons[16];
@@ -435,6 +457,16 @@ extern char Food[0x10];
 void far misc_init(FILE *fd);
 
 /* DAMAGE.C: damage to objects */
+/* Damage types, the bits of damage_item's and check_res's type and of ComObjData's resist
+   byte. The names are UW2's Study Monster list (UW2Decomp's SPELLS2.C dtypes, its strings
+   0x146..0x14B); UW1 has no such spell, and its code uses the same bits the same way. */
+#define DMG_MAGIC       0x03            /* resisted by chance: rand() % 3 < (resist & 3) */
+#define DMG_PHYSICAL    0x04            /* blows */
+#define DMG_FIRE        0x08
+#define DMG_POISON      0x10
+#define DMG_COLD        0x20
+#define DMG_MISSILE     0x40
+#define RES_UNDEAD      0x80            /* in the resist byte: undead (Smite Undead tests it) */
 char far damage_object(struct Object far *obj, struct Object far *who, int damage, int x, int y);
 char far remove_lock(struct Object far *obj, char all);
 unsigned char far check_res(struct Object far *obj, unsigned char damage, unsigned char type);
@@ -516,7 +548,7 @@ int far get_animlen(struct Object far *obj);
 void far set_animlen(struct Object far *obj, int len);
 extern char animcount;
 extern struct AnimClass animclassd[16];
-extern struct Anim animlist[0x40];
+extern struct Anim animlist[MAX_ANIMS];
 int far add_animobj(int index, int len, unsigned char a, unsigned char x, unsigned char y);
 unsigned char far put_effect(struct Object far *who, int cls, int len, int frame, int z, int x, int y);
 int far find_anim(struct Object far *obj);

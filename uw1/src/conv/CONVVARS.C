@@ -104,11 +104,11 @@ void far setup_converse_data(struct Object far *npc)
     bab_var("play_level", &val, 1);
     val = PlayerLevel;
     bab_var("dungeon_level", &val, 1);
-    val = player->game_clock / 0x3BC4L;
+    val = player->game_clock / CONV_MINUTE;
     bab_var("game_time", &val, 1);
-    val = player->game_clock / 0x3BC4L % 0x5A0L;
+    val = player->game_clock / CONV_MINUTE % CONV_DAY_MINS;
     bab_var("game_mins", &val, 1);
-    val = player->game_clock / 0x1502E80L;
+    val = player->game_clock / CONV_DAY;
     bab_var("game_days", &val, 1);
     val = 0;
     bab_var("new_player_exp", &val, 1);

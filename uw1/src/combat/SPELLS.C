@@ -58,7 +58,7 @@ extern union PlayerStore PlayerDat;
 
 #define SPELL_CLASS(s)  (((s).cls & 0xF8) >> 3)
 
-extern struct Spell far spells[53];
+extern struct Spell far spells[NUM_SPELLS];
 /* UW1's own routines, at the addresses of their stubs (the listing's names). */
 
 /* This file's _BSS, DS:3636..3637: the map square of an object (not a critter) that casts. */
@@ -76,7 +76,7 @@ unsigned char far anti_magic_p(int x, int y)
 /* Casts spell by number, an index into spells[] (0..0x34; anything higher does nothing). */
 void far cast(unsigned char spell, struct Object far *who, struct Object far *target)
 {
-    if (spell < 0x35)
+    if (spell < NUM_SPELLS)
         do_spell(SPELL_CLASS(spells[spell]), spells[spell].sub, who, target);
 }
 
@@ -90,28 +90,28 @@ void far cast(unsigned char spell, struct Object far *who, struct Object far *ta
 char far do_spell(unsigned char cls, unsigned char sub, struct Object far *who,
                   struct Object far *target)
 {
-    if (who >= (struct Object far *)objdata && cls <= 11) {
+    if (who >= (struct Object far *)objdata && cls <= SPELLC_XT) {
         if (anti_magic_p(inanmMapX, inanmMapY))
             return 0;
     } else if (anti_magic_p(OBJ_HOMEX(who), OBJ_HOMEY(who)) || PlayerLevel == 9)
         return 0;
     switch (cls) {
-    case 1:
-        if ((sub & ~0xC0) == 3 || (sub & ~0xC0) == 5)
+    case SPELLC_MOTION:
+        if ((sub & ~SPELL_FLAGS) == 3 || (sub & ~SPELL_FLAGS) == 5)
             phys_bounce_up(who);
-    case 0:
-    case 2:
-    case 3:
-        if (who == ThePlayer && set_curmagic(cls, sub & 0x3F, sub & 0xC0))
+    case SPELLC_LIGHT:
+    case SPELLC_ARMOUR:
+    case SPELLC_PROTECT:
+        if (who == ThePlayer && set_curmagic(cls, sub & SPELL_MINOR, sub & SPELL_FLAGS))
             break;
         return 0;
-    case 4:
+    case SPELLC_HEAL:
         if (target) {
             healing(target, sub);
             break;
         }
         return 0;
-    case 5:
+    case SPELLC_MISSILE:
         if (who == ThePlayer) {
             GameInputMode = 3;
             ObjectActing = ThePlayer;
@@ -120,29 +120,29 @@ char far do_spell(unsigned char cls, unsigned char sub, struct Object far *who,
         } else
             release_missile(who, sub);
         break;
-    case 6:
+    case SPELLC_AREA:
         nail_area(who, sub);
         break;
-    case 7:
+    case SPELLC_1AREA:
         nail_1area(who, sub);
         break;
-    case 8:
+    case SPELLC_CREATE:
         creat_spell(who, sub);
         break;
-    case 9:
+    case SPELLC_BACKFIRE:
         backfire(who, sub);
         break;
-    case 10:
+    case SPELLC_MANA:
         restore_mana(who, sub);
         break;
-    case 11:
-        xt_spells(who, sub & 0xC0, sub & 0x3F);
+    case SPELLC_XT:
+        xt_spells(who, sub & SPELL_FLAGS, sub & SPELL_MINOR);
         break;
-    case 14:
+    case SPELLC_CUTSCENE:
         runcutscene(sub);
         update_animobj(4);
         break;
-    case 13:
+    case SPELLC_SPECIAL:
         switch (sub) {
         case 3:
             work_bullfrog_tiles(4, 0, 0);
@@ -303,7 +303,7 @@ char far sp_sheet_light(int x, int y, struct Object far *target, struct Tile far
 {
     struct Object far *obj;
 
-    obj = build_new_obj(ITEM_LIGHTNING_1C5, tile);
+    obj = build_new_obj(ITEM_SPLASH_1C5, tile);
     damage_square(x, y, 2, src);
     if (add_animobj(Obj_MemTPtr(obj), 4, rand() % 4, x, y) == -1)
         Obj_Free(obj);
@@ -339,8 +339,8 @@ char far sp_meteor(int x, int y, struct Object far *target, struct Tile far *til
 char far sp_ward_undead(int x, int y, struct Object far *target, struct Tile far *tile,
                         unsigned char src)
 {
-    if (check_res(target, 1, 0x80) == 0) {
-        damage_item(target, Obj_IntTMem(src), x, y, 0xFF, 3);
+    if (check_res(target, 1, RES_UNDEAD) == 0) {
+        damage_item(target, Obj_IntTMem(src), x, y, 0xFF, DMG_MAGIC);
         return 1;
     }
     return 0;
@@ -351,7 +351,7 @@ char far sp_poison(int x, int y, struct Object far *target, struct Tile far *til
                    unsigned char src)
 {
     put_effect(target, 7, 4, 0, 7, x, y);
-    damage_item(target, Obj_IntTMem(src), x, y, rollem(5, 4), 0x13);
+    damage_item(target, Obj_IntTMem(src), x, y, rollem(5, 4), DMG_MAGIC | DMG_POISON);
     return 1;
 }
 
@@ -360,7 +360,7 @@ char far sp_poison(int x, int y, struct Object far *target, struct Tile far *til
    Always returns 1. */
 char far hit_critter_goal(char goal, char attitude, struct Object far *npc, int x, int y)
 {
-    if (check_res(npc, 1, 3)) {
+    if (check_res(npc, 1, DMG_MAGIC)) {
         put_effect(npc, 7, 4, 0, 7, x, y);
         change_critter_goal(npc, goal, 1);
         if (attitude != -1)
@@ -373,7 +373,7 @@ char far hit_critter_goal(char goal, char attitude, struct Object far *npc, int 
    (attitude 3), and one that was not an ally already gets goal 2. */
 char far sp_charm(int x, int y, struct Object far *target)
 {
-    if (check_res(target, 1, 3)) {
+    if (check_res(target, 1, DMG_MAGIC)) {
         put_effect(target, 7, 4, 0, 7, x, y);
         if (!OBJ_ALLY(target))
             change_critter_goal(target, 2, 0);
@@ -455,7 +455,7 @@ void far process_area(char count, unsigned char src, SpellFn fn, unsigned char t
                 if (y >= MAP_SIZE)
                     continue;
                 tile = start + (x - x0) + ((y - y0) << 6);
-                if (type == 0x40) {
+                if (type == AREA_RANDOM) {
                     obj = 0;
                     if (tile->type > TILE_SOLID && rand() % (w * h + 3) < count)
                         if (fn(x, y, obj, tile, src) && --count == 0)
@@ -465,16 +465,16 @@ void far process_area(char count, unsigned char src, SpellFn fn, unsigned char t
                 link = &tile->objects;
                 while ((obj = Obj_PtrTMem(link)) != 0) {
                     next = link->word >> 6 & 0x3FF;
-                    if (type == 0x80
-                        || type == 0 && OBJ_MAJOR(obj) == MAJOR_CREATURE && Obj_MemTPtr(obj) != src
-                        || type == 0xC0)
+                    if (type == AREA_OBJECTS
+                        || type == AREA_CRITTERS && OBJ_MAJOR(obj) == MAJOR_CREATURE && Obj_MemTPtr(obj) != src
+                        || type == AREA_ALL)
                         if (fn(x, y, obj, tile, src) && --count <= 0)
                             return;
                     if ((link->word >> 6 & 0x3FF) == next)
                         link = &obj->qn.link;
                 }
             }
-    } while (type == 0x40 && count > 0 && tries++ < 4);
+    } while (type == AREA_RANDOM && count > 0 && tries++ < 4);
 }
 
 /* An area spell centred dist squares ahead of who (along the caster's heading; an object
@@ -542,7 +542,7 @@ void far nail_area(struct Object far *who, unsigned char sub)
     char count;
 
     count = rollem(3, 4);
-    gronk_area(who, count, area_spells[(sub & ~0xC0) - 1], sub & 0xC0, 4, 2);
+    gronk_area(who, count, area_spells[(sub & ~SPELL_FLAGS) - 1], sub & SPELL_FLAGS, 4, 2);
 }
 
 /* Spells on a critter (class 7), the player's only: the handler acts once within 2 of the
@@ -550,7 +550,7 @@ void far nail_area(struct Object far *who, unsigned char sub)
 void far nail_1area(struct Object far *who, unsigned char sub)
 {
     if (who == ThePlayer)
-        gronk_area(who, 1, area1_spells[(sub & ~0xC0) - 1], sub & 0xC0, 4, 2);
+        gronk_area(who, 1, area1_spells[(sub & ~SPELL_FLAGS) - 1], sub & SPELL_FLAGS, 4, 2);
 }
 
 /* Creates something about a square in front of the caster, a little to either side at
@@ -762,7 +762,7 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
     if (caster == ThePlayer)
         switch (sub) {
         case 0:                         /* speed */
-            set_curmagic(0xB, 2, stab);
+            set_curmagic(SPELLC_XT, 2, stab);
             break;
         case 1:                         /* detect monster */
             mdetect(10, 0x2D);
@@ -781,16 +781,16 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
             player->poison = 0;
             break;
         case 7:                         /* roaming sight */
-            set_curmagic(0xB, 1, stab);
+            set_curmagic(SPELLC_XT, 1, stab);
             home_cam(0);
             attach_eye(-1);
             GameInputMode += 8;
             break;
         case 8:                         /* telekinesis */
-            set_curmagic(0xB, 3, stab);
+            set_curmagic(SPELLC_XT, 3, stab);
             break;
         case 9:                         /* tremor */
-            gronk_area(caster, rollem(8, 3), tremor_area, 0x40, 5, 3);
+            gronk_area(caster, rollem(8, 3), tremor_area, AREA_RANDOM, 5, 3);
             set_effect(0x40, 0x28);
             play_effect_on_mobile(0x12, caster, 0);
             break;
@@ -804,7 +804,7 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
                 game_sprint(0x111);  /* 'The moonstone is not available.' */
             break;
         case 11:                        /* freeze time */
-            set_curmagic(0xB, 0, stab);
+            set_curmagic(SPELLC_XT, 0, stab);
             break;
         case 12:                        /* armageddon */
             FreePlayerInv(&ThePlayer->ol.link);
@@ -822,7 +822,7 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
 
 static unsigned char sq_dice[2] = { 10, 6 };
 static unsigned char sq_sides[2] = { 6, 5 };
-static unsigned char sq_type[2] = { 11, 3 };
+static unsigned char sq_type[2] = { DMG_MAGIC | DMG_FIRE, DMG_MAGIC };
 
 /* The 53 spells: cls (class << 3), the three runes packed five bits each (0x18 none)
    and the minor. */
@@ -830,7 +830,7 @@ static unsigned char sq_type[2] = { 11, 3 };
    the link order of the files that define them, and seg064 lies between seg019's and
    seg039's, so it was defined by a resident file in between: this one (RUNES.C, the other
    user, is an overlay). */
-struct Spell far spells[53] = {
+struct Spell far spells[NUM_SPELLS] = {
     { 0x00, 0x2178, 0x83 }, { 0x10, 0x0512, 0x02 }, { 0x29, 0x3938, 0x01 },
     { 0x40, 0x2197, 0x01 }, { 0x18, 0x48F8, 0x02 }, { 0x08, 0x51F8, 0x01 },
     { 0x18, 0x0258, 0x01 }, { 0x08, 0x446F, 0x02 }, { 0x20, 0x202C, 0x02 },

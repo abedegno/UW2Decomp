@@ -50,6 +50,17 @@ struct Phys {
                                            which becomes damage */
 };
 
+/* struct Phys's terrain, the footing: one bit, set by MOTION.C's set_resterr from the
+   collision state (and by do_zbounce and the air moves), turned into the 0-4 code an
+   object stores by res_to_terr. The names are ours, from those functions. */
+#define FOOT_FLOOR      0x01            /* a plain floor, or a solid object */
+#define FOOT_WATER      0x02
+#define FOOT_LAVA       0x04
+#define FOOT_ICE        0x08
+#define FOOT_AIR        0x10            /* in the air: falling, jumping, flying */
+#define FOOT_SHORE      0x20            /* the player on water with a corner of the
+                                           footprint on another floor */
+
 /* A mover's handler, 12 bytes, reached through the near pointer TP while seg031 moves a
    physics record: which collision bits to ignore, which to pass to special, and which
    stop it climbing onto objects. The player's is PT, the critters' CT1..CT4 (set up by
@@ -136,6 +147,19 @@ void far do_physics(struct Phys *pp, struct Handler *tp);
 struct Object far * far IsaDoor(unsigned char *x, unsigned char *y);
 struct Object far * far CollObject(void);
 unsigned char far set_resterr(unsigned bits);
+
+/* PlayerInput, the movement command (PHYSICS.C's do_player_input carries it out;
+   PLAYMOVE.C's parse_playin and do_player_keyboard set it from the mouse and keys). The
+   names are ours, from do_player_input. */
+#define PIN_NONE        0               /* stop */
+#define PIN_FORWARD     1               /* forward and turn at ForwInpRate, TurnInpRate */
+#define PIN_RUN_JUMP    6               /* a running jump */
+#define PIN_JUMP        7
+#define PIN_BACK        8
+#define PIN_LEFT        9               /* sideways, a quarter turn left */
+#define PIN_RIGHT       10
+#define PIN_UP          12              /* while levitating or flying */
+#define PIN_DOWN        13
 
 /* PLAYMOVE.C: player input and motion */
 extern unsigned char pmouseHandled;

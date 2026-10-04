@@ -64,9 +64,9 @@ void far makePlayerInvCopy(void far *ws)
     p->qn.f.next = 0;
     cursor = (struct StaticObj far *)(p + 1);
     invSlots = (union Link far *)(cursor + 1);
-    saveObjs = (struct StaticObj far *)(invSlots + 0x1C);
+    saveObjs = (struct StaticObj far *)(invSlots + NUM_INV_SLOTS);
     saveNum = 0;
-    for (i = 0; i <= 0x12; i++)
+    for (i = 0; i <= INV_PACK_LAST; i++)
         invSlots[i].f.index = invSlots[i].f.low = 0;
     InvSaveNexts(&ThePlayer->ol.link, &p->ol.word);
     if (GameInputMode == 1) {
@@ -137,7 +137,7 @@ void far replaceInInv(union Link far *old, union Link far *new)
 {
     int i;
 
-    for (i = 0; i <= 0x12; i++)
+    for (i = 0; i <= INV_PACK_LAST; i++)
         if (Inventory[i].f.index == old->f.index)
             invSlots[i].f.index = new->f.index;
 }
@@ -160,7 +160,7 @@ void far putInInv(union Link far *mem, union Link far *saved)
 {
     int i;
 
-    for (i = 0; i <= 0x12; i++)
+    for (i = 0; i <= INV_PACK_LAST; i++)
         if (invSlots[i].f.index == saved->f.index)
             Inventory[i].f.index = mem->f.index;
 }
@@ -215,7 +215,7 @@ void far getPlayerInvCopy(void far *ws)
     p = ws;
     cursor = (struct StaticObj far *)(p + 1);
     invSlots = (union Link far *)(cursor + 1);
-    saveObjs = (struct StaticObj far *)(invSlots + 0x1C);
+    saveObjs = (struct StaticObj far *)(invSlots + NUM_INV_SLOTS);
     *ThePlayer = *p;
     InvRestoreNexts(&ThePlayer->ol.word, &p->ol.link);
     if (GameInputMode == 1) {

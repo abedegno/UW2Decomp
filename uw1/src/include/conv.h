@@ -9,6 +9,34 @@ struct Object;
 
 #include "object.h"
 
+/* The trade slots on the conversation screen: UW1 has four a side (BARTER.C). */
+#define NUM_TRADE_SLOTS 4
+/* A conversation script names an item by its id below this, and from it a group of items:
+   find_barter and find_inv take BARTER_CLASS + major * 4 + minor, take_from_npc and the
+   like and dislike lists BARTER_CLASS + the item's class (id >> 4). */
+#define BARTER_CLASS    1000
+
+/* The conversation bytecode's opcodes, as BABL.C's babl_run dispatches them; the names are
+   UW-Formats' (the Underworld Adventures document, 7.4, "Assembler language opcodes"). */
+enum BablOp {
+    OP_NOP, OP_ADD, OP_MUL, OP_SUB, OP_DIV, OP_MOD, OP_OR, OP_AND,             /* 0x00 */
+    OP_NOT, OP_TSTGT, OP_TSTGE, OP_TSTLT, OP_TSTLE, OP_TSTEQ, OP_TSTNE, OP_JMP,  /* 0x08 */
+    OP_BEQ, OP_BNE, OP_BRA, OP_CALL, OP_CALLI, OP_RET, OP_PUSHI, OP_PUSHI_EFF,  /* 0x10 */
+    OP_POP, OP_SWAP, OP_PUSHBP, OP_POPBP, OP_SPTOBP, OP_BPTOSP, OP_ADDSP,       /* 0x18 */
+    OP_FETCHM,
+    OP_STO, OP_OFFSET, OP_START, OP_SAVE_REG, OP_PUSH_REG, OP_STRCMP, OP_EXIT,  /* 0x20 */
+    OP_SAY, OP_RESPOND, OP_NEG                                                  /* 0x27 */
+};
+/* The game clock as a conversation sees it (CONVVARS.C's game_time, game_mins and
+   game_days): 0x3BC4 ticks a minute and 1440 minutes a day. The rest of the game counts
+   0x3C00 ticks a minute (0xE1000 an hour: SKILLS.C), so a conversation's minute is a
+   little shorter. */
+#define CONV_MINUTE     0x3BC4L
+#define CONV_DAY_MINS   0x5A0L
+#define CONV_DAY        0x1502E80L      /* CONV_MINUTE * CONV_DAY_MINS */
+/* An import record's kind (UW-Formats 7.1): a built-in function, else a variable (0x10F). */
+#define IMPORT_FUNC     0x111
+
 /* BABL.C: the conversation interpreter ("babl") */
 int far DoReadHeader_ovr095_12C3(void);
 void far DoCopyCode_ovr095_14B1(void);

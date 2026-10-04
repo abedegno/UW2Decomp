@@ -137,7 +137,7 @@ static struct PathOffset PathingOffset[4] = { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -
 uint16 freepaths = 0xFFFF;
 static unsigned char path_turns[3][3] = {
     { 0xFF, 3, 0xFF }, { 2, 0xFF, 0 }, { 0xFF, 1, 0xFF } };
-static unsigned char slope_for_dir[4] = { 6, 8, 7, 9 };
+static unsigned char slope_for_dir[4] = { TILE_SLOPE_N, TILE_SLOPE_E, TILE_SLOPE_S, TILE_SLOPE_W };
 static unsigned char far crit_hndlr_obj(struct Phys *pn);
 
 /* Leave a dead critter's remains. fluids (the creature's corpse field, AI.C passes it
@@ -249,7 +249,7 @@ unsigned char far crit_hndlr_walk(struct Phys *pn) {
             failed = 1;
             control = 0;
             put_effect(meptr, 6, 3, 0, 0, CN1.x >> 8, CN1.y >> 8);
-            SET_SEQ(meptr, 12);             /* UW1: a fixed sequence and frame */
+            SET_SEQ(meptr, SEQ_DYING);             /* UW1: a fixed sequence and frame */
             SET_FRAME(meptr, 3);
             SET_RATE(meptr, 1);
             return 1;
@@ -506,7 +506,7 @@ unsigned char far hyp_move(unsigned char x1, unsigned char y1,
     h12 = tile2->height > tile1->height ? tile2->height : tile1->height;
     h23b = h23 = tile2->height > tile3->height ? tile2->height : tile3->height;
     if (height > h12) h12 = height;
-    if (type3 >= 6 && type3 <= 9
+    if (type3 >= TILE_SLOPE_N && type3 <= TILE_SLOPE_W
         && slope_for_dir[path_turns[x3 - x2 + 1][y3 - y2 + 1]] != type3)
         h23++;
     if (((h12 > h23 ? h12 : h23) << 3) + myheight > 0x7F) return 0;
@@ -1121,12 +1121,12 @@ void far crit_head_for_loc(unsigned char x, unsigned char y, char z) {
             freepaths |= 1 << OBJ_PATH(meptr);
             SET_B15_7(meptr, 0);
         }
-        if (OBJ_GOAL(meptr) == 1)
-            critter_set_goal(8, 0);
+        if (OBJ_GOAL(meptr) == GOAL_GO_HOME)
+            critter_set_goal(GOAL_MILL, 0);
         else if (control) {
             SET_SPEED(meptr, 0);
             SET_B15_6(meptr, 1);
-            SET_SEQ(meptr, 0x20);       /* UW1: sequence 0x20, the frame kept */
+            SET_SEQ(meptr, SEQ_STAND);       /* UW1: sequence 0x20, the frame kept */
             return;
         }
     }
@@ -1141,7 +1141,7 @@ void far crit_head_for_loc(unsigned char x, unsigned char y, char z) {
     if (failed && !(char)aligned && !OBJ_B18_6(meptr)) {
         if (didhitobj) {
             if (hitadoor) {
-                SET_SEQ(meptr, 0x20);
+                SET_SEQ(meptr, SEQ_STAND);
                 /* UW1: a critter not hostile to the player never opens the door */
                 if (rand() % 4 == 0 || OBJ_ATTITUDE(meptr))
                     SET_B18_6(meptr, 1);
@@ -1149,8 +1149,8 @@ void far crit_head_for_loc(unsigned char x, unsigned char y, char z) {
                     try_to_open_door(collobject);
             } else if ((((item = collobject->id & ID_ITEM) & ID_MAJOR) >> 6) == MAJOR_CREATURE
                 && item != ITEM_ADVENTURER
-                && OBJ_GOAL(meptr) == 5
-                && OBJ_GOAL(collobject) == 5) {
+                && OBJ_GOAL(meptr) == GOAL_ATTACK
+                && OBJ_GOAL(collobject) == GOAL_ATTACK) {
             } else if ((item >> 4) == CLASS_DOOR && (item & ID_INCLASS) >= 8
                 && mycst->flier) {
                 SET_PITCH(meptr, 0xE);
@@ -1209,9 +1209,9 @@ void far crit_head_for_loc(unsigned char x, unsigned char y, char z) {
     }
     if (!(char)didmove) {
         SET_B15_6(meptr, 0);
-        SET_SEQ(meptr, 0x2C);           /* UW1: a fixed walking sequence, four frames */
+        SET_SEQ(meptr, SEQ_WALK);           /* UW1: a fixed walking sequence, four frames */
         if (opening) SET_SPEED(meptr, 0);
-        else if (OBJ_GOAL(meptr) == 5) SET_SPEED(meptr, mycst->run);
+        else if (OBJ_GOAL(meptr) == GOAL_ATTACK) SET_SPEED(meptr, mycst->run);
         else SET_SPEED(meptr, mycst->speed);
         SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % 4);
         SET_RATE(meptr, 4);

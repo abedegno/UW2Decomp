@@ -78,13 +78,40 @@ int far DamageInventory(int slot, unsigned char damage, unsigned char type, int 
    0 the body, 1..5 the armour (SlotToDisplay maps slots 3, 0, 1, 2, 4 to 1..5), 6..19
    slots 5..18 (an open bag's 20..27 take 12..19), 20 the open bag, 21 and 22 its scroll
    arrows; FindInventoryHit adds 0x17 for the 3D view and 0x18 for the barter area. */
-extern int16 SaveHandles[23];
+/* Inventory[] slots, as the comment above lists them (the names are descriptive). */
+#define INV_HEAD        0               /* the armour slots, 0..4 (ObjWorn) */
+#define INV_TORSO       1
+#define INV_GLOVES      2
+#define INV_LEGS        3
+#define INV_BOOTS       4
+#define INV_SHOULDER    5               /* the shoulders, 5 and 6 */
+#define INV_HAND        7               /* the hands, 7 and 8 */
+#define INV_WEAPON_HAND 8               /* less lefty; the shield hand is INV_HAND + lefty */
+#define INV_RING        9               /* the rings, 9 and 10 */
+#define INV_PACK        11              /* the backpack, 11..18 */
+#define INV_PACK_LAST   18
+#define INV_BAG         19              /* the open bag itself */
+#define INV_BAG_ITEMS   20              /* its objects on show, 20..27 */
+#define INV_BAG_LAST    27
+#define NUM_INV_SLOTS   28
+/* Display positions: InvDisplay[] and FindInventoryHit's results. */
+#define DISP_BODY       0               /* the paperdoll; 1..5 the armour (SlotToDisplay) */
+#define DISP_PACK       12              /* 12..19, the backpack's last eight or an open bag's
+                                           objects */
+#define DISP_PACK_LAST  19
+#define DISP_BAG        20              /* 0x14, the open bag's picture */
+#define DISP_UP         21              /* 0x15, InvUpArrow */
+#define DISP_DOWN       22              /* 0x16, InvDownArrow */
+#define NUM_DISPLAY     23
+#define DISP_WORLD      0x17            /* the 3D view */
+#define DISP_BARTER     0x18            /* the player's barter area, in barter mode */
+extern int16 SaveHandles[NUM_DISPLAY];
 extern struct Object far *CursorObjPtr;
 extern struct Bag far *OpenBagList;
 extern struct Bag far *OpenBag;
-extern struct InvRect InvDisplay[23];
+extern struct InvRect InvDisplay[NUM_DISPLAY];
 #ifdef __TURBOC__
-extern char SlotToDisplay[28];
+extern char SlotToDisplay[NUM_INV_SLOTS];
 extern char DisplayToSlot[21];
 #else
 /* BAGS.C's OpenTheBag writes an open bag's slots 20..27 to SlotToDisplay[40..47],
@@ -115,7 +142,7 @@ void far DisplayInvSpecial(void);
 void far DoInventoryMouse(int how);
 void far DoInventoryDrag(struct Object far *obj);
 void far DisplayInventory(void);
-extern union Link Inventory[28];
+extern union Link Inventory[NUM_INV_SLOTS];
 extern char ValidLightSlots[4];
 
 #endif

@@ -87,15 +87,49 @@ enum TileType {
                                            is the world (Guide, "The Worlds and Level
                                            Concept") */
 
-/* A texture's terrain type (TxmTerr, from DATA\TERRAIN.DAT): bits 6-7 are a class the
-   code tests with (TxmTerr[t] & 0xC0) >> 6. UW2's TERRAIN.DAT uses 0x40, 0x80 and 0xC0
-   (Underworld Adventures' format document, 4.7: water, lava, ice); fishing needs class 1
-   (ovr110), and a changed floor of class 2 turns solid at random (ovr110's change terrain
-   trap). */
-#define TERR_CLASS      0xC0
+/* Levels the code treats specially (PlayerLevel, 1 to 9). The names are the Guide's
+   (Ultima Underworld's levels: Tybal's Lair, the Ethereal Void endgame map); what each
+   gets is read from the code: on level 7 the player has no mana while Tybal's orb stands
+   (GAMEWRAP.C's do_level_hacks) and Tybal's guards close in (AI.C), and it has the maze
+   spell's floor; on level 9 the automap is off, nothing dropped is kept (OBJPHYS.C), and
+   the player cannot sleep, plant the silver seed or come back at the tree. */
+#define LEVEL_TYBAL     7
+#define LEVEL_VOID      9
+
+/* A texture's terrain type, DATA\TERRAIN.DAT's word for it (walls from offset 0 into
+   w64_types, floors from 0x200 into TxmTerr): the values are UW-Formats' (4.8, "Terrain
+   texture properties", Ultima Underworld's list). The wall types mark special walls;
+   CONVERSE.C, LOOK.C and USEITEMS.C test 8, 9 and 0xB. */
+#define TERR_NORMAL     0x00            /* a normal (solid) wall or floor */
+#define TERR_ANKH       0x02            /* an ankh mural (shrines) */
+#define TERR_STAIRS_UP  0x03
+#define TERR_STAIRS_DOWN 0x04
+#define TERR_PIPE       0x05
+#define TERR_GRATING    0x06
+#define TERR_DRAIN      0x07
+#define TERR_PRINCESS   0x08            /* the chained-up princess */
+#define TERR_WINDOW     0x09
+#define TERR_TAPESTRY   0x0A
+#define TERR_TEXTURED_DOOR 0x0B         /* the textured door */
+#define TERR_WATER      0x10            /* floors: water */
+#define TERR_LAVA       0x20            /* floors: lava */
+
+/* A floor's terrain class: UW1 takes TERRAIN.DAT's word shifted right 4 (PATHFIND.C's
+   hyp_move, WORLDEV.C), and COLLIDE.C's tile terrain word has it in bits 8-9 (the word
+   shifted left 4), from which MOTION.C's collision state takes it as bits 0-1. UW2's
+   TERRAIN.DAT keeps its classes in bits 6-7 instead (0xC0). UW1's floors use only
+   classes 0 to 2; the engine still handles ice (class 3), as UW2 does. */
 #define TERRAIN_WATER   1
 #define TERRAIN_LAVA    2
 #define TERRAIN_ICE     3
+
+/* A level's texture map (TEXTMAPS.C): its wall textures (TxmID), floor textures
+   (floor_IDs) and door textures (ActDoors), and its block in LEV.ARK: 48 wall words, 10
+   floor words, then the six door textures a byte each in three words. */
+#define TXM_WALLS       0x30
+#define TXM_FLOORS      10
+#define TXM_DOORS       6
+#define TXM_BLOCK_SIZE  0x7A            /* (TXM_WALLS + TXM_FLOORS + TXM_DOORS / 2) * 2 */
 
 /* MAP.C: loading and saving the level map. hgt_val converts a floor height to a z. */
 extern int16 hgt_val[17];
@@ -107,16 +141,16 @@ extern struct Tile far *mapdata;
 char far Map_Init(void);
 
 /* TEXTMAPS.C: a level's texture map */
-extern int16 TxmID[0x30];
+extern int16 TxmID[TXM_WALLS];
 void far load_txtmaps(void);
 void far Load_Terrains(int16 *walls, int16 *floors); /* UW1: walls and floors apart */
-extern uint16 TxmTerr[10];
+extern uint16 TxmTerr[TXM_FLOORS];
 char far init_txtlib(void);
 /* UW1: an open archive (ovr091) and the level, as GAMEWRAP.C passes them */
 unsigned char far Txm_Load(char *arc, int lev);
 char far Txm_Save(char *arc, int lev);
 extern uint16 f16p;
-extern int16 floor_IDs[10];
+extern int16 floor_IDs[TXM_FLOORS];
 extern uint16 f32_buf;
 void far load_tr_mem(char *name, int16 *ids, int16 *count, uint16 seg);
 

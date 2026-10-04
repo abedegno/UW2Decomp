@@ -471,7 +471,7 @@ void far bounce_that_guy(void)
     CP->acc[2] = -4;
     if (CP->speed < 0xEB)
         CP->speed = 0xEB;
-    CP->terrain = 0x10;
+    CP->terrain = FOOT_AIR;
     CP->heading -= 0x3000;
     CP->heading += rand() % 0x6000;
 }
@@ -500,7 +500,7 @@ void far do_zbounce(void)
     if (MP.hit == -1 && (1 & Ppd.hits0) && Ppd.floor + Ppd.radius >= MP.pos[2]
         && CP->vel[2] < 0) {
         stop_me();
-        CP->terrain = 2;
+        CP->terrain = FOOT_WATER;
         play_effect(5, CP->x >> 5, CP->y >> 5, (mass - 600) / 50);
         return;
     }
@@ -538,21 +538,21 @@ void far do_zbounce(void)
                 obj = Obj_IntTMem(oCollisions[MP.hit].link.f.index);
                 item = OBJ_ITEM(obj);
                 if (ComObjData[item].solid)
-                    CP->terrain = 1;
+                    CP->terrain = FOOT_FLOOR;
                 else if (OBJ_MAJOR(Obj_IntTMem(CP->index)) != MAJOR_CREATURE)
                     bounce_that_guy();
                 else
-                    CP->terrain = 1;
+                    CP->terrain = FOOT_FLOOR;
             } else if (Ppd.floor + Ppd.radius >= MP.pos[2])
                 CP->terrain = 1 << (Ppd.hits0 & 3);
             else if (OBJ_MAJOR(Obj_IntTMem(CP->index)) != MAJOR_CREATURE)
                 bounce_that_guy();
             else if (Ppd.hits1 & 0x10)
-                CP->terrain = 2;
+                CP->terrain = FOOT_WATER;
             else if (Ppd.hits1 & 0x20)
-                CP->terrain = 4;
+                CP->terrain = FOOT_LAVA;
             else
-                CP->terrain = 1;
+                CP->terrain = FOOT_FLOOR;
         }
         recalc_vecs(0);
     } else {
@@ -589,7 +589,7 @@ unsigned char far full_move(int crossed, int dir)
     if (dir == -1)
         MP.pos[2] += dz;
     else if (dz > 0) {
-        CP->terrain = 0x10;
+        CP->terrain = FOOT_AIR;
         if (MP.pos[2] + dz <= MP.targz)
             MP.pos[2] += dz;
         else {
@@ -597,7 +597,7 @@ unsigned char far full_move(int crossed, int dir)
             return 0;
         }
     } else if (dz < 0) {
-        CP->terrain = 0x10;
+        CP->terrain = FOOT_AIR;
         if (MP.pos[2] + dz >= MP.targz)
             MP.pos[2] += dz;
         else {
@@ -642,20 +642,20 @@ unsigned char far grid_move(int dir)
 unsigned char far set_resterr(unsigned bits)
 {
     if (bits & 0x1000)
-        return 0x10;
+        return FOOT_AIR;
     if (bits & 4) {
-        if (Ppd.index == 1 && (bits & 3) == 1 && (bits & 0xF8) != (bits & 0x90))
-            return 0x20;
+        if (Ppd.index == 1 && (bits & 3) == TERRAIN_WATER && (bits & 0xF8) != (bits & 0x90))
+            return FOOT_SHORE;
         return 1 << (bits & 3);
     }
     if (!(bits & 0x88)) {
         if (bits & 0x10)
-            return 2;
+            return FOOT_WATER;
         if (bits & 0x20)
-            return 4;
-        return 8;
+            return FOOT_LAVA;
+        return FOOT_ICE;
     }
-    return 1;
+    return FOOT_FLOOR;
 }
 
 /* What the mover overlaps at its new cell: runs the terrain and object checks and

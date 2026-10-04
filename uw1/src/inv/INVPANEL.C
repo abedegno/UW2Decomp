@@ -60,14 +60,14 @@ unsigned char far grfx_load_font(char *name);
    provisional name chosen for its key. Inventory (DS:5A92) stays extern, as in UW2. */
 char invArmorObj[6];
 char invArmorQ[6];
-int16 SaveHandles[23];
+int16 SaveHandles[NUM_DISPLAY];
 static int16 panel_mouse;               /* DS:5B04 */
 struct Object far *CursorObjPtr;
 
-char ValidLightSlots[4] = { 5, 6, 7, 8 };
+char ValidLightSlots[4] = { INV_SHOULDER, INV_SHOULDER + 1, INV_HAND, INV_HAND + 1 };
 struct Bag far *OpenBagList = 0;
 struct Bag far *OpenBag = 0;
-struct InvRect InvDisplay[23] = {
+struct InvRect InvDisplay[NUM_DISPLAY] = {
     { 0x0, 0x0, 0x0, 0x0, 0x104, 0xBC, 0x24, 0x45 },
     { 0x10D, 0x90, 0x11D, 0x80, 0x10C, 0xAF, 0x13, 0x32 },
     { 0x10D, 0xBF, 0x11E, 0xAF, 0x10B, 0xBD, 0x14, 0x14 },
@@ -96,10 +96,10 @@ struct InvRect InvDisplay[23] = {
     12, 13, 14, 15, 16, 17, 18, 19
 #define DISPLAY_TO_SLOT 1, 3, 0, 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
 #ifdef __TURBOC__
-char SlotToDisplay[28] = { SLOT_TO_DISPLAY };
+char SlotToDisplay[NUM_INV_SLOTS] = { SLOT_TO_DISPLAY };
 char DisplayToSlot[21] = { DISPLAY_TO_SLOT };
 #else
-char SlotToDisplay[28 + 21] = { SLOT_TO_DISPLAY, DISPLAY_TO_SLOT };     /* inv.h has why */
+char SlotToDisplay[NUM_INV_SLOTS + 21] = { SLOT_TO_DISPLAY, DISPLAY_TO_SLOT };     /* inv.h has why */
 #endif
 /* name: UW2's FM Towns build keeps the next three as unnamed statics; the names are ours. */
 static int16 panel_input = 0;           /* DS:189D, the panel's mouse handler */
@@ -133,11 +133,11 @@ void far BeginInventory(void)
         inv_begun = 1;
         Transparency = 1;
         load_inventory_pix();
-        for (i = 6; i < 23; i++)
+        for (i = 6; i < NUM_DISPLAY; i++)
             SaveHandles[i] = valloc(InvDisplay[i].w, InvDisplay[i].h);
         SaveHandles[0] = valloc(0x10, 0x0A);
         SaveHandles[1] = valloc(0x54, 0x29);
-        for (i = 6; i < 23; i++) {
+        for (i = 6; i < NUM_DISPLAY; i++) {
             if (i == 10) {
                 x = InvDisplay[i].x + 5;
                 w = InvDisplay[i].w - 5;
@@ -166,7 +166,7 @@ void far ClearInventory(void)
 {
     register int i;
 
-    for (i = 0; i < 28; i++)
+    for (i = 0; i < NUM_INV_SLOTS; i++)
         Inventory[i].f.index = 0;
     for (i = 1; i <= 5; i++)
         invArmorObj[i] = 0;
@@ -206,15 +206,15 @@ void far DoInventoryMouse(int how)
     x0 = inplist->x + 0xF0;
     y0 = inplist->y + 0x52;
     hit = FindInventoryHit(x0, y0);
-    if (hit > 0 && hit < 21) {
+    if (hit > 0 && hit < DISP_UP) {
         slot = DisplayToSlot[hit];
         if (CursorObjPtr == 0 && Inventory[slot].f.index == 0) {
-            if (8 - player->lefty == slot)
+            if (INV_WEAPON_HAND - player->lefty == slot)
                 toggle_fightmode();
             mouse_release(1);
             return;
         }
-        if (CursorObjPtr == 0 && slot != -1 && slot != 19)
+        if (CursorObjPtr == 0 && slot != -1 && slot != INV_BAG)
             pick = 1;
         if (pick && mouse_dragged(1)) {
             obj = Obj_PtrTMem(&Inventory[slot]);
@@ -236,7 +236,7 @@ void far DoInventoryMouse(int how)
             }
             held = 1;
             SetCursorObj(slot, split != 0 && split != obj);
-            if (slot > 19) {
+            if (slot > INV_BAG) {
                 for (bag = OpenBag; bag != 0; bag = bag->prev)
                     bag->weight -= ItemWeight(obj);
                 FixOpenBag();
@@ -257,10 +257,10 @@ void far DoInventoryMouse(int how)
     mouse_release(1);
     if (CursorObjPtr != 0 && GameInputMode != 2) {
         GameInputMode = 1;
-        if (RightPanel != 0 && hit != 0x17)
+        if (RightPanel != 0 && hit != DISP_WORLD)
             return;
         if (hit > 0) {
-            if (hit < 21)
+            if (hit < DISP_UP)
                 RearrangeInventory(DisplayToSlot[hit]);
             else {
                 DoSpecialActions(hit);
@@ -299,9 +299,9 @@ void far DoInventoryDrag(struct Object far *obj)
             hit = FindInventoryHit(x, y);
             if (hit > 0) {
                 GameInputMode = 1;
-                if (RightPanel != 0 && hit != 0x17)
+                if (RightPanel != 0 && hit != DISP_WORLD)
                     return;
-                if (hit < 21) {
+                if (hit < DISP_UP) {
                     RearrangeInventory(DisplayToSlot[hit]);
                     if (CursorObjPtr == 0) {
                         GameInputMode = 0;
@@ -348,7 +348,7 @@ void far DisplayInvSpecial(void)
             set_the_color(0x106);
             rectangle(0xF0, 0xBD, 0x13B, 0x52);
         }
-        pic_to_screen(PIC_BODY, InvDisplay[0].x, InvDisplay[0].y, InvDisplay[0].h, InvDisplay[0].w);
+        pic_to_screen(PIC_BODY, InvDisplay[DISP_BODY].x, InvDisplay[DISP_BODY].y, InvDisplay[DISP_BODY].h, InvDisplay[DISP_BODY].w);
         Transparency = 1;
         for (slot = 1; slot <= 5; slot++) {
             if (Inventory[DisplayToSlot[slot]].f.index != 0) {
@@ -373,7 +373,7 @@ void far DisplayInvSpecial(void)
                   InvDisplay[11].h);
         save_rect(SaveHandles[10], InvDisplay[10].x + 5, InvDisplay[10].y, InvDisplay[10].w - 5,
                   InvDisplay[10].h);
-        if (Inventory[9].f.index != 0 || Inventory[10].f.index != 0)
+        if (Inventory[INV_RING].f.index != 0 || Inventory[INV_RING + 1].f.index != 0)
             displayInventoryArray(10, 11);
         if (inv_refresh) {
             grSoftPageFlip();
@@ -394,11 +394,11 @@ void far DisplayInvObject(int slot)
     if (RightPanel == 0) {
         if (slot < 6)
             DisplayInvSpecial();
-        else if (slot < 21)
+        else if (slot < DISP_UP)
             displayInventoryArray(slot, slot);
         else {
             restore_rect(SaveHandles[slot]);
-            if (slot == 21) {
+            if (slot == DISP_UP) {
                 if (InvUpArrow)
                     pic = 0x101B;
             } else if (InvDownArrow)
@@ -520,33 +520,33 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
     major = OBJ_MAJOR(ActiveObj);
     minor = OBJ_MINOR(ActiveObj);
     sub = ActiveObj->id & ID_INCLASS;
-    if (slot == 19) {
+    if (slot == INV_BAG) {
         int j;
 
         if (OpenBag == 0)
             return 0;
         if (OpenBag->prev == 0) {
-            for (j = 11; j <= 18; j++)
+            for (j = INV_PACK; j <= INV_PACK_LAST; j++)
                 if (Inventory[j].f.index == 0)
                     break;
-            if (j > 18)
+            if (j > INV_PACK_LAST)
                 game_sprint(0x102);  /* 'There is no place to put that.' */
-            return j <= 18;
+            return j <= INV_PACK_LAST;
         }
         cont = Obj_PtrTMem(&OpenBag->prev->obj);
-    } else if (slot > 19) {
+    } else if (slot > INV_BAG) {
         struct Object far *o;
 
         o = Obj_PtrTMem(&Inventory[slot]);
         if (o != 0 && OBJ_CLASS(o) == CLASS_CONTAINER)
             cont = o;
         else
-            cont = Obj_PtrTMem(&Inventory[19]);
+            cont = Obj_PtrTMem(&Inventory[INV_BAG]);
     } else
         cont = Obj_PtrTMem(&Inventory[slot]);
-    if (slot < 5) {
+    if (slot < INV_SHOULDER) {
         if (major != MAJOR_HACK) {
-            if (slot == 0 && UseFood(ThePlayer, obj, 0) > 0)
+            if (slot == INV_HEAD && UseFood(ThePlayer, obj, 0) > 0)
                 return -1;
             return 0;
         }
@@ -554,26 +554,26 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
             return 0;
         cls = get_class_data();
         switch (slot) {
-        case 1:
-            return cls[3] == 1;
-        case 3:
-            return cls[3] == 3;
-        case 2:
-            return cls[3] == 4;
-        case 0:
-            return cls[3] == 8;
-        case 4:
-            return cls[3] == 5;
+        case INV_TORSO:
+            return cls[3] == ARMOUR_BODY;
+        case INV_LEGS:
+            return cls[3] == ARMOUR_LEGGINGS;
+        case INV_GLOVES:
+            return cls[3] == ARMOUR_GLOVES;
+        case INV_HEAD:
+            return cls[3] == ARMOUR_HAT;
+        case INV_BOOTS:
+            return cls[3] == ARMOUR_BOOTS;
         }
         return 0;
     }
-    if (slot == 9 || slot == 10) {
+    if (slot == INV_RING || slot == INV_RING + 1) {
         if (major != MAJOR_HACK || OBJ_MINOR(obj) < MINOR_ARMOR)
             return 0;
         cls = get_class_data();
-        return cls[3] == 9;
+        return cls[3] == ARMOUR_RING;
     }
-    if (8 - player->lefty == slot && major == MAJOR_HACK && minor == 0) {
+    if (INV_WEAPON_HAND - player->lefty == slot && major == MAJOR_HACK && minor == 0) {
         if (cont != 0 && OBJ_ITEM(cont) == id
             || OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL) && obj->ol.f.link > 1)
             return 0;
@@ -597,7 +597,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
             struct Bag far *bag;
             char name[26];
 
-            if (slot > 19) {
+            if (slot > INV_BAG) {
                 for (bag = OpenBag; bag != 0; bag = bag->prev) {
                     cap = Containers[Obj_PtrTMem(&bag->obj)->id & ID_INCLASS].capacity;
                     ok &= cap == 0 || bag->weight + weight <= cap;
@@ -638,8 +638,8 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
                 res = major == MAJOR_SPEC && minor == 3 && sub >= 8;
                 break;
             case CONT_FOOD:
-                res = major == MAJOR_MISC && minor == 3 || id == 0xCE || id == 0xCF || id == 0x92
-                    || id == 0x125 || id == 0x11B || id == 0xD9;
+                res = major == MAJOR_MISC && minor == 3 || id == ITEM_PLANT_CE || id == ITEM_PLANT_CF || id == ITEM_CANDLE
+                    || id == ITEM_LEECHES || id == ITEM_ROTWORM_STEW || id == ITEM_DEAD_ROTWORM;
                 break;
             default:
                 res = 0;
@@ -667,10 +667,10 @@ char far AddToEmptySlot(struct Object far *obj, int slot)
     char ok;
 
     ok = 0;
-    if (slot == 19)
+    if (slot == INV_BAG)
         return 0;
     if (AddToInventory(obj, slot)) {
-        if (slot > 18) {
+        if (slot > INV_PACK_LAST) {
             FixOpenBag();
             DisplayOpenBag();
         } else
@@ -702,7 +702,7 @@ char far AddTogether(struct Object far *obj, struct Object far *onto)
     if (OBJ_CLASS(obj) == CLASS_KEY && obj->ol.f.owner != onto->ol.f.owner)
         return 0;
     if (obj->ol.f.link + onto->ol.f.link < 999) {
-        if (OBJ_ITEM(obj) >= 0x10 && OBJ_ITEM(obj) <= 0x12)     /* UW1's missiles */
+        if (OBJ_ITEM(obj) >= ITEM_SLING_STONE && OBJ_ITEM(obj) <= ITEM_ARROW_12)     /* UW1's missiles */
             return 1;
         q1 = obj->qn.f.quality;
         q2 = onto->qn.f.quality;
@@ -746,7 +746,7 @@ char far AddToOccupiedSlot(struct Object far *obj, register int slot)
             target->ol.f.link = 1;
         }
         weight = ComObjData[OBJ_ITEM(obj)].mass * qty;
-        if (slot > 19)
+        if (slot > INV_BAG)
             for (bag = OpenBag; bag != 0; bag = bag->prev)
                 bag->weight += weight;
         PlayerDat.rec.weight += weight;
@@ -775,7 +775,7 @@ char far AddToOccupiedSlot(struct Object far *obj, register int slot)
             Obj_Punt(0, target, 1);
         }
         ok = 0;
-    } else if (slot <= 18) {
+    } else if (slot <= INV_PACK_LAST) {
         struct Object far *old;
 
         old = removeFromSlot(-1, -1, -1, slot, 0);
@@ -801,7 +801,7 @@ void far DisplayInventory(void)
             pic_to_screen(0x2097, 0xEC, 0x77, 0x29, 0x54);
         else
             restore_rect(1);            /* match: FM Towns restores SaveHandles[1]; DOS pushes 1 */
-        displayInventoryArray(6, 0x16);
+        displayInventoryArray(6, DISP_DOWN);
     }
 }
 
@@ -826,7 +826,7 @@ void far displayInventoryArray(int from, int to)
     for (i = from; i <= to; i++) {
         restore_rect(SaveHandles[i]);
         qty[i] = 1;
-        if (i <= 20) {
+        if (i <= DISP_BAG) {
             slot = DisplayToSlot[i];
             if (Inventory[slot].f.index != 0) {
                 obj = Obj_PtrTMem(&Inventory[slot]);
@@ -890,10 +890,10 @@ int far FindInventoryHit(int x, int y)
 
     if (inplist->mode != 4) {
         if (x > PLeft && PLeft + PWid > x && y > PBot && PBot + PHgt > y)
-            return 0x17;
+            return DISP_WORLD;
     } else if (x > 0x8B && x < 0xC1 && y > 0x98 && y < 0xBE)
-        return 0x18;
-    for (i = 0; i < 23; i++) {
+        return DISP_BARTER;
+    for (i = 0; i < NUM_DISPLAY; i++) {
         r = &InvDisplay[i];
         if (r->left <= x && r->right >= x && r->bottom <= y && r->top >= y)
             return i;

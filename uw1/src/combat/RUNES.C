@@ -35,7 +35,7 @@
 #include "ui.h"
 
 /* Declared in each file that uses it, its own way (no header). */
-extern struct Spell far spells[53];
+extern struct Spell far spells[NUM_SPELLS];
 
 /* This file's _BSS, DS:5A90. Set by try_cast, it makes the next rune click start a new
    shelf. */
@@ -54,7 +54,7 @@ char far add_rune(struct Object far *obj)
     int rune;
 
     rune = OBJ_ITEM(obj) - FIRST_RUNESTONE;
-    if (rune < 0 || rune > 0x18)
+    if (rune < 0 || rune > NUM_RUNES)
         return 0;
     Obj_Free(obj);
     player->runebag[rune >> 3] = player->runebag[rune >> 3] | 1 << 7 - (rune & 7);
@@ -193,10 +193,10 @@ void far try_cast(int how)
     }
     mouse_release(1);
     runes = (player->shelf[0] << 10) + (player->shelf[1] << 5) + player->shelf[2];
-    for (i = 0; i < 0x30; i++)
+    for (i = 0; i < NUM_RUNE_SPELLS; i++)
         if (spells[i].runes == runes)
             break;
-    if (i == 0x30) {
+    if (i == NUM_RUNE_SPELLS) {
         not_a_spell();
         return;
     }

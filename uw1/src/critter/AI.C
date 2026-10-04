@@ -65,11 +65,6 @@
 /* Declared in each file that uses it, its own way (no header). */
 extern struct Spell far spells[53];
 
-/* UW1: the combat music themes (sound.h has UW2's 2, 3 and 4). */
-#define MUSIC1_FOE_HURT 5
-#define MUSIC1_COMBAT   6
-#define MUSIC1_DANGER   7
-
 /* UW1: set_htx (AI.C in UW2) is not a function; its three stores are written out at
    each use (PATHFIND.C has the same macro). */
 #define set_htx(h) { meptr->heading = (h) << 5; SET_HEADING(meptr, (h)); SET_FINEHEAD(meptr, 0); }
@@ -137,7 +132,7 @@ void far crit_drunkwalk(void)
         SET_RATE(meptr, 1);
         return;
     }
-    if (OBJ_ATTITUDE(meptr) == 0 && rand() % 2) {
+    if (OBJ_ATTITUDE(meptr) == ATT_HOSTILE && rand() % 2) {
         crit_guard();
         return;
     }
@@ -149,18 +144,18 @@ void far crit_drunkwalk(void)
         else
             SET_PITCH(meptr, rand() % 5 + 0xE);
     }
-    if (OBJ_SEQ(meptr) == 0x20) {
+    if (OBJ_SEQ(meptr) == SEQ_STAND) {
         r = rand() % 16;
         if (mycst->lazy > r && OBJ_FRAME(meptr) == 3)
-            SET_SEQ(meptr, 0x2C);
+            SET_SEQ(meptr, SEQ_WALK);
     } else {
         r = rand() % 16;
         if (mycst->lazy < r && OBJ_FRAME(meptr) == 3)
-            SET_SEQ(meptr, 0x20);
+            SET_SEQ(meptr, SEQ_STAND);
         else
-            SET_SEQ(meptr, 0x2C);
+            SET_SEQ(meptr, SEQ_WALK);
     }
-    if (OBJ_SEQ(meptr) == 0x2C) {
+    if (OBJ_SEQ(meptr) == SEQ_WALK) {
         if (failed && !(char)aligned) {
             head = (meptr->heading + (rand() % 2 * 2 - 1) * 0x40 + 0x100) % 0x100;
             meptr->heading = head;
@@ -188,7 +183,7 @@ void far crit_drunkwalk(void)
             SET_FINEHEAD(meptr, head);
         }
     }
-    if (OBJ_SEQ(meptr) == 0x20) {
+    if (OBJ_SEQ(meptr) == SEQ_STAND) {
         SET_B15_6(meptr, 1);
         SET_SPEED(meptr, 0);
         SET_RATE(meptr, 6);
@@ -219,7 +214,7 @@ void far seg007_1798_3E4(void)
     if (tdistsqr <= 2) {
         if (!(char)control)
             return;
-        SET_SEQ(meptr, 1);
+        SET_SEQ(meptr, SEQ_ATTACK1);
         SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % 4);
         SET_SPEED(meptr, 0);
         SET_HEADING(meptr, deltatotheta(tdx, tdy));
@@ -254,8 +249,8 @@ void far crit_mill(void)
 
     if (!(char)control)
         return;
-    if (OBJ_ATTITUDE(meptr) == 0 && OBJ_GOAL(meptr) != 4) {
-        critter_set_goal(4, 1);
+    if (OBJ_ATTITUDE(meptr) == ATT_HOSTILE && OBJ_GOAL(meptr) != GOAL_GUARD) {
+        critter_set_goal(GOAL_GUARD, 1);
         return;
     }
     dx = myxhome - myxpos;
@@ -281,11 +276,11 @@ void far crit_guard(void)
     if (!(char)control)
         return;
     switch (OBJ_ATTITUDE(meptr)) {
-    case 0:
+    case ATT_HOSTILE:
         SET_GTARG(meptr, 1);
         set_up_target();
         if (OBJ_B19_0(meptr)) {
-            critter_set_goal(5, 1);
+            critter_set_goal(GOAL_ATTACK, 1);
             return;
         }
         if (OBJ_B19_1(meptr)) {
@@ -297,12 +292,12 @@ void far crit_guard(void)
         if (rand() % 16 < mycst->alert) {
             found = target_found(&x, &y);
             switch (found) {
-            case 0:
+            case ATT_HOSTILE:
                 SET_B19_0(meptr, 1);
                 set_loc(x, y, tzpos);
-                critter_set_goal(5, 1);
+                critter_set_goal(GOAL_ATTACK, 1);
                 return;
-            case 2:
+            case ATT_MELLOW:
                 SET_B19_1(meptr, 1);
                 if (rand() % 2 == 0) {
                     crit_head_for_loc(x, y, tzpos);
@@ -313,14 +308,14 @@ void far crit_guard(void)
         }
     }
     switch (OBJ_GOAL(meptr)) {
-    case 2:
+    case GOAL_WANDER:
         crit_drunkwalk();
         break;
-    case 0:
-    case 7:
+    case GOAL_STAND:
+    case GOAL_STAND_7:
         SET_RATE(meptr, 6);
         SET_SPEED(meptr, 0);
-        SET_SEQ(meptr, 0x20);
+        SET_SEQ(meptr, SEQ_STAND);
         if (rand() % 2)
             SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % 4);
         break;
@@ -350,14 +345,14 @@ void far crit_offense(void)
         return;
     /* UW1: in Tybal's lair (level 7) while the orb is whole, his guards (race 0x13) close
        right in */
-    if (PlayerLevel == 7 && !player->orb && mycst->race == 0x13)
+    if (PlayerLevel == LEVEL_TYBAL && !player->orb && mycst->race == 0x13)
         how = 1;
     dist = tdx * tdx + tdy * tdy;
     dx = myxhome - myxpos;
     dy = myyhome - myypos;
     homedist = dx * dx + dy * dy;
     if (OBJ_GTARG(meptr) == 1)
-        SET_ATTITUDE(meptr, 0);
+        SET_ATTITUDE(meptr, ATT_HOSTILE);
     if ((dist < 0x64 || myxpos == txpos && myypos == typos)
         && (abs((signed char)myzpos - tzpos) < 4 || mycst->flier))
         crit_attack(dist);  /* UW1: then on to the ranged attack's test */
@@ -367,19 +362,19 @@ void far crit_offense(void)
     } else if (mycst->arms[0].item >> 4 == CLASS_MISSILE)
         attacked = crit_missile_attack();
     if (attacked) {
-        if (OBJ_SEQ(meptr) != 5 && OBJ_SEQ(meptr) != 0xD && OBJ_SEQ(meptr) != 1) {
-            SET_SEQ(meptr, 0);
+        if (OBJ_SEQ(meptr) != SEQ_FIRE && OBJ_SEQ(meptr) != SEQ_CAST && OBJ_SEQ(meptr) != SEQ_ATTACK1) {
+            SET_SEQ(meptr, SEQ_COMBAT);
             SET_RATE(meptr, 4);
             SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % 4);
             SET_SPEED(meptr, 0);
         }
         return;
     }
-    if (dist > 0x100 && OBJ_OLDGOAL(meptr) == 4 && !OBJ_B19_5(meptr)
+    if (dist > 0x100 && OBJ_OLDGOAL(meptr) == GOAL_GUARD && !OBJ_B19_5(meptr)
         && mycst->range * mycst->range * 4 < homedist) {
         SET_B19_0(meptr, 0);
         SET_B19_1(meptr, 0);
-        critter_set_goal(4, 0);
+        critter_set_goal(GOAL_GUARD, 0);
         return;
     }
     crit_offense_find_target(txpos, typos, mycst->b2D_0 ? how : 1);
@@ -407,26 +402,26 @@ unsigned char far crit_attack(register unsigned dist)
     if (dist < 0x31) {
         if (rand() % 4 == 0) {
             head = (head + (rand() % 2 * 2 - 1) * 2 + 8) % 8;
-            SET_SEQ(meptr, 0);
+            SET_SEQ(meptr, SEQ_COMBAT);
             meptr->heading = head << 5;
             SET_SPEED(meptr, mycst->speed * 2 / 3);
         } else {
             head = (head + 4) % 8;
-            SET_SEQ(meptr, 7);
+            SET_SEQ(meptr, SEQ_BACK_OFF);
             meptr->heading = head << 5;
             SET_SPEED(meptr, 2);
         }
     } else if (dist > 0x51) {
-        SET_SEQ(meptr, 0x2C);
+        SET_SEQ(meptr, SEQ_WALK);
         meptr->heading = head << 5;
         SET_SPEED(meptr, 2);
     } else if (rand() % 0x40 < mycst->attr[1]) {
         head = rand() % 8;
-        SET_SEQ(meptr, 0);
+        SET_SEQ(meptr, SEQ_COMBAT);
         meptr->heading = head << 5;
         SET_SPEED(meptr, 1);
     } else {
-        SET_SEQ(meptr, 0);
+        SET_SEQ(meptr, SEQ_COMBAT);
         meptr->heading = head << 5;
         SET_SPEED(meptr, 0);
     }
@@ -507,9 +502,9 @@ char far maybe_cast_defensive_spell(void)     /* UW1: char (callers cbw) */
 {
     if (mycst->spells[2] != 0xFF && rand() % 0x100 < mycst->caster
         && !(char)anti_magic_p(myxpos, myypos)
-        && (PlayerLevel != 7 || player->orb || mycst->race != 0x13)) {
+        && (PlayerLevel != LEVEL_TYBAL || player->orb || mycst->race != 0x13)) {
         SET_SPEED(meptr, 0);
-        SET_SEQ(meptr, 0xD);
+        SET_SEQ(meptr, SEQ_CAST);
         SET_CAST(meptr, 3);
         SET_FRAME(meptr, 0);
         return 1;
@@ -528,7 +523,7 @@ unsigned char far crit_magik_attack(void)
     register int r;
 
     if (anti_magic_p(myxpos, myypos)
-        || PlayerLevel == 7 && !player->orb && mycst->race == 0x13)
+        || PlayerLevel == LEVEL_TYBAL && !player->orb && mycst->race == 0x13)
         return 0;
     if (tdistsqr < 0x40 && !(char)anti_magic_p(myxpos, myypos)
         && line_of_sight(myxpost, myypost, OBJ_Z(meptr) + ComObjData[OBJ_ITEM(meptr)].height,
@@ -537,7 +532,7 @@ unsigned char far crit_magik_attack(void)
         r = rand() % 0x80;
         if (mycst->caster > r) {
             SET_SPEED(meptr, 0);
-            SET_SEQ(meptr, 0xD);
+            SET_SEQ(meptr, SEQ_CAST);
             SET_CAST(meptr, rand() % 16 < 0xB ? 1 : 2);
             SET_FRAME(meptr, 0);
         }
@@ -557,7 +552,7 @@ unsigned char far crit_missile_attack(void)
         && look_for_target(1)) {
         if (rand() % 0xC0 <= mycst->attr[1]) {
             SET_SPEED(meptr, 0);
-            SET_SEQ(meptr, 5);
+            SET_SEQ(meptr, SEQ_FIRE);
             SET_FRAME(meptr, 0);
         }
         return 1;
@@ -594,7 +589,7 @@ void far crit_defense(void)
         SET_SPEED(meptr, 0);
         set_htx(head);
         SET_RATE(meptr, 4);
-        SET_SEQ(meptr, 0);
+        SET_SEQ(meptr, SEQ_COMBAT);
         SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % 4);
     }
 }
@@ -627,29 +622,29 @@ void far crit_flee(void)
     if (tdistsqr <= 3 && abs(dz) < 0x10) {
         if (rand() % 0x100 < mycst->b1C_0 >> 3 || failed && !(char)aligned) {
             SET_B19_4(meptr, 1);
-            critter_set_goal(9, OBJ_GTARG(meptr));
+            critter_set_goal(GOAL_CORNERED, OBJ_GTARG(meptr));
             return;
         }
         meptr->heading = (head + 4) % 8 << 5;
         SET_HEADING(meptr, head);
         SET_FINEHEAD(meptr, 0);
-        SET_SEQ(meptr, 7);
+        SET_SEQ(meptr, SEQ_BACK_OFF);
         SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % 4);
         SET_SPEED(meptr, (mycst->speed + 1) / 2);
         return;
     }
     if (failed && !(char)aligned) {
         if (tdistsqr < 9) {
-            if (OBJ_GOAL(meptr) == 9) {
+            if (OBJ_GOAL(meptr) == GOAL_CORNERED) {
                 SET_SPEED(meptr, 0);
                 set_htx(head);
                 SET_RATE(meptr, 4);
-                SET_SEQ(meptr, 0);
+                SET_SEQ(meptr, SEQ_COMBAT);
                 SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % 4);
                 return;
             }
             SET_B19_4(meptr, 1);
-            critter_set_goal(9, OBJ_GTARG(meptr));
+            critter_set_goal(GOAL_CORNERED, OBJ_GTARG(meptr));
             return;
         }
         newh = (((meptr->heading >> 5) + (rand() % 2 * 2 - 1) * 2 + 8) % 8 << 5) + rand() % 0x20;
@@ -674,7 +669,7 @@ void far crit_flee(void)
         SET_SPEED(meptr, mycst->run);
     else
         SET_SPEED(meptr, mycst->speed);
-    SET_SEQ(meptr, 0x2C);
+    SET_SEQ(meptr, SEQ_WALK);
     SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % 4);
     SET_RATE(meptr, 4);
 }
@@ -741,7 +736,7 @@ void far crit_talk(void)
     if (found != 1 && dist < 0x190) {
         head = deltatotheta(tdx, tdy);
         SET_SPEED(meptr, 0);
-        SET_SEQ(meptr, 0x20);
+        SET_SEQ(meptr, SEQ_STAND);
         SET_RATE(meptr, 6);
         if (rand() % 2)
             SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % 4);
@@ -757,7 +752,7 @@ void far crit_talk(void)
     } else {
         SET_RATE(meptr, 6);
         SET_SPEED(meptr, 0);
-        SET_SEQ(meptr, 0x20);
+        SET_SEQ(meptr, SEQ_STAND);
         if (rand() % 2)
             SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % 4);
     }
@@ -777,7 +772,7 @@ void far check_out_player(void)
         if (dist < 0x90) {
             head = deltatotheta(tdx, tdy);
             SET_SPEED(meptr, 0);
-            SET_SEQ(meptr, 0x20);
+            SET_SEQ(meptr, SEQ_STAND);
             SET_RATE(meptr, 6);
             if (rand() % 2)
                 SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % 4);
@@ -797,14 +792,14 @@ void far crit_hover(void)
         return;
     dx = myxhome - myxpos;
     dy = myyhome - myypos;
-    if (OBJ_ATTITUDE(meptr) == 0 && OBJ_GOAL(meptr) != 4)
-        critter_set_goal(4, 1);
+    if (OBJ_ATTITUDE(meptr) == ATT_HOSTILE && OBJ_GOAL(meptr) != GOAL_GUARD)
+        critter_set_goal(GOAL_GUARD, 1);
     else if (dx != 0 || dy != 0)
         crit_head_for_loc(myxhome, myyhome, Map_GetAddr(myxhome, myyhome)->height);
     else {
         SET_RATE(meptr, 6);
         SET_SPEED(meptr, 0);
-        SET_SEQ(meptr, 0x20);
+        SET_SEQ(meptr, SEQ_STAND);
         if (rand() % 2)
             SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % 4);
     }
@@ -1070,7 +1065,7 @@ unsigned char far critter_ai(void)
             + ((signed char)myypos - lastYeye) * ((signed char)myypos - lastYeye);
     pdist = ((signed char)myxpos - px) * ((signed char)myxpos - px)
           + ((signed char)myypos - py) * ((signed char)myypos - py);
-    if (eyedist > 0x64 && pdist > 0x64 && OBJ_GOAL(meptr) != 3) {
+    if (eyedist > 0x64 && pdist > 0x64 && OBJ_GOAL(meptr) != GOAL_FOLLOW) {
         SET_BIN(meptr, (OBJ_BIN(meptr) + 8) % 16);
         return 1;
     }
@@ -1096,7 +1091,7 @@ unsigned char far critter_ai(void)
     didhitobj = 0;
     hitadoor = 0;
     dontchangedz = 0;
-    if (OBJ_SEQ(meptr) != 0x2C && OBJ_SEQ(meptr) != 0x20 && OBJ_B15_7(meptr)) {
+    if (OBJ_SEQ(meptr) != SEQ_WALK && OBJ_SEQ(meptr) != SEQ_STAND && OBJ_B15_7(meptr)) {
         freepaths |= 1 << OBJ_PATH(meptr);
         SET_B15_7(meptr, 0);
     }
@@ -1127,9 +1122,9 @@ unsigned char far critter_ai(void)
     myoldfacing = (OBJ_HEADING(meptr) << 5) + OBJ_FINEHEAD(meptr);
     myoldspeed = meptr->b13 & 0x7F;
     myheight = ComObjData[OBJ_ITEM(meptr)].height;
-    if (OBJ_GOAL(meptr) == 0xB || OBJ_GOAL(meptr) == 3)
+    if (OBJ_GOAL(meptr) == GOAL_FLUTTER || OBJ_GOAL(meptr) == GOAL_FOLLOW)
         critter_mv();
-    else if (OBJ_SEQ(meptr) == 0xC) {
+    else if (OBJ_SEQ(meptr) == SEQ_DYING) {
         if (OBJ_FRAME(meptr) == 3) {
             death_check(meptr, 1);
             XP = OBJ_HOMEX(meptr);
@@ -1142,35 +1137,35 @@ unsigned char far critter_ai(void)
             return 0;
         } else
             SET_FRAME(meptr, OBJ_FRAME(meptr) + 1);
-    } else if (OBJ_SEQ(meptr) >= 1 && OBJ_SEQ(meptr) <= 3) {
+    } else if (OBJ_SEQ(meptr) >= SEQ_ATTACK1 && OBJ_SEQ(meptr) <= SEQ_ATTACK3) {
         if (OBJ_FRAME(meptr) == 0 && OBJ_GTARG(meptr) == 1) {
-            if (get_current_music() < MUSIC1_FOE_HURT || get_current_music() > MUSIC1_DANGER)
-                set_new_music(MUSIC1_COMBAT);
+            if (get_current_music() < MUSIC_FOE_HURT || get_current_music() > MUSIC_DANGER)
+                set_new_music(MUSIC_COMBAT);
             lastcombattime = GAME_TIME();
         }
         if (OBJ_FRAME(meptr) == 4) {
             critter_attack(meptr, rand() % 9, atk_charge[OBJ_ATKFRAME(meptr)].charge, OBJ_SEQ(meptr) - 1,
                            mycst->b0F);
-            SET_SEQ(meptr, 0);
+            SET_SEQ(meptr, SEQ_COMBAT);
             SET_FRAME(meptr, 0);
             SET_ATKFRAME(meptr, 0);
         } else
             SET_FRAME(meptr, OBJ_FRAME(meptr) + 1);
-    } else if (OBJ_SEQ(meptr) == 0xD && OBJ_CAST(meptr)) {
+    } else if (OBJ_SEQ(meptr) == SEQ_CAST && OBJ_CAST(meptr)) {
         if (OBJ_FRAME(meptr) == 4) {
             missile_try = compute_trz_or_try_rather(0x1E, 0);
             cast(mycst->spells[OBJ_CAST(meptr) - 1], meptr, 0L);
-            SET_SEQ(meptr, 0);
+            SET_SEQ(meptr, SEQ_COMBAT);
             SET_FRAME(meptr, 0);
             SET_CAST(meptr, 0);
         } else
             SET_FRAME(meptr, OBJ_FRAME(meptr) + 1);
-    } else if (OBJ_SEQ(meptr) == 5) {
+    } else if (OBJ_SEQ(meptr) == SEQ_FIRE) {
         if (OBJ_FRAME(meptr) == 4) {
             type = mycst->arms[0].item & ID_INCLASS;
             missile_try = compute_trz_or_try_rather(Missile[type].type, 1);
             critter_fire(meptr, type, Missile[type].type);
-            SET_SEQ(meptr, 0);
+            SET_SEQ(meptr, SEQ_COMBAT);
             SET_FRAME(meptr, 0);
         } else
             SET_FRAME(meptr, OBJ_FRAME(meptr) + 1);
@@ -1195,9 +1190,9 @@ void far critter_mv(void)
     didmove = 0;
     SET_B18_5(meptr, 0);
     SET_B15_6(meptr, 0);
-    if (OBJ_GOAL(meptr) == 0xB)
+    if (OBJ_GOAL(meptr) == GOAL_FLUTTER)
         goto do_goal;
-    if (OBJ_SEQ(meptr) == 0x2C && (OBJ_FRAME(meptr) & 1) == 1) {
+    if (OBJ_SEQ(meptr) == SEQ_WALK && (OBJ_FRAME(meptr) & 1) == 1) {
         switch (mycst->sound) {
         case 1:
             if (OBJ_FRAME(meptr) == 1)
@@ -1224,10 +1219,10 @@ void far critter_mv(void)
     if ((!OBJ_ALLY(meptr) && crithit != myid && mycst->race == typehit && !OBJ_LONER(meptr) || OBJ_ALLY(meptr))
         && crithittime + 0x200 > player->game_clock
         && abs(myxpos - hitx) + abs(myypos - hity) < mycst->hearing) {
-        SET_ATTITUDE(meptr, 0);
+        SET_ATTITUDE(meptr, ATT_HOSTILE);
         SET_B19_0(meptr, 1);
-        if (OBJ_GOAL(meptr) != 9 && OBJ_GOAL(meptr) != 6) {
-            critter_set_goal(5, OBJ_ALLY(meptr) ? crithit : 1);
+        if (OBJ_GOAL(meptr) != GOAL_CORNERED && OBJ_GOAL(meptr) != GOAL_FLEE) {
+            critter_set_goal(GOAL_ATTACK, OBJ_ALLY(meptr) ? crithit : 1);
             set_loc(hitx, hity, hitpz);
         }
     }
@@ -1240,71 +1235,71 @@ void far critter_mv(void)
             goto do_goal;
         targeted = 1;
         if (meptr->last_hit == 1) {
-            SET_ATTITUDE(meptr, 0);
+            SET_ATTITUDE(meptr, ATT_HOSTILE);
             set_loc(OBJ_HOMEX(ThePlayer), OBJ_HOMEY(ThePlayer), OBJ_Z(ThePlayer) >> 3);
             SET_B19_0(meptr, 1);
         }
         if (tdistsqr > 2 && (!mycst->b2D_0 || anti_magic_p(myxpos, myypos))) {
             SET_B19_5(meptr, 1);
-            critter_set_goal(5, meptr->last_hit);
+            critter_set_goal(GOAL_ATTACK, meptr->last_hit);
         } else if (OBJ_B19_5(meptr))
-            critter_set_goal(5, meptr->last_hit);
+            critter_set_goal(GOAL_ATTACK, meptr->last_hit);
         else if (!OBJ_B19_4(meptr) && should_i_flee(mycst->avghit, meptr->hp, mycst->b1C_0, OBJ_DAMAGE(meptr)))
-            critter_set_goal(6, meptr->last_hit);
+            critter_set_goal(GOAL_FLEE, meptr->last_hit);
         else if (OBJ_B19_4(meptr)) {
             SET_B19_4(meptr, 1);
-            critter_set_goal(9, meptr->last_hit);
+            critter_set_goal(GOAL_CORNERED, meptr->last_hit);
         } else
-            critter_set_goal(5, meptr->last_hit);
+            critter_set_goal(GOAL_ATTACK, meptr->last_hit);
         meptr->last_hit = 0;
         meptr->b11 = 0;
     }
 do_goal:
     switch (OBJ_GOAL(meptr)) {
-    case 0:
-    case 7:
+    case GOAL_STAND:
+    case GOAL_STAND_7:
         crit_guard();
         break;
-    case 1:
+    case GOAL_GO_HOME:
         crit_head_for_loc(myxhome, myyhome, Map_GetAddr(myxhome, myyhome)->height);
         break;
-    case 2:
+    case GOAL_WANDER:
         crit_drunkwalk();
         break;
-    case 3:
+    case GOAL_FOLLOW:
         if (!targeted && !set_up_target())
             critter_discard_goal();
         else
             seg007_1798_3E4();
         break;
-    case 4:
+    case GOAL_GUARD:
         crit_guard();
         break;
-    case 5:
+    case GOAL_ATTACK:
         if (!targeted && !set_up_target())
             critter_discard_goal();
         else
             crit_offense();
         break;
-    case 6:
+    case GOAL_FLEE:
         if (!targeted && !set_up_target())
             critter_discard_goal();
         else
             crit_flee();
         break;
-    case 8:
+    case GOAL_MILL:
         crit_mill();
         break;
-    case 9:
+    case GOAL_CORNERED:
         if (!targeted && !set_up_target())
             critter_discard_goal();
         else
             crit_defense();
         break;
-    case 10:
+    case GOAL_TALK:
         crit_talk();
         break;
-    case 11:
+    case GOAL_FLUTTER:
         SET_RATE(meptr, 4);
         SET_SPEED(meptr, rand() % 2);
         meptr->heading = rand() % 0x100;
@@ -1312,7 +1307,7 @@ do_goal:
         SET_FRAME(meptr, (OBJ_FRAME(meptr) + 1) % 4);
         SET_B15_6(meptr, 1);
         break;
-    case 12:
+    case GOAL_HOVER:
         crit_hover();
         break;
     default:
@@ -1380,7 +1375,7 @@ unsigned char far acceptable_danger(void)
 {
     register unsigned char d;
 
-    if (OBJ_ATTITUDE(meptr) != 0 || mycst->avghit == 0 || OBJ_DOORDIR(meptr))
+    if (OBJ_ATTITUDE(meptr) != ATT_HOSTILE || mycst->avghit == 0 || OBJ_DOORDIR(meptr))
         return 0;
     /* UW1: 0 for the critter with conversation 0x16 on level 6 */
     if (PlayerLevel == 6 && meptr->whoami == 0x16)
@@ -1393,7 +1388,7 @@ unsigned char far acceptable_danger(void)
    that in its old goal, so critter_discard_goal can return it to guarding. */
 void far critter_set_goal(unsigned char goal, int target)
 {
-    if (OBJ_GOAL(meptr) == 4)
+    if (OBJ_GOAL(meptr) == GOAL_GUARD)
         SET_OLDGOAL(meptr, OBJ_GOAL(meptr));
     SET_GOAL(meptr, goal);
     SET_GTARG(meptr, target);
@@ -1406,9 +1401,9 @@ void far critter_discard_goal(void)
     if (OBJ_OLDGOAL(meptr)) {
         SET_GOAL(meptr, OBJ_OLDGOAL(meptr));
         SET_GTARG(meptr, 1);
-        SET_OLDGOAL(meptr, 0);
+        SET_OLDGOAL(meptr, GOAL_STAND);
     } else {
-        SET_GOAL(meptr, 2);
+        SET_GOAL(meptr, GOAL_WANDER);
         SET_GTARG(meptr, 0);
     }
 }
@@ -1418,7 +1413,7 @@ void far critter_discard_goal(void)
 unsigned char far go_into_dying_sequence(struct Object far *obj)
 {
     if (obj->whoami == 0 || death_check(obj, 0)) {
-        SET_SEQ(obj, 0xC);
+        SET_SEQ(obj, SEQ_DYING);
         SET_FRAME(obj, 0);
         SET_RATE(obj, 4);
         obj->hp = 0;
@@ -1432,7 +1427,7 @@ unsigned char far go_into_dying_sequence(struct Object far *obj)
    started dying here, 0 if it was already dying or death_check kept it alive. */
 unsigned char far crit_die(struct Object far *obj)
 {
-    if (OBJ_SEQ(obj) != 0xC) {
+    if (OBJ_SEQ(obj) != SEQ_DYING) {
         if (!(char)go_into_dying_sequence(obj))
             return 0;
         switch (mycst->death) {
@@ -1498,16 +1493,16 @@ unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
     if (who == 1) {
         ratio = (obj->hp << 6) / (cr->avghit + 1);
         if (ratio < 0x10)
-            set_new_music(MUSIC1_FOE_HURT);
+            set_new_music(MUSIC_FOE_HURT);
         else
-            set_new_music(MUSIC1_COMBAT);
+            set_new_music(MUSIC_COMBAT);
         lastcombattime = GAME_TIME();
     } else if (obj == ThePlayer && who) {
         ratio = (ThePlayer->hp << 6) / (playerdat->avghit + 1);
         if (ratio < 0x10)
-            set_new_music(MUSIC1_DANGER);
+            set_new_music(MUSIC_DANGER);
         else
-            set_new_music(MUSIC1_COMBAT);
+            set_new_music(MUSIC_COMBAT);
         lastcombattime = GAME_TIME();
     }
     return 0;

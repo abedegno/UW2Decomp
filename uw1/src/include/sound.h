@@ -38,20 +38,42 @@ struct DrvrDesc {
 };
 HOST_LAYOUT_END
 
-/* Music themes, for set_new_music and load_new_music: theme n is SOUND\UWAnn.XMI (UWRnn.XMI
-   for the Roland card) with nn the number in octal (load_new_music builds the name). The
-   names say when the game asks for each; UW-Formats' song list ("Enemy wounded", "Combat",
-   "Dangerous Situation", "Armed", "Victory") agrees for 2 to 6. */
-#define MUSIC_THEME     1               /* the main menu and start-up */
-#define MUSIC_FOE_HURT  2               /* the player's foe is nearly dead (AI.C) */
-#define MUSIC_COMBAT    3
-#define MUSIC_DANGER    4               /* the player is badly hurt */
-#define MUSIC_ARMED     5               /* the weapon is drawn */
-#define MUSIC_VICTORY   6               /* a creature is killed (COMBAT.C) */
-#define MUSIC_DEATH     7               /* the player dies (SKILLS.C) */
-#define MUSIC_WALK_FIRST 8              /* the walking themes, 8 to 15 (UWA10..UWA17), chosen */
-#define MUSIC_WALK_LAST 15              /* by world (SOUND.C's walking_music) */
-#define MUSIC_INTRO     0x18            /* UWA30 */
+/* Music themes, for set_new_music and load_new_music: theme n is SOUND\UWnn.XMI (on the
+   MT-32, sound card 6) or SOUND\AWnn.XMI, nn the number in octal (load_new_music builds
+   the name); UW1 ships UW01 to UW07, UW10 to UW13 and UW15, so themes 1 to 11 and 13.
+   UW1's numbers are its own (UW2's list in UW-Formats does not apply): the names say
+   where the game asks for each, read from the callers. change_music_maybe picks a
+   walking theme at random from 2 to 4 (seg014_1DC5_15C5) and counts 5 to 7 as combat
+   themes; the weapon drawn asks for 8 (INTERACT.C); 9 and 11 play to their end. */
+#define MUSIC_THEME     1               /* the start-up and the main menu */
+#define MUSIC_WALK_FIRST 2              /* the walking themes, 2 to 4, one at random */
+#define MUSIC_WALK_LAST 4
+#define MUSIC_FOE_HURT  5               /* a creature the player hits is below a quarter
+                                           of its hit points (AI.C's damage_critter) */
+#define MUSIC_COMBAT    6               /* a critter attacks the player, or is hit */
+#define MUSIC_DANGER    7               /* the player is below a quarter of their hit
+                                           points */
+#define MUSIC_ARMED     8               /* the weapon is drawn */
+#define MUSIC_VICTORY   9               /* a creature is killed (COMBAT.C's
+                                           player_killed_a) */
+#define MUSIC_DEATH     10              /* the player dies (SKILLS.C's player_is_dead) */
+#define MUSIC_MAPS      13              /* conversations, the automap and sleep (UW15.XMI;
+                                           the UnderworldGodot port calls it
+                                           MapsAndLegends) */
+
+/* Sound cards, UW.CFG's card numbers (seg014_1DC5_1D0D reads them): the music card picks
+   SOUND.C's music_drivers entry, the speech card its speech_drivers entry. */
+#define CARD_NONE       0
+#define CARD_PCSPKR     1               /* PCSPKR.ADV: effects only, no music */
+#define CARD_ADLIB      2               /* ADLIB.ADV */
+#define CARD_SBFM       3               /* SBFM.ADV */
+#define CARD_SBPFM      4               /* SBPFM.ADV */
+#define CARD_PASFM      5               /* PASFM.ADV */
+#define CARD_MT32       6               /* MT32MPU.ADV: UWnn.XMI, and every effect's timbre
+                                           installed at start-up */
+/* struct DrvrDesc's drvr_type (AIL 2's driver types) */
+#define DRVR_DIGITAL    2
+#define DRVR_XMIDI      3
 
 /* SOUND.C: sound and music */
 extern char speechok;

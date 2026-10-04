@@ -316,7 +316,7 @@ unsigned char far set_phys_data(struct Object far *obj, struct Phys *pp)
         obj->hp = pp->hp;
     else
         obj->qn.f.quality = pp->hp;
-    if (pp->terrain & 4 && rand() % 5 == 0)
+    if (pp->terrain & FOOT_LAVA && rand() % 5 == 0)
         damage_item(obj, 0L, XP, YP, 1, 8);
     if (OBJ_MAJOR(obj) != MAJOR_CREATURE) {
         if (obj > (struct Object far *)objdata) {
@@ -440,7 +440,7 @@ struct Object far * far mob_to_static(struct Object far *obj)
                 game_sprint(0x116);
                 editchng(0x400);
             } else {
-                SET_ITEM(obj, 0x1C2);
+                SET_ITEM(obj, ITEM_EXPLOSION_1C2);
                 for (i = 8; player->talismans <= i; i--) {
                     SET_Z(obj, OBJ_Z(obj) + (rand() & 7) + 4);
                     fireball_effect(obj, XP + rand() % 3 - 1, YP + rand() % 3 - 1);
@@ -451,7 +451,7 @@ struct Object far * far mob_to_static(struct Object far *obj)
     }
     if (fate > 0 && fate <= 8 && (rand() & 7) < fate && Obj_Elem_Fate(10, obj))
         keep = 0;
-    if (PlayerLevel == 9)
+    if (PlayerLevel == LEVEL_VOID)
         keep = 0;
     tile = Map_GetAddr(XP, YP);
     head = &tile->objects;

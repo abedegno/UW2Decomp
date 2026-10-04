@@ -63,7 +63,7 @@ int far FindEmptySlot(void)
 {
     register int slot;
 
-    for (slot = 5; slot <= 18; slot++)
+    for (slot = INV_SHOULDER; slot <= INV_PACK_LAST; slot++)
         if (Inventory[slot].f.index == 0)
             return slot;
     return -1;
@@ -90,7 +90,7 @@ unsigned char far AddToInventory(struct Object far *obj, int slot)
     if (fits > 0) {
         mass = ItemWeight(obj);
         if (slot >= 0) {
-            if (slot > 18) {
+            if (slot > INV_PACK_LAST) {
                 owner = Obj_PtrTMem(&OpenBag->obj);
                 for (bag = OpenBag; bag; bag = bag->prev)
                     bag->weight += mass;
@@ -115,7 +115,7 @@ int far FindSlot(struct Object far *obj)
     register int i;
 
     index = Obj_MemTPtr(obj);
-    for (i = 0; i < 20; i++) {
+    for (i = 0; i < DISP_BAG; i++) {
         slot = DisplayToSlot[i];
         if (Inventory[slot].f.index != 0) {
             if (Inventory[slot].f.index == index)
@@ -135,10 +135,10 @@ int far FindSlot(struct Object far *obj)
 struct Object far * far FindObj(int major, int minor, int cls, int how, register int16 *where)
 {
     struct Object far *contents;
-    struct Object far *objs[19];
+    struct Object far *objs[INV_PACK_LAST + 1];
     register int i;
 
-    for (i = 0; i < 11; i++) {
+    for (i = 0; i < INV_PACK; i++) {
         objs[i] = Obj_PtrTMem(&Inventory[i]);
         if (objs[i] != 0 && (major < 0 || OBJ_MAJOR(objs[i]) == major)
             && (minor < 0 || OBJ_MINOR(objs[i]) == minor)
@@ -149,7 +149,7 @@ struct Object far * far FindObj(int major, int minor, int cls, int how, register
     }
     if (how == 1)
         return 0;
-    for (; i <= 18; i++) {
+    for (; i <= INV_PACK_LAST; i++) {
         objs[i] = Obj_PtrTMem(&Inventory[i]);
         if (objs[i] != 0 && (major < 0 || OBJ_MAJOR(objs[i]) == major)
             && (minor < 0 || OBJ_MINOR(objs[i]) == minor)
@@ -162,7 +162,7 @@ struct Object far * far FindObj(int major, int minor, int cls, int how, register
         return 0;
     if (how == 3)
         return 0;
-    for (i = 0; i <= 18; i++) {
+    for (i = 0; i <= INV_PACK_LAST; i++) {
         if (objs[i] != 0 && !OBJ_ISQUANT(objs[i])) {
             contents = Obj_PtrTMem(&objs[i]->ol.link);
             objs[i] = find_obj(major, minor, cls, &contents);
@@ -213,7 +213,7 @@ struct Object far * far pick_inv(int how)
     x = inplist->x + 0xF0;
     y = inplist->y + 0x52;
     hit = FindInventoryHit(x, y);
-    if (hit < 0 || hit >= 20)
+    if (hit < 0 || hit >= DISP_BAG)
         return 0;
     if (how == 2)
         return WhatsInSlot(DisplayToSlot[hit]);
@@ -251,12 +251,12 @@ unsigned char far invRemoveObject(struct Object far *obj, int qty)
 
     mass = ItemWeight(obj);
     index = Obj_MemTPtr(obj);
-    for (i = 0; i < 28; i++)
+    for (i = 0; i < NUM_INV_SLOTS; i++)
         if (Inventory[i].f.index == index)
             break;
-    if (i < 28) {
+    if (i < NUM_INV_SLOTS) {
         removeFromSlot(-1, -1, -1, i, qty);
-        if (i >= 19) {
+        if (i >= INV_BAG) {
             FixOpenBag();
             DisplayOpenBag();
             for (bag = OpenBag; bag; bag = bag->prev)
@@ -341,7 +341,7 @@ struct Object far * far takeFromSlot(int major, int minor, int cls, int slot, in
     obj = Obj_PtrTMem(&Inventory[slot]);
     if (obj == 0)
         return 0;
-    if (slot <= 18)
+    if (slot <= INV_PACK_LAST)
         owner = ThePlayer;
     else
         owner = Obj_PtrTMem(&OpenBag->obj);
@@ -360,7 +360,7 @@ struct Object far * far takeFromSlot(int major, int minor, int cls, int slot, in
         obj->ol.f.link = qty;
         Obj_Add(&obj->qn.link, copy);
     }
-    if (owner == ThePlayer || slot >= 20) {
+    if (owner == ThePlayer || slot >= INV_BAG_ITEMS) {
         if (copy != 0)
             Inventory[slot].f.index = Obj_MemTPtr(copy);
         else
@@ -371,7 +371,7 @@ struct Object far * far takeFromSlot(int major, int minor, int cls, int slot, in
     PlayerDat.rec.weight -= mass;
     if (OpenBag != 0 && Obj_MemTPtr(owner) == OpenBag->obj.f.index) {
         index = Obj_MemTPtr(obj);
-        for (i = 20; i <= 27; i++) {
+        for (i = INV_BAG_ITEMS; i <= INV_BAG_LAST; i++) {
             if (Inventory[i].f.index == index) {
                 Inventory[i].f.index = copy == 0 ? 0 : Obj_MemTPtr(copy);
                 for (bag = OpenBag; bag; bag = bag->prev)
@@ -388,11 +388,11 @@ struct Object far * far takeFromSlot(int major, int minor, int cls, int slot, in
    (MAJOR_HACK, minor 2 or 3, class 0xB..0xF). */
 unsigned char far ObjWorn(register int id, register int slot)
 {
-    if (slot >= 0 && slot <= 4)
+    if (slot >= 0 && slot <= INV_BOOTS)
         return 1;
-    if (slot == 10 || slot == 9)
+    if (slot == INV_RING + 1 || slot == INV_RING)
         return 1;
-    if (player->lefty + 7 != slot)
+    if (player->lefty + INV_HAND != slot)
         return 0;
     if ((id >> 6) == MAJOR_HACK && (id & ID_MINOR) >> 4 >= 2 && (id & ID_INCLASS) >= 0xB && (id & ID_INCLASS) <= 0xF)
         return 1;
@@ -425,7 +425,7 @@ int far DamageInventory(int slot, unsigned char damage, unsigned char type, int 
     quality = obj->qn.f.quality;
     if (damage_item(obj, 0L, -1, -1, damage, type)) {
         if (debris) {
-            junk = CreateObj((int)(rand() * 2L / 0x8000L) + 0xD5, 0);
+            junk = CreateObj((int)(rand() * 2L / 0x8000L) + ITEM_PILE_OF_DEBRIS_D5, 0);
             near_mob_put_at(ThePlayer, junk, 6, 0);
         }
         InvRemoveOneObject(obj);

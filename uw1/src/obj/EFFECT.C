@@ -57,7 +57,7 @@ struct AnimClass animclassd[16];        /* DS:3658 */
 /* name: chosen for layout (bssorder.py: 1005, between animclassd and animlist); four bytes
    that no code in the listing reads or writes. */
 static char unknown[4];                 /* DS:3698 */
-struct Anim animlist[0x40];             /* DS:369C */
+struct Anim animlist[MAX_ANIMS];             /* DS:369C */
 
 /* UW1: ovr091's LEV.ARK block reader and writer (unmatched; the listing's names). The reader
    returns the length read; the caller passes a far file name and the block number. */
@@ -107,7 +107,7 @@ void far toast_animobj(int n, int frames)
     obj = Obj_PtrTMem(&animlist[n].link);
     cls = OBJ_INCLASS(obj);
     type = animclassd[cls].flags;
-    if ((type & 0x80) && animlist[n].len != 0)
+    if ((type & ANIMF_FINISH) && animlist[n].len != 0)
         do_animobj(n, animlist[n].len);
     switch (cls) {
     case 0xF:
@@ -142,7 +142,7 @@ void far toast_animobj(int n, int frames)
         else
             SET_FLAGS(obj, (OBJ_FLAGS(obj) & 7) + 8);
     }
-    if (type & 0x20)
+    if (type & ANIMF_REMOVE)
         rem_anim_from_map(n);
     if (--animcount > 0 && animcount != n)
         animlist[n] = animlist[animcount];
@@ -186,7 +186,7 @@ int far add_animobj(int index, int len, unsigned char a, unsigned char x, unsign
     struct Object far *obj;
     register int frame;
 
-    if (animcount + 1 > 0x40)
+    if (animcount + 1 > MAX_ANIMS)
         return -1;
     animlist[animcount].link.f.index = index;
     animlist[animcount].len = len;
@@ -221,17 +221,17 @@ void far do_animobj(int n, register int frames)
     type = animclassd[cls].flags;
     for (mask = 1; type > 0; type &= ~mask, mask = mask << 1) {
         switch (type & mask) {
-        case 1:
+        case ANIMF_CYCLE:
             owner = obj->ol.f.owner;
             if (animclassd[cls].start + animclassd[cls].count - 1 > owner)
                 obj->ol.f.owner++;
             else
                 obj->ol.f.owner = animclassd[cls].start;
             break;
-        case 2:
+        case ANIMF_RANDOM:
             obj->ol.f.owner = animclassd[cls].start + rand() % animclassd[cls].count;
             break;
-        case 4:
+        case ANIMF_DOOR:
             if (OBJ_FLAGS(obj) & 8)
                 frames = -frames;
             if (((obj->ol.f.owner >> 0) & 7) == 6)
@@ -318,8 +318,8 @@ void far fireball_effect(struct Object far *src, int x, int y)
 unsigned char far mts_doanim(struct Object far *obj, int x, int y, char who)
 {
     /* UW1: two missiles, the fireball and the lightning bolt (UW2 adds a second fireball) */
-    int16 from[2] = { ITEM_FIREBALL_14, ITEM_LIGHTNING_BOLT };
-    int16 to[2] = { ITEM_EXPLOSION_1C2, ITEM_LIGHTNING_1C5 };
+    int16 from[2] = { ITEM_FIREBALL, ITEM_LIGHTNING_BOLT };
+    int16 to[2] = { ITEM_EXPLOSION_1C2, ITEM_SPLASH_1C5 };
     int i;
 
     for (i = 0; i < 2; i++)
@@ -480,11 +480,11 @@ int far Anim_Load(char *name, int level)
     register int ok = 1;
     int count;
 
-    if (get_arc(name, level + 8, animlist) != 0x180) {
+    if (get_arc(name, level + 8, animlist) != ANIM_BLOCK_LEN) {
         animcount = 0;
         ok = 0;
     } else {
-        for (count = 0; count < 0x40; count++)
+        for (count = 0; count < MAX_ANIMS; count++)
             if (animlist[count].link.f.index == 0)
                 break;
         animcount = count;
@@ -496,7 +496,7 @@ int far Anim_Load(char *name, int level)
    the list with a zero object index. Returns the writer's result. */
 char far Anim_Save(char *name, int level)
 {
-    if (animcount < 0x40)
+    if (animcount < MAX_ANIMS)
         animlist[animcount].link.f.index = 0;
-    return put_arc(name, level + 8, animlist, 0x180);
+    return put_arc(name, level + 8, animlist, ANIM_BLOCK_LEN);
 }

@@ -41,7 +41,7 @@ uint16 cr_class;                        /* DS:5652, the creature's class */
 /* Read the 64 critter records, 48 bytes each, from the open OBJECTS.DAT. */
 void far creature_init(FILE *fd)
 {
-    fread(Creature, 0x30, NUM_CREATURES, fd);
+    fread(Creature, sizeof(struct Creature), NUM_CREATURES, fd);
 }
 
 /* Write the critter table back to a file. Only its overlay stub refers to it in the IDA
@@ -52,7 +52,7 @@ void far creature_init(FILE *fd)
    the listing's ovr101_17 (567) would not. */
 void far creature_save_ovr101_17(FILE *fd)
 {
-    fwrite(Creature, 0x30, NUM_CREATURES, fd);
+    fwrite(Creature, sizeof(struct Creature), NUM_CREATURES, fd);
 }
 
 /* The Creature entry of ActiveObj: minor class * 16 + type within the class, the same as
@@ -85,9 +85,9 @@ char far creature_obj_init(void)
     cst = &Creature[ActiveObj->id & ID_INMAJOR];
     ActiveObj->hp = (cst->avghit * (rand() % 0x18 + 0x10)) / 0x20;
     ActiveObj->heading = OBJ_HEADING(ActiveObj) << 5;
-    SET_GOAL(ActiveObj, 8);
+    SET_GOAL(ActiveObj, GOAL_MILL);
     SET_GTARG(ActiveObj, 0);
-    SET_OLDGOAL(ActiveObj, 0);
+    SET_OLDGOAL(ActiveObj, GOAL_STAND);
     SET_DESTX(ActiveObj, 0);
     SET_DESTY(ActiveObj, 0);
     SET_TARGETZ(ActiveObj, 0);
@@ -99,7 +99,7 @@ char far creature_obj_init(void)
     SET_ATKFRAME(ActiveObj, 0);
     SET_BIN(ActiveObj, 0);
     SET_RATE(ActiveObj, 4);
-    SET_SEQ(ActiveObj, 0x20);
+    SET_SEQ(ActiveObj, SEQ_STAND);
     SET_FRAME(ActiveObj, 0);
     SET_PITCH(ActiveObj, 0x10);
     SET_GRAVITY(ActiveObj, 0);
@@ -120,7 +120,7 @@ char far creature_obj_init(void)
     SET_FED(ActiveObj, 0);
     SET_HAS_INV(ActiveObj, 0);
     SET_TALKEDTO(ActiveObj, 0);
-    SET_ATTITUDE(ActiveObj, 2);
+    SET_ATTITUDE(ActiveObj, ATT_MELLOW);
     SET_LONER(ActiveObj, 0);
     SET_CAST(ActiveObj, 0);
     return 1;

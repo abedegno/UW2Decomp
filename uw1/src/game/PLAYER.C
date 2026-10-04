@@ -62,7 +62,7 @@ int16 PHgt;
 int16 PLeft;
 static int16 rgnh_ul;                   /* up and left */
 static int16 rgnh_left;                 
-unsigned char PlayerDat[0xD2];
+unsigned char PlayerDat[sizeof(struct Player)];
 int16 curvrad;
 static int16 region_br;                 /* down and right */
 int16 PBot;

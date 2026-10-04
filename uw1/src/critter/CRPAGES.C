@@ -76,7 +76,7 @@ char far preload_cr(char load_pages)
     }
     seg042_19B();
     if (!load_pages) return 1;
-    if ((fd = open("crit\\assoc.anm", 0x8001)) < 0) {
+    if ((fd = open("crit\\assoc.anm", O_RDONLY | O_BINARY)) < 0) {
         for (i = 0; i < 0x80; i++) assoc[i] = 0xFF;
         close(fd);
         return 0;

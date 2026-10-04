@@ -58,9 +58,6 @@
 char far EncumCheck(struct Object far *obj);
 void far grfx_load_font(char *name);              /* UW2: grfx_quikfont(int) */
 
-/* UW1: the coin is item 0xA1 (UW2 0xA0). */
-#define ITEM1_COIN 0xA1
-
 /* A point on the screen. */
 struct BarterXY {
     int16 x, y;
@@ -68,10 +65,10 @@ struct BarterXY {
 
 /* UW1 has four trade slots a side, two columns by two rows, placed by these tables: the
    player's slots, the marks showing which are selected, the NPC's slots and their marks. */
-static struct BarterXY play_slot_xy[4] = { { 0x94, 0xBC }, { 0xA9, 0xBC }, { 0x94, 0xAA }, { 0xA9, 0xAA } };
-static struct BarterXY play_mark_xy[4] = { { 0x91, 0xB5 }, { 0xBB, 0xB5 }, { 0x91, 0xA3 }, { 0xBB, 0xA3 } };
-static struct BarterXY npc_slot_xy[4] = { { 0x5B, 0xBC }, { 0x70, 0xBC }, { 0x5B, 0xAA }, { 0x70, 0xAA } };
-static struct BarterXY npc_mark_xy[4] = { { 0x58, 0xB5 }, { 0x82, 0xB5 }, { 0x58, 0xA3 }, { 0x82, 0xA3 } };
+static struct BarterXY play_slot_xy[NUM_TRADE_SLOTS] = { { 0x94, 0xBC }, { 0xA9, 0xBC }, { 0x94, 0xAA }, { 0xA9, 0xAA } };
+static struct BarterXY play_mark_xy[NUM_TRADE_SLOTS] = { { 0x91, 0xB5 }, { 0xBB, 0xB5 }, { 0x91, 0xA3 }, { 0xBB, 0xA3 } };
+static struct BarterXY npc_slot_xy[NUM_TRADE_SLOTS] = { { 0x5B, 0xBC }, { 0x70, 0xBC }, { 0x5B, 0xAA }, { 0x70, 0xAA } };
+static struct BarterXY npc_mark_xy[NUM_TRADE_SLOTS] = { { 0x58, 0xB5 }, { 0x82, 0xB5 }, { 0x58, 0xA3 }, { 0x82, 0xA3 } };
 
 static void far ReturnTradeObjectsToNPC_ovr097_F76(int only_unselected);
 
@@ -80,26 +77,26 @@ static void far ReturnTradeObjectsToNPC_ovr097_F76(int only_unselected);
 /* match: The static names were chosen so that Turbo C lays them out in _BSS where the
    EXE has them (it orders a file's _BSS by a hash of the name, see tools/bssorder.py);
    UW1 keeps each side in arrays of its own. */
-static int16 barter_npc_ids[4];         /* the object in each of the NPC's slots, 0 for none */
+static int16 barter_npc_ids[NUM_TRADE_SLOTS];         /* the object in each of the NPC's slots, 0 for none */
 static int16 barter_unused1;            /* cleared by barter_init, never read */
 static int16 barter_unused2;            /* cleared by barter_init, never read */
-static int16 barter_ply_ids[4];         /* the object in each of the player's slots */
+static int16 barter_ply_ids[NUM_TRADE_SLOTS];         /* the object in each of the player's slots */
 static unsigned char barter_result;     /* the last offer or demand succeeded */
 static int16 npc_wit;                   /* worked out by barter_init, never read */
 static int16 far *npc_likes;            /* lists set by npc_likes_dislikes, ending in -1 */
-static char npc_select[4];              /* which of the NPC's slots are selected */
-static char play_select[4];             /* which of the player's */
+static char npc_select[NUM_TRADE_SLOTS];              /* which of the NPC's slots are selected */
+static char play_select[NUM_TRADE_SLOTS];             /* which of the player's */
 int16 npc_assess;                       /* how far off the NPC's appraisals may be, in % */
 static int16 patience;                  /* bad offers left before the NPC gives up */
 static int16 far *npc_dislikes;
 int16 greed;                            /* the % gain the NPC wants from a trade */
 static int16 last_offer;                /* the % gain of the previous offer */
-static int16 npc_judgement[4];          /* the player's valuations of the NPC's items, -1 unknown */
-static int16 npc_appraisals[4];         /* the NPC's valuations of its own */
-static int16 npc_undersave[4];          /* what was on screen under each NPC slot */
-static int16 play_judgement[4];         /* the player's valuations of the player's items */
-static int16 play_appraisals[4];        /* the NPC's valuations of the player's items */
-static int16 play_undersave[4];         /* what was on screen under each player slot */
+static int16 npc_judgement[NUM_TRADE_SLOTS];          /* the player's valuations of the NPC's items, -1 unknown */
+static int16 npc_appraisals[NUM_TRADE_SLOTS];         /* the NPC's valuations of its own */
+static int16 npc_undersave[NUM_TRADE_SLOTS];          /* what was on screen under each NPC slot */
+static int16 play_judgement[NUM_TRADE_SLOTS];         /* the player's valuations of the player's items */
+static int16 play_appraisals[NUM_TRADE_SLOTS];        /* the NPC's valuations of the player's items */
+static int16 play_undersave[NUM_TRADE_SLOTS];         /* what was on screen under each player slot */
 
 /* Conversation built-in: fill the NPC's trade slots from its inventory (at most 0x28
    objects looked at), generating the inventory first if it has none. Once all four are
@@ -164,17 +161,17 @@ void far barter_init(void)
 
     crit = &Creature[OBJ_INMAJOR(talking_to)];
     Transparency = 1;
-    for (slot = 0; slot < 4; slot++) {
+    for (slot = 0; slot < NUM_TRADE_SLOTS; slot++) {
         play_undersave[slot] = valloc(16, 16);
         npc_undersave[slot] = valloc(16, 16);
     }
-    for (slot = 0; slot < 4; slot++) {
+    for (slot = 0; slot < NUM_TRADE_SLOTS; slot++) {
         save_rect(play_undersave[slot], play_slot_xy[slot].x, play_slot_xy[slot].y, 16, 16);
         save_rect(npc_undersave[slot], npc_slot_xy[slot].x, npc_slot_xy[slot].y, 16, 16);
     }
     barter_unused2 = 0;
     barter_unused1 = 0;
-    for (slot = 0; slot < 4; slot++) {
+    for (slot = 0; slot < NUM_TRADE_SLOTS; slot++) {
         barter_ply_ids[slot] = 0;
         barter_npc_ids[slot] = 0;
         play_judgement[slot] = -1;
@@ -193,7 +190,7 @@ void far barter_init(void)
     npc_assess = range((15 - crit->shrewd) * 6, -25, 50);
     npc_wit = range(crit->level, -20, 20);
     last_offer = 0;
-    charm = player->skills[15];
+    charm = player->skills[SKILL_CHARISMA];
     greed = greed - charm * 2;
     patience += charm >> 1;
     npc_wit -= charm / 6;
@@ -209,7 +206,7 @@ void far end_barter(void)
     register int slot;
 
     mouse_hide();
-    for (slot = 0; slot < 4; slot++) {
+    for (slot = 0; slot < NUM_TRADE_SLOTS; slot++) {
         if (barter_ply_ids[slot] > 0) {
             near_mob_put_at(ThePlayer, Obj_IntTMem(barter_ply_ids[slot]), 5, 0);
             restore_rect(play_undersave[slot]);
@@ -220,7 +217,7 @@ void far end_barter(void)
         }
     }
     mouse_show();
-    for (slot = 0; slot < 4; slot++) {
+    for (slot = 0; slot < NUM_TRADE_SLOTS; slot++) {
         vfree(play_undersave[slot]);
         vfree(npc_undersave[slot]);
     }
@@ -248,7 +245,7 @@ int far play_slot_hit_abs(int x, int y)
     register int i;
     register int found;
     found = -1;
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < NUM_TRADE_SLOTS; i++) {
         if (play_slot_xy[i].x <= x &&
             play_slot_xy[i].x + 0x10 >= x &&
             play_slot_xy[i].y >= y &&
@@ -266,7 +263,7 @@ int far npc_slot_hit_abs(int x, int y)
     register int i;
     register int found;
     found = -1;
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < NUM_TRADE_SLOTS; i++) {
         if (npc_slot_xy[i].x <= x &&
             npc_slot_xy[i].x + 0x10 >= x &&
             npc_slot_xy[i].y >= y &&
@@ -399,8 +396,8 @@ void far UseTradeSlot_ovr097_6E8(int16 side, int16 slot, int16 *content,
         lore = 1;
         obj = Obj_IntTMem(content[slot]);
         if (side == 0) {
-            if (skill_check(player->skills[8], 20) > 0) lore++;
-        } else lore += skill_check(player->skills[8], 15);
+            if (skill_check(player->skills[SKILL_LORE], 20) > 0) lore++;
+        } else lore += skill_check(player->skills[SKILL_LORE], 15);
         seg024_24DC_D0A(obj, lore);
     }
     if (had_cursor && CursorObjPtr == 0) {
@@ -495,7 +492,7 @@ unsigned char far CombineToSlot_ovr097_D30(struct Object far *obj, int side,
     if (OBJ_ISQUANT(obj) && OBJ_ISQUANT(found) &&
         !(obj->ol.f.link & LINK_SPECIAL) && !(found->ol.f.link & LINK_SPECIAL) &&
         OBJ_ITEM(obj) == OBJ_ITEM(found) &&
-        obj->ol.f.link + found->ol.f.link < 0x3E7) {
+        obj->ol.f.link + found->ol.f.link < STACK_LIMIT) {
         found->ol.f.link += obj->ol.f.link;
         Obj_Free(obj);
         merged = 1;
@@ -542,7 +539,7 @@ static void far ReturnTradeObjectsToNPC_ovr097_F76(int only_unselected)
     register int flag;
     flag = only_unselected;
     mouse_hide();
-    for (slot = 0; slot < 4; slot++) {
+    for (slot = 0; slot < NUM_TRADE_SLOTS; slot++) {
         if (barter_npc_ids[slot] > 0) {
             if (!flag || npc_select[slot] == 0) {
                 obj = Obj_IntTMem(barter_npc_ids[slot]);
@@ -567,17 +564,17 @@ static void far probablyTradeObjects_ovr097_100A(void)
     register int slot;
 
     mouse_hide();
-    for (slot = 0; slot < 4; slot++) {
+    for (slot = 0; slot < NUM_TRADE_SLOTS; slot++) {
         if (barter_ply_ids[slot] > 0 && play_select[slot] &&
             does_npc_like(barter_ply_ids[slot]) != -1) {
             obj = Obj_IntTMem(barter_ply_ids[slot]);
             other = Obj_PtrTMem(&talking_to->ol.link);
-            if (OBJ_ITEM(obj) == ITEM1_COIN)
+            if (OBJ_ITEM(obj) == ITEM_GOLD_COIN)
                 for (; other; other = Obj_PtrTMem(&other->qn.link)) {
                     if (OBJ_ISQUANT(obj) && OBJ_ISQUANT(other) &&
                         !(obj->ol.f.link & LINK_SPECIAL) && !(other->ol.f.link & LINK_SPECIAL) &&
                         OBJ_ITEM(obj) == OBJ_ITEM(other) &&
-                        obj->ol.f.link + other->ol.f.link < 0x3E7) {
+                        obj->ol.f.link + other->ol.f.link < STACK_LIMIT) {
                         other->ol.f.link += obj->ol.f.link;
                         Obj_Free(obj);
                         obj = 0;
@@ -599,7 +596,7 @@ static void far probablyTradeObjects_ovr097_100A(void)
 char far nothing_there(int16 *content, char *selected)
 {
     register int i;
-    for (i = 0; i < 4; i++)
+    for (i = 0; i < NUM_TRADE_SLOTS; i++)
         if (selected[i] > 0 && content[i] > 0) return 0;
     return 1;
 }
@@ -698,7 +695,7 @@ int far do_demand(int16 far *args)
         health = 2 - (player->maxhealth - ThePlayer->hp) * 2 / playerdat->avghit;
     else health = 1;
     armed = player->drawn;
-    player_score = player->level + armed + health + player->skills[15] / 6;
+    player_score = player->level + armed + health + player->skills[SKILL_CHARISMA] / 6;
     demanded = total_offering_ovr097_17CB(0, barter_npc_ids, npc_select,
                                                    npc_appraisals, npc_assess);
     if (Creature[OBJ_INMAJOR(talking_to)].avghit > 0)
@@ -744,7 +741,7 @@ void far do_judgement(void)
     register int evaluation;
     register int result;
 
-    skill = player->skills[18];
+    skill = player->skills[SKILL_APPRAISE];
     accuracy = 50 - skill * 45 / 30;
     player_value = total_offering_ovr097_17CB(0, barter_ply_ids,
                     play_select, play_judgement, accuracy);
@@ -767,7 +764,7 @@ void far do_judgement(void)
     else if (evaluation > -50) result = 7;
     else result = 8;
     str_copy(appraisal, get_string((certainty + 3) | STR_CONV)); /* "...I guess" .. "...I know" */
-    str_cat(appraisal, get_string(0xE02));  /* " that I am getting " */
+    str_cat(appraisal, get_string(2 | STR_CONV));  /* " that I am getting " */
     str_cat(appraisal, get_string((result + 8) | STR_CONV)); /* "a terrible deal.." .. "an excellent deal.." */
     play_say(appraisal);
 }
@@ -781,7 +778,7 @@ int far total_offering_ovr097_17CB(int use_likes, int16 *items,
     register int i;
     register int total;
     total = 0;
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < NUM_TRADE_SLOTS; i++) {
         if (selected[i] > 0 && items[i] > 0) {
             if (values[i] == -1)
                 values[i] = assess_value(use_likes, items[i], accuracy);
@@ -843,7 +840,7 @@ int far player_barter_items(int16 *items, int16 *indices)
 
     slot = 0;
     count = 0;
-    for (; slot < 4; slot++) {
+    for (; slot < NUM_TRADE_SLOTS; slot++) {
         if (play_select[slot]) {
             obj = Obj_IntTMem(barter_ply_ids[slot]);
             indices[count] = barter_ply_ids[slot];
@@ -858,7 +855,7 @@ int far player_barter_items(int16 *items, int16 *indices)
 void far npc_inv_add(struct Object far *obj)
 {
     struct Object far *other;
-    if (OBJ_ITEM(obj) == ITEM1_COIN) {
+    if (OBJ_ITEM(obj) == ITEM_GOLD_COIN) {
         for (other = Obj_PtrTMem(&talking_to->ol.link); other;
              other = Obj_PtrTMem(&other->qn.link)) {
             if (OBJ_ISQUANT(obj) &&
@@ -866,7 +863,7 @@ void far npc_inv_add(struct Object far *obj)
                 !(obj->ol.f.link & LINK_SPECIAL) &&
                 !(other->ol.f.link & LINK_SPECIAL) &&
                 OBJ_ITEM(obj) == OBJ_ITEM(other) &&
-                obj->ol.f.link + other->ol.f.link < 0x3E7) {
+                obj->ol.f.link + other->ol.f.link < STACK_LIMIT) {
                 other->ol.f.link += obj->ol.f.link;
                 Obj_Free(obj);
                 obj = 0;
@@ -886,7 +883,7 @@ void far player_barter_give(int index)
     objindex = index;
     npc_inv_add(Obj_IntTMem(objindex));
     mouse_hide();
-    for (slot = 0; slot < 4; slot++) {
+    for (slot = 0; slot < NUM_TRADE_SLOTS; slot++) {
         if (barter_ply_ids[slot] == objindex) {
             restore_rect(play_undersave[slot]);
             barter_ply_ids[slot] = 0;
@@ -915,13 +912,13 @@ int far npc_barter_find(int item, int from_player)
             generate_inventory(talking_to);
         head = &talking_to->ol.link;
     }
-    if (id > 0x3E7) {
-        major = (id - 0x3E8) >> 2;
-        minor = (id - 0x3E8) & 3;
+    if (id > BARTER_CLASS - 1) {
+        major = (id - BARTER_CLASS) >> 2;
+        minor = (id - BARTER_CLASS) & 3;
         cls = -1;
     } else {
         major = id >> 6;
-        minor = (id & 0x30) >> 4;
+        minor = (id & ID_MINOR) >> 4;
         cls = id & 0xF;
     }
     found = Obj_InList(&head, 1, major, minor, cls);
@@ -943,8 +940,8 @@ int far npc_barter_give(register int item)
         generate_inventory(talking_to);
     head = &talking_to->ol.link;
     for (obj = Obj_PtrTMem(&talking_to->ol.link); obj; obj = Obj_PtrTMem(&obj->qn.link)) {
-        if (item > 0x3E7) {
-            if (OBJ_CLASS(obj) != item - 1000) continue;
+        if (item > BARTER_CLASS - 1) {
+            if (OBJ_CLASS(obj) != item - BARTER_CLASS) continue;
         } else if (OBJ_ITEM(obj) != item) continue;
         Obj_Rem(head, obj);
         if (EncumCheck(obj)) {
@@ -956,7 +953,7 @@ int far npc_barter_give(register int item)
             set_workspace();
             return 1;
         }
-        for (slot = 0; slot < 4; slot++)
+        for (slot = 0; slot < NUM_TRADE_SLOTS; slot++)
             if (barter_ply_ids[slot] == 0) {
                 barter_ply_ids[slot] = Obj_MemTPtr(obj);
                 play_select[slot] = 0;
@@ -992,7 +989,7 @@ int far npc_barter_give_id(register int index)
             set_workspace();
             return 1;
         }
-        for (slot = 0; slot < 4; slot++)
+        for (slot = 0; slot < NUM_TRADE_SLOTS; slot++)
             if (barter_ply_ids[slot] == 0) {
                 barter_ply_ids[slot] = Obj_MemTPtr(obj);
                 play_select[slot] = 0;
@@ -1024,7 +1021,7 @@ int far npc_inv_create(int item)
             !(obj->ol.f.link & LINK_SPECIAL) &&
             !(other->ol.f.link & LINK_SPECIAL) &&
             OBJ_ITEM(obj) == OBJ_ITEM(other) &&
-            obj->ol.f.link + other->ol.f.link < 0x3E7) {
+            obj->ol.f.link + other->ol.f.link < STACK_LIMIT) {
             other->ol.f.link += obj->ol.f.link;
             Obj_Free(obj);
             obj = 0;
@@ -1074,17 +1071,17 @@ int far does_npc_like(int index)
     obj = Obj_IntTMem(index);
     if (ComObjData[obj->id & ID_ITEM].value == 0) return -1;
     id = obj->id & ID_ITEM;
-    cls = (id >> 4) + 0x3E8;
+    cls = (id >> 4) + BARTER_CLASS;
     liked = 0;
     if (npc_likes)
         for (i = 0; npc_likes[i] > -1; i++) {
-            if (npc_likes[i] < 0x3E8) {
+            if (npc_likes[i] < BARTER_CLASS) {
                 if (npc_likes[i] == id) return 1;
             } else if (npc_likes[i] == cls) liked = 1;
         }
     if (npc_dislikes)
         for (i = 0; npc_dislikes[i] > -1; i++) {
-            if (npc_dislikes[i] < 0x3E8) {
+            if (npc_dislikes[i] < BARTER_CLASS) {
                 if (npc_dislikes[i] == id) return -1;
             } else if (npc_dislikes[i] == cls) liked = -1;
         }

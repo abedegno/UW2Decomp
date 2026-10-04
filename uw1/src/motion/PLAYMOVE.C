@@ -78,7 +78,7 @@ char KeybUsed = 0;                      /* UW1: signed (cbw) */
    so their names are ours. */
 /* mouse_moves: the inputs for the three thirds of the view's bottom strip; move_keys: the
    scan codes of w s a d z c x e q. */
-static unsigned char mouse_moves[3] = { 9, 8, 10 };
+static unsigned char mouse_moves[3] = { PIN_LEFT, PIN_BACK, PIN_RIGHT };
 static unsigned char move_keys[9] = { 0x11, 0x1F, 0x1E, 0x20, 0x2C, 0x2E, 0x2D, 0x12, 0x10 };
 static uint32 last_time = 0;
 static unsigned char frame_inc = 0;
@@ -151,14 +151,14 @@ void far parse_playin(int command)
                     TurnInpRate = (inplist->x - PWid * 2 / 3) * 0x180 / PWid;
                 if (inplist->y > PHgt * 2 / 5)
                     ForwInpRate = (inplist->y - PHgt * 2 / 5) * 0xC0 / PHgt;
-                PlayerInput = 1;
+                PlayerInput = PIN_FORWARD;
             }
         }
         else if (buttons == 3)
         {
-            PlayerInput = 1;
-            if ((PN.terrain & 0x10) == 0 && player->motion_state != 1)
-                PlayerInput = 7;
+            PlayerInput = PIN_FORWARD;
+            if ((PN.terrain & FOOT_AIR) == 0 && player->motion_state != MS_SWIM)
+                PlayerInput = PIN_JUMP;
         }
     }
     else
@@ -166,14 +166,14 @@ void far parse_playin(int command)
         do_player_keyboard();
         switch (command)
         {
-        case 6:
-        case 7:
-            if ((PN.terrain & 0x10) == 0 && player->motion_state != 1)
+        case PIN_RUN_JUMP:
+        case PIN_JUMP:
+            if ((PN.terrain & FOOT_AIR) == 0 && player->motion_state != MS_SWIM)
                 PlayerInput = command;
             else
-                PlayerInput = 1;
+                PlayerInput = PIN_FORWARD;
             break;
-        case 0:
+        case PIN_NONE:
             TurnInpRate = ForwInpRate = 0;
             PlayerInput = command;
             break;
@@ -202,43 +202,43 @@ void far do_player_keyboard(void)
             {
             case 0x11:
                 ForwInpRate = 0x70;
-                PlayerInput = 1;
+                PlayerInput = PIN_FORWARD;
                 break;
             case 0x1F:
                 ForwInpRate = 0x32;
-                PlayerInput = 1;
+                PlayerInput = PIN_FORWARD;
                 break;
             case 0x1E:
                 TurnInpRate = -0x5A;
-                PlayerInput = 1;
+                PlayerInput = PIN_FORWARD;
                 break;
             case 0x20:
                 TurnInpRate = 0x5A;
-                PlayerInput = 1;
+                PlayerInput = PIN_FORWARD;
                 break;
             case 0x2D:
                 TurnInpRate = ForwInpRate = 0;
-                PlayerInput = 8;
+                PlayerInput = PIN_BACK;
                 break;
             case 0x2C:
                 TurnInpRate = ForwInpRate = 0;
-                PlayerInput = 9;
+                PlayerInput = PIN_LEFT;
                 break;
             case 0x2E:
                 TurnInpRate = ForwInpRate = 0;
-                PlayerInput = 10;
+                PlayerInput = PIN_RIGHT;
                 break;
             case 0x12:
-                if ((motionbits & 0x14) == 0)
-                    PlayerInput = 0;
+                if ((motionbits & (MB_LEVITATE | MB_FLY)) == 0)
+                    PlayerInput = PIN_NONE;
                 else
-                    PlayerInput = 12;
+                    PlayerInput = PIN_UP;
                 break;
             case 0x10:
-                if ((motionbits & 0x14) == 0)
-                    PlayerInput = 0;
+                if ((motionbits & (MB_LEVITATE | MB_FLY)) == 0)
+                    PlayerInput = PIN_NONE;
                 else
-                    PlayerInput = 13;
+                    PlayerInput = PIN_DOWN;
                 break;
             }
         }
@@ -324,9 +324,9 @@ void far move_physics(int incr, int frames, unsigned char easy)
     doMod = 0;
     playerMod[0] = 0;
     tsteps += incr;
-    if (PlayerInput == 0)
+    if (PlayerInput == PIN_NONE)
         do_player_keyboard();
-    if ((PlayerInput != 0 || PN.speed != 0 || PN.vel[2] != 0 || PN.acc[2] != 0 || PN.acc[1] != 0
+    if ((PlayerInput != PIN_NONE || PN.speed != 0 || PN.vel[2] != 0 || PN.acc[2] != 0 || PN.acc[1] != 0
          || PN.acc[0] != 0 || fiz_update) && !(char)easy)    /* UW1: cbw */
         move_player(incr);
     if (MoveCrits && !(char)TimeStop && frames != 0)     /* UW1: cbw */
@@ -340,7 +340,7 @@ void far move_physics(int incr, int frames, unsigned char easy)
 /* Runs the player's physics until the player is at rest (game/SKILLS.C). */
 void far finish_player(void)
 {
-    PlayerInput = 0;
+    PlayerInput = PIN_NONE;
     while (PN.speed != 0 || PN.vel[2] != 0 || PN.acc[2] != 0 || PN.acc[1] != 0 || PN.acc[0] != 0
            || fiz_update)
         move_player(0x40);
@@ -357,9 +357,9 @@ void far move_player(int incr)
     do_physics(&PN, &PT);
     phys_affect_player();
     editchng(10);
-    if ((PN.terrain & 0x10) == 0)
+    if ((PN.terrain & FOOT_AIR) == 0)
     {
-        if (PN.speed > pFPS[0] >> 2 && PlayerInput == 1)
+        if (PN.speed > pFPS[0] >> 2 && PlayerInput == PIN_FORWARD)
         {
             char bob;
 
@@ -368,20 +368,20 @@ void far move_player(int incr)
             doMod = 1;
             playerMod[0] = bobEffect[tsteps >> 4] * bob;
         }
-        if (PlayerInput == 7)
+        if (PlayerInput == PIN_JUMP)
         {
             playerMod[0] = -0x20;
             playerMod[2] = -0x100;
             doMod = 1;
-            PlayerInput = 0;
+            PlayerInput = PIN_NONE;
         }
-        if (PlayerInput == 9 || PlayerInput == 10)
+        if (PlayerInput == PIN_LEFT || PlayerInput == PIN_RIGHT)
         {
             doMod = 1;
             playerMod[0] = sliEffect[tsteps >> 4] * 2;
         }
     }
-    PlayerInput = 0;
+    PlayerInput = PIN_NONE;
 }
 
 /* The player's sounds: a looping water sound while swimming (restarted every 0x1800
@@ -391,7 +391,7 @@ void far make_noise(char easy)
 {
     unsigned delay;
 
-    if (player->motion_state & 1)
+    if (player->motion_state & MS_SWIM)
     {
         if (water_eff != 0xFF && watertime + 0x1800 <= GAME_TIME())
         {
@@ -411,9 +411,9 @@ void far make_noise(char easy)
             kill_effect(water_eff);
             water_eff = 0xFF;
         }
-        if (player->motion_state & 8)
+        if (player->motion_state & MS_FLOAT)
             return;
-        if (PN.terrain & 0x10)
+        if (PN.terrain & FOOT_AIR)
             return;
         if (easy != 0)
         {
@@ -502,28 +502,28 @@ void far parse_effect(void)
             playerMod[2] = amp * ((rand() & 0x7F) - 0x40);
         }
     }
-    if (player->motion_state & 2 && !DragonSkinBoots_dseg_5c99_1B01 && rand() % 5 == 0)
+    if (player->motion_state & MS_LAVA && !DragonSkinBoots_dseg_5c99_1B01 && rand() % 5 == 0)
         damage_item(ThePlayer, 0L, 0, 0, 1, 8);
-    if (player->motion_state & 8)
+    if (player->motion_state & MS_FLOAT)
         playerMod[0] = abs(0x10 - (tsteps >> 3)) * 3;
-    if (player->motion_state & 0x60)
+    if (player->motion_state & (MS_SHAKE | MS_TREMOR))
     {
-        if (player->motion_state & 0x40)
+        if (player->motion_state & MS_TREMOR)
         {
             if (tremEfflen-- == 0)
             {
-                player->motion_state = player->motion_state ^ 0x40;
+                player->motion_state = player->motion_state ^ MS_TREMOR;
                 editchng(2);
             }
             amp = tremEfflen / 10;
             if (amp > 8)
                 amp = 8;
         }
-        if (player->motion_state & 0x20)
+        if (player->motion_state & MS_SHAKE)
         {
             if (combEfflen-- == 0)
             {
-                player->motion_state = player->motion_state ^ 0x20;
+                player->motion_state = player->motion_state ^ MS_SHAKE;
                 editchng(2);
             }
             phase = combEfflen / 8;
@@ -543,10 +543,10 @@ void far set_effect(unsigned char which, char amount)
 {
     switch (which)
     {
-    case 0x20:
+    case MS_SHAKE:
         combEfflen = amount;
         break;
-    case 0x40:
+    case MS_TREMOR:
         tremEfflen = amount;
         break;
     default:

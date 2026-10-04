@@ -24,15 +24,18 @@ unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
 struct Combination {
     uint16 first, second, output;
 };
+/* CMB.DAT's size in rules, and the flag on a source word that says the source is used up. */
+#define NUM_COMBINATIONS 10
+#define CMB_USED_UP     0x8000
 
 /* match: this file's _BSS, in UW1 DS:48C6..4901 (UW2 DS:47C0..47FB); only this file uses
    it. */
 /* name: UW2's FM Towns build has no name for it, so it was static. */
-static struct Combination ObjectCombinations[10];
+static struct Combination ObjectCombinations[NUM_COMBINATIONS];
 
 void far init_combinables(void)
 {
-    bltfromdrive("DATA\\cmb.dat", ObjectCombinations, 0x3C);
+    bltfromdrive("DATA\\cmb.dat", ObjectCombinations, sizeof(ObjectCombinations));
 }
 
 /* Returns the index of the CMB.DAT rule that combines a and b, in either order, or -1.
@@ -57,17 +60,17 @@ int far ObjsBeCombinable(struct Object far *a, struct Object far *b)
     ids[0] = b->id & ID_ITEM;
     dprintf("checking if %d and %d are combinable...\n", ids[1], ids[0]);
     entry = ObjectCombinations;
-    for (i = 0; i < 10; entry++, i++) {
+    for (i = 0; i < NUM_COMBINATIONS; entry++, i++) {
         first = entry->first & ID_ITEM;
         second = entry->second & ID_ITEM;
         dprintf("combination %d is %d and %d.\n", i, first, second);
-        if ((entry->first & 0x8000 | entry->second & 0x8000) != 0 &&
+        if ((entry->first & CMB_USED_UP | entry->second & CMB_USED_UP) != 0 &&
             ((first == ids[1] && second == ids[0]) ||
              (first == ids[0] && second == ids[1])))
             break;
     }
-    dprintf("objsbecombinable returns %d\n", i == 10 ? -1 : i);
-    return i == 10 ? -1 : i;
+    dprintf("objsbecombinable returns %d\n", i == NUM_COMBINATIONS ? -1 : i);
+    return i == NUM_COMBINATIONS ? -1 : i;
 }
 
 /* Creates a new static object of rule combo's output item; returns 0 if none is free. */
@@ -89,7 +92,7 @@ char far RemoveAfterCombine(struct Object far *obj, int combo)
         ;
     else
         entry++;
-    return (*entry & 0x8000) != 0;
+    return (*entry & CMB_USED_UP) != 0;
 }
 
 /* Rotworm stew, made when the player reads the recipe (UseBook, USEITEMS.C, for a book
@@ -101,7 +104,7 @@ char far RemoveAfterCombine(struct Object far *obj, int combo)
    Returns 1 when the stew was made. */
 char far make_stew(void)
 {
-    int recipe[3] = { 0xD9, 0xB8, 0xBE };
+    int recipe[3] = { ITEM_DEAD_ROTWORM, ITEM_MUSHROOM, ITEM_FLASK_OF_PORT };
     int found[3] = { 0, 0, 0 };
     int16 where;
     struct Object far *bowl;
@@ -109,7 +112,7 @@ char far make_stew(void)
     register int i;
     register int ok = 0;
 
-    if ((bowl = FindObj(MAJOR_MISC, 0, 0xE, 4, &where)) == 0) {
+    if ((bowl = FindObj(MAJOR_MISC, 0, ITEM_BOWL & ID_INCLASS, 4, &where)) == 0) {
         game_sprint(0x96);
         return 0;
     }
@@ -132,7 +135,7 @@ char far make_stew(void)
     if (Obj_MemTPtr(bowl) == OpenBag->obj.f.index)
         CloseTheBag();
     Obj_FreeChain(&bowl->ol.link);
-    bowl->id = bowl->id & 0xFE00 | 0x11B;
+    bowl->id = bowl->id & 0xFE00 | ITEM_ROTWORM_STEW;
     DisplayInventory();
     game_sprint(0x95);
     return 1;

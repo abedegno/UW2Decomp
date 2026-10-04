@@ -188,7 +188,7 @@ char far do_of(struct Object far *obj, int lore, register char *s)
             charges = -1;
             link = &obj->ol.link;
             spell = Obj_InList(&link, 0, MAJOR_SPEC, 2, 0);
-            if (spell != 0 && (spell->id & 0x800))
+            if (spell != 0 && (spell->id & ID_FLAG11))
                 charges = spell->qn.f.quality;
             if (charges >= 0) {
                 strcat(s, " with ");
@@ -224,7 +224,7 @@ void far BookLook(struct Object far *obj, int print)
 
     if (print < 1)
         return;
-    if (OBJ_ITEM(obj) == 0x13B) {         /* UW1: the map (UW2 0x13A) */
+    if (OBJ_ITEM(obj) == ITEM_MAP) {         /* UW1: the map (UW2 0x13A) */
         game_sprint(0x97);  /* 'Enscribed upon the scroll is your map.' */
         return;
     }
@@ -443,15 +443,15 @@ char far talisman_desc(struct Object far *obj, struct ComObj *com)
 
     if (com->fate == 10) {
         switch (OBJ_ITEM(obj)) {
-        case 0x136: which = 0; break;
-        case 0x93: which = 1; break;
-        case 0x97: which = 2; break;
-        case 0xBF: which = 3; break;
-        case 0x11F: which = 4; break;
-        case 0x37: which = 5; break;
-        case 0xAE: which = 6; break;
-        case 0x0A: which = 7; break;
-        case 0x36: which = 8; break;
+        case ITEM_BOOK_136: which = 0; break;
+        case ITEM_TAPER: which = 1; break;
+        case ITEM_LIT_TAPER: which = 2; break;
+        case ITEM_BOTTLE_OF_WINE: which = 3; break;
+        case ITEM_STANDARD: which = 4; break;
+        case ITEM_SHINY_SHIELD: which = 5; break;
+        case ITEM_SHINY_CUP: which = 6; break;
+        case ITEM_SHINY_SWORD: which = 7; break;
+        case ITEM_IRON_RING: which = 8; break;
         }
         game_sprint(0x104);
         game_sprint(which + 0x105);

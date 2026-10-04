@@ -105,39 +105,39 @@ unsigned char far GetHgt(unsigned char n, char *steep)
 
     *steep = 0;
     switch (tiles[pnt[n].tile] & 0xF) {
-    case 0:
+    case TILE_SOLID:
         h = 0x80;
         break;
-    case 2:
+    case TILE_DIAG_SE:
         if (pnt[n].y >= pnt[n].x)
             h = 0x80;
         *steep = 1;
         break;
-    case 3:
+    case TILE_DIAG_SW:
         if (pnt[n].x + pnt[n].y >= 7)
             h = 0x80;
         *steep = 1;
         break;
-    case 4:
+    case TILE_DIAG_NE:
         if (pnt[n].x + pnt[n].y <= 7)
             h = 0x80;
         *steep = 1;
         break;
-    case 5:
+    case TILE_DIAG_NW:
         if (pnt[n].y <= pnt[n].x)
             h = 0x80;
         *steep = 1;
         break;
-    case 6:
+    case TILE_SLOPE_N:
         h = h + (pnt[n].y & 7);
         break;
-    case 7:
+    case TILE_SLOPE_S:
         h = h + (7 - (pnt[n].y & 7));
         break;
-    case 8:
+    case TILE_SLOPE_E:
         h = h + (pnt[n].x & 7);
         break;
-    case 9:
+    case TILE_SLOPE_W:
         h = h + (7 - (pnt[n].x & 7));
         break;
     }
@@ -156,16 +156,16 @@ int far GetSlopeHgt(int x, int y)
     y = y & 0xFF;
     x = x & 0xFF;
     switch (tiles[4] & 0xF) {
-    case 6:
+    case TILE_SLOPE_N:
         h = y;
         break;
-    case 7:
+    case TILE_SLOPE_S:
         h = 0xFF - y;
         break;
-    case 8:
+    case TILE_SLOPE_E:
         h = x;
         break;
-    case 9:
+    case TILE_SLOPE_W:
         h = 0xFF - x;
         break;
     }
@@ -216,7 +216,7 @@ unsigned char far SolveCenter(unsigned char range)
         curP->hits0 |= 4;
         curP->hits0 |= 8 << ((tiles[4] & 0x300) >> 8);
     }
-    if ((tiles[4] & 0xF) >= 6)
+    if ((tiles[4] & 0xF) >= TILE_SLOPE_N)
         curP->hits0 |= 0x2000;
     return !steep;
 }
@@ -599,8 +599,8 @@ unsigned char far can_place(int item, int index, int x, int y, int z, unsigned c
     if (curP->z <= curP->floor + radius)
         nvokTerr = 1 << (curP->hits0 & 3);
     else
-        nvokTerr = 0x10;
-    ObjectCheck(nvokTerr != 0x10 && index >= NUM_MOBILE, 1);
+        nvokTerr = FOOT_AIR;
+    ObjectCheck(nvokTerr != FOOT_AIR && index >= NUM_MOBILE, 1);
     if (curP->found != 0) {
         int i;
         int best;
@@ -620,7 +620,7 @@ unsigned char far can_place(int item, int index, int x, int y, int z, unsigned c
                 ok = 0;
                 goto out;
             }
-            nvokTerr = 1;
+            nvokTerr = FOOT_FLOOR;
         }
     }
     if (!(char)flier && (curP->hits0 | curP->hits1) & 0x800 && curP->z - range > nvokHgt)

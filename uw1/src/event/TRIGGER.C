@@ -117,7 +117,7 @@ int far UseTrigger(struct Object far *who, struct Object far *start,
         if (OBJ_ITEM(who) == ITEM_ADVENTURER) {
             if (!(trig->id & ID_FLAG11)) return 2;
             if (type == 5 && (trig->pos & POS_Z) > 0 &&
-                skill_check(player->skills[11], trig->pos & POS_Z) <= 0)
+                skill_check(player->skills[SKILL_SEARCH], trig->pos & POS_Z) <= 0)
                 return 2;
         } else {
             if (OBJ_MAJOR(who) == MAJOR_CREATURE) {
@@ -200,16 +200,16 @@ int far UseTrap(struct Object far *trap, int x, int y)
     register int v;
 
     switch (OBJ_INMAJOR(trap)) {
-    case 2:
+    case TRAP_ARROW:
         trap_fire(trap, x, y);
         break;
-    case 1:
+    case TRAP_TELEPORT:
         v = trap->qn.f.quality;
         b = trap->ol.f.owner;
         c = OBJ_Z(trap);
         result = do_teleport(CharacterThatTriggeredTrap, v, b, c);
         break;
-    case 5:
+    case TRAP_CHANGE_TERRAIN:
         e = trap->ol.f.owner;
         d = trap->qn.f.quality >> 1;
         c = OBJ_Z(trap) >> 3;
@@ -220,7 +220,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
         g = OBJ_FINEY(trap);
         result = change_terrain(x, y, e, d, c, i, f, g, 0);
         break;
-    case 0xD:
+    case TRAP_SET_VARIABLE:
         i = OBJ_Z(trap);
         d = (trap->qn.f.quality << 5 | trap->ol.f.owner) << 3 | OBJ_FINEY(trap);
         c = OBJ_HEADING(trap);
@@ -249,7 +249,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
             player->game_vars[i] = player->game_vars[i] & 0x3F;
         }
         break;
-    case 0xE:
+    case TRAP_CHECK_VARIABLE:
         i = OBJ_Z(trap);
         c = i + OBJ_HEADING(trap);
         d = (trap->qn.f.quality << 5 | trap->ol.f.owner) << 3 | OBJ_FINEY(trap);
@@ -271,7 +271,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
             }
         }
         break;
-    case 0:
+    case TRAP_DAMAGE:
         if ((int)(((int32)rand() * 10) / 0x8000L) < 7)
             h = 2;
         else
@@ -279,16 +279,16 @@ int far UseTrap(struct Object far *trap, int x, int y)
         result = whack_thing(Obj_MemTPtr(CharacterThatTriggeredTrap),
                              trap->qn.f.quality * (trap->ol.f.owner ? -1 : 1), 4, h);
         break;
-    case 3:
+    case TRAP_DO:
         result = do_trap_hack(trap, x, y);
         break;
-    case 6:
+    case TRAP_SPELL:
         spell = trap->qn.f.quality;
         power = trap->ol.f.owner;
         result = inanimate_spell(x, y, trap, CharacterThatTriggeredTrap,
                                  spell, power);
         break;
-    case 7: {
+    case TRAP_CREATE_OBJECT: {
         unsigned char placed;
         if ((int)(((int32)rand() * 0x3F) / 0x8000L) < trap->qn.f.quality)
             return 2;
@@ -330,7 +330,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
         result = 2;
         break;
     }
-    case 8:
+    case TRAP_DOOR:
         continue_chain = 0;
         tile = Map_GetAddr(x, y);
         head = &tile->objects;
@@ -378,30 +378,30 @@ int far UseTrap(struct Object far *trap, int x, int y)
             }
         }
         break;
-    case 0xB:
+    case TRAP_DELETE_OBJECT:
         head = &Map_GetAddr(trap->qn.f.quality, trap->ol.f.owner)->objects;
         lock = Obj_PtrTMem(&trap->ol.link);
         Obj_FreeLinkChain(head, lock);
         editchng(2);
         continue_chain = 0;
         break;
-    case 0xC:
+    case TRAP_INVENTORY:
         i = trap->qn.f.quality << 5 | trap->ol.f.owner;
-        obj = FindObj(i >> 6, (i & 0x30) >> 4, i & 0xF, 4, &slot);
+        obj = FindObj(i >> 6, (i & ID_MINOR) >> 4, i & 0xF, 4, &slot);
         if (obj == 0)
             return 2;
         if (OBJ_Z(trap) > 0 && OBJ_ISQUANT(obj) &&
             !(obj->ol.f.link & LINK_SPECIAL) && OBJ_Z(trap) > obj->ol.f.link)
             return 2;
         break;
-    case 9:
-    case 0xA:
+    case TRAP_WARD:
+    case TRAP_TELL:
         if (CharacterThatTriggeredTrap != 0 &&
             (trap->qn.f.quality == 0x3F ||
              trap->qn.f.quality == OBJ_INCLASS(CharacterThatTriggeredTrap))) {
             int damage;
-            damage = (int)(((int32)rand() * player->skills[9]) / 0x8000L) + 3;
-            print_path_to(get_string(0x2F5), OBJ_HOMEX(ThePlayer), OBJ_HOMEY(ThePlayer), 0,
+            damage = (int)(((int32)rand() * player->skills[SKILL_CASTING]) / 0x8000L) + 3;
+            print_path_to(get_string(0xF5 | STR_GAME), OBJ_HOMEX(ThePlayer), OBJ_HOMEY(ThePlayer), 0,
                           OBJ_HOMEX(CharacterThatTriggeredTrap),
                           OBJ_HOMEY(CharacterThatTriggeredTrap), 0, 0);
             result = whack_thing(Obj_MemTPtr(CharacterThatTriggeredTrap),
@@ -409,7 +409,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
         }
         continue_chain = 0;
         break;
-    case 0x10: {
+    case TRAP_TEXT_STRING: {
         char far *str = get_string(trap->qn.f.quality << 5 | trap->ol.f.owner | STR_TRAPTEXT);
         dprintf("Look, it's a text trap\n");
         if (str != 0)
@@ -438,7 +438,7 @@ void far kill_triggers(union Link far *head)
     union Link far *link;
     obj = Obj_PtrTMem(head);
     while (obj != 0) {
-        if (OBJ_CLASS(obj) == 0x1A &&
+        if (OBJ_CLASS(obj) == CLASS_TRIGGER &&
             obj->ol.f.link == RemoveTrapIndex) {
             Obj_Rem(head, obj);
             Obj_Free(obj);
@@ -463,7 +463,7 @@ void far delete_trap(union Link far *head, struct Object far *trap)
     if (RemoveTrapFlags != 0) {
         RemoveTrapIndex = Obj_MemTPtr(trap);
         tile = mapdata;
-        for (i = 0; RemoveTrapFlags > 0 && i < 0x1000; i++, tile++) {
+        for (i = 0; RemoveTrapFlags > 0 && i < MAP_TILES; i++, tile++) {
             tilehead = &tile->objects;
             if (tilehead->f.index > 0)
                 kill_triggers(tilehead);
@@ -552,8 +552,8 @@ int far cast_trap_spell(int x, int y, int sub)
     tile = Map_GetAddr(x, y);
     SET_INVIS(trigger, 1);
     SET_DOORDIR(trigger, 1);
-    SET_MAJOR(trigger, 6);
-    SET_MINOR(trigger, 2);
+    SET_MAJOR(trigger, MAJOR_TRAP);
+    SET_MINOR(trigger, MINOR_TRIGGER);
     SET_INCLASS(trigger, 0);
     SET_Z(trigger, tile->height << 3);
     SET_ISQUANT(trigger, 1);
@@ -568,8 +568,8 @@ int far cast_trap_spell(int x, int y, int sub)
     trigger->qn.f.quality = x;
     trigger->ol.f.owner = y;
     Obj_Add(&tile->objects, trigger);
-    SET_MAJOR(trap, 6);
-    SET_MINOR(trap, 0);
+    SET_MAJOR(trap, MAJOR_TRAP);
+    SET_MINOR(trap, MINOR_TRAP);
     SET_INCLASS(trap, sub);
     SET_INVIS(trap, 1);
     SET_DOORDIR(trap, 1);
@@ -652,7 +652,7 @@ void far DoWanderingMonsters(char is_player)
     int16 y = 0;
     struct Object far *obj;
     struct Object far *newobj;
-    while ((obj = Obj_FindInMap(6, 0, 7, &x, &y)) != 0) {
+    while ((obj = Obj_FindInMap(MAJOR_TRAP, MINOR_TRAP, TRAP_CREATE_OBJECT, &x, &y)) != 0) {
         if (OBJ_FLAGS(obj) == 0) {
             newobj = Obj_PtrTMem(&obj->ol.link);
             if (IsMobElem(newobj)) {
@@ -673,7 +673,7 @@ void far DoClosingDoors(char is_player)
     int16 y = 0;
     struct Object far *door;
     register int i;
-    while ((door = Obj_FindInMap(5, 0, -1, &x, &y)) != 0) {
+    while ((door = Obj_FindInMap(MAJOR_RECT, MINOR_DOOR, -1, &x, &y)) != 0) {
         if (((Map_GetAddr(x, y)->door & 2) >> 1) == 0 &&
             OBJ_INCLASS(door) >= 8 &&
             (int)(((int32)rand() * 10) / 0x8000L) < 3) {

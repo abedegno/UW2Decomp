@@ -61,16 +61,16 @@ void far DoSpecialActions(int slot)
 
     held = CursorObjPtr != 0;
     switch (slot) {
-    case 0x15:
+    case DISP_UP:
         ScrollItemsUp();
         break;
-    case 0x16:
+    case DISP_DOWN:
         ScrollItemsDown();
         break;
-    case 0x14:
+    case DISP_BAG:
         CloseTheBag();
         break;
-    case 0x17:
+    case DISP_WORLD:
         if (CursorObjPtr != 0 && ReturnObject(CursorObjPtr, 1)) {
             if (HasOrIsObj(CursorObjPtr, ITEM_MOONSTONE))
                 player->moonstone = (char)PlayerLevel;
@@ -78,7 +78,7 @@ void far DoSpecialActions(int slot)
             FixPlayerEquips();
         }
         break;
-    case 0x18:
+    case DISP_BARTER:
         conv_inv_special();
         break;
     case 8:
@@ -140,12 +140,12 @@ void far FixBagArea(void)
 
     if (OpenBag != 0) {
         CloseAllBags();
-        Inventory[19].f.index = 0;
-        for (i = 11; i <= 18; i++)
+        Inventory[INV_BAG].f.index = 0;
+        for (i = INV_PACK; i <= INV_PACK_LAST; i++)
             DisplayToSlot[i + 1] = i;
-        for (i = 12; i <= 19; i++) {
-            t = BagSaveHandles[i - 12];
-            BagSaveHandles[i - 12] = SaveHandles[i];
+        for (i = DISP_PACK; i <= DISP_PACK_LAST; i++) {
+            t = BagSaveHandles[i - DISP_PACK];
+            BagSaveHandles[i - DISP_PACK] = SaveHandles[i];
             SaveHandles[i] = t;
         }
         mouse_hide();
@@ -155,8 +155,8 @@ void far FixBagArea(void)
         }
         mouse_show();
         InvUpArrow = InvDownArrow = 0;
-        DisplayInvObject(0x15);
-        DisplayInvObject(0x16);
+        DisplayInvObject(DISP_UP);
+        DisplayInvObject(DISP_DOWN);
     }
 }
 
@@ -173,11 +173,11 @@ void far CloseTheBag(void)
             OpenBag = OpenBag->prev;
             farfree(bag);
             OpenBag->next = 0;
-            Inventory[19] = OpenBag->obj;
-            Inventory[20].f.index = Obj_PtrTMem(&OpenBag->obj)->ol.f.link;
+            Inventory[INV_BAG] = OpenBag->obj;
+            Inventory[INV_BAG_ITEMS].f.index = Obj_PtrTMem(&OpenBag->obj)->ol.f.link;
             FixOpenBag();
             DisplayOpenBag();
-            displayInventoryArray(0x14, 0x14);
+            displayInventoryArray(DISP_BAG, DISP_BAG);
         } else
             FixBagArea();
     }
@@ -189,20 +189,20 @@ void far DisplayOpenBag(void)
     struct Object far *obj;
 
     mouse_hide();
-    displayInventoryArray(0xC, 0x13);
-    obj = Obj_PtrTMem(&Obj_PtrTMem(&Inventory[19])->ol.link);
+    displayInventoryArray(DISP_PACK, DISP_PACK_LAST);
+    obj = Obj_PtrTMem(&Obj_PtrTMem(&Inventory[INV_BAG])->ol.link);
     while (obj != 0 && OBJ_INVIS(obj))
         obj = Obj_PtrTMem(&obj->qn.link);
-    if (Obj_MemTPtr(obj) == Inventory[20].f.index)
+    if (Obj_MemTPtr(obj) == Inventory[INV_BAG_ITEMS].f.index)
         InvDownArrow = 0;
     else
         InvDownArrow = 1;
-    if (Inventory[27].f.index == 0)
+    if (Inventory[INV_BAG_LAST].f.index == 0)
         InvUpArrow = 0;
     else
         InvUpArrow = 1;
-    DisplayInvObject(0x15);
-    DisplayInvObject(0x16);
+    DisplayInvObject(DISP_UP);
+    DisplayInvObject(DISP_DOWN);
     mouse_show();
 }
 
@@ -213,12 +213,12 @@ void far FixOpenBag(void)
     struct Object far *obj;
     int i;
 
-    for (i = 20; i <= 27; i++)
+    for (i = INV_BAG_ITEMS; i <= INV_BAG_LAST; i++)
         if (Inventory[i].f.index != 0)
             break;
-    obj = Obj_PtrTMem(&Obj_PtrTMem(&Inventory[19])->ol.link);
-    if (i > 27) {
-        for (i = 20; i <= 27; i++) {
+    obj = Obj_PtrTMem(&Obj_PtrTMem(&Inventory[INV_BAG])->ol.link);
+    if (i > INV_BAG_LAST) {
+        for (i = INV_BAG_ITEMS; i <= INV_BAG_LAST; i++) {
             Inventory[i].f.index = Obj_MemTPtr(obj);
             if (obj != 0) {
                 if (OBJ_INVIS(obj))
@@ -227,9 +227,9 @@ void far FixOpenBag(void)
             }
         }
         while (obj != 0) {
-            for (i = 20; i < 24; i++)
+            for (i = INV_BAG_ITEMS; i < INV_BAG_ITEMS + 4; i++)
                 Inventory[i].f.index = Inventory[i + 4].f.index;
-            for (; i <= 27; i++) {
+            for (; i <= INV_BAG_LAST; i++) {
                 Inventory[i].f.index = Obj_MemTPtr(obj);
                 if (obj != 0) {
                     if (OBJ_INVIS(obj))
@@ -244,7 +244,7 @@ void far FixOpenBag(void)
             if (obj == 0)
                 return;
         }
-        for (i = 20; i <= 27; i++) {
+        for (i = INV_BAG_ITEMS; i <= INV_BAG_LAST; i++) {
             Inventory[i].f.index = Obj_MemTPtr(obj);
             if (obj != 0) {
                 if (OBJ_INVIS(obj))
@@ -283,25 +283,25 @@ void far OpenTheBag(int slot)
                 return;
             }
         }
-        if (slot < 11)
+        if (slot < INV_PACK)
             CloseAllBags();
     } else {
         mouse_hide();
         if ((scrmode == 1 || scrmode == 4) && RightPanel == 0)
             pic_to_screen(0x2097, 0xEC, 0x77, 0x29, 0x54);
         if (BagSaveHandles[0] == 0) {
-            for (j = 12; j <= 19; j++) {
-                BagSaveHandles[j - 12] = valloc(InvDisplay[j].w, InvDisplay[j].h);
-                save_rect(BagSaveHandles[j - 12], InvDisplay[j].x, InvDisplay[j].y,
+            for (j = DISP_PACK; j <= DISP_PACK_LAST; j++) {
+                BagSaveHandles[j - DISP_PACK] = valloc(InvDisplay[j].w, InvDisplay[j].h);
+                save_rect(BagSaveHandles[j - DISP_PACK], InvDisplay[j].x, InvDisplay[j].y,
                           InvDisplay[j].w, InvDisplay[j].h);
             }
         }
         mouse_show();
-        for (i = 20; i <= 27; i++)
+        for (i = INV_BAG_ITEMS; i <= INV_BAG_LAST; i++)
             SlotToDisplay[i + 20] = i;
-        for (i = 12; i <= 19; i++) {
-            j = BagSaveHandles[i - 12];
-            BagSaveHandles[i - 12] = SaveHandles[i];
+        for (i = DISP_PACK; i <= DISP_PACK_LAST; i++) {
+            j = BagSaveHandles[i - DISP_PACK];
+            BagSaveHandles[i - DISP_PACK] = SaveHandles[i];
             SaveHandles[i] = j;
         }
     }
@@ -318,10 +318,10 @@ void far OpenTheBag(int slot)
     }
     OpenBag->next = 0;
     OpenBag->weight = 0;
-    Inventory[19].f.index = OpenBag->obj.f.index = Inventory[slot].f.index;
-    first = Obj_PtrTMem(&Obj_PtrTMem(&Inventory[19])->ol.link);
-    BagWeight(&Obj_PtrTMem(&Inventory[19])->ol.link, &OpenBag->weight);
-    for (i = 20; i <= 27; i++) {
+    Inventory[INV_BAG].f.index = OpenBag->obj.f.index = Inventory[slot].f.index;
+    first = Obj_PtrTMem(&Obj_PtrTMem(&Inventory[INV_BAG])->ol.link);
+    BagWeight(&Obj_PtrTMem(&Inventory[INV_BAG])->ol.link, &OpenBag->weight);
+    for (i = INV_BAG_ITEMS; i <= INV_BAG_LAST; i++) {
         Inventory[i].f.index = Obj_MemTPtr(first);
         if (first != 0) {
             if (OBJ_INVIS(first))
@@ -329,12 +329,12 @@ void far OpenTheBag(int slot)
             first = Obj_PtrTMem(&first->qn.link);
         }
     }
-    cont = Obj_PtrTMem(&Inventory[19]);
+    cont = Obj_PtrTMem(&Inventory[INV_BAG]);
     cls = cont->id & ID_INCLASS;
     if (cls < 12 && !(cls & 1))
         SET_INCLASS(cont, cls + 1);
     DisplayOpenBag();
-    displayInventoryArray(0x14, 0x14);
+    displayInventoryArray(DISP_BAG, DISP_BAG);
     if (SlotToDisplay[slot] < 11)
         DisplayInvObject(SlotToDisplay[slot]);
 }
@@ -343,7 +343,7 @@ void far ScrollItemsUp(void)
 {
     if (OpenBagList == 0 || !(char)InvUpArrow)      /* UW1: a signed char (cbw) */
         return;
-    Inventory[20] = Inventory[24];
+    Inventory[INV_BAG_ITEMS] = Inventory[INV_BAG_ITEMS + 4];
     FixOpenBag();
     DisplayOpenBag();
 }
@@ -360,7 +360,7 @@ void far ScrollItemsDown(void)
     if (OpenBagList == 0 || !(char)InvDownArrow)    /* UW1: a signed char (cbw) */
         return;
     first = obj = Obj_PtrTMem(&Obj_PtrTMem(&OpenBag->obj)->ol.link);
-    target = Obj_PtrTMem(&Inventory[20]);
+    target = Obj_PtrTMem(&Inventory[INV_BAG_ITEMS]);
     while (obj != target) {
         first = obj;
         for (i = 0; i < 4; i++) {
@@ -371,7 +371,7 @@ void far ScrollItemsDown(void)
                 break;
         }
     }
-    Inventory[20].f.index = Obj_MemTPtr(first);
+    Inventory[INV_BAG_ITEMS].f.index = Obj_MemTPtr(first);
     FixOpenBag();
     DisplayOpenBag();
 }
@@ -394,23 +394,23 @@ char far PutObjectInBag(struct Object far *obj, int slot)
     found = 0;
     if (!ItemFitsSlot(obj, slot))
         return 0;
-    if (slot == 19 && OpenBag->prev == 0) {
-        for (i = 11; i <= 18; i++) {
+    if (slot == INV_BAG && OpenBag->prev == 0) {
+        for (i = INV_PACK; i <= INV_PACK_LAST; i++) {
             if (Inventory[i].f.index == 0) {
                 found = 1;
                 break;
             }
         }
-        if (i > 18)
+        if (i > INV_PACK_LAST)
             return 0;
         cont = ThePlayer;
         bag = 0;
-    } else if (slot == 19 && OpenBag->prev != 0) {
+    } else if (slot == INV_BAG && OpenBag->prev != 0) {
         bag = OpenBag->prev;
         cont = Obj_PtrTMem(&bag->obj);
     } else {
         cont = Obj_PtrTMem(&Inventory[slot]);
-        if (slot > 19)
+        if (slot > INV_BAG)
             bag = OpenBag;
         else
             bag = 0;
@@ -452,7 +452,7 @@ char far PutObjectInBag(struct Object far *obj, int slot)
     }
     if (Obj_MemTPtr(cont) == FARNULLREC(OpenBag, "ffww")->obj.f.index) {
         FixOpenBag();
-        displayInventoryArray(0xC, 0x13);
+        displayInventoryArray(DISP_PACK, DISP_PACK_LAST);
     } else if (displayEnc(1))
         grfx_load_font((int)"font5x6p.sys");  /* UW1: takes the font's file name; the cast is to UW2's index */
     if (OBJ_ITEM(obj) >= FIRST_LIT_LIGHT && OBJ_ITEM(obj) < FIRST_WAND)

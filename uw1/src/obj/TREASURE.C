@@ -103,7 +103,7 @@ void far generate_treasure(struct Object far *npc)
     type = rand() % (40 - PlayerLevel * 3) - (33 - PlayerLevel * 3);
     if (type < 0)
         type = 0;
-    if ((value = (unsigned char)ComObjData[type + 0xA0].value) == 0)
+    if ((value = (unsigned char)ComObjData[type + FIRST_TREASURE].value) == 0)
         value = 1;
     if (value >= 12)
         value = value * 8 - 68;

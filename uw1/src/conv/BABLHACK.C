@@ -305,7 +305,7 @@ void far x_obj_stuff(int16 far *args)
         if (*flags != -1)
             SET_FLAGS(obj, *flags);
         if (*link != -1)
-            obj->ol.f.link = 0x200 | *link;     /* UW1: sets bit 9 of the link */
+            obj->ol.f.link = LINK_SPECIAL | *link;     /* UW1: sets bit 9 of the link */
         if (*flag10 != -1)
             SET_FLAG10(obj, *flag10);
         if (*flag9 != -1)
@@ -322,9 +322,9 @@ void far x_obj_stuff(int16 far *args)
         if (*link != -1)
             *link = obj->ol.f.link & 0x1FF;     /* UW1: without bit 9 */
         if (*flag10 != -1)
-            *flag10 = obj->id & 0x400;
+            *flag10 = obj->id & ID_FLAG10;
         if (*flag9 != -1)
-            *flag9 = obj->id & 0x200;
+            *flag9 = obj->id & ID_FLAG9;
         if (*quality != -1)
             *quality = obj->qn.f.quality;
     }

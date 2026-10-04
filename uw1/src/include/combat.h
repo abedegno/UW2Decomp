@@ -30,6 +30,21 @@ struct Tile;
 #define SPELLC_SPECIAL  13              /* special_spells */
 #define SPELLC_CUTSCENE 14              /* runcutscene */
 
+/* A spell's minor (struct Spell's sub, do_spell's sub): bits 0-5 the minor itself, bits 6
+   and 7 flags, passed to set_curmagic for the active spell classes and the target mode for
+   the area spells (process_area's type). */
+#define SPELL_MINOR     0x3F
+#define SPELL_FLAGS     0xC0
+#define AREA_CRITTERS   0x00            /* every critter but the caster */
+#define AREA_RANDOM     0x40            /* random open squares */
+#define AREA_OBJECTS    0x80            /* every object */
+#define AREA_ALL        0xC0            /* every object */
+/* The spell table, spells[] (SPELLS.C; cast's spell numbers). */
+#define NUM_SPELLS      53
+/* The spells a player can cast from runes: spells[0..0x2F], eight circles of six (RUNES.C's
+   try_cast searches them; player_cast's circle is idx / 6 + 1). */
+#define NUM_RUNE_SPELLS 0x30
+
 #define NUM_RUNES       0x18            /* An to Ylem, items FIRST_RUNESTONE on */
 #define RUNE_NONE       0x18            /* an empty place on the rune shelf */
 

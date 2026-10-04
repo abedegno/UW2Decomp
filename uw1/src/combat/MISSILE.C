@@ -110,7 +110,7 @@ void far player_fire(int weapon)
             Obj_Free(ammo_obj);
         } else
             game_sprint(0xFE);  /* 'You need more space to fire that weapon.' */
-        if (weapon == 9 || weapon == 10)
+        if (weapon == ITEM_BOW - FIRST_MISSILE || weapon == ITEM_CROSSBOW - FIRST_MISSILE)
             play_effect_here(9, 0x40, 0);
     }
 }

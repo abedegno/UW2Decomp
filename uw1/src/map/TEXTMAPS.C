@@ -46,14 +46,14 @@ char far put_arc(char far *arc, int block, void far *buf, int size); /* writes o
    and COLLIDE.C index it by a tile's floor); the others are ours, chosen for layout
    (bssorder.py keys 22, 198, 206, 420, 590, 735, 988, 991, 991, 991). */
 uint16 f16p;                            /* DS:717A, the floors' 16-pixel bitmaps */
-int16 floor_IDs[10];                    /* DS:717C, the level's floor textures */
+int16 floor_IDs[TXM_FLOORS];                    /* DS:717C, the level's floor textures */
 uint16 f32_buf;                         /* DS:7190, the floors' 32-pixel bitmaps */
-uint16 TxmTerr[10];                     /* DS:7192, each floor's terrain type */
+uint16 TxmTerr[TXM_FLOORS];                     /* DS:7192, each floor's terrain type */
 int16 floor_num;                        /* DS:71A6, floor textures loaded */
 uint16 w16_buf;                         /* DS:71A8, the walls' 16-pixel bitmaps */
-int16 TxmID[0x30];                      /* DS:71AA, the level's wall textures */
+int16 TxmID[TXM_WALLS];                      /* DS:71AA, the level's wall textures */
 uint16 w64_buf;                         /* DS:720A, the walls' 64-pixel bitmaps */
-uint16 w64_types[0x30];                 /* DS:720C, each wall's terrain type */
+uint16 w64_types[TXM_WALLS];                 /* DS:720C, each wall's terrain type */
 int16 w64_num;                          /* DS:726C, wall textures */
 
 /* 0x0: the default texture map: walls 0..11 repeated, floors 0..9, doors 0..5; loads them
@@ -62,20 +62,20 @@ char far init_txtlib(void)
 {
     int i;
 
-    for (i = 0; i < 0x30; i++) {
+    for (i = 0; i < TXM_WALLS; i++) {
         TxmID[i] = i % 12;
         w64_types[i] = 0;
     }
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < TXM_FLOORS; i++) {
         floor_IDs[i] = i;
         TxmTerr[i] = 0;
     }
-    for (i = 0; i < 6; i++)
+    for (i = 0; i < TXM_DOORS; i++)
         ActDoors[i] = i;
-    w64_num = 0x30;
-    floor_num = 10;
+    w64_num = TXM_WALLS;
+    floor_num = TXM_FLOORS;
     load_txtmaps();
-    for (i = 0; i < 0x30; i++) {
+    for (i = 0; i < TXM_WALLS; i++) {
         if (i < 12) {
             seg051_C378[i] = 0;
             seg051_C3B2[i] = 0;
@@ -88,11 +88,11 @@ char far init_txtlib(void)
             seg051_C460[i] = EmsBuff + ((i - 12) << 4) + 0xC00;
         }
     }
-    for (; i < 0x3A; i++) {
+    for (; i < TXM_WALLS + TXM_FLOORS; i++) {
         seg051_C378[i] = 0;
         seg051_C3B2[i] = 0;
-        seg051_C3EC[i] = f32_buf + ((i - 0x30) << 6);
-        seg051_C460[i] = f16p + ((i - 0x30) << 4);
+        seg051_C3EC[i] = f32_buf + ((i - TXM_WALLS) << 6);
+        seg051_C460[i] = f16p + ((i - TXM_WALLS) << 4);
     }
     return 1;
 }
@@ -103,7 +103,7 @@ void far ovr131_1DD(int n, int x, int y)
 {
     register unsigned seg;
 
-    seg = seg009_38C(n + 0x3A);
+    seg = seg009_38C(n + TXM_WALLS + TXM_FLOORS);
     show(x, y, MK_FP(seg, 0), 0x10, 0x10, 0, 0);
 }
 
@@ -117,22 +117,22 @@ unsigned char far Txm_Load(char *arc, int lev)
     register int i;
 
     ok = 1;
-    if (get_arc(arc, lev + 0x11, buf) != 0x7A) {
+    if (get_arc(arc, LEVARK_TXM(lev), buf) != TXM_BLOCK_SIZE) {
         dprintf("bad tmap ids size\n");
         ok = 0;
     }
-    for (i = 0; i < 0x30; i++) {
+    for (i = 0; i < TXM_WALLS; i++) {
         TxmID[i] = buf[i];
         w64_types[i] = 0;
     }
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < TXM_FLOORS; i++) {
         TxmTerr[i] = 0;
-        floor_IDs[i] = buf[i + 0x30];
+        floor_IDs[i] = buf[i + TXM_WALLS];
     }
     Load_Terrains(TxmID, floor_IDs);
     for (i = 0; i < 3; i++) {
-        ActDoors[i * 2] = buf[i + 0x3A] & 0xFF;
-        ActDoors[i * 2 + 1] = buf[i + 0x3A] >> 8;
+        ActDoors[i * 2] = buf[i + TXM_WALLS + TXM_FLOORS] & 0xFF;
+        ActDoors[i * 2 + 1] = buf[i + TXM_WALLS + TXM_FLOORS] >> 8;
     }
     load_txtmaps();
     return ok;
@@ -144,13 +144,13 @@ char far Txm_Save(char *arc, int lev)
     int16 buf[0x40];
     register int i;
 
-    for (i = 0; i < 0x30; i++)
+    for (i = 0; i < TXM_WALLS; i++)
         buf[i] = TxmID[i];
-    for (i = 0; i < 10; i++)
-        buf[i + 0x30] = floor_IDs[i];
+    for (i = 0; i < TXM_FLOORS; i++)
+        buf[i + TXM_WALLS] = floor_IDs[i];
     for (i = 0; i < 3; i++)
-        buf[i + 0x3A] = (ActDoors[i * 2 + 1] << 8) | (ActDoors[i * 2] & 0xFF);
-    return put_arc(arc, lev + 0x11, buf, 0x7A);
+        buf[i + TXM_WALLS + TXM_FLOORS] = (ActDoors[i * 2 + 1] << 8) | (ActDoors[i * 2] & 0xFF);
+    return put_arc(arc, LEVARK_TXM(lev), buf, TXM_BLOCK_SIZE);
 }
 
 /* 0x375: loads the level's textures: the first 12 walls and the floors into conventional
@@ -197,7 +197,7 @@ void far load_tr_mem(char *name, int16 *ids, int16 *count, uint16 seg)
 
     offs = 0;
     dst = MK_FP(seg, 0);
-    if ((fd = open(name, 0x8001)) < 0) pfatal_code(ERR_READ | 0xF);
+    if ((fd = open(name, O_RDONLY | O_BINARY)) < 0) pfatal_code(ERR_READ | 0xF);
     read(fd, &b, 1);
     if (b != 2) pfatal_code(ERR_READ | 0x10);
     read(fd, &b, 1);
@@ -231,11 +231,11 @@ void far Load_Terrains(int16 *walls, int16 *floors)
 
     fp = fopen("DATA\\terrain.dat", "rb");
     if (fp != NULL) {
-        for (i = 0; i < 0x30; i++) {
+        for (i = 0; i < TXM_WALLS; i++) {
             fseek(fp, (int32)walls[i] * 2, SEEK_SET);
             fread(&w64_types[i], 2, 1, fp);
         }
-        for (i = 0; i < 10; i++) {
+        for (i = 0; i < TXM_FLOORS; i++) {
             fseek(fp, (int32)floors[i] * 2 + 0x200, SEEK_SET);
             fread(&TxmTerr[i], 2, 1, fp);
         }

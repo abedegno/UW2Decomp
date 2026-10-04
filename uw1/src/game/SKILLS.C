@@ -69,15 +69,15 @@ char far use_skill(struct Object far *who, unsigned char skill, unsigned char va
         return 0;
     switch (skill)
     {
-    case 12:
+    case SKILL_TRACK:
         mdetect(8, value);
         break;
     default:
-        scroll_print(get_string((skill + 0x1F) | STR_CHARGEN));
+        scroll_print(get_string((skill + STRN_SKILLS) | STR_CHARGEN));
         scroll_print("\n");
         return 1;
-    case 10:
-    case 11:
+    case SKILL_TRAPS:
+    case SKILL_SEARCH:
         break;
     }
     return 1;
@@ -97,7 +97,7 @@ void far player_compute(char restore)
 
     playerdat->avghit = 30 + player->level * playerdat->attr[0] / 5;
     mana = (player->skills[SKILL_MANA] + 1) * playerdat->attr[2] >> 3;
-    if (PlayerLevel == 7)
+    if (PlayerLevel == LEVEL_TYBAL)
         player->saved_mana = mana;
     else
         player->max_mana = mana;
@@ -128,9 +128,9 @@ void far advance(char levels)
 /* The attribute that governs a skill: 0 strength, 1 dexterity, 2 intelligence. */
 int far prime(int skill)
 {
-    if (skill < 7)
+    if (skill < SKILL_MANA)
         return 0;
-    if (skill < 10)
+    if (skill < SKILL_TRAPS)
         return 2;
     return 1;
 }
@@ -201,7 +201,7 @@ char far get_skill(char skill)
         if (player->skills[skill] > 30)
             player->skills[skill] = 30;
     }
-    if (skill == 8)
+    if (skill == SKILL_LORE)
     {
         clear_all_loretries();
         if (PlayerLevel <= 8)
@@ -218,7 +218,7 @@ void far great_advance(int skill, char ok)
 {
     if (ok) {
         game_sprint(0x1C);
-        scroll_print(get_string((skill + 0x1F) | STR_CHARGEN));
+        scroll_print(get_string((skill + STRN_SKILLS) | STR_CHARGEN));
         scroll_print(".\n");
     } else
         game_sprint(0x1B);
@@ -242,7 +242,7 @@ void far report_advance(register unsigned char *list)
             scroll_print(" and ");
         else if (i != 0)
             scroll_print(", ");
-        scroll_print(get_string((list[i] + 0x1F) | STR_CHARGEN));
+        scroll_print(get_string((list[i] + STRN_SKILLS) | STR_CHARGEN));
     }
     scroll_print(".\n");
 }
@@ -265,14 +265,14 @@ void far mantra_advance(void)
     text[0] = 0;
     wdialog("Chant the mantra: ", 0, text, 1, 0xA);
     scroll_print("\n");
-    for (mantra = 0x33; mantra < 0x4D; mantra++)
+    for (mantra = STRN_MANTRAS; mantra < STRN_MANTRAS + NUM_MANTRAS; mantra++)
         if (str_cmp(get_string(mantra | STR_CHARGEN), strupr(text)) == 0)
             break;
-    if (mantra == 0x4D)
+    if (mantra == STRN_MANTRAS + NUM_MANTRAS)
         game_sprint(0x19);              /* "That is not a mantra." */
     else {
-        mantra -= 0x33;
-        if (mantra < 20) {
+        mantra -= STRN_MANTRAS;
+        if (mantra < NUM_SKILLS) {
             char r1, r2;
 
             if (player->skill_points == 0)
@@ -292,7 +292,7 @@ void far mantra_advance(void)
             unsigned char list[4];
             unsigned char found;
 
-            switch (mantra - 20) {
+            switch (mantra - NUM_SKILLS) {
             case 0:
                 if (!player->cup)
                     print_path_to(get_string(0x223), OBJ_HOMEX(ThePlayer),
@@ -300,7 +300,7 @@ void far mantra_advance(void)
                 seg041_35D7_E9(0x20);
                 return;
             case 1:
-                if (!player->key && place_new(0, 0xE1)) {
+                if (!player->key && place_new(0, ITEM_KEY_OF_TRUTH)) {
                     game_sprint(0x1E);
                     player->key = 1;
                 }
@@ -374,7 +374,7 @@ void far game_stats(void)
     text[i++] = player->level % 10 + '0';
     text[i++] = ' ';
     text[i++] = 0;
-    str_cat(text, get_string((player->pclass + 0x17) | STR_CHARGEN));
+    str_cat(text, get_string((player->pclass + STRN_CLASSES) | STR_CHARGEN));
     y -= cur_font->height;
     x = 0xA0 - string_width(text) / 2;
     string_to_screen(text, x, y);
@@ -398,7 +398,7 @@ void far game_stats(void)
     {
         x = i / 3 ? 0xBE : 0x50;
         value = i % 3 * cur_font->height;
-        str = get_string((i + 0x11) | STR_CHARGEN);
+        str = get_string((i + STRN_STATS) | STR_CHARGEN);
         switch (i)
         {
         case 0:
@@ -421,10 +421,10 @@ void far game_stats(void)
     }
 
     y -= cur_font->height * 2;
-    for (i = 0; i < 20; i++)
+    for (i = 0; i < NUM_SKILLS; i++)
     {
         value = player->skills[i];
-        str = get_string((i + 0x1F) | STR_CHARGEN);
+        str = get_string((i + STRN_SKILLS) | STR_CHARGEN);
         text[0] = value > 9 ? value / 10 + '0' : value + '0';
         text[1] = value > 9 ? value % 10 + '0' : 0;
         text[2] = 0;
@@ -484,16 +484,16 @@ void far drop_drunk_player(void)
 {
     unsigned char damage;
 
-    if (player->motion_state & 3)
+    if (player->motion_state & (MS_SWIM | MS_LAVA))
         damage_item(ThePlayer, 0L, 0, 0, 0xFF, 0);
     FixPlayerEquips();
     finish_player();
-    if ((player->motion_state & 8) && (motionbits & 0x16) == 0)
+    if ((player->motion_state & MS_FLOAT) && (motionbits & (MB_SLOW_FALL | MB_LEVITATE | MB_FLY)) == 0)
     {
         damage = rand() % 6 * 10 + 12;
         damage_item(ThePlayer, 0L, 0, 0, damage, 0x10);
     }
-    if (player->motion_state & 3)
+    if (player->motion_state & (MS_SWIM | MS_LAVA))
         damage_item(ThePlayer, 0L, 0, 0, 0xFF, 0);
 }
 
@@ -514,7 +514,7 @@ void far player_sleep(register int how)
 
     if (how >= 0)
     {
-        if ((player->motion_state & 0x1B) || PN.acc[2] != 0 || PlayerLevel == 9)
+        if ((player->motion_state & 0x1B) || PN.acc[2] != 0 || PlayerLevel == LEVEL_VOID)
         {
             game_sprint(0x14);          /* "You can't go to sleep here!" */
             return;
@@ -527,7 +527,7 @@ void far player_sleep(register int how)
         game_sprint(0xF);               /* "You make camp." */
     }
     render_FB();
-    set_new_music(0xD);
+    set_new_music(MUSIC_MAPS);
     change_music_maybe();
     fadeout3d(5);
     if (how >= 0)
@@ -687,7 +687,7 @@ void far check_victory(void)
     else if (player->talismans == 0)
     {
         gate = 0;
-        if ((gate = CreateObj(0x15A, 0)) != 0)
+        if ((gate = CreateObj(ITEM_MOONGATE, 0)) != 0)
         {
             SET_ISQUANT(gate, 1);
             gate->ol.f.link = 0x2C0;
@@ -725,7 +725,7 @@ char far plant_seed(void)
     register int terrain;
     register int z;
 
-    if (PlayerLevel == 9)
+    if (PlayerLevel == LEVEL_VOID)
         return -1;
     x = PN.x >> 5;
     y = PN.y >> 5;
@@ -738,9 +738,9 @@ char far plant_seed(void)
         && (terrain < 27 || terrain > 31) && (terrain < 35 || terrain > 40))
         return 0;
     z = tile->height << 3;
-    if (can_place(0x1CA, 0, x, y, z, 0, 0))
+    if (can_place(ITEM_SILVER_TREE, 0, x, y, z, 0, 0))
     {
-        tree = CreateObj(0x1CA, 0);
+        tree = CreateObj(ITEM_SILVER_TREE, 0);
         SET_Z(tree, z);
         SET_FINEX_UNSIGNED(tree, x & 7);
         SET_FINEY(tree, y);
@@ -781,7 +781,7 @@ char far moveto(int level, register int item)
    drop_drunk_player 460, where UW2 has do_dreamret). */
 void far do_resurrect(void)
 {
-    if (moveto(player->tree, 0x1CA)) {
+    if (moveto(player->tree, ITEM_SILVER_TREE)) {
         if (playerdat->avghit > 8)
             ThePlayer->hp = playerdat->avghit - 2 - rand() * 3L / 0x8000L;
         else
@@ -800,7 +800,7 @@ void far do_resurrect(void)
 /* npp_func of the moonstone spells: arrive at the moonstone (item 0x126) on its level. */
 void far do_mstone(void)
 {
-    moveto(player->moonstone, 0x126);
+    moveto(player->moonstone, ITEM_MOONSTONE);
 }
 
 /* HP has reached 0. While talismans remain to be destroyed: the effects stop, death
@@ -820,7 +820,7 @@ void far player_is_dead(void)
         return;
     }
     seg014_1DC5_C7C();
-    load_new_music(10, 1);
+    load_new_music(MUSIC_DEATH, 1);
     player_get_exp(-(int)(player->exp >> 3));
     render_FB();
     fadeout3d(5);
@@ -841,7 +841,7 @@ void far player_is_dead(void)
             unforce_mouse_cursor(3);
         }
     }
-    bones = CreateObj(rand() % 5 + 0xC2, 0);
+    bones = CreateObj(rand() % 5 + ITEM_SKULL_C2, 0);
     if (put_at(PN.x >> 5, PN.y >> 5, PN.z >> 3, bones, 0, 1))
     {
         SET_Z(bones, OBJ_Z(ThePlayer));
@@ -850,7 +850,7 @@ void far player_is_dead(void)
         SET_FINEY(bones, OBJ_FINEY(ThePlayer));
         obj_deal(bones, PN.x >> 8, PN.y >> 8, 1);
     }
-    if (player->tree && PlayerLevel != 9)
+    if (player->tree && PlayerLevel != LEVEL_VOID)
     {
         do_teleport(ThePlayer, 0x3F, 0x3F, player->tree);
         npp_func = do_resurrect;

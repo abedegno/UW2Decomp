@@ -112,17 +112,17 @@ uint16 cnv_id = 0;
 void far TalkTo(struct Object far *thing)
 {
     unsigned char who, subclass;
-    if (OBJ_ITEM(thing) == 0x157) {
+    if (OBJ_ITEM(thing) == ITEM_SHRINE) {
         mantra_advance(0);
         return;
     }
-    if (OBJ_ITEM(thing) == 0x16E) {
+    if (OBJ_ITEM(thing) == ITEM_TMAP_C) {
         if ((w64_types[thing->ol.f.owner] & 0xFF) == 8)
             game_sprint(0x110);  /* "There is no reaction from the princess." */
         return;
     }
     if (OBJ_MAJOR(thing) != MAJOR_CREATURE) {
-        scroll_print(get_string(0xe00));  /* "You cannot talk to that!\n" */
+        scroll_print(get_string(STR_CONV));  /* "You cannot talk to that!\n" */
         return;
     }
     talking_to = thing;
@@ -133,13 +133,13 @@ void far TalkTo(struct Object far *thing)
            OBJ_GOAL(talking_to) == 9) && OBJ_GTARG(talking_to) == 1 ||
           OBJ_ATTITUDE(talking_to) == 0) && !OBJ_ALLY(talking_to) || who == 0xff) &&
         OBJ_GOAL(talking_to) != 10) {
-        scroll_print(get_string(0xe01));  /* "You get no response.\n" */
+        scroll_print(get_string(STR_CONV | 1));  /* "You get no response.\n" */
         return;
     }
     if (who == 0) cnv_id = (unsigned)subclass + 0x100;
     else cnv_id = who;
     if (check_arc(cnv_file, cnv_id) <= 0) {
-        scroll_print(get_string(0xe01));  /* "You get no response.\n" */
+        scroll_print(get_string(STR_CONV | 1));  /* "You get no response.\n" */
         return;
     }
     newscr(4);
@@ -274,7 +274,7 @@ void far Converse(unsigned char who, int subclass)
 {
     register int wait_time;
     if (load_script(cnv_file, convoScreen + 0x400) < 0) {
-        scroll_print(get_string(0xe01));  /* "You get no response.\n" */
+        scroll_print(get_string(STR_CONV | 1));  /* "You get no response.\n" */
         return;
     }
     bab_fun("babl_menu", (BablFn)conv_choice_ovr103_A13);
@@ -594,10 +594,10 @@ int far getInputText_ovr103_1117(void)
    player's selected trade items; returns how many. */
 int far conv_check_inv(int16 far *stack)
 {
-    int16 ids[4], indices[4];
+    int16 ids[NUM_TRADE_SLOTS], indices[NUM_TRADE_SLOTS];
     register int i, count;
     count = player_barter_items(ids, indices);
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < NUM_TRADE_SLOTS; i++) {
         if (count > i) {
             babl_setmem(stack[-2] + i, ids[i]);
             babl_setmem(stack[-1] + i, indices[i]);
@@ -613,17 +613,17 @@ int far conv_check_inv(int16 far *stack)
    type, or (1000 and up) of major (item - 1000) >> 2, minor (item - 1000) & 3; else 0. */
 int far find_barter(int16 far *stack)
 {
-    int16 count, ids[4], indices[4];
+    int16 count, ids[NUM_TRADE_SLOTS], indices[NUM_TRADE_SLOTS];
     register int i, wanted;
     wanted = getmem(stack[-1]);
     count = player_barter_items(ids, indices);
-    if (wanted < 1000) {
+    if (wanted < BARTER_CLASS) {
         for (i = 0; i < count; i++)
             if (ids[i] == wanted) return indices[i];
     } else {
         for (i = 0; i < count; i++)
-            if ((ids[i] >> 6) == ((wanted - 1000) >> 2) &&
-                ((ids[i] & 0x30) >> 4) == ((wanted - 1000) & 3))
+            if ((ids[i] >> 6) == ((wanted - BARTER_CLASS) >> 2) &&
+                ((ids[i] & ID_MINOR) >> 4) == ((wanted - BARTER_CLASS) & 3))
                 return indices[i];
     }
     return 0;
@@ -643,9 +643,9 @@ int far find_barter_total(int16 far *stack)
     matches = 0;
     total = 0;
     count = player_barter_items(ids, indices);
-    if (wanted < 1000) {
+    if (wanted < BARTER_CLASS) {
         for (i = 0; i < count; i++) {
-            if (wanted < 1000 ? ids[i] == wanted : (ids[i] >> 4) == wanted - 1000) {
+            if (wanted < BARTER_CLASS ? ids[i] == wanted : (ids[i] >> 4) == wanted - BARTER_CLASS) {
                 obj = Obj_IntTMem(indices[i]);
                 matching[matches] = indices[i];
                 if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL))
@@ -665,7 +665,7 @@ int far find_barter_total(int16 far *stack)
    one is among the player's selected trade items; 1 if given, else 0. */
 int far conv_give_inv(int16 far *stack)
 {
-    int16 ids[4], indices[4], slot_of[4], item_of[4], count, have;
+    int16 ids[NUM_TRADE_SLOTS], indices[NUM_TRADE_SLOTS], slot_of[NUM_TRADE_SLOTS], item_of[NUM_TRADE_SLOTS], count, have;
     register int j, i;
     count = getmem(stack[-2]);
     if ((have = player_barter_items(ids, indices)) < count) return 0;
@@ -691,12 +691,12 @@ int far conv_give_inv(int16 far *stack)
 int far give_ptr_npc(int16 far *stack)
 {
     int qty;
-    int16 ids[4], indices[4];
+    int16 ids[NUM_TRADE_SLOTS], indices[NUM_TRADE_SLOTS];
     struct Object far *obj;
     register int i, index;
     index = getmem(stack[-2]);
     qty = player_barter_items(ids, indices);
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < NUM_TRADE_SLOTS; i++) {
         if (ids[i] != 0 && indices[i] == index) {
             player_barter_give(index);
             return 1;

@@ -54,9 +54,6 @@
 /* Declared in each file that uses it, its own way (no header). */
 unsigned char far IsMobElem(struct Object far *obj);
 
-/* UW1: the fish is item 0xB6. */
-#define ITEM1_FISH 0xB6
-
 /* name: 1: ovr107_0 (UW2's find_good_x_and_y, the same bytes). A breadth-first search
    outward from (x, y), at most 20 tiles a ring, for a tile within the 9x9 box around it
    where the object fits. */
@@ -326,7 +323,7 @@ unsigned char far go_fish(void)
         goto bad_place;
     if (rand() % 5 != 0)
         goto no_luck;
-    if (player->weight + ComObjData[ITEM1_FISH].mass >= player->max_weight)
+    if (player->weight + ComObjData[ITEM_FISH].mass >= player->max_weight)
         goto no_room;
     game_sprint(0x63);  /* 'You catch a lovely fish.' */
     return 1;
@@ -418,7 +415,7 @@ void far emerald_trap(struct Object far *trap, int x, int y)
         }
     }
     if (count == 4) {
-        obj = CreateObj(0xFD, 0);
+        obj = CreateObj(ITEM_VAS_STONE, 0);
         tile = Map_GetAddr(x, y + 1);
         SET_Z(obj, 0x40);
         obj->pos = obj->pos & 0x1FFF | 0x6000;
@@ -488,7 +485,7 @@ void far ExplodingBook_ovr107_1259(struct Object far *trap, int x, int y)
 void far talking_door_trap(struct Object far *trap, int x, int y)
 {
     struct Object far *door;
-    door = CreateObj(0x40, 1);
+    door = CreateObj(FIRST_CREATURE, 1);
     door->whoami = 0x19;
     SET_ATTITUDE(door, 3);
     SET_GOAL(door, 0xA);
@@ -534,7 +531,7 @@ void far TyballDeath_ovr107_13D1(void)
     head = &Map_GetAddr(0x17, 0x38)->objects;
     for (obj = Obj_PtrTMem(head); obj; obj = next) {
         next = Obj_PtrTMem(&obj->qn.link);
-        if (OBJ_ITEM(obj) == 0x1A0) {
+        if (OBJ_ITEM(obj) == ITEM_MOVE_TRIGGER) {
             Obj_Rem(head, obj);
             Obj_Free(obj);
         }

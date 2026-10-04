@@ -178,11 +178,11 @@ unsigned char far init_sounds(void)
     char path[80];
 
     AIL_startup();
-    if (sound_card == 0) {
+    if (sound_card == CARD_NONE) {
         if (speech_drivers[speech_card])
             init_speech();
     } else {
-        if (sound_card == 1) {
+        if (sound_card == CARD_PCSPKR) {
             music_ok = 0;
             music_on = 0;
         }
@@ -193,7 +193,7 @@ unsigned char far init_sounds(void)
         if ((music_driver = AIL_register_driver(midi_drv)) == -1)
             goto fail;
         drv_desc = AIL_describe_driver(music_driver);
-        if (drv_desc->drvr_type != 3)
+        if (drv_desc->drvr_type != DRVR_XMIDI)
             goto fail;
         do_settings(drv_desc, m_settings);
         if (!SND_READ(music_driver, AIL_detect_device(music_driver, drv_desc->io, drv_desc->irq, drv_desc->dma, drv_desc->drq)))
@@ -275,7 +275,7 @@ char far init_timbres(void)
     }
     if ((timbre_fd = open(path, O_RDONLY | O_BINARY)) == -1)
         goto fail;
-    if (sound_card == 6)
+    if (sound_card == CARD_MT32)
         for (i = 0; i < numeffects; i++)
             install_timbre(1, i);
     return 1;
@@ -310,7 +310,7 @@ unsigned char far load_new_music(unsigned char music, char start)
     if (!music_ok || !music_on)
         return 0;
     if (music != curmusic) {
-        if (sound_card != 6)
+        if (sound_card != CARD_MT32)
             name[0] = 'a';
         name[2] = (music >> 3) + '0';
         name[3] = (music & 7) + '0';
@@ -601,7 +601,7 @@ void far kill_effect(unsigned char n)
 {
     if (fx_mask & (1 << n)) {
         fx_mask = fx_mask - (1 << n);
-        if (sound_card == 1)
+        if (sound_card == CARD_PCSPKR)
             AIL_send_channel_voice_message(music_driver, fx_midi_chan[n] + 0xAF, 0x7B, 0);
         else
             AIL_release_channel(music_driver, fx_midi_chan[n]);
@@ -617,7 +617,7 @@ void far seg014_1DC5_C7C(void)
     for (i = 0; i < 4; i = i + 1) {
         if (fx_mask & (1 << i)) {
             fx_mask = fx_mask - (1 << i);
-            if (sound_card == 1)
+            if (sound_card == CARD_PCSPKR)
                 AIL_send_channel_voice_message(music_driver, fx_midi_chan[i] + 0xAF, 0x7B, 0);
             else
                 AIL_release_channel(music_driver, fx_midi_chan[i]);
@@ -638,7 +638,7 @@ static void far fx_timer(void)
     for (i = 0, bit = 1; i < 4; i = i + 1, bit <<= 1) {
         if ((fx_mask & bit) && fx_ticks_left[i] != -1 && --fx_ticks_left[i] == 0) {
             fx_mask = fx_mask & ~bit;
-            if (sound_card == 1)
+            if (sound_card == CARD_PCSPKR)
                 AIL_send_channel_voice_message(music_driver, fx_midi_chan[i] + 0xAF, 0x7B, 0);
             else {
                 AIL_send_channel_voice_message(music_driver, fx_midi_chan[i] + 0x7F, fx_note[i], 0);
@@ -714,7 +714,7 @@ unsigned char far fx_play(unsigned char fx, unsigned char patch, unsigned char n
         ;
     if (i == 4)
         return 0xFF;
-    if (sound_card == 1) {
+    if (sound_card == CARD_PCSPKR) {
         switch (fx) {
         case 4:
         case 0x10:
@@ -795,7 +795,7 @@ void far play_instrument(register int which)
     if (ok == 1 && music_driver == -1)
         ok = 0;
     if (ok) {
-        if (sound_card == 1)
+        if (sound_card == CARD_PCSPKR)
             ch = 2;
         else {
             ch = SND_READ(music_driver, AIL_lock_channel(music_driver));
@@ -892,7 +892,7 @@ void far set_new_music(unsigned char m)
 /* A walking theme at random, 2 to 4 (UW2's set_random_walking_music). */
 void far seg014_1DC5_15C5(void)
 {
-    newmusic = rand() % 3 + 2;
+    newmusic = rand() % 3 + MUSIC_WALK_FIRST;
 }
 
 /* Restarts the theme when it has ended, except that theme 1 is followed by theme 4. */
@@ -902,14 +902,14 @@ void far loop_music_maybe(void)
 
     m = curmusic;
     if (music_over()) {
-        if (curmusic == 1)
+        if (curmusic == MUSIC_THEME)
             m = 4;
         load_new_music(m, 1);
     }
 }
 
-#define WALKING(m)  ((m) >= 2 && (m) <= 4)
-#define COMBAT(m)   ((m) >= 5 && (m) <= 7)
+#define WALKING(m)  ((m) >= MUSIC_WALK_FIRST && (m) <= MUSIC_WALK_LAST)
+#define COMBAT(m)   ((m) >= MUSIC_FOE_HURT && (m) <= MUSIC_DANGER)
 
 /* Called from the main loop to keep the right theme playing. Themes 9 and 11 play to
    their end. Ten seconds (0xA00 ticks) after the last combat a combat theme gives way to
@@ -924,13 +924,13 @@ void far change_music_maybe(void)
         return;
     if (!music_on)
         return;
-    if ((curmusic == 9 || curmusic == 0x0B) && !music_over())
+    if ((curmusic == MUSIC_VICTORY || curmusic == 0x0B) && !music_over())
         return;
     if (COMBAT(curmusic) && GAME_TIME() > lastcombattime + 0xA00) {
         if (player->drawn)
-            newmusic = 8;
+            newmusic = MUSIC_ARMED;
         else
-            newmusic = rand() % 3 + 2;
+            newmusic = rand() % 3 + MUSIC_WALK_FIRST;
     }
     if (newmusic != 0 && newmusic != curmusic) {
         if (COMBAT(curmusic) && COMBAT(newmusic)) {
@@ -945,9 +945,9 @@ void far change_music_maybe(void)
             theme_changed = GAME_TIME();
     } else if (music_over()) {
         if ((music_repeats[curmusic] == 0 || WALKING(curmusic)) && scrmode == 1 || newmusic == 0)
-            newmusic = rand() % 3 + 2;
+            newmusic = rand() % 3 + MUSIC_WALK_FIRST;
         if (player->drawn)
-            newmusic = 8;
+            newmusic = MUSIC_ARMED;
         load_new_music(newmusic, 1);
         theme_changed = 0;
     }
@@ -985,7 +985,7 @@ char far init_speech(void)
     if ((sphdriver = AIL_register_driver(speech_mem)) == -1)
         goto fail;
     speech_descr = AIL_describe_driver(sphdriver);
-    if (speech_descr->drvr_type != 2)
+    if (speech_descr->drvr_type != DRVR_DIGITAL)
         goto fail;
     do_settings(speech_descr, speech_cfg);
     if (!SND_READ(sphdriver, AIL_detect_device(sphdriver, speech_descr->io, speech_descr->irq, speech_descr->dma, speech_descr->drq)))

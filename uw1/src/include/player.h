@@ -117,6 +117,51 @@ enum PlayerClass {
     PCLASS_PALADIN, PCLASS_RANGER, PCLASS_SHEPHERD
 };
 
+/* Strings of block 2 (STR_CHARGEN) the player code prints by number: the six labels of
+   the statistics, the class names (+ enum PlayerClass), the skill names (+ enum Skill)
+   and the mantras chanted at a shrine (SKILLS.C's mantra_advance: the twenty skills'
+   own, in enum Skill's order, then six more). From the game's STRINGS.PAK. */
+#define STRN_STATS      0x11            /* "Str:", "Dex:", "Int:", "Vit:", "Mana:", "Exp:" */
+#define STRN_CLASSES    0x17
+#define STRN_SKILLS     0x1F
+#define STRN_MANTRAS    0x33
+#define NUM_MANTRAS     0x1A
+
+/* struct Player's quest_bytes[]: quests 32 to 35 (UW-Formats 7.8.1, UW1's quest flags;
+   0 to 31 are the bits of quests). */
+#define QB_CRUX         0               /* quest 32, the Knight of the Crux: 1 seek out
+                                           Dorna Ironfist, 2 search for the writ of Lorne,
+                                           3 the writ found, 4 the armoury opened */
+
+/* struct Player's motion_state: how the player moves (PHYSICS.C's newFPS sets the low
+   bits from the movement state) and two screen shakes (PLAYMOVE.C's set_effect). The
+   names are ours, from those functions. */
+#define MS_SWIM         0x01            /* swimming */
+#define MS_LAVA         0x02            /* on lava */
+#define MS_ICE          0x04            /* on ice (nothing in UW1 sets it) */
+#define MS_FLOAT        0x08            /* levitating or flying */
+#define MS_SHAKE        0x20            /* the combat shake (combEfflen) */
+#define MS_TREMOR       0x40            /* the tremor (tremEfflen) */
+
+/* struct Player's fps: the movement state, newFPS's argument (-1 keeps it). The names
+   are ours, from PHYSICS.C's parse_player_terr, which picks it. */
+#define FPS_WALK        0
+#define FPS_SWIM        1
+#define FPS_LAVA        2
+#define FPS_ICE         3               /* UW2's ice; nothing in UW1 picks it */
+#define FPS_LEVITATE    4
+#define FPS_FLY         5
+#define FPS_SLOW_FALL   6
+
+/* motionbits (PHYSICS.C), the motion spells in force: bit minor - 1 for an active spell
+   of class SPELLC_MOTION (PLAYDATA.C's player_affected_by), the minors in the Guide's
+   order of the motion spells. */
+#define MB_LEAP         0x01            /* a lower gravity when jumping */
+#define MB_SLOW_FALL    0x02
+#define MB_LEVITATE     0x04
+#define MB_WATER_WALK   0x08            /* no swimming */
+#define MB_FLY          0x10
+
 /* SKILLS.C: skills, levelling, sleep, eating, death and traps (ovr154) */
 char far player_use_skill(int skill);
 void far player_compute(char restore);
@@ -169,7 +214,7 @@ void far crystal_ball(struct Object far *obj, int x, int y);
    themselves as this union, so it is in no header. */
 union PlayerStore {
     struct Player rec;
-    char bytes[0xD2];
+    char bytes[sizeof(struct Player)];
 };
 
 /* CHARGEN.C: character creation */

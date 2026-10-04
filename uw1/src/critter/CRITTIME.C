@@ -96,25 +96,25 @@ char far set_gridx_and_y_based_on_tile_type(unsigned char type, unsigned char *x
                                             unsigned char *y)  /* UW1: char (callers cbw) */
 {
     switch (type) {
-    case 0:
+    case TILE_SOLID:
         return 0;
-    case 2:
+    case TILE_DIAG_SE:
         *x = 6;
         *y = 1;
         break;
-    case 3:
+    case TILE_DIAG_SW:
         *x = 1;
         *y = 1;
         break;
-    case 4:
+    case TILE_DIAG_NE:
         *x = 6;
         *y = 6;
         break;
-    case 5:
+    case TILE_DIAG_NW:
         *x = 6;
         *y = 1;
         break;
-    case 1:
+    case TILE_OPEN:
     default:
         *x = 4;
         *y = 4;
@@ -161,10 +161,10 @@ void far up_crit(struct Object far *npc, char *counts)
         npc->hp = (npc->hp + cst->avghit) / 2;
     if (!OBJ_LONER(npc)) {
         switch (OBJ_ATTITUDE(npc)) {
-        case 0:
+        case ATT_HOSTILE:
             counts[cst->race] = counts[cst->race] - 1;
             break;
-        case 3:
+        case ATT_FRIENDLY:
             counts[cst->race] = counts[cst->race] + 1;
             break;
         }
@@ -256,8 +256,8 @@ void far update_all_critters_whilst_player_snoozes(void)
             if (c < 0) {
                 if (att < 0)
                     att = 0;
-            } else if (att > 3)
-                att = 3;
+            } else if (att > ATT_FRIENDLY)
+                att = ATT_FRIENDLY;
             SET_ATTITUDE(npc, att);
         }
     }
@@ -279,7 +279,7 @@ char far check_for_hostile_creature(int x, int y, struct Object far *target,
     if (Obj_MemTPtr(target) == 1)          /* UW1: index 1, the player */
         return 0;
     npc = target;
-    if (OBJ_GOAL(npc) == 5 || OBJ_GOAL(npc) == 4 || OBJ_GOAL(npc) == 9)
+    if (OBJ_GOAL(npc) == GOAL_ATTACK || OBJ_GOAL(npc) == GOAL_GUARD || OBJ_GOAL(npc) == GOAL_CORNERED)
         if (OBJ_B19_0(npc))
             hostile_found = 1;
     return 0;
@@ -319,7 +319,7 @@ char far wander_that_monster(int x, int y, struct Object far *target, struct Til
     if (Obj_MemTPtr(target) == 1)
         return 0;
     obj = target;
-    if (OBJ_ATTITUDE(obj) > 0)
+    if (OBJ_ATTITUDE(obj) > ATT_HOSTILE)
         return 0;
     if (rand() % 2 == 0)
         return 0;
@@ -336,7 +336,7 @@ char far wander_that_monster(int x, int y, struct Object far *target, struct Til
                 next = Obj_PtrTMem(link);
                 if (OBJ_MAJOR(next) == MAJOR_TRAP && OBJ_MINOR(next) == MINOR_TRIGGER && next->ol.f.link > 0) {
                     trap = Obj_PtrTMem(&next->ol.link);
-                    if (OBJ_MAJOR(trap) == MAJOR_TRAP && OBJ_MINOR(trap) == MINOR_TRAP && OBJ_INCLASS(trap) == 9)
+                    if (OBJ_MAJOR(trap) == MAJOR_TRAP && OBJ_MINOR(trap) == MINOR_TRAP && OBJ_INCLASS(trap) == TRAP_WARD)
                         UseTrap(trap, pathsq[i].x, pathsq[i].y);
                 }
             }
@@ -437,7 +437,7 @@ char far critter_get_told(int x, int y, struct Object far *target, struct Tile f
         || OBJ_LONER(npc) != 0 && !(grab_owner & 0x20)
         || grab_owner == 0x20 && !OBJ_LONER(npc))
         return 0;
-    if (grab_owner == 0x0D && player->quest_bytes[0] >= 3)  /* UW1 only */
+    if (grab_owner == 0x0D && player->quest_bytes[QB_CRUX] >= 3)  /* UW1 only */
         return 0;
     nx = (x << 3) + OBJ_FINEX(npc);
     ny = (y << 3) + OBJ_FINEY(npc);

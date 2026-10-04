@@ -80,6 +80,51 @@ struct Creature {
     unsigned char b2F;
 };
 
+/* A critter's goal, the low nibble of its goal word (OBJ_GOAL), with the goal target
+   (OBJ_GTARG, a mobile index, 1 the player) beside it. The names are ours, from what
+   AI.C's critter_mv runs for each; UW-Formats (7.x, npc_goal) knows only that 5 kills
+   the player. Other values only slow the critter (rate 7). */
+#define GOAL_STAND      0               /* stand, watching for the player (crit_guard) */
+#define GOAL_GO_HOME    1               /* head home (myxhome, myyhome), then mill */
+#define GOAL_WANDER     2               /* wander (crit_drunkwalk) */
+#define GOAL_FOLLOW     3               /* UW1: keep close to the target, jumping to it
+                                           from afar (seg007_1798_3E4); never skipped
+                                           for distance from the player */
+#define GOAL_GUARD      4               /* guard: watch, attack what comes near; kept in
+                                           the old goal while another goal runs */
+#define GOAL_ATTACK     5               /* attack the target (crit_offense) */
+#define GOAL_FLEE       6               /* flee the target (crit_flee) */
+#define GOAL_STAND_7    7               /* as GOAL_STAND */
+#define GOAL_MILL       8               /* mill about near home (crit_mill); a new
+                                           critter's goal */
+#define GOAL_CORNERED   9               /* fight back when cornered (crit_defense) */
+#define GOAL_TALK       10              /* come and talk to the player (crit_talk) */
+#define GOAL_FLUTTER    11              /* drift at random, whatever the sequence, not
+                                           reacting to blows */
+#define GOAL_HOVER      12              /* stand at home (crit_hover) */
+
+/* A critter's attitude to the player, bits 14-15 of its attitude word (OBJ_ATTITUDE):
+   the names are UW-Formats' (7.x, npc_attitude: 0 hostile, 1 upset, 2 mellow,
+   3 friendly). */
+#define ATT_HOSTILE     0
+#define ATT_UPSET       1
+#define ATT_MELLOW      2               /* a new critter's */
+#define ATT_FRIENDLY    3
+
+/* A critter's animation sequence (OBJ_SEQ), four frames each (OBJ_FRAME counts them).
+   The names are ours, from what AI.C and PATHFIND.C do with each: UW1 writes the
+   sequence numbers out where UW2 looks them up (UW2's change_or_inc_seq). */
+#define SEQ_COMBAT      0               /* the combat stance */
+#define SEQ_ATTACK1     1               /* the three melee attacks (1 to 3), by the
+                                           creature's attacks[]; the blow lands on frame 4 */
+#define SEQ_ATTACK3     3
+#define SEQ_FIRE        5               /* firing a missile */
+#define SEQ_BACK_OFF    7               /* backing away */
+#define SEQ_DYING       0xC             /* dying; removed after frame 3 */
+#define SEQ_CAST        0xD             /* casting a spell */
+#define SEQ_STAND       0x20            /* standing */
+#define SEQ_WALK        0x2C            /* walking */
+
 /* One square of a critter's path, 4 bytes. */
 struct PathSq { unsigned char x, y, unused, flag; };
 
