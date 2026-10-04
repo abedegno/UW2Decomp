@@ -53,9 +53,7 @@ static struct {
 } gif;
 HOST_LAYOUT_END
 
-/* UW1: the overlay's own names (file.h declares UW2's ovr116 ones) */
-void far ovr112_194(int fd, char size);
-void far ovr112_2A3(int fd, int bits);
+/* UW1: the overlay's own names (UW2's are ovr116's) */
 
 static void far ovr112_149(int bits);
 static void far ovr112_1C3(int fd, int code);

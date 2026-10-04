@@ -148,8 +148,6 @@ void far try_to_open_door(struct Object far *door);
 unsigned char far crit_hndlr_walk(struct Phys *pn);
 unsigned char far crit_hndlr_fly(struct Phys *pn);
 unsigned char far crit_hndlr_swim(struct Phys *pn);
-void far check_homing(void);
-void far check_sat(void);
 void far do_that_jump_kinda_thing(struct PathRec far *path);
 unsigned char far deltatotheta(char x, char y);
 unsigned char far add_to_beeline_path(unsigned char x, unsigned char y);
@@ -167,22 +165,20 @@ unsigned char far do_crit_phys(struct Phys *pn, struct Handler *tp);
 unsigned char far flood_path(char x, char y, unsigned char height0, char destx, char desty, char destz, unsigned char range);
 unsigned char far line_of_sight(int x1, int y1, int z1, int x2, int y2, int z2);
 void far set_loc(unsigned char x, unsigned char y, unsigned char z);
+void far clear_paths(void);
 
 /* AI.C: critter movement and AI */
 extern int16 lastXeye;
 extern int16 lastYeye;
 extern unsigned char hitx;
 extern unsigned char hity;
-extern unsigned char seq_len;
-extern unsigned char seq_lframe;
-void far change_or_inc_seq(int seq, char force);
 void far set_htx(int heading);
 void far crit_drunkwalk(void);
 void far crit_mill(void);
 void far crit_guard(void);
 unsigned char far crit_attack(unsigned dist);
 void far crit_offense_find_target(unsigned char x, unsigned char y, unsigned char how);
-unsigned char far maybe_cast_defensive_spell(void);
+char far maybe_cast_defensive_spell(void);
 unsigned char far crit_magik_attack(void);
 unsigned char far crit_missile_attack(void);
 void far crit_flee(void);
@@ -191,14 +187,13 @@ void far check_out_player(void);
 unsigned char far target_found(unsigned char *x, unsigned char *y);
 unsigned char far look_for_target(char how);
 unsigned char far turn_real_fine(signed char dx, signed char dy);
-void far set_cur_seq_len(void);
 void far critter_mv(void);
 unsigned char far go_into_dying_sequence(struct Object far *obj);
 unsigned char far crit_die(struct Object far *obj);
 unsigned char far timetodo(int bin, int rate);
 unsigned char far should_i_flee(unsigned char maxhp, unsigned char hp, unsigned char nerve,
                                 unsigned char damage);
-unsigned char far set_up_target(void);
+char far set_up_target(void);
 void far critter_discard_goal(void);
 void far set_critter_vars(struct Object far *obj);
 unsigned char far acceptable_danger(void);
@@ -210,7 +205,6 @@ extern signed char curBin;
 extern unsigned char crithit;
 extern unsigned char typehit;
 void far critter_set_goal(unsigned char goal, int target);
-void far move_mobile(int delta);
 
 /* CRITTIME.C: critters between moments */
 void far change_critter_goal(struct Object far *npc, char goal, int gtarg);
@@ -222,24 +216,19 @@ void far set_creatures_from_saved_game(void);
 void far set_creatures_to_saved_game(void);
 void far init_level_creature_stuff(void);
 void far player_grabbed(struct Object far *obj, unsigned char owner);
-void far maybe_rescue_guy_from_fire(struct Object far *obj);
-void far maybe_cheat_arena_fire(void);
-void far arena_opponent_runs(struct Object far *obj);
-void far where_shall_we_hang_out(struct Object far *npc, int16 *x, int16 *y);
-char far maybe_go_hang_out(struct Object far *npc);
-char far teleport_critter(struct Object far *critter, int x, int y, int how);
 
 /* CREATURE.C: creature class data */
 #define NUM_CREATURES   0x40            /* creature types: OBJECTS.DAT's creature table */
 extern struct Creature Creature[NUM_CREATURES];
-char far init_this_critter(struct Object far *obj);
-void far creature_obj_init(void);
+char far creature_obj_init(void);
 void far creature_init(FILE *fd);
 struct Creature * far creature_class_data(void);
 
 /* CRPAGES.C: critter art pages */
 void far NightCleanCritPages(void);
-void far PreLoadCritPages(void);
-unsigned char far preload_cr(unsigned char load_map);
+char far preload_cr(char load_pages);
+int far ovr113_2A2(int count, int16 *out);
+int far swap_ws_out(void);
+void far unswap_ws(unsigned handle);
 
 #endif

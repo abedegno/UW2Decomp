@@ -28,10 +28,6 @@
 #include "sys.h"
 #include "view3d.h"
 
-/* UW1: UW2's ModelData_seg052_519C_2600 (a byte of the 3D renderer's far data, read as
-   a value) is at seg051:28A0. */
-extern unsigned char far seg051_28A0;
-
 /* The light level set_light last loaded, 5 for mono.dat; 0xFF until the first call. */
 /* name: FM Towns _cur_light_level. DS:1C50, the first byte of this file's _DATA. */
 unsigned char cur_light_level = 0xFF;

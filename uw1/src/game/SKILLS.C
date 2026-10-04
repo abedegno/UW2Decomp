@@ -32,9 +32,6 @@
 
 #include <string.h>
 #include <stdlib.h>
-/* UW1: the headers' declarations that UW1 does not share are renamed out of the way
-   (below). */
-#define grfx_init UW2_grfx_init
 #include "combat.h"
 #include "critter.h"
 #include "event.h"
@@ -49,84 +46,19 @@
 #include "sys.h"
 #include "ui.h"
 #include "view3d.h"
-#undef grfx_init
 
-/* UW1: the player record differs from UW2's struct Player (player.h). The fields this
-   file uses, from the bytes. */
-struct Player1Skills {
-    char name[0x1E];                    /* 0x00 */
-    unsigned char strength;             /* 0x1E */
-    unsigned char dexterity;            /* 0x1F */
-    unsigned char intelligence;         /* 0x20 */
-    unsigned char skills[20];           /* 0x21 */
-    unsigned char health;               /* 0x35 */
-    unsigned char maxhealth;            /* 0x36 */
-    unsigned char play_mana;            /* 0x37 */
-    unsigned char max_mana;             /* 0x38 */
-    unsigned char hunger;               /* 0x39 */
-    unsigned char fatigue;              /* 0x3A */
-    unsigned char food_heal;            /* 0x3B */
-    unsigned char b3C;                  /* 0x3C */
-    unsigned char level;                /* 0x3D */
-    char pad3E[0x4C - 0x3E];
-    uint16 max_weight;                  /* 0x4C */
-    uint32 exp;                         /* 0x4E, in tenths */
-    unsigned char skill_points;         /* 0x52 */
-    char pad53[0x5E - 0x53];
-    unsigned char moonstone:4;          /* 0x5E: the moonstone's level */
-    unsigned char tree:4;               /* the silver tree's level, 0 for none */
-    uint16 b5F_0:2;                     /* word 0x5F */
-    uint16 poison:4;
-    uint16 active_spells:4;             /* word 0x5F, bits 6-9 */
-    uint16 b60_2:4;
-    uint16 key:1;                       /* 0x60 bit 6: the key of truth given */
-    uint16 cup:1;                       /* 0x60 bit 7: the cup of wonder found */
-    uint16 b61_0:2;                     /* 0x61 */
-    uint16 shrooms:2;
-    uint16 drunk:6;                     /* word 0x61, bits 4-9 */
-    uint16 b62_2:1;                     /* 0x62 */
-    uint16 garamon:1;                   /* 0x62 bit 3: Garamon is buried */
-    uint16 b62_4:4;
-    unsigned char light;                /* 0x63 */
-    uint16 lefty:1;                     /* 0x64 */
-    uint16 female:1;
-    uint16 body:3;
-    uint16 pclass:3;
-    char pad65[0x6D - 0x65];
-    unsigned char talismans;            /* 0x6D: talismans left, 0xFF once the last went */
-    uint16 dreams;                      /* 0x6E: the dreams seen, a bit each */
-    char pad70[0xB0 - 0x70];
-    unsigned char bB0;                  /* 0xB0: the saved maximum mana on level 7 */
-    char padB1[0xB8 - 0xB1];
-    unsigned char motion_state;         /* 0xB8 */
-    char padB9[0xC2 - 0xB9];
-    unsigned char lore[8];              /* 0xC2, the lore skill by level */
-    char padCA[0xCE - 0xCA];
-    uint32 game_clock;                  /* 0xCE */
-};
-#define PLAYER1 ((struct Player1Skills *)player)
+/* Declared in each file that uses it, its own way (no header). */
+void far grfx_clear(void);
+unsigned char far player_eat(int nutrition);
 
 /* UW1: declarations that differ from the headers'. */
 unsigned char far grfx_load_font(char *name);
-char far LoadBitMap_ovr141_0(int pal, char *name);
 void far Vortex_ovr143_E09();           /* PLAYER.C; this file passes it -1 */
-void far seg041_35D7_E9(unsigned ticks);
-void far dprintf(char *fmt, ...);
 /* UW1: copy_visible_to_hidden is seg003_5350 (symbols.tsv's name; kin pairs it with
    UW2's). */
-/* UW1: probably the sound effects' stop (kin: like UW2's kill_all_digi_effects); the
-   listing's name. */
-void far seg014_1DC5_C7C(void);
 /* UW1: ovr145 is not matched: panel_check's place in player_sleep, advance and
    mantra_advance (kin pairs ovr145_4FB with UW2's panel_check); symbols.tsv's name.
    NightCleanCritPages is critter/CRPAGES.C's. */
-void far NightCleanCritPages(void);
-void far ovr145_4FB(void);
-/* UW1: called where UW2 has set_random_walking_music(-1), with no argument; symbols.tsv's
-   name. */
-void far seg014_1DC5_15C5(void);
-/* UW1: the tile's floor texture numbers (ovr131, see PLAYDATA.C). */
-extern int16 floor_IDs[];
 
 /* The use-skill key: only track (12) does anything, running mdetect(8, value) to
    report nearby creatures. Traps (10) and search (11) do nothing here; any other skill
@@ -153,7 +85,7 @@ char far use_skill(struct Object far *who, unsigned char skill, unsigned char va
 
 char far player_use_skill(int skill)
 {
-    return use_skill(ThePlayer, skill + SKILL_TRAPS, PLAYER1->skills[skill + SKILL_TRAPS]);
+    return use_skill(ThePlayer, skill + SKILL_TRAPS, player->skills[skill + SKILL_TRAPS]);
 }
 
 /* The derived maxima: HP 30 + level * strength / 5, mana (mana skill + 1) *
@@ -163,15 +95,15 @@ void far player_compute(char restore)
 {
     register int mana;
 
-    playerdat->avghit = 30 + PLAYER1->level * playerdat->attr[0] / 5;
-    mana = (PLAYER1->skills[SKILL_MANA] + 1) * playerdat->attr[2] >> 3;
+    playerdat->avghit = 30 + player->level * playerdat->attr[0] / 5;
+    mana = (player->skills[SKILL_MANA] + 1) * playerdat->attr[2] >> 3;
     if (PlayerLevel == 7)
-        PLAYER1->bB0 = mana;
+        player->saved_mana = mana;
     else
-        PLAYER1->max_mana = mana;
-    PLAYER1->max_weight = playerdat->attr[0] * 2 * 10;
+        player->max_mana = mana;
+    player->max_weight = playerdat->attr[0] * 2 * 10;
     if (restore)
-        PLAYER1->play_mana = PLAYER1->max_mana;
+        player->play_mana = player->max_mana;
 }
 
 /* Gains levels: prints the new level, gives one skill point a level, recomputes the
@@ -180,15 +112,15 @@ void far advance(char levels)
 {
     register char *s = WRITABLE_STR(" 0\n");
 
-    PLAYER1->level = PLAYER1->level + levels;
-    if (PLAYER1->level >= 10)
-        s[0] = PLAYER1->level / 10 + '0';
+    player->level = player->level + levels;
+    if (player->level >= 10)
+        s[0] = player->level / 10 + '0';
     else
         s[0] = ' ';
-    s[1] = PLAYER1->level % 10 + '0';
+    s[1] = player->level % 10 + '0';
     game_sprint(0x93);                  /* "Congratulations! You've reached experience level " */
     scroll_print(s);
-    PLAYER1->skill_points = PLAYER1->skill_points + levels;
+    player->skill_points = player->skill_points + levels;
     player_compute(0);
     ovr145_4FB();
 }
@@ -213,7 +145,7 @@ void far add_to_skill(int skill)
     int divisor;
     int stat;
 
-    if (PLAYER1->skills[skill] != 0)
+    if (player->skills[skill] != 0)
     {
         base = 1;
         divisor = 13;
@@ -226,13 +158,13 @@ void far add_to_skill(int skill)
         rolls = 3;
     }
     stat = playerdat->attr[prime(skill)];
-    PLAYER1->skills[skill] += base;
-    PLAYER1->skills[skill] += stat / divisor;
-    PLAYER1->skills[skill] += (int32)rand() * rolls / 0x8000L;
+    player->skills[skill] += base;
+    player->skills[skill] += stat / divisor;
+    player->skills[skill] += (int32)rand() * rolls / 0x8000L;
     for (; rolls > 0; rolls--)
-        PLAYER1->skills[skill] += skill_check(stat, 20);
-    if (PLAYER1->skills[skill] > 30)
-        PLAYER1->skills[skill] = 30;
+        player->skills[skill] += skill_check(stat, 20);
+    if (player->skills[skill] > 30)
+        player->skills[skill] = 30;
 }
 
 /* The divisor for the random bonus when a skill rises, by governing attribute. */
@@ -256,24 +188,24 @@ char far get_skill(char skill)
     stat = prime(skill);
     stat_rng = skill_rng[stat];
     attribute = playerdat->attr[stat];
-    if (attribute * 2 < PLAYER1->skills[skill] || PLAYER1->skills[skill] >= 30)
+    if (attribute * 2 < player->skills[skill] || player->skills[skill] >= 30)
         result = 0;
     else
     {
-        PLAYER1->skills[skill] = PLAYER1->skills[skill] + 1;
-        if (stat != 0 && attribute / 2 > PLAYER1->skills[skill])
-            PLAYER1->skills[skill] = PLAYER1->skills[skill] + 1;
-        if (PLAYER1->skills[skill] < attribute
-            && rand() % stat_rng < attribute - PLAYER1->skills[skill])
-            PLAYER1->skills[skill] = PLAYER1->skills[skill] + 1;
-        if (PLAYER1->skills[skill] > 30)
-            PLAYER1->skills[skill] = 30;
+        player->skills[skill] = player->skills[skill] + 1;
+        if (stat != 0 && attribute / 2 > player->skills[skill])
+            player->skills[skill] = player->skills[skill] + 1;
+        if (player->skills[skill] < attribute
+            && rand() % stat_rng < attribute - player->skills[skill])
+            player->skills[skill] = player->skills[skill] + 1;
+        if (player->skills[skill] > 30)
+            player->skills[skill] = 30;
     }
     if (skill == 8)
     {
         clear_all_loretries();
         if (PlayerLevel <= 8)
-            PLAYER1->lore[PlayerLevel] = PLAYER1->skills[SKILL_LORE];
+            player->lore[PlayerLevel] = player->skills[SKILL_LORE];
     }
     return result;
 }
@@ -343,14 +275,14 @@ void far mantra_advance(void)
         if (mantra < 20) {
             char r1, r2;
 
-            if (PLAYER1->skill_points == 0)
+            if (player->skill_points == 0)
                 game_sprint(0x18);      /* "You are not ready to advance." */
             else {
                 r1 = get_skill(mantra);
                 r2 = get_skill(mantra);
                 if (r1 || r2) {
                     game_sprint(0x1A);
-                    PLAYER1->skill_points--;
+                    player->skill_points--;
                 }
                 great_advance(mantra, r1 || r2);
             }
@@ -362,15 +294,15 @@ void far mantra_advance(void)
 
             switch (mantra - 20) {
             case 0:
-                if (!PLAYER1->cup)
+                if (!player->cup)
                     print_path_to(get_string(0x223), OBJ_HOMEX(ThePlayer),
                                   OBJ_HOMEY(ThePlayer), PlayerLevel, 0x18, 0x2D, 3, 4);
                 seg041_35D7_E9(0x20);
                 return;
             case 1:
-                if (!PLAYER1->key && place_new(0, 0xE1)) {
+                if (!player->key && place_new(0, 0xE1)) {
                     game_sprint(0x1E);
-                    PLAYER1->key = 1;
+                    player->key = 1;
                 }
                 seg041_35D7_E9(0x20);
                 return;
@@ -385,13 +317,13 @@ void far mantra_advance(void)
                 seg041_35D7_E9(0x20);
                 return;
             }
-            if (PLAYER1->skill_points == 0)
+            if (player->skill_points == 0)
                 game_sprint(0x18);
             else {
                 found = 0;
                 memset(list, 0xFF, 4);
                 for (count = size; tries != 0 && count--; tries--) {
-                    if (base == SKILL_MANA && PLAYER1->skills[SKILL_MANA] < 8 && (rand() & 2))
+                    if (base == SKILL_MANA && player->skills[SKILL_MANA] < 8 && (rand() & 2))
                         skill = SKILL_MANA;
                     else
                         skill = base + (int)(((int32)rand() * size) / 0x8000L);
@@ -401,7 +333,7 @@ void far mantra_advance(void)
                     }
                 }
                 report_advance(list);
-                PLAYER1->skill_points--;
+                player->skill_points--;
             }
         }
         player_compute(0);
@@ -437,12 +369,12 @@ void far game_stats(void)
 
     str = str_copy(text, get_string(0x2BB));    /* "A level " */
     i = strlen(text);
-    if (PLAYER1->level > 9)
-        text[i++] = PLAYER1->level / 10 + '0';
-    text[i++] = PLAYER1->level % 10 + '0';
+    if (player->level > 9)
+        text[i++] = player->level / 10 + '0';
+    text[i++] = player->level % 10 + '0';
     text[i++] = ' ';
     text[i++] = 0;
-    str_cat(text, get_string((PLAYER1->pclass + 0x17) | STR_CHARGEN));
+    str_cat(text, get_string((player->pclass + 0x17) | STR_CHARGEN));
     y -= cur_font->height;
     x = 0xA0 - string_width(text) / 2;
     string_to_screen(text, x, y);
@@ -452,7 +384,7 @@ void far game_stats(void)
     x = 0xA0 - string_width(str) / 2;
     string_to_screen(str, x, y);
 
-    hours = PLAYER1->game_clock / 0x1C2000L;
+    hours = player->game_clock / 0x1C2000L;
     days = hours / 12;
     str_copy(text, get_string(0x2BD));  /* "after " */
     str_cat(text, itoa(days, numbuf, 10));
@@ -478,10 +410,10 @@ void far game_stats(void)
             itoa(playerdat->avghit, text, 10);
             break;
         case 4:
-            itoa(PLAYER1->max_mana, text, 10);
+            itoa(player->max_mana, text, 10);
             break;
         case 5:
-            ltoa(PLAYER1->exp / 10, text, 10);
+            ltoa(player->exp / 10, text, 10);
             break;
         }
         string_to_screen(str, x, y - value);
@@ -491,7 +423,7 @@ void far game_stats(void)
     y -= cur_font->height * 2;
     for (i = 0; i < 20; i++)
     {
-        value = PLAYER1->skills[i];
+        value = player->skills[i];
         str = get_string((i + 0x1F) | STR_CHARGEN);
         text[0] = value > 9 ? value / 10 + '0' : value + '0';
         text[1] = value > 9 ? value % 10 + '0' : 0;
@@ -515,7 +447,7 @@ char far dream(int sleepfactor)
     uint32 timer;
     register int dreams;
 
-    dreams = PLAYER1->dreams;
+    dreams = player->dreams;
     if ((dreams & 1) != 1)
         found = 0;
     else if (PlayerLevel > 1 && (dreams & 2) != 2)
@@ -533,10 +465,10 @@ char far dream(int sleepfactor)
                 found = -1;
         }
     }
-    if (found >= 0 && !PLAYER1->garamon)
+    if (found >= 0 && !player->garamon)
     {
         runcutscene(found + 0x18);
-        PLAYER1->dreams ^= 1 << found;
+        player->dreams ^= 1 << found;
         return 1;
     }
     timer = GAME_TIME();
@@ -552,16 +484,16 @@ void far drop_drunk_player(void)
 {
     unsigned char damage;
 
-    if (PLAYER1->motion_state & 3)
+    if (player->motion_state & 3)
         damage_item(ThePlayer, 0L, 0, 0, 0xFF, 0);
     FixPlayerEquips();
     finish_player();
-    if ((PLAYER1->motion_state & 8) && (motionbits & 0x16) == 0)
+    if ((player->motion_state & 8) && (motionbits & 0x16) == 0)
     {
         damage = rand() % 6 * 10 + 12;
         damage_item(ThePlayer, 0L, 0, 0, damage, 0x10);
     }
-    if (PLAYER1->motion_state & 3)
+    if (player->motion_state & 3)
         damage_item(ThePlayer, 0L, 0, 0, 0xFF, 0);
 }
 
@@ -582,7 +514,7 @@ void far player_sleep(register int how)
 
     if (how >= 0)
     {
-        if ((PLAYER1->motion_state & 0x1B) || PN.acc[2] != 0 || PlayerLevel == 9)
+        if ((player->motion_state & 0x1B) || PN.acc[2] != 0 || PlayerLevel == 9)
         {
             game_sprint(0x14);          /* "You can't go to sleep here!" */
             return;
@@ -603,15 +535,15 @@ void far player_sleep(register int how)
     DoClosingDoors(0);
     Obj_GarbageCollect(1, 0x14);
     hours = rand() % 5 + 2;
-    PLAYER1->game_clock += hours * 0xE1000L;
-    PLAYER1->active_spells = 0;
-    PLAYER1->shrooms = 0;
+    player->game_clock += hours * 0xE1000L;
+    player->active_spells = 0;
+    player->shrooms = 0;
     DegradeLights(hours * 180, 0);
-    if (PLAYER1->poison)
+    if (player->poison)
     {
-        comfort = (PLAYER1->poison + 1) * PLAYER1->poison >> 1;
+        comfort = (player->poison + 1) * player->poison >> 1;
         damage_item(ThePlayer, 0L, 0, 0, comfort, 0x10);
-        PLAYER1->poison = 0;
+        player->poison = 0;
     }
     if (how < 0)
         drop_drunk_player();
@@ -622,16 +554,16 @@ void far player_sleep(register int how)
     }
     if (wandering_monster_check())
     {
-        if (PLAYER1->fatigue > 0x20)
-            PLAYER1->fatigue -= 0x20;
+        if (player->fatigue > 0x20)
+            player->fatigue -= 0x20;
         else
-            PLAYER1->fatigue = 0;
+            player->fatigue = 0;
         game_sprint(0x15);              /* "Your sleep is interrupted!" */
         player_eat(-12 - (rand() & 0xF));
-        if (PLAYER1->drunk < 0x10)
-            PLAYER1->drunk = 0;
+        if (player->drunk < 0x10)
+            player->drunk = 0;
         else
-            PLAYER1->drunk -= 0x10;
+            player->drunk -= 0x10;
     }
     else
     {
@@ -640,14 +572,14 @@ void far player_sleep(register int how)
         hours = rand() % 4 + 7 - hours;
         if (ThePlayer->hp < 10)
             hours += rand() % 2 + 1;
-        PLAYER1->game_clock += hours * 0xE1000L;
+        player->game_clock += hours * 0xE1000L;
         DegradeLights(hours * 180, 0);
-        comfort = PLAYER1->hunger > 0x40 && how > 0;
-        regen = PLAYER1->fatigue / 2 + 2;
+        comfort = player->hunger > 0x40 && how > 0;
+        regen = player->fatigue / 2 + 2;
         if (regen > 5)
             regen = 5;
-        PLAYER1->fatigue = 0;
-        if (PLAYER1->hunger != 0)
+        player->fatigue = 0;
+        if (player->hunger != 0)
         {
             restore_hp(ThePlayer, regen + regen * comfort - 1);
             restore_mana(ThePlayer, -6);
@@ -659,10 +591,10 @@ void far player_sleep(register int how)
             damage_item(ThePlayer, 0L, 0, 0, 2, 0);
         }
         player_eat(-24 - (rand() & 0x1F));
-        if (PLAYER1->drunk < 0x20)
-            PLAYER1->drunk = 0;
+        if (player->drunk < 0x20)
+            player->drunk = 0;
         else
-            PLAYER1->drunk -= 0x20;
+            player->drunk -= 0x20;
         if (how >= 0)
             fade = !dream(comfort);
         game_sprint(0x13 - comfort);    /* "Your sleep is uneasy." or "You feel rested." */
@@ -701,21 +633,21 @@ unsigned char far player_eat(int nutrition)
 {
     int value;
 
-    value = PLAYER1->hunger;
+    value = player->hunger;
     value += nutrition;
     if (value > 0xFF)
         return 0;
     if (value < 0)
-        PLAYER1->hunger = 0;
+        player->hunger = 0;
     else
-        PLAYER1->hunger = value;
+        player->hunger = value;
     if (nutrition > 0)
     {
-        value = PLAYER1->food_heal / 8;
+        value = player->food_heal / 8;
         if (value > 8)
             value = 8;
         get_hp_back(ThePlayer, value);
-        PLAYER1->food_heal = 0;
+        player->food_heal = 0;
     }
     return 1;
 }
@@ -752,7 +684,7 @@ void far check_victory(void)
         real_death(0);
         EndGameMode_dseg_1C8F = 0;
     }
-    else if (PLAYER1->talismans == 0)
+    else if (player->talismans == 0)
     {
         gate = 0;
         if ((gate = CreateObj(0x15A, 0)) != 0)
@@ -771,7 +703,7 @@ void far check_victory(void)
             Obj_Free(gate);
         }
         do_teleport(ThePlayer, 0x1B, 0x17, 9);
-        PLAYER1->talismans = 0xFF;
+        player->talismans = 0xFF;
         game_sprint(0x118);             /* "You are sucked through the moongate . . ." */
         NewPlyFade &= 0xFE;
         new_player_pos();
@@ -815,7 +747,7 @@ char far plant_seed(void)
         SET_DOORDIR(tree, 1);
         if (add_animobj(Obj_MemTPtr(tree), -1, 0, x >> 3, y >> 3))
         {
-            PLAYER1->tree = PlayerLevel;
+            player->tree = PlayerLevel;
             Obj_Add(&tile->objects, tree);
             return 1;
         }
@@ -849,17 +781,17 @@ char far moveto(int level, register int item)
    drop_drunk_player 460, where UW2 has do_dreamret). */
 void far do_resurrect(void)
 {
-    if (moveto(PLAYER1->tree, 0x1CA)) {
+    if (moveto(player->tree, 0x1CA)) {
         if (playerdat->avghit > 8)
             ThePlayer->hp = playerdat->avghit - 2 - rand() * 3L / 0x8000L;
         else
             ThePlayer->hp = playerdat->avghit;
-        PLAYER1->play_mana = PLAYER1->max_mana;
-        if (PLAYER1->max_mana > 8)
-            PLAYER1->play_mana -= PLAYER1->max_mana / 8 + 2;
+        player->play_mana = player->max_mana;
+        if (player->max_mana > 8)
+            player->play_mana -= player->max_mana / 8 + 2;
         SET_SEQ(ThePlayer, 0x2C);
-        PLAYER1->poison = 0;
-        PLAYER1->active_spells = 0;
+        player->poison = 0;
+        player->active_spells = 0;
         FixPlayerEquips();
         set_new_music(4);
     }
@@ -868,7 +800,7 @@ void far do_resurrect(void)
 /* npp_func of the moonstone spells: arrive at the moonstone (item 0x126) on its level. */
 void far do_mstone(void)
 {
-    moveto(PLAYER1->moonstone, 0x126);
+    moveto(player->moonstone, 0x126);
 }
 
 /* HP has reached 0. While talismans remain to be destroyed: the effects stop, death
@@ -882,14 +814,14 @@ void far player_is_dead(void)
     struct Object far *bones;
     char ok;
 
-    if (PLAYER1->talismans == 0)
+    if (player->talismans == 0)
     {
         ThePlayer->hp = 4;
         return;
     }
     seg014_1DC5_C7C();
     load_new_music(10, 1);
-    player_get_exp(-(int)(PLAYER1->exp >> 3));
+    player_get_exp(-(int)(player->exp >> 3));
     render_FB();
     fadeout3d(5);
     clear_fight_state();
@@ -918,9 +850,9 @@ void far player_is_dead(void)
         SET_FINEY(bones, OBJ_FINEY(ThePlayer));
         obj_deal(bones, PN.x >> 8, PN.y >> 8, 1);
     }
-    if (PLAYER1->tree && PlayerLevel != 9)
+    if (player->tree && PlayerLevel != 9)
     {
-        do_teleport(ThePlayer, 0x3F, 0x3F, PLAYER1->tree);
+        do_teleport(ThePlayer, 0x3F, 0x3F, player->tree);
         npp_func = do_resurrect;
         NewPlyFade = 0;
         ok = new_player_pos();

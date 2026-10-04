@@ -52,9 +52,6 @@
    matches the segment from 0x21136 (a scratch table without that row). */
 
 #include <dos.h>
-#define SpecShadeMode UW2_SpecShadeMode /* UW1: signed char, below */
-#define color_to_map UW2_color_to_map   /* UW1: 192 entries, below */
-#define color_to_obj UW2_color_to_obj
 #include "conv.h"
 #include "event.h"
 #include "map.h"
@@ -63,33 +60,11 @@
 #include "sys.h"
 #include "ui.h"
 #include "view3d.h"
-#undef SpecShadeMode
-#undef color_to_map
-#undef color_to_obj
-
-/* UW1: GRSPIC.C's texture lookup (UW2's seg009_392): the segment of texture index's
-   bitmap, whose first byte is its average colour (UW1 keeps no TxmCol). */
-unsigned far seg009_38C(int index);
-/* UW1: a byte of another file's initialised data (DS:12B6, 0x64), not yet named; at
-   0x64 the nearest textures are drawn at full brightness. */
-extern unsigned char dseg_5c99_12B6;
-
-/* UW1: the player record differs from UW2's struct Player (player.h). The fields this
-   file uses, from the bytes. */
-struct Player1Grid {
-    char pad00[0x3D];
-    unsigned char level;                /* 0x3D */
-    char pad3E[0xB5 - 0x3E];
-    uint16 sound:2;                     /* 0xB5 */
-    uint16 music:2;
-    uint16 detail:4;
-};
-#define PLAYER1 ((struct Player1Grid *)player)
+#include "gfx.h"
 
 typedef void (far *FlrFn)(unsigned char *pts, unsigned char shade, unsigned char tex);
 typedef void (far *WalFn)(unsigned char *pts, unsigned char shade, unsigned char height,
                           unsigned char tex);
-
 
 /* match: this file's _BSS, DS:2E0A..3147 (VIEW3D.C's ends at 2E09; ActDoors starts at
    3148), laid out by name (tools/bssorder.py): cWCol 27, loopx and loopy 44, UsPtr 53,
@@ -200,7 +175,7 @@ void far set_graphics_level(void)
     register int level;
     int cie, flr;
 
-    level = PLAYER1->detail;
+    level = player->detail;
     tmapson = 0;
     cie = 0;
     flr = 0;

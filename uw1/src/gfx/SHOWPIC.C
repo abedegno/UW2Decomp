@@ -23,6 +23,10 @@
 #include "gfx.h"
 #include "sys.h"
 
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
+void far grfx_clear(void);
+
 char far LoadBitMap_ovr141_0(int pal, char *name)
 {
     unsigned char far *buf;

@@ -37,6 +37,10 @@
 #include "sys.h"
 #include "ui.h"
 
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
+unsigned char far blttodrive(void far *buf, char *name, unsigned n);
+
 void far flip_bool(char *p) { if (*p) *p = 0; else *p = 1; }
 
 /* Which ninth of an a by b box (x, y) falls in, as a direction: the 3 by 3 grid's

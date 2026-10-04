@@ -23,12 +23,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-/* UW1: creature_obj_init does the whole of UW2's init_this_critter on ActiveObj and
-   returns char; critter.h declares UW2's void one, so it is renamed out of the way. */
-#define creature_obj_init UW2_creature_obj_init
 #include "critter.h"
 #include "object.h"
-#undef creature_obj_init
 
 /* match: this file's _BSS, in UW1 DS:4A30..5653 (UW2 DS:492A..554D), laid out by name
    (tools/bssorder.py): cr_type 931, cst 955, cr_unused 971, Creature 979, cr_class 1019.

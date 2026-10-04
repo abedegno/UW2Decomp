@@ -13,6 +13,7 @@ struct Camera;
 struct Grs3d;
 struct Object;
 struct Tile;
+union Link;
 
 #include "map.h"
 #include "object.h"
@@ -54,11 +55,10 @@ struct Gloc {
 extern int16 loopx;
 extern int16 loopy;
 extern struct Object far *UsPtr;
-extern unsigned char TxmCol[64];
-extern int16 color_to_map[172];
+extern int16 color_to_map[192];
 /* The pick tables, indexed by the byte under the cursor (less 1).
    name: no FM Towns names. */
-extern int16 color_to_obj[172];
+extern int16 color_to_obj[192];
 extern struct Tile far *mlowptr;
 extern unsigned char sqmod;
 extern struct Tile far *tmptr;
@@ -77,12 +77,13 @@ extern int16 distpoly;
 extern int16 tmapson;
 extern int16 lighton;
 extern unsigned char curautocode;
-extern unsigned char SpecShadeMode;  /* name: DOS only, no FM Towns name */
+extern signed char SpecShadeMode;  /* name: DOS only, no FM Towns name */
 void far set_graphics_level(void);
 void far process_grid(void);
 void far do_3d_pickup(void);
 extern unsigned char AnimObjInPipe;
 extern unsigned char PickUp;
+extern char ProbablyAutomapEnabled_dseg_5c99_546;
 
 /* VIEW3D.C: setting up the 3D view */
 extern int16 chgtable[4][3];
@@ -137,15 +138,20 @@ extern uint16 far crit_fpage;
 extern unsigned char far crit_inpage;
 extern uint16 far crit_nlpages;
 extern uint16 far first_anim;
-extern struct Grs3d far grs_3dinf[];
 extern unsigned char far obj_inpage1;  /* the EMS page mapped into frame page 2 */
 /* The EMS page holding the screen graphics, and the page last mapped for objects, which
    is spoiled by any other mapping.
    name: FM Towns names, at 4FAF:E4D0 and E4D1. */
-extern unsigned char far scrgr_fpage;
-extern uint16 far seg052_519C_E4D4;    /* 4FAF:E4D4 */
-extern unsigned char far tmap_fpage;
 extern unsigned char far tmap_inpage;
+extern unsigned char far seg051_C10F[];
+extern unsigned char far seg051_C375;
+extern unsigned char far seg051_C376;
+extern unsigned char far seg051_C377;
+extern unsigned char far seg051_C378[];
+extern unsigned char far seg051_C3B2[];
+extern uint16 far seg051_C3EC[];
+extern uint16 far seg051_C460[];
+extern uint16 far seg051_C4D7;
 
 /* PGCACHE.ASM */
 extern uint16 far *grs_off;    /* EMS page and paragraph, or video address, per slot */
@@ -162,5 +168,9 @@ extern uint16 far bmsegoff;
 extern int16 far smooth_base;
 extern int16 far smooth_div;
 extern int16 far smooth_lowpass;
+extern unsigned char dseg_5c99_12B6;
+
+/* INSTANCE.ASM */
+extern unsigned char far seg051_28A0;
 
 #endif

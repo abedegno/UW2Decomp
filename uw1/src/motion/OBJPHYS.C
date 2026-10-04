@@ -409,18 +409,6 @@ void far mob_init(struct Object far *obj, int x, int y)
     }
 }
 
-/* UW1: struct Player differs from UW2's (player.h). mob_to_static reads bit 2 of the word
-   at 0x62, the byte at 0x6D and the word at 0x6E (see mob_to_static). */
-/* name: descriptive; the fields' meaning is read from mob_to_static alone. */
-struct UW1PlayerQuest {
-    char pad[0x62];
-    uint16 b62_0:2;
-    uint16 talisman_ok:1;               /* word 0x62, bit 2 */
-    char pad63[0x6D - 0x63];          /* the bitfield run takes one byte */
-    unsigned char talismans;            /* 0x6D */
-    uint16 quest6E;                     /* 0x6E */
-};
-
 /* Replaces the mobile object obj, in tile XP, YP, with a new static copy and releases
    the mobile record. Its type's fate (ComObjData) may destroy it instead: 1 to 8 is the
    chance in 8 that it is culled, if Obj_Elem_Fate also allows it, and 9 runs mts_doanim
@@ -443,23 +431,23 @@ struct Object far * far mob_to_static(struct Object far *obj)
         put_effect(obj, 6, 3, 0, 0, XP, YP);
     } else if (OBJ_TERRAIN(obj) == 2 && fate == 10 && PlayerLevel == 8
                && abs(XP - 32) + abs(YP - 32) < 6 && ThePlayer->hp != 0) {
-        if (((struct UW1PlayerQuest *)player)->talisman_ok) {
+        if (player->talisman_ok) {
             register int i;
 
             fate = 8;
             keep = 0;
-            if (--((struct UW1PlayerQuest *)player)->talismans == 0) {
+            if (--player->talismans == 0) {
                 game_sprint(0x116);
                 editchng(0x400);
             } else {
                 SET_ITEM(obj, 0x1C2);
-                for (i = 8; ((struct UW1PlayerQuest *)player)->talismans <= i; i--) {
+                for (i = 8; player->talismans <= i; i--) {
                     SET_Z(obj, OBJ_Z(obj) + (rand() & 7) + 4);
                     fireball_effect(obj, XP + rand() % 3 - 1, YP + rand() % 3 - 1);
                 }
             }
         } else
-            ((struct UW1PlayerQuest *)player)->quest6E |= 8;
+            player->dreams |= 8;
     }
     if (fate > 0 && fate <= 8 && (rand() & 7) < fate && Obj_Elem_Fate(10, obj))
         keep = 0;

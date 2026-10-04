@@ -36,8 +36,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#define GetAutoMapLevel UW2_GetAutoMapLevel   /* UW1: an archive argument, below */
-#define SaveAutoMapLevel UW2_SaveAutoMapLevel
 #include "event.h"
 #include "file.h"
 #include "gfx.h"
@@ -47,35 +45,21 @@
 #include "sound.h"
 #include "sys.h"
 #include "ui.h"
-#undef GetAutoMapLevel
-#undef SaveAutoMapLevel
 
-/* UW1: an open archive, as ovr091 (LEV.ARK access) keeps it; 11 bytes (the copies in
-   SaveAutoMapLevel), its fields not used here. */
-struct Arc {
-    char b[11];
-};
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
+void far grfx_clear(void);
+
 char far open_arc(char far *arc, char *name);           /* opens an archive into arc */
 char far close_arc(char far *arc);                     /* closes it */
 int far get_arc(char far *arc, int block, void far *buf);           /* reads a block */
 char far put_arc(char far *arc, int block, void far *buf, int len); /* writes one */
 /* UW1: CRPAGES.C lends the critter pages to hold the workspace (UW2's get_workspace and
    release_workspace). */
-int far swap_ws_out(void);
-void far unswap_ws(unsigned handle);
-extern uint16 conv_ws_seg;                  /* TMPALLOC.C */
 /* UW1: do_beep, called with (0x12C, 0xA) when a note will not take another
    character. */
-void far do_beep(int a, int b);
-void far input_del(int id);              /* removes an input handler */
-void far seg014_1DC5_15C5(void);          /* the level's music again */
 /* UW1: seg015's pixel plot (UW2's gr_pixel). */
-void far seg015_1F9B_25A(int x, int y, int color);
 unsigned char far grfx_load_font(char *name);
-
-unsigned char far SaveAutoMapLevel(struct Arc *arcp, int lev);
-unsigned char far GetAutoMapLevel(struct Arc *arc, int lev);
-void far GetTheWords(int lev);
 
 /* Initialised data, DS:0ACA (the strings follow, to DS:0B49). */
 /* name: none of it has an FM Towns name, so it was static. */
@@ -106,7 +90,6 @@ unsigned char PlayersMap[MAP_SIZE][MAP_SIZE];
 static int16 old_strings;
 static int16 num_words;
 static int16 map_mouse;
-
 
 /* Opens the map screen: registers its key handler once, plays theme 0xD, saves the
    current level's map and shows it, and adds the mouse handler (map_mouse). */

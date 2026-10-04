@@ -49,20 +49,8 @@
 #include "ui.h"
 #include "view3d.h"
 
-/* UW1: struct Player differs from UW2's (player.h): the weapon drawn bit and the poison
-   level share byte 0x5F, handedness is bit 0 of byte 0x64 and the easy flag is byte 0xB4
-   (UW2 0x60, 0x65, 0x301). */
-struct Player1Combat {
-    char pad0[0x5F];
-    uint16 b5F_0:1;
-    uint16 drawn:1;                     /* 0x5F, bit 1 */
-    uint16 poison:4;                    /* 0x5F, bits 2-5 */
-    char pad60[0x64 - 0x60];
-    uint16 lefty:1;                     /* 0x64, bit 0 */
-    char pad65[0xB4 - 0x65];
-    unsigned char easy;                 /* 0xB4 */
-};
-#define PLAYER1 ((struct Player1Combat *)player)
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far IsMobElem(struct Object far *obj);
 
 /* Initialised data, DS:236 onwards (DS:234 and 235 are COLCYCLE.C's), then the literal
    pool to DS:267. */
@@ -295,7 +283,7 @@ int far frp_check(int attacker, int defender)
     if (OBJ_MAJOR(def) != MAJOR_CREATURE) {
         if (attacker == 1 && OBJ_CLASS(def) == CLASS_DOOR
             && (int)(rand() * 12L / 0x8000L) < (def->id & 7) << 1) {
-            slot = 8 - PLAYER1->lefty;
+            slot = 8 - player->lefty;
             DamageInventory(slot, rollem(2, 4), 4, 0, 1);
         }
         return 0;
@@ -313,14 +301,14 @@ int far frp_check(int attacker, int defender)
             if ((slot = hitloc + 1 & 3) == 3)
                 slot += rand() % 5 == 0;
             else if (slot != 0 && slot <= 2)
-                slot = PLAYER1->lefty + 7;
+                slot = player->lefty + 7;
             DamageInventory(slot, rollem(2, 4), 4, 1, 1);
         }
         return 0;
     }
     if (result == -1 && attacker == 1
         && !Creature[Obj_IntTMem(hitobj)->id & ID_INMAJOR].passive) {
-        slot = 8 - PLAYER1->lefty;
+        slot = 8 - player->lefty;
         DamageInventory(slot, rollem(2, 3), 4, 0, 1);
     }
     return 1 - result;
@@ -379,7 +367,7 @@ void far do_damage(int type)
     }
     if ((level = ddone / 4) >= 4)
         level = 3;
-    if (hitobj == 1 && PLAYER1->easy)
+    if (hitobj == 1 && player->easy)
         ddone >>= 1;
     result = damage_item(def, Obj_IntTMem(fromwho), targx, targy, ddone, type);
     if (ddone == 0)
@@ -540,7 +528,7 @@ int far GetPlayerWeapon(unsigned char **wd, struct Object far **weap)
     register int item;
 
     *wd = 0;
-    *weap = AskInventory(8 - PLAYER1->lefty);
+    *weap = AskInventory(8 - player->lefty);
     if (*weap != 0) {
         if (((item = OBJ_ITEM(*weap)) >> 4) == CLASS_MISSILE) {
             if (Missile[item & ID_INCLASS].ammo >= 0 && Missile[item & ID_INCLASS].ammo < 0x10) {
@@ -580,7 +568,7 @@ void far DoPlayerWeapon(register unsigned char *wd, struct Object far *weap, int
         skill = SKILL_BAREHAND;
     askill = (player->skills[SKILL_ATTACK] >> 1) + player->skills[skill];
     askill += player->dexterity / 7;
-    if (PLAYER1->easy)
+    if (player->easy)
         askill += 7;
     if (skill == SKILL_BAREHAND)
         damage = player->skills[SKILL_BAREHAND] * 2 / 5 + Creature[ThePlayer->id & ID_INMAJOR].attr[0] / 6 + 4;
@@ -614,7 +602,7 @@ void far missile_finish(void)
 
 void far fin_attack(void)
 {
-    if (PLAYER1->drawn)
+    if (player->drawn)
         set_screen_frame(8, 4);
     else
         set_screen_frame(8, 6);
@@ -730,7 +718,7 @@ void far player_attack(int swing)
         pQatt = -10;
         return;
     }
-    if (!PLAYER1->drawn)
+    if (!player->drawn)
         return;
     if (swing == 0)
         return;
@@ -799,9 +787,9 @@ char far critter_attack(struct Object far *npc, int swing, unsigned char charge,
         damage += rand() % 12 + 4;
     }
     result = do_attack();
-    if (result && hitobj == 1 && PLAYER1->poison < poison) {
+    if (result && hitobj == 1 && player->poison < poison) {
         if (check_res(ThePlayer, 1, 0x10))
-            PLAYER1->poison = poison;
+            player->poison = poison;
     }
     return result;
 }

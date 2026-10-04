@@ -34,10 +34,6 @@
    it; its key (10) lists it before remove_whoami, so the EXE's stub order (where it is
    the 19th entry) is not reproduced. A name with a key from 859 to 876 (such as
    work_bullfrog_tiles, 863) gives the EXE's order. */
-/* UW1: these are declared differently below; the headers have UW2's forms, renamed out
-   of the way here. */
-#define death_check UW2_death_check
-#define find_good_x_and_y UW2_find_good_x_and_y
 #include <stdlib.h>
 #include <string.h>
 #include "combat.h"
@@ -54,33 +50,9 @@
 #include "sound.h"
 #include "sys.h"
 #include "ui.h"
-#undef death_check
-#undef find_good_x_and_y
 
-
-/* UW1: declarations the headers do not have (or have in UW2's form). */
-char far death_check(struct Object far *obj, char mode);
-
-/* UW1: the player record's fields this file uses; player.h has UW2's layout. */
-struct Player1World {
-    char pad0[0x4A];
-    uint16 weight;                      /* 0x4A */
-    uint16 max_weight;                  /* 0x4C */
-    char pad4E[0x5F - 0x4E];
-    uint16 b5F_0:2;                     /* 0x5F */
-    uint16 poison:4;
-    char pad60[0x62 - 0x60];
-    uint16 b62_0:2;                     /* 0x62 */
-    uint16 b62_2:1;
-    char pad63[0x65 - 0x63];
-    int32 quests;                       /* 0x65: quests 0..31, a bit each */
-    char pad69[0x6E - 0x69];
-    uint16 b6E;                         /* 0x6E */
-    unsigned char game_vars[0x40];      /* 0x70 */
-    char padB0[0xCE - 0xB0];
-    int32 game_clock;                   /* 0xCE */
-};
-#define PLAYER1 ((struct Player1World *)player)
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far IsMobElem(struct Object far *obj);
 
 /* UW1: the fish is item 0xB6. */
 #define ITEM1_FISH 0xB6
@@ -299,9 +271,9 @@ int far whack_thing(int index, int damage, int how, int extra)
     target = Obj_IntTMem(index);
     if (damage < 0) {
         if (target == ThePlayer) {
-            if ((unsigned)(-damage) > PLAYER1->poison) {
+            if ((unsigned)(-damage) > player->poison) {
                 if (check_res(ThePlayer, 1, 0x10)) {
-                    PLAYER1->poison = -damage;
+                    player->poison = -damage;
                 }
             }
         } else {
@@ -354,7 +326,7 @@ unsigned char far go_fish(void)
         goto bad_place;
     if (rand() % 5 != 0)
         goto no_luck;
-    if (PLAYER1->weight + ComObjData[ITEM1_FISH].mass >= PLAYER1->max_weight)
+    if (player->weight + ComObjData[ITEM1_FISH].mass >= player->max_weight)
         goto no_room;
     game_sprint(0x63);  /* 'You catch a lovely fish.' */
     return 1;
@@ -387,33 +359,33 @@ void far work_bullfrog_tiles(int mode, int x, int y)
     else switch (mode) {
     case 0:
     case 1:
-        x = PLAYER1->game_vars[0x18] + 0x30;
-        y = PLAYER1->game_vars[0x19] + 0x30;
-        if (PLAYER1->game_vars[0x1A] > 1) {
-            PLAYER1->game_vars[0x1A] = PLAYER1->game_vars[0x1A] - 1;
+        x = player->game_vars[0x18] + 0x30;
+        y = player->game_vars[0x19] + 0x30;
+        if (player->game_vars[0x1A] > 1) {
+            player->game_vars[0x1A] = player->game_vars[0x1A] - 1;
             tx = x - 1;
             ty = y - 1;
             dx = 2;
             dy = 2;
-            if (PLAYER1->game_vars[0x18] == 0) tx = x;
-            if (PLAYER1->game_vars[0x18] == 0 || PLAYER1->game_vars[0x18] == 7) dx = 1;
-            if (PLAYER1->game_vars[0x19] == 0) ty = y;
-            if (PLAYER1->game_vars[0x19] == 0 || PLAYER1->game_vars[0x19] == 7) dy = 1;
+            if (player->game_vars[0x18] == 0) tx = x;
+            if (player->game_vars[0x18] == 0 || player->game_vars[0x18] == 7) dx = 1;
+            if (player->game_vars[0x19] == 0) ty = y;
+            if (player->game_vars[0x19] == 0 || player->game_vars[0x19] == 7) dy = 1;
             change_terrain(tx, ty, 0x3F, 0xF, 0xF, 0xF, dx, dy, mode * 2 + 1);
             change_terrain(x, y, 0x3F, 0xF, 0xF, 0xF, 0, 0, mode * 2 + 1);
         } else {
             game_sprint(0xC0);  /* 'There is an empty clicking sound.' */
-            PLAYER1->game_vars[0x1A] = 1;
+            player->game_vars[0x1A] = 1;
         }
         break;
     case 2:
-        PLAYER1->game_vars[0x19] = (PLAYER1->game_vars[0x19] + 1) & 7;
+        player->game_vars[0x19] = (player->game_vars[0x19] + 1) & 7;
         break;
     case 3:
-        PLAYER1->game_vars[0x18] = (PLAYER1->game_vars[0x18] + 1) & 7;
+        player->game_vars[0x18] = (player->game_vars[0x18] + 1) & 7;
         break;
     case 4:
-        PLAYER1->game_vars[0x1A] = 0x3F;
+        player->game_vars[0x1A] = 0x3F;
         change_terrain(0x30, 0x30, 0x3F, 0xF, 4, 0xF, 7, 7, 0);
         game_sprint(0xC1);  /* 'A voice utters the words "Reset Activated."' */
         break;
@@ -501,7 +473,7 @@ void far ExplodingBook_ovr107_1259(struct Object far *trap, int x, int y)
     book = Obj_InList(&head, 1, 4, 1, 4);
     if (book) {
         scroll_print("The book explodes in your face!\n");
-        PLAYER1->quests |= 0x100L;
+        player->quests |= 0x100L;
         backfire(ThePlayer, 3);
         InvRemoveOneObject(book);
         Obj_Punt(0L, book, 1);
@@ -556,7 +528,7 @@ void far TyballDeath_ovr107_13D1(void)
     struct Object far *obj;
     struct Object far *next;
     runcutscene(2);
-    PLAYER1->b6E |= 4;
+    player->dreams |= 4;
     for (i = 9; i > 0; i--)
         gronk_whoami(tyball_allies[i], 0, 0, (WhoamiFn)remove_whoami);
     head = &Map_GetAddr(0x17, 0x38)->objects;
@@ -579,7 +551,7 @@ char far death_check(struct Object far *obj, char mode)
 {
     switch (obj->whoami) {
     case 0x1B:
-        if (mode) PLAYER1->b62_2 = 0;
+        if (mode) player->talisman_ok = 0;
         break;
     case 0xE7:
         if (mode) TyballDeath_ovr107_13D1();
@@ -606,13 +578,13 @@ char far death_check(struct Object far *obj, char mode)
         }
         break;
     case 0x6E:
-        if (mode) PLAYER1->quests |= 0x10L;
+        if (mode) player->quests |= 0x10L;
         break;
     case 0x8E:
-        if (mode) PLAYER1->quests |= 0x800L;
+        if (mode) player->quests |= 0x800L;
         break;
     case 0x18:
-        if (mode) PLAYER1->quests |= 0x40L;
+        if (mode) player->quests |= 0x40L;
         break;
     }
     return 1;
@@ -725,7 +697,7 @@ void far repair_item(struct Object far *obj, int skill, char who)
     result = do_repair(obj, skill, &time);
     if (who) {
         playerdat->noise = 0xF;
-        PLAYER1->game_clock += ((int32)time << 8) * 60;
+        player->game_clock += ((int32)time << 8) * 60;
         if (result == -2) {
             if (Obj_Elem_Fate(10, obj)) {
                 InvRemoveOneObject(obj);

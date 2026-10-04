@@ -64,15 +64,7 @@ void far bab_fun(char *name, BablFn fn);  /* binds a built-in by name */
 int far babl_run(void);
 
 /* BABLHACK.C: conversation built-ins that reach into the game */
-struct Object far * far place_pitfighter(int power, int x, int y);
-void far do_babl_teleport(void);
-extern unsigned char running_away;
-void far teleport_player(int16 far *args);  /* ties teleport_talker */
-int far teleport_talker(int16 far *args);
 /* The built-ins CONVERSE.C binds with bab_fun, given the argument stack. */
-int far babl_hack(int16 far *args);
-void far set_sequence(int16 far *args);
-int far x_exp(int16 far *args);
 void far set_attitude(int16 far *args);
 void far set_race_attitude(int16 far *args);
 int far x_skills(int16 far *args);
@@ -80,11 +72,9 @@ int far x_traps(int16 far *args);
 int far place_object(int16 far *args);
 int far take_from_npc_inv(int16 far *args);
 void far add_to_npc_inv(int16 far *args);
-void far transform_talker(int16 far *args);
 void far remove_talker(void);
 void far set_quest(int16 far *args);
 int far get_quest(int16 far *args);
-int far x_clock(int16 far *args);
 int far sex(int16 far *args);
 int far gronk_door(int16 far *args);
 void far x_obj_stuff(int16 far *args);
@@ -93,10 +83,9 @@ void far x_obj_pos(int16 far *args);
 /* BARTER.C: bartering in conversations */
 /* A trade adjustment set by a conversation, read when bartering. Defined in ovr097: it is
    the byte at DS:BFE, and ovr097's word-aligned _DATA starts there. */
-extern char fudge;
 void far drawTradeSlot_ovr097_A91(int side, int slot);
 void far showSelection_ovr097_E83(int side, int slot);
-void far UseTradeSlot_ovr097_6E8(int16 side, int16 slot, int16 *content, unsigned char *active);
+void far UseTradeSlot_ovr097_6E8(int16 side, int16 slot, int16 *content, char *active);
 void far PickUpFromSlot_ovr097_C39(int slot, int16 *content, unsigned char split);
 void far ovr097_CDB(int side, int slot, int16 *content);
 unsigned char far CombineToSlot_ovr097_D30(struct Object far *obj, int side, int slot,
@@ -104,7 +93,7 @@ unsigned char far CombineToSlot_ovr097_D30(struct Object far *obj, int side, int
 int far assess_value(int use_likes, int item, int accuracy);
 int far does_npc_like(int index);
 int far range(int base, int min, int max);
-int far total_offering_ovr097_17CB(int use_likes, int16 *items, unsigned char *selected, int16 *values,
+int far total_offering_ovr097_17CB(int use_likes, int16 *items, char *selected, int16 *values,
                                    int accuracy);
 void far npc_inv_add(struct Object far *obj);
 extern int16 npc_assess;
@@ -112,7 +101,6 @@ extern int16 greed;
 void far barter_init(void);
 void far end_barter(void);
 void far conv_inv_special(void);
-void far RedisplayBarterSlots(int side);
 int far player_barter_items(int16 *items, int16 *indices);
 void far player_barter_give(int index);
 int far npc_barter_find(int item, int from_player);
@@ -130,13 +118,12 @@ int far do_demand(int16 far *args);
 void far do_decline(void);
 void far do_judgement(void);
 int far npc_likes_dislikes(int16 far *args);
-int far give_all_stuff(void);
 
 /* CONVERSE.C: conversations */
 extern struct Object far *talking_to;
 extern uint16 cnv_id;
 char far * far adr_convpic(int n);
-int far move_convpic(char far *image, int ok, int which);
+char far move_convpic(char far *image, int ok, int which);
 void far Converse(unsigned char who, int subclass);
 int far conv_choice_ovr103_A13(int16 far *stack);
 int far conv_fmenu_ovr103_BF2(int16 far *stack);
@@ -162,7 +149,6 @@ int far count_inv(int16 far *stack);
 int far find_barter(int16 far *stack);
 int far find_barter_total(int16 far *stack);
 int far give_ptr_npc(int16 far *stack);
-int far switch_pic(int16 far *stack);
 void far TalkTo(struct Object far *thing);
 void far free_converse(void);
 void far strt_converse(void);

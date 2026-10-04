@@ -39,20 +39,13 @@
 #include "ui.h"
 #include "uw2.h"
 
+/* PLAYER.C defines the record's storage as a byte array; this file reaches it as the
+   union (player.h). */
+extern union PlayerStore PlayerDat;
+
 /* This file's _BSS, in UW1 DS:5A72..5A81 (UW2 DS:6A76..6A85): the backpack slots' screen
    saves while a bag is open. Only this file uses it. */
 int16 BagSaveHandles[8];
-
-/* UW1: the player record's moonstone level and handedness (UW2: moonstones[2] at 0x5E,
-   lefty at 0x65); player.h has UW2's layout. */
-struct Player1Bags {
-    char pad0[0x5E];
-    unsigned char moonstone:4;          /* 0x5E: the level the moonstone was left on */
-    char pad5F[0x64 - 0x5F];
-    uint16 lefty:1;                     /* 0x64 */
-};
-#define PLAYER1 ((struct Player1Bags *)player)
-
 
 /* A click on display position slot that is not a pick-up or put-down: 0x15 and 0x16
    scroll the open bag, 0x14 (the open bag's own picture) closes it, 0x17 drops or throws the
@@ -80,7 +73,7 @@ void far DoSpecialActions(int slot)
     case 0x17:
         if (CursorObjPtr != 0 && ReturnObject(CursorObjPtr, 1)) {
             if (HasOrIsObj(CursorObjPtr, ITEM_MOONSTONE))
-                PLAYER1->moonstone = (char)PlayerLevel;
+                player->moonstone = (char)PlayerLevel;
             CursorObjPtr = 0;
             FixPlayerEquips();
         }
@@ -90,7 +83,7 @@ void far DoSpecialActions(int slot)
         break;
     case 8:
     case 9:
-        if (9 - PLAYER1->lefty == slot) {
+        if (9 - player->lefty == slot) {
             obj = Obj_PtrTMem(&Inventory[DisplayToSlot[slot]]);
             id = OBJ_ITEM(FARNULLTRAP(obj));     /* an empty hand reads 19h, a bow */
             cls = OBJ_CLASS(FARNULLTRAP(obj));
@@ -461,7 +454,7 @@ char far PutObjectInBag(struct Object far *obj, int slot)
         FixOpenBag();
         displayInventoryArray(0xC, 0x13);
     } else if (displayEnc(1))
-        grfx_load_font((int)"font5x6p.sys");  /* UW1: takes the font's file name; gfx.h has UW2's index */
+        grfx_load_font((int)"font5x6p.sys");  /* UW1: takes the font's file name; the cast is to UW2's index */
     if (OBJ_ITEM(obj) >= FIRST_LIT_LIGHT && OBJ_ITEM(obj) < FIRST_WAND)
         SET_INCLASS(obj, OBJ_INCLASS(obj) - 4);
     return 1;

@@ -27,10 +27,6 @@
    Name: original (init_player is in System Shock's PLAYER.C, setting up the player in
    both). */
 
-/* UW1: the player record's storage is 0xD2 bytes and there is no IsJoy (below); player.h
-   declares UW2's, so the declarations are renamed out of the way. */
-#define PlayerDat UW2_PlayerDat
-#define IsJoy UW2_IsJoy
 #include "combat.h"
 #include "conv.h"
 #include "critter.h"
@@ -43,16 +39,10 @@
 #include "sys.h"
 #include "ui.h"
 #include "view3d.h"
-#undef PlayerDat
-#undef IsJoy
 
 /* match: declared here, not in map.h: LIGHTING.C defines set_light(signed char), and this
    file's callers push an int. */
 void far set_light(int level);
-
-/* UW1: the automap's update flag (the listing's name, DS:0546), where UW2 has the
-   player record's automap bit. */
-extern char ProbablyAutomapEnabled_dseg_5c99_546;
 
 /* This file's _DATA, in UW1 DS:1B36..1B40 (then the version string). */
 unsigned char MoveCrits = 1;            /* seg035 moves critters only while set */

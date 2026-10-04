@@ -13,6 +13,7 @@ struct Scroll;
 struct StringNode;
 struct Tile;
 struct buttongroup;
+struct Arc;
 
 #include "map.h"
 #include "object.h"
@@ -84,23 +85,10 @@ int far _input_addkey(int key, NEARPTR arg, int mask, InputFn func);
 void far input_dispatch(struct Inplist *in);
 
 /* ICONS.C: the icon bar */
-extern int16 gameopts_done;
-extern char dseg_67d6_120;
-extern char current_hilit_button;
-extern unsigned char button_to_mode[6];
-extern unsigned char mode_to_button[6];
-extern struct buttongroup detail_buttongroup;
-extern struct buttongroup file_buttongroup;
-extern struct buttongroup musicsound_buttongroup;
-extern struct buttongroup *current_buttongroup;
-void far setup_icon_buttons(void);
-void far term_icon_buttons(void);
-int far get_iconreg_button(void);
+extern char gameopts_done;
 void far new_IconUnselect(int index);
 void far new_IconSelect(int index);
 void far do_option_shortcut(int keycode);
-extern struct buttongroup gameopts_buttongroup;
-extern struct buttongroup quit_buttongroup;
 
 /* Input codes from do_keyboard_input (seg015): the key's code in the low byte, codes
    from 0x80 being the special keys, with these added for the shift keys held. */
@@ -135,9 +123,6 @@ extern struct buttongroup quit_buttongroup;
 #define KEY_BACKTAB     0xA3            /* Shift+Tab */
 
 /* MOUSE.C: the mouse */
-extern int16 joymovecur;
-extern int16 fauxright;
-extern char mouse_hand;
 char far mouse_check_reg(int x0, int y0, int x1, int y1);
 void far set_mouse_data(int id);
 void far checkMouse(void);
@@ -174,34 +159,7 @@ int far do_keyboard_input(char array);
 unsigned char far mouse_dragged(char how);
 
 /* WRAPPER.C: the options panel */
-int far get_buttonreg_button(void);
-void far new_hilit_button(int b);
-void far install_buttongroup(struct buttongroup *g);
-void far deal_with_button(int b);
-void far load_message(int row, int col, int how);
-void far detail_setting_message(int how);
-void far draw_button(int b, int hilit);
-void far copy_rectangle(int x, int y, int w, int h, int sx, int sy, int how);
-void far blit_panel_to_main(void);
-void far load_buttongroup_images(int n);
-void far move_hilite(int dir);
-void far donothing_opt(int arg);
-void far resume_play_opt(int arg);
-void far detail_set_opt(int level);
-void far quit_do_opt(int arg);
-void far save_opt(int arg);
-void far restore_opt(int arg);
-void far do_saverest_opt(int slot);
-void far music_opt(int arg);
-void far sound_opt(int arg);
-void far do_musicsound_opt(int on);
-void far game_group_fun(void);
-void far detail_group_fun(void);
-void far quit_group_fun(void);
-void far file_group_fun(void);
-void far musicsound_group_fun(void);
 extern unsigned char plyregen[2];
-void far busywaiting_new_options(struct buttongroup *g);
 
 /* GAMESCR.C: the main game screen's set-up and teardown and its status clicks */
 void far pull_chain(int how);
@@ -251,18 +209,14 @@ int far scroll_print(char far *s);
 /* MAINMENU.C: the main menu */
 int far parse_start_input(int n, struct Button far *b, int text, int sel);
 int far do_journey(void);
-char far Region_ovr147_A73(int x, int y);
 void far real_start(int intro);
 
 /* INTERACT.C: the player's interaction with the 3D view and the panels */
-extern unsigned char PoisonWeap;
 extern unsigned char TimeStop;
 extern unsigned char Hasted;
 extern unsigned char WizEye;
 extern unsigned char Blessed;
-extern unsigned char Valor;
 extern int16 LeftPanel;
-extern unsigned char quick_time;
 extern unsigned char realDScheck;
 extern struct Object far *ObjectActing;
 extern int16 RightButtonThing;
@@ -287,6 +241,7 @@ extern ActorFn ObjectActor;
 extern int16 ObjectActorArg;
 void far mous_in_3d(void);
 void far punt_fightmode(void);
+void far seg024_24DC_D0A(struct Object far *obj, int how);
 
 /* AUTOMAP.C: the automap */
 /* One map note: its text and where it sits on the map, 0x36 bytes. */
@@ -295,6 +250,7 @@ struct ATM {
     int16 x;                            /* 0x32, -1 once erased */
     int16 y;                            /* 0x34 */
 };
+void far GetTheWords(int lev);
 
 /* The map notes, up to 100 (FARDATA.ASM's far segment). */
 extern struct ATM far ATM_Strings[100];
@@ -313,14 +269,11 @@ void far PixelDarken(int x, int y, int base, unsigned n);
 char far ShadeSide(int side, int x, int y);
 void far ChangeAutoMapLevel(int lev);
 void far automap_scr(void);
-void far make_terrain_unseen(int x, int y, unsigned w, unsigned h);
-unsigned char far GetAutoMapLevel(int flags, int lev);
+unsigned char far GetAutoMapLevel(struct Arc *arc, int lev);
 extern unsigned char PlayersMap[MAP_SIZE][MAP_SIZE];
-unsigned char far SaveAutoMapLevel(int flags, int lev);
+unsigned char far SaveAutoMapLevel(struct Arc *arcp, int lev);
 /* What automap_area does to each tile. */
 typedef char (far *AreaMapFn)(int x, int y, int16 *arg);
-void far automap_area(int x0, int y0, int x1, int y1, int16 *arg, AreaMapFn fn);
-void far update_map_scraps(int scrap, int lev, unsigned char sections);
 
 /* String blocks of DATA\STRINGS.PAK. A string id is the block shifted left 9 plus the
    string's number in it (get_string splits it as id >> 9 and id & 0x1FF; make_string
@@ -349,8 +302,6 @@ void far update_map_scraps(int scrap, int lev, unsigned char sections);
                                            blocks 0xE00 and up) */
 
 /* GAMESTRN.C: strings */
-int far LoadFileStringsPak_seg039_547(void);
-void far seg039_3452_5E1(void);
 void far free_strings(void);
 char far * far get_string(int id);
 int far make_string(char far *s, int block);
@@ -358,19 +309,21 @@ void far clear_dynamics(int block);
 char far * far fix_name_string(char far *s, unsigned char article, char plural);
 char far * far str_cat(char far *dst, char far *src);
 char far * far read_string(int block, int string);
-int far seg039_3452_781(FILE *file);
-int far seg039_3452_7B2(FILE *file, int index);
 void far game_sprint(int id);
 void far game_strings_3(int first, int second, int third);
 /* 3265:0814, upper-cases a far string in place and returns it. */
 /* name: FM Towns has no counterpart (its build is Japanese), so the name is the segment
    and offset. */
 char far * far seg039_3452_814(char far *s);
-char far * far seg039_3452_857(char far *s);
-int far seg039_3452_89A(char far *s);
 unsigned char far init_strings(void);
 int far replace_string(char far *s, int id);
 int far get_name(char far *dst, struct Object far *obj, char article, char plural);
+int far seg039_3495_537(void);
+void far seg039_3495_5E4(void);
+int far seg039_3495_784(FILE *file);
+int far seg039_3495_7B5(FILE *file, int index);
+char far * far seg039_3495_85A(char far *s);
+int far seg039_3495_89D(char far *s);
 
 /* Defined where no source has it yet: data the link takes from the EXE. */
 extern struct StringNode far *StringsPak_Address_Indices;
@@ -378,8 +331,23 @@ extern FILE *StringsPak_FileHandle;
 extern int16 StringsPak_NoOfNodes;
 extern int16 string_bits;
 
-/* JOYSTICK.C */
-void far seg011_6(int unused);  /* callers pass an argument it ignores */
-void far JoyStickCalibration_seg011_1B8(void);
-void far seg011_2C6(int16 *out_x, int16 *out_y, int unused);  /* MOUSE.C passes a third argument it ignores */
+/* OPTIONS.C */
+void far run_options_panel(int show);
+void far close_option_panel(void);
+void far draw_top_page(void);
+void far draw_save_page(void);
+void far draw_quit_yn_page(void);
+void far draw_music_and_sound_page(void);
+void far draw_detail_page(void);
+void far choose_music(int row);
+void far choose_sounds(int row);
+void far choose_detail(int row);
+void far choose_top(int row);
+void far choose_save(int row);
+void far choose_quit(int row);
+void far set_options_page(int page);
+void far press_options_btn(int row);
+void far options_mouse_click(int x, int y);
+void far options_handle_key(int key);
+
 #endif

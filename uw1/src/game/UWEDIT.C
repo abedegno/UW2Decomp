@@ -48,18 +48,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-/* UW1: init_mem is called with an argument, fadein and fadeout take no pump argument,
-   grfx_init, find_good_x_and_y and init_save return char, copy_file takes two paths, and the
-   working directory is a literal;
-   the headers have UW2's declarations, renamed out of the way. */
-#define init_mem UW2_init_mem
-#define HomeDir UW2_HomeDir
-#define fadein UW2_fadein
-#define fadeout UW2_fadeout
-#define grfx_init UW2_grfx_init
-#define find_good_x_and_y UW2_find_good_x_and_y
-#define copy_file UW2_copy_file
-#define init_save UW2_init_save
 #include "combat.h"
 #include "conv.h"
 #include "critter.h"
@@ -75,42 +63,18 @@
 #include "sys.h"
 #include "ui.h"
 #include "view3d.h"
-#undef init_mem
-#undef HomeDir
-#undef fadein
-#undef fadeout
-#undef grfx_init
-#undef find_good_x_and_y
-#undef copy_file
-#undef init_save
+
+/* Declared in each file that uses it, its own way (no header). */
+void far grfx_clear(void);
+unsigned char far read_quikpal(int n, void far *dest);
+void far player_setup(int x, int y, int how);
 
 /* UW1: the working directory. */
 #define HomeDir "SAVE0\\"
 
 void far init_mem();
-void far fadein(unsigned char far *src, int count);
-void far fadeout(unsigned char far *src, int count);
 char far grfx_init(void);
-char far find_good_x_and_y(struct Object far *obj, int x, int y, int16 *nx, int16 *ny,
-                           char loose);
-char far copy_file(char *src, char *dst);
-char far init_save(void);
-void far dprintf(char *fmt, ...);
-void far init_char(char blank);
-/* UW1: ovr141, unmatched: loads a full-screen picture file with a palette. */
-char far LoadBitMap_ovr141_0(int pal, char *name);
-/* UW1: SKILLS.C's routine run every frame as the 3D view's handler 10. */
-void far check_victory(void);
 /* UW1: start-up and UW.CFG routines with no name yet (the listing's). */
-void far memcheck(void);
-void far init_lighting(void);
-void far seg014_1DC5_1D0D(FILE *fp);
-void far cuts_skipline(FILE *fp);
-/* match: kin names init_cutscene reset_db, a false hit (VIEW3D.C has reset_db; both copy
-   a far pointer). */
-void far init_cutscene(void);
-/* UW1: the automap's update flag (the listing's name, DS:0546). */
-extern char ProbablyAutomapEnabled_dseg_5c99_546;
 
 /* This file's uninitialised data, in UW1 DS:565E..5709 (UW2 DS:5D1E..5E0B, which also
    held HomeDir). */
@@ -132,7 +96,6 @@ char dungeonf[0x12];
 int16 lastscrmode;
 int16 NewPlayerX, NewPlayerY;
 int16 NewPlayerLevel;
-
 
 /* name: elsewhere in the game, UW2's names where kin pairs the routine with UW2's at the
    same place in init_world (check_dirs, init_sounds, init_timers, seg001_023B_C,

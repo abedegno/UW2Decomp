@@ -11,7 +11,6 @@
 #include "gfx.h"
 #include "sys.h"
 
-
 void far show_credits(void)
 {
     runcutscene(10);

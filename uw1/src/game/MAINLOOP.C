@@ -24,8 +24,6 @@
 #include "sys.h"
 #include "ui.h"
 
-
-
 void far mainloop(void)
 {
     while (notdone)

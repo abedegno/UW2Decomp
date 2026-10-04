@@ -39,12 +39,6 @@
    count), stack[-2] arg2 and so on. Each argument is the address of a conversation
    variable, which getmem reads and babl_setmem writes. */
 
-/* UW1: these are declared differently below; the headers have UW2's forms, renamed out
-   of the way here. */
-#define move_convpic UW2_move_convpic
-#define gronk_gr UW2_gronk_gr
-#define invRemoveObject UW2_invRemoveObject
-#define grfx_quikfont UW2_grfx_quikfont
 #include <string.h>
 #include <stdlib.h>
 #include <dos.h>
@@ -59,29 +53,15 @@
 #include "sound.h"
 #include "sys.h"
 #include "ui.h"
-#undef move_convpic
-#undef gronk_gr
-#undef invRemoveObject
-#undef grfx_quikfont
 
 /* UW1: declarations the headers do not have (or have in UW2's form). */
 void far mantra_advance(int how);                   /* talking to a shrine */
 int far check_arc(char *file, int block);      /* 1 if the block is there, 0 if not, -1 if the file cannot be read */
 extern int16 w64_types[];                  /* a word for each texture of the level */
-char far move_convpic(char far *image, int ok, int which);
-char far gronk_gr(char *art, int start, int count, ArtAllocFn adr, ArtMoveFn move);
 char far invRemoveObject(struct Object far *obj, int qty);
 void far grfx_load_font(char *name);           /* UW2: grfx_quikfont(int) */
 
-/* UW1: the player record's fields this file reads; player.h has UW2's layout. */
-struct Player1Converse {
-    char pad0[0x64];
-    uint16 lefty:1;                     /* 0x64 */
-    uint16 female:1;
-    uint16 body:3;
-};
-#define PLAYER1 ((struct Player1Converse *)player)
-void far seg014_1DC5_15C5(void);                     /* the level's music again (UW2:
+                     /* the level's music again (UW2:
                                                    set_random_walking_music(-1)) */
 
 /* This file's own uninitialised data, DS:4902..4A2D, in its _BSS with talking_to (the
@@ -234,7 +214,7 @@ void far strt_converse(void)
     *foreground_color = 0x65;
     *background_color = 0x65;
     convo_facedata = convoScreen;
-    if (!gronk_gr("heads", PLAYER1->female * 5 + PLAYER1->body, 1, (ArtAllocFn)adr_convpic, (ArtMoveFn)move_convpic)) {
+    if (!gronk_gr("heads", player->female * 5 + player->body, 1, (ArtAllocFn)adr_convpic, (ArtMoveFn)move_convpic)) {
         free_converse();
         return;
     }

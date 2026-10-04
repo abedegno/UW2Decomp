@@ -19,8 +19,8 @@
    colours 0x40..0x7F while it waits (ovr138_94, new in UW1); the screen is loaded from
    the file DATA\OPSCR.BYT (bltfromdrive and show, or ovr141's LoadBitMap_ovr141_0) where
    UW2 has block 5 of its art; the introduction is one
-   cutscene, not two; grfx_load_font takes the font's file name (gfx.h has UW2's index,
-   so the calls cast it, as BAGS.C does); there is no music theme to set and no walking
+   cutscene, not two; grfx_load_font takes the font's file name (the calls cast it to int,
+   UW2's index, as BAGS.C does); there is no music theme to set and no walking
    music to start.
 
    Data owned: the button pictures (opbuf, buttons) and the time of the last colour step.
@@ -31,38 +31,23 @@
 #include <string.h>
 #include "conv.h"
 #include "critter.h"
-/* UW1: these take two arguments (no pump flag); gfx.h has UW2's three, renamed out of the
-   way here. */
-#define fadein UW2_fadein
-#define fadeout UW2_fadeout
 #include "gfx.h"
-#undef fadein
-#undef fadeout
 #include "player.h"
 #include "sound.h"
 #include "sys.h"
 #include "ui.h"
+#include "file.h"
 
-void far fadein(unsigned char far *src, int count);
-void far fadeout(unsigned char far *src, int count);
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far read_quikpal(int n, void far *dest);
+void far player_setup(int x, int y, int how);
 
-/* UW1: the save-file module, ovr140 (UW2's GAMEWRAP.C, ovr149). file.h is not included:
-   copy_file takes a source and a destination file name, not two directories and a name. */
 /* name: GetLevel and do_level_hacks are the target table's ovr140_92 and
    LevelChangeEvents_ovr140_906, which have no kin by bytes; they are UW2's GetLevel and
    do_level_hacks by position (the second and the last function of the same file, as in
    UW2's ovr149) and by this call site (GetLevel(1) > 0, then player_setup, then
    do_level_hacks(1, 0), as in UW2's real_start). */
-void far get_save_descs(char descs[][40], int16 *found);
-unsigned char far clear_dir(char *dir);
-unsigned char far copy_file(char *src, char *dst);
-int far GetLevel(int level);
-void far do_level_hacks(int level, int mode);
-char far RestoreGame();
 unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
-/* UW1: ovr141, unmatched: loads a full-screen picture file with a palette (-1: none);
-   UW2 has display_screen and disk_to_vid of a block number here. Its table name. */
-void far LoadBitMap_ovr141_0(int pal, char *name);
 
 /* name: FM Towns keeps these as statics in UW2, so their names are not known. */
 static unsigned char far *opbuf = 0;    /* where gronk_gr puts the next button picture */

@@ -43,13 +43,7 @@
 #include <alloc.h>
 #include "critter.h"
 #include "file.h"
-/* UW1: these return a signed char (callers cbw); gfx.h has UW2's unsigned char, renamed out
-   of the way. */
-#define gronk_gr UW2_gronk_gr
-#define load_tr_ems UW2_load_tr_ems
 #include "gfx.h"
-#undef gronk_gr
-#undef load_tr_ems
 #include "map.h"
 #include "sys.h"
 #include "view3d.h"
@@ -60,17 +54,8 @@
    stub order confirms). */
 /* match: load_tr_ems first, as gfx.h has it: it and load_gr_ems have the same public-order
    key (404), and the first seen is listed last. */
-char far load_tr_ems(char *art);
-char far gronk_gr(char *art, int start, int count, ArtAllocFn adr, ArtMoveFn move);
-char far seg012_10F(char physical, unsigned logical);
-void far seg015_1F9B_2A7(unsigned char far *src, unsigned dst, int w, int h);
-int far seg015_1F9B_366(unsigned char far *src, unsigned n, int unused);
-void far seg042_19B(void);
-void far dprintf(char *fmt, ...);
 /* UW1: the texture pages, the animation slot base and EmsBuff are in seg051 (the 3D
    renderer's far data, assembly); the listing has no names for the two page bytes. */
-extern unsigned char far seg051_C375;
-extern unsigned char far seg051_C376;
 
 /* Graphics slot bookkeeping: where each range of grs_off starts.
    match: these words start the file's _DATA (DS:15DE..16C6), straight after GRFX.C's
@@ -98,7 +83,6 @@ uint16 tmpcnt;                      /* pictures in the open file */
 unsigned char Palettes[32][16];
 FILE *grfp;
 UNEARPTR *PalStore;
-
 
 /* Reads a .CR file's palette count and palettes (32 bytes each). They are kept in a
    malloc'd block whose near address goes to *PalStore when *PalStore is nonzero, and

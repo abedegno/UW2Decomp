@@ -14,7 +14,6 @@
 #include "map.h"
 #include "object.h"
 
-
 /* The tile at x, y, or a null pointer when either is outside 0..63. */
 struct Tile far * far Map_GetAddr(int x, int y)
 {

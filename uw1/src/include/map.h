@@ -13,6 +13,7 @@ struct Collision;
 struct MotionCalc;
 struct Object;
 struct Tile;
+struct Arc;
 
 #include "object.h"
 
@@ -98,22 +99,26 @@ enum TileType {
 
 /* MAP.C: loading and saving the level map. hgt_val converts a floor height to a z. */
 extern int16 hgt_val[17];
-char far Anim_Load(char far *source);
-char far Anim_Save(char far *destination);
-unsigned char far Map_Load(int arc, int level, int folderType);
-char far Map_Save(int arc, int level, int folderType);
+int far Anim_Load(char *name, int level);
+char far Anim_Save(char *name, int level);
+char far Map_Load(struct Arc *arc, int level);
+char far Map_Save(struct Arc *arc, int level);
 extern struct Tile far *mapdata;
 char far Map_Init(void);
 
 /* TEXTMAPS.C: a level's texture map */
-extern int16 TxmID[0x40];
+extern int16 TxmID[0x30];
 void far load_txtmaps(void);
 void far Load_Terrains(int16 *walls, int16 *floors); /* UW1: walls and floors apart */
-extern uint16 TxmTerr[0x40];
+extern uint16 TxmTerr[10];
 char far init_txtlib(void);
 /* UW1: an open archive (ovr091) and the level, as GAMEWRAP.C passes them */
 unsigned char far Txm_Load(char *arc, int lev);
 char far Txm_Save(char *arc, int lev);
+extern uint16 f16p;
+extern int16 floor_IDs[10];
+extern uint16 f32_buf;
+void far load_tr_mem(char *name, int16 *ids, int16 *count, uint16 seg);
 
 /* LIGHTING.C: lighting */
 void far init_lighting(void);
@@ -126,7 +131,6 @@ extern int16 nvokHgt;
 extern int16 nvokTerr;
 int far GetSlopeHgt(int x, int y);
 void far ComputeHeading(void);
-int far get_home_tile(void);
 void far process_objlist(void);
 unsigned char far drop_around_place(struct Object far *obj, int x, int y, int z, int range);
 void far TerrainCheck(unsigned char range);
@@ -137,7 +141,7 @@ unsigned char far near_mob_put_at(struct Object far *src, struct Object far *obj
 extern char stay_centered;
 
 /* Defined where no source has it yet: data the link takes from the EXE. */
-extern unsigned char far ModelData_seg052_519C_2600;
+extern uint16 dseg_5c99_7178;
 
 #define MAP_H_COMPLETE
 #include "level.h"

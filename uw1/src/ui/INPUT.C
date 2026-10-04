@@ -29,12 +29,6 @@
 #include "sys.h"
 #include "ui.h"
 
-/* UW1: the debug printer of DEBUG.C (ovr106_1B), empty in this build, called with a
-   printf format; UW2 has no such call. name: descriptive (map/functions.tsv gives
-   mous_3d_show by kin with an empty UW2 function, which cannot be right for a function
-   taking a format string). */
-void far dprintf(char *fmt, ...);
-
 /* A mouse region, 0x12 bytes. Screen y counts up from the bottom row (0) to the top (199)
    in this engine (MOUSE.C: the up key warps the pointer to y 199), so despite the "upper
    left" and "lower right" in the field names (ulx, uly) is the bottom left corner and

@@ -47,14 +47,6 @@
 #include "sys.h"
 #include "ui.h"
 
-/* UW1: ui.h has these under their UW2 listing names (seg039_3452_*); here they take UW1's. */
-int far seg039_3495_537(void);
-void far seg039_3495_5E4(void);
-int far seg039_3495_784(FILE *file);
-int far seg039_3495_7B5(FILE *file, int index);
-char far * far seg039_3495_85A(char far *s);
-int far seg039_3495_89D(char far *s);
-
 HOST_LAYOUT_BEGIN
 struct StringBlock {
     int16 block;
@@ -75,8 +67,6 @@ int16 string_bits_used = 8;
 int16 string_blocks = 0;
 char aStrings_pak[] = "DATA\\strings.pak";
 char aRb_4[] = "rb";
-
-
 
 /* Empties the two made blocks and loads the Huffman tree; a failure is fatal. */
 unsigned char far init_strings(void)

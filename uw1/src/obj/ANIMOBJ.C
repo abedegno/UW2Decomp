@@ -13,7 +13,6 @@
 #include <stdio.h>
 #include "object.h"
 
-
 /* UW2 FM Towns: animobj_load. */
 void far animobj_load(FILE *fd)
 {

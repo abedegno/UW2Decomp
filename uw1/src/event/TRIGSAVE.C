@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include "event.h"
 
-
 /* name: the target table's name: FM Towns trap_save_ is UW2's twin of this function (the
    same size and shape), and UW1's ovr153_0, the matching fread of the same 16 bytes, is
    the load side. */

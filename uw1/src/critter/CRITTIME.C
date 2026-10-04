@@ -59,23 +59,6 @@ extern struct PathSq far pathsq[];
 /* name: FM Towns has it as a static. Provisional name. */
 static char wander_found;
 
-/* UW1: the player record keeps the last critter hit at 0xBA..0xC1 (UW2 0x308..0x30F);
-   player.h has UW2's layout. */
-struct Player1Hit {
-    char pad0[0x69];
-    unsigned char b69;                  /* 0x69: critter_get_told; unknown meaning */
-    char pad6A[0xBA - 0x6A];
-    unsigned char crithit;              /* 0xBA */
-    unsigned char typehit;              /* 0xBB */
-    int32 crithittime;                  /* 0xBC */
-    unsigned char hitx;                 /* 0xC0 */
-    unsigned char hity;                 /* 0xC1 */
-};
-#define PLAYER1 ((struct Player1Hit *)player)
-
-void far clear_paths(void);
-
-
 /* critter_set_goal (AI.C) for any critter, not only the current one. */
 void far change_critter_goal(struct Object far *npc, char goal, int gtarg)
 {
@@ -397,22 +380,22 @@ char far wandering_monster_check(void)
    five player fields at 0x308-0x30F into the same globals. */
 void far set_creatures_from_saved_game(void)
 {
-    crithit = PLAYER1->crithit;
-    typehit = PLAYER1->typehit;
-    crithittime = PLAYER1->crithittime;
-    hitx = PLAYER1->hitx;
-    hity = PLAYER1->hity;
+    crithit = player->crithit;
+    typehit = player->typehit;
+    crithittime = player->crithittime;
+    hitx = player->hitx;
+    hity = player->hity;
 }
 
 /* name: IDA: SaveRecentCombatAction; FM Towns' set_creatures_to_saved_game, the reverse
    copy. */
 void far set_creatures_to_saved_game(void)
 {
-    PLAYER1->crithit = crithit;
-    PLAYER1->typehit = typehit;
-    PLAYER1->crithittime = crithittime;
-    PLAYER1->hitx = hitx;
-    PLAYER1->hity = hity;
+    player->crithit = crithit;
+    player->typehit = typehit;
+    player->crithittime = crithittime;
+    player->hitx = hitx;
+    player->hity = hity;
 }
 
 /* On entering a level: forget the last critter hit and free the paths. */
@@ -454,7 +437,7 @@ char far critter_get_told(int x, int y, struct Object far *target, struct Tile f
         || OBJ_LONER(npc) != 0 && !(grab_owner & 0x20)
         || grab_owner == 0x20 && !OBJ_LONER(npc))
         return 0;
-    if (grab_owner == 0x0D && PLAYER1->b69 >= 3)  /* UW1 only */
+    if (grab_owner == 0x0D && player->quest_bytes[0] >= 3)  /* UW1 only */
         return 0;
     nx = (x << 3) + OBJ_FINEX(npc);
     ny = (y << 3) + OBJ_FINEY(npc);

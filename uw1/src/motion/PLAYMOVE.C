@@ -50,6 +50,9 @@
 #include "ui.h"
 #include "view3d.h"
 
+/* Declared in each file that uses it, its own way (no header). */
+void far move_mobile(int delta);
+
 /* This file's data, in UW1 DS:0726 to DS:0783 (UW2 DS:073E to DS:079D). */
 unsigned char pmouseHandled = 0;
 unsigned char combEfflen = 0;           /* effect 0x20 */
@@ -86,23 +89,6 @@ static unsigned char step_foot = 0;
 unsigned char water_eff = 0xFF;
 uint32 watertime = 0;                   /* *Time when make_noise last started water_eff */
 static unsigned char noise_count = 0;
-
-/* UW1: the player record's fields this file uses; player.h has UW2's layout. */
-struct Player1Move {
-    char pad0[0x5F];
-    uint16 b5F_0:1;
-    uint16 drawn:1;                     /* 0x5F bit 1: the weapon is drawn */
-    char pad60[0xB8 - 0x60];
-    unsigned char motion_state;         /* 0xB8 */
-    unsigned char swim_count;           /* 0xB9 */
-    char padBA[0xCE - 0xBA];
-    uint32 game_clock;                  /* 0xCE */
-};
-#define PLAYER1 ((struct Player1Move *)player)
-
-/* UW1: set while the player wears the dragon skin boots, which keep lava from hurting;
-   name: the listing's (DS:1B01). */
-extern char DragonSkinBoots_dseg_5c99_1B01;
 
 /* This file's _BSS, in UW1 DS:3578..3599 (UW2 DS:33C6..33E7). All
    FM Towns names. campos and camang are the camera when it is not on an object (UsPtr 0);
@@ -150,7 +136,7 @@ void far parse_playin(int command)
     if (!(KeybUsed = command >= 0))
     {
         mouse_getbut(&buttons);
-        if (buttons == 1 || (buttons & 1) && PLAYER1->drawn)
+        if (buttons == 1 || (buttons & 1) && player->drawn)
         {
             ForwInpRate = TurnInpRate = 0;
             if (inplist->y < PHgt / 5)
@@ -171,7 +157,7 @@ void far parse_playin(int command)
         else if (buttons == 3)
         {
             PlayerInput = 1;
-            if ((PN.terrain & 0x10) == 0 && PLAYER1->motion_state != 1)
+            if ((PN.terrain & 0x10) == 0 && player->motion_state != 1)
                 PlayerInput = 7;
         }
     }
@@ -182,7 +168,7 @@ void far parse_playin(int command)
         {
         case 6:
         case 7:
-            if ((PN.terrain & 0x10) == 0 && PLAYER1->motion_state != 1)
+            if ((PN.terrain & 0x10) == 0 && player->motion_state != 1)
                 PlayerInput = command;
             else
                 PlayerInput = 1;
@@ -275,7 +261,7 @@ void far player_simple_move(int dir)
         PN.speed = 0;
         if (DoAnimO)
             update_animobj(1);
-        PLAYER1->game_clock += 0x40;
+        player->game_clock += 0x40;
         last_time = GAME_TIME();
         frames = frame_inc;
         if (Hasted)
@@ -316,7 +302,7 @@ void far check_physics(void)
     {
         if (frames != 0 && DoAnimO)
             update_animobj(frames);
-        PLAYER1->game_clock += delta;
+        player->game_clock += delta;
         last_time = GAME_TIME();
         frames = frame_inc;
         if (Hasted)
@@ -345,7 +331,7 @@ void far move_physics(int incr, int frames, unsigned char easy)
         move_player(incr);
     if (MoveCrits && !(char)TimeStop && frames != 0)     /* UW1: cbw */
         move_mobile(frames);
-    if (PLAYER1->motion_state)
+    if (player->motion_state)
         parse_effect();
     set_sound(easy);
     make_noise(easy);
@@ -405,7 +391,7 @@ void far make_noise(char easy)
 {
     unsigned delay;
 
-    if (PLAYER1->motion_state & 1)
+    if (player->motion_state & 1)
     {
         if (water_eff != 0xFF && watertime + 0x1800 <= GAME_TIME())
         {
@@ -425,7 +411,7 @@ void far make_noise(char easy)
             kill_effect(water_eff);
             water_eff = 0xFF;
         }
-        if (PLAYER1->motion_state & 8)
+        if (player->motion_state & 8)
             return;
         if (PN.terrain & 0x10)
             return;
@@ -468,7 +454,7 @@ void far set_sound(char easy)
         n = 0;
     else
         n = PN.speed * 10 / pFPS[0] + n - 5;
-    if (PLAYER1->motion_state)
+    if (player->motion_state)
         n = n + 4;
     if (n < 0)
         n = 0;
@@ -498,10 +484,10 @@ void far parse_effect(void)
     doMod = 1;
     editchng(2);
     playerMod[1] = playerMod[2] = playerMod[3] = 0;
-    if (PLAYER1->motion_state & 0x11)
+    if (player->motion_state & 0x11)
     {
-        playerMod[0] = -PLAYER1->swim_count;
-        if (PLAYER1->swim_count > 0x50)
+        playerMod[0] = -player->swim_count;
+        if (player->swim_count > 0x50)
         {
             amp = PN.speed * 4 / (pFPS[0] >> 1) - 3;
             if (amp < 1)
@@ -516,28 +502,28 @@ void far parse_effect(void)
             playerMod[2] = amp * ((rand() & 0x7F) - 0x40);
         }
     }
-    if (PLAYER1->motion_state & 2 && !DragonSkinBoots_dseg_5c99_1B01 && rand() % 5 == 0)
+    if (player->motion_state & 2 && !DragonSkinBoots_dseg_5c99_1B01 && rand() % 5 == 0)
         damage_item(ThePlayer, 0L, 0, 0, 1, 8);
-    if (PLAYER1->motion_state & 8)
+    if (player->motion_state & 8)
         playerMod[0] = abs(0x10 - (tsteps >> 3)) * 3;
-    if (PLAYER1->motion_state & 0x60)
+    if (player->motion_state & 0x60)
     {
-        if (PLAYER1->motion_state & 0x40)
+        if (player->motion_state & 0x40)
         {
             if (tremEfflen-- == 0)
             {
-                PLAYER1->motion_state = PLAYER1->motion_state ^ 0x40;
+                player->motion_state = player->motion_state ^ 0x40;
                 editchng(2);
             }
             amp = tremEfflen / 10;
             if (amp > 8)
                 amp = 8;
         }
-        if (PLAYER1->motion_state & 0x20)
+        if (player->motion_state & 0x20)
         {
             if (combEfflen-- == 0)
             {
-                PLAYER1->motion_state = PLAYER1->motion_state ^ 0x20;
+                player->motion_state = player->motion_state ^ 0x20;
                 editchng(2);
             }
             phase = combEfflen / 8;
@@ -566,7 +552,7 @@ void far set_effect(unsigned char which, char amount)
     default:
         return;
     }
-    PLAYER1->motion_state |= which;
+    player->motion_state |= which;
 }
 
 /* name: IDA's PositionCameraAtObject. FM Towns has get_eye_ at this position, after

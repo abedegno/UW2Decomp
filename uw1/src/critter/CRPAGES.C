@@ -42,16 +42,6 @@
 #include "sys.h"
 #include "view3d.h"
 
-/* UW1: the cache tables are 128-entry arrays in seg051 (view3d.h has UW2's in
-   TMAPOPS.ASM); CmapFrm is per critter file, three pages each. */
-extern unsigned char far seg051_C10F[];
-
-void far seg042_19B(void);
-char far seg012_BB(unsigned physical, unsigned logical, int count);
-/* UW1: TMPALLOC.C's conventional workspace segment (DS:364E). TMPALLOC.C has it static,
-   but this file and AUTOMAP.C (ovr092) read it, so it was public. */
-extern uint16 conv_ws_seg;
-
 /* The name of one critter page file, digits filled in by preload_cr. */
 /* name: chosen; static, as no other file refers to it. */
 /* match: this file's _DATA, DS:1598..15BB, with its literals. */

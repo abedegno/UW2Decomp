@@ -32,9 +32,6 @@
    UW2's (FM Towns), the routines being the same; seg024_24DC_D0A is the listing's. */
 
 #include <stdlib.h>
-#define UsingPole UW2_UsingPole         /* UW1: char, below */
-#define IsMobElem UW2_IsMobElem
-#define EncumCheck UW2_EncumCheck
 #include "combat.h"
 #include "conv.h"
 #include "critter.h"
@@ -49,49 +46,11 @@
 #include "sys.h"
 #include "ui.h"
 #include "view3d.h"
-#undef UsingPole
-#undef IsMobElem
-#undef EncumCheck
 
-/* UW1: signed where UW2's headers have unsigned char (cbw). */
+/* Signed here (cbw), unsigned char where they are defined: declared in no header. */
 extern char UsingPole;
 char far IsMobElem(struct Object far *obj);
 char far EncumCheck(struct Object far *obj);
-
-/* UW1: the player record differs from UW2's struct Player (player.h). The fields this
-   file uses, from the bytes. */
-struct Player1Scr {
-    char pad00[0x21];
-    unsigned char skills[20];           /* 0x21 */
-    char pad35[0x37 - 0x35];
-    unsigned char play_mana;            /* 0x37 */
-    unsigned char max_mana;             /* 0x38 */
-    unsigned char hunger;               /* 0x39 */
-    unsigned char fatigue;              /* 0x3A */
-    char pad3B[0x5E - 0x3B];
-    unsigned char moonstone:4;          /* 0x5E */
-    unsigned char b5E_4:4;
-    uint16 b5F_0:1;                     /* word 0x5F */
-    uint16 drawn:1;
-    uint16 poison:4;
-    char pad60[0xB8 - 0x60];             /* (the bit run takes one byte) */
-    unsigned char motion_state;         /* 0xB8 */
-    char padB9[0xCE - 0xB9];
-    uint32 game_clock;                  /* 0xCE */
-};
-#define PLAYER1 ((struct Player1Scr *)player)
-
-/* UW1: declarations this file needs that the headers lack or give otherwise. */
-void far run_options_panel(int n);
-void far options_mouse_click(int x, int y);
-void far seg014_1DC5_15C5(void);            /* the level's music again */
-extern int16 floor_IDs[];
-void far stop_music(void);
-void far seg027_2861_EF9(void);
-void far EtherealVoidSpecialEffects_seg008_150(void);
-/* the player's maximum vitality: Creature[63].avghit, DS:5626 (a name for the middle of
-   Creature[] would not link: the link proved it) */
-extern unsigned char realDScheck;           /* GAMEWRAP.C's, DS:12B3 */
 
 #define TERRAIN(t)      (TxmTerr[(t)->floor])      /* UW1: the whole word */
 
@@ -108,7 +67,6 @@ unsigned char def_mode = 0;             /* DS:0288 */
 int32 lastDurCheck = 0;                 /* DS:0289 */
 unsigned char DurCount = 0;             /* DS:028D */
 char releaseable = 0;                   /* DS:028E, UW1: char (cbw) */
-
 
 /* This file's _BSS, DS:2682..26AD (COMBAT.C's ends at 2681). */
 /* match: laid out by name (tools/bssorder.py): the keys run pTxtId 56, ObjectActor 135,
@@ -134,7 +92,6 @@ unsigned char CrownTmap;
 union Link far *releasePtr;
 int16 GameInputMode;
 
-
 /* Flips the right-hand panel: from the inventory (RightPanel 0) to the statistics page
    (2), from any other panel back to the inventory, and nothing while a flip is under way
    (4). PANELS.C's adjust_panel animates the flip. The argument is not read. */
@@ -156,14 +113,14 @@ void far print_info(void)
 
     scroll_print("\n");
     /* "You are currently " ... */
-    game_strings_3(0x40, PLAYER1->hunger / 0x1E + 0x68, 0x67);
-    n = PLAYER1->fatigue / 0x17;
+    game_strings_3(0x40, player->hunger / 0x1E + 0x68, 0x67);
+    n = player->fatigue / 0x17;
     if (n > 5)
         n = 5;
     game_sprint(0x76 - n);
     scroll_print(".\n");
     game_strings_3(0x41, PlayerLevel + 0x19A, 0x42);
-    n = PLAYER1->game_clock / 0x1C2000L;
+    n = player->game_clock / 0x1C2000L;
     day = n / 12;
     n = n % 12;
     if (day > 100)
@@ -194,11 +151,11 @@ void far flask_info(void)
         if (inplist->x < 0x1E) {
             itoa(ThePlayer->hp, cur, 10);
             itoa(playerdat->avghit, max, 10);
-            if (PLAYER1->poison)
-                game_strings_3(0x5B, (PLAYER1->poison - 1) / 3 + 0x54, 0x5C);
+            if (player->poison)
+                game_strings_3(0x5B, (player->poison - 1) / 3 + 0x54, 0x5C);
         } else {
-            itoa(PLAYER1->play_mana, cur, 10);
-            itoa(PLAYER1->max_mana, max, 10);
+            itoa(player->play_mana, cur, 10);
+            itoa(player->max_mana, max, 10);
         }
         str_cat(msg, cur);
         str_cat(msg, " out of ");
@@ -268,7 +225,7 @@ void far display_scr(void)
     if ((dam << 2) > Creature[63].avghit || v < 0x10 && dam > 0)
         set_screen_frame(4, 3);
     ThePlayer->b11 = 0;
-    v = PLAYER1->play_mana;
+    v = player->play_mana;
     set_screen_frame(1, v);
     if (PlayerLevel != 9) {
         v = (OBJ_HEADING(ThePlayer) << 5) + OBJ_FINEHEAD(ThePlayer);
@@ -501,7 +458,7 @@ void far player_3dget(void)
             game_sprint(0x5F);
         } else {
             if (HasOrIsObj(newPlObj, ITEM_MOONSTONE))
-                PLAYER1->moonstone = 0;
+                player->moonstone = 0;
             player_grabbed(newPlObj, 0);
             release_3d(newPlObj);
             GameInputMode = 1;
@@ -550,14 +507,14 @@ void far player_3dlook(void)
     else
         seg024_24DC_D0A(newPlObj, 0);
     if (RightButtonThing == 3) {
-        if (DetectedTrap(newPlObj, PLAYER1->skills[SKILL_SEARCH]) > 0) {
+        if (DetectedTrap(newPlObj, player->skills[SKILL_SEARCH]) > 0) {
             yes = 1;
             r = wyorn(0, 0xF4, &yes);
             if (r != 0 && r < 4)
                 wd_bool(yes = r == 2);
             scroll_print("\n");
             if (yes)
-                RemoveTrap(newPlObj, PLAYER1->skills[SKILL_TRAPS]);
+                RemoveTrap(newPlObj, player->skills[SKILL_TRAPS]);
         }
     } else
         def_mode = 1;
@@ -674,7 +631,7 @@ void far inv_look(void)
         if (head & 4)
             lore = head & 3;
         else {
-            lore = skill_check(PLAYER1->skills[SKILL_LORE], 0xA) + 1;
+            lore = skill_check(player->skills[SKILL_LORE], 0xA) + 1;
             if (lore == 0)
                 lore = 1;
             if ((head & 3) > lore)
@@ -816,7 +773,7 @@ void far deal_with_icons(register int mode)
         run_options_panel(1);
     else {
         set_screen_frame(8, 6);
-        PLAYER1->drawn = 0;
+        player->drawn = 0;
         if (RightButtonThing == 1 || RightButtonThing == 3 || RightButtonThing == 4)
             unforce_mouse_cursor(3);
         if (++mode == RightButtonThing) {
@@ -827,8 +784,8 @@ void far deal_with_icons(register int mode)
                 new_IconUnselect(RightButtonThing);
             RightButtonThing = mode;
             if (RightButtonThing == 2) {
-                if ((PLAYER1->motion_state & 1) == 0) {
-                    PLAYER1->drawn = 1;
+                if ((player->motion_state & 1) == 0) {
+                    player->drawn = 1;
                     set_screen_frame(8, 4);
                     new_IconSelect(RightButtonThing);
                     if (get_current_music() < 5 || get_current_music() > 7)
@@ -838,7 +795,7 @@ void far deal_with_icons(register int mode)
             } else
                 new_IconSelect(RightButtonThing);
         }
-        if (!PLAYER1->drawn && get_current_music() == 8)
+        if (!player->drawn && get_current_music() == 8)
             seg014_1DC5_15C5();
         mouse_release(1);
         if (RightButtonThing == 1 || RightButtonThing == 3 || RightButtonThing == 4)
@@ -849,16 +806,16 @@ void far deal_with_icons(register int mode)
 /* Draws the weapon: fight mode, the combat music, the weapon picture. */
 void far pick_fightmode(void)
 {
-    if (PLAYER1->drawn == 1)
+    if (player->drawn == 1)
         return;
-    if (PLAYER1->motion_state & 1)
+    if (player->motion_state & 1)
         return;
     if (RightButtonThing == 1 || RightButtonThing == 3 || RightButtonThing == 4)
         unforce_mouse_cursor(3);
     if (RightButtonThing != 0)
         new_IconUnselect(RightButtonThing);
     RightButtonThing = 2;
-    PLAYER1->drawn = 1;
+    player->drawn = 1;
     set_screen_frame(8, 4);
     new_IconSelect(RightButtonThing);
     if (get_current_music() < 5 || get_current_music() > 7)
@@ -868,9 +825,9 @@ void far pick_fightmode(void)
 /* Sheathes the weapon and leaves fight mode, back to the level's music. */
 void far punt_fightmode(void)
 {
-    if (PLAYER1->drawn) {
+    if (player->drawn) {
         set_screen_frame(8, 6);
-        PLAYER1->drawn = 0;
+        player->drawn = 0;
         if (LeftPanel == 0)
             new_IconUnselect(2);
         RightButtonThing = 0;
@@ -882,7 +839,7 @@ void far punt_fightmode(void)
 /* Draws or sheathes the weapon (from a click on the weapon hand). */
 void far toggle_fightmode(void)
 {
-    if (PLAYER1->drawn)
+    if (player->drawn)
         punt_fightmode();
     else
         pick_fightmode();

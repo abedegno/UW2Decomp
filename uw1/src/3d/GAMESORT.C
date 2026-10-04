@@ -41,6 +41,9 @@
 #include "sys.h"
 #include "view3d.h"
 
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far IsMobElem(struct Object far *obj);
+
 /* match: this file's _BSS, in UW1 DS:314E..3577 (in UW2 DS:2F9C..33C5), laid out by name (tools/bssorder.py): holdmid 112, holdtmp 144, locsqmod 228,
    sortlist 267, sortdata 275, mptrmod 421, sd_xmod and sd_ymod 427, dirval 492,
    refugees 666, objxloc, objyloc and objzloc 935, objptrs 959. All FM Towns names: FM Towns
@@ -65,7 +68,6 @@ signed char trans_pos_x[64] = {
     0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0, 7,
     7, 0, 6, 0, 5, 0, 4, 0, 3, 0, 2, 0, 1, 0, 0, 0,
     0, 7, 0, 6, 0, 5, 0, 4, 0, 3, 0, 2, 0, 1, 0, 0 };
-
 
 /* Called by GRIDDB.C's subprocess: -10 at the start of a frame (clear everything held),
    2 before a row's left half, 1 before its right half (what the left half passed to

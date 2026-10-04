@@ -24,8 +24,6 @@
 #include "sys.h"
 #include "ui.h"
 
-void far ovr127_0(void);
-
 void far init_debug(void)
 {
     _input_addkey(KEY_ALT | KEY_F4, 0, 0xFF, (InputFn)ovr127_0);

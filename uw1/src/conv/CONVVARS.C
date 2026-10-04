@@ -8,7 +8,7 @@
    bab_var and bab_var_out look the name up in the script's import table and do nothing
    when it is missing. The file owns no data but its strings. The whole of UW1's DOS
    overlay ovr103, in original order; seeded from UW2Decomp's src/conv/CONVVARS.C (UW2's
-   ovr106), the same code. UW1 differs only in the player record (struct Player1Vars:
+   ovr106), the same code. UW1 differs only in the player record (struct Player:
    play_sex, play_poison, play_drawn and the game clock sit elsewhere).
 
    What goes in: npc_whoami, npc_hunger (0x10 fed, 0xC0 not), npc_health (hp * 256 /
@@ -38,20 +38,6 @@
 #include "object.h"
 #include "player.h"
 #include "ui.h"
-
-/* UW1: the player record's fields this file uses where they differ from UW2's (player.h). */
-struct Player1Vars {
-    char pad0[0x5F];
-    uint16 b5F_0:1;                     /* 0x5F */
-    uint16 drawn:1;                     /* bit 1, the weapon drawn */
-    uint16 poison:4;                    /* bits 2-5 */
-    char pad60[0x64 - 0x60];
-    uint16 lefty:1;                     /* 0x64 */
-    uint16 female:1;
-    char pad65[0xCE - 0x65];
-    uint32 game_clock;                  /* 0xCE */
-};
-#define PLAYER1 ((struct Player1Vars *)player)
 
 void far setup_converse_data(struct Object far *npc)
 {
@@ -118,19 +104,19 @@ void far setup_converse_data(struct Object far *npc)
     bab_var("play_level", &val, 1);
     val = PlayerLevel;
     bab_var("dungeon_level", &val, 1);
-    val = PLAYER1->game_clock / 0x3BC4L;
+    val = player->game_clock / 0x3BC4L;
     bab_var("game_time", &val, 1);
-    val = PLAYER1->game_clock / 0x3BC4L % 0x5A0L;
+    val = player->game_clock / 0x3BC4L % 0x5A0L;
     bab_var("game_mins", &val, 1);
-    val = PLAYER1->game_clock / 0x1502E80L;
+    val = player->game_clock / 0x1502E80L;
     bab_var("game_days", &val, 1);
     val = 0;
     bab_var("new_player_exp", &val, 1);
-    val = PLAYER1->female;
+    val = player->female;
     bab_var("play_sex", &val, 1);
-    val = PLAYER1->poison;
+    val = player->poison;
     bab_var("play_poison", &val, 1);
-    val = PLAYER1->drawn;
+    val = player->drawn;
     bab_var("play_drawn", &val, 1);
     val = player_name_handle;
     bab_var("play_name", &val, 1);
@@ -174,7 +160,7 @@ char far update_converse_data(struct Object far *npc)
     bab_var_out("play_mana", &val, 1);
     player->play_mana = val;
     bab_var_out("play_poison", &val, 1);
-    PLAYER1->poison = val;
+    player->poison = val;
     bab_var_out("new_player_exp", &val, 1);
     if (val != 0)
         player_get_exp(val);

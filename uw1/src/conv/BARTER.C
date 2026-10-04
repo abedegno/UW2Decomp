@@ -41,12 +41,6 @@
    probablyTradeObjects; ovr095_A06 is drawTradeSlot, and ovr095_1D97 npc_inv_create. */
 /* match: UW2's provisional names reproduce UW1's stub order too (checked against the
    EXE's 32 stub entries). */
-/* UW1: these are declared differently below; the headers have UW2's forms, renamed out
-   of the way here. */
-#define EncumCheck UW2_EncumCheck
-#define Obj_Rem UW2_Obj_Rem
-#define total_offering_ovr097_17CB UW2_total_offering_ovr097_17CB
-#define UseTradeSlot_ovr097_6E8 UW2_UseTradeSlot_ovr097_6E8
 #include <stdlib.h>
 #include <time.h>
 #include "conv.h"
@@ -59,39 +53,10 @@
 #include "sys.h"
 #include "ui.h"
 #include "uw2.h"
-#undef EncumCheck
-#undef Obj_Rem
-#undef total_offering_ovr097_17CB
-#undef UseTradeSlot_ovr097_6E8
 
-
-/* UW1: declarations the headers have in UW2's form, or not at all. */
+/* Declared as this file uses them (in no header). */
 char far EncumCheck(struct Object far *obj);
-void far Obj_Rem(union Link far *head, struct Object far *obj);
 void far grfx_load_font(char *name);              /* UW2: grfx_quikfont(int) */
-void far seg015_1F9B_25A(int x, int y, int color);     /* plots one pixel in a colour */
-void far seg024_24DC_D0A(struct Object far *obj, int lore); /* calls LookAt */
-void far UseTradeSlot_ovr097_6E8(int16 side, int16 slot, int16 *content, char *active);
-int far total_offering_ovr097_17CB(int use_likes, int16 *items, char *selected,
-                                   int16 *values, int accuracy);
-
-/* UW1: the player record's fields this file reads; player.h has UW2's layout. */
-struct Player1Barter {
-    char pad0[0x29];
-    unsigned char lore;                 /* 0x29 */
-    char pad2A[0x30 - 0x2A];
-    unsigned char charisma;             /* 0x30 */
-    char pad31[0x33 - 0x31];
-    unsigned char appraise;             /* 0x33 */
-    char pad34[0x36 - 0x34];
-    unsigned char maxhealth;            /* 0x36 */
-    char pad37[0x3D - 0x37];
-    unsigned char level;                /* 0x3D */
-    char pad3E[0x5F - 0x3E];
-    uint16 b5F_0:1;                     /* 0x5F */
-    uint16 drawn:1;
-};
-#define PLAYER1 ((struct Player1Barter *)player)
 
 /* UW1: the coin is item 0xA1 (UW2 0xA0). */
 #define ITEM1_COIN 0xA1
@@ -228,7 +193,7 @@ void far barter_init(void)
     npc_assess = range((15 - crit->shrewd) * 6, -25, 50);
     npc_wit = range(crit->level, -20, 20);
     last_offer = 0;
-    charm = PLAYER1->charisma;
+    charm = player->skills[15];
     greed = greed - charm * 2;
     patience += charm >> 1;
     npc_wit -= charm / 6;
@@ -434,8 +399,8 @@ void far UseTradeSlot_ovr097_6E8(int16 side, int16 slot, int16 *content,
         lore = 1;
         obj = Obj_IntTMem(content[slot]);
         if (side == 0) {
-            if (skill_check(PLAYER1->lore, 20) > 0) lore++;
-        } else lore += skill_check(PLAYER1->lore, 15);
+            if (skill_check(player->skills[8], 20) > 0) lore++;
+        } else lore += skill_check(player->skills[8], 15);
         seg024_24DC_D0A(obj, lore);
     }
     if (had_cursor && CursorObjPtr == 0) {
@@ -730,10 +695,10 @@ int far do_demand(int16 far *args)
     wont_str = getmem(args[-1]);
     crit = &Creature[OBJ_INMAJOR(talking_to)];
     if (playerdat->avghit > 0)
-        health = 2 - (PLAYER1->maxhealth - ThePlayer->hp) * 2 / playerdat->avghit;
+        health = 2 - (player->maxhealth - ThePlayer->hp) * 2 / playerdat->avghit;
     else health = 1;
-    armed = PLAYER1->drawn;
-    player_score = PLAYER1->level + armed + health + PLAYER1->charisma / 6;
+    armed = player->drawn;
+    player_score = player->level + armed + health + player->skills[15] / 6;
     demanded = total_offering_ovr097_17CB(0, barter_npc_ids, npc_select,
                                                    npc_appraisals, npc_assess);
     if (Creature[OBJ_INMAJOR(talking_to)].avghit > 0)
@@ -779,7 +744,7 @@ void far do_judgement(void)
     register int evaluation;
     register int result;
 
-    skill = PLAYER1->appraise;
+    skill = player->skills[18];
     accuracy = 50 - skill * 45 / 30;
     player_value = total_offering_ovr097_17CB(0, barter_ply_ids,
                     play_select, play_judgement, accuracy);

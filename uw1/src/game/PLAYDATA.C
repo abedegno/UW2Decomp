@@ -31,12 +31,6 @@
 #include <io.h>
 #include <mem.h>
 #include <stdlib.h>
-/* UW1: decode_obj_spell's flag is a plain char, and fx_is_on and music_is_on return
-   char (below); object.h and sound.h declare UW2's, so their declarations are renamed out
-   of the way. */
-#define decode_obj_spell UW2_decode_obj_spell
-#define fx_is_on UW2_fx_is_on
-#define music_is_on UW2_music_is_on
 #include "combat.h"
 #include "critter.h"
 #include "file.h"
@@ -49,62 +43,16 @@
 #include "sound.h"
 #include "ui.h"
 #include "view3d.h"
-#undef decode_obj_spell
-#undef fx_is_on
-#undef music_is_on
 
-/* UW1: the player record differs from UW2's struct Player (player.h). The fields this
-   file uses, from the bytes. */
-struct Player1Data {
-    char name[0x1E];                    /* 0x00 */
-    unsigned char strength;             /* 0x1E */
-    unsigned char dexterity;            /* 0x1F */
-    unsigned char intelligence;         /* 0x20 */
-    unsigned char skills[20];           /* 0x21 */
-    unsigned char health;               /* 0x35 */
-    unsigned char maxhealth;            /* 0x36 */
-    char pad37[0x3E - 0x37];
-    uint16 spells[3];                   /* 0x3E, the active spells */
-    char pad44[0x54 - 0x44];
-    int16 saved_x;                      /* 0x54 */
-    int16 saved_y;
-    int16 saved_z;
-    int16 saved_facing;                 /* 0x5A */
-    int16 saved_level;                  /* 0x5C */
-    char pad5E;
-    uint16 b5F_0:6;                     /* word 0x5F (bit 1 the weapon drawn) */
-    uint16 active_spells:4;             /* word 0x5F, bits 6-9 */
-    uint16 b60_2:6;
-    uint16 b61_0:2;
-    uint16 shrooms:2;                   /* 0x61, bits 2-3 */
-    uint16 b61_4:4;
-    uint16 b62_0:4;
-    uint16 maze:1;                      /* 0x62, bit 4: the maze navigation spell */
-    uint16 b62_5:3;
-    unsigned char light;                /* 0x63 */
-    uint16 lefty:1;                     /* 0x64 (the run takes one byte) */
-    char pad65[0xB5 - 0x65];
-    uint16 sound:2;                     /* 0xB5 */
-    uint16 music:2;
-    uint16 bB5_4:4;
-    uint16 fps:3;                       /* word 0xB6 */
-    uint16 terrain:8;                   /* word 0xB6, bits 3-10: PN.terrain, saved */
-};
-#define PLAYER1 ((struct Player1Data *)player)
+/* Declared in each file that uses it, its own way (no header). */
+extern struct Spell far spells[53];
+extern unsigned char UsingPole;
 
 /* UW1: LIGHTING.C's set_light (ovr142_0). */
 void far set_light(signed char n);
 /* UW1: decode_obj_spell's flag is tested signed; fx_is_on and music_is_on return char. */
-char far decode_obj_spell(struct Object far *obj, int16 *major, int16 *effect, char *flag);
-char far fx_is_on(void);
-char far music_is_on(void);
-/* UW1: ovr131's texture file loader (the listing's name; ovr131 is not matched). */
-void far load_tr_mem(char *name, int16 *a, int16 *b, int16 n);
 /* UW1: ovr131's floor texture data (the listing's names). */
-extern int16 floor_IDs[];
 extern int16 floor_num[];
-extern int16 f32_buf;
-extern int16 f16p;
 /* floor_IDs[4] (DS:7184), the floor texture the maze spell swaps (TEXTMAPS.C's array: the
    link proved it is not a variable of its own) */
 
@@ -152,20 +100,20 @@ void far MaybePlayerDayLoadrelated_ovr142_0(void) {}
 void far save_player_data(int fd)
 {
     unsigned char key;
-    key = PLAYER1->name[0] ^ 0xAA;
-    PLAYER1->strength = playerdat->attr[0];
-    PLAYER1->dexterity = playerdat->attr[1];
-    PLAYER1->intelligence = playerdat->attr[2];
-    PLAYER1->health = ThePlayer->hp;
-    PLAYER1->maxhealth = playerdat->avghit;
-    PLAYER1->saved_x = PN.x;
-    PLAYER1->saved_y = PN.y;
-    PLAYER1->saved_z = PN.z;
-    PLAYER1->saved_facing = PlayerFacing;
-    PLAYER1->saved_level = PlayerLevel;
-    PLAYER1->sound = (unsigned)fx_is_on();
-    PLAYER1->music = (unsigned)music_is_on();
-    PLAYER1->terrain = PN.terrain;
+    key = player->name[0] ^ 0xAA;
+    player->strength = playerdat->attr[0];
+    player->dexterity = playerdat->attr[1];
+    player->intelligence = playerdat->attr[2];
+    player->health = ThePlayer->hp;
+    player->maxhealth = playerdat->avghit;
+    player->saved_x = PN.x;
+    player->saved_y = PN.y;
+    player->saved_z = PN.z;
+    player->saved_facing = PlayerFacing;
+    player->saved_level = PlayerLevel;
+    player->sound = (unsigned)fx_is_on();
+    player->music = (unsigned)music_is_on();
+    player->terrain = PN.terrain;
     write(fd, &key, 1);
     xorwrite(fd, key, (unsigned char far *)player, 0xD2);
 }
@@ -175,21 +123,21 @@ void far read_player_data(int fd)
     unsigned char key;
     read(fd, &key, 1);
     xorread(fd, key, (unsigned char far *)player, 0xD2);
-    playerdat->attr[0] = PLAYER1->strength;
-    playerdat->attr[1] = PLAYER1->dexterity;
-    playerdat->attr[2] = PLAYER1->intelligence;
-    ThePlayer->hp = PLAYER1->health;
-    playerdat->avghit = PLAYER1->maxhealth;
-    PN.x = PLAYER1->saved_x;
-    PN.y = PLAYER1->saved_y;
-    PN.z = PLAYER1->saved_z;
-    PlayerFacing = PLAYER1->saved_facing;
-    PlayerLevel = PLAYER1->saved_level;
-    PN.terrain = PLAYER1->terrain;
-    turn_fx(PLAYER1->sound);
-    turn_music(PLAYER1->music);
+    playerdat->attr[0] = player->strength;
+    playerdat->attr[1] = player->dexterity;
+    playerdat->attr[2] = player->intelligence;
+    ThePlayer->hp = player->health;
+    playerdat->avghit = player->maxhealth;
+    PN.x = player->saved_x;
+    PN.y = player->saved_y;
+    PN.z = player->saved_z;
+    PlayerFacing = player->saved_facing;
+    PlayerLevel = player->saved_level;
+    PN.terrain = player->terrain;
+    turn_fx(player->sound);
+    turn_music(player->music);
     set_graphics_level();
-    newFPS(PLAYER1->fps);
+    newFPS(player->fps);
 }
 
 /* Clears every spell effect before FixPlayerEquips applies them again: resistances,
@@ -200,8 +148,8 @@ void far read_player_data(int fd)
 void far init_spells(void)
 {
     ComObjData[127].resist = 0;         /* item 127 is the player's own object type */
-    plyNotice[0] = 13 - PLAYER1->skills[SKILL_STEALTH] / 3;
-    plyNotice[1] = 15 - PLAYER1->skills[SKILL_STEALTH] / 5;
+    plyNotice[0] = 13 - player->skills[SKILL_STEALTH] / 3;
+    plyNotice[1] = 15 - player->skills[SKILL_STEALTH] / 5;
     motionbits = 0;
     memset(cmbModTH, 0, 4);
     /* name: DS:0285 is UW2's Blessed by its place in the chain. */
@@ -291,8 +239,8 @@ unsigned char far player_affected_by(unsigned char major, unsigned char minor,
         motionbits = motionbits | (1 << (minor - 1));
         break;
     case SPELLC_LIGHT:
-        if (((PLAYER1->light & 0xF0) >> 4) < minor)
-            PLAYER1->light = minor << 4;
+        if (((player->light & 0xF0) >> 4) < minor)
+            player->light = minor << 4;
         break;
     case SPELLC_XT:
         switch (minor) {
@@ -348,9 +296,9 @@ void far parse_aspells(unsigned char *out)
 {
     unsigned char i;
     memset(out, 0x15, 3);
-    for (i = 0; i < PLAYER1->active_spells; i++) {
-        out[i] = spell_class_values[PLAYER1->spells[i] & 0xF];
-        out[i] = out[i] + ((PLAYER1->spells[i] & 0xF0) >> 4);
+    for (i = 0; i < player->active_spells; i++) {
+        out[i] = spell_class_values[player->spells[i] & 0xF];
+        out[i] = out[i] + ((player->spells[i] & 0xF0) >> 4);
     }
 }
 
@@ -371,7 +319,7 @@ void far set_maze(char on)
         if (tex >= 0)
             swap_tmap(tex);
     }
-    PLAYER1->maze = on;
+    player->maze = on;
 }
 
 /* Applies the bits player_affected_by gathered: bit 1 cuts noise by 16, bit 2
@@ -443,7 +391,7 @@ void far FixPlayerEquips(void)
         if (item = AskInventory(slot))
             playerdat->armour[defence_slot_index[slot]] += armor_val(item);
     }
-    item = AskInventory(PLAYER1->lefty + 7);
+    item = AskInventory(player->lefty + 7);
     if (item && OBJ_MAJOR(item) == MAJOR_HACK &&
         OBJ_MINOR(item) == MINOR_ARMOR2 &&
         OBJ_INCLASS(item) >= 11 && OBJ_INCLASS(item) <= 15) {
@@ -451,8 +399,8 @@ void far FixPlayerEquips(void)
         playerdat->armour[0] += armour;
         playerdat->armour[1] += armour;
     }
-    playerdat->defence = PLAYER1->skills[SKILL_DEFENSE];
-    ActiveObj = AskInventory(8 - PLAYER1->lefty);
+    playerdat->defence = player->skills[SKILL_DEFENSE];
+    ActiveObj = AskInventory(8 - player->lefty);
     armour = 2;
     if (ActiveObj && OBJ_MAJOR(ActiveObj) == MAJOR_HACK &&
         OBJ_MINOR(ActiveObj) < MINOR_ARMOR) {
@@ -466,7 +414,7 @@ void far FixPlayerEquips(void)
         else
             load_weapon(-1);
     } else load_weapon(3);
-    playerdat->defence = playerdat->defence + (PLAYER1->skills[armour] >> 1);
+    playerdat->defence = playerdat->defence + (player->skills[armour] >> 1);
     init_spells();
     best_slot = 0;
     brightness = 0;
@@ -482,10 +430,10 @@ void far FixPlayerEquips(void)
             }
         }
     }
-    PLAYER1->light = (brightness << 4) + best_slot;
-    for (slot = 0; slot < PLAYER1->active_spells; slot++)
-        player_affected_by(PLAYER1->spells[slot] & 0xF,
-                           (PLAYER1->spells[slot] & 0xF0) >> 4, &bonuses, -1);
+    player->light = (brightness << 4) + best_slot;
+    for (slot = 0; slot < player->active_spells; slot++)
+        player_affected_by(player->spells[slot] & 0xF,
+                           (player->spells[slot] & 0xF0) >> 4, &bonuses, -1);
     for (slot = 0; slot <= 10; slot++) {
         ActiveObj = AskInventory(slot);
         if (ActiveObj && ObjWorn(ActiveObj->id & ID_ITEM, slot)) {
@@ -498,8 +446,8 @@ void far FixPlayerEquips(void)
     }
     parse_spells(bonuses);
     if (WizEye) set_light(6);
-    else set_light((PLAYER1->light & 0xF0) >> 4);
-    set_drugged(PLAYER1->shrooms > 0);
+    else set_light((player->light & 0xF0) >> 4);
+    set_drugged(player->shrooms > 0);
     fizix_update();
     newFPS(-1);
 }

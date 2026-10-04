@@ -21,6 +21,11 @@
 #include "object.h"
 #include "sys.h"
 
+/* Declared in each file that uses it, its own way (no header). */
+char * far rect_class_data(void);
+char * far spec_class_data(void);
+char * far stuff_class_data(void);
+
 /* match: this file's _BSS, DS:5B6A..716D (UW2: DS:6B70..8173), by name: ActiveObj 145, ComObjData 355. This file loads
    ComObjData (0x1600 bytes, from comobj.dat) and finds the active object's class data. */
 struct Object far *ActiveObj;

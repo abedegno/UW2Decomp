@@ -22,11 +22,7 @@
 #include <stdlib.h>
 #include "sound.h"
 #include "sys.h"
-
-/* UW1: the console printer (DOS function 9) under its listing name (UW2's
-   PrintStringToConsole_seg017_DE). */
-void far seg015_1F9B_E8(char far *text);
-
+#include "gfx.h"
 
 /* Prints "Cannot run Underworld.", the reason for the code's kind, and the code. The
    strings end in '$' for DOS function 9. */

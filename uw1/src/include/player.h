@@ -14,17 +14,20 @@ struct Tile;
 #include "map.h"
 #include "object.h"
 
-/* The player's record, 0x37D bytes, saved in PLAYER.DAT (ovr142 writes it xor-encoded)
-   and reached through the near pointer player. Names are provisional, taken from the
-   sources that use the fields. */
+/* UW1's player record, 0xD2 bytes, saved in PLAYER.DAT and reached through the near
+   pointer player (PLAYER.C's PlayerDat holds it). Reconciled from the bytes of the 30
+   files that use it: every field below is at the offset, width and signedness the code
+   compiled from. Fields 0x00..0x5D are laid out as in UW2; from 0x5E on UW1 packs its
+   flags far tighter (UW2's lefty at 0x65 is UW1's 0x64, its game clock 0x369 UW1's 0xCE).
+   Unsigned bitfield runs take a byte at a time (the byte holding the next free bit), so
+   the 0x64 run is one byte and quests follows at 0x65. Names are provisional, taken from
+   the sources that use the fields. */
 struct Player {
-    char name[0x1E];                    /* 0x00 (ovr101 and ovr158 declare 0x21 bytes);
-                                           save_player_data's key is name[0] */
+    char name[0x1E];                    /* 0x00 */
     unsigned char strength;             /* 0x1E */
     unsigned char dexterity;            /* 0x1F */
     unsigned char intelligence;         /* 0x20 */
-    unsigned char skills[20];           /* 0x21: attack, defence, ...; [11] search,
-                                           [12] track, [13] sneak, [17] acrobat */
+    unsigned char skills[20];           /* 0x21, enum Skill */
     unsigned char health;               /* 0x35 */
     unsigned char maxhealth;            /* 0x36 */
     unsigned char play_mana;            /* 0x37 */
@@ -42,68 +45,58 @@ struct Player {
     uint32 exp;                         /* 0x4E, in tenths */
     unsigned char skill_points;         /* 0x52 */
     unsigned char skill_points_earned;  /* 0x53 */
-    int16 saved_x;                      /* 0x54: PN's x, y and z, PlayerFacing and */
-    int16 saved_y;                      /* PlayerLevel, stored here when saving */
+    int16 saved_x;                      /* 0x54 */
+    int16 saved_y;
     int16 saved_z;
     int16 saved_facing;                 /* 0x5A */
     int16 saved_level;                  /* 0x5C */
-    unsigned char moonstones[2];        /* 0x5E, the level each moonstone is on */
-    uint16 drawn:1;                     /* word 0x60: the weapon is drawn */
+    unsigned char moonstone:4;          /* 0x5E: the level the moonstone is on */
+    unsigned char tree:4;               /* the silver tree's level, 0 for none */
+    uint16 b5F_0:1;                     /* word 0x5F */
+    uint16 drawn:1;                     /* the weapon is drawn */
     uint16 poison:4;
-    uint16 active_spells:4;
-    uint16 nrunes:2;                    /* word 0x61, bits 1-2 */
-    uint16 b60_11:1;
+    uint16 active_spells:4;             /* bits 6-9 */
+    uint16 nrunes:2;                    /* 0x60, bits 2-3 */
+    uint16 armageddon:1;                /* bit 4: Armageddon cast (clearobj on arrival) */
+    uint16 orb:1;                       /* bit 5: the orb is destroyed */
+    uint16 key:1;                       /* bit 6: the key of truth given */
+    uint16 cup:1;                       /* bit 7: the cup of wonder found */
+    uint16 incense:2;                   /* 0x61 */
     uint16 shrooms:2;
-    uint16 drunk:6;                     /* word 0x61, bits 6-11 */
-    uint16 automap:1;                   /* word 0x62, bit 4 */
-    uint16 b62_5:1;
-    uint16 sleepbits:3;                 /* word 0x62, bits 6-8 */
-    uint16 in_void:1;                   /* word 0x63, bit 1 */
-    uint16 in_pits:1;
-    uint16 b63_3:5;
-    unsigned char light;                /* 0x64 */
-    uint16 lefty:1;                     /* 0x65 */
+    uint16 drunk:6;                     /* word 0x61, bits 4-9 */
+    uint16 talisman_ok:1;               /* 0x62, bit 2 */
+    uint16 garamon:1;                   /* bit 3: Garamon is buried */
+    uint16 maze:1;                      /* bit 4: the maze navigation spell */
+    uint16 b62_5:3;
+    unsigned char light;                /* 0x63 */
+    uint16 lefty:1;                     /* 0x64 (the run takes one byte) */
     uint16 female:1;
     uint16 body:3;
-    uint16 pclass:3;
-    uint32 quests[32];                  /* 0x66, quests 0-127, four to a long */
-    unsigned char quest_bytes[16];      /* 0xE6: [0] lines cut, [1] arena wins, [2] key gems,
-                                           [3] worlds, [5] Jospur's debt (pit fights won,
-                                           unpaid), [6] Killorn's countdown, [7] worms
-                                           killed, [13] worlds visited, [15] the pending
-                                           cutscene plus one */
-    unsigned char bF6;                  /* 0xF6 */
-    unsigned char dreamflags;           /* 0xF7 */
-    unsigned char map_scrap;            /* 0xF8 */
-    uint16 vars[256];                   /* 0xF9, the numbered variables: [0..5] the vending
-                                           machines' selections, [6] the last gem,
-                                           [100..106] the pyramid's colour sequence, a done
-                                           flag and the last trigger tile */
-    int16 saved_automap;                /* 0x2F9 */
-    int16 dream_x;                      /* 0x2FB */
-    int16 dream_y;                      /* 0x2FD */
-    uint16 dream_pos;                   /* 0x2FF, level << 8 plus heading */
-    unsigned char easy;                 /* 0x301 */
-    uint16 sound:2;                     /* word 0x302 */
+    uint16 pclass:3;                    /* enum PlayerClass */
+    int32 quests;                       /* 0x65: quests 0..31, a bit each */
+    unsigned char quest_bytes[4];       /* 0x69: quests 32..35 */
+    unsigned char talismans;            /* 0x6D: talismans left, 0xFF once the last went */
+    uint16 dreams;                      /* 0x6E: the dreams seen, a bit each */
+    unsigned char game_vars[0x40];      /* 0x70: the game variables (x_traps) */
+    unsigned char saved_mana;           /* 0xB0: the maximum mana saved on level 7 */
+    unsigned char bB1[3];               /* 0xB1 */
+    unsigned char easy;                 /* 0xB4 */
+    uint16 sound:2;                     /* 0xB5 */
     uint16 music:2;
     uint16 detail:4;
-    uint16 fps:3;                       /* 0x303 */
-    uint16 terrain:8;                   /* word 0x303, bits 3-10: PN.terrain, saved */
-    uint16 b304_3:5;
-    unsigned char paralyzed;            /* 0x305 */
-    unsigned char motion_state;         /* 0x306 */
-    unsigned char swim_count;           /* 0x307 */
-    unsigned char crithit;              /* 0x308 */
-    unsigned char typehit;              /* 0x309 */
-    int32 crithittime;                  /* 0x30A */
-    unsigned char hitx;                 /* 0x30E */
-    unsigned char hity;                 /* 0x30F */
-    unsigned char lore[0x50];           /* 0x310, the lore skill by level */
-    unsigned char pit_fighters[5];      /* 0x360 */
-    char pad365[0x369 - 0x365];
-    uint32 game_clock;                  /* 0x369 */
-    unsigned char xclock[16];           /* 0x36D: [0] the day, [1..3] ..., [14] the best
-                                           arena record */
+    uint16 fps:3;                       /* word 0xB6 */
+    uint16 terrain:8;                   /* word 0xB6, bits 3-10: PN.terrain, saved */
+    uint16 bB7_3:5;
+    unsigned char motion_state;         /* 0xB8 */
+    unsigned char swim_count;           /* 0xB9 */
+    unsigned char crithit;              /* 0xBA */
+    unsigned char typehit;              /* 0xBB */
+    int32 crithittime;                  /* 0xBC */
+    unsigned char hitx;                 /* 0xC0 */
+    unsigned char hity;                 /* 0xC1 */
+    unsigned char lore[8];              /* 0xC2, the lore skill by level */
+    unsigned char bCA[4];               /* 0xCA */
+    uint32 game_clock;                  /* 0xCE */
 };
 
 /* The player's skills, struct Player's skills[]: string block 2 names them from string
@@ -124,49 +117,20 @@ enum PlayerClass {
     PCLASS_PALADIN, PCLASS_RANGER, PCLASS_SHEPHERD
 };
 
-/* Quest variables 128 and up, struct Player's quest_bytes[] (quest_bytes[n] is quest
-   128 + n). Only those whose meaning the Guide to the Ultima Underworlds ("UW2 Quests",
-   the PLAYER.DAT table) states and the code agrees with are named. */
-#define QB_LINES_OF_POWER 0             /* quest 128: the lines of power cut, a bit each */
-#define QB_PIT_RECORD   1               /* quest 129: the win-loss record in the pits */
-#define QB_GEMS_USED    2               /* quest 130: a bit per blackrock gem used up
-                                           (UseKeyGem sets them) */
-#define QB_JOSPUR_DEBT  5               /* quest 133: what Jospur owes for fights in the
-                                           pits (BABLHACK.C pays it; cleared on leaving) */
-#define QB_WORMS_KILLED 7               /* quest 135: bloodworms killed on level 4, the
-                                           sewers (death_check counts to 0xC8) */
-#define QB_CUTSCENE     15              /* quest 143: the cutscene to play when a
-                                           conversation ends, plus one (SKILLS.C) */
-#define QB_WORLDS_VISITED 13            /* quest 141: a bit per world visited (the
-                                           automap's world list tests them) */
-
-/* The X clocks, struct Player's xclock[] (Guide, "The X Clock"). */
-#define XC_TIME         0               /* the time of day in 72 steps (ovr135 and ovr110
-                                           set it, the schedules read it) */
-#define DAY_STEPS       72              /* XC_TIME's steps in a day */
-#define XC_CASTLE       1               /* the castle plot's progress */
-#define XC_GEMS         2               /* Nystrul and the blackrock gems treated */
-#define XC_DJINN        3               /* the djinn capture's progress */
-#define XC_PIT_KILLS    14              /* most enemies killed in the pits */
-#define XC_CHANGED      15              /* counted up when an X clock event happens */
-
 /* SKILLS.C: skills, levelling, sleep, eating, death and traps (ovr154) */
-void far punt_void(void);
-void far go_void(void);
-void far do_gem(void);
 char far player_use_skill(int skill);
 void far player_compute(char restore);
 void far add_to_skill(int skill);
 char far get_skill(char skill);
-char far grant_skill_advance(int which);
 void far player_sleep(int how);
 void far player_key_sleep(int bedroll);
-void far cs_check(void);
 void far do_mstone(void);
 void far player_is_dead(void);
 int far DetectedTrap(struct Object far *obj, int skill);
-unsigned char far player_eat(int nutrition);
 int far RemoveTrap(struct Object far *obj, int skill);
+extern char EndGameMode_dseg_1C8F;
+void far check_victory(void);
+char far plant_seed(void);
 
 /* SKILLCHK.C: skill checks, experience and levelling */
 void far panel_check_hpmp(void);
@@ -200,16 +164,17 @@ void far move_cam(int how);
 void far attach_eye(int mode);
 void far release_camera(int index);
 void far crystal_ball(struct Object far *obj, int x, int y);
-extern unsigned char IsJoy;
-/* The player record's storage (player points at it), a byte longer than the record. */
+/* The player record's storage as its users see it (player points at it). PLAYER.C defines
+   PlayerDat as unsigned char[0xD2] and the files that reach it by name declare it
+   themselves as this union, so it is in no header. */
 union PlayerStore {
     struct Player rec;
-    char bytes[0x37E];
+    char bytes[0xD2];
 };
-extern union PlayerStore PlayerDat;
 
 /* CHARGEN.C: character creation */
 char far create_player(void);
+void far init_char(char blank);
 
 /* PLAYDATA.C: the player record's load and save, and spell effects */
 extern int16 player_name_handle;
@@ -219,26 +184,17 @@ extern struct Object far *ThePlayer;
 extern int16 PlayerLevel;
 extern int16 PlayerFacing;
 extern int16 PlayerHeading;
-extern unsigned char light_hi;
-extern unsigned char last_light;
 void far save_player_data(int fd);
 void far read_player_data(int fd);
 void far parse_aspells(unsigned char *out);
 void far FixPlayerEquips(void);
-void far load_dl(void);
 extern unsigned char plyNotice[2];
-extern unsigned char UsingPole;
-extern unsigned char light_mod;
-extern signed char light_act;
-extern signed char loc_lght;
 void far set_drugged(char on);
+extern char DragonSkinBoots_dseg_5c99_1B01;
+void far set_maze(char on);
 
 /* PHYSICS.C: the player's physics */
-extern unsigned char frictionless;
 extern int16 GrSq;
-void far change_GrSq(int sq, int z);
-void far hgt_change(struct Object far *obj, struct Tile far *tile, int z);
-void far player_newsq(int sq);
 /* name: IDA's StopPlayerMotion. Named from FM Towns: player_sqhandler_ follows player_newsq_
    there and is the same test (bit 0x1000, no pitch, slow, lastTerr & 0xA) clearing PN+6
    and PN+8; player_setup stores it as PT's handler, as FM Towns does. */
@@ -251,16 +207,16 @@ extern unsigned char motionbits;
 extern unsigned char fiz_update;
 char far simple_fizix(int turn);
 void far set_player_phys_params(int rate);
-void far player_setup(int x, int y, int how);
 void far phys_affect_player(void);
 void far phys_bounce_up(struct Object far *obj);
 void far fizix_update(void);
 extern int16 pFPS[3];
 void far parse_player_terr(int terr, char force);
 void far newFPS(char state);
+void far EtherealVoidSpecialEffects_seg008_150(void);
+void far QuakeTrap_seg008_DE7(int type, int intensity);
 
 /* Defined where no source has it yet: data the link takes from the EXE. */
-char far GetItemEnchantment(struct Object far *obj, int16 *major, int16 *effect, unsigned char *flag);
 extern struct Object far *curelem;
 
 #endif

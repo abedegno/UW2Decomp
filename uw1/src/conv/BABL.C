@@ -69,9 +69,6 @@
 char far open_arc(char far *arc, char *name);          /* opens an archive into arc */
 char far close_arc(char far *arc);                    /* closes it */
 int far get_arc(char far *arc, int block, void far *buf);
-void far dprintf(char *fmt, ...);
-char far * far seg039_3495_85A(char far *s);          /* UW2's seg039_3452_857 */
-int far seg039_3495_89D(char far *s);                 /* UW2's seg039_3452_89A */
 
 /* A block of the script heap: its size in bytes (header and tag included) and, while
    free, the next free block. An allocated block points at itself and ends with a tag,

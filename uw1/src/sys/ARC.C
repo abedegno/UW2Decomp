@@ -23,30 +23,9 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
-/* UW1: the archive functions take the caller's struct Arc (file.h has UW2's); those
-   declarations are renamed out of the way. */
-#define open_arc UW2_open_arc
-#define close_arc UW2_close_arc
-#define put_arc UW2_put_arc
-#define get_arc UW2_get_arc
-#define check_arc UW2_check_arc
 #include "file.h"
 #include "gfx.h"
 #include "sys.h"
-#undef open_arc
-#undef close_arc
-#undef put_arc
-#undef get_arc
-#undef check_arc
-
-/* An open archive, kept by the caller (UW1). */
-struct Arc {
-    int16 fd;                           /* 0x00 */
-    int16 tmpfd;                        /* 0x02, _arc.tmp */
-    uint16 count;                       /* 0x04, number of blocks */
-    uint32 far *offtab;                 /* 0x06, the blocks' offsets */
-    unsigned char dirty;                /* 0x0A, offtab changed */
-};
 
 /* This file's _DATA, DS:0AB8..0AC8: the offset table and the names, in stdat. */
 uint32 far *offtab = (uint32 far *)(stdat + 0x8000);

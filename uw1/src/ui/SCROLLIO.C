@@ -57,11 +57,6 @@ static int16 edge_phase = 0;            /* DS:0A94 */
 static int16 conv_edge_phase = 0;       /* DS:0A96 */
 char scroll_esc = 1;                    /* DS:0A98 */
 
-void far scroll_wait(int ticks, char mouse);
-void far draw_scroll(int x, int y, int w, int h, char flag);
-void far scroll_more(void);
-void far scroll_clear(char redraw);
-
 /* Selects and clears the message scroll. */
 void far init_scroll(void)
 {

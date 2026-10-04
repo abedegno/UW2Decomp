@@ -36,10 +36,6 @@
    EFFECT.C, which has add_obj_to_animlist and do_special_effect). */
 
 #include <stdlib.h>
-/* UW1: Anim_Load and Anim_Save take a file name and a level (below); map.h declares UW2's,
-   which take the level block, so its declarations are renamed out of the way. */
-#define Anim_Load UW2_Anim_Load
-#define Anim_Save UW2_Anim_Save
 #include "combat.h"
 #include "critter.h"
 #include "event.h"
@@ -52,8 +48,6 @@
 #include "uw2.h"
 
 #include "view3d.h"
-#undef Anim_Load
-#undef Anim_Save
 unsigned char lengset = 0;              /* DS:AAE, check_door set the length itself */
 unsigned char DoAnimO = 1;              /* DS:AAF */
 
@@ -69,8 +63,6 @@ struct Anim animlist[0x40];             /* DS:369C */
    returns the length read; the caller passes a far file name and the block number. */
 int far get_arc(char far *name, int block, void far *buf);
 char far put_arc(char far *name, int block, void far *buf, int len);
-
-
 
 /* Removes animation n's object from its tile and frees it. */
 void far rem_anim_from_map(int n)

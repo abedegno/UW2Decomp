@@ -31,12 +31,6 @@
    numbers the stub entries from the last one listed).
    Name: UW2Decomp's (triggers and traps: UseTrigger, SetOffTrap, UseTrap; the job of
    System Shock's TRIGGER.C). */
-/* UW1: these are declared differently below; the headers have UW2's forms, renamed out
-   of the way here. */
-#define CloseDoor UW2_CloseDoor
-#define check_alert UW2_check_alert
-#define DoWanderingMonsters UW2_DoWanderingMonsters
-#define DoClosingDoors UW2_DoClosingDoors
 #include <stdlib.h>
 #include <stdio.h>
 #include "combat.h"
@@ -51,39 +45,12 @@
 #include "sys.h"
 #include "ui.h"
 #include "uw2.h"
-#undef CloseDoor
-#undef check_alert
-#undef DoWanderingMonsters
-#undef DoClosingDoors
+
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far IsMobElem(struct Object far *obj);
 
 /* UW1: declarations the headers do not have (or have in UW2's form). */
-void far CloseDoor(struct Object far *door);
-char far check_alert(char is_player, int x, int y);
-void far DoWanderingMonsters(char is_player);
-void far DoClosingDoors(char is_player);
-void far dprintf(char *fmt, ...);
-void far QuakeTrap_seg008_DE7(int type, int intensity);
-void far work_bullfrog_tiles(int mode, int x, int y);
-void far emerald_trap(struct Object far *trap, int x, int y);
 void far ExplodingBook_ovr107_1259(struct Object far *trap, int x, int y);
-void far talking_door_trap(struct Object far *trap, int x, int y);
-void far do_arial_talking(struct Object far *trap, int x, int y);
-char far gronkify_talkto_player(struct Object far *npc, NEARPTR arg);
-extern unsigned char EndGameMode_dseg_1C8F;
-
-/* UW1: the player record's skills, quest bits and game variables (player.h has UW2's
-   layout). */
-struct Player1Trap {
-    char pad0[0x2A];
-    unsigned char casting;              /* 0x2A, the Casting skill */
-    char pad2B;
-    unsigned char search;               /* 0x2C, the Search skill */
-    char pad2D[0x65 - 0x2D];
-    int32 quests;                       /* 0x65: quests 0..31, a bit each */
-    char pad69[0x70 - 0x69];
-    unsigned char game_vars[0x40];      /* 0x70 */
-};
-#define PLAYER1 ((struct Player1Trap *)player)
 
 /* This file's _BSS, DS:736E..738D: the trigger modes, the trap being removed, and the
    trigger that is running. */
@@ -150,7 +117,7 @@ int far UseTrigger(struct Object far *who, struct Object far *start,
         if (OBJ_ITEM(who) == ITEM_ADVENTURER) {
             if (!(trig->id & ID_FLAG11)) return 2;
             if (type == 5 && (trig->pos & POS_Z) > 0 &&
-                skill_check(PLAYER1->search, trig->pos & POS_Z) <= 0)
+                skill_check(player->skills[11], trig->pos & POS_Z) <= 0)
                 return 2;
         } else {
             if (OBJ_MAJOR(who) == MAJOR_CREATURE) {
@@ -260,26 +227,26 @@ int far UseTrap(struct Object far *trap, int x, int y)
         if (i == 0) {
             switch (c) {
             case 5:
-                PLAYER1->quests ^= 1L << d;
+                player->quests ^= 1L << d;
                 break;
             case 1:
-                PLAYER1->quests &= ~(1L << d);
+                player->quests &= ~(1L << d);
                 break;
             default:
-                PLAYER1->quests |= 1L << d;
+                player->quests |= 1L << d;
                 break;
             }
         } else {
             switch (c) {
-            case 0: PLAYER1->game_vars[i] += d; break;
-            case 1: PLAYER1->game_vars[i] -= d; break;
-            case 2: PLAYER1->game_vars[i] = d; break;
-            case 3: PLAYER1->game_vars[i] &= d; break;
-            case 4: PLAYER1->game_vars[i] |= d; break;
-            case 5: PLAYER1->game_vars[i] ^= d; break;
-            case 6: PLAYER1->game_vars[i] <<= d; break;
+            case 0: player->game_vars[i] += d; break;
+            case 1: player->game_vars[i] -= d; break;
+            case 2: player->game_vars[i] = d; break;
+            case 3: player->game_vars[i] &= d; break;
+            case 4: player->game_vars[i] |= d; break;
+            case 5: player->game_vars[i] ^= d; break;
+            case 6: player->game_vars[i] <<= d; break;
             }
-            PLAYER1->game_vars[i] = PLAYER1->game_vars[i] & 0x3F;
+            player->game_vars[i] = player->game_vars[i] & 0x3F;
         }
         break;
     case 0xE:
@@ -288,10 +255,10 @@ int far UseTrap(struct Object far *trap, int x, int y)
         d = (trap->qn.f.quality << 5 | trap->ol.f.owner) << 3 | OBJ_FINEY(trap);
         for (v = 0; i <= c; i++) {
             if (OBJ_FINEX(trap))
-                v += PLAYER1->game_vars[i];
+                v += player->game_vars[i];
             else {
                 v <<= 3;
-                v |= PLAYER1->game_vars[i] & 7;
+                v |= player->game_vars[i] & 7;
             }
         }
         if (v != d) {
@@ -433,7 +400,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
             (trap->qn.f.quality == 0x3F ||
              trap->qn.f.quality == OBJ_INCLASS(CharacterThatTriggeredTrap))) {
             int damage;
-            damage = (int)(((int32)rand() * PLAYER1->casting) / 0x8000L) + 3;
+            damage = (int)(((int32)rand() * player->skills[9]) / 0x8000L) + 3;
             print_path_to(get_string(0x2F5), OBJ_HOMEX(ThePlayer), OBJ_HOMEY(ThePlayer), 0,
                           OBJ_HOMEX(CharacterThatTriggeredTrap),
                           OBJ_HOMEY(CharacterThatTriggeredTrap), 0, 0);

@@ -31,7 +31,6 @@
 #include <dos.h>
 #include <io.h>
 #include <fcntl.h>
-#define decode_obj_spell UW2_decode_obj_spell
 #include "gfx.h"
 #include "inv.h"
 #include "map.h"
@@ -40,16 +39,8 @@
 #include "sys.h"
 #include "ui.h"
 
-/* UW1: decode_obj_spell's flag is a plain char (object.h: unsigned char). */
-#undef decode_obj_spell
-char far decode_obj_spell(struct Object far *obj, int16 *major, int16 *effect, char *flag);
-
-char far talisman_desc(struct Object far *obj, struct ComObj *com);
-
 /* Copy a far string, terminator included, to any address. */
 #define far_strcpy(d, s) FAR_COPY(d, s, str_len(s) + 1)
-
-
 
 /* Prints the look description of obj (see the file comment). The quality word is skipped
    for quality 0; indestructible items (qualclass 3) use the fifth word of their quality

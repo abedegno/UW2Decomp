@@ -31,23 +31,6 @@
 
 #include <string.h>
 #include <stdlib.h>
-#define UseObj UW2_UseObj
-#define UseLockpickOn UW2_UseLockpickOn
-#define UseKeyOn UW2_UseKeyOn
-#define UseUnique UW2_UseUnique
-#define UseLight UW2_UseLight
-#define UseWand UW2_UseWand
-#define UseFood UW2_UseFood
-#define CloseDoor UW2_CloseDoor
-#define decode_obj_spell UW2_decode_obj_spell
-#define always_decode UW2_always_decode
-#define ObjectActorArg UW2_ObjectActorArg
-#define add_animobj UW2_add_animobj
-#define player_eat UW2_player_eat
-#define UseBook UW2_UseBook
-#define UseRockHammerOn UW2_UseRockHammerOn
-#define UseKey UW2_UseKey
-#define UseOilOn UW2_UseOilOn
 #include "combat.h"
 #include "critter.h"
 #include "event.h"
@@ -60,89 +43,18 @@
 #include "sound.h"
 #include "sys.h"
 #include "ui.h"
-#undef UseObj
-#undef UseLockpickOn
-#undef UseKeyOn
-#undef UseUnique
-#undef UseLight
-#undef UseWand
-#undef UseFood
-#undef CloseDoor
-#undef decode_obj_spell
-#undef always_decode
-#undef ObjectActorArg
-#undef add_animobj
-#undef player_eat
-#undef UseBook
-#undef UseRockHammerOn
-#undef UseKey
-#undef UseOilOn
+#include "conv.h"
 
-/* UW1: how is a plain char throughout (object.h: unsigned char); CloseDoor takes only the
-   door; decode_obj_spell's flag is a plain char; useNSpellCharges spends one charge and
-   returns nothing. */
-struct Object far * far UseObj(struct Object far *who, struct Object far *obj, char how);
-void far UseLockpickOn(struct Object far *obj, char how);
-void far UseKeyOn(struct Object far *obj, char how);
-void far UseUnique(struct Object far *who, struct Object far *obj, char how);
-void far UseLight(struct Object far *obj, char how);
-void far UseWand(struct Object far *wand, char how);
-int far UseFood(struct Object far *who, struct Object far *food, char how);
-void far CloseDoor(struct Object far *door);
-char far decode_obj_spell(struct Object far *obj, int16 *major, int16 *effect, char *flag);
-void far useNSpellCharges(struct Object far *obj);
-void far UseBonesOn(struct Object far *obj, char how);
-void far TybalsOrb_seg040_A12(struct Object far *obj, char how, char other);
-char far seg040_352B_9EA(struct Object far *npc, int div);
-void far seg040_352B_AFF(struct Object far *obj, char how);
-void far SpikeDoor_seg040_662(struct Object far *door);
-void far SpikeDoor_seg040_352B_6F9(struct Object far *obj, char how);
-void far UseOilOn(struct Object far *obj, char how, char other);
-void far UseKey(struct Object far *obj, char how);
-void far UseRockHammerOn(struct Object far *obj, char how, char other);
-void far UseBook(struct Object far *obj, char how);
-void far UseAnvilOn(struct Object far *obj, char how, char other);
-void far UsePoleOn(struct Object far *obj);
-void far moveDoor(struct Object far *door);
+/* Declared in each file that uses it, its own way (no header). */
+extern unsigned char UsingPole;
 
-/* UW1: player_eat returns a plain char (player.h: unsigned char). */
+/* UW1: player_eat returns a plain char here (SKILLS.C defines it unsigned char). */
 char far player_eat(int nutrition);
 
-/* UW1: ObjectActorArg is a char; add_animobj takes the tile as chars. */
-extern char ObjectActorArg;
-int far add_animobj(int index, int len, char a, char x, char y);
-
-/* UW1: not in the headers. */
-void far TalkTo(struct Object far *npc);
+/* Declared as this file calls them (in no header). */
 void far ExplodingBook_ovr107_1259(void);
 void far mantra_advance(int n);         /* SKILLS.C defines it (void); this caller pushes 0 */
-char far plant_seed(void);
 extern int16 w64_types[];
-
-/* UW1's player record, the bytes used here (player.h has UW2's layout). */
-struct Player1Use {
-    char pad0[0x5E];
-    unsigned char moonstone:4;          /* 0x5E */
-    unsigned char tree:4;               /* cleared when the silver tree is picked */
-    uint16 b5F_0:1;                     /* 0x5F */
-    uint16 drawn:1;
-    uint16 poison:4;
-    uint16 active_spells:4;
-    uint16 nrunes:2;                    /* 0x60, bits 2-3 */
-    uint16 armageddon:1;
-    uint16 orb:1;                       /* bit 5: the orb is destroyed */
-    uint16 b60_6:2;
-    uint16 incense:2;                   /* 0x61 */
-    uint16 shrooms:2;
-    uint16 drunk:6;
-    uint16 b62_2:1;                     /* 0x62, bit 2: talisman_ok */
-    uint16 garamon:1;                   /* bit 3: Garamon buried */
-    char pad63[0xB0 - 0x63];
-    unsigned char bB0;                  /* 0xB0, the mana restored with the orb */
-    char padB1[0xCE - 0xB1];
-    uint32 game_clock;                  /* 0xCE */
-};
-#define PLAYER1 ((struct Player1Use *)player)
 
 /* The next time the player may cast from an object, and a flag that makes
    decode_obj_spell always identify the spell. */
@@ -227,7 +139,7 @@ struct Object far * far UseObj(struct Object far *who, struct Object far *obj, c
             if ((char)using_punt(obj, how, 1)) {
                 game_sprint(9);
                 obj = place_new(0L, 0x122);
-                PLAYER1->tree = 0;
+                player->tree = 0;
                 obj->id = obj->id & 0xDFFF | 0x2000;
                 return 0;
             }
@@ -390,8 +302,8 @@ void far UseBonesOn(struct Object far *obj, char how)
     if (OBJ_ITEM(obj) == 0x165) {
         if (OBJ_OWNER(ObjectActing) == 0x3E) {
             if (OBJ_ISQUANT(obj) && (obj->ol.f.link & 0x200) && (obj->ol.f.link & 0x1FF) == 0x21) {
-                PLAYER1->b62_2 = 1;
-                PLAYER1->garamon = 1;
+                player->talisman_ok = 1;
+                player->garamon = 1;
                 obj->ol.f.link = 0x222;
                 tmp.id = 0;
                 SET_ITEM(&tmp, 0x7E);
@@ -479,9 +391,9 @@ void far TybalsOrb_seg040_A12(struct Object far *obj, char how, char other)
         put_effect(obj, 4, 5, 0, 0, MapObj_X, MapObj_Y);
         Obj_Punt(&Map_GetAddr(MapObj_X, MapObj_Y)->objects, obj, 1);
         MapObj_X = -1;
-        PLAYER1->orb = 1;
-        player->max_mana = PLAYER1->bB0;
-        player->play_mana = PLAYER1->bB0;
+        player->orb = 1;
+        player->max_mana = player->saved_mana;
+        player->play_mana = player->saved_mana;
         gronk_whoami(0xE7, 0, 2, (WhoamiFn)seg040_352B_9EA);
     }
     if (CursorObjPtr != 0) {
@@ -513,8 +425,8 @@ void far UseUnique(struct Object far *who, struct Object far *obj, char how)
     switch (OBJ_ITEM(obj)) {
     case 0x115:
         n = rand() % 3;
-        if (PLAYER1->incense < 3)
-            n = 3 - (PLAYER1->incense = PLAYER1->incense + 1);
+        if (player->incense < 3)
+            n = 3 - (player->incense = player->incense + 1);
         runcutscene(n + 0xB);
         SET_ITEM(obj, 0xD5);
         if (how)
@@ -649,8 +561,8 @@ int far UseFood(struct Object far *who, struct Object far *food, char how)
     case 0xB8:
         if (skill_check(playerdat->attr[2], 20))
             restore_mana(ThePlayer, -(rand() * 3L / 0x8000L));
-        if (PLAYER1->shrooms < 3)
-            PLAYER1->shrooms = PLAYER1->shrooms + 1;
+        if (player->shrooms < 3)
+            player->shrooms = player->shrooms + 1;
         FixPlayerEquips();
         taste++;
     case 0xB9:
@@ -707,29 +619,29 @@ int far UseFood(struct Object far *who, struct Object far *food, char how)
         }
         game_sprint(taste);
         if (OBJ_ITEM(food) == 0xB9) {
-            if (PLAYER1->poison < 4)
-                PLAYER1->poison = 4;
-            else if (PLAYER1->poison < 0xD)
-                PLAYER1->poison = PLAYER1->poison + 2;
+            if (player->poison < 4)
+                player->poison = 4;
+            else if (player->poison < 0xD)
+                player->poison = player->poison + 2;
         }
     } else if (nutrition < 0) {
         game_sprint(taste);
         if (nutrition < -1 && nutrition > -0x7F) {
-            if (PLAYER1->drunk - nutrition > 0x3F)
-                PLAYER1->drunk = 0x3F;
+            if (player->drunk - nutrition > 0x3F)
+                player->drunk = 0x3F;
             else
-                PLAYER1->drunk = PLAYER1->drunk - nutrition;
-            switch (skill_check(playerdat->attr[0], PLAYER1->drunk)) {
+                player->drunk = player->drunk - nutrition;
+            switch (skill_check(playerdat->attr[0], player->drunk)) {
             case -1:
                 game_sprint(0xF1);
                 player_sleep(-2);
                 if (ThePlayer->hp != 0) {
                     game_sprint(0xF3);
-                    set_effect(0x40, PLAYER1->drunk / 6 + 10);
+                    set_effect(0x40, player->drunk / 6 + 10);
                 }
                 break;
             case 0:
-                set_effect(0x40, PLAYER1->drunk / 6);
+                set_effect(0x40, player->drunk / 6);
                 break;
             case 2:
                 game_sprint(0xF2);
@@ -839,7 +751,7 @@ void far UseMagic(struct Object far *who, struct Object far *obj, char how)
             play_instrument(OBJ_ITEM(obj) - 0x123);
             break;
         case 0x125:
-            PLAYER1->poison = 0;
+            player->poison = 0;
             backfire(ThePlayer, 2);
             using_punt(obj, how, 1);
             game_sprint(0xE0);
@@ -1058,11 +970,11 @@ char far checkSpell(int x, int y, struct Object far *who, struct Object far *obj
 
     if (decode_obj_spell(obj, &major, &effect, &flag) && flag) {
         if (how != 0) {
-            if (PLAYER1->game_clock < nextSpellTime) {
+            if (player->game_clock < nextSpellTime) {
                 play_effect_here(0x15, 0x40, 0);
                 return 0;
             }
-            nextSpellTime = PLAYER1->game_clock + 0x2FD;
+            nextSpellTime = player->game_clock + 0x2FD;
             src = who;
         } else {
             if (who == ThePlayer && OBJ_ITEM(obj) >= 0x98 && OBJ_ITEM(obj) <= 0x9B)

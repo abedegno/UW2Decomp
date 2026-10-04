@@ -45,14 +45,13 @@ void far clear_fight_state(void);
 char far critter_attack(struct Object far *npc, int swing, unsigned char charge, int type,
                         int poison);
 extern signed char cmbModTH[4];
-extern unsigned char using_altaras_dagger;
 void far player_attack(int swing);
 void far missile_thwack(int attacker, struct Object far *missile, struct Object far *def, int x, int y, int dmg, unsigned char type);
 void far player_killed_a(struct Object far *npc);
 
 /* MISSILE.C: missiles */
 struct Object far * far missile_fire(void);
-unsigned char far push_missile(struct Object far *proj, struct Object far *src, char launch);
+char far push_missile(struct Object far *proj, struct Object far *src);
 void far player_fire(int weapon);
 void far critter_fire(struct Object far *who, int item, int type);
 char far spell_fire(struct Object far *who, int spell);
@@ -62,7 +61,6 @@ void far trap_fire(struct Object far *trap, int x, int y);
 /* SPELLS.C: casting spells */
 extern unsigned char inanmMapX;
 extern unsigned char inanmMapY;
-extern int16 area_spell_state;
 extern unsigned char mspell_mused;
 void far restore_mana(struct Object far *who, char amount);
 void far healing(struct Object far *who, char sub);
@@ -70,7 +68,6 @@ void far backfire(struct Object far *who, char sub);
 void far release_missile(struct Object far *who, char sub);
 void far nail_area(struct Object far *who, unsigned char sub);
 void far nail_1area(struct Object far *who, unsigned char sub);
-void far special_spells(struct Object far *who, struct Object far *target, char sub);
 void far damage_square(int x, int y, unsigned char kind, unsigned char src);
 char far do_spell(unsigned char cls, unsigned char sub, struct Object far *who,
                   struct Object far *target);
@@ -80,8 +77,7 @@ void far get_hp_back(struct Object far *who, unsigned char amount);
 struct Object far * far build_new_obj(int item, struct Tile far *tile);
 char far sp_ward_undead(int x, int y, struct Object far *target, struct Tile far *tile,
                         unsigned char src);
-char far hit_critter_goal(char goal, char attitude, int gtarg, struct Object far *npc, int x,
-                          int y);
+char far hit_critter_goal(char goal, char attitude, struct Object far *npc, int x, int y);
 char far sp_hold(int x, int y, struct Object far *target, struct Tile far *tile, unsigned char src);
 void far obj_spells(struct Object far *target, int how, unsigned char b);
 unsigned char far anti_magic_p(int x, int y);
@@ -91,23 +87,28 @@ typedef char (far *SpellFn)(int x, int y, struct Object far *target, struct Tile
 void far gronk_area(struct Object far *who, char count, SpellFn fn, unsigned char type, unsigned char dist, unsigned char radius);
 /* What gronk_whoami (and gronk_race) do to each critter they find. */
 typedef char (far *WhoamiFn)(struct Object far *npc, NEARPTR arg);
-void far gronk_whoami(int whoami, unsigned char all, NEARPTR arg, WhoamiFn fn);
+void far gronk_whoami(int whoami, char all, NEARPTR arg,
+                      char (far *fn)(struct Object far *npc, NEARPTR arg));
 void far process_area(char count, unsigned char src, SpellFn fn, unsigned char type, char x0, char y0, char w, char h);
-extern struct Spell far spells[69];
+char far sp_sheet_light(int x, int y, struct Object far *target, struct Tile far *tile,
+                        unsigned char src);
+char far sp_meteor(int x, int y, struct Object far *target, struct Tile far *tile,
+                   unsigned char src);
+char far sp_poison(int x, int y, struct Object far *target, struct Tile far *tile,
+                   unsigned char src);
+char far sp_charm(int x, int y, struct Object far *target);
+char far sp_confusion(int x, int y, struct Object far *target, struct Tile far *tile,
+                      unsigned char src);
+char far sp_fear(int x, int y, struct Object far *target, struct Tile far *tile, unsigned char src);
+void far print_monster(unsigned char dir, unsigned char n);
 
 /* SPELLS2.C: spells */
-void far sp_enchant(struct Object far *obj, unsigned char inv, int x, int y);
-char far mendable(struct Object far *obj);
 char far sp_true_sight(struct Object far *caster, struct Object far *target);
 char far tremor_area(int x, int y, struct Object far *target, struct Tile far *tile,
                      unsigned char src);
 void far creat_spell(struct Object far *caster, char which);
 void far mdetect(int dist, int skill);
 void far xt_spells(struct Object far *caster, char stab, char sub);
-char far check_Guardian_magic_marker(int x, int y, struct Object far *obj, struct Tile far *tile,
-                                     unsigned char src);
-void far thump_your_magic_twanger_froggie(void);
-char far sp_study_monster(struct Object far *caster, struct Object far *target);
 
 /* RUNES.C: the rune bag and casting from runes */
 extern uint32 lstime;

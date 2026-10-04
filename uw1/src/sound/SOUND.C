@@ -57,31 +57,9 @@
 #include "player.h"
 #include "sys.h"
 #include "ui.h"
-
-/* UW1: sound.h and file.h are UW2's and declare several of this file's functions with
-   other types (UW1 returns plain char where UW2 returns unsigned char; load_sound_driver
-   takes no slot), so this file declares what it uses itself. */
-
-/* AIL's sound buffer, 12 bytes (sound.h). */
-HOST_LAYOUT_BEGIN
-struct SoundBuff {
-    uint16 pack_type;
-    uint16 sample_rate;
-    char far *data;                     /* 0x04 */
-    uint32 len;                         /* 0x08 */
-};
-HOST_LAYOUT_END
-
-/* AIL's description of a driver (sound.h). */
-HOST_LAYOUT_BEGIN
-struct DrvrDesc {
-    uint16 min_api;
-    uint16 drvr_type;                   /* 0x02: 2 digital, 3 XMIDI */
-    char data_suffix[4];                /* 0x04 */
-    char far *dev_names;                /* 0x08 */
-    int16 io, irq, dma, drq;            /* 0x0C */
-};
-HOST_LAYOUT_END
+#include "file.h"
+#include "gfx.h"
+#include "sound.h"
 
 /* An entry of a global timbre library's directory, 6 bytes. */
 struct GtlHdr {
@@ -98,73 +76,13 @@ struct Effect {
     uint16 length;                      /* 0x03 */
 };
 
-/* UW1's player record: the fields this file uses. */
-struct Player1Sound {
-    char pad00[0x5F];
-    uint16 b5F_0:1;                     /* word 0x5F */
-    uint16 drawn:1;                     /* the weapon is drawn */
-    uint16 b5F_2:13;
-    uint16 cup:1;                       /* 0x60 bit 7: the cup of wonder found */
-};
-#define PLAYER1 ((struct Player1Sound *)player)
-
 /* AIL.ASM (seg020) */
-unsigned far AIL_default_timbre_cache_size(int drv);
-void far AIL_define_timbre_cache(int drv, void far *cache, unsigned size);
-struct DrvrDesc far * far AIL_describe_driver(int drv);
-int far AIL_detect_device(int drv, int io, int irq, int dma, int drq);
-int far AIL_index_VOC_block(int drv, void far *voc, int block, struct SoundBuff far *buf);
-void far AIL_init_driver(int drv, int io, int irq, int dma, int drq);
-void far AIL_install_timbre(int drv, int bank, int patch, void far *src);
-int far AIL_lock_channel(int drv);
-int far AIL_register_driver(void far *driver);
-int far AIL_register_sequence(int drv, void far *xmid, int n, void far *state, void far *ctrl);
-void far AIL_register_sound_buffer(int drv, int n, struct SoundBuff far *buf);
-int far AIL_register_timer(void (far *fn)(void));
-void far AIL_release_channel(int drv, int ch);
-void far AIL_release_sequence_handle(int drv, int seq);
-void far AIL_release_timer_handle(int timer);
-void far AIL_send_channel_voice_message(int drv, int status, int d1, int d2);
-unsigned far AIL_sequence_status(int drv, int seq);
-void far AIL_set_relative_tempo(int drv, int seq, int percent, int ms);
-void far AIL_set_relative_volume(int drv, int seq, int percent, int ms);
-void far AIL_set_timer_frequency(int timer, uint32 hertz);
-void far AIL_shutdown(char far *msg);
-unsigned far AIL_sound_buffer_status(int driver, int buffer);
-void far AIL_start_digital_playback(int driver);
-void far AIL_start_sequence(int drv, int seq);
-void far AIL_start_timer(int timer);
-void far AIL_startup(void);
-unsigned far AIL_state_table_size(int drv);
-void far AIL_stop_digital_playback(int driver);
-void far AIL_stop_sequence(int drv, int seq);
-void far AIL_stop_timer(int timer);
-unsigned far AIL_timbre_request(int drv, int seq);
-int far AIL_timbre_status(int drv, int bank, int patch);
 
 /* Other files */
-int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
 char far bltfromdrive(char *name, void far *buf, unsigned n);
-char far seg012_10F(char physical, unsigned logical);
-int far ovr113_2A2(int count, int16 *out);
 /* CUTS.C (ovr105): the cutscenes' buffer (seg049:2100), lent to the speech. */
-char far * far free_block(void);
 
 /* This file, called before their definitions */
-void far * far load_sound_driver(char *name);
-char far init_timbres(void);
-char far install_timbre(unsigned char bank, unsigned char patch);
-char far read_file_to_mbuf(char *name);
-void far seg014_1DC5_15C5(void);
-void far seg014_1DC5_C7C(void);
-char far init_fx(void);
-unsigned char far fx_play(unsigned char fx, unsigned char patch, unsigned char note,
-                          unsigned char vel, unsigned char pan, int length);
-char far play_cup_tune(char *played);
-char far music_over(void);
-void far do_settings(struct DrvrDesc far *d, int16 *s);
-char far init_speech(void);
-void far update_speech(void);
 
 /* match: far variables, each its own segment: music_repeats is the listing's seg061
    (561B:0000), effects its seg062 (561C:0000), after AI.C's atk_charge. */
@@ -936,14 +854,14 @@ char far play_cup_tune(char *played)
     char tune[9] = { 0x40, 0x43, 0x41, 0x3E, 0x40, 0x47, 0x48, 0x47, 0x43 };
     char i;
 
-    if (PLAYER1->cup)
+    if (player->cup)
         return 0;
     for (i = 0; i < 9; i = i + 1)
         if (tune[i] != played[i])
             return 0;
     if (place_new(0L, 0xAE)) {
         game_sprint(0x88);
-        PLAYER1->cup = 1;
+        player->cup = 1;
         return 1;
     }
     return 0;
@@ -1009,7 +927,7 @@ void far change_music_maybe(void)
     if ((curmusic == 9 || curmusic == 0x0B) && !music_over())
         return;
     if (COMBAT(curmusic) && GAME_TIME() > lastcombattime + 0xA00) {
-        if (PLAYER1->drawn)
+        if (player->drawn)
             newmusic = 8;
         else
             newmusic = rand() % 3 + 2;
@@ -1028,7 +946,7 @@ void far change_music_maybe(void)
     } else if (music_over()) {
         if ((music_repeats[curmusic] == 0 || WALKING(curmusic)) && scrmode == 1 || newmusic == 0)
             newmusic = rand() % 3 + 2;
-        if (PLAYER1->drawn)
+        if (player->drawn)
             newmusic = 8;
         load_new_music(newmusic, 1);
         theme_changed = 0;

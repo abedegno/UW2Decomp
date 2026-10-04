@@ -9,21 +9,25 @@
 #include "uw2.h"
 
 struct Object;
+union Link;
 
 #include "object.h"
 
-/* ARC.C: the .ark archives */
-/* UW1: the archive functions (sys/ARC.C: open_arc, close_arc, put_arc, get_arc, check_arc,
-   count_arc) take UW1's 11-byte struct Arc or a file name, not UW2's archive numbers; each
-   caller declares them for now (docs/NOTES.md, ARC.C), until the readability pass. */
+/* An open archive, 11 bytes, kept by the caller (UW1; UW2 keeps its archives in ARC.C by
+   number). The callers that only pass it on hold it as bytes (char[12] on the stack). */
+struct Arc {
+    int16 fd;                           /* 0x00 */
+    int16 tmpfd;                        /* 0x02, _arc.tmp */
+    uint16 count;                       /* 0x04, number of blocks */
+    uint32 far *offtab;                 /* 0x06, the blocks' offsets */
+    unsigned char dirty;                /* 0x0A, offtab changed */
+};
 
 /* MISCUTIL.C: file I/O helpers */
 void far flip_bool(char *p);
-int far octant(char x, char y);
 void far print_path_to(char far *s, int px, int py, int ignored, int ox, int oy, int previous,
                        int radius);
 /* name: FM Towns get_theta_ (IDA's DartSatelliteVectoring_ovr167_313). */
-int far get_theta(int sx, int sy, int x, int y);
 void far errmsg(char *a, char *b);
 void far check_dirs(void);
 void far check_fds(void);
@@ -32,28 +36,20 @@ int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n);
    read() and write() here; DOS cannot (_read is the near-buffer library call at 0E72:1FCD).
    name: the DOS helpers' original names are not known, so these are the IDA names. */
 int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
-int far our_open(char *name, int directory, int mode);
-int far OkEnoughMem_ovr167_463(void);
 /* name: FM Towns bltfromdrive_ (read_file_to_mbuf_ and load_sound_driver_ call it where
    DOS calls 65E0:007A). */
-unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
-unsigned char far blttodrive(void far *buf, char *name, unsigned n);
 FILE * far data_fopen(char *name, char *mode);
 int far mpos(char x, char y);
 int far xorread(int fd, unsigned char key, unsigned char far *buf, unsigned n);
 int far xorwrite(int fd, unsigned char key, unsigned char far *buf, unsigned n);
+int far do_beep(int freq, int ms);
+void far memcheck(void);
 
 /* LZSS.C: LZSS compression of archive blocks (Okumura's LZSS; the "LZW" in the original
    names is not the algorithm). Both return the number of bytes produced. */
-unsigned far DecompressLZW_disk(unsigned char far *dst, int fd, unsigned char far *work,
-                                unsigned worksize, unsigned n);
-unsigned far CompressLZW_disk(unsigned char far *src, int fd, unsigned char far *work,
-                              unsigned worksize, unsigned n);
 
 /* ACLZW.C: reading and writing a compressed archive block: the uncompressed length as a
    long, then the LZSS stream (the name says LZW; the algorithm is LZSS.C's) */
-unsigned far ac_unshrink_disk(char far *dst, int fd, unsigned n);
-unsigned far ac_shrink_disk(char far *src, int fd, unsigned n);
 /* LZSS.C's work area. ACLZW.C places it at the start of stdat and the file buffer straight after
    it, at +722Fh. The bytes at 0 and 0Dh and the words at 722Bh and 722Dh are set or
    tested by LZSS.C but not otherwise used, so their meaning is unknown. text_buf's length is
@@ -73,7 +69,6 @@ struct LzwWork {
     int16 w722B;                        /* 0x722B, set to -1 when compressing */
     int16 w722D;                        /* 0x722D, set to 0 when compressing */
 };
-extern struct LzwWork far *globals;
 
 /* INVSAVE.C: saving and restoring the player's inventory in player.dat */
 void far FreePlayerInv(union Link far *head);
@@ -89,16 +84,15 @@ char far SavePlayerInv(char *name);
 char far RestorePlayerInv(char *name);
 
 /* GAMEWRAP.C: saving and restoring games, and changing level */
-unsigned char far clear_dir(char *dir);
+char far clear_dir(char *dir);
 unsigned char far copy_dir(char *src, char *dst);
 void far do_level_hacks(int level, int mode);
 int far GetLevel(int level);
 void far get_save_descs(char descs[][40], int16 *found);
 void far ShowSaveRest(void);
 void far DoSaveRest(int restore, int slot);
-unsigned char far copy_file(char *srcdir, char *dstdir, char *name);
-void far gruesome_door_hack(int x, int y);
-unsigned char far init_save(void);
+char far copy_file(char *src, char *dst);
+char far init_save(void);
 /* RestoreGame(char slot) and SaveGame(char slot, char *desc). */
 /* match: no prototypes under Turbo C (OLDSTYLE, portable.h): their callers push the slot as
    an int. SaveGame is declared before
@@ -106,13 +100,14 @@ unsigned char far init_save(void);
    the publics, which for names with the same hash key is the order they were first seen:
    the EXE's stub has SaveGame before SaveLevel. */
 char far RestoreGame OLDSTYLE((char slot));
-int far SaveGame OLDSTYLE((char slot, char *desc));
+char far SaveGame OLDSTYLE((char slot, char *desc));
 char far ChangeLevel(int from, int to);
+char far SaveLevel(int level);
 
 /* SCRSHOT.C: screenshots */
-void far ovr116_194(int fd, char size);
-void far ovr116_2A3(int fd, int bits);
 int far GifPixel_ovr116_420(void);
 void far save_screenshot(int seg);
+void far ovr112_194(int fd, char size);
+void far ovr112_2A3(int fd, int bits);
 
 #endif

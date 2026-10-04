@@ -36,6 +36,9 @@
 #include "sys.h"
 #include "ui.h"
 
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far IsMobElem(struct Object far *obj);
+
 /* Removes the lock object (a MAJOR_SPEC object of minor class 0) from obj's contents:
    the first one, or every one if all is set. Returns 1 only when all was set and a lock
    was found; with all clear it returns 0 even after removing one. */

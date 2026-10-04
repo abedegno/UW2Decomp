@@ -32,21 +32,9 @@
 #include "sys.h"
 #include "ui.h"
 
-/* UW1: the class is bits 5-7 of byte 0x64 of the player record (UW2: 0x65); player.h has
-   UW2's layout. */
-struct Player1Stats {
-    char pad0[0x64];
-    uint16 lefty:1;                     /* 0x64 */
-    uint16 female:1;
-    uint16 body:3;
-    uint16 pclass:3;
-};
-#define PLAYER1 ((struct Player1Stats *)player)
-
 /* UW1: the font loader takes a file name (UW2: grfx_quikfont(int)); UW1's name for
    UW2's seg003_0272_5025 (copy part of a saved screen area back). */
 unsigned char far grfx_load_font(char *name);
-void far seg003_581E(int handle, int x, int y, int w, int h, int sx, int sy);
 
 /* The first skill shown in the skill list (UW1 DS:1D5C, UW2 DS:1B92). */
 /* name: UW2's FM Towns build has no name for it, so it was static; the name is ours. */
@@ -56,7 +44,6 @@ static unsigned char skill_top = 0;
 static char ordinals[4][3] = { "ST", "ND", "RD", "TH" };
 /* Saved screen areas, UW1 DS:1D69. */
 int16 spsave[3] = { 0, 0, 0 };
-
 
 /* The x of the right edge everything is aligned to (UW2 0x135). */
 #define RIGHT   0x138
@@ -73,7 +60,7 @@ void far sp_hdr(void)
     strupr(buf);
     string_to_screen(buf, (0x48 - string_width(buf)) / 2 + 0xF2, 0xB9);
     /* the class name, upper-cased in the string buffer */
-    string_to_screen(seg039_3452_814(get_string((PLAYER1->pclass + 0x17) | STR_CHARGEN)), 0xF2, 0xB2);
+    string_to_screen(seg039_3452_814(get_string((player->pclass + 0x17) | STR_CHARGEN)), 0xF2, 0xB2);
     itoa(player->level, buf, 10);
     n = player->level < 4 ? player->level - 1 : 3;
     strcat(buf, ordinals[n]);

@@ -46,18 +46,9 @@
 #include "sys.h"
 #include "view3d.h"
 
-/* UW1: the player record differs from UW2's struct Player (player.h). The field this
-   file uses, from the bytes. */
-struct Player1Draw {
-    char pad00[0xB5];
-    uint16 sound:2;                     /* 0xB5 */
-    uint16 music:2;
-    uint16 detail:4;
-};
-#define PLAYER1 ((struct Player1Draw *)player)
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far IsMobElem(struct Object far *obj);
 
-/* UW1: GRSPIC.C's texture lookup: the segment of a texture's bitmap. */
-unsigned far seg009_38C(int index);
 /* UW1: a word for each texture of the level (CONVERSE.C and LOOK.C declare it too). */
 extern int16 w64_types[];
 
@@ -409,7 +400,7 @@ void far do_rect(unsigned char model, struct Object far *o, char heading, int te
     }
     if ((model == 0x10 || model == 0x11) && (tmapson | PickUp) == 0)
         hilite = 0;
-    else if (PickUp == 0 && PLAYER1->detail == 1 && model == 2)
+    else if (PickUp == 0 && player->detail == 1 && model == 2)
         hilite = 1;
     if (hilite != -1) {
         *dbptr++ = 2;

@@ -37,26 +37,12 @@
 #include "sys.h"
 #include "ui.h"
 
+/* Declared in each file that uses it, its own way (no header). */
+extern struct Spell far spells[53];
+unsigned char far player_eat(int nutrition);
+
 /* An active spell word, struct Player's spells[]: the class in bits 0 to 3, the
    subclass in bits 4 to 7, the duration left (in duration checks) in the high byte. */
-/* UW1: struct Player differs from UW2's (player.h). This file reads the poison level and
-   the active spell count (word 0x5F, bits 2-5 and 6-9), the hallucination and drink
-   levels (byte 0x61 bits 2-3, word 0x61 bits 4-9) and the swimming count (byte 0xB9). */
-struct Player1Time {
-    char pad0[0x5F];
-    uint16 b5F_0:1;
-    uint16 drawn:1;
-    uint16 poison:4;                    /* word 0x5F, bits 2-5 */
-    uint16 active_spells:4;             /* word 0x5F, bits 6-9 */
-    uint16 nrunes:2;                    /* byte 0x60, bits 2-3 */
-    uint16 b60_4:4;
-    uint16 b61_0:2;                     /* byte 0x61 */
-    uint16 shrooms:2;                   /* byte 0x61, bits 2-3 */
-    uint16 drunk:6;                     /* word 0x61, bits 4-9 */
-    char pad63[0xB9 - 0x63];
-    unsigned char swim_count;           /* 0xB9 */
-};
-#define PLAYER1 ((struct Player1Time *)player)
 
 #define SPELL_CLASS(s)  ((s) & 0x0F)
 #define SPELL_SUB(s)    (((s) & 0xF0) >> 4)
@@ -85,9 +71,9 @@ char far dispel_spell(int16 *i)
         }
         if (SPELL_CLASS(player->spells[*i]) == SPELLC_MOTION)
             fiz_update = 1;
-        PLAYER1->active_spells--;
-        if ((*i)-- < PLAYER1->active_spells)
-            player->spells[*i + 1] = player->spells[PLAYER1->active_spells];
+        player->active_spells--;
+        if ((*i)-- < player->active_spells)
+            player->spells[*i + 1] = player->spells[player->active_spells];
     }
     return 1;
 }
@@ -101,7 +87,7 @@ void far duration_check(void)
 
     changed = 0;
     plyregen[1]++;
-    for (i = 0; i < PLAYER1->active_spells; i++)
+    for (i = 0; i < player->active_spells; i++)
     {
         stab = SPELL_STAB(player->spells[i]);
         if (stab == 1)
@@ -111,9 +97,9 @@ void far duration_check(void)
     }
     if (DegradeLights(1, plyregen[1]))
         changed = 1;
-    if (PLAYER1->shrooms)
+    if (player->shrooms)
     {
-        if (--PLAYER1->shrooms == 0)
+        if (--player->shrooms == 0)
             changed = 1;
     }
     if (changed)
@@ -128,13 +114,13 @@ void far duration_check(void)
         if (plyregen[0] & 2)
             restore_mana(ThePlayer, -1);
     }
-    if (PLAYER1->swim_count > 0x50)
+    if (player->swim_count > 0x50)
         sink_sink_sink();
     if (plyregen[1] % 3 == 0)
     {
-        if (PLAYER1->poison)
+        if (player->poison)
         {
-            dmg = PLAYER1->poison--;
+            dmg = player->poison--;
             damage_item(ThePlayer, 0L, 0, 0, dmg, 0x10);
         }
         if ((dmg = skill_check(player->skills[SKILL_MANA], 10)) > 0)
@@ -143,8 +129,8 @@ void far duration_check(void)
     if (plyregen[1] % 24 == 0)
     {
         player_eat(-3 - (rand() & 3));
-        if (PLAYER1->drunk)
-            PLAYER1->drunk--;
+        if (player->drunk)
+            player->drunk--;
         if ((rand() & 3) == 0)
             DoWanderingMonsters(1);
         yearly_checkup();
@@ -213,9 +199,9 @@ void far sink_sink_sink(void)
     load = 0;
     if (player->max_weight != 0)
         load += (player->weight << 5) / player->max_weight;
-    if ((skill = skill_check(player->skills[SKILL_SWIMMING], load)) < 1 && PLAYER1->swim_count < 0x8C)
-        PLAYER1->swim_count += rollem(3 - skill, 4);
-    if (PLAYER1->swim_count > 0x78)
+    if ((skill = skill_check(player->skills[SKILL_SWIMMING], load)) < 1 && player->swim_count < 0x8C)
+        player->swim_count += rollem(3 - skill, 4);
+    if (player->swim_count > 0x78)
     {
         hurt = 2 - skill_check(player->skills[SKILL_SWIMMING], load);
         if (hurt)
@@ -235,10 +221,10 @@ char far set_curmagic(unsigned char cls, unsigned char sub, unsigned char stabil
 {
     unsigned char stab;
 
-    if (PLAYER1->active_spells == 3)
+    if (player->active_spells == 3)
         return 0;
-    player->spells[PLAYER1->active_spells] =
-        (player->spells[PLAYER1->active_spells] >> 8 << 8) + cls + (sub << 4);
+    player->spells[player->active_spells] =
+        (player->spells[player->active_spells] >> 8 << 8) + cls + (sub << 4);
     switch (stability)
     {
     case 1:
@@ -254,9 +240,9 @@ char far set_curmagic(unsigned char cls, unsigned char sub, unsigned char stabil
         stab = rollem(3, 20) + 24;
         break;
     }
-    player->spells[PLAYER1->active_spells] =
-        (player->spells[PLAYER1->active_spells] & 0xFF) + (stab << 8);
-    PLAYER1->active_spells++;
+    player->spells[player->active_spells] =
+        (player->spells[player->active_spells] & 0xFF) + (stab << 8);
+    player->active_spells++;
     FixPlayerEquips();
     return 1;
 }

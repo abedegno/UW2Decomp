@@ -33,13 +33,8 @@
 
 /* UW1: the callees under their UW1 listing names (UW2: MapMemory_seg013_1D3C_C7,
    DRAW_RELATED_seg017_2179_320, seg003_0272_5025). */
-char far seg012_10F(char physical, unsigned logical);
-void far seg015_1F9B_325(unsigned offset, int16 far *width, int16 far *height);
-void far seg003_581E(int handle, int x, int y, int w, int h, int sx, int sy);
 /* UW1: the texture page and segment tables in seg051 (the 3D renderer's far data,
    assembly); the listing has no names for them. */
-extern unsigned char far seg051_C378[];
-extern uint16 far seg051_C3EC[];
 
 /* Maps the EMS page holding slot icon into physical page 2 (unless it is mapped already,
    obj_inpage1) and returns the picture's address in the frame. */

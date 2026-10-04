@@ -37,18 +37,7 @@
 #include "combat.h"
 #include "critter.h"
 #include "file.h"
-/* UW1: fadein and fadeout have no pump argument, and gronk_gr and read_quikpal return
-   char; gfx.h has
-   UW2's, renamed out of the way. */
-#define fadein UW2_fadein
-#define fadeout UW2_fadeout
-#define gronk_gr UW2_gronk_gr
-#define read_quikpal UW2_read_quikpal
 #include "gfx.h"
-#undef fadein
-#undef fadeout
-#undef gronk_gr
-#undef read_quikpal
 #include "inv.h"
 #include "map.h"
 #include "object.h"
@@ -58,9 +47,10 @@
 #include "ui.h"
 #include "view3d.h"
 
-void far fadein(unsigned char far *src, int count);
-void far fadeout(unsigned char far *src, int count);
-char far gronk_gr(char *art, int start, int count, ArtAllocFn adr, ArtMoveFn move);
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
+void far grfx_clear(void);
+
 char far read_quikpal(int n, void far *dest);
 /* UW1: GRFX.C's font loader takes the font's file name (UW2's grfx_quikfont an index). */
 unsigned char far grfx_load_font(char *name);
@@ -79,81 +69,6 @@ struct ChrOpt {
 };
 HOST_LAYOUT_END
 
-/* UW1: the player record differs from UW2's struct Player (player.h). The fields this
-   file uses, from the bytes. */
-struct Player1Gen {
-    char name[0x1E];                    /* 0x00 */
-    unsigned char strength;             /* 0x1E */
-    unsigned char dexterity;            /* 0x1F */
-    unsigned char intelligence;         /* 0x20 */
-    unsigned char skills[20];           /* 0x21 */
-    unsigned char health;               /* 0x35 */
-    unsigned char maxhealth;            /* 0x36 */
-    unsigned char play_mana;            /* 0x37 */
-    unsigned char max_mana;             /* 0x38 */
-    unsigned char hunger;               /* 0x39 */
-    unsigned char fatigue;              /* 0x3A */
-    unsigned char food_heal;            /* 0x3B */
-    unsigned char b3C;                  /* 0x3C */
-    unsigned char level;                /* 0x3D */
-    uint16 spells[3];                   /* 0x3E */
-    unsigned char runebag[3];           /* 0x44 */
-    unsigned char shelf[3];             /* 0x47 */
-    uint16 weight;                      /* 0x4A */
-    uint16 max_weight;                  /* 0x4C */
-    uint32 exp;                         /* 0x4E */
-    unsigned char skill_points;         /* 0x52 */
-    unsigned char skill_points_earned;  /* 0x53 */
-    int16 saved_x;                      /* 0x54 */
-    int16 saved_y;
-    int16 saved_z;
-    int16 saved_facing;                 /* 0x5A */
-    int16 saved_level;                  /* 0x5C */
-    unsigned char moonstone:4;          /* 0x5E */
-    unsigned char b5E_4:4;
-    uint16 b5F_0:1;                     /* word 0x5F */
-    uint16 drawn:1;
-    uint16 poison:4;
-    uint16 active_spells:4;             /* word 0x5F, bits 6-9 */
-    uint16 nrunes:2;                    /* 0x60, bits 2-3 */
-    uint16 b60_4:1;
-    uint16 b60_5:1;
-    uint16 b60_6:1;
-    uint16 b60_7:1;
-    uint16 b61_0:2;                     /* 0x61 */
-    uint16 shrooms:2;
-    uint16 drunk:6;                     /* word 0x61, bits 4-9 */
-    uint16 talisman_ok:1;               /* 0x62, bit 2 */
-    uint16 b62_3:1;
-    uint16 maze:1;                      /* 0x62, bit 4: the maze navigation spell */
-    uint16 b62_5:3;
-    unsigned char light;                /* 0x63 */
-    uint16 lefty:1;                     /* 0x64 */
-    uint16 female:1;
-    uint16 body:3;
-    uint16 pclass:3;
-    uint32 quests;                      /* 0x65 */
-    unsigned char quest_bytes[4];       /* 0x69 */
-    unsigned char talismans;            /* 0x6D, talismans left */
-    uint16 b6E;                         /* 0x6E */
-    unsigned char game_vars[0x40];      /* 0x70 */
-    char padB0[0xB4 - 0xB0];
-    unsigned char easy;                 /* 0xB4 */
-    uint16 sound:2;                     /* 0xB5 */
-    uint16 music:2;
-    uint16 detail:4;
-    uint16 fps:3;                       /* word 0xB6 */
-    uint16 terrain:8;
-    uint16 bB7_3:5;
-    unsigned char motion_state;         /* 0xB8 */
-    unsigned char swim_count;           /* 0xB9 */
-    char padBA[0xC2 - 0xBA];
-    unsigned char lore[8];              /* 0xC2 */
-    char padCA[0xCE - 0xCA];
-    uint32 game_clock;                  /* 0xCE */
-};
-#define PLAYER1 ((struct Player1Gen *)player)
-
 /* stdat holding DATA\SKILLS.DAT: four bytes a class, its three attributes and its skill points. */
 #define CLASS_TAB ((unsigned char (far *)[4])stdat)
 /* This file's _BSS, in UW1 DS:48BE..48C5 (UW2 DS:47B8..47BF). */
@@ -162,7 +77,6 @@ struct Player1Gen {
 int16 sknow;
 int16 *chroff;                          /* offsets of the button pictures in chrbuf */
 unsigned char far *chrbuf;
-
 
 /* The starting record of a new character. Fixed values: level 1, one skill point, the
    game clock at 0x10B3000, the moonstone on level 2, eight talismans to destroy, hunger
@@ -174,53 +88,53 @@ void far init_char(char blank)
 {
     register int i;
 
-    PLAYER1->lefty = 1;
-    PLAYER1->exp = 0;
-    PLAYER1->skill_points = 1;
-    PLAYER1->skill_points_earned = 0;
-    PLAYER1->level = 1;
-    PLAYER1->game_clock = 0x10B3000L;
-    PLAYER1->moonstone = 2;
-    PLAYER1->b5E_4 = 0;
-    PLAYER1->poison = 0;
-    PLAYER1->active_spells = 0;
-    PLAYER1->nrunes = 0;
-    PLAYER1->b60_4 = 0;
-    PLAYER1->b60_5 = 0;
-    PLAYER1->b60_7 = 0;
-    PLAYER1->b60_6 = 0;
-    PLAYER1->talisman_ok = 0;
-    PLAYER1->b62_3 = 0;
-    PLAYER1->maze = 0;
-    PLAYER1->b61_0 = 0;
-    PLAYER1->drunk = 0;
-    PLAYER1->shrooms = 0;
-    PLAYER1->detail = 3;
+    player->lefty = 1;
+    player->exp = 0;
+    player->skill_points = 1;
+    player->skill_points_earned = 0;
+    player->level = 1;
+    player->game_clock = 0x10B3000L;
+    player->moonstone = 2;
+    player->tree = 0;
+    player->poison = 0;
+    player->active_spells = 0;
+    player->nrunes = 0;
+    player->armageddon = 0;
+    player->orb = 0;
+    player->cup = 0;
+    player->key = 0;
+    player->talisman_ok = 0;
+    player->garamon = 0;
+    player->maze = 0;
+    player->incense = 0;
+    player->drunk = 0;
+    player->shrooms = 0;
+    player->detail = 3;
     set_graphics_level();
-    PLAYER1->talismans = 8;
-    PLAYER1->quests = 0;
-    PLAYER1->b6E = 0;
-    PLAYER1->fps = 0;
-    PLAYER1->motion_state = 0;
-    PLAYER1->swim_count = 0;
-    PLAYER1->fatigue = 0x40;
-    PLAYER1->food_heal = 0x40;
-    PLAYER1->b3C = 0;
-    memset(PLAYER1->quest_bytes, 0, 4);
-    memset(PLAYER1->shelf, 0x18, 3);
-    memset(PLAYER1->runebag, 0, 3);
-    memset(PLAYER1->game_vars, 0, 0x40);
-    memset(PLAYER1->lore, 0, 8);
-    PLAYER1->game_vars[0x1A] = 0x35;
-    PLAYER1->hunger = 0xC0;
-    PLAYER1->body = rand() % 5;
-    PLAYER1->female = rand() & 1;
+    player->talismans = 8;
+    player->quests = 0;
+    player->dreams = 0;
+    player->fps = 0;
+    player->motion_state = 0;
+    player->swim_count = 0;
+    player->fatigue = 0x40;
+    player->food_heal = 0x40;
+    player->b3C = 0;
+    memset(player->quest_bytes, 0, 4);
+    memset(player->shelf, 0x18, 3);
+    memset(player->runebag, 0, 3);
+    memset(player->game_vars, 0, 0x40);
+    memset(player->lore, 0, 8);
+    player->game_vars[0x1A] = 0x35;
+    player->hunger = 0xC0;
+    player->body = rand() % 5;
+    player->female = rand() & 1;
     for (i = 0; i < NUM_SKILLS; i++)
-        PLAYER1->skills[i] = blank ? 0 : rollem(3, 4);
+        player->skills[i] = blank ? 0 : rollem(3, 4);
     for (i = 0; i < 3; i++)
         playerdat->attr[i] = blank ? 0 : rollem(2, 10) + 10;
     player_compute(1);
-    PLAYER1->weight = 0;
+    player->weight = 0;
     ThePlayer->hp = playerdat->avghit - 6 - rand() % 6;
     PlayerLevel = 1;
     FixPlayerEquips();
@@ -238,7 +152,7 @@ char far set_sklmnu(unsigned char *idx, unsigned char *skills, struct ChrOpt far
     register int pos;
     register int i;
 
-    cls = PLAYER1->pclass;
+    cls = player->pclass;
     for (n = 0, pos = 0; cls * 5 + *idx > n; n++)
         pos += dat[pos] + 1;
     for (; *idx < 5; (*idx)++) {
@@ -323,10 +237,10 @@ void far roll_stats(void)
     register int a;
 
     for (i = 0; i < 3; i++)
-        playerdat->attr[i] = CLASS_TAB[PLAYER1->pclass][i];
+        playerdat->attr[i] = CLASS_TAB[player->pclass][i];
     for (i = 0; i < NUM_SKILLS; i++)
         player->skills[i] = 0;
-    i = CLASS_TAB[PLAYER1->pclass][3];
+    i = CLASS_TAB[player->pclass][3];
     while (i > 0) {
         pts = (rand() & 3) + 1;
         if (pts > i)
@@ -660,19 +574,19 @@ char far gen_char(unsigned char far *buf, unsigned char far *dat, struct ChrOpt 
         case 0:
             s = get_string(strs[choice] | STR_CHARGEN);
             opts[4].strings[0] = choice ? 12 : 7;
-            PLAYER1->female = choice;
+            player->female = choice;
             mouse_hide();
             string_to_screen(s, 0x11, 0xB2);
             mouse_show();
             stage++;
             break;
         case 1:
-            PLAYER1->lefty = choice;
+            player->lefty = choice;
             stage++;
             break;
         case 2:
             s = get_string(strs[choice] | STR_CHARGEN);
-            PLAYER1->pclass = choice;
+            player->pclass = choice;
             roll_stats();
             if (!set_sklmnu(&idx, skills, &opts[3], dat32))
                 stage++;
@@ -695,7 +609,7 @@ char far gen_char(unsigned char far *buf, unsigned char far *dat, struct ChrOpt 
             break;
         case 4:
             Transparency = 1;
-            k = chroff[PLAYER1->female * 5 + choice + 0x11];
+            k = chroff[player->female * 5 + choice + 0x11];
             get_cuts_block(0);
             w = buf[k - 4];
             h = buf[k - 3];
@@ -705,11 +619,11 @@ char far gen_char(unsigned char far *buf, unsigned char far *dat, struct ChrOpt 
             show(x, y, buf + k, h, w, 0, 0);
             mouse_show();
             Transparency = 0;
-            PLAYER1->body = choice;
+            player->body = choice;
             stage++;
             break;
         case 5:
-            PLAYER1->easy = choice;
+            player->easy = choice;
             stage++;
             break;
         case 6:

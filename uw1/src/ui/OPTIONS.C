@@ -41,7 +41,6 @@
    (hilite_pic 816, hilite_row 864). The listing called run_options_panel and
    options_mouse_click ovr130_0 and ovr130_6D6. */
 
-#define gameopts_done uw2_gameopts_done     /* UW1: a char, below */
 #include "file.h"
 #include "gfx.h"
 #include "player.h"
@@ -49,34 +48,6 @@
 #include "sys.h"
 #include "ui.h"
 #include "view3d.h"
-#undef gameopts_done
-
-/* UW1: the player record differs from UW2's struct Player (player.h). The field this
-   file uses, from the bytes. */
-struct Player1Opt {
-    char pad00[0xB5];
-    uint16 sound:2;                     /* 0xB5 */
-    uint16 music:2;
-    uint16 detail:4;
-};
-#define PLAYER1 ((struct Player1Opt *)player)
-
-void far close_option_panel(void);
-void far draw_top_page(void);
-void far draw_save_page(void);
-void far draw_quit_yn_page(void);
-void far draw_music_and_sound_page(void);
-void far draw_detail_page(void);
-void far choose_music(int row);
-void far choose_sounds(int row);
-void far choose_detail(int row);
-void far choose_top(int row);
-void far choose_save(int row);
-void far choose_quit(int row);
-void far set_options_page(int page);
-void far press_options_btn(int row);
-void far options_mouse_click(int x, int y);
-void far options_handle_key(int key);
 
 /* match: this file's _DATA is DS:1A30..1AA5, from LeftPanel to "optbtns"; DS:1AA6
    ("bad tmap ids size") starts the next file. */
@@ -252,7 +223,7 @@ void far draw_detail_page(void)
 {
     int level;
 
-    level = PLAYER1->detail;
+    level = player->detail;
     hilite_pic = -1;
     draw_options_back(5);
     reload_gr_vpic(0x20ED, "optbtns", level + 0x35);
@@ -312,7 +283,7 @@ void far choose_detail(int row)
 
     if (row >= 1 && row <= 4) {
         /* match: -(row - 4), not 4 - row: add ax,-4; neg ax */
-        PLAYER1->detail = level = -(row - 4);
+        player->detail = level = -(row - 4);
         set_graphics_level();
         grSoftPageFlip();
         render_FB();

@@ -41,7 +41,6 @@
 #include "ui.h"
 #include "uw2.h"
 
-
 /* name: FM Towns keeps these as statics after BagSaveHandles, so their names are not known. */
 /* match: these names were chosen to land in _BSS in the EXE's order (UW1: DS:5A82, 5A86,
    5A8A, 5A8C; UW2 also had cursorSaved). */
@@ -49,7 +48,6 @@ static union Link far *invSlots;        /* the inventory slots in the workspace 
 static struct StaticObj far *saveObjs;     /* the saved objects, numbered from 1 */
 static int16 saveNum;                   /* the number of saved objects */
 static void far *saveBuf;               /* the workspace */
-
 
 /* Fills the workspace ws with the player object, the inventory and, in input mode 1, the
    cursor object (which is freed from memory: it is in the copy now). */

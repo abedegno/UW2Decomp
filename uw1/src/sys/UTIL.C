@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include "sys.h"
 
-
 /* Steps *val by step in direction dir (-1 or 1) unless that passes limit; returns whether
    it moved. */
 int far mvcheck(int16 *val, int limit, int step, int dir)

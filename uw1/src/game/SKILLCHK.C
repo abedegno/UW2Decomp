@@ -38,8 +38,7 @@ static unsigned char level_table[15] = { 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 6
    the declaration it saw took an int. */
 void far advance(int levels);
 
-/* UW1: GRFX.C's font loader takes the font's file name; UW1 has no grfx_quikfont (gfx.h
-   declares UW2's, which takes an index). */
+/* UW1: GRFX.C's font loader takes the font's file name (UW2's grfx_quikfont an index). */
 unsigned char far grfx_load_font(char *name);
 
 /* Rolls value - target + 0..30 and grades it: above 28 returns 2 (a great success),

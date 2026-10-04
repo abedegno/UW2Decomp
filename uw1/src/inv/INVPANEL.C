@@ -36,7 +36,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#define AddToEmptySlot UW2_AddToEmptySlot
 #include "gfx.h"
 #include "inv.h"
 #include "object.h"
@@ -44,22 +43,12 @@
 #include "ui.h"
 #include "uw2.h"
 
-/* UW1: the player record's handedness, sex and body type, byte 0x64 (UW2: 0x65); player.h
-   has UW2's layout. */
-struct Player1Inv {
-    char pad0[0x64];
-    uint16 lefty:1;                     /* 0x64 */
-    uint16 female:1;
-    uint16 body:3;
-};
-#define PLAYER1 ((struct Player1Inv *)player)
+/* PLAYER.C defines the record's storage as a byte array; this file reaches it as the
+   union (player.h). */
+extern union PlayerStore PlayerDat;
 
 /* UW1: the paperdoll's pictures (UW2 0x206D): the body, then one per armour position */
 #define PIC_BODY        0x2091
-
-/* UW1: AddToEmptySlot returns a plain char (inv.h: unsigned char). */
-#undef AddToEmptySlot
-char far AddToEmptySlot(struct Object far *obj, int slot);
 
 /* UW1: the font loader takes a file name (UW2: grfx_quikfont(int)). */
 unsigned char far grfx_load_font(char *name);
@@ -127,7 +116,7 @@ void far load_inventory_pix(void)
     register int i;
     register char *name = "bodies";
 
-    reload_gr_vpic(PIC_BODY, name, PLAYER1->female * 10 / 2 + PLAYER1->body);
+    reload_gr_vpic(PIC_BODY, name, player->female * 10 / 2 + player->body);
     for (i = 1; i <= 5; i++)
         invArmorObj[i] = 0;
 }
@@ -220,7 +209,7 @@ void far DoInventoryMouse(int how)
     if (hit > 0 && hit < 21) {
         slot = DisplayToSlot[hit];
         if (CursorObjPtr == 0 && Inventory[slot].f.index == 0) {
-            if (8 - PLAYER1->lefty == slot)
+            if (8 - player->lefty == slot)
                 toggle_fightmode();
             mouse_release(1);
             return;
@@ -333,7 +322,7 @@ char far load_inv_pic(int n, int img)
 {
     register char *name = WRITABLE_STR("armor_f");
 
-    if (PLAYER1->female != 1)
+    if (player->female != 1)
         name[6] = 'm';
     else
         name[6] = 'f';
@@ -584,7 +573,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
         cls = get_class_data();
         return cls[3] == 9;
     }
-    if (8 - PLAYER1->lefty == slot && major == MAJOR_HACK && minor == 0) {
+    if (8 - player->lefty == slot && major == MAJOR_HACK && minor == 0) {
         if (cont != 0 && OBJ_ITEM(cont) == id
             || OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL) && obj->ol.f.link > 1)
             return 0;

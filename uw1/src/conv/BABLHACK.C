@@ -41,20 +41,6 @@
 #include "ui.h"
 #include "uw2.h"
 
-/* UW1: the player record's fields this file uses; player.h has UW2's layout. */
-struct Player1Conv {
-    char pad0[0x21];
-    unsigned char skills[0x64 - 0x21];  /* 0x21 */
-    uint16 lefty:1;                     /* 0x64 */
-    uint16 female:1;
-    int32 quests;                       /* 0x65: quests 0..31, a bit each */
-    unsigned char quest_bytes[4];       /* 0x69: quests 32..35 */
-    unsigned char b6D;                  /* 0x6D: get_quest of 36 and above */
-    char pad6E[0x70 - 0x6E];
-    unsigned char game_vars[0x40];      /* 0x70: x_traps' variables */
-};
-#define PLAYER1 ((struct Player1Conv *)player)
-
 /* set_attitude(arg2 whoami, arg1 attitude), through gronk_whoami. */
 char far set_mob_att(struct Object far *npc, int att)
 {
@@ -121,8 +107,8 @@ int far x_skills(int16 far *args)
     if (val == 10000)
         get_skill(skill);
     else if (val >= 0 && val <= 30)
-        PLAYER1->skills[skill] = val;
-    return PLAYER1->skills[skill];
+        player->skills[skill] = val;
+    return player->skills[skill];
 }
 
 /* x_traps(arg2 variable, arg1 value): set one of the 64 game variables in the player
@@ -135,8 +121,8 @@ int far x_traps(int16 far *args)
     var = getmem(args[-2]);
     val = getmem(args[-1]);
     if (val >= 0 && val <= 0x3F)
-        PLAYER1->game_vars[var] = val;
-    return PLAYER1->game_vars[var];
+        player->game_vars[var] = val;
+    return player->game_vars[var];
 }
 
 /* place_object(arg3 object, arg2 x, arg1 y): take an object from the talker and put it
@@ -223,11 +209,11 @@ void far set_quest(int16 far *args)
     if (quest >= 0) {
         if (quest < 0x20) {
             if (val)
-                PLAYER1->quests |= 1 << quest;
+                player->quests |= 1 << quest;
             else
-                PLAYER1->quests &= ~(1 << quest);
+                player->quests &= ~(1 << quest);
         } else if (quest < 0x24)
-            PLAYER1->quest_bytes[quest - 0x20] = val;
+            player->quest_bytes[quest - 0x20] = val;
     }
 }
 
@@ -241,16 +227,16 @@ int far get_quest(int16 far *args)
     if (quest < 0)
         return 0;
     if (quest < 0x20)
-        return (PLAYER1->quests & (1 << getmem(args[-1]))) != 0;
+        return (player->quests & (1 << getmem(args[-1]))) != 0;
     if (quest < 0x24)
-        return PLAYER1->quest_bytes[quest - 0x20];
-    return PLAYER1->b6D;
+        return player->quest_bytes[quest - 0x20];
+    return player->talismans;
 }
 
 /* sex: arg2 for a male player, arg1 for a female one (player->female is 0 or 1). */
 int far sex(int16 far *args)
 {
-    return getmem(args[-2 + PLAYER1->female]);
+    return getmem(args[-2 + player->female]);
 }
 
 /* gronk_door(arg3 x, arg2 y, arg1 how): open (0), close (1) or toggle (2) the door at
@@ -275,7 +261,7 @@ int far gronk_door(int16 far *args)
         OpenDoor(0, door);
         break;
     case 1:
-        /* UW1: CloseDoor takes the door alone; object.h has UW2's two-argument form */
+        /* UW1: CloseDoor takes the door alone (UW2's takes two) */
         ((void (far *)(struct Object far *))CloseDoor)(door);
         break;
     case 2:

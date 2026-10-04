@@ -16,9 +16,10 @@
 #include "inv.h"
 #include "object.h"
 #include "ui.h"
+#include "sys.h"
 
-/* UW1: the debug printer (DEBUG.C, ovr106) */
-void far dprintf(char *fmt, ...);
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
 
 struct Combination {
     uint16 first, second, output;

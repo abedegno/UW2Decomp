@@ -33,9 +33,6 @@
    fizix_update; the job of System Shock's PHYSICS.C). */
 
 #include <stdlib.h>
-/* UW1: player_setup takes no third argument (below); player.h declares UW2's, so its
-   declaration is renamed out of the way. */
-#define player_setup UW2_player_setup
 #include "event.h"
 #include "gfx.h"
 #include "map.h"
@@ -45,19 +42,6 @@
 #include "sound.h"
 #include "sys.h"
 #include "ui.h"
-#undef player_setup
-
-/* UW1: struct Player differs from UW2's (player.h). This file reads the movement state
-   (fps, bits 0-2 of byte 0xB6), the motion state bits (byte 0xB8) and the swimming
-   count (byte 0xB9), where UW2 has them at 0x303, 0x306 and 0x307. */
-struct UW1PlayerMotion {
-    char pad[0xB6];
-    uint16 fps:3;                       /* 0xB6 (the run takes one byte) */
-    char padB7;
-    unsigned char motion_state;         /* 0xB8 */
-    unsigned char swim_count;           /* 0xB9 */
-};
-#define PLAYER1 ((struct UW1PlayerMotion *)player)
 
 /* Uninitialised data, DS:2492..24A1 (UW2 DS:229A onwards). saved_dz is the four bytes
    at DS:249C, which nothing in the game references. */
@@ -69,8 +53,6 @@ int16 GrSq;                             /* the player's tile, as an index into m
 int16 pFPS[3];                          /* forward, side and backward speeds */
 static int32 saved_dz;
 int16 lastTerr;                         /* the terrain bits parse_player_terr last saw */
-
-
 
 /* Initialised data, DS:C8 onwards. Speeds are in PN.speed's units, 0x2F to an object's
    OBJ_SPEED step (OBJPHYS.C). MaxPlayerAccel is the most the speed may change in a tick;
@@ -93,11 +75,11 @@ char far water_set(int terr)
     if (terr & 2)
     {
         swimming = 1;
-        PLAYER1->swim_count = 0x60;
+        player->swim_count = 0x60;
         punt_fightmode();
     }
     else
-        PLAYER1->swim_count = 0x10;
+        player->swim_count = 0x10;
     return swimming;
 }
 
@@ -137,7 +119,7 @@ void far parse_player_terr(int terr, char force)
         }
         newFPS(state);
         if (!swimming)
-            PLAYER1->swim_count = 0;
+            player->swim_count = 0;
     }
     if (terr & 0x10)
     {
@@ -594,11 +576,11 @@ void far newFPS(char state)
     unsigned char trans[7] = { 0, 1, 2, 4, 8, 8, 0 };
 
     if (state == -1)
-        state = PLAYER1->fps;
+        state = player->fps;
     else
     {
-        PLAYER1->motion_state = (PLAYER1->motion_state & 0xE0) + trans[state];
-        PLAYER1->fps = state;
+        player->motion_state = (player->motion_state & 0xE0) + trans[state];
+        player->fps = state;
     }
     pFPS[0] = Run_FPS * ratios[state] / 10;
     pFPS[1] = Side_FPS * ratios[state] / 10;

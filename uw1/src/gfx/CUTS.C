@@ -52,27 +52,6 @@ struct LpDesc;
 struct CutsState;
 int far read_lp_inc(int fd, unsigned page, struct LpDesc far *desc, unsigned n, void far *dst);
 int far cutsop_stop(unsigned far *code, struct CutsState *st);
-/* UW1: the cutscene state and the handlers that take it differ from UW2's (gfx.h); those
-   declarations are renamed out of the way. */
-#define CutsState UW2_CutsState
-#define cutsop_txt UW2_cutsop_txt
-#define cutsop_erase UW2_cutsop_erase
-#define cutsop_func UW2_cutsop_func
-#define cutsop_pause UW2_cutsop_pause
-#define cutsop_wait UW2_cutsop_wait
-#define cutsop_skip UW2_cutsop_skip
-#define cutsop_end UW2_cutsop_end
-#define cutsop_loop UW2_cutsop_loop
-#define cutsop_data UW2_cutsop_data
-#define cutsop_say UW2_cutsop_say
-#define cutsop_fadeout UW2_cutsop_fadeout
-#define cutsop_fadein UW2_cutsop_fadein
-#define cutsop_jump UW2_cutsop_jump
-#define cutsop_punt UW2_cutsop_punt
-#define cutsop_clang UW2_cutsop_clang
-#define fadein UW2_fadein
-#define fadeout UW2_fadeout
-#define speech_available UW2_speech_available
 #include "conv.h"
 #include "file.h"
 #include "gfx.h"
@@ -81,48 +60,9 @@ int far cutsop_stop(unsigned far *code, struct CutsState *st);
 #include "sys.h"
 #include "ui.h"
 #include "view3d.h"
-#undef CutsState
-#undef cutsop_txt
-#undef cutsop_erase
-#undef cutsop_func
-#undef cutsop_pause
-#undef cutsop_wait
-#undef cutsop_skip
-#undef cutsop_end
-#undef cutsop_loop
-#undef cutsop_data
-#undef cutsop_say
-#undef cutsop_fadeout
-#undef cutsop_fadein
-#undef cutsop_jump
-#undef cutsop_punt
-#undef cutsop_clang
-#undef fadein
-#undef fadeout
-#undef speech_available
 
-/* UW1: the cutscene's state, on show_anm's stack, 0x4A bytes: UW2's without repeat43, so
-   the speech and fade fields and the flags come two bytes earlier. Flag bits: b0 drawing
-   (cleared while a key skips frames: UW2's b0 is the reverse), b1 a key arrived, b2 play
-   on in this file, b3 play on in the cutscene, b4 Escape may end it, b5 speech is
-   available, b6 speech is playing, b7 the current wait ignores keys. */
-struct CutsState {
-    char name[0x13];                    /* CUTS\csXXX.nXX */
-    int16 x, y, w, h;                   /* 0x13, the window; 320 by 200 for full screen */
-    unsigned char windowed;             /* 0x1B */
-    unsigned char far *palette;         /* 0x1C */
-    char far *text_lines[6];            /* 0x20 */
-    unsigned char color38;              /* 0x38 */
-    int16 flag39;                       /* 0x39, subtitle lines to draw */
-    int16 frame3B, frame3D;             /* 0x3B, the frame a skip runs to, a pause's frame */
-    uint16 frame3F;                     /* 0x3F, pause length (256-tick units) */
-    uint16 repeat41;                    /* 0x41, loops left */
-    int16 speech43, fade45, fade47;     /* 0x43, speech playing, fade in, fade out */
-    union {
-        unsigned char value;
-        struct { uint16 b0:1, b1:1, b2:1, b3:1, b4:1, b5:1, b6:1, b7:1; } bit;
-    } flags;                            /* 0x49 */
-};
+/* Declared in each file that uses it, its own way (no header). */
+void far grfx_clear(void);
 
 /* A colour cycle of the LPF header, 8 bytes, 16 of them at +0x80. */
 struct Cycle { uint16 started, period; char pad4[2]; unsigned char first, last; };
@@ -165,42 +105,14 @@ struct AnmHdr {
 typedef int (far *CutsOp)(uint16 far *code, struct CutsState *st);
 
 /* UW1's declarations where they differ from the headers (UW2's). */
-void far seg042_19B(void);                              /* UW2: seg042_35ED_12B */
-char far seg012_BB(unsigned physical, unsigned logical, int count);   /* UW2: seg013_1D3C_E4 */
-extern unsigned char far seg051_C375;                   /* the textures' first EMS page */
-void far fadein(unsigned char far *src, int count);     /* UW1: no pump argument */
-void far fadeout(unsigned char far *src, int count);
 unsigned char far grfx_load_font(char *name);           /* UW2: grfx_quikfont(int) */
-void far loop_music_maybe(void);
 /* SOUND.C's speech (UW1's speech_available returns a char). */
-char far speech_available(void);
-char far init_voc(void);
-char far play_speech(int n);
-void far update_speech(void);
-char far speech_over(void);
-void far stop_speech(void);
-void far free_speech_stuff(void);
-/* The run/skip/dump delta decoder (seg002, assembly): decodes src into dst. */
-void far seg002_A(unsigned char far *src, unsigned char far *dst);
 /* TMPALLOC.C's conventional workspace (DS:364A), the frame buffer here. */
 extern unsigned char far *conv_ws;
 
-int far cutsop_txt(uint16 far *code, struct CutsState *st);
-int far cutsop_erase(uint16 far *code, struct CutsState *st);
-int far cutsop_func(uint16 far *code, struct CutsState *st);
-int far cutsop_pause(uint16 far *code, struct CutsState *st);
+int far cutsop_wait(uint16 far *code, struct CutsState *st);
 int far cutsop_skip(uint16 far *code, struct CutsState *st);
 int far cutsop_stop(uint16 far *code, struct CutsState *st);
-int far cutsop_end(uint16 far *code, struct CutsState *st);
-int far cutsop_loop(uint16 far *code, struct CutsState *st);
-int far cutsop_data(uint16 far *code, struct CutsState *st);
-int far cutsop_fadeout(uint16 far *code, struct CutsState *st);
-int far cutsop_fadein(uint16 far *code, struct CutsState *st);
-int far cutsop_jump(uint16 far *code, struct CutsState *st);
-int far cutsop_punt(uint16 far *code, struct CutsState *st);
-int far cutsop_say(uint16 far *code, struct CutsState *st);
-int far cutsop_wait(uint16 far *code, struct CutsState *st);
-int far cutsop_clang(uint16 far *code, struct CutsState *st);
 
 /* Initialised data, DS:1236 to DS:12B0. */
 static int16 lp_page = -1;              /* the LPF page read_lp_inc is reading */

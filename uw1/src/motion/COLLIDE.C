@@ -50,6 +50,9 @@
 #include "object.h"
 #include "uw2.h"
 
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far IsMobElem(struct Object far *obj);
+
 /* A tile's terrain word: type 0-3, height 4-7, the floor texture's terrain byte from
    bit 4 (its class, read back as bits 8-9). */
 /* UW1: the terrain byte is shifted left 4 whole; UW2 masks TERR_CLASS (0xC0) and shifts 2. */

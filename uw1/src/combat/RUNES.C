@@ -34,20 +34,8 @@
 #include "sound.h"
 #include "ui.h"
 
-/* UW1: struct Player differs from UW2's (player.h): the active spell count and the shelf's
-   rune count are bits 6-9 of word 0x5F and bits 2-3 of byte 0x60 (UW2 word 0x60 bits 5-8,
-   byte 0x61 bits 1-2), and the game clock is at 0xCE (UW2 0x369). */
-struct Player1Runes {
-    char pad0[0x5F];
-    uint16 b5F_0:1;
-    uint16 drawn:1;
-    uint16 poison:4;
-    uint16 active_spells:4;             /* word 0x5F, bits 6-9 */
-    uint16 nrunes:2;                    /* word 0x60, bits 2-3 */
-    char pad61[0xCE - 0x61];
-    uint32 game_clock;                  /* 0xCE */
-};
-#define PLAYER1 ((struct Player1Runes *)player)
+/* Declared in each file that uses it, its own way (no header). */
+extern struct Spell far spells[53];
 
 /* This file's _BSS, DS:5A90. Set by try_cast, it makes the next rune click start a new
    shelf. */
@@ -106,7 +94,7 @@ void far RedispRune(void)
 void far clear_shelf(void)
 {
     memset(player->shelf, RUNE_NONE, 3);
-    PLAYER1->nrunes = 0;
+    player->nrunes = 0;
     set_runes(player->shelf);
 }
 
@@ -135,12 +123,12 @@ void far mous_in_rune(void)
                 if (dseg_5c99_5A90)
                     clear_shelf();
                 dseg_5c99_5A90 = 0;
-                if (PLAYER1->nrunes == 3) {
+                if (player->nrunes == 3) {
                     player->shelf[0] = player->shelf[1];
                     player->shelf[1] = player->shelf[2];
-                    PLAYER1->nrunes--;
+                    player->nrunes--;
                 }
-                player->shelf[PLAYER1->nrunes++] = rune;
+                player->shelf[player->nrunes++] = rune;
                 set_runes(player->shelf);
             }
         }
@@ -165,7 +153,7 @@ void far try_clear(void)
     if (GameInputMode > 0 && GameInputMode < 4)
         return;
     idx = 2 - (inplist->x >> 4);
-    if (PLAYER1->active_spells > idx) {
+    if (player->active_spells > idx) {
         if (inplist->cmd & 2) {
             parse_aspells(active);
             scroll_print(get_string(active[idx] + 0x180 | STR_SPELLS));
@@ -199,7 +187,7 @@ void far try_cast(int how)
         return;
     }
     dseg_5c99_5A90 = 1;
-    if (PLAYER1->game_clock < lstime + spell_delay) {
+    if (player->game_clock < lstime + spell_delay) {
         play_effect_here(0x15, 0x40, 0);
         return;
     }
@@ -255,7 +243,7 @@ char far player_cast(unsigned char idx)
     } else
         sub = spells[idx].sub;
     spell_delay = (level * 2 - player->level) * 4 + 0x40;
-    lstime = PLAYER1->game_clock;
+    lstime = player->game_clock;
     mspell_mused = level * 3;
     if (cls != SPELLC_MISSILE) {
         player->play_mana -= mspell_mused;

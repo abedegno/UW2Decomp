@@ -49,9 +49,6 @@
 #include "sys.h"
 #include "ui.h"
 
-/* UW1: GRSPIC.C's EMS picture mapper under its UW1 listing name (UW2's seg009_7). */
-void far * far seg009_1(int icon);
-
 /* Initialised data, DS:10E..132, in definition order. FM Towns (UW2) keeps the statics
    after _current_buttongroup (+4 onwards) and its publics in its small-data group, in this
    same order. UW1: no joymovecur, fauxright or mouse_hand. */

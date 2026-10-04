@@ -48,11 +48,6 @@
    crit_attack). */
 
 #include <dos.h>
-/* UW1: these return or take other types than UW2's (below); the headers' declarations
-   are renamed out of the way. */
-#define maybe_cast_defensive_spell UW2_maybe_cast_defensive_spell
-#define set_up_target UW2_set_up_target
-#define move_mobile UW2_move_mobile
 #include <stdlib.h>
 #include "combat.h"
 #include "conv.h"
@@ -66,24 +61,9 @@
 #include "sys.h"
 #include "ui.h"
 #include "view3d.h"
-#undef maybe_cast_defensive_spell
-char far maybe_cast_defensive_spell(void);    /* UW1: char (callers cbw) */
-#undef set_up_target
-#undef move_mobile
-char far set_up_target(void);           /* UW1: char (callers cbw) */
 
-/* UW1: struct Player differs from UW2's (player.h); the fields this file reads. */
-struct Player1AI {
-    char pad0[0x5F];
-    uint16 b5F_0:1;
-    uint16 drawn:1;                     /* word 0x5F, bit 1 */
-    uint16 b5F_2:8;
-    uint16 b60_2:3;                     /* word 0x60, bits 2-4 */
-    uint16 orb_destroyed:1;             /* bit 5, Tybal's orb (inferred from crit_offense) */
-    char pad61[0xCE - 0x61];
-    uint32 game_clock;                  /* 0xCE */
-};
-#define PLAYER1 ((struct Player1AI *)player)
+/* Declared in each file that uses it, its own way (no header). */
+extern struct Spell far spells[53];
 
 /* UW1: the combat music themes (sound.h has UW2's 2, 3 and 4). */
 #define MUSIC1_FOE_HURT 5
@@ -370,7 +350,7 @@ void far crit_offense(void)
         return;
     /* UW1: in Tybal's lair (level 7) while the orb is whole, his guards (race 0x13) close
        right in */
-    if (PlayerLevel == 7 && !PLAYER1->orb_destroyed && mycst->race == 0x13)
+    if (PlayerLevel == 7 && !player->orb && mycst->race == 0x13)
         how = 1;
     dist = tdx * tdx + tdy * tdy;
     dx = myxhome - myxpos;
@@ -527,7 +507,7 @@ char far maybe_cast_defensive_spell(void)     /* UW1: char (callers cbw) */
 {
     if (mycst->spells[2] != 0xFF && rand() % 0x100 < mycst->caster
         && !(char)anti_magic_p(myxpos, myypos)
-        && (PlayerLevel != 7 || PLAYER1->orb_destroyed || mycst->race != 0x13)) {
+        && (PlayerLevel != 7 || player->orb || mycst->race != 0x13)) {
         SET_SPEED(meptr, 0);
         SET_SEQ(meptr, 0xD);
         SET_CAST(meptr, 3);
@@ -548,7 +528,7 @@ unsigned char far crit_magik_attack(void)
     register int r;
 
     if (anti_magic_p(myxpos, myypos)
-        || PlayerLevel == 7 && !PLAYER1->orb_destroyed && mycst->race == 0x13)
+        || PlayerLevel == 7 && !player->orb && mycst->race == 0x13)
         return 0;
     if (tdistsqr < 0x40 && !(char)anti_magic_p(myxpos, myypos)
         && line_of_sight(myxpost, myypost, OBJ_Z(meptr) + ComObjData[OBJ_ITEM(meptr)].height,
@@ -790,7 +770,7 @@ void far check_out_player(void)
     unsigned char head;
     unsigned dist;
 
-    if (OBJ_SPEED(meptr) <= 0 || PLAYER1->drawn) {
+    if (OBJ_SPEED(meptr) <= 0 || player->drawn) {
         SET_GTARG(meptr, 1);
         set_up_target();
         dist = tdx * tdx + tdy * tdy;
@@ -1242,7 +1222,7 @@ void far critter_mv(void)
     if (mycst->bA_1)
         goto do_goal;
     if ((!OBJ_ALLY(meptr) && crithit != myid && mycst->race == typehit && !OBJ_LONER(meptr) || OBJ_ALLY(meptr))
-        && crithittime + 0x200 > PLAYER1->game_clock
+        && crithittime + 0x200 > player->game_clock
         && abs(myxpos - hitx) + abs(myypos - hity) < mycst->hearing) {
         SET_ATTITUDE(meptr, 0);
         SET_B19_0(meptr, 1);
@@ -1501,7 +1481,7 @@ unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
         hitx = OBJ_HOMEX(obj);
         hity = OBJ_HOMEY(obj);
         hitpz = OBJ_Z(obj) >> 3;
-        crithittime = PLAYER1->game_clock;
+        crithittime = player->game_clock;
     }
     if (obj->hp <= damage) {
         obj->hp = 0;

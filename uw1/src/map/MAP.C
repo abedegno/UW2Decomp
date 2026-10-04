@@ -26,25 +26,10 @@
 #include <dos.h>
 #include <alloc.h>
 #include <mem.h>
-/* UW1: map.h declares UW2's Map_Load, Map_Save, Anim_Load and Anim_Save, which take
-   other arguments; their declarations are renamed out of the way. */
-#define Map_Load UW2_Map_Load
-#define Map_Save UW2_Map_Save
-#define Anim_Load UW2_Anim_Load
-#define Anim_Save UW2_Anim_Save
 #include "file.h"
 #include "map.h"
 #include "object.h"
 #include "sys.h"
-#undef Map_Load
-#undef Map_Save
-#undef Anim_Load
-#undef Anim_Save
-
-/* An open archive, ovr091's record (11 bytes). */
-struct Arc {
-    char b[11];
-};
 
 /* ovr091: LEV.ARK access */
 char far open_arc(char far *arc, char *name);
@@ -52,8 +37,6 @@ char far close_arc(char far *arc);
 char far put_arc(char far *arc, int block, void far *buf, int n);
 int far get_arc(char far *arc, int block, void far *buf);
 /* EFFECT.C */
-int far Anim_Load(char *arc, int level);
-char far Anim_Save(char *arc, int level);
 
 /* hgt_val converts a tile's 4-bit floor height to a z, 0x40 a step. mapdata is the level
    block, MapDirty is set by edits to it and cleared by loading and saving. */

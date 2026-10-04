@@ -41,19 +41,8 @@
 #include <io.h>
 #include <fcntl.h>
 #include <stat.h>                       /* sys\stat.h; the build keeps it flat */
-/* UW1: clear_dir, copy_file, SaveGame, blttodrive and init_save return char and copy_file takes two paths, the
-   working directory is a literal, and do_level_hacks's clearobj is ovr109's (below); the
-   headers have UW2's, renamed out of the way. */
-#define clear_dir UW2_clear_dir
-#define init_save UW2_init_save
-#define copy_file UW2_copy_file
-#define SaveGame UW2_SaveGame
-#define HomeDir UW2_HomeDir
-#define blttodrive UW2_blttodrive
 /* UW1: map.h (which other headers include too) has UW2's Map_Load and Map_Save; UW1's take
    the archive record and the level (declared below). */
-#define Map_Load uw2_Map_Load
-#define Map_Save uw2_Map_Save
 #include "combat.h"
 #include "critter.h"
 #include "event.h"
@@ -66,23 +55,7 @@
 #include "player.h"
 #include "sound.h"
 #include "sys.h"
-/* UW1: ui.h has UW2's automap prototypes (an int flags where UW1 passes the archive); this
-   file declares UW1's below, so the header's are renamed out of the way. */
-#define ClearAutoMap uw2_ClearAutoMap
-#define GetAutoMapLevel uw2_GetAutoMapLevel
-#define SaveAutoMapLevel uw2_SaveAutoMapLevel
 #include "ui.h"
-#undef Map_Load
-#undef Map_Save
-#undef ClearAutoMap
-#undef GetAutoMapLevel
-#undef SaveAutoMapLevel
-#undef clear_dir
-#undef init_save
-#undef copy_file
-#undef SaveGame
-#undef HomeDir
-#undef blttodrive
 
 /* UW1: the working directory. */
 #define HomeDir "SAVE0\\"
@@ -91,47 +64,12 @@
    jump after it, as if a debugging message had been compiled out. */
 #define complain(what)
 
-char far clear_dir(char *dir);
-char far copy_file(char *src, char *dst);
-char far SaveGame OLDSTYLE((char slot, char *desc));
-char far SaveLevel(int level);
 char far blttodrive(void far *buf, char *name, unsigned n);
-void far set_maze(char on);
 
-/* UW1: LEV.ARK's archive access (ovr091), the map's load and save (ovr123), the texture
-   map's (ovr131) and the automap's (ovr092), none matched yet: the listing's names. arc
-   is a 12-byte archive record. */
+/* LEV.ARK's archive access (ARC.C), declared as this file uses it: arc is a 12-byte buffer
+   holding the archive record (file.h's struct Arc). */
 char far open_arc(char far *arc, char *name);
 char far close_arc(char far *arc);
-char far Map_Load(char *arc, int level);
-char far Map_Save(char *arc, int level);
-void far ClearAutoMap(void);
-void far GetAutoMapLevel(char *arc, int level);
-char far SaveAutoMapLevel(char *arc, int level);
-void far clear_paths(void);
-/* UW1: the automap's update flag (the listing's name, DS:0546). */
-extern char ProbablyAutomapEnabled_dseg_5c99_546;
-
-/* UW1: the player record's fields this file uses (struct Player is UW2's). */
-struct Player1Wrap {
-    char pad0[0x37];
-    unsigned char play_mana;            /* 0x37 */
-    unsigned char max_mana;             /* 0x38 */
-    char pad39[0x60 - 0x39];
-    uint16 b60_0:4;                     /* 0x60 */
-    uint16 b60_4:1;                     /* 0x60 bit 4 (clearobj on arrival) */
-    uint16 orb:1;                       /* 0x60 bit 5: the orb is destroyed */
-    uint16 b60_6:2;
-    char pad61;
-    uint16 b62_0:4;                     /* 0x62 */
-    uint16 maze:1;                      /* 0x62 bit 4: the maze navigation spell */
-    uint16 b62_5:3;
-    char pad63[0xB0 - 0x63];
-    unsigned char bB0;                  /* 0xB0: the saved max mana, or automap flag */
-};
-#define PLAYER1 ((struct Player1Wrap *)player)
-
-
 
 /* Makes the SAVE0 directory, empties it, and checks for 0x9B0A0 bytes free on the
    current drive. Returns 0 (start-up then stops with "Not enough disk space") if not. */
@@ -477,7 +415,7 @@ char far ChangeLevel(int from, int to)
      when leaving, and turned off after a restore. */
 void far do_level_hacks(int level, register int mode)
 {
-    if (PLAYER1->b60_4 && mode == 0) {
+    if (player->armageddon && mode == 0) {
         clearobj(0);
         return;
     }
@@ -487,24 +425,24 @@ void far do_level_hacks(int level, register int mode)
         update_all_critters_whilst_player_snoozes();
     switch (level) {
     case 7:
-        if (!PLAYER1->orb) {
+        if (!player->orb) {
             if (mode == 0) {
-                PLAYER1->bB0 = PLAYER1->max_mana;
-                PLAYER1->max_mana = 0;
-                PLAYER1->play_mana = 0;
-                set_maze(PLAYER1->maze);
+                player->saved_mana = player->max_mana;
+                player->max_mana = 0;
+                player->play_mana = 0;
+                set_maze(player->maze);
             } else if (mode == 1) {
-                PLAYER1->max_mana = PLAYER1->bB0;
-                PLAYER1->play_mana = PLAYER1->bB0 >> 2;
+                player->max_mana = player->saved_mana;
+                player->play_mana = player->saved_mana >> 2;
             }
         }
         break;
     case 9:
         if (mode == 0) {
-            PLAYER1->bB0 = ProbablyAutomapEnabled_dseg_5c99_546;
+            player->saved_mana = ProbablyAutomapEnabled_dseg_5c99_546;
             ProbablyAutomapEnabled_dseg_5c99_546 = 0;
         } else if (mode == 1)
-            ProbablyAutomapEnabled_dseg_5c99_546 = PLAYER1->bB0;
+            ProbablyAutomapEnabled_dseg_5c99_546 = player->saved_mana;
         else if (mode == 3)
             ProbablyAutomapEnabled_dseg_5c99_546 = 0;
         break;

@@ -28,41 +28,18 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <dos.h>
-/* UW1: the texture map's tables and loaders differ from UW2's (map.h); those declarations
-   are renamed out of the way. */
-#define TxmID UW2_TxmID
-#define TxmTerr UW2_TxmTerr
-#define Load_Terrains UW2_Load_Terrains
-#define Txm_Load UW2_Txm_Load
-#define Txm_Save UW2_Txm_Save
 #include "file.h"
 #include "gfx.h"
 #include "map.h"
 #include "sys.h"
 #include "view3d.h"
-#undef TxmID
-#undef TxmTerr
-#undef Load_Terrains
-#undef Txm_Load
-#undef Txm_Save
 
 /* UW1's declarations. */
-unsigned far seg009_38C(int n);         /* a picture's segment */
-void far dprintf(char *fmt, ...);
 int far get_arc(char far *arc, int block, void far *buf);           /* reads a block */
 char far put_arc(char far *arc, int block, void far *buf, int size); /* writes one */
-extern uint16 dseg_5c99_7178;           /* TMPALLOC.C's workspace paragraph */
 /* The 3D view's texture tables (seg051, far): for textures 0..57 (48 walls, then the 10
    floors), the EMS page of the 64-pixel bitmap (0 in conventional memory), the page of the
    16-pixel one, and the two bitmaps' segments. */
-extern unsigned char far seg051_C375;   /* the textures' first EMS page */
-extern unsigned char far seg051_C376;
-extern unsigned char far seg051_C378[];
-extern unsigned char far seg051_C3B2[];
-extern uint16 far seg051_C3EC[];
-extern uint16 far seg051_C460[];
-void far Load_Terrains(int16 *walls, int16 *floors);
-void far load_tr_mem(char *name, int16 *ids, int16 *count, uint16 seg);
 
 /* This file's _BSS, DS:717A..726D.
    name: TxmID and TxmTerr are UW2's (TxmTerr here the floors' terrain words, as GRIDDB.C

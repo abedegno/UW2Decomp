@@ -36,36 +36,22 @@
 #include <fcntl.h>
 #include <mem.h>
 #include "file.h"
-/* UW1: fadein and fadeout have no pump argument, and grfx_load_font takes a file name;
-   gfx.h has UW2's, renamed out of the way. */
-#define fadein UW2_fadein
-#define fadeout UW2_fadeout
-#define grfx_load_font UW2_grfx_quikfont
 #include "gfx.h"
-#undef fadein
-#undef fadeout
-#undef grfx_load_font
 #include "player.h"
 #include "sys.h"
 #include "ui.h"
 #include "view3d.h"
 
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far grfx_init(void);
+void far grfx_clear(void);
+unsigned char far read_quikpal(int n, void far *dest);
+
 unsigned char far grfx_load_font(char *name);
-void far fadein(unsigned char far *src, int count);
-void far fadeout(unsigned char far *src, int count);
 /* UW1: seg019's start-up and shut-down and the two 3D fade callbacks (UW2's seg021_22FD_755,
    _791, CallbackFunctionSleepRelated_seg021_22FD_CB7 and Callback_seg021_22FD_CEA); the
    listing's names (seg019_CEA is not a procedure in the listing). */
-void far seg019_755(void);
-void far seg019_791(void);
-void far seg019_CB7(int);
-void far seg019_CEA(int);
 
-/* UW1: the fade work buffer is not this file's: it is the start of seg050 (paragraph 4423),
-   a far data segment of 0x3000 bytes holding several variables, so assembly; the sprite
-   code (seg000) uses words at seg050:0305 and on, inside the 0x900 bytes the fades use.
-   name: UW2's (fade_buffer, this file's own _BSS there). */
-extern unsigned char far fade_buffer[];
 /* This file's _DATA, DS:15BC..15DD: the byte grfx_load_font sets (a static with no recovered
    name, as in UW2), then the string pool. */
 static unsigned char font_loaded = 0;

@@ -32,10 +32,12 @@
 #include "sys.h"
 #include "ui.h"
 
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far IsMobElem(struct Object far *obj);
+
 /* This file's _BSS, DS:736C (UW2 DS:863A). */
 /* name: only this file uses it; no FM Towns name, so static. */
 static struct Creature near *LootCreature;
-
 
 /* Empties container cont onto the floor at its position (MapObj_X, MapObj_Y for a static
    container). For each object, when owner is nonzero and the container can be owned, the

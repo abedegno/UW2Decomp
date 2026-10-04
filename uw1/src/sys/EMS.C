@@ -32,9 +32,6 @@
 /* UW1: the 3D renderer's copy of the handle (seg051, its far data, assembly; UW2's
    seg052_519C_E4D4) and the byte seg012_15E steps (UW2's dseg_67d6_120, in another
    file's data at DS:10C); the listing's names. */
-extern uint16 far seg051_C4D7;
-extern char dseg_5c99_10C;
-void far seg012_12C(unsigned handle, char far *name);
 
 /* the EMS handle name and the EMM driver's device name */
 static char ems_name[10] = "UW";            /* DS:F8 */

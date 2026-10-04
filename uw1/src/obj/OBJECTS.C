@@ -52,8 +52,8 @@
 #include "uw2.h"
 #include "view3d.h"
 
-/* UW1: the debug printer (DEBUG.C, ovr106_1B), as INPUT.C declares it. */
-void far dprintf(char *fmt, ...);
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far IsMobElem(struct Object far *obj);
 
 /* An object pointer's index in the object store. */
 #define MEMTPTR(o)      ((o) < (struct Object far *)objdata ? (o) - critdata \
@@ -576,8 +576,6 @@ unsigned char far count_list(struct Object far *obj, unsigned char *counts)
    the lists are good again. */
 /* name: ours (no symbol-bearing build); match: this file's _DATA starts here, DS:02D6. */
 static char objlist_complained = 0;
-
-unsigned char far Obj_ListOkay(char how);
 
 /* Checks the object lists (Obj_ListOkay) and reports the first failure through errmsg. */
 void far seg027_2861_EF9(void)

@@ -36,15 +36,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-/* UW1: hit_critter_goal has no gtarg argument, gronk_whoami's all is a char and spells[]
-   has 53 entries (below); combat.h declares UW2's, so they are renamed out of the way. */
-#define hit_critter_goal UW2_hit_critter_goal
-#define spells UW2_spells
-#define gronk_whoami UW2_gronk_whoami
 #include "combat.h"
-#undef hit_critter_goal
-#undef spells
-#undef gronk_whoami
 #include "critter.h"
 #include "event.h"
 #include "file.h"
@@ -56,48 +48,18 @@
 #include "sys.h"
 #include "ui.h"
 
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far IsMobElem(struct Object far *obj);
+void far player_setup(int x, int y, int how);
+
+/* PLAYER.C defines the record's storage as a byte array; this file reaches it as the
+   union (player.h). */
+extern union PlayerStore PlayerDat;
+
 #define SPELL_CLASS(s)  (((s).cls & 0xF8) >> 3)
 
-/* UW1: struct Player differs from UW2's (player.h). This file reads the moonstone's level
-   (low nibble of byte 0x5E), the poison level (word 0x5F bits 2-5), the Armageddon flag
-   (byte 0x60 bit 4) and the hallucination level (byte 0x61 bits 2-3). */
-struct Player1Spells {
-    char pad0[0x5E];
-    unsigned char moonstone:4;          /* 0x5E: the level the moonstone is on */
-    unsigned char b5E_4:4;              /* 0x5E: cleared by Armageddon */
-    uint16 b5F_0:1;                     /* word 0x5F */
-    uint16 drawn:1;
-    uint16 poison:4;                    /* word 0x5F, bits 2-5 */
-    uint16 active_spells:4;
-    uint16 nrunes:2;                    /* byte 0x60, bits 2-3 */
-    uint16 armageddon:1;                /* byte 0x60, bit 4 */
-    uint16 b60_5:3;
-    uint16 b61_0:2;                     /* byte 0x61 */
-    uint16 shrooms:2;                   /* byte 0x61, bits 2-3 */
-};
-#define PLAYER1 ((struct Player1Spells *)player)
-
 extern struct Spell far spells[53];
-/* UW1: all is a char (cbw). */
-void far gronk_whoami(int whoami, char all, NEARPTR arg,
-                      char (far *fn)(struct Object far *npc, NEARPTR arg));
-/* UW1: no gtarg argument; the goal's target is always 1. */
-char far hit_critter_goal(char goal, char attitude, struct Object far *npc, int x, int y);
 /* UW1's own routines, at the addresses of their stubs (the listing's names). */
-void far work_bullfrog_tiles(int a, int b, int c);
-int far cast_trap_spell(int x, int y, int which);
-void far print_monster(unsigned char dir, unsigned char n);
-char far sp_meteor(int x, int y, struct Object far *target, struct Tile far *tile,
-                   unsigned char src);
-char far sp_sheet_light(int x, int y, struct Object far *target, struct Tile far *tile,
-                        unsigned char src);
-char far sp_confusion(int x, int y, struct Object far *target, struct Tile far *tile,
-                      unsigned char src);
-char far sp_fear(int x, int y, struct Object far *target, struct Tile far *tile,
-                 unsigned char src);
-char far sp_charm(int x, int y, struct Object far *target);
-char far sp_poison(int x, int y, struct Object far *target, struct Tile far *tile,
-                   unsigned char src);
 
 /* This file's _BSS, DS:3636..3637: the map square of an object (not a critter) that casts. */
 unsigned char inanmMapX, inanmMapY;
@@ -187,7 +149,7 @@ char far do_spell(unsigned char cls, unsigned char sub, struct Object far *who,
             break;
         case 5:
             game_sprint(0xE4);  /* 'Your vision distorts and you feel light headed.' */
-            PLAYER1->shrooms = 3;
+            player->shrooms = 3;
             FixPlayerEquips();
             break;
         }
@@ -816,7 +778,7 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
             force_mouse_cursor(0x1076);
             break;
         case 6:                         /* cure poison */
-            PLAYER1->poison = 0;
+            player->poison = 0;
             break;
         case 7:                         /* roaming sight */
             set_curmagic(0xB, 1, stab);
@@ -833,9 +795,9 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
             play_effect_on_mobile(0x12, caster, 0);
             break;
         case 10:                        /* gate travel */
-            if (PLAYER1->moonstone) {
+            if (player->moonstone) {
                 npp_func = do_mstone;
-                do_teleport(ThePlayer, 0x3F, 0x3F, PLAYER1->moonstone);
+                do_teleport(ThePlayer, 0x3F, 0x3F, player->moonstone);
                 player_setup(0, 0, 0);
                 editchng(0x7FFE);
             } else
@@ -849,8 +811,8 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
             clearobj(0);
             clear_runes();
             clear_shelf();
-            PLAYER1->armageddon = 1;
-            PLAYER1->b5E_4 = 0;
+            player->armageddon = 1;
+            player->tree = 0;
             PlayerDat.rec.weight = 0;
             FixPlayerEquips();
             pretty_panelagain();

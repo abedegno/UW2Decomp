@@ -33,29 +33,16 @@
 #include <dos.h>
 #include <stdlib.h>
 #include <alloc.h>
-/* UW1: ws_active is a signed char (cbw); sys.h has UW2's unsigned one, renamed out of the
-   way here. */
-#define ws_active UW2_ws_active
 #include "gfx.h"
 #include "sys.h"
 #include "view3d.h"
-#undef ws_active
+
+/* Declared in each file that uses it, its own way (no header). */
+void far init_mem(void);
 
 /* UW1: EMS.C's functions under their UW1 listing names, the console printer (UW2's
    PrintStringToConsole_seg017_DE) under its listing name, and the 3D renderer's page
    bytes and the global seg042_190 sets, which the listing does not name. */
-int far seg012_B(unsigned min_pages, unsigned max_pages);
-void far seg012_A6(void);
-char far seg012_BB(unsigned physical, unsigned logical, int count);
-char far seg012_10F(char physical, unsigned logical);
-void far seg015_1F9B_E8(char far *text);
-extern unsigned char far seg051_C375;
-extern unsigned char far seg051_C376;
-extern unsigned char far seg051_C377;
-extern uint16 dseg_5c99_7178;
-
-void far mem_setup(int page);
-void far seg042_190(void);
 
 /* This file's _DATA, DS:0A48..0A5E, with its string. */
 int16 dseg_5c99_A48 = 0;                /* EMS pages allocated (UW2: dseg_67d6_920) */

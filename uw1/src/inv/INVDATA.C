@@ -39,8 +39,13 @@
 #include "ui.h"
 #include "uw2.h"
 
+/* Declared in each file that uses it, its own way (no header). */
+unsigned char far EncumCheck(struct Object far *obj);
+unsigned char far invRemoveObject(struct Object far *obj, int qty);
 
-
+/* PLAYER.C defines the record's storage as a byte array; this file reaches it as the
+   union (player.h). */
+extern union PlayerStore PlayerDat;
 
 void far RedisplayInvSlot(int slot)
 {
@@ -378,13 +383,6 @@ struct Object far * far takeFromSlot(int major, int minor, int cls, int slot, in
     return obj;
 }
 
-/* UW1: struct Player differs from UW2's (player.h); the handedness bit is bit 0 of byte 0x64
-   (ObjWorn's mov al,[bx+64h]), where UW2 has it at 0x65. */
-struct UW1PlayerHand {
-    char pad[0x64];
-    uint16 lefty:1;                     /* 0x64 */
-};
-
 /* Whether an object of type id is being worn or wielded in slot: anything in the armour
    slots 0..4 and the ring slots 9 and 10, and in the shield hand (lefty + 7) a shield
    (MAJOR_HACK, minor 2 or 3, class 0xB..0xF). */
@@ -394,7 +392,7 @@ unsigned char far ObjWorn(register int id, register int slot)
         return 1;
     if (slot == 10 || slot == 9)
         return 1;
-    if (((struct UW1PlayerHand *)player)->lefty + 7 != slot)
+    if (player->lefty + 7 != slot)
         return 0;
     if ((id >> 6) == MAJOR_HACK && (id & ID_MINOR) >> 4 >= 2 && (id & ID_INCLASS) >= 0xB && (id & ID_INCLASS) <= 0xF)
         return 1;

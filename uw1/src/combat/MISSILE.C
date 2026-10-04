@@ -28,11 +28,7 @@
    ammunition and each missile its damage and type.
    Name: descriptive (missiles: player_fire, missile_fire). */
 
-/* UW1: push_missile has no launch argument (below); combat.h declares UW2's, so its
-   declaration is renamed out of the way. */
-#define push_missile UW2_push_missile
 #include "combat.h"
-#undef push_missile
 #include "event.h"
 #include "inv.h"
 #include "map.h"
@@ -42,17 +38,6 @@
 #include "sound.h"
 #include "sys.h"
 #include "ui.h"
-
-/* UW1: struct Player differs from UW2's (player.h): the swimming count is byte 0xB9 (UW2
-   0x307). */
-struct Player1Swim {
-    char pad[0xB9];
-    unsigned char swim_count;           /* 0xB9 */
-};
-#define PLAYER1 ((struct Player1Swim *)player)
-
-/* UW1: no launch argument (always moves the missile clear), and returns a char. */
-char far push_missile(struct Object far *proj, struct Object far *src);
 
 /* This file's _BSS, DS:26AE..26BF: the missile being launched. This file has no _DATA. */
 /* match: laid out by name (tools/bssorder.py). Static in FM Towns (unnamed there), so
@@ -290,9 +275,9 @@ struct Object far * far missile_fire(void)
         if (ComObjData[OBJ_ITEM(missile_src)].height != 0) {
             z = OBJ_Z(proj);
             SET_Z(proj, z + ComObjData[OBJ_ITEM(missile_src)].height * 5 / 6 + missile_try * 2);
-            if (missile_src == ThePlayer && PLAYER1->swim_count > 0x50)
+            if (missile_src == ThePlayer && player->swim_count > 0x50)
                 SET_Z(proj, z + missile_try * 2
-                      + (ComObjData[OBJ_ITEM(missile_src)].height - (PLAYER1->swim_count >> 3)));
+                      + (ComObjData[OBJ_ITEM(missile_src)].height - (player->swim_count >> 3)));
             if (!push_missile(proj, missile_src))
                 goto failed;
         }

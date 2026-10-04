@@ -10,6 +10,7 @@ struct ComObj;
 struct Object;
 struct StaticObj;
 struct Tile;
+union Link;
 
 #include "map.h"
 
@@ -327,7 +328,6 @@ void far Map_ObjFix(void);
 unsigned char far Obj_Elem_Fate(int range, struct Object far *obj);
 void far Obj_GarbageCollect(int range, int count);
 void far Obj_Free(struct Object far *obj);
-struct Object far * far Obj_FindInMapSquare(int major, int minor, int index, int x, int y);
 struct Object far * far Obj_PtrTMem(union Link far *link);
 struct Object far * far Obj_IntTMem(int index);
 void far Obj_FreeChain(union Link far *head);
@@ -339,12 +339,9 @@ void far Obj_AddEnd(union Link far *head, struct Object far *obj);
 unsigned char far Obj_Rem(union Link far *head, struct Object far *obj);
 struct Object far * far Obj_Punt(union Link far *head, struct Object far *obj, char force);
 struct Object far * far Obj_Find(union Link far *head, char recurse, int index);
-unsigned char far IsMobElem(struct Object far *obj);
 struct Object far * far Obj_InList(union Link far **head, char recurse, int major, int minor, int index);
 unsigned char far HasOrIsObj(struct Object far *obj, int id);
 struct Object far * far Obj_FindInMap(int major, int minor, int index, int16 *x, int16 *y);
-int far check_weight(union Link far *head, int min, int z, int adjust);
-unsigned char far ObjCrunch(char how);
 extern struct StaticObj far *objdata;
 extern unsigned char far *LastActiveMob;
 extern unsigned char far *ActiveMob;
@@ -354,6 +351,8 @@ extern uint16 far *objptr;
 extern uint16 far *crittop;    /* the free mobile list */
 extern uint16 far *critbot;
 extern uint16 far *critptr;
+void far seg027_2861_EF9(void);
+unsigned char far Obj_ListOkay(char how);
 
 /* MAPADDR.C: Map_GetAddr and CreateObj */
 struct Tile far * far Map_GetAddr(int x, int y);
@@ -436,7 +435,6 @@ extern char Food[0x10];
 void far misc_init(FILE *fd);
 
 /* DAMAGE.C: damage to objects */
-int far debris_type(int item, char type);
 char far damage_object(struct Object far *obj, struct Object far *who, int damage, int x, int y);
 char far remove_lock(struct Object far *obj, char all);
 unsigned char far check_res(struct Object far *obj, unsigned char damage, unsigned char type);
@@ -448,9 +446,8 @@ void far drop_some_objects(struct Object far *critter);
 void far generate_inventory(struct Object far *npc);
 
 /* OBJUSE.C: using objects */
-void far UseKey(struct Object far *obj, unsigned char how);
-void far UseWand(struct Object far *wand, unsigned char how);
-char far UseReag(struct Object far *who, struct Object far *obj, char how);
+void far UseKey(struct Object far *obj, char how);
+void far UseWand(struct Object far *wand, char how);
 char far checkSpell(int x, int y, struct Object far *who, struct Object far *obj, char how);
 void far checkTrap(struct Object far *who, struct Object far *obj, int how, int x, int y);
 struct Object far * far place_new(struct Object far *obj, int item);
@@ -459,37 +456,42 @@ int far checkLock(struct Object far *who, struct Object far *door, int key);
 void far BlastFunction(void);
 void far remove_spell(struct Object far *obj);
 extern int32 nextSpellTime;
-extern unsigned char always_decode;
-struct Object far * far UseObj(struct Object far *who, struct Object far *obj, unsigned char how);
+extern char always_decode;
+struct Object far * far UseObj(struct Object far *who, struct Object far *obj, char how);
 int far using_punt(struct Object far *obj, char inv, char how);
-char far flip_switch(struct Object far *obj, int state);
-char far decode_obj_spell(struct Object far *obj, int16 *major, int16 *effect, unsigned char *flag);
+char far decode_obj_spell(struct Object far *obj, int16 *major, int16 *effect, char *flag);
 
 /* USEITEMS.C: using objects */
-extern char door_type;
 void far DumpTheBag(struct Object far *bag, char to_player);
-void far UseRockHammerOn(struct Object far *obj, unsigned char how, char other);
-void far UseWatch(void);
-void far UseCrystal(int quality);
+void far UseRockHammerOn(struct Object far *obj, char how, char other);
 /* match: declared before the rest of its file because TLINK numbers the overlay's stub
    entries in the order Turbo C lists the publics, which for names with the same hash key
    is the order they were first seen: the EXE's stub has UseBook before UseFood. */
-void far UseBook(struct Object far *obj, unsigned char how);
-int far UseFood(struct Object far *who, struct Object far *food, unsigned char how);
-void far UseLockpickOn(struct Object far *obj, unsigned char how);
+void far UseBook(struct Object far *obj, char how);
+int far UseFood(struct Object far *who, struct Object far *food, char how);
+void far UseLockpickOn(struct Object far *obj, char how);
 void far UseCont(struct Object far *who, struct Object far *obj, char how);
-void far UseLight(struct Object far *obj, unsigned char how);
-void far UseUnique(struct Object far *who, struct Object far *obj, unsigned char how);
+void far UseLight(struct Object far *obj, char how);
+void far UseUnique(struct Object far *who, struct Object far *obj, char how);
 void far changeDoor(struct Object far *door);
 void far OpenDoor(struct Object far *who, struct Object far *door);
-void far CloseDoor(struct Object far *who, struct Object far *door);
+void far CloseDoor(struct Object far *door);
 void far ToggleDoor(struct Object far *who, struct Object far *door);
-void far UseRune(struct Object far *who, struct Object far *rune);
 void far UseRect(struct Object far *who, struct Object far *obj);
 void far UseMagic(struct Object far *who, struct Object far *obj, char how);
 void far UseUtil(struct Object far *obj, char how);
-void far UseOilOn(struct Object far *obj, unsigned char how, unsigned char other);  /* ties UseKeyOn */
-void far UseKeyOn(struct Object far *obj, unsigned char how);
+void far UseOilOn(struct Object far *obj, char how, char other);  /* ties UseKeyOn */
+void far UseKeyOn(struct Object far *obj, char how);
+void far SpikeDoor_seg040_662(struct Object far *door);
+void far SpikeDoor_seg040_352B_6F9(struct Object far *obj, char how);
+void far UseBonesOn(struct Object far *obj, char how);
+void far UsePoleOn(struct Object far *obj);
+void far UseAnvilOn(struct Object far *obj, char how, char other);
+char far seg040_352B_9EA(struct Object far *npc, int div);
+void far TybalsOrb_seg040_A12(struct Object far *obj, char how, char other);
+void far seg040_352B_AFF(struct Object far *obj, char how);
+void far moveDoor(struct Object far *door);
+void far useNSpellCharges(struct Object far *obj);
 
 /* LOOK.C: looking at things */
 char far do_mods(struct Object far *obj, int lore, char *s);
@@ -498,7 +500,7 @@ void far RectLook(struct Object far *obj, int look);
 void far CritterLook(struct Object far *obj, char *s);
 void far SpecialLook(struct Object far *obj, int print);
 void far LookAt(struct Object far *obj, int lore);
-int far GetObjDesc(struct Object far *obj, int lore, char *s);
+char far talisman_desc(struct Object far *obj, struct ComObj *com);
 
 /* EFFECT.C: animated objects and timers */
 extern unsigned char DoAnimO;
@@ -512,11 +514,8 @@ void far fireball_effect(struct Object far *src, int x, int y);
 unsigned char far mts_doanim(struct Object far *obj, int x, int y, char who);
 int far get_animlen(struct Object far *obj);
 void far set_animlen(struct Object far *obj, int len);
-unsigned char far rem_timer_obj(int index);
 extern char animcount;
 extern struct AnimClass animclassd[16];
-extern int16 timerlist[0x40];
-extern char timercount;
 extern struct Anim animlist[0x40];
 int far add_animobj(int index, int len, unsigned char a, unsigned char x, unsigned char y);
 unsigned char far put_effect(struct Object far *who, int cls, int len, int frame, int z, int x, int y);
@@ -525,12 +524,4 @@ int far find_anim(struct Object far *obj);
 #define OBJECT_H_COMPLETE
 #include "level.h"
 
-/* RECT.C */
-char * far rect_class_data(void);
-
-/* SPEC.C */
-char * far spec_class_data(void);
-
-/* STUFF.C */
-char * far stuff_class_data(void);
 #endif

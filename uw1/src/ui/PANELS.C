@@ -34,7 +34,6 @@
    in _BSS were chosen for their layout keys (tools/bssorder.py). */
 
 #include <stdio.h>
-#define init_panelflip UW2_init_panelflip   /* UW1: the panel's place too, below */
 #include <string.h>
 #include <stdlib.h>
 #include <dos.h>
@@ -47,47 +46,9 @@
 #include "sys.h"
 #include "ui.h"
 #include "view3d.h"
-#undef init_panelflip
 
-/* UW1: the player record differs from UW2's struct Player (player.h). The fields this
-   file uses, from the bytes. */
-struct Player1Pan {
-    char pad00[0x38];
-    unsigned char max_mana;             /* 0x38 */
-    char pad39[0x47 - 0x39];
-    unsigned char shelf[3];             /* 0x47 */
-    char pad4A[0x5F - 0x4A];
-    uint16 b5F_0:2;                     /* word 0x5F */
-    uint16 poison:4;
-    char pad60[0x64 - 0x60];
-    uint16 lefty:1;                     /* 0x64 */
-    uint16 b64_1:1;
-    uint16 body:3;
-};
-#define PLAYER1 ((struct Player1Pan *)player)
-
-/* UW1: callees the headers lack or give otherwise. */
-char far seg012_10F(char physical, unsigned logical);     /* EMS: maps a page */
-int far seg012_141(uint16 *handle);                        /* EMS: allocates */
-void far *far seg012_15E(unsigned handle);                 /* EMS: maps, returns it */
-void far seg012_1B1(unsigned handle);                      /* EMS: frees */
-extern unsigned char far seg051_C377;      /* the weapon pictures' EMS page (UW2 scrgr_fpage) */
-void far value_cuts(unsigned n, int value);
-void far RedispRune(void);
-void far RedispStat(void);
-void far adjust_flasks(int which);
-void far adjust_dragons(int which);
-void far adjust_compass(void);
-void far adjust_power(void);
-void far adjust_panel(void);
-void far adjust_eyes(void);
-void far adjust_weapon(void);
-void far init_panelflip(int panel, int x, int y, int w, int h);
-void far free_panelflip(void);
-char far do_panel_frame(void);
-void far flip_scale(unsigned char far *src, unsigned char far *dst, int frame);
-void far flip_column(unsigned char far *src, unsigned char far *dst);
-
+/* Declared in each file that uses it, its own way (no header). */
+extern struct Spell far spells[53];
 
 /* This file's _BSS, DS:359A-3635. The two function-level statics come first, in
    definition order and unaligned: update_screen's old_time (DS:359A) and
@@ -109,7 +70,6 @@ static int16 flip_width_now;            /* DS:3626, the squeezed panel's width *
 unsigned char goal[9];                  /* DS:3628 */
 static int16 pnl_wide;                  /* DS:3632, the panel's width */
 static int16 pnl_skew;                  /* DS:3634, blank rows above and below a column */
-
 
 /* The panel showing on the right, an index into panel_dispatch (FM Towns _RightPanel). */
 unsigned char RightPanel = 0;           /* DS:784 */
@@ -188,7 +148,7 @@ void far set_flask(register int which)
     register int i;
 
     if (which == 0)
-        frame = PLAYER1->poison ? 0x203E : 0x200C;
+        frame = player->poison ? 0x203E : 0x200C;
     else if (which == 1)
         frame = 0x2025;
     else
@@ -276,7 +236,7 @@ void far init_scrgr(void)
     }
     set_compass();
     draw_sprite(eyes, 0x20A6);
-    set_runes(PLAYER1->shelf);
+    set_runes(player->shelf);
     read_gr_far("panels", RightPanel, stdat);
     show(0xEC, 0xC0, stdat, 0x72, 0x53, 0, 0);
     panel_dispatch[RightPanel]();
@@ -309,7 +269,7 @@ void far set_screen_frame(char which, int val)
     switch (which) {
     case 0:
     case 1:
-        max = which == 1 ? PLAYER1->max_mana : playerdat->avghit;
+        max = which == 1 ? player->max_mana : playerdat->avghit;
         if (max)
             goal[which] = val * 12 / max;
         else
@@ -437,7 +397,7 @@ void far adjust_flasks(int which)
 
     switch (f) {
     case 0:
-        if (PLAYER1->poison) {
+        if (player->poison) {
             base = 0x203E;
             bub_first = 0x204B;
             bub_last = 0x2056;
@@ -792,9 +752,9 @@ char far do_weapload(void)
     if (weapid > 3 || weapid < 0)
         return 0;
     wbuf = 0;
-    start = (1 - PLAYER1->lefty) * 0x70 + weapid * 0x1C;
+    start = (1 - player->lefty) * 0x70 + weapid * 0x1C;
     ok = gronk_gr("weapons", start, 0x1C, (ArtAllocFn)adr_weapon, (ArtMoveFn)move_weapon);
-    off = (1 - PLAYER1->lefty) * 0xE0 + weapid * 0x38;
+    off = (1 - player->lefty) * 0xE0 + weapid * 0x38;
     fp = fopen("DATA\\weapons.dat", "rb");
     ok &= fp != 0;
     if (fp) {
@@ -918,7 +878,7 @@ char far load_weapcm(void)
 
     ok = (fp = fopen("DATA\\weapons.cm", "rb")) != 0;
     if (ok) {
-        off = PLAYER1->body == 1 ? 0x10 : 0;
+        off = player->body == 1 ? 0x10 : 0;
         ok &= fseek(fp, off, 0) == 0;
         ok &= fread(Palettes[30], 1, 0x10, fp) == 0x10;
         ok &= fclose(fp) == 0;

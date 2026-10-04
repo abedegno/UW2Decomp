@@ -122,7 +122,6 @@ int16 far *DbEntry;
    seg052).
    name: seg_5DFD is UW2's IDA segment name, kept for the same buffer. */
 
-
 /* Place the view window (w by h at x, y; y is its bottom row, since mous_player gets
    y - h + 1 as the top),
    tell the mouse code where it is, and set the zoom: 0x6062 when inplist->mode has
