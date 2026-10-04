@@ -186,6 +186,7 @@ _clear_shelf	5A0B:003E	provisional
 _clear_window	0090:557F	provisional
 _ClearInventory	5A1A:0070	provisional
 _clearobj	59D3:0039	provisional
+_cLightTabs	DS:2388	provisional
 _Clk	37FF:00E6	provisional
 _close	0EC5:02FE	provisional
 _close_to_square	128A:24A8	provisional
@@ -247,6 +248,7 @@ _count_inv	599C:0039	provisional
 _count_list	2674:0E2D	provisional
 _CP	DS:284A	provisional
 _cPerror	DS:2368	provisional
+_cPixXferStuff	DS:2394	provisional
 _cPlaceFB	1F3A:0D1D	provisional
 _cPlayer	DS:2378	provisional
 _cr_class	DS:5652	provisional
@@ -308,6 +310,8 @@ _CT3	DS:2874	provisional
 _CT4	DS:2880	provisional
 _cTmBm	DS:3134	provisional
 _cTmDm	DS:3136	provisional
+_cTmHg	DS:3144	provisional
+_cTmSz	DS:2E14	provisional
 _Ctrl	DS:2340	provisional
 _cur_font	DS:23DC	provisional
 _curautocode	DS:054F	provisional
@@ -319,6 +323,7 @@ _CursorObjPtr	DS:5B06	provisional
 _curvrad	DS:735A	provisional
 _curZoom	DS:2CFE	provisional
 _CutsceneOrConversationStringBloc	DS:3644	provisional
+_cWCol	DS:2E0A	provisional
 _cycle_colors	210D:00A7	provisional
 _cZoom	1F3A:0C34	provisional
 _damage	DS:2670	provisional
@@ -355,6 +360,8 @@ _DisplayInvObject	5A1A:0025	provisional
 _DisplayInvSpecial	5A1A:002A	provisional
 _DisplayOpenBag	59FE:0052	provisional
 _DisplayToSlot	DS:1888	provisional
+_dist8	DS:0547	provisional
+_distpoly	DS:0549	provisional
 _div_zero_ovr112_661	59D3:0070	provisional
 _do_2dbounce	2939:0BDF	provisional
 _do_2dclip	2ABA:121A	provisional
@@ -439,6 +446,7 @@ _drop_drunk_player	5A76:0048	provisional
 _drop_link_chain	5A92:0034	provisional
 _drop_some_objects	5A92:003E	provisional
 _dseg_5c99_10C	DS:010C	provisional
+_dseg_5c99_12B6	DS:12B6	provisional
 _dseg_5c99_7178	DS:7178	provisional
 _dseg_5c99_717A	DS:717A	provisional
 _dseg_5c99_7190	DS:7190	provisional
@@ -449,6 +457,7 @@ _dseg_5c99_A48	DS:0A48	provisional
 _DumpTheBag	333E:23EC	provisional
 _dungeonf	DS:56F0	provisional
 _duration_check	2798:013D	provisional
+_dxtab	DS:05D3	provisional
 _editchng	1AB6:00AF	provisional
 _editexit	59D3:003E	provisional
 _editor_dispatch	DS:12EC	provisional
@@ -517,6 +526,7 @@ _FixOpenBag	59FE:0048	provisional
 _FixPlayerEquips	5A4D:002A	provisional
 _fiz_update	DS:00D3	provisional
 _fizix_update	193D:0D85	provisional
+_flat_case	DS:312D	provisional
 _flat_move	2939:08A4	provisional
 _flciel	DS:0515	provisional
 _flog_list	2674:0D44	provisional
@@ -557,6 +567,7 @@ _game_sprint	32A8:0494	provisional
 _game_stats	5A76:0084	provisional
 _game_strings_3	32A8:04BD	provisional
 _GameInputMode	DS:26AC	provisional
+_gctab	DS:0559	provisional
 _gen_char	5991:003E	provisional
 _generate_equipment	5A92:002F	provisional
 _generate_food	5A92:0020	provisional
@@ -593,20 +604,25 @@ _GetPlayerWeapon	2121:0F16	provisional
 _getSaveObj	5A05:004D	provisional
 _GetSlopeHgt	2529:01A5	provisional
 _getvect	0EC5:1B78	provisional
+_gftab	DS:0551	provisional
 _gfx_inpage	DS:0A4B	provisional
 _GifPixel_ovr116_420	59E1:002F	provisional
 _give_ptr_npc	599C:00B6	provisional
 _glocs	DS:2890	provisional
 _go_fish	59C8:003E	provisional
 _go_into_dying_sequence	15AB:3577	provisional
+_gr_ccall	DS:313C	provisional
 _gr_entry	37FF:00FC	provisional
+_gr_fcall	DS:3138	provisional
 _gr_freelab	37FF:033D	provisional
 _gr_getlab	37FF:024B	provisional
 _gr_getpre	37FF:022C	provisional
 _gr_putlab	37FF:0272	provisional
 _gr_tostrt	37FF:010B	provisional
+_gr_wcall	DS:3140	provisional
 _grab	1DAE:000E	provisional
 _grdb_blank	37FF:000B	provisional
+_grdb_elem	1DF0:0DBC	provisional
 _grdb_size	37FF:00C3	provisional
 _great_advance	5A76:002F	provisional
 _greed	DS:488A	provisional
@@ -634,6 +650,7 @@ _GrSq	DS:2494	provisional
 _gsize	DS:5732	provisional
 _gvechead	DS:2E02	provisional
 _gvecs	DS:2D00	provisional
+_gwtab	DS:0561	provisional
 _hack_class_data	59FB:0020	provisional
 _hack_init	59FB:0025	provisional
 _HasOrIsObj	2674:0C36	provisional
@@ -641,6 +658,7 @@ _Hasted	DS:0283	provisional
 _headmod	DS:045C	provisional
 _healing	311A:042C	provisional
 _hgt_val	DS:1992	provisional
+_hgtmodtab	DS:0589	provisional
 _hit_critter_goal	311A:0889	provisional
 _hitadoor	DS:2473	provisional
 _hitangle	DS:2675	provisional
@@ -813,6 +831,7 @@ _memcpy	0EC5:1E65	provisional
 _memset	0EC5:1EAE	provisional
 _menus_active	DS:0A8E	provisional
 _meptr	DS:245A	provisional
+_mhighptr	DS:3128	provisional
 _misc_class_data	5A2F:0020	provisional
 _misc_init	5A2F:0025	provisional
 _Missile	DS:5942	provisional
@@ -920,6 +939,7 @@ _nextSpellTime	DS:09F4	provisional
 _nextstep	DS:0779	provisional
 _NightCleanCritPages	59E5:002F	provisional
 _Nop_ovr090_18	5953:0020	provisional
+_norm	DS:05EB	provisional
 _not_a_spell	5A0B:0025	provisional
 _notdone	DS:5666	provisional
 _nothing_there	597E:007A	provisional
@@ -1041,6 +1061,8 @@ _PBot	DS:735E	provisional
 _pfatal	59DB:002A	provisional
 _pfatal_code	59DB:0025	provisional
 _pFPS	DS:2496	provisional
+_pget1	DS:059D	provisional
+_pget2	DS:05A0	provisional
 _PgtoCmap	4723:C20F	provisional
 _PHgt	DS:7280	provisional
 _phys_affect_player	193D:090D	provisional
@@ -1053,6 +1075,7 @@ _pickloc	2121:000A	provisional
 _pickopt	5991:0052	provisional
 _PickUp	DS:311E	provisional
 _PickUpFromSlot_ovr097_C39	597E:0052	provisional
+_pipeexp	DS:3132	provisional
 _place_3d_view	2ABA:000D	provisional
 _place_browse	598A:003E	provisional
 _place_new	333E:0438	provisional
@@ -1100,6 +1123,7 @@ _PlayerInput	DS:075A	provisional
 _PlayerLevel	DS:7278	provisional
 _playerMod	DS:3580	provisional
 _PlayerPitch	DS:3588	provisional
+_PlayersMap	DS:3820	provisional
 _PlayerTurn	DS:075C	provisional
 _PLeft	DS:7282	provisional
 _plyMoType	DS:00D0	provisional
@@ -1109,6 +1133,9 @@ _pmouseHandled	DS:0726	provisional
 _PMsHndle	DS:1B37	provisional
 _PN	DS:2780	provisional
 _pn_act	DS:2474	provisional
+_polycie	1DF0:0880	provisional
+_polyflr	1DF0:079A	provisional
+_polywal	1DF0:0964	provisional
 _power	DS:2680	provisional
 _Ppd	DS:2768	provisional
 _pQatt	DS:0242	provisional
@@ -1124,6 +1151,7 @@ _process_area	311A:09C7	provisional
 _process_grid	1DF0:00C5	provisional
 _process_objlist	2529:0EBF	provisional
 _PT	DS:284E	provisional
+_ptnuminq	DS:3124	provisional
 _pTurn	DS:2492	provisional
 _pull_chain	22EF:000F	provisional
 _punt_fightmode	22EF:15C0	provisional
@@ -1135,8 +1163,11 @@ _put_effect	3707:0A33	provisional
 _putInInv	5A05:0048	provisional
 _PutObjectInBag	59FE:0057	provisional
 _PWid	DS:7364	provisional
+_qdec	DS:2E1A	provisional
 _quad	DS:2CF4	provisional
+_quad_mod	DS:0569	provisional
 _QuakeTrap_seg008_DE7	193D:0DE7	provisional
+_qudecode	DS:0579	provisional
 _rand	0EC5:0DE7	provisional
 _random_light	5A73:002A	provisional
 _range	597E:0061	provisional
@@ -1314,6 +1345,7 @@ _set_new_music	1BD8:15BA	provisional
 _set_next_square_on_path	128A:23CB	provisional
 _set_osum	2D02:03CD	provisional
 _set_phys_data	2801:061A	provisional
+_set_pix_xfer	1DF0:0036	provisional
 _set_player_phys_params	193D:05E3	provisional
 _set_quest	5977:0052	provisional
 _set_race_attitude	5977:002A	provisional
@@ -1331,6 +1363,7 @@ _set_up_target	15AB:326B	provisional
 _set_workspace	35D3:0223	provisional
 _SetCursorObj	5A1A:007A	provisional
 _SetOffTrap	5A9C:0057	provisional
+_SetPnt	1DF0:0001	provisional
 _setup_converse_data	59AE:0025	provisional
 _setup_font	0090:4CB1	provisional
 _setup_to_barter	597E:0039	provisional
@@ -1430,6 +1463,7 @@ _strtime	DS:2CF6	provisional
 _strupr	0EC5:29E3	provisional
 _stuff_class_data	5A88:0020	provisional
 _subOpcode_ovr095_1965	5964:0043	provisional
+_subprocess	1DF0:0526	provisional
 _swap_tmap	5A4D:0034	provisional
 _swap_ws_out	59E5:0034	provisional
 _SwapItemsInBag	59FE:002A	provisional
@@ -1450,6 +1484,7 @@ _tdx	DS:243C	provisional
 _tdy	DS:243E	provisional
 _TerrainCheck	2529:0379	provisional
 _ThePlayer	DS:7274	provisional
+_thgt	DS:05A3	provisional
 _tile_to_five	DS:0525	provisional
 _tile_walls	DS:1D8A	provisional
 _Time	DS:2364	provisional
@@ -1545,6 +1580,7 @@ _vort_timer	DS:357C	provisional
 _vort_x	DS:3598	provisional
 _vort_y	DS:3599	provisional
 _Vortex_ovr143_E09	5A53:0043	provisional
+_wallmodtab	DS:05C1	provisional
 _wander_that_monster	59B1:0039	provisional
 _wandering_monster_check	59B1:004D	provisional
 _warpMouse	1ADC:0DBE	provisional

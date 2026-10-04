@@ -1,0 +1,3 @@
+# segment seg017_1FDD_1 base 0x21101 size 0x35 org 0x1
+# cname: UW2's SetPnt (kin same, UW2's src/3d/SETPNT.ASM); the rest of the segment is GRIDDB.C (targets/seg017_1FDD.tsv, org 0x36)
+SetPnt	seg017_1FDD_1	0x0	0x35

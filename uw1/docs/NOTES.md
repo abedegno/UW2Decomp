@@ -77,3 +77,9 @@ Things agents found that belong to the shared headers or the map, to settle in t
 - UW1's player record is 0xD2 bytes (PlayerDat). More fields: 0x60 bits 4-7 (orb 5, key 6, cup 7); 0x62 bit 3 Garamon buried, bit 4 maze; 0x63 light; 0x64 pclass; 0x6E dreams; 0xB0 saved max mana; 0xB5 sound, music, detail; 0xB6 terrain; 0xC2 lore[8].
 - sound.h: fx_is_on, music_is_on return char. gfx.h: read_quikpal, grfx_init return char; LoadBitMap_ovr141_0(int, char *) returns char. file.h: clear_dir, init_save, blttodrive, SaveGame, SaveLevel(int) return char (MAINMENU.C declares clear_dir unsigned: tidy). sys.h: init_world calls init_mem(2), TMPALLOC.C defines it void: settle. No HomeDir variable in UW1 (GAMEWRAP uses the literal "SAVE0\\"). New globals ProbablyAutomapEnabled_dseg_5c99_546 (char), EndGameMode_dseg_1C8F; swap_tmap(unsigned char), set_maze(char), check_victory; dream, set_sklmnu return char. In UW1 bltfromdrive is the character-creation background loader; advance() calls ovr145_4FB where UW2 calls panel_check.
 - Kin false hit: ovr105_14E3 is not reset_db (VIEW3D's reset_db is 2ABA:0246).
+
+## From wave 4 (C, 3D and UI)
+
+- seg017_1FDD starts with SetPnt (0x35 bytes, assembly, kin same as UW2's SETPNT.ASM): its own table targets/seg017_1FDD_1.tsv, as UW2's seg019_21BA_C; GRIDDB.C's table starts at org 0x36.
+- GRIDDB.C defines `ProbablyAutomapEnabled_dseg_5c99_546` (DS:546, char 1, UW1's automap switch).
+- Headers should take: `SpecShadeMode` signed char; `flat_case` char; `color_to_map`/`color_to_obj` of 192 entries and no `TxmCol`; `unsigned far seg009_38C(int)`; `extern unsigned char dseg_5c99_12B6` (data no matched file owns yet, value 0x64). GRIDDB.C uses `#define` renames against view3d.h for now.

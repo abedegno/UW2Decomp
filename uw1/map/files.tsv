@@ -15,7 +15,7 @@ seg012	C	8	435	0	0	0	8			yes
 seg013_1CC9	C	40	4029	0	0	0	11			yes
 seg014_1DC5	C	42	7504	0	0	0	29			
 seg015_1F9B	C	14	947	0	0	0	4			
-seg017_1FDD	C	12	5155	0	0	0	8			
+seg017_1FDD	C	12	5155	0	0	0	8			yes
 seg019	assembly	72	4210	0	0	0	72			
 seg020	assembly	44	2297	0	0	0	23			
 seg021	C	2	324	0	0	0	1			yes
