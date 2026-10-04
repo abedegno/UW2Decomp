@@ -23,6 +23,10 @@ overlay_segment = "ovr(\\d{3})"
 listing = "${UW1_ASM:-~/UWReverseEngineering/UW1_asm.asm}"
 listing_para_bias = 0x1ED
 listing_stub_prefix = "stub"
+# the listing names segments without their paragraph; code segments are found through
+# map/segments.tsv, and the modding build needs seg051 (FD58, 4723), which holds the model
+# interpreter's opcode table at 2738h (docs/LAYOUT.md)
+listing_segments = { seg051 = 0x4723 }
 
 [toolchain]
 profile = "borland-tc101"
@@ -55,3 +59,17 @@ exact_exe = "LINK/out/UW.EXE"
 mod_exe = "MODLINK/out/UW.EXE"
 # `gate.py boot`: the title, then the main menu
 boot = ["w:8000", "s:title", "k:Escape", "w:4000", "s:menu"]
+
+[layout]
+# tools/addrscan.py, which lists addresses written as numbers (docs/link.md, "Layout audits";
+# docs/LAYOUT.md). Segment table entry 50 is C0's empty _FARDATA; entries 51 to 76 are the far
+# data segments, reported as FD51..FD76 (FD52 is seg048, 3963, the graphics library's data;
+# FD72 seg063, seg019's).
+far_data_entries = [51, 76]
+# seg046 (src/lib/OVERLAY.ASM) is the overlay manager, which the link takes from OVERLAY.LIB
+# rather than from its object; named by segment, so a renamed file needs no change
+library_objects = ["seg046"]
+# seg003's dispatchers (GRDISP's _seg003_5B0B and the path at _seg003_5AF9) are handed a near
+# routine of seg003 in BP and call it with DS = ES = seg048 and SS = the word at seg048:558A,
+# which holds `dd seg048` (GRDISP's FD52 piece): DS = ES = SS = FD52
+dispatch = [{ register = "bp", ds = "FD52", es = "FD52", ss = "FD52" }]

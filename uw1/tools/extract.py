@@ -746,9 +746,9 @@ def labels_at(m, f, para):
 # assembly jumps through). Each one the IDA listing types, and the rest of its table, becomes
 # `dw offset NAME` (Exhume's tools/modding.py), so that it follows that code if the module
 # holding it changes size. In UW2 that was the model interpreter's opcode table in extracted
-# far data; UW1's is in PGCACHE.ASM's source, and the listing finds none in UW1's extracted
-# bytes. Whether they hold numbers that are addresses has not been audited for UW1
-# (Exhume's tools/addrscan.py, skills/modding-build). The exact link keeps the bytes.
+# far data, and so is UW1's: seg051:2738 in the extracted head of FD58, which the listing
+# types as `dw offset seg004_...` (UW1's listing names its segments without a paragraph:
+# exhume.toml's [binary] listing_segments; docs/LAYOUT.md). The exact link keeps the bytes.
 NEAR = {}
 if MOD:
     NEAR = modding.code_offset_tables(
