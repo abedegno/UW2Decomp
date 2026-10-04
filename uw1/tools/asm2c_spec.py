@@ -72,6 +72,24 @@ OVERRIDES = {
     ('PGCACHE', 0x7A87): (
         'AX = (uint16_t)port_fp_seg(Palettes);',
         "do_uwobj: DGROUP's segment, here the paragraph the port's map gives _Palettes (as UW2's)"),
+    ('INSTANCE', 0x50D8): (
+        'if (memcmp(CODE004 + 0x50D8, CODE004 + 0x517E, 0x26) == 0) goto L517E;\n'
+        'AX = BX;',
+        "mxmul's body is whichever check_flat last copied over it (rep movs from L512B, the general "
+        "one, 54h bytes, or L517E, the flat one, 26h bytes): the code block holds the copy, so the "
+        "body runs as it says (as UW2's)"),
+    ('GRENTRY', 0x0BEC): (
+        '{ uint16_t p_ = 0x0BEC;\n'
+        '  for (;;) {\n'
+        '    uint8_t op_ = CODE003[p_];\n'
+        '    if (op_ == 0xC3) { SP = (uint16_t)(SP + 2); return ASM_RET; }\n'
+        '    if (op_ == 0xA4) { wb(pES, DI, rb(pDS, SI)); SI = (uint16_t)(SI + STEP(1)); DI = (uint16_t)(DI + STEP(1)); p_++; }\n'
+        '    else if (op_ == 0x83 && CODE003[p_ + 1] == 0xC6) { SI = (uint16_t)(SI + (int8_t)CODE003[p_ + 2]); p_ += 3; }\n'
+        '    else port_halt("GRENTRY _BEC: an instruction the copier does not have");\n'
+        '  } }',
+        "_BEC, the unrolled copier (movsb; add si,3 for 320 pixels): setup_frame_buf (_B0C) writes "
+        "a ret (C3h) at _BEC + the frame's width and puts back the movsb (A4h) the last one replaced, "
+        "so the copier runs from the code block until its ret (UW2's cPlaceFB set-up does the same)"),
     ('SPRITE', 0x0342): ('AX = port_dgroup_seg();', "mov ax,DGROUP: the C stack's segment, the port's stand-in for DGROUP (x86/entry.c)"),
     ('SPRITE', 0x0445): ('AX = port_dgroup_seg();', "mov ax,DGROUP, as at 0342"),
     ('SPRITE', 0x048A): ('AX = port_dgroup_seg();', "mov ax,DGROUP, as at 0342"),

@@ -3844,6 +3844,8 @@ L50D6:
        halved. */
 L50D8: /* _mxmul */
     /* 50D8  mov     ax,bx */
+    /* by hand: mxmul's body is whichever check_flat last copied over it (rep movs from L512B, the general one, 54h bytes, or L517E, the flat one, 26h bytes): the code block holds the copy, so the body runs as it says (as UW2's) */
+    if (memcmp(CODE004 + 0x50D8, CODE004 + 0x517E, 0x26) == 0) goto L517E;
     AX = BX;
 L50DA:
     /* 50DA  imul    word ptr ds:[MAT_XX] */

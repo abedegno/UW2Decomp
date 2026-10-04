@@ -1370,7 +1370,15 @@ L0BEB:
        for 320 pixels; setup_frame_buf patches in the ret). */
 L0BEC: /* _seg003_BEC */
     /* 0BEC  movsb */
-    wb(pES, DI, rb(pDS, SI)); SI = (uint16_t)(SI + STEP(1)); DI = (uint16_t)(DI + STEP(1));
+    /* by hand: _BEC, the unrolled copier (movsb; add si,3 for 320 pixels): setup_frame_buf (_B0C) writes a ret (C3h) at _BEC + the frame's width and puts back the movsb (A4h) the last one replaced, so the copier runs from the code block until its ret (UW2's cPlaceFB set-up does the same) */
+    { uint16_t p_ = 0x0BEC;
+      for (;;) {
+        uint8_t op_ = CODE003[p_];
+        if (op_ == 0xC3) { SP = (uint16_t)(SP + 2); return ASM_RET; }
+        if (op_ == 0xA4) { wb(pES, DI, rb(pDS, SI)); SI = (uint16_t)(SI + STEP(1)); DI = (uint16_t)(DI + STEP(1)); p_++; }
+        else if (op_ == 0x83 && CODE003[p_ + 1] == 0xC6) { SI = (uint16_t)(SI + (int8_t)CODE003[p_ + 2]); p_ += 3; }
+        else port_halt("GRENTRY _BEC: an instruction the copier does not have");
+      } }
 L0BED:
     /* 0BED  add     si,3 */
     SI = (uint16_t)(SI + 0x3);
