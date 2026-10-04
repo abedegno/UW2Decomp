@@ -130,10 +130,13 @@ void (far *npp_func)() = 0;             /* run by new_player_pos after a level c
 int main(int argc, char *argv[])
 {
     init_world(argc, argv);
+    CHECKPOINT(1);
     dprintf("before titlescr\n");
     titlescr();
+    CHECKPOINT(2);
     dprintf("after titlescr\n");
     real_start(1);
+    CHECKPOINT(3);
     in_game = 1;
     mainloop();
     free_world(1);
@@ -319,11 +322,13 @@ void far strt_demscr(void)
     init_gamedisp();
     editchng(0x7DFE);
     FixPlayerEquips();
+    CHECKPOINT(4);                      /* the game screen drawn, before its first 3D frame */
     render_FB();
     send_FB();
     mouse_show();
     read_quikpal(PAL_GAME, pal);
     fadein(pal, 2);
+    CHECKPOINT(5);                      /* the first game screen, faded in */
 }
 
 /* The 3D view's exit handler: its mouse regions, the game screen's panels and the screen graphics are put away. */
