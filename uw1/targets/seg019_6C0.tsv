@@ -1,0 +1,8 @@
+# segment seg019_6C0 base 0x22c60 size 0x4D org 0x6c0
+# cname: UW2 kin name (FM Towns original where UW2 has one), else the UW1 listing name; seg019 split at module bounds
+seg019_6C0	seg019_6C0	0x0	0x4
+seg019_6C4	seg019_6C4	0x4	0x4
+seg019_6C8	seg019_6C8	0x8	0x1F
+Read_Mouse_Motion_seg019_6E7	seg019_6E7	0x27	0x11
+seg019_6F8	seg019_6F8	0x38	0xB
+seg019_703	seg019_703	0x43	0xA

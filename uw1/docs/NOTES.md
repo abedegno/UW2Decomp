@@ -129,3 +129,9 @@ Things agents found that belong to the shared headers or the map, to settle in t
 - seg002 is assembly: UW2's LPFDELTA.ASM (the DeluxePaint LPF run/skip/dump decoder), the same 0x92 bytes, entry at +0xA; UW1's CUTS.C calls it, UW2 leaves it unused.
 - ovr141 is UW1's SHOWPIC.C: LoadBitMap_ovr141_0 reads a 0xFA00-byte picture by file name (not a BYT.ARK block) into the workspace or a farmalloc'd buffer and shows it; pal >= 0 clears, flips and loads the palette. It returns char (MAINMENU.C declares it void: tidy at the readability pass).
 - ovr130 is UW1's options panel, src/ui/OPTIONS.C (not mouse code; its 1% kin with WRAPPER.C is chance): seven pages, each a draw and a press handler, a key and mouse loop; it owns LeftPanel (DS:1A30). ovr130_0 is run_options_panel and ovr130_6D6 options_mouse_click (stub order; INTERACT.C follows); do_option_shortcut and gameopts_done (char in UW1) are UW2's names, the rest descriptive by key. Tricks: `-(row - 4)` for `add ax,-4; neg ax`; options_mouse_click increments x and never uses it.
+
+## seg019, the system library
+
+- seg019 is UW2's seg021 almost byte for byte: the same size (0x1071), 17 modules at the same offsets with no padding (STARTUP linked as an object, relocations 692-694; the rest from the library, from 2555). Cut into targets/seg019_<offset>.tsv; sources in src/sys. Far segments by UW1 listing names: seg063 (UW2 FD71), seg051 (seg052_519C), seg048 (seg_370D).
+- Differences: SYSINIT's "No graphics adapter" at DS:490h; KEYQUEUE has an `int 2` whenever a shifted key goes down (a debugging breakpoint UW2 removed); SYSENTRY's private stack top 448h, no cJoyInit pointer, 0EAh bytes of stack zeros; IMATH's tables at 4E0/560, 762, 864; C3DENTRY's _DATA opens with an unreferenced zero doubleword, and its constants and far targets move (render_3d at seg004:4987, update_cache seg004:7B3D).
+- sys.h still has UW2's cJoyInit and seg021_22FD_7CD/_809 (UW1 seg019_7CD/_809): readability pass.
