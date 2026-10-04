@@ -20,6 +20,10 @@ Still to do ([docs/PLAN.md](docs/PLAN.md)):
 
 [docs/NOTES.md](docs/NOTES.md) collects what matching found: where UW1 differs from UW2 (an earlier sound library, a graphics library of 18 modules where UW2 has 14, a 3D renderer of 9 modules with no 386 code, an options panel and screen-frame dragons of its own), the module boundaries, and items for the readability pass. [docs/FINDINGS.md](docs/FINDINGS.md) collects what it revealed about the game: likely bugs in the shipped program, the game rules the code implements, engine findings, dead code and open questions.
 
+## Finding a routine
+
+`map/crosswalk.tsv` lists every function by the disassembly listing's name and address (the names in UWReverseEngineering's `UW1_asm.asm`, which UnderworldGodot cites), with the matched source's name for it and the file and line that define it. `python3 tools/crosswalk.py --find NAME_OR_ADDRESS` looks one up; an address inside a routine (`ovr119_3CE`) finds the routine that holds it. `python3 tools/crosswalk.py` rebuilds the table from the target tables and the built objects. seg005 is Borland's C library and has no source line.
+
 ## Names
 
 UW1 has no build with symbols. Its names come from UW2's matched sources, whose names are the FM Towns build's originals: a UW1 function whose code pairs with a UW2 function (`tools/kin.py` in Exhume, `map/kin.tsv`) takes that name. Where the overlay manager's stub order rules a name out (the linker numbers an overlay's entries in the order of a hash of their names), a function takes a descriptive name whose hash fits, and the source says so.
