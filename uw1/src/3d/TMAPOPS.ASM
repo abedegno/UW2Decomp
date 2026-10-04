@@ -10,8 +10,9 @@
 ; offsets, but where UW2 hands the polygon to its 386 texture mapper in seg004 (CLIP.ASM,
 ; PROJPOLY.ASM and the scanline modules, none of which UW1 has), UW1 clips and projects it
 ; here in 16-bit code and calls the mapper through the far pointer at seg051:0B006h, whose
-; offset the handlers set to seg003's wall mapper (01DAh, WALLMAP.ASM) or its polygon mapper
-; (0545h, POLYFILL.ASM). The UW1-only routines: seg004_6130 projects and draws the textured
+; offset the handlers set to seg003's wall mapper (_seg003_1DA, WALLMAP.ASM) or its polygon mapper
+; (_seg003_545, POLYFILL.ASM). The original named them: TLINK takes those two modules from
+; the library only for a reference by name. The UW1-only routines: seg004_6130 projects and draws the textured
 ; polygon (seg004_6129 is its entry with this module's overflow handler, L692C, installed),
 ; seg004_624B, 63C6, 6545 and 66C2 clip it against the four planes, carrying the texture
 ; coordinates. UW1 has no do_bcompact_map (its opcode table ends at 0DAh).
@@ -46,6 +47,8 @@ OPCODE_TABLE    equ     2738h
 
         extrn   seg048:far
         extrn   _seg003_1082:far
+        extrn   _seg003_1DA:far
+        extrn   _seg003_545:far
 
 _DATA   segment word public 'DATA'
 _DATA   ends
@@ -108,10 +111,10 @@ _do_set_gmap_ctxt proc near
         lodsw
         test    al,0FFh
         jne     short L5C52
-        mov     word ptr ds:[0B00Ah],1DAh
+        mov     word ptr ds:[0B00Ah],offset _seg003_1DA
         jmp     short L5C58
 L5C52:
-        mov     word ptr ds:[0B00Ah],545h
+        mov     word ptr ds:[0B00Ah],offset _seg003_545
 L5C58:
         lodsw
         xchg    bx,ax
@@ -122,7 +125,7 @@ _do_set_gmap_ctxt endp
 ; do_ctxt_gtmap: a g-polygon textured from the context slot (do_set_tmctxt), floor-style
 ; mapping. Falls into do_gwtmap's vertex loop with BP = the context's bitmap block.
 _do_ctxt_gtmap proc near
-        mov     word ptr ds:[0B006h],1DAh
+        mov     word ptr ds:[0B006h],offset _seg003_1DA
         mov     bp,word ptr ds:[0B07Ch]
         jmp     short L5C9B
 _do_ctxt_gtmap endp
@@ -153,13 +156,13 @@ _do_gtri endp
 ; records vert_ptr and either draws the polygon flat (polym set) or calls _seg004_6141 to
 ; texture map it.
 _do_gtmap proc near
-        mov     word ptr ds:[0B006h],1DAh
+        mov     word ptr ds:[0B006h],offset _seg003_1DA
         jmp     short L5C8C
 _do_gtmap endp
 
 ; seg004_5C86  (+5C86)
 _do_gwtmap proc near
-        mov     word ptr ds:[0B006h],545h
+        mov     word ptr ds:[0B006h],offset _seg003_545
 L5C8C:
         lodsw
         shl     ax,1
@@ -215,13 +218,13 @@ _do_compact_map endp
 
 ; seg004_5CED  (+5CED)
 _do_compact_tmap proc near
-        mov     word ptr ds:[0B006h],1DAh
+        mov     word ptr ds:[0B006h],offset _seg003_1DA
         jmp     short L5CFB
 _do_compact_tmap endp
 
 ; seg004_5CF5  (+5CF5)
 _do_compact_wtmap proc near
-        mov     word ptr ds:[0B006h],545h
+        mov     word ptr ds:[0B006h],offset _seg003_545
 L5CFB:
         lodsw
         shl     ax,1
@@ -284,13 +287,13 @@ _do_compact_wtmap endp
 ; dispatch's xchg), where FM Towns' do_bcompact_map loads bmap_blk_ptr first. So in DOS it
 ; would map with a stray block pointer; probably the C never emits it.
 _do_bcompact_tmap proc near
-        mov     word ptr ds:[0B006h],1DAh
+        mov     word ptr ds:[0B006h],offset _seg003_1DA
         jmp     short L5D7D
 _do_bcompact_tmap endp
 
 ; seg004_5D77  (+5D77)
 _do_bcompact_wtmap proc near
-        mov     word ptr ds:[0B006h],545h
+        mov     word ptr ds:[0B006h],offset _seg003_545
 L5D7D:
         lodsw
         shl     ax,1
@@ -351,20 +354,20 @@ _do_bcompact_wtmap endp
 ; per vertex a point offset into resbuf and a corner word: bit 0 set gives u = width-1, a value
 ; of 2 or more gives v = the v limit, so each vertex sits at one corner of the texture.
 _do_tmap_tri proc near
-        mov     word ptr ds:[0B006h],1DAh
+        mov     word ptr ds:[0B006h],offset _seg003_1DA
         mov     cx,3
         jmp     short L5E0D
 _do_tmap_tri endp
 
 ; seg004_5DFC  (+5DFC)
 _do_wtmap proc near
-        mov     word ptr ds:[0B006h],545h
+        mov     word ptr ds:[0B006h],offset _seg003_545
         jmp     short L5E0A
 _do_wtmap endp
 
 ; seg004_5E04  (+5E04)
 _do_tmap proc near
-        mov     word ptr ds:[0B006h],1DAh
+        mov     word ptr ds:[0B006h],offset _seg003_1DA
 L5E0A:
         mov     cx,4
 L5E0D:
@@ -418,7 +421,7 @@ L5E73:
         je      short L5E7D
         jmp     L60E0
 L5E7D:
-        cmp     word ptr ds:[0B006h],545h
+        cmp     word ptr ds:[0B006h],offset _seg003_545
         je      short L5E88
         jmp     L60E0
 L5E88:

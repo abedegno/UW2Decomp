@@ -41,6 +41,7 @@ DGROUP  group   _DATA
 SEG003_TEXT segment word public 'code'
         assume  cs:SEG003_TEXT, ds:DGROUP, ss:DGROUP
         public  _seg003_121
+        public  _seg003_1DA
         public  _seg003_60
 
 ; seg003_60  (+60)
@@ -201,6 +202,9 @@ L014F:
         add     word ptr cs:L0316,dx
         test    word ptr ds:[7D1h],0FFFFh
         ret
+; the mapper's far entry (+1DA), named because TMAPOPS stores its offset (the link needs the
+; name to take this module from the library)
+_seg003_1DA label far
         push    es
         push    ds
         mov     ax,seg seg048

@@ -105,7 +105,8 @@ extern int16 floor_IDs[];
 extern int16 floor_num[];
 extern int16 f32_buf;
 extern int16 f16p;
-extern int16 MazeNavigationTextureMaybe_dseg_5c99_7184;
+/* floor_IDs[4] (DS:7184), the floor texture the maze spell swaps (TEXTMAPS.C's array: the
+   link proved it is not a variable of its own) */
 
 /* This file's _BSS, in UW1 DS:726E..727D (UW2 DS:8288..8297). player is the player
    record (its storage is PLAYER.C's PlayerDat), playerdat the adventurer's creature type
@@ -215,7 +216,7 @@ void far init_spells(void)
 void far swap_tmap(unsigned char tex)
 {
     if (tex != 0xFF)
-        MazeNavigationTextureMaybe_dseg_5c99_7184 = tex;
+        floor_IDs[4] = tex;
     load_tr_mem("DATA\\f32.tr", floor_IDs,
                                floor_num, f32_buf);
     load_tr_mem("DATA\\f16.tr", floor_IDs,
@@ -363,9 +364,9 @@ void far set_maze(char on)
     char tex;
     if (PlayerLevel == 7) {
         tex = 0xFF;
-        if (on && MazeNavigationTextureMaybe_dseg_5c99_7184 != 0x0C)
+        if (on && floor_IDs[4] != 0x0C)
             tex = 0x0C;
-        if (!on && MazeNavigationTextureMaybe_dseg_5c99_7184 == 0x0C)
+        if (!on && floor_IDs[4] == 0x0C)
             tex = 0x0E;
         if (tex >= 0)
             swap_tmap(tex);

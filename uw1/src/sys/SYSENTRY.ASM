@@ -36,7 +36,7 @@
 ;   UW2 only, not checked in UW1: 0C30..0C36 the clip window set_the_window copies there,
 ;         0C38.. the screen mode and size.
 ;
-; The 0EAh zero bytes at the start of _DATA (DS:2242..232B; UW2 0CEh, DS:204E..211B) are a
+; The 0D4h zero bytes at the start of _DATA (DS:2258..232B; UW2 0CEh, DS:204E..211B) are a
 ; stack: C3DENTRY.ASM's _102B runs MousQUp on it during a frame.
 ;
 ; name: descriptive (module 13 of seg019, "far C entry points (key, mouse, mbuttons)"); key,
@@ -50,13 +50,15 @@
 ; padding before a paragraph-aligned module (TASM 2.0 pads `align 16` with 87 DB/90, not
 ; zeros).
 ; Its relocations are entries 2576-2587 of UW.EXE's relocation table.
-; Its _DATA is DS:2242..2370 (relocation entries 2559-2575), defined before the code because
+; Its _DATA is DS:2258..2370 (relocation entries 2559-2575), defined before the code because
 ; those entries come before the code's.
 ;
-; DS:2242..232B (zeros; nothing names them, but C3DENTRY.ASM's _102B runs on them as a
+; DS:2258..232B (zeros; nothing names them, but C3DENTRY.ASM's _102B runs on them as a
 ; stack, its SP at joy_position) is placed here: it is the second library's data before this
-; module's first pointer (the C library's "floating point formats not linked" message ends at DS:2241), and no module linked earlier
-; from the library has data in DGROUP; which module it belonged to is not known.
+; module's first pointer, and no module linked earlier from the library has data in DGROUP.
+; The link showed where the C library's data ends: DS:2242..2257 are the _DATA of NEARHEAP,
+; SETARGV and SETENVP (6, 14 and 2 zero bytes), which TLINK takes from CM.LIB after CVTFAK,
+; so the run here is 0D4h bytes, not the 0EAh this module had before the link.
 
         .186
 
@@ -64,7 +66,7 @@
         extrn   seg063:far
 
 _DATA   segment word public 'DATA'
-        db      0EAh dup (0)                    ; UW2 0CEh
+        db      0D4h dup (0)                    ; UW2 0CEh
 _joy_position label dword
         dd      seg063+1A0h
 _joy_buttons label dword

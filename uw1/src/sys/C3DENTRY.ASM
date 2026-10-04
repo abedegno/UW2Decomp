@@ -703,7 +703,7 @@ _seg019_102B proc far
         mov     ax,ss
         mov     word ptr cs:L0C30,ax
         mov     word ptr cs:L0C32,sp
-        mov     ax,offset DGROUP:_joy_position  ; the 0CEh bytes of SYSENTRY's _DATA below it are the stack
+        mov     ax,offset DGROUP:_joy_position  ; the 0D4h bytes of SYSENTRY's _DATA below it are the stack
         cli
         mov     sp,ax
         mov     ax,DGROUP

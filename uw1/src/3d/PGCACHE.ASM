@@ -26,6 +26,12 @@
 ; Its _DATA is DS:23A4..23B4 (relocation entries 2743-2745), defined before the code because
 ; those entries come before the code's.
 ;
+; The empty SEG019_TEXT declaration at the end is the later paragraph-aligned contribution
+; that makes seg019's segment end at 1080h, 15 zero bytes after its last routine (the segment
+; table counts them as seg019's; the link showed it, entry 21's length being 1071h without
+; it). Which module made it is not known; as in UW2 (UW2Decomp's PGCACHE.ASM), this is the
+; first module linked after seg019's last one that calls into seg019.
+;
 ; The routine comments are UW2's, with UW1's addresses, except where marked UW1.
 
 ; The model interpreter's opcode table: a word per opcode, the offset of its handler
@@ -1046,5 +1052,8 @@ L8151:
 _do_uwcolv endp
 
 SEG004_TEXT ends
+
+SEG019_TEXT segment para public 'CODE'
+SEG019_TEXT ends
 
         end

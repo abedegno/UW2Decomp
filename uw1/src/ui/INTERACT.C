@@ -89,7 +89,8 @@ extern int16 floor_IDs[];
 void far stop_music(void);
 void far seg027_2861_EF9(void);
 void far EtherealVoidSpecialEffects_seg008_150(void);
-extern unsigned char dseg_5c99_5626;
+/* the player's maximum vitality: Creature[63].avghit, DS:5626 (a name for the middle of
+   Creature[] would not link: the link proved it) */
 extern unsigned char realDScheck;           /* GAMEWRAP.C's, DS:12B3 */
 
 #define TERRAIN(t)      (TxmTerr[(t)->floor])      /* UW1: the whole word */
@@ -251,7 +252,7 @@ void far clear_gamedisp(void)
 
 /* Called every frame: drives the player's attack, redraws the health and mana flasks and
    the compass (not on level 9), flashes the screen frame when the player took enough
-   damage (dseg_5c99_5626 against four times OBJ_DAMAGE), cycles the palette, starts death
+   damage (the player creature's avghit against four times OBJ_DAMAGE), cycles the palette, starts death
    when the player's hit points are 0, and once per second of game time maybe changes the
    music; every 20 seconds it runs duration_check. On level 9 a random one in 32 frames
    gets EtherealVoidSpecialEffects. */
@@ -264,7 +265,7 @@ void far display_scr(void)
     v = ThePlayer->hp;
     set_screen_frame(0, v);
     dam = OBJ_DAMAGE(ThePlayer);
-    if ((dam << 2) > dseg_5c99_5626 || v < 0x10 && dam > 0)
+    if ((dam << 2) > Creature[63].avghit || v < 0x10 && dam > 0)
         set_screen_frame(4, 3);
     ThePlayer->b11 = 0;
     v = PLAYER1->play_mana;

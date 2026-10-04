@@ -10,10 +10,12 @@ No game data is included. You need your own copy of UW1 (the GOG release). This 
 
 Every code segment is matched. Each source compiles with Turbo C++ 1.01 (C) or assembles with Turbo Assembler 2.0 (assembly) to its segment's bytes in `UW.EXE`, and its fixups, data and names are verified: 353,727 of the program's 369,167 bytes of code, in 89 C files and 50 assembly modules. The rest is Borland's C runtime library, which the link takes from the library, as UW2Decomp's does.
 
+The relinked EXE is identical to `UW.EXE` (the same MD5) and boots to the main menu, and the modding build with no change gives the same EXE ([LINKING.md](docs/LINKING.md)). What no source holds yet (four small pieces of code, 442 bytes, and the far data and DGROUP gaps no source owns) is extracted from your own `UW.EXE` at build time and never committed.
+
 Still to do ([docs/PLAN.md](docs/PLAN.md)):
 
-1. The data as source, and the link to an EXE byte-identical to `UW.EXE`.
-2. The gate, the modding build and the readability pass: shared headers that match UW1 (the matched files still declare some of UW1's differences from UW2 locally), named constants and struct fields, and notes on what each file does in the game.
+1. The rest of the data as source.
+2. The gate, the layout audit for the modding build, and the readability pass: shared headers that match UW1 (the matched files still declare some of UW1's differences from UW2 locally), named constants and struct fields, and notes on what each file does in the game.
 3. A port, on the same port layer as UW2Decomp's.
 
 [docs/NOTES.md](docs/NOTES.md) collects what matching found: where UW1 differs from UW2 (an earlier sound library, a graphics library of 18 modules where UW2 has 14, a 3D renderer of 9 modules with no 386 code, an options panel and screen-frame dragons of its own), the module boundaries, and items for the readability pass.
@@ -31,7 +33,12 @@ This needs your own `UW.EXE`, the Turbo C++ 1.01 disk images (which Borland rele
 ```sh
 python3 path/to/Exhume/tools/match.py src/ui/OPTIONS.C     # compile in DOS and compare with the segment
 python3 path/to/Exhume/tools/verify.py src/ui/OPTIONS.C    # fixups, data and names
+python3 path/to/Exhume/tools/build.py --all                # every object
+python3 tools/link.py                                      # build/LINK/out/UW.EXE, compared with yours
+python3 tools/link.py --mod                                # the modding build
 ```
+
+The tools find Exhume through `$EXHUME`, or a checkout named `Exhume` next to this one.
 
 `python3 tools/repocheck.py` runs the checks CI runs on every push: no game data or Borland binary is committed, and the Markdown links resolve.
 

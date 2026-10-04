@@ -94,6 +94,7 @@ SEG003_TEXT segment word public 'code'
         extrn   _seg003_3CE:near
         public  _seg003_4B9
         public  _seg003_422
+        public  _seg003_545
 
 ; seg003_422  (+422)
 ; _422 (get_wright, FM Towns): advance the right-hand edge to the next vertex (forwards through
@@ -217,6 +218,9 @@ L04DE:
         add     word ptr cs:L0853,dx
         test    word ptr ds:[7D1h],0FFFFh
         ret
+; wmap_bitmap's far entry (+545), named because TMAPOPS stores its offset (the link needs the
+; name to take this module from the library)
+_seg003_545 label far
         mov     word ptr cs:_seg003_3CA,cx
         mov     ax,es
         mov     word ptr cs:_seg003_3CC,ax
