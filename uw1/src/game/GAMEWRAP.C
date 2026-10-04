@@ -62,7 +62,15 @@
 #include "player.h"
 #include "sound.h"
 #include "sys.h"
+/* UW1: ui.h has UW2's automap prototypes (an int flags where UW1 passes the archive); this
+   file declares UW1's below, so the header's are renamed out of the way. */
+#define ClearAutoMap uw2_ClearAutoMap
+#define GetAutoMapLevel uw2_GetAutoMapLevel
+#define SaveAutoMapLevel uw2_SaveAutoMapLevel
 #include "ui.h"
+#undef ClearAutoMap
+#undef GetAutoMapLevel
+#undef SaveAutoMapLevel
 #undef clear_dir
 #undef init_save
 #undef copy_file
@@ -93,9 +101,9 @@ char far ovr123_76(char *arc, int level);
 char far ovr123_16E(char *arc, int level);
 void far ApplyTerrainData_ovr131_20D(char *arc, int level);
 char far ovr131_2E2(char *arc, int level);
-void far ovr092_1D0(void);
-void far ovr092_11E(char *arc, int level);
-char far ovr092_97(char *arc, int level);
+void far ClearAutoMap(void);
+void far GetAutoMapLevel(char *arc, int level);
+char far SaveAutoMapLevel(char *arc, int level);
 void far clear_paths(void);
 /* UW1: the automap's update flag (the listing's name, DS:0546). */
 extern char ProbablyAutomapEnabled_dseg_5c99_546;
@@ -159,11 +167,11 @@ int far GetLevel(register int level)
     RestorePlayerInv(0);
     if (ok > 0) {
         ApplyTerrainData_ovr131_20D(arc, level);
-        ovr092_1D0();
+        ClearAutoMap();
         clear_paths();
         init_level_creature_stuff();
         if (ok == 1)
-            ovr092_11E(arc, level);
+            GetAutoMapLevel(arc, level);
     }
     ovr091_153(arc);
     return ok;
@@ -185,7 +193,7 @@ char far SaveLevel(register int level)
     if ((ok = ovr091_0(arc, "SAVE0\\lev.ark")) != 0) {
         ok = ovr123_16E(arc, level);
         ok = ok && ovr131_2E2(arc, level);
-        ok = ok && ovr092_97(arc, level);
+        ok = ok && SaveAutoMapLevel(arc, level);
         ok = ok && ovr091_153(arc);
     }
     RestorePlayerInv(0);

@@ -63,6 +63,7 @@ _AskInventory	5A11:0043	provisional
 _assess_value	597E:006B	provisional
 _aStrings_pak	DS:09E0	provisional
 _AtIndex_ovr095_11C0	5964:00B6	provisional
+_ATM_Strings	3F4B:3336	provisional
 _atol	0EC5:15B5	provisional
 _attach_eye	5A53:005C	provisional
 _attackKey	DS:0244	provisional
@@ -147,6 +148,7 @@ _change_music_maybe	1BD8:160D	provisional
 _change_screen	59D3:005C	provisional
 _change_state	DS:13AC	provisional
 _change_terrain	59C8:0066	provisional
+_ChangeAutoMapLevel	595C:007A	provisional
 _changed	DS:56AA	provisional
 _changeDoor	333E:212E	provisional
 _ChangeLevel	5A69:0039	provisional
@@ -184,6 +186,7 @@ _clear_paths	128A:220A	provisional
 _clear_runes	5A0B:0039	provisional
 _clear_shelf	5A0B:003E	provisional
 _clear_window	0090:557F	provisional
+_ClearAutoMap	595C:0052	provisional
 _ClearInventory	5A1A:0070	provisional
 _clearobj	59D3:0039	provisional
 _cLightTabs	DS:2388	provisional
@@ -244,6 +247,7 @@ _copy_dir	5A69:0025	provisional
 _copy_file	5A69:002A	provisional
 _copy_hidden_to_visible	0090:5314	provisional
 _copy_visible_to_hidden	0090:5350	provisional
+_CornerShade_ovr094_9D2	595C:005C	provisional
 _count_inv	599C:0039	provisional
 _count_list	2674:0E2D	provisional
 _CP	DS:284A	provisional
@@ -345,6 +349,7 @@ _deltatotheta	128A:2862	provisional
 _demo_mode	DS:2DFF	provisional
 _demous_player	5A53:006B	provisional
 _DetectedTrap	5A76:007F	provisional
+_DetermineBetterHit	595C:0039	provisional
 _didhitobj	DS:246D	provisional
 _didMouseInput	DS:0A8F	provisional
 _didmove	DS:2472	provisional
@@ -413,6 +418,7 @@ _do_zbounce	2939:0C93	provisional
 _DoAnimO	DS:0AAF	provisional
 _DoClosingDoors	5A9C:0048	provisional
 _DoCopyCode_ovr095_14B1	5964:00AC	provisional
+_DoDoorTile	595C:003E	provisional
 _does_npc_like	597E:0066	provisional
 _DoInventoryDrag	5A1A:0052	provisional
 _DoInventoryMouse	5A1A:0061	provisional
@@ -427,6 +433,7 @@ _DoPlayerWeapon	2121:0FF6	provisional
 _DoReadHeader_ovr095_12C3	5964:00CA	provisional
 _DoSaveRest	5A69:002F	provisional
 _DoSpecialActions	59FE:0039	provisional
+_DoTile	595C:0020	provisional
 _DoTrapScreenShake_seg008_DD6	193D:0DD6	provisional
 _DoVal_ovr095_EB2	5964:0075	provisional
 _DoWanderingMonsters	5A9C:006B	provisional
@@ -592,6 +599,7 @@ _get_skill	5A76:0070	provisional
 _get_string	32A8:008D	provisional
 _get_terrain	128A:0367	provisional
 _get_workspace	35D3:01C1	provisional
+_GetAutoMapLevel	595C:0025	provisional
 _getcurdir	0EC5:1AB1	provisional
 _getdfree	0EC5:1B58	provisional
 _GetHgt	2529:0004	provisional
@@ -603,6 +611,7 @@ _getPlayerInvCopy	5A05:002A	provisional
 _GetPlayerWeapon	2121:0F16	provisional
 _getSaveObj	5A05:004D	provisional
 _GetSlopeHgt	2529:01A5	provisional
+_GetTheWords	595C:0061	provisional
 _getvect	0EC5:1B78	provisional
 _gftab	DS:0551	provisional
 _gfx_inpage	DS:0A4B	provisional
@@ -618,6 +627,7 @@ _gr_freelab	37FF:033D	provisional
 _gr_getlab	37FF:024B	provisional
 _gr_getpre	37FF:022C	provisional
 _gr_putlab	37FF:0272	provisional
+_gr_read_pixel	0090:4FDE	provisional
 _gr_tostrt	37FF:010B	provisional
 _gr_wcall	DS:3140	provisional
 _grab	1DAE:000E	provisional
@@ -807,6 +817,7 @@ _make_string	32A8:0116	provisional
 _MakeBagClose	59FE:005C	provisional
 _makePlayerInvCopy	5A05:0039	provisional
 _malloc	0EC5:38BF	provisional
+_ManageDungeonMap	595C:002A	provisional
 _mantra_advance	5A76:0020	provisional
 _Map_GetAddr	2E86:0009	provisional
 _Map_Init	5A29:0025	provisional
@@ -1019,9 +1030,6 @@ _ovr091_153	5958:002A	provisional
 _ovr091_22C	5958:0039	provisional
 _ovr091_61A	5958:0034	provisional
 _ovr091_798	5958:002F	provisional
-_ovr092_11E	595C:0025	provisional
-_ovr092_1D0	595C:0052	provisional
-_ovr092_97	595C:002F	provisional
 _ovr097_CDB	597E:0093	provisional
 _ovr105_14E3	59B8:0039	provisional
 _ovr105_1639	59B8:0025	provisional
@@ -1042,6 +1050,7 @@ _ovr145_4FB	5A83:0048	provisional
 _ovr152_0	5A99:0025	provisional
 _ovr152_13	5A99:0020	provisional
 _ovr152_5	5A99:002A	provisional
+_ovr154_2D1	5AA4:0025	provisional
 _ovr154_374	5AA4:0057	provisional
 _palette	DS:23BC	provisional
 _Palettes	DS:573E	provisional
@@ -1076,6 +1085,8 @@ _pickopt	5991:0052	provisional
 _PickUp	DS:311E	provisional
 _PickUpFromSlot_ovr097_C39	597E:0052	provisional
 _pipeexp	DS:3132	provisional
+_pixel_color	DS:2400	provisional
+_PixelDarken	595C:0066	provisional
 _place_3d_view	2ABA:000D	provisional
 _place_browse	598A:003E	provisional
 _place_new	333E:0438	provisional
@@ -1190,6 +1201,7 @@ _rectangle	0090:54EB	provisional
 _RectLook	5A23:0048	provisional
 _RedispInv	22EF:0506	provisional
 _RedisplayInvSlot	5A11:002A	provisional
+_RedisplayStrings	595C:0034	provisional
 _RedispRune	5A0B:0048	provisional
 _RedispStat	5A83:0043	provisional
 _Ref	37FF:011E	provisional
@@ -1244,11 +1256,13 @@ _Run_FPS	DS:00CE	provisional
 _save_player_data	5A4D:003E	provisional
 _save_rect	004E:01D5	provisional
 _save_screenshot	59E1:0020	provisional
+_SaveAutoMapLevel	595C:002F	provisional
 _saved_tmap_inpage	DS:0A4D	provisional
 _SaveGame	5A69:0048	provisional
 _SaveHandles	DS:5AD6	provisional
 _SaveLevel	5A69:004D	provisional
 _SavePlayerInv	5A05:0020	provisional
+_SaveTheWords	595C:0070	provisional
 _scanf	0EC5:0E0D	provisional
 _scrmode	DS:565E	provisional
 _scrnum	DS:5664	provisional
@@ -1370,6 +1384,7 @@ _setup_to_barter	597E:0039	provisional
 _setup_vars	2ABA:0396	provisional
 _setvect	0EC5:1B87	provisional
 _sex	5977:003E	provisional
+_ShadeSide	595C:0043	provisional
 _Shift	DS:2334	provisional
 _should_i_flee	15AB:3383	provisional
 _show	0090:57BB	provisional
@@ -1378,7 +1393,9 @@ _show_credits	5A32:0020	provisional
 _show_cutscene	59B8:0089	provisional
 _show_skills	5991:0048	provisional
 _show_version	5A53:0061	provisional
+_ShowAutoMapLevel	595C:0075	provisional
 _ShowClip	3963:0DC6	provisional
+_ShowDungeonMap	595C:0057	provisional
 _ShowRune	5A0B:002A	provisional
 _ShowSaveRest	5A69:0052	provisional
 _showSelection_ovr097_E83	597E:002F	provisional
@@ -1502,6 +1519,7 @@ _toggle_fightmode	22EF:1608	provisional
 _ToggleDoor	333E:23B7	provisional
 _tolower	0EC5:141E	provisional
 _total_offering_ovr097_17CB	597E:0020	provisional
+_toupper	0EC5:144A	provisional
 _towhere	DS:2658	provisional
 _TP	DS:285A	provisional
 _tp_act	DS:2446	provisional
