@@ -54,3 +54,25 @@ After these: **89 of 89 sources compile, 0 errors, 44 warnings, 259 names for th
 `tools/layoutcheck.py` compares every record in `src/include` under Turbo C (in DOS) and on the host: 43 records, 34 identical, 9 different, all 9 with pointer fields (`Handler`, `MotionParams`, `Arc`, `CutsState`, `Bag`, `SoundBuff`, `DrvrDesc`, `buttongroup`, `Button`). The 19 file records in `[port.layout] file_records` are all identical, among them `Player` (0xD2 bytes) and `LevelBlock` (0x7C08). `get_arc` and `put_arc` are not in `io_calls`: UW1's take the archive's `struct Arc` as their handle.
 
 `tools/intaudit.py` lists 1,495 sites where a value can leave its 16-bit range before it is truncated. UW1's sources were seeded from UW2's after UW2's audit, and the casts it added that were checked here are already in them (DRAWOBJ.C's facing, PHYSICS.C's heading tests, GRDB.C's `(uint16)-1`). The rest is the list to read when a replay disagrees (`build/port/intaudit.txt`).
+
+## Milestone 2: link
+
+`make port` (Exhume's `tools/portbuild.py`) compiles the game's C, UW1's port C and Exhume's runtime where it is, and links `build/port/uw1port`. `tools/portstubs.py` writes a stub for every name nothing defines yet: a function that names itself and stops the port, or zeroed storage for data. Run on 4 October 2026 (Apple clang 21, SDL 3), the port links, with no warning in the port's C, a 1 MB arm64 executable. Run on the GOG release's data, it loads the far data from `UW.EXE`, starts the game's thread and stops at the first stub it reaches, MODEX.ASM's console print `seg015_1F9B_E8`.
+
+The first set of stubs had 85 functions and 81 variables in 20 files. UW1's own port C, written from UW2Decomp's (UW1's system library is UW2's almost byte for byte) and from the link's map for every address, took them to **69 functions and 17 variables in 9 files**:
+
+| File | Replaces | What |
+| --- | --- | --- |
+| `src/port/portgame.h`, `asmgame.h`, `ailgame.h` | | UW1's bindings for the runtime: the names and DGROUP (5AACh) and `_ctype` (DS:1E00), the exit chain, the black box, the window, finding the game (`UW.EXE` in a `UW1` folder, GOG's product 1207658937), the far data blocks; the code segments seg003 (0090h) and seg004 (06E7h) for the x86 machine; the game's AIL declarations (no FM extension yet) |
+| `mem/fardata.c` | FARDATA.ASM and the far data extract.py takes from the EXE | FD51 to FD63 (395B:0000 to 54D7:105C) as one block in the EXE's layout with the C's names as labels at their offsets, seg019's data seg063 (FD72, 5624:0000), seg003 and seg004 as a code block, DGROUP's image; all read from the user's `UW.EXE` (547,248 bytes, CRC-32 F2BF2527h), with the EXE's relocations applied at the port's load segment |
+| `mem/dgroup.c` | the DGROUP gaps | the eleven names extract.py places; `dseg_5c99_12B6` gets its byte (64h) from the EXE's DGROUP |
+| `mem/ems.c` | EMS.C (dos-only) | seg012's entry points on the runtime's EMS memory; the three routines nothing calls stop the port |
+| `mem/nulls.c` | | what DOS reads through a null pointer: DS:0..3 `3F F1 02 00`, int 0 at `int0_trap` (1DEA:000E) |
+| `sys/sysentry.c` | SYSENTRY, STARTUP, SYSINIT, CPUTYPE, VIDSAVE, SYSLIBL, TICKS, TICKREAD, JOYPORT's start-up | seg019's start-up and shut-down, the far pointers into seg063 (MouseDx, MouseDy and cExitMessage at 0448, 044A and 044C, where UW2's are at 0510..0514; no `cJoyInit`), `mouse`, `mbuttons`, the clock |
+| `sys/keyqueue.c`, `sys/mousedrv.c` | KEYQUEUE, KBDINT, MOUSEDRV | UW2Decomp's, renamed; UW1's KEYQUEUE.ASM has an `int 2` when a shifted key goes down, which the port leaves out |
+| `sys/int0trap.c`, `sys/overlay.c` | INT0TRAP (seg016), OVERLAY.ASM | UW2Decomp's |
+| `sys/main.c` | | the port's main and options, UW2Decomp's adapted: `--sound` takes UW1's card numbers (SOUND.C's driver tables) and writes UW.CFG's three lines; a first run has no sound cards until the port's sound is checked against UW1's drivers |
+| `3d/pgcache.c` | PGCACHE.ASM's data | `grs_off` and `obj_tab`, into seg051 |
+| `x86/modtab.c`, `x86/glue.c` | | the translated modules' and the glue's tables, empty until a module is translated |
+
+The stubs left are the graphics library (GRCORE.ASM 22 functions and 11 variables, MODEX.ASM 14, SPRITE.ASM 8, VALLOC.ASM 5, LPFDELTA.ASM 1), the 3D entry points (C3DENTRY.ASM 13 and 6), SETPNT, four Borland calls (`delay`, `int86`, `sound`, `nosound`) and `port_render_tag`.

@@ -6,7 +6,11 @@
    The program's name in its messages, and the game's main it runs; DGROUP's paragraph in UW.EXE,
    which the pseudo-registers _DS and _SS start with, and where Borland's _ctype table sits in
    DGROUP (DS:1E00, after the C library's ATEXIT word at 1DFE: build/LINK/out/UW.MAP, and the
-   bytes); the termination chain exit runs, which seg019's init hooked. */
+   bytes); the termination chain exit runs, which seg019's init hooked; the black box; the
+   window; how the game's folder is found and what the settings file is called; the sound
+   library's environment variables; and the far data blocks of UW.EXE that no source defines
+   yet (mem/fardata.c), whose initial bytes are read from the user's own UW.EXE at start-up,
+   never shipped. The load segment and the far heap are the runtime's defaults. */
 #ifndef UW1_PORTGAME_H
 #define UW1_PORTGAME_H
 
@@ -21,5 +25,43 @@ void seg019_exit_chain(void);                   /* sys/sysentry.c */
    visible: renamed in the port, after compat.h has included the host's headers.
    dprintf is DEBUG.C's (ovr106_1B, UW1's debug print); POSIX's writes to a descriptor. */
 #define dprintf uw1_dprintf
+
+/* the black box (sys/blackbox.c): stage/ leaves out the port's settings file */
+#define PORT_BLACKBOX 1
+#define BLACKBOX_SKIP "uw1port.cfg"
+
+/* the window (plat.h): its title when main gives none; no icon of its own yet */
+#define PLAT_TITLE "UW1"
+
+/* finding the game (sys/gamedir.c): the GOG release's UW.EXE (port_check_exe, mem/fardata.c),
+   in a UW1 folder of an install or of GOG's CD image; GOG sells UW1 and UW2 as one product,
+   Ultima Underworld 1+2, 1207658937 (UW2Decomp's portgame.h) */
+#define PORT_GAME_EXE "UW.EXE"
+#define PORT_GAME_FOLDER "UW1"
+#define PORT_GAME_HINTS "underworld", "uw1"
+#define PORT_GAME_DESC "the GOG release's UW.EXE"
+#define PORT_GOG_ID "1207658937"
+#define PORT_DATA_ENV "UW1PORT_DATA"
+#ifdef _WIN32
+#define PORT_GAME_ROOTS "$USERPROFILE/UWGOG"
+#else
+#define PORT_GAME_ROOTS "~/UWGOG"
+#endif
+#define PORT_CONFIG_FILE "uw1port.cfg"
+#define PORT_CONFIG_TITLE "uw1port settings"
+
+/* the sound library's environment variables (sound/ail.c, sound/audio.c) */
+#define AIL_SNDCHECK_ENV "UW1PORT_SNDCHECK"     /* list each sound read that differs from DOS's */
+#define AUDIO_ROMS_ENV "UW1PORT_MT32_ROMS"      /* the user's MT-32 or CM-32L ROMs */
+
+/* The far data segments the assembly modules keep their data in (build/LINK/out/UW.MAP):
+   seg048, the graphics library's (FD52, 3963:0000, its first eight bytes FD51's last), seg051,
+   the 3D renderer's (FD58, 4723:0000), and seg063, the system library's (FD72, 5624:0000). */
+extern unsigned char seg048[];
+extern unsigned char seg051[];
+extern unsigned char seg063[];
+#define SEG048_SIZE 0x5E7C
+#define SEG051_SIZE 0xC4D9
+#define SEG063_SIZE 0x0AB0
 
 #endif
