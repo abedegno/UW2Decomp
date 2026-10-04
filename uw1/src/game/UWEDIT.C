@@ -102,9 +102,9 @@ char far LoadBitMap_ovr141_0(int pal, char *name);
 /* UW1: SKILLS.C's routine run every frame as the 3D view's handler 10. */
 void far check_victory(void);
 /* UW1: start-up and UW.CFG routines with no name yet (the listing's). */
-void far ovr154_374(void);
+void far memcheck(void);
 void far ovr131_0(void);
-void far ovr142_11A(void);
+void far init_lighting(void);
 void far seg014_1DC5_1D0D(FILE *fp);
 void far ovr105_1639(FILE *fp);
 /* match: kin names ovr105_14E3 reset_db, a false hit (VIEW3D.C has reset_db; both copy
@@ -200,7 +200,7 @@ void far init_world(int argc, char *argv[])
     init_sounds();
     init_timers();
     ovr105_14E3();
-    ovr154_374();
+    memcheck();
     if (!grfx_init())
         pfatal_code(ERR_READ | 3);
     LoadBitMap_ovr141_0(5, "DATA\\pres1.byt");
@@ -219,7 +219,7 @@ void far init_world(int argc, char *argv[])
     init_ai();
     init_char(0);
     init_edit(argc, argv);
-    ovr142_11A();
+    init_lighting();
     init_combinables();
     if (!init_save())
         pfatal("Not enough disk space for save game.$");

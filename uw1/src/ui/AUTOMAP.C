@@ -64,9 +64,9 @@ char far ovr091_22C(char far *arc, int block, void far *buf, int len); /* writes
 int far swap_ws_out(void);
 void far unswap_ws(unsigned handle);
 extern uint16 conv_ws_seg;                  /* TMPALLOC.C */
-/* UW1: ovr154_2D1, called with (0x12C, 0xA) when a note will not take another
+/* UW1: do_beep, called with (0x12C, 0xA) when a note will not take another
    character. */
-void far ovr154_2D1(int a, int b);
+void far do_beep(int a, int b);
 void far input_del(int id);              /* removes an input handler */
 void far seg014_1DC5_15C5(void);          /* the level's music again */
 /* UW1: seg015's pixel plot (UW2's gr_pixel). */
@@ -479,10 +479,10 @@ void far ManageDungeonMap(void)
                     len++;
                     w = string_width(text) + string_width(ch);
                     if (note->x + w > 0x13B) {
-                        ovr154_2D1(0x12C, 0xA);
+                        do_beep(0x12C, 0xA);
                         len--;
                     } else if (len > 0x2D) {
-                        ovr154_2D1(0x12C, 0xA);
+                        do_beep(0x12C, 0xA);
                         len = 0x2D;
                     } else
                         text[len] = ch[0];

@@ -50,6 +50,10 @@
 #define SaveGame UW2_SaveGame
 #define HomeDir UW2_HomeDir
 #define blttodrive UW2_blttodrive
+/* UW1: map.h (which other headers include too) has UW2's Map_Load and Map_Save; UW1's take
+   the archive record and the level (declared below). */
+#define Map_Load uw2_Map_Load
+#define Map_Save uw2_Map_Save
 #include "combat.h"
 #include "critter.h"
 #include "event.h"
@@ -68,6 +72,8 @@
 #define GetAutoMapLevel uw2_GetAutoMapLevel
 #define SaveAutoMapLevel uw2_SaveAutoMapLevel
 #include "ui.h"
+#undef Map_Load
+#undef Map_Save
 #undef ClearAutoMap
 #undef GetAutoMapLevel
 #undef SaveAutoMapLevel
@@ -97,8 +103,8 @@ void far set_maze(char on);
    is a 12-byte archive record. */
 char far ovr091_0(char far *arc, char *name);
 char far ovr091_153(char far *arc);
-char far ovr123_76(char *arc, int level);
-char far ovr123_16E(char *arc, int level);
+char far Map_Load(char *arc, int level);
+char far Map_Save(char *arc, int level);
 void far ApplyTerrainData_ovr131_20D(char *arc, int level);
 char far ovr131_2E2(char *arc, int level);
 void far ClearAutoMap(void);
@@ -163,7 +169,7 @@ int far GetLevel(register int level)
         GrSq = -1;
     if (!ovr091_0(arc, "SAVE0\\lev.ark"))
         return 0;
-    ok = ovr123_76(arc, level);
+    ok = Map_Load(arc, level);
     RestorePlayerInv(0);
     if (ok > 0) {
         ApplyTerrainData_ovr131_20D(arc, level);
@@ -191,7 +197,7 @@ char far SaveLevel(register int level)
     GrSq = -1;
     SET_MAJOR(ThePlayer, 0);
     if ((ok = ovr091_0(arc, "SAVE0\\lev.ark")) != 0) {
-        ok = ovr123_16E(arc, level);
+        ok = Map_Save(arc, level);
         ok = ok && ovr131_2E2(arc, level);
         ok = ok && SaveAutoMapLevel(arc, level);
         ok = ok && ovr091_153(arc);

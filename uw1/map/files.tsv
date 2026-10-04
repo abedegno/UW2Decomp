@@ -13,7 +13,7 @@ seg010	C	7	1139	0	0	0	0			yes
 seg011_1CA3	C	3	180	0	0	0	0			yes
 seg012	C	8	435	0	0	0	8			yes
 seg013_1CC9	C	40	4029	0	0	0	11			yes
-seg014_1DC5	C	42	7504	0	0	0	29			
+seg014_1DC5	C	42	7504	0	0	0	29			yes
 seg015_1F9B	C	14	947	0	0	0	4			
 seg017_1FDD	C	12	5155	0	0	0	8			yes
 seg019	assembly	72	4210	0	0	0	72			
@@ -74,7 +74,7 @@ ovr119	C	11	1502	0	0	0	5			yes
 ovr120	C	20	3733	0	0	0	0			yes
 ovr121	C	20	6470	0	0	0	7			yes
 ovr122	C	10	3430	0	0	0	6			yes
-ovr123	C	4	604	0	0	0	3			
+ovr123	C	4	604	0	0	0	3			yes
 ovr125	C	2	137	0	0	0	1			yes
 ovr126	C	1	24	0	0	0	0			yes
 ovr127	C	1	7	0	0	0	1			yes
@@ -88,7 +88,7 @@ ovr138	C	9	2715	0	0	0	3			yes
 ovr139	C	1	7	0	0	0	1			yes
 ovr140	C	13	2537	0	0	0	10			yes
 ovr141	C	1	250	0	0	0	1			
-ovr142	C	3	550	0	0	0	3			
+ovr142	C	3	550	0	0	0	3			yes
 ovr143	C	23	6913	0	0	0	13			yes
 ovr144	mixed	2	14	0	0	0	2			yes
 ovr145	mixed	18	2583	0	0	0	8			yes
@@ -97,4 +97,4 @@ ovr149	mixed	2	45	0	0	0	2			yes
 ovr150	mixed	14	2874	0	0	0	2			yes
 ovr152	mixed	6	48	0	0	0	6			yes
 ovr153	mixed	34	11603	0	0	0	16			yes
-ovr154	mixed	38	4454	0	0	0	14			
+ovr154	mixed	38	4454	0	0	0	14			yes

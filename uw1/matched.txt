@@ -76,3 +76,7 @@ seg017_1FDD
 ovr092
 seg040_352B
 seg024_24DC
+seg014_1DC5
+ovr154
+ovr142
+ovr123
