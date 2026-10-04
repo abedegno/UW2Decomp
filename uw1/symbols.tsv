@@ -145,12 +145,14 @@ _changed	DS:56AA	provisional
 _changeDoor	333E:212E	provisional
 _ChangeLevel	5A69:0039	provisional
 _chdir	0EC5:16A1	provisional
+_check_alert	5A9C:0052	provisional
 _check_ammo	2121:0E78	provisional
 _check_dirs	5AA4:0052	provisional
 _check_door	3707:0D50	provisional
 _check_fds	5AA4:003E	provisional
 _check_for_hostile_creature	59B1:0052	provisional
 _check_inv_quality	599C:0020	provisional
+_check_out_player	15AB:1AF6	provisional
 _check_physics	2D9C:0406	provisional
 _check_positions	2939:1640	provisional
 _check_res	229B:02FF	provisional
@@ -184,6 +186,9 @@ _close_to_square	128A:24A8	provisional
 _CloseAllBags	59FE:0034	provisional
 _CloseDoor	333E:22FD	provisional
 _CloseTheBag	59FE:002F	provisional
+_CmapCache	4723:C2EF	provisional
+_CmapFrm	4723:C28F	provisional
+_CmaptoPg	4723:C18F	provisional
 _cmbModTH	DS:266A	provisional
 _CN1	DS:27A8	provisional
 _CN2	DS:27D0	provisional
@@ -197,8 +202,10 @@ _combEfflen	DS:0727	provisional
 _CombineToSlot_ovr097_D30	597E:008E	provisional
 _ComObjData	DS:5B6E	provisional
 _compute_hitangle	2121:0D48	provisional
+_compute_trz_or_try_rather	15AB:22C1	provisional
 _ComputeHeading	2529:07F6	provisional
 _constadr	DS:5734	provisional
+_constrain_movement	15AB:1FDC	provisional
 _Containers	DS:5B0A	provisional
 _control	DS:2440	provisional
 _conv_buffer	DS:0EAB	provisional
@@ -219,6 +226,7 @@ _conv_play_menu	599C:0075	provisional
 _conv_print	599C:0048	provisional
 _conv_take_inv	599C:0070	provisional
 _conv_take_inv_id	599C:0089	provisional
+_conv_ws_seg	DS:364E	provisional
 _Converse	599C:002F	provisional
 _converse_event_loop	599C:00B1	provisional
 _convert_string	5964:0093	provisional
@@ -232,22 +240,39 @@ _CP	DS:284A	provisional
 _cPerror	DS:2368	provisional
 _cPlaceFB	1F3A:0D1D	provisional
 _cPlayer	DS:2378	provisional
+_cr_class	DS:5652	provisional
+_cr_type	DS:4A30	provisional
 _creat_spell	311A:0E45	provisional
 _create_player	5991:0025	provisional
+_CreatedObjectFound_dseg_5c99_1D9	DS:1D9A	provisional
 _CreateObj	2E86:003E	provisional
 _Creature	DS:4A52	provisional
 _creature_class_data	59A8:002F	provisional
 _creature_init	59A8:0020	provisional
 _creature_obj_init	59A8:002A	provisional
+_creature_save_ovr101_17	59A8:0025	provisional
 _cRender	1F3A:0D7A	provisional
+_crit_attack	15AB:0AFF	provisional
+_crit_avoid_player	15AB:181D	provisional
+_crit_defense	15AB:12C6	provisional
+_crit_die	15AB:35CB	provisional
 _crit_drunkwalk	15AB:0001	provisional
+_crit_flee	15AB:13FA	provisional
 _crit_fpage	4723:C36F	provisional
+_crit_guard	15AB:06B0	provisional
 _crit_head_for_loc	128A:29A1	provisional
 _crit_hndlr_fly	128A:05FE	provisional
 _crit_hndlr_swim	128A:065E	provisional
 _crit_hndlr_walk	128A:0431	provisional
+_crit_hover	15AB:1BF4	provisional
 _crit_inpage	4723:C373	provisional
+_crit_magik_attack	15AB:109F	provisional
+_crit_mill	15AB:05DF	provisional
+_crit_missile_attack	15AB:11FB	provisional
 _crit_nlpages	4723:C371	provisional
+_crit_offense	15AB:0891	provisional
+_crit_offense_find_target	15AB:0E5D	provisional
+_crit_talk	15AB:1937	provisional
 _crit_terr	DS:2438	provisional
 _critbot	DS:2752	provisional
 _critdata	DS:272E	provisional
@@ -255,14 +280,18 @@ _crithit	DS:00C5	provisional
 _crithittime	DS:2486	provisional
 _criti	DS:2676	provisional
 _critptr	DS:2756	provisional
+_critter_ai	15AB:2488	provisional
 _critter_attack	2121:15DE	provisional
+_critter_discard_goal	15AB:34FD	provisional
 _critter_fire	2456:0262	provisional
 _critter_get_told	59B1:0048	provisional
+_critter_mv	15AB:2C4A	provisional
 _critter_set_goal	15AB:348E	provisional
 _crittop	DS:274E	provisional
 _crystal_ball	5A53:003E	provisional
 _cSinCos	1F3A:0EAE	provisional
 _cSqRt	1F3A:0F3F	provisional
+_cst	DS:4A32	provisional
 _CT1	DS:285C	provisional
 _CT2	DS:2868	provisional
 _CT3	DS:2874	provisional
@@ -355,6 +384,7 @@ _do_resurrect	5A76:0043	provisional
 _do_spell	311A:0078	provisional
 _do_teleport	59C8:0052	provisional
 _do_that_jump_kinda_thing	128A:2679	provisional
+_do_trap_hack	5A9C:003E	provisional
 _do_zbounce	2939:0C93	provisional
 _DoAnimO	DS:0AAF	provisional
 _DoClosingDoors	5A9C:0048	provisional
@@ -363,6 +393,7 @@ _does_npc_like	597E:0066	provisional
 _DoInventoryMouse	5A1A:0061	provisional
 _doMod	DS:3578	provisional
 _DoNothing_ovr090_22	5953:002A	provisional
+_dont_create_wandering_monster_he	5A9C:004D	provisional
 _dontchangedz	DS:244A	provisional
 _door_part	2D02:0281	provisional
 _doorx	DS:243A	provisional
@@ -515,6 +546,7 @@ _generate_treasure	5A92:002A	provisional
 _generate_weapons	5A92:0025	provisional
 _get_animlen	3707:0CFC	provisional
 _get_class_data	5A3A:0020	provisional
+_get_current_music	1BD8:0738	provisional
 _get_cuts_ems	59B8:00BB	provisional
 _get_eye	2D9C:0B99	provisional
 _get_hp_back	311A:03BA	provisional
@@ -547,6 +579,7 @@ _GifPixel_ovr116_420	59E1:002F	provisional
 _give_ptr_npc	599C:00B6	provisional
 _glocs	DS:2890	provisional
 _go_fish	59C8:003E	provisional
+_go_into_dying_sequence	15AB:3577	provisional
 _gr_entry	37FF:00FC	provisional
 _gr_freelab	37FF:033D	provisional
 _gr_getlab	37FF:024B	provisional
@@ -571,6 +604,7 @@ _gronk_area	311A:0C77	provisional
 _gronk_door	5977:0020	provisional
 _gronk_gr	59F1:0093	provisional
 _gronk_whoami	311A:0D4E	provisional
+_gronkify_talkto_player	5A9C:005C	provisional
 _grPageFlip	0090:4F2A	provisional
 _grs_fbplot	1A31:019C	provisional
 _grs_off	DS:23A4	provisional
@@ -656,6 +690,7 @@ _InvRemoveOneObject	5A11:0048	provisional
 _InvRestoreNexts	5A05:003E	provisional
 _InvSaveNexts	5A05:002F	provisional
 _InvUpArrow	DS:18A1	provisional
+_is_this_wandering	5A9C:0061	provisional
 _IsaDoor	2939:170C	provisional
 _IsMobElem	2674:0A52	provisional
 _ItemFitsSlot	5A1A:005C	provisional
@@ -669,8 +704,11 @@ _key_on	DS:2344	provisional
 _keyboard_mouse	1ADC:0E29	provisional
 _KeybUsed	DS:0767	provisional
 _kill_effect	1BD8:0BFD	provisional
+_kill_triggers	5A9C:0025	provisional
 _labs	0EC5:0B1F	provisional
 _LastActiveMob	DS:2732	provisional
+_lastbin	DS:00C4	provisional
+_lastcombattime	DS:2482	provisional
 _lastscrmode	DS:5702	provisional
 _lastTerr	DS:24A0	provisional
 _lastXeye	DS:248E	provisional
@@ -700,6 +738,7 @@ _loc	DS:7856	provisional
 _local_do_palette	1DAE:0225	provisional
 _locsqmod	DS:3172	provisional
 _loct	DS:2E03	provisional
+_look_for_target	15AB:1F1A	provisional
 _LookAt	5A23:004D	provisional
 _loop_music_maybe	1BD8:15DC	provisional
 _loopx	DS:2E0C	provisional
@@ -733,6 +772,7 @@ _MapObj_Y	DS:269C	provisional
 _mapptr	DS:2CFA	provisional
 _mask_to_screen	1A31:034D	provisional
 _MaxPlayerAccel	DS:00C8	provisional
+_maybe_cast_defensive_spell	15AB:0FF2	provisional
 _MaybePlayerDayLoadrelated_ovr142	5A4D:0043	provisional
 _MazeNavigationTextureMaybe_dseg_	DS:7184	provisional
 _MazeSpell	DS:1B02	provisional
@@ -848,6 +888,7 @@ _NewPlyFade	DS:13B2	provisional
 _newscr	59D3:0048	provisional
 _nextSpellTime	DS:09F4	provisional
 _nextstep	DS:0779	provisional
+_NightCleanCritPages	59E5:002F	provisional
 _Nop_ovr090_18	5953:0020	provisional
 _not_a_spell	5A0B:0025	provisional
 _notdone	DS:5666	provisional
@@ -937,8 +978,7 @@ _ovr106_20	59C5:002A	provisional
 _ovr112_194	59E1:0025	provisional
 _ovr112_2A3	59E1:002A	provisional
 _ovr112_389	59D3:0057	provisional
-_ovr113_0	59E5:0020	provisional
-_ovr113_1CE	59E5:002F	provisional
+_ovr113_2A2	59E5:0039	provisional
 _ovr123_16E	5A29:002F	provisional
 _ovr123_76	5A29:0020	provisional
 _ovr127_0	5A35:0020	provisional
@@ -970,6 +1010,7 @@ _PBot	DS:735E	provisional
 _pfatal	59DB:002A	provisional
 _pfatal_code	59DB:0025	provisional
 _pFPS	DS:2496	provisional
+_PgtoCmap	4723:C20F	provisional
 _PHgt	DS:7280	provisional
 _phys_affect_player	193D:090D	provisional
 _phys_bounce_up	193D:0D5B	provisional
@@ -1039,6 +1080,7 @@ _power	DS:2680	provisional
 _Ppd	DS:2768	provisional
 _pQatt	DS:0242	provisional
 _prelblnum	DS:742C	provisional
+_preload_cr	59E5:0020	provisional
 _preset_grid	2ABA:04AB	provisional
 _pretty_panelagain	2E9A:1A25	provisional
 _prime	5A76:0075	provisional
@@ -1052,6 +1094,7 @@ _PT	DS:284E	provisional
 _pTurn	DS:2492	provisional
 _pull_chain	22EF:000F	provisional
 _punt_fightmode	22EF:15C0	provisional
+_punt_idle_crpage	59E5:002A	provisional
 _Punt_player_inv	5A53:002F	provisional
 _push_missile	2456:0B51	provisional
 _put_at	2529:122B	provisional
@@ -1157,6 +1200,7 @@ _sd_xmod	DS:32A2	provisional
 _sd_ymod	DS:32A4	provisional
 _seg001_023B_C	004E:000C	provisional
 _seg003_581E	0090:581E	provisional
+_seg007_1798_3E4	15AB:03E4	provisional
 _seg009_1	1A31:0001	provisional
 _seg009_38C	1A31:038C	provisional
 _seg009_6D	1A31:006D	provisional
@@ -1195,6 +1239,7 @@ _seg039_3495_89D	32A8:089D	provisional
 _seg041_35D7_E9	35BD:00E8	provisional
 _seg042_190	35D3:0190	provisional
 _seg042_19B	35D3:019B	provisional
+_seg051_C10F	4723:C10F	provisional
 _seg051_C375	4723:C375	provisional
 _seg051_C376	4723:C376	provisional
 _seg051_C377	4723:C377	provisional
@@ -1243,6 +1288,7 @@ _set_sound	2D9C:0898	provisional
 _set_targz	2939:010C	provisional
 _set_the_color	0090:5174	provisional
 _set_the_window	0090:52BA	provisional
+_set_up_target	15AB:326B	provisional
 _set_workspace	35D3:0223	provisional
 _SetCursorObj	5A1A:007A	provisional
 _SetOffTrap	5A9C:0057	provisional
@@ -1253,6 +1299,7 @@ _setup_vars	2ABA:0396	provisional
 _setvect	0EC5:1B87	provisional
 _sex	5977:003E	provisional
 _Shift	DS:2334	provisional
+_should_i_flee	15AB:3383	provisional
 _show	0090:57BB	provisional
 _show_atts	5991:0039	provisional
 _show_credits	5A32:0020	provisional
@@ -1340,6 +1387,7 @@ _strupr	0EC5:29E3	provisional
 _stuff_class_data	5A88:0020	provisional
 _subOpcode_ovr095_1965	5964:0043	provisional
 _swap_tmap	5A4D:0034	provisional
+_swap_ws_out	59E5:0034	provisional
 _SwapItemsInBag	59FE:002A	provisional
 _take_from_npc_inv	5977:0034	provisional
 _takeFromSlot	5A11:007A	provisional
@@ -1347,6 +1395,7 @@ _talk_calli_ovr095_1D44	5964:0052	provisional
 _talking_door_trap	59C8:0039	provisional
 _talking_to	DS:4A14	provisional
 _TalkTo	599C:004D	provisional
+_target_found	15AB:1CEB	provisional
 _targx	DS:2664	provisional
 _targy	DS:2666	provisional
 _tdistsqr	DS:2450	provisional
@@ -1360,6 +1409,7 @@ _tile_walls	DS:1D8A	provisional
 _Time	DS:2364	provisional
 _time	0EC5:1010	provisional
 _TimeStop	DS:0282	provisional
+_timetodo	15AB:3825	provisional
 _titlescr	59D3:0052	provisional
 _tmap_inpage	4723:C374	provisional
 _tmpcnt	DS:573C	provisional
@@ -1383,6 +1433,7 @@ _trap_obj_del	5A9C:002F	provisional
 _trap_save	5A8F:0020	provisional
 _tremEfflen	DS:0728	provisional
 _tremor_area	311A:1211	provisional
+_trigger_obj_del	5A9C:0039	provisional
 _Triggers	DS:737E	provisional
 _try_cast	5A0B:0020	provisional
 _try_clear	5A0B:0052	provisional
@@ -1391,6 +1442,7 @@ _try_to_open_door	128A:3123	provisional
 _tsteps	DS:0729	provisional
 _turn_fx	1BD8:07FC	provisional
 _turn_music	1BD8:0768	provisional
+_turn_real_fine	15AB:2123	provisional
 _TurnInpRate	DS:0765	provisional
 _TxmID	DS:71AA	provisional
 _TxmTerr	DS:7192	provisional
@@ -1406,6 +1458,7 @@ _unbound	5964:00DE	provisional
 _undefineMouseRegion	1ADC:06DC	provisional
 _unforce_mouse_cursor	1ADC:076C	provisional
 _unlink	0EC5:2CAF	provisional
+_unswap_ws	59E5:0025	provisional
 _up_crit	59B1:0043	provisional
 _up_mob	59B1:003E	provisional
 _update_all_critters_whilst_playe	59B1:002A	provisional

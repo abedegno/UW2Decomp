@@ -56,8 +56,8 @@
 
 /* UW1: the callees under their UW1 listing names (UW2: seg012_10F,
    seg015_1F9B_2A7 and _361, seg042_35ED_12B, preload_cr), and DEBUG.C's
-   printer. ovr113_0 takes UW2's preload_cr's place in load_all_gr (the same argument and
-   test) but has no kin by bytes, so it keeps the listing's name. */
+   printer. preload_cr is critter/CRPAGES.C's, declared in critter.h (UW2's name, which the
+   stub order confirms). */
 /* match: load_tr_ems first, as gfx.h has it: it and load_gr_ems have the same public-order
    key (404), and the first seen is listed last. */
 char far load_tr_ems(char *art);
@@ -66,7 +66,6 @@ char far seg012_10F(char physical, unsigned logical);
 void far seg015_1F9B_2A7(unsigned char far *src, unsigned dst, int w, int h);
 int far seg015_1F9B_366(unsigned char far *src, unsigned n, int unused);
 void far seg042_19B(void);
-char far ovr113_0(int load_map);
 void far dprintf(char *fmt, ...);
 /* UW1: the texture pages, the animation slot base and EmsBuff are in seg051 (the 3D
    renderer's far data, assembly); the listing has no names for the two page bytes. */
@@ -448,7 +447,7 @@ int far load_all_gr(void)
         return ERR_READ | 0x004;
     ems_page++;
     seg051_C376 = seg051_C375 + 9;      /* UW1 */
-    if (ovr113_0(1))
+    if (preload_cr(1))
         return 0;
     return ERR_READ | 0x009;
 }

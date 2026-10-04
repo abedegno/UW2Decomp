@@ -117,10 +117,10 @@ void far dprintf(char *fmt, ...);
 /* UW1: probably the sound effects' stop (kin: like UW2's kill_all_digi_effects); the
    listing's name. */
 void far seg014_1DC5_C7C(void);
-/* UW1: ovr113 and ovr145 are not matched: NightCleanCritPages's and panel_check's
-   places in player_sleep, advance and mantra_advance (kin pairs ovr145_4FB with UW2's
-   panel_check); symbols.tsv's names. */
-void far ovr113_1CE(void);
+/* UW1: ovr145 is not matched: panel_check's place in player_sleep, advance and
+   mantra_advance (kin pairs ovr145_4FB with UW2's panel_check); symbols.tsv's name.
+   NightCleanCritPages is critter/CRPAGES.C's. */
+void far NightCleanCritPages(void);
 void far ovr145_4FB(void);
 /* UW1: called where UW2 has set_random_walking_music(-1), with no argument; symbols.tsv's
    name. */
@@ -668,7 +668,7 @@ void far player_sleep(register int how)
         game_sprint(0x13 - comfort);    /* "Your sleep is uneasy." or "You feel rested." */
     }
     FixPlayerEquips();
-    ovr113_1CE();
+    NightCleanCritPages();
     PN.speed = 0;
     PN.acc[0] = PN.acc[1] = PN.acc[2] = 0;
     PN.vel[0] = PN.vel[1] = PN.vel[2] = 0;
