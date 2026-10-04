@@ -6,8 +6,8 @@
 Adapted from Exhume's examples/uw2/link.py (UW2Decomp's). The general parts (the date and
 name TLINK stores, the response file, library order, checking public order against overlay
 stubs) are described in Exhume's docs/link.md and profiles/borland-tc101/linker.md; the
-facts here are UW.EXE's, measured (docs/LINKING.md). Exhume's tools are found through
-$EXHUME, or a checkout named Exhume beside this one.
+facts here are UW.EXE's, measured (docs/LINKING.md). Exhume's tools are found by
+tools/exhume.py.
 
 --obj links another build of one object in place of <build>/STEM/STEM.OBJ (to try a changed
 source without disturbing the matched build).
@@ -61,8 +61,11 @@ With no source changed it gives the exact link's EXE.
 """
 import sys, os, json, subprocess, shutil, re
 here = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(here)
-# Exhume's tools: $EXHUME, or a checkout beside this one
-EXHUME = os.environ.get('EXHUME') or os.path.join(os.path.dirname(ROOT), 'Exhume')
+# Exhume's tools: tools/exhume.py finds the checkout ($EXHUME, .exhume, a checkout beside this
+# one, ~/Exhume)
+sys.path.insert(0, here)
+import exhume
+EXHUME = exhume.EXHUME
 TOOLS = os.path.join(EXHUME, 'tools')
 sys.path.insert(0, TOOLS)
 import config, modding
@@ -157,6 +160,7 @@ def changed_sources():
                                    'run the exact link (python3 tools/link.py) once while every source matches')
 
 def main():
+    exhume.check_pin()          # advisory: a warning when the Exhume checkout lacks tools/exhume-ref's commit
     global LINKDIR
     a = ARGS
     mod = '--mod' in a

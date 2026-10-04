@@ -525,6 +525,10 @@ void far show_anm(int cuts, int x, int y, int w, int h)
     struct CutsState st;
     register int key, in;
 
+    /* flag b7 (a pause waiting for the speech) is never set before the pause loop reads it:
+       in DOS it is whatever the stack held, so a pause runs on until the speech is over, or
+       not; the replay build and the port take 0, the path with no wait */
+    STACK_JUNK_SET(st.flags.bit.b7, 0);
     strcpy(st.name, "CUTS\\csXXX.nXX");
     st.x = x;
     st.y = y;

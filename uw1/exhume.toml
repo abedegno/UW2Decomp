@@ -49,6 +49,8 @@ original_label = "UW2 kin"
 [repocheck]
 # UW1's data formats, never to be committed (tools/repocheck.py)
 ban = ["GR", "DAT", "BYT", "TR", "ARK", "PAK", "OLB", "CM", "CFG", "VOC", "XMI", "ADV", "N00", "N01", "N02", "N03", "N04", "N05", "N06", "N07", "N08", "N09", "N10"]
+# the sound configurations recorded with the replay sessions are ours, not the game's
+allow = ["^tests/replay/[a-z]+\\.cfg$"]
 
 [gate]
 # tools/gate.py: the build driver and the gate (Exhume's skills/readability-pass). The exact
@@ -73,3 +75,173 @@ library_objects = ["seg046"]
 # routine of seg003 in BP and call it with DS = ES = seg048 and SS = the word at seg048:558A,
 # which holds `dd seg048` (GRDISP's FD52 piece): DS = ES = SS = FD52
 dispatch = [{ register = "bp", ds = "FD52", es = "FD52", ss = "FD52" }]
+
+[replay]
+# The record and replay harness (Exhume's docs/port.md, "Verifying a port"; docs/BUILDING.md,
+# "Recording and replaying a session"): Exhume's tools/replay.py, golden.py, replaydos.mjs.
+# Sessions are tests/replay/NAME.rec with NAME.cfg, the DATA\UW.CFG it ran with; goldens
+# tests/replay/golden/NAME. The record and replay code is Exhume's runtime/replay/replay.c,
+# compiled where it is, with src/include/rpgame.h.
+sessions = "tests/replay"
+golden = "tests/replay/golden"
+magic = "UW1R"
+exe_name = "UW.EXE"
+data = "${UW1_DATA:-~/UWGOG/UW1}"
+# the saved games already in the game's directory: every session starts with none
+data_skip = ["SAVE1/", "SAVE2/", "SAVE3/", "SAVE4/"]
+cfg_path = "DATA/UW.CFG"
+saves = ["SAVE1", "SAVE2", "SAVE3", "SAVE4"]
+shared_opts = "-mm -1 -G -O -Y -d"     # replay.c in the replay DOS build, as UW2's
+# the replay DOS build's link: the modding build, to which replay.py adds --out, --obj, --add
+link = "{python} tools/link.py --mod --config {config}"
+order = ["newgame", "walk", "sound", "soundfm", "soundmt", "items", "talk", "load", "intro"]
+c0_signature_at = 8                    # DS:8, after DS:0..3 (an overlay stub's tail) and C0's DS:4..7
+stage_from = { load = "items" }
+# sound's DOS replays run in js-dos: in DOSBox-X (2026.10.01, sb16 or sbpro2, either core,
+# mixer on or off) the replay hangs once the introduction starts its speech on SBDIG.ADV, where
+# js-dos replays it to the end, twice identical. soundfm, with no speech card, replays in both.
+dos_backend = { sound = "jsdos" }
+
+
+[replay.segments]
+# far pointers kept in game state. SEGS' first block is seg048 (EXE paragraph 3963h, the
+# graphics library's data, palette's segment), and every paragraph from the far data (FD51 at
+# 395Bh) up moves with the load segment, DGROUP and the far heap above the program included.
+# The slots are the segment words the sessions have in seg048's data: POLYFILL's texture
+# segment at 07AF (filled from the polygon record, a far heap block), the far pointers at 07D4,
+# 095A, 0B0E and 0B1C, GRDISP's saved SS at 558A, and at 55EA the segment VIDMODE.ASM draws to
+# (A000h, the screen, which SEGS lists, or a buffer). Each was seen to differ between DOSBox-X
+# and js-dos by exactly the difference of their load segments, or to be A000h in both.
+first_block_para = 0x3963
+exe_range = [0x395B, 0xA000]
+slots = { "GFX" = [0x7AF, 0x7D4, 0x95A, 0xB0E, 0xB1C, 0x558A, 0x55EA] }
+
+[replay.nulls]
+# DS:0..3 is the tail of the last overlay stub entry (the EXE has 3F F1 02 00 there, measured):
+# 3F F1 02 00 while its overlay is not loaded, and F1 02 and the overlay's segment while it is
+ds_forms = ["3ff10200", "f102????"]
+sum_from = 4                           # C0 sums DS:4..30h, from DATASEG@ (tools/link.py's c0_source)
+sum_to = 0x31
+sum_expect = 0xCA5
+
+[[replay.mask]]
+section = "GFX"
+lo = 0x4DFE
+hi = 0x4FA6
+scope = "always"
+why = "GRCORE.ASM's private stack (it switches to 3963:4FA6; UW2's is 370D:4E00..4FA8): interrupts push onto it whenever they come"
+[[replay.mask]]
+section = "GFX"
+lo = 0x547E
+hi = 0x5546
+scope = "always"
+why = "the stack GRENTRY.ASM and GRDISP.ASM switch to (SP 5546h, from 3963:5586; UW2's 5480..5548): interrupts push onto it"
+[[replay.mask]]
+section = "GFX"
+lo = 0x652
+hi = 0x654
+scope = "always"
+why = "GRMISC.ASM's _46: the low word of the real clock after each 3D frame, for the retrace wait's time-out"
+[[replay.mask]]
+section = "GFX"
+lo = 0x5588
+hi = 0x558C
+scope = "cross"
+why = "GRDISP.ASM's saved SP (5588) and SS (558A)"
+
+[[replay.string_junk]]
+# GRCORE's string entries copy the string, its 0 and one byte more to 3963:4FA6
+section = "GFX"
+start = 0x4FA6
+len = 0x84
+[replay.cfgs]
+# DATA\UW.CFG for each session (SOUND.C's seg014_1DC5_1D0D reads the first two lines, UWEDIT.C
+# skips the third): the music card (0 none, 3 Sound Blaster FM, SBFM.ADV, or 6 Roland MT-32,
+# MT32MPU.ADV, on the MPU-401 at 330h) and the speech card (0 none, 1 Sound Blaster digital,
+# SBDIG.ADV), each with its IRQ, port (hex) and DMA. Every session has one, so that none depends
+# on the configuration in the player's copy of the game.
+newgame = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+walk = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+items = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+talk = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+load = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+intro = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+sound = "3 7 220 1 sound\r\n1 7 220 1 speech\r\n0 cuts\r\n"
+soundfm = "3 7 220 1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+soundmt = "6 2 330 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+
+[replay.derive]
+# soundfm: sound with no speech card; soundmt: on a Roland MT-32, with every wait doubled
+# (MT32MPU.ADV uploads each theme's timbres before it plays, so the way in takes longer)
+soundfm = { from = "sound" }
+soundmt = { from = "sound", wait_scale = 2 }
+
+[replay.steps]
+# Steps for Exhume's tools/replaydos.mjs. Timings are generous: the recording does not depend on
+# them, only on the inputs arriving where the game reads them. "@NAME" takes NAME's steps; a
+# name starting with _ is not a session. Pointer moves are a corner slam (M), then a move in
+# the 640 by 400 frame. In UW1 the right button does what the mode icon says and the left moves.
+# The way into the game: the title, Escape (no saved game, so the introduction starts), Escape
+# (the main menu), Enter (Create Character), Enter for every default (male, right-handed,
+# fighter, the skill picks, the portrait, standard difficulty), the name Avatar, Enter, and Yes
+_chargen = [
+    "w:9000", "k:Escape", "w:3000", "k:Escape", "w:3000", "k:Enter", "w:3000", "k:Enter",
+    "w:2000", "k:Enter", "w:2000", "k:Enter", "w:2000", "k:Enter", "w:2000", "k:Enter", "w:2000",
+    "k:Enter", "w:2000", "k:Enter", "w:2000", "k:Enter", "w:2000", "t:Avatar", "w:1000", "k:Enter",
+    "w:2000", "k:Enter"
+]
+# boot, the title, the main menu, a new character, sixteen seconds in the game;
+# tools/replaydos.mjs then sends F12
+newgame = ["@_chargen", "w:4000", "s:ingame1", "w:6000", "s:ingame2", "w:6000"]
+# the way into the game, then about forty seconds in the 3D view: walk forward (w held), turn
+# left and right (a, d), look up and down and level again (3, 1, 2), step back (s), slide (z,
+# c) and press the left button in the view, so that frames from many positions, a pitched view
+# and a pick frame are compared
+walk = [
+    "@_chargen", "w:6000", "s:ingame1", "h:w,1200", "w:800", "h:a,700", "w:600", "h:w,1500",
+    "w:600", "h:d,1400", "w:600", "k:3", "w:800", "k:3", "w:800", "s:lookup", "k:1", "w:600",
+    "k:1", "w:600", "k:1", "w:800", "s:lookdown", "k:2", "w:800", "h:s,600", "w:600", "h:z,600",
+    "w:600", "h:c,600", "w:600", "h:d,900", "w:600", "h:w,2000", "w:800", "s:ingame2",
+    "c:left,150", "w:2000", "h:a,1200", "w:600", "h:w,1500", "w:3000", "s:ingame3"
+]
+# the way into the game with a sound card ([replay.cfgs]), then fight mode (F5, which asks for
+# the combat theme), swings into the air (the right button held in the view), walking and
+# turning, and the music playing on long enough for the theme to end and the game to choose
+# the next
+sound = [
+    "@_chargen", "w:6000", "s:ingame1", "k:F5", "w:800", "c:right,1200", "w:1500", "c:right,1200",
+    "w:1500", "h:w,1200", "w:800", "h:a,700", "w:600", "c:right,1200", "w:1500", "h:w,1500",
+    "w:600", "h:d,1400", "w:600", "c:right,1500", "w:2000", "s:ingame2", "w:12000", "s:ingame3",
+    "w:40000", "s:ingame4"
+]
+# the sack by the start: look down twice (1), a quarter turn right and a step (Shift+D,
+# Shift+W, which move by fixed amounts); get mode (F3) and the sack (right button), into the
+# first slot (left button); use mode (F6) on it, which opens it; the map in it, which opens the
+# automap; a note there, "hello"; Escape back; look mode (F4) at the fish; the statistics panel
+# and back (F7 twice); a save to slot I described "first" (Ctrl+S, Enter), a turn, a restore of
+# slot I (Ctrl+R, Enter) and a few steps
+items = [
+    "@_chargen", "w:10000", "k:1", "w:600", "k:1", "w:600", "k:Shift+D", "w:800", "k:Shift+W",
+    "w:800", "k:F3", "w:500", "M", "m:262,238", "w:300", "c:right,200", "w:1500", "M",
+    "m:505,170", "w:300", "c:left,200", "w:1500", "s:items1", "k:F6", "w:500", "M", "m:505,170",
+    "w:300", "c:right,200", "w:2000", "s:items2", "M", "m:575,180", "w:300", "c:right,200",
+    "w:3000", "M", "m:300,200", "w:300", "c:left,200", "w:1500", "t:hello", "w:500", "k:Enter",
+    "w:1500", "s:automap", "k:Escape", "w:2500", "k:F4", "w:500", "M", "m:612,180", "w:300",
+    "c:right,200", "w:2000", "k:F7", "w:2000", "s:stats", "k:F7", "w:2000", "k:Control+s",
+    "w:1500", "k:Enter", "w:1500", "t:first", "w:800", "k:Enter", "w:4000", "s:saved", "h:a,1000",
+    "w:800", "k:Control+r", "w:1500", "k:Enter", "w:5000", "s:restored", "h:w,600", "w:1500",
+    "s:items3"
+]
+# a saved game loaded from the main menu ([replay] stage_from: the one items saves): the
+# title, Escape (with a saved game the menu comes at once), Journey Onward (Enter), slot I
+# "first" (Enter), and a step
+load = [
+    "w:9000", "k:Escape", "w:3000", "s:menu", "k:Enter", "w:3000", "s:slots", "k:Enter",
+    "w:6000", "s:loaded", "h:w,800", "w:1500", "s:load_end"
+]
+# boot with no saved game and no key at all: the title, then the whole introduction (about
+# four and a half minutes), to the main menu. The only session that plays a cutscene through
+intro = [
+    "w:30000", "s:intro1", "w:60000", "s:intro2", "w:60000", "s:intro3", "w:60000", "s:intro4",
+    "w:65000", "s:menu", "w:5000"
+]

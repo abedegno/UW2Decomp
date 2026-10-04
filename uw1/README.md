@@ -46,7 +46,7 @@ python3 tools/link.py                                      # build/LINK/out/UW.E
 python3 tools/link.py --mod                                # the modding build
 ```
 
-The tools find Exhume through `$EXHUME`, or a checkout named `Exhume` next to this one (the Makefile: `$EXHUME`, default `~/Exhume`).
+The tools find Exhume through `tools/exhume.py`: `$EXHUME`, else `.exhume` in this repository, else a checkout named `Exhume` next to this one, else `~/Exhume` (the Makefile: `$EXHUME`, default `~/Exhume`). The DOS build depends on Exhume's runtime as well as its tools: the shared headers include its `runtime/include/portable.h`, which the build stages beside `src/include`, so the gate proves the runtime's macros cost no byte. `tools/exhume-ref` names the Exhume commit this tree was proved with; `tools/link.py` (so `make check` and `make game`) warns when your checkout does not contain it, and `python3 tools/exhume.py` checks it on its own. [docs/BUILDING.md](docs/BUILDING.md) has more, and how to record and replay sessions.
 
 `python3 tools/repocheck.py` runs the checks CI runs on every push: no game data or Borland binary is committed, and the Markdown links resolve.
 

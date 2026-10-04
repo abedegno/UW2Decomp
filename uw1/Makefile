@@ -18,6 +18,8 @@
 #   make test-full     the long tier: goldens again from DOS, UBSan, drivers, deep fuzzing, coverage
 #   make verify        the sessions against their goldens, in the port
 #   make golden        every session's golden made again from DOS (twice, checked identical)
+#   make golden-check  every session replayed in DOS twice by the replay DOS build and compared
+#                      with its committed golden, writing nothing (needs no port)
 #   make fuzz          the routine fuzzing (FUZZ=--deep for the long run)
 #   make coverage      the port's coverage over the sessions and the fuzzing
 
@@ -29,7 +31,7 @@ HOOK ?= make check
 PORT := $(PY) $(EXHUME)/tools
 
 .PHONY: game exact check check-all fast boot hooks repocheck help \
-        port-check port port-debug test test-full verify golden fuzz coverage
+        port-check port port-debug test test-full verify golden golden-check fuzz coverage
 .DEFAULT_GOAL := game
 
 game:
@@ -73,6 +75,9 @@ verify:
 
 golden:
 	@$(PORT)/replay.py --config exhume.toml golden all
+
+golden-check:
+	@$(PORT)/replay.py --config exhume.toml golden all --check
 
 fuzz:
 	@$(PORT)/fuzzasm.py --config exhume.toml $(FUZZ)

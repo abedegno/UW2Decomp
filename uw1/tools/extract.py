@@ -10,8 +10,7 @@ Adapted from Exhume's examples/uw2/extract.py (UW2Decomp's). The rules are TLINK
 same for both games (Exhume's docs/link.md); the facts are UW.EXE's, measured again, and
 docs/LINKING.md lists them with the evidence: the header and segment table, the module order
 from the relocation table, the C library's data range from TLINK's map, the pieces of code
-and data no source holds. Exhume's tools are found through $EXHUME, or a checkout named
-Exhume beside this one.
+and data no source holds. Exhume's tools are found by tools/exhume.py.
 
 The modules hold game bytes, so they live under build/ and are never committed.
 
@@ -82,8 +81,11 @@ otherwise a segment word (`dw seg NAME`) naming something in the same frame.
 """
 import sys, os, re, struct, json, glob, io, contextlib
 here = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(here)
-# Exhume's tools: $EXHUME, or a checkout beside this one
-EXHUME = os.environ.get('EXHUME') or os.path.join(os.path.dirname(ROOT), 'Exhume')
+# Exhume's tools: tools/exhume.py finds the checkout ($EXHUME, .exhume, a checkout beside this
+# one, ~/Exhume)
+sys.path.insert(0, here)
+import exhume
+EXHUME = exhume.EXHUME
 sys.path.insert(0, os.path.join(EXHUME, 'tools'))
 import config, modding
 from fixups import fixups
