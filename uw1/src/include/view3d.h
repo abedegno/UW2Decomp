@@ -2,7 +2,7 @@
    and the renderer's data that the C reads. VIEW3D.C sets up a frame and builds the
    vision grid, GRIDDB.C turns the grid into model interpreter bytecode (the render
    database), GAMESORT.C orders each tile's objects and DRAWOBJ.C emits them, and seg004
-   (src/3d/*.ASM), entered through seg021's cRender, runs the bytecode.
+   (src/3d/*.ASM), entered through seg019's cRender (C3DENTRY.ASM), runs the bytecode.
    docs/subsystems/3d.md describes the whole. */
 #ifndef VIEW3D_H
 #define VIEW3D_H
@@ -19,7 +19,7 @@ union Link;
 #include "object.h"
 
 /* The 3D view's camera, a copy of the player's position that get_eye fills (cPlayer, a
-   far pointer in seg021's data). VIEW3D.C's setup_vars rewrites it each frame: x and y
+   far pointer in seg019's data). VIEW3D.C's setup_vars rewrites it each frame: x and y
    keep only the position within the eye's tile, turned into the first quadrant, and
    heading loses the quadrant's turn. Heading is a full turn in 0x10000. Only the fields
    the C reads are named. */
@@ -42,7 +42,7 @@ struct Grs3d {
     char b1;
 };
 
-/* One cell of the vision grid (seg032's glocs), 33 cells to a row and 17 rows, the eye at
+/* One cell of the vision grid (VIEW3D.C's glocs), 33 cells to a row and 17 rows, the eye at
    row 0 column 16: which faces of the tile are seen and drawn. */
 struct Gloc {
     unsigned char flags;                /* GLOC_*: seen, shape, the faces to draw */
@@ -206,7 +206,7 @@ extern uint16 far seg051_C4D7;
 
 /* PGCACHE.ASM */
 extern uint16 far *grs_off;    /* EMS page and paragraph, or video address, per slot */
-extern uint16 far *obj_tab;    /* two words per object; only the first is set by ovr119 */
+extern uint16 far *obj_tab;    /* two words per object; only the first is set by LOADGR.C */
 
 /* Defined where no source has it yet: data the link takes from the EXE. bmsegoff and
    bmhgtoff are offsets of the renderer's bitmap table (8 bytes a slot); smooth_div and

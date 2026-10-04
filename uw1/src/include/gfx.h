@@ -180,31 +180,22 @@ unsigned far seg009_38C(int index);
 void far rotate_bank(unsigned char first, unsigned char count, unsigned char up);
 void far cycle_colors(unsigned char t);
 
-/* Fonts for grfx_quikfont: the index into ovr118's font_suffixes, which names the file
-   DATA\FONTxxxx.SYS. */
-enum Font {
-    FONT_4X5P,                          /* font4x5p.sys */
-    FONT_5X6P,                          /* font5x6p.sys, the usual one */
-    FONT_CHAR,                          /* fontchar.sys */
-    FONT_BIG,                           /* fontbig.sys */
-    FONT_5X6I,                          /* font5x6i.sys */
-    FONT_BUTN                           /* fontbutn.sys */
-};
+/* Fonts: UW1's loader, GRFX.C's grfx_load_font, takes the file name (font4x5p.sys,
+   font5x6p.sys the usual one, font5x6i.sys, fontbig.sys, fontchar.sys, fontbutn.sys in
+   DATA), where UW2's grfx_quikfont takes an index. Its callers disagree on the argument's
+   type, so it is declared in each file that calls it (docs/readability/headers/plan.toml). */
 
 /* Palettes of DATA\PALS.DAT (grfx_quikpal, read_quikpal), 0x300 bytes each. The uses
    name them; UW-Formats' file list gives UW1 the same numbering (blnkmap.byt palette 1,
    chargen.byt palette 3). */
 #define PAL_GAME        0               /* the game's palette (main, the automap's exit) */
-#define PAL_MAP         1               /* the automap (ovr094) */
+#define PAL_MAP         1               /* the automap (AUTOMAP.C) */
 #define PAL_OPENING     2               /* the opening screen, opscr.byt (MAINMENU.C) */
-#define PAL_CHARGEN     3               /* character creation (ovr101) */
+#define PAL_CHARGEN     3               /* character creation (CHARGEN.C) */
 #define PAL_PRESENTS    5               /* the "presents" screens, pres1.byt */
 #define PAL_WIN         7               /* the winning screens, win1.byt */
 
 /* GRFX.C: graphics start-up, fonts and palettes */
-/* name: IDA OpenFont, ovr118. FM Towns game_stats calls a set_font_size_ wrapper here, but
-   every other FM Towns call site, and the map's call-graph pairing, give grfx_quikfont_. */
-void far grfx_quikfont(int n);
 void far grfx_close(void);
 void far grfx_setpal(void far *src);
 void far fadein(unsigned char far *src, int count);

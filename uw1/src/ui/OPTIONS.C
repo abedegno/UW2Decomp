@@ -383,6 +383,8 @@ void far choose_quit(int row)
     }
 }
 
+/* Shows options page page (page_draw); press_options_btn runs the page's press
+   handler for row on the hidden page, then flips and redraws the panel's frame. */
 void far set_options_page(int page)
 {
     options_page = page;

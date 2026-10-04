@@ -15,14 +15,14 @@
    on the cursor, 2 a targeted spell or an object being used on another (ObjectActor), 3 a
    missile spell being aimed. mous_in_panel does the same for the right-hand panel.
    display_scr runs every frame: the flasks and compass, the damage flash, colour cycling,
-   death, the timed effects every 20 seconds of game time, and level 9's random effects.
+   death, the timed effects every 21 seconds of game time, and level 9's random effects.
    init_gamedisp sets up the game screen and its five mouse areas (start_gameinp: the
    icons, the rune shelf, the active spells, the compass and the flasks).
 
    UW1's differences from UW2: no PoisonWeap, Valor, quick_time or current_button; the
    game time comes from Time (GAME_TIME), not the player record; no check_around (a click
    on a wall or floor only notes the texture); no swimming reach, book theft, moonstone
-   table, pressure plates or wisp; the player record differs (Player1Scr); the terrain
+   table, pressure plates or wisp; UW1's player record (player.h); the terrain
    compared whole (TERRAIN); string numbers and the icon and flask areas are UW1's own.
 
    Data owned: the icon places, the spell effect flags (TimeStop, Hasted, WizEye,
@@ -166,6 +166,8 @@ void far flask_info(void)
     }
 }
 
+/* The game screen's five click areas: the interaction icons, the active spells (try_cast),
+   the rune shelf (try_clear), the compass (print_info) and the flasks (flask_info). */
 void far start_gameinp(void)
 {
     LeftPanel = 0;
@@ -185,6 +187,8 @@ void far clear_gameinp(void)
     input_del(inforMshandle);
 }
 
+/* Sets up the game screen: inventory, message scroll, music, click areas, the selected
+   icon or the options panel, then a first frame and the screen furniture. */
 void far init_gamedisp(void)
 {
     BeginInventory();
@@ -211,7 +215,7 @@ void far clear_gamedisp(void)
    the compass (not on level 9), flashes the screen frame when the player took enough
    damage (the player creature's avghit against four times OBJ_DAMAGE), cycles the palette, starts death
    when the player's hit points are 0, and once per second of game time maybe changes the
-   music; every 20 seconds it runs duration_check. On level 9 a random one in 32 frames
+   music; when 21 seconds have gathered (DurCount over 0x14) it runs duration_check. On level 9 a random one in 32 frames
    gets EtherealVoidSpecialEffects. */
 void far display_scr(void)
 {
@@ -253,6 +257,8 @@ void far display_scr(void)
         EtherealVoidSpecialEffects_seg008_150();
 }
 
+/* Change handler 9 of the 3D view: redraws the inventory panel when it is showing, or
+   in a conversation (MODE_CONV), where the inventory is always shown. */
 void far RedispInv(void)
 {
     if (RightPanel == PANEL_INV || inplist->mode == MODE_CONV) {
@@ -368,8 +374,9 @@ char far BlockingTerrain(int dist, struct Object far *obj)
 
 /* The object drawn at the pointer in the 3D view, or 0: the renderer's pick buffer gives
    each object a colour (1..PickUp-1, mapped to the object by color_to_obj and its tile by
-   color_to_map); a click on a wall or floor (colours 0xAC..0xFC) looks around for a nearby
-   object, else leaves the texture in pTxtId for look_nothing. Sets PickMap, releasePtr and
+   color_to_map); a click on a wall, floor or ceiling (colours PICK_WALL to PICK_CEILING)
+   leaves the texture in pTxtId for look_nothing (UW2 looks around for a nearby object
+   there; UW1 does not). Sets PickMap, releasePtr and
    whether the object could be picked up (releaseable). */
 struct Object far * far pick_3d(int how)
 {
@@ -383,6 +390,8 @@ struct Object far * far pick_3d(int how)
     p += inplist->y * (xwid + 2) + inplist->x + 2;
     idx = 0;
     pTxtId = 0;
+    /* match: PickUp is a byte, read here as a word; the byte after it (DS:311F) is
+       _BSS alignment padding, always 0, so the test is the byte's */
     if (*p >= 1 && *p < *(int16 *)&PickUp) {
         idx = color_to_obj[*p - 1];
         PickMap = mlowptr + color_to_map[*p - 1];
@@ -612,7 +621,7 @@ void far mous_in_3d(void)
 }
 
 /* Looks at an object in the inventory, identifying it with the Lore skill: the first
-   look rolls skill_check(Lore, 8) + 1 (at least 1) and keeps the best result in the
+   look rolls skill_check(Lore, 10) + 1 (at least 1; UW2 8) and keeps the best result in the
    object's heading (bit 2 marks it examined, bits 0..1 the lore level), so it is not
    rerolled until a better Lore clears the marks (WORLDEV.C's clear_all_loretries). */
 void far inv_look(void)

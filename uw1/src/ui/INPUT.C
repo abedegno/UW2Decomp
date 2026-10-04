@@ -82,6 +82,8 @@ void far init_input(void)
     inplist->cmd = 0;
 }
 
+/* Frees both dispatch tables; kcurhndl -666 marks them freed, so a second call does
+   nothing. */
 void far free_input(void)
 {
     if (kcurhndl != -666) {
@@ -91,6 +93,10 @@ void far free_input(void)
     }
 }
 
+/* Registers a click area (ulx, uly to lrx, lry) live in the screen modes of mask, with
+   its handler and argument, and returns its handle. Mouse handles count up from
+   mcurhndl and key handles down from kcurhndl, so input_del can tell them apart. The
+   table grows by realloc; failing is fatal (ERR_LOWMEM | 5, | 6 for keys). */
 int far input_addmouse(int ulx, int uly, int lrx, int lry, NEARPTR arg, int mask,
                        void (far *func)(NEARPTR))
 {
@@ -113,6 +119,7 @@ int far input_addmouse(int ulx, int uly, int lrx, int lry, NEARPTR arg, int mask
     return p->hndl;
 }
 
+/* Registers a key handler the same way (see input_addmouse). */
 int far _input_addkey(int key, NEARPTR arg, int mask, void (far *func)(NEARPTR))
 {
     struct KeyDispatch *p;

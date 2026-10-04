@@ -15,7 +15,7 @@
    edge rays leave the eye at the heading +-0x2040 and walk outwards row by row,
    narrowing at walls, and every grid cell between them gets the faces it shows,
    enc_n_chk), and GRIDDB.C's process_grid turns the grid into render-database bytecode.
-   send_db sets the clip window to the view, has seg021's cRender run the database
+   send_db sets the clip window to the view, has seg019's cRender (C3DENTRY.ASM) run the database
    (seg004's render_3d) into the frame buffer, and copies the frame buffer to the screen
    with cFBtoScreen, hiding the mouse cursor around the copy.
 
@@ -24,7 +24,7 @@
    view size (xwid, xhgt), zoom and demo_mode; DbEntry, where each frame's bytecode
    starts.
 
-   name: descriptive (map/filenames.tsv: "setting up the 3D view and the vision grid").
+   name: descriptive (UW2Decomp's map/filenames.tsv: "setting up the 3D view and the vision grid").
    The whole of UW1's DOS resident segment seg031, in original order; the same code as
    UW2's seg032_2E9B. UW1 has no symbol-bearing build: function and global names are
    UW2's (the FM Towns symbol table where it has them), the routines being the same; the
@@ -151,7 +151,7 @@ void far place_3d_view(int x, int y, int w, int h)
    normal values 0xF0, 0xF0, 0x3E0, 0x3E0, 0xFC0, 0xFC0 back. Those words are probably
    the texture-coordinate masks of the six bitmap slots, so random ones scramble the
    textures; this has not been checked in seg004.
-   name: IDA seg032_2E9B_9B. FM Towns set_cyb_ sits at the same place after
+   name: UW2's IDA name seg032_2E9B_9B. FM Towns set_cyb_ sits at the same place after
    place_3d_view_ and does the same. */
 void far set_cyb(char on)
 {
@@ -238,6 +238,7 @@ void far init_3d(void)
     lcldblen = _dblen;
 }
 
+/* Starts the next frame's database at DbEntry, after init_3d's header. */
 void far reset_db(void)
 {
     dbptr = DbEntry;
@@ -272,6 +273,8 @@ void far do_3d_grab(void)
     set_the_window(0, 0xC7, 0x13F, 0);
 }
 
+/* Draws a frame into the frame buffer only, as establish_view does but without showing
+   it (fades and screens drawn over the view). */
 void far render_FB(void)
 {
     setup_vars();
@@ -419,6 +422,8 @@ void far init_grid(void)
     }
 }
 
+/* Moves an edge one column right in the turned grid (map, column and cell together);
+   decvec one column left. */
 void far incvec(struct Gvec *v)
 {
     v->x++;

@@ -13,6 +13,7 @@
    do_tmap and 0xA0/0xA2 do_compact_tmap/do_compact_wtmap (texture-mapped faces, 0xA2
    when the view is level), 0xB0 do_mouseq (end of a grid row), 0xB6 do_minires
    (SetPnt's point records), 0x38 do_obj and 0xD0 do_set_gmap_ctxt (the frame header).
+   view3d.h names them OP_*.
 
    Entry points: process_grid (a normal frame, from VIEW3D.C's do_2dclip after the
    vision grid is built), do_3d_pickup (a pick frame, from do_3d_grab: every face and
@@ -34,7 +35,7 @@
    Neighbours: VIEW3D.C (the vision grid, quadrant and camera), GAMESORT.C and
    DRAWOBJ.C (objects), SetPnt (points), seg004 (runs the bytecode).
 
-   name: descriptive (map/filenames.tsv: "the render database from the map grid").
+   name: descriptive (UW2Decomp's map/filenames.tsv: "the render database from the map grid").
    UW1 has no symbol-bearing build: function and global names are UW2's (FM Towns),
    the routines being the same, in the same order.
 
@@ -43,7 +44,7 @@
    the texture-mapped faces pick a smaller copy of the texture by distance (dist8) and
    light (lighton) rather than one size; no ceiling switch (ciels): the unlit level is
    9 (PlayerLevel), which gets no experience for newly seen tiles; the detail setting
-   and the automap switch are not where UW2 has them (Player1Grid, and the global
+   and the automap switch are not where UW2 has them (player.h's UW1 record, and the global
    ProbablyAutomapEnabled_dseg_5c99_546); the pick tables have 192 entries.
 
    DOS segment seg017_1FDD starts with SetPnt (1DF0:0001), the same assembly as UW2's
@@ -253,9 +254,9 @@ void far process_grid(void)
 }
 
 /* Emit the database for a pick frame (VIEW3D.C's do_3d_grab). PickUp makes the face
-   and object routines draw in identifying colours instead of shades: floors 0xEC +
-   texture, walls 0xAC + texture, ceilings 0xFC, objects 1..0xAB (DRAWOBJ.C), and
-   UI/INTERACT.C's pick_3d reads the colour under the cursor back through color_to_obj
+   and object routines draw in identifying colours instead of shades (view3d.h's
+   PICK_*): floors 0xF0 + texture, walls 0xC0 + texture, ceilings 0xFA, objects
+   1..0xBF (DRAWOBJ.C; UW2: 0xEC, 0xAC, 0xFC and 1..0xAB), and UI/INTERACT.C's pick_3d reads the colour under the cursor back through color_to_obj
    and color_to_map. */
 void far do_3d_pickup(void)
 {

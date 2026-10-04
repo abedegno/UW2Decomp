@@ -13,7 +13,7 @@
 ;
 ; Callers: seg019's C3DENTRY.ASM (cRender calls _A46 before each frame; cFillFB _A48; cFBtoScreen
 ; _B5D; cPlaceFB _B0C; the dim and light entries _AC8 and _AEC), VIDMODE.ASM's fbshow and vcopyfb
-; (the transfers _A5C, _A8D, _DE3 through 0DC2), GRCORE's fbuf_setcolor (_EFF), GRLIBM.ASM and
+; (the transfers _A5C, _A8D, _DE3 through 0DC4, XFER_RTN; UW2 0DC2), GRCORE's fbuf_setcolor (_EFF), GRLIBM.ASM and
 ; seg004's SMOOTH.ASM (the smooth spans, _F77).
 ; Data (seg048): 095A the frame buffer's segment; 095E its row offsets (setup_frame_buf);
 ; 0AF0 the frame width the copier is patched for; 0AF2 the last row; 0B0A, 0B0C the current

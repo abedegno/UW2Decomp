@@ -22,7 +22,7 @@
 ; offsets into GRLIBN (645A, 6472, 6486, 6490), the per-case routines GRLIBN's clipper calls
 ; through [bx+5E74h].
 ;
-; name: descriptive (map/filenames.tsv: "graphics library module 11: the dispatcher the thunks
+; name: descriptive (UW2Decomp's map/filenames.tsv: "graphics library module 11: the dispatcher the thunks
 ; jump to"). No FM Towns counterpart: the 32-bit build has one flat segment and calls the
 ; routines directly.
 ;

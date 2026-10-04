@@ -78,6 +78,7 @@ void far sp_att(unsigned char i)
     string_to_screen(buf, RIGHT - string_width(buf), (2 - i) * 7 + 0x9D);
 }
 
+/* The hit points as "current/maximum", right-aligned; sp_mp the same for mana. */
 void far sp_hp(void)
 {
     char buf[8];
@@ -125,6 +126,9 @@ void far sp_skill(unsigned char i)
     string_to_screen(buf, RIGHT - string_width(buf), 0x80 - i * 7);
 }
 
+/* Draws the statistics page. The first time it saves the two areas the page redraws
+   (the skills and the hit point and mana figures) into video memory (spsave), so that
+   scrolling the skills and updating the figures can restore the background. */
 void far RedispStat(void)
 {
     unsigned char i;

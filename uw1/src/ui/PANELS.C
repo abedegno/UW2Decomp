@@ -28,7 +28,8 @@
 
    Data owned: the goal, setting and adjust tables, the flask, compass, dragon and
    weapon tables, RightPanel (0 inventory, 1 runes, 2 statistics, 4 while turning) and
-   panel_dispatch, the weapon frame state (weapid, weap_frame ...).
+   panel_dispatch, the weapon frame state (weapid, weap_frame ...). The element numbers
+   and states are gfx.h's SCR_*, WEAP_* and PANEL_*.
    Function and global names are UW2's (FM Towns) where the routine is the same; UW1 has
    no symbol-bearing build. Names of UW1's own are descriptive, and the statics' names
    in _BSS were chosen for their layout keys (tools/bssorder.py). */
@@ -1298,6 +1299,7 @@ void far player_look_shaft(void)
     value_cuts(0x100, PlayerLevel);
 }
 
+/* Looking at gravestone grave (nonzero) records it in cutscene value 0x101. */
 void far player_look_grave(int grave)
 {
     if (grave)

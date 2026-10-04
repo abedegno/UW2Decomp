@@ -8,7 +8,11 @@
 ; timing them, turning the counts into positions from -127 to 127 around the centre found at
 ; start-up, and reading the four buttons. FM Towns has initjoy, joystick and jbuttons here (as
 ; stubs). The far entries (_2E0, _2E4, _2E8, _369, _36D, _371) are for C (SYSENTRY.ASM's
-; joy_position and the debug key Ctrl+J in DEBUG.C).
+; joy_position and, in UW2, the debug key Ctrl+J in DEBUG.C).
+;
+; UW1: SYSINIT.ASM's start-up still finds the axes (_30A), but nothing reads the joystick:
+; no C calls SYSENTRY.ASM's _7CD or _809, UW1 has no JOYSTICK.C, and MOUSE.C has no
+; joystick code. The module is otherwise unused.
 ;
 ; Data (seg063): 01A0 the four positions (-127..127); 01A8 each axis's centre count (0: not
 ; connected); 01B0 the four buttons (0 or -1); 01B8 the raw counts from the last timing;

@@ -1,8 +1,9 @@
 /* sys.h: the program's start-up, main loop and shutdown, memory and EMS, errors, small
-   helpers, debugging hooks, the C-like helpers in seg017 (MODEX.ASM), and the C side of
-   seg021, the assembly system layer: the input and timer drivers (SYSENTRY.ASM) and the
-   entry points into the 3D renderer (C3DENTRY.ASM). The far pointers declared for seg021
-   (Alt, Asc, MouseDx, cPlayer ...) point into seg021's own data segment, dseg062_62a6;
+   helpers, debugging hooks, the C-like helpers in MODEX.ASM (seg015_1F9B), and the C side
+   of seg019, the assembly system layer (UW2's seg021): the input and timer drivers
+   (SYSENTRY.ASM) and the entry points into the 3D renderer (C3DENTRY.ASM). The far
+   pointers declared for seg019 (Alt, Asc, MouseDx, cPlayer ...) point into its own data
+   segment, seg063 (UW2's dseg062_62a6);
    SYSENTRY.ASM's header has a map of it. docs/subsystems/sys.md describes the subsystem. */
 #ifndef SYS_H
 #define SYS_H
@@ -60,7 +61,7 @@ void far mainloop(void);
 void far editchng(int bits);
 
 /* EMS.C: EMS (LIM expanded memory) driver calls */
-/* The segment of the EMS page frame, set by seg013 from INT 67h function 41h.
+/* The segment of the EMS page frame, set by EMS.C (seg012) from INT 67h function 41h.
    name: provisional; no FM Towns counterpart (FM Towns has no EMS). */
 extern uint16 ems_frame;
 int far seg012_B(unsigned min_pages, unsigned max_pages);
@@ -114,10 +115,10 @@ void far dprintf(char *fmt, ...);
 char far * far FindStringDelimiter(char far *s, int c);
 void far grab(void far *dst, int x, int y, int w, int h);
 void far local_do_palette(int count, unsigned char first);
-void far mem_set(void far *p, int value, int count);  /* seg017's far memset; our name */
+void far mem_set(void far *p, int value, int count);  /* MODEX.ASM's far memset; our name */
 int far str_cmp(char far *a, char far *b);
 char far * far str_copy(char far *dst, char far *src);
-/* Far string routines (seg017 and seg039). */
+/* Far string routines (MODEX.ASM and GAMESTRN.C). */
 int far str_len(char far *s);
 void far str_ncopy(char far *dst, char far *src, int n);
 char far * far str_str(char far *s, char far *find);
@@ -125,7 +126,7 @@ char far * far str_str(char far *s, char far *find);
 /* INT0TRAP.ASM */
 extern uint16 far int0_sp;
 extern uint16 far int0_ss;
-/* The divide-by-zero trap in seg018 (assembly), and the two words in its code segment
+/* The divide-by-zero trap in INT0TRAP.ASM (seg016), and the two words in its code segment
    where it finds the stack to return to. name: DOS only; the names are ours. */
 void interrupt far int0_trap();
 

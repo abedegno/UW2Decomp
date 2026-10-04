@@ -57,6 +57,8 @@ void far error_code(int code)
     seg015_1F9B_E8((char far *)error_code);
 }
 
+/* A fatal error during start-up: prints the code (error_code), frees EMS and quits
+   with exit status -1. */
 void far first_punt(int code)
 {
     error_code(code);

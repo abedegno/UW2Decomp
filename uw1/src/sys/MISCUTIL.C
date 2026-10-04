@@ -76,6 +76,7 @@ int far mpos(char x, char y)
     }
 }
 
+/* The direction from (x1, y1) to (x2, y2) as mpos gives it. */
 int far postodir(int x1, int y1, int x2, int y2)
 { return mpos((char)x2 - (char)x1, (char)y2 - (char)y1); }
 
@@ -123,6 +124,7 @@ void far unsolve_compass(int x, int y, int t, int cx, int cy, int n)
     box(xx - 1, yy - 1, xx + 1, yy + 1);
 }
 
+/* Prints "Underworld internal error" and the two strings to the message scroll. */
 void far errmsg(char *a, char *b)
 {
     scroll_print("Underworld internal error\n ");
@@ -149,6 +151,7 @@ void far dbg_break(void)
     int86(2, &r, &r);
 }
 
+/* Whether name exists and is a directory. */
 char far dir_exist(char *name)
 {
     struct stat st;
@@ -186,7 +189,7 @@ void far check_fds(void)
     int16 handles[8];
     register int i;
     for (i = 0; i < 8; i++) {
-        ok &= (handles[i] = open(name, 0x304, 0x80)) != -1;
+        ok &= (handles[i] = open(name, O_RDWR | O_CREAT | O_TRUNC, S_IWRITE)) != -1;
         name[0]++;
     }
     name[0] = 'a';
@@ -206,18 +209,19 @@ unsigned char far blttodrive(void far *buf, char *name, unsigned n)
 {
     unsigned char ok = 1;
     register int fd;
-    fd = open(name, 0x8302, 0x80);
+    fd = open(name, O_WRONLY | O_CREAT | O_TRUNC | O_BINARY, S_IWRITE);
     if (fd < 0) return 0;
     if (FarWrite_ovr167_627(fd, buf, n) != n) ok = 0;
     if (close(fd)) ok = 0;
     return ok;
 }
 
+/* Reads n bytes of file name into buf; 1 if all of them were read and the file closed. */
 unsigned char far bltfromdrive(char *name, void far *buf, unsigned n)
 {
     unsigned char ok = 1;
     register int fd;
-    fd = open(name, 0x8001);
+    fd = open(name, O_RDONLY | O_BINARY);
     if (fd < 0) return 0;
     if (intoFarBuffer_ovr167_5DA(fd, buf, n) != n) ok = 0;
     if (close(fd)) ok = 0;
@@ -241,6 +245,8 @@ int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n)
     if (out.x.cflag) { errno = out.x.ax; return -1; }
     return out.x.ax;
 }
+/* write() for a far buffer: int 21h function 40h with DS set to the buffer's segment;
+   -1 with errno set on an error. */
 int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n)
 {
     struct SREGS sregs;
@@ -278,6 +284,10 @@ int far xorread(int fd, unsigned char key, unsigned char far *buf, unsigned n)
     }
     return total;
 }
+/* Writes n bytes of buf, each XORed with a key that starts at key + 3 and grows by 3 a
+   byte, the sequence starting again every 0x50 bytes (the inverse of xorread). The loop
+   runs until remaining wraps below zero; when n is a multiple of 0x50 its last pass
+   writes nothing. */
 int far xorwrite(int fd, unsigned char key, unsigned char far *buf, unsigned n)
 {
     int written;

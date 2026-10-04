@@ -233,7 +233,8 @@ _do_set_tmctxt endp
 
 ; seg004_5C45  (+5C45)
 ; do_set_gmap_ctxt (opcode 0xD0): operand: a flag. Sets the g-map context's map routine (B00A):
-; 60h (floor-style) when the flag's low byte is 0, else 545h (wall).
+; _seg003_1DA (WALLMAP.ASM; UW2 60h, floor-style) when the flag's low byte is 0, else
+; _seg003_545 (POLYFILL.ASM; UW2 545h, wall-style).
 _do_set_gmap_ctxt proc near
         lodsw
         test    al,0FFh
@@ -279,7 +280,7 @@ _do_gtri endp
 ; coordinates. Operands: the bitmap slot, the vertex count n, then n triples (point offset into
 ; resbuf, u, v); u and v are fractions (0..FFFFh) of the texture's width and height, scaled here
 ; by the block's words 0 and 1 (the `mul` keeps the 8.8 result). do_gtmap maps floor-style
-; (60h), do_gwtmap wall-style (545h). The tail at L60E0, shared by every handler in the module,
+; (_seg003_1DA; UW2 60h), do_gwtmap wall-style (_seg003_545; UW2 545h). The tail at L60E0, shared by every handler in the module,
 ; records vert_ptr and either draws the polygon flat (polym set) or calls _seg004_6141 to
 ; texture map it.
 _do_gtmap proc near
@@ -333,11 +334,15 @@ _do_gwtmap endp
 
 ; seg004_5CE5  (+5CE5)
 ; do_compact_map, do_compact_tmap, do_compact_wtmap: a textured quadrilateral in a compact form.
-; Operands: the bitmap slot (not for do_compact_map, which uses the context), then four point
+; Operands: the bitmap slot, then four point
 ; numbers as bytes (each times 8 is the point's offset in resbuf). The texture coordinates are
 ; implied: the corners get u = width-1 or 0 and v = the v limit or 0 in a fixed order, so the
 ; whole texture covers the quad. GRIDDB.C's txtflr and txtwal emit these for floors and walls
 ; (opcodes 0xA0 and 0xA2).
+; UW1: do_compact_map (opcode 0D2h) stores the constant 0B00Ah, the address of the g-map
+; context's routine word, as the mapper's offset where UW2 loads the word itself, and then
+; reads a slot operand like the others (UW2 takes the context's block); probably a slip,
+; harmless while no program uses opcode 0D2h (the C never emits it).
 _do_compact_map proc near
         mov     word ptr ds:[0B006h],0B00Ah
         jmp     short L5CFB

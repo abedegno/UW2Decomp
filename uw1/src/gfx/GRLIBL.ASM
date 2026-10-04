@@ -4,7 +4,7 @@
 ; Graphics library module 16: the bitmap span transfers. VIDMODE.ASM's bitmap routines (show,
 ; fbshow, vcopy and the rest) clip a bitmap's rectangle to the window, write one 8-byte record
 ; per row (y, left x, right x, source offset; the list ends with a y whose top bit is set) and
-; call the transfer they chose through seg048:0DC2. The transfers here move those rows to or
+; call the transfer they chose through seg048:0DC4 (XFER_RTN; UW2 0DC2). The transfers here move those rows to or
 ; from the mode X screen or the linear frame buffer:
 ;
 ;   _5B6C  a linear (one byte per pixel) bitmap to the planar screen, opaque          (show)

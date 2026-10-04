@@ -65,6 +65,8 @@ unsigned char far * far adr_opbtn(int size)
     return p;
 }
 
+/* gronk_gr callback for the menu buttons: pictures come in pairs, unselected then selected,
+   and the first of each pair gives the button its size. */
 int far move_opbtn(struct Bitmap far *p, int size, register int n)
 {
     buttons[n >> 1].img[n & 1] = p->u.b8.data;

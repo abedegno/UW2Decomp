@@ -155,6 +155,9 @@ void far mouse_show(void)
         drawMouse();
 }
 
+/* Hides the cursor when the last of the nested mouse_show calls is undone: the cursor
+   picture is taken off and the saved background put back (_actual_mhide); set_the_color(1)
+   then leaves an ordinary pen selected. */
 void far mouse_hide(void)
 {
     if (--mouse_shown == 0) {
@@ -173,6 +176,7 @@ void far mous_3d_set(int x, int y, int w, int h)
     m3dh = h;
 }
 
+/* Whether the cursor touches the 3D view's rectangle (m3dx, m3dy is its bottom left). */
 char far mous_in_3d_p(void)
 {
     return mouse_check_reg(m3dx, m3dy - m3dh, m3dx + m3dw, m3dy);
@@ -218,6 +222,8 @@ void far mous_3d_hide(void)
     }
 }
 
+/* UW1: shows the cursor again after mous_3d_hide hid it outside screen mode 1, with the
+   clip window opened to the whole screen for the moment (UW2's is empty). */
 void far mous_3d_show(void)
 {
     int wl, wt, wr, wb;
@@ -278,6 +284,7 @@ void far mouse_putxy(int x, int y)
     mouse_show();
 }
 
+/* The buttons held now, also into *b; no button cancels a queued press (q_button). */
 int far mouse_getbut(int16 *b)
 {
     if ((*b = mouse_btns()) == 0)
@@ -346,6 +353,7 @@ void far mouse_constrain(int x0, int y0, int x1, int y1)
     max_y = y1;
 }
 
+/* Lets the pointer go anywhere on the 320 by 200 screen again (see mouse_constrain). */
 void far mouse_freereign(void)
 {
     con_x0 = con_y0 = 0;
@@ -452,6 +460,8 @@ int far get_input(char array)
     return c;
 }
 
+/* The next input event (get_input, see the file comment); mouse_get_input_sp is the same
+   with get_input's flag set, the form INPUT.C's dispatcher uses. */
 int far mouse_get_input(void)
 {
     return get_input(0);
@@ -485,6 +495,8 @@ int far defineMouseRegion(int x0, int y0, int x1, int y1, int id)
     return i;
 }
 
+/* Frees cursor region handle: its left edge becomes 10000, which no pointer reaches, and
+   the count shrinks past free slots at the end. */
 void far undefineMouseRegion(int handle)
 {
     int i;
@@ -702,6 +714,9 @@ void far MousQUp(char from3d)
         q_release = 0;
 }
 
+/* Saves the screen under the cursor: a rectangle in pen 0x100, which probably copies to
+   the save-under area in video memory rather than drawing (VIDMODE.ASM's pens; not
+   traced further). */
 void far MousReSave(void)
 {
     set_the_color(0x100);
@@ -710,6 +725,9 @@ void far MousReSave(void)
     mouse_saved = 1;
 }
 
+/* The same for the cursor drawn into the 3D view's frame buffer (m3dt 2), or, while it
+   straddles the view in screen mode 1 (m3dt 1), a copy of the frame buffer area from
+   video memory through vcopyfb. */
 void far MousReSave3d(void)
 {
     if (m3dt == 2) {
@@ -726,6 +744,8 @@ void far MousReSave3d(void)
     mouse_saved = 1;
 }
 
+/* Draws the cursor on the screen at the pointer, transparent and clipped, after saving
+   what it covers. */
 void far drawMouse(void)
 {
     MousReSave();
@@ -735,6 +755,7 @@ void far drawMouse(void)
     set_the_color(0);
 }
 
+/* Draws the cursor into the 3D view's frame buffer, relative to the view. */
 void far draw3dMouse(void)
 {
     int x, y;

@@ -24,11 +24,13 @@
 #include "sys.h"
 #include "ui.h"
 
+/* Binds Alt+F4, in every screen mode, to ovr127_0 (OVR127.C). */
 void far init_debug(void)
 {
     _input_addkey(KEY_ALT | KEY_F4, 0, 0xFF, (InputFn)ovr127_0);
 }
 
+/* The debug printer, empty in this build: its callers' format strings remain. */
 void far dprintf(char *fmt, ...)
 {
 }

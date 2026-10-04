@@ -30,7 +30,7 @@
    flags are signed chars.
 
    name: UW1 has no symbol-bearing build; the names are UW2's, the routines being the
-   same. UW2's: inferred (map/filenames.tsv: "sorting objects for drawing ...; the job of
+   same. UW2's: inferred (UW2Decomp's map/filenames.tsv: "sorting objects for drawing ...; the job of
    System Shock's GAMESORT.C (partition_sort)"). FM Towns identifies the formerly
    anonymous helpers by their matching positions and operations: sort_setup, sort_obj,
    build_sort, set_sds, set_osum and clear_objsort. */

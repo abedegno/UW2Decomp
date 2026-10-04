@@ -92,6 +92,7 @@ void far init_mem(void)
     seg042_190();
 }
 
+/* Releases the game's EMS (seg012_A6) and the conversation workspace on the way out. */
 void far free_mem(void)
 {
     if (dseg_5c99_A48 > 0)

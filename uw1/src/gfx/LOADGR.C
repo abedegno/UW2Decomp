@@ -177,6 +177,10 @@ void far *far adrnew_ems(unsigned size)
     return MK_FP(EmsBuff + ems_off + 0x800, 0);
 }
 
+/* gronk_gr callbacks that reload a picture into the place its slot already names
+   (adrold_ems), record new EMS pictures in grs_off (movenew_ems) or in obj_tab for object
+   art, a slot 0 for an empty picture (moveobj_ems, move_reload_obj_ems from reload_base).
+   An EMS address is the page in the top four bits and the paragraph in the low twelve. */
 void far *far adrold_ems(void)
 {
     unsigned address = grs_off[gr_index];
@@ -230,6 +234,7 @@ void far *far adrnew_vram(void)
     return stdat;
 }
 
+/* gronk_gr callback: the one fixed address read_gr_far loads into (constadr). */
 void far *far adr_const(void)
 {
     return constadr;

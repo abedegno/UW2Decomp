@@ -164,6 +164,10 @@ int far seg012_141(uint16 *handle)
     return 0;
 }
 
+/* Maps logical page 0 of handle into the next physical page in turn (dseg_5c99_10C goes
+   round 0 to 3) and returns its address in the page frame, 0 on an EMS error. Any page
+   cached as mapped (crit_inpage, obj_inpage1, tmap_inpage) is marked unknown, since one
+   of the four is now replaced. */
 void far *far seg012_15E(unsigned handle)
 {
     crit_inpage = obj_inpage1 = tmap_inpage = 0xFF;
@@ -177,6 +181,7 @@ void far *far seg012_15E(unsigned handle)
     return 0;
 }
 
+/* Frees an EMS handle (int 67h function 45h). */
 void far seg012_1B1(unsigned handle)
 {
     _DX = handle;

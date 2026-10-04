@@ -193,7 +193,7 @@ int far scroll_print(char far *s)
     char pad1;                 /* match: unused; the EXE reserves it too (frame 0x36) */
     char sentinel;
 
-    if (scrmode != 1 && scrmode != 4)
+    if (scrmode != MODE_GAME && scrmode != MODE_CONV)
         return -1;
 
     set_mouse_in();
@@ -480,6 +480,7 @@ void far wd_replace(int n)
     scroll_print(buf);
 }
 
+/* Replaces the answer of a yes-or-no question on the main scroll with "Yes" or "No". */
 void far wd_bool(char yes)
 {
     int y;

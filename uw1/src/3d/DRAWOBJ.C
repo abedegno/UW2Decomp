@@ -8,7 +8,7 @@
    field in COMOBJ.DAT (ComObjData): 0 a sprite (do_uwobj, opcode 0x3A), 1 a critter
    (do_uwcrit, 0x5A, with its view and animation frame), 2 a 3D model
    (do_rect) or a door (do_door), 3 a texture-mapped object (a 3D model with a
-   texture). Opcode names are from the FM Towns opcode table (see GRIDDB.C).
+   texture). Opcode names are from the FM Towns opcode table (see GRIDDB.C; view3d.h's OP_*).
 
    do_rect emits one call of a 3D model: the model's colours and texture in the model
    variables (Clk(n), opcode 0x02), the origin (0x18 do_org, three longs), and a call
@@ -24,7 +24,7 @@
    Data owned: rect_cols and rect_sub (the models' colours and the model for each 3D
    object type), dirtab, and ActDoors (used elsewhere; see below).
 
-   name: descriptive (map/filenames.tsv: "drawing an object into the render database
+   name: descriptive (UW2Decomp's map/filenames.tsv: "drawing an object into the render database
    (do_obj, do_rect, do_door)"). The whole of UW1's DOS resident segment seg032_2DCA,
    in original order. UW1 has no symbol-bearing build: function and global names are
    UW2's (FM Towns), the routines being the same.
@@ -35,7 +35,7 @@
    pixel of its bitmap (GRSPIC.C's seg009_38C) where UW2 has TxmCol; rect_cols has four
    bytes a model, the texture count and first texture packed in one; no model 0x1E
    (UW2's blackrock gem); door textures from first_tmobj + 0x30; the detail setting
-   in UW1's player record (Player1Draw). */
+   in UW1's player record (player.h). */
 
 #include <dos.h>
 #include "conv.h"

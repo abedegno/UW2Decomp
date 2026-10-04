@@ -6,7 +6,7 @@
    seg039_3495 (UW2's seg039_3452), in original order.
 
    String ids: an id is block << 9 | index (ui.h's STR_* bases). get_string(id) looks the
-   block up among the made blocks first (make_string adds strings to them; in UW2 block
+   block up among the made blocks first (make_string adds strings to them: block
    0x7C, a conversation's dynamic strings, and 0x7D, the player's name), and otherwise decodes the
    string from the file with read_string; block 0 means the current conversation's or
    cutscene's block (CutsceneOrConversationStringBlock, conv.h), so conversation code can
@@ -206,12 +206,14 @@ char far * far fix_name_string(char far *s, unsigned char article, char plural)
     return s;
 }
 
+/* Prints game string id (block 1, STR_GAME) to the message scroll. */
 void far game_sprint(int id)
 {
     char far *s = get_string(id | STR_GAME);
     scroll_print(s);
 }
 
+/* Prints up to three game strings run together; a negative second or third is left out. */
 void far game_strings_3(int first, int second, int third)
 {
     char text[256];
@@ -317,6 +319,7 @@ int far seg039_3495_7B5(FILE *file, int index)
     return StringsPak_Address_Indices[value].value;
 }
 
+/* Upper-cases s in place (letters only) and returns it. */
 char far * far seg039_3452_814(char far *s)
 {
     char far *start = s;

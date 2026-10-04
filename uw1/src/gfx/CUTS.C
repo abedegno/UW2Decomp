@@ -547,7 +547,7 @@ void far show_anm(int cuts, int x, int y, int w, int h)
     st.name[12] = '0';
     st.name[13] = '0';
     if (get_cut_banks() >= 2) {
-        if ((n00_fd = open(st.name, 1)) == -1) {
+        if ((n00_fd = open(st.name, O_RDONLY)) == -1) {
             seg042_19B();
             return;
         }
@@ -570,7 +570,7 @@ void far show_anm(int cuts, int x, int y, int w, int h)
             code += 2;
             if (code[-1] < 0x10) code += cuts_dispatch[code[-1]](code, &st);
         }
-        while ((anm_fd = open(st.name, 0x8001)) > 0 && st.flags.bit.b3) {
+        while ((anm_fd = open(st.name, O_RDONLY | O_BINARY)) > 0 && st.flags.bit.b3) {
             lp_page = -1;
             if (!read_anim_hdr(anm_fd, n0x)) goto fail;
             hdr = (struct AnmHdr far *)n0x;
@@ -824,7 +824,7 @@ void far value_cuts(unsigned n, int value)
     name[7] = ((n >> 6) & 7) + '0';
     name[8] = ((n >> 3) & 7) + '0';
     name[9] = (n & 7) + '0';
-    ok = (fd = open(name, 0x8004)) != -1;
+    ok = (fd = open(name, O_RDWR | O_BINARY)) != -1;
     ok &= lseek(fd, 4L, 0) != -1L;
     ok &= write(fd, &value, 2) == 2;
     ok &= write(fd, &value, 2) == 2;

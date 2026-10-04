@@ -5,7 +5,7 @@
 ; marked UW1/UW2 where they occur. Other remarks are UW2's unless they say UW1.
 ;
 ; The far C entry points into seg019's input and start-up code: key, mouse and mbuttons, the
-; joystick reads JOYSTICK.C calls (_7CD, _809), and _755 and _791, which GRFX.C's grfx_init and
+; joystick reads (_7CD, _809; UW2's JOYSTICK.C calls them, nothing in UW1 does), and _755 and _791, which GRFX.C's grfx_init and
 ; grfx_close use to run STARTUP.ASM's start-up and shut-down glue. Each saves the caller's SS:SP
 ; in L0750/L0752, loads DS, ES and SS with seg063 and SP with 448h (UW2 510h), calls the near
 ; routine and switches back (STARTUP.ASM's header describes the arrangement). Its _DATA is the
@@ -214,7 +214,8 @@ _seg019_791 proc far
 _seg019_791 endp
 
 ; seg019_7CD  (+7CD)
-; _7CD: read the joystick position into joy_position (JOYPORT.ASM's _3A3); JOYSTICK.C calls it.
+; _7CD: read the joystick position into joy_position (JOYPORT.ASM's _3A3). UW1: no caller
+; (UW2's JOYSTICK.C calls it).
 _seg019_7CD proc far
         push    bp
         mov     bp,sp

@@ -87,12 +87,15 @@ unsigned char far grfx_load_font(char *name)
     return 1;
 }
 
+/* Hides the cursor and runs seg019's shut-down glue (SYSENTRY.ASM's _791), which puts
+   the screen mode back. */
 void far grfx_close(void)
 {
     mouse_hide();
     seg019_791();
 }
 
+/* Clears the whole screen to colour 0. */
 void far grfx_clear(void)
 {
     mouse_hide();
@@ -116,6 +119,8 @@ unsigned char far read_quikpal(int n, void far *dest)
     return 1;
 }
 
+/* Loads palette n of DATA\PALS.DAT (read_quikpal) into the VGA; 0 if it could not be
+   read. */
 unsigned char far grfx_quikpal(int n)
 {
     if (read_quikpal(n, palette)) {
@@ -125,6 +130,7 @@ unsigned char far grfx_quikpal(int n)
     return 0;
 }
 
+/* Copies a 768-byte palette into the library's palette and loads it into the VGA. */
 void far grfx_setpal(void far *src)
 {
     FAR_COPY(palette, src, 0x300);

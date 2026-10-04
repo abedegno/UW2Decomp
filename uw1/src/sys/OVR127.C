@@ -10,6 +10,8 @@
 
 #include <dos.h>
 
+/* Raises int 0Ch, the COM1 interrupt (IRQ 4), in software; DEBUG.C's Alt+F4 calls it.
+   What handler, if any, the development setup had on it is not known. */
 void far ovr127_0(void)
 {
     geninterrupt(0x0C);

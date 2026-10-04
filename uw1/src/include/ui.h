@@ -18,7 +18,7 @@ struct Arc;
 #include "map.h"
 #include "object.h"
 
-/* The mouse and keyboard state handed to an input handler, 10 bytes (seg010's dispatcher
+/* The mouse and keyboard state handed to an input handler, 10 bytes (INPUT.C's dispatcher
    fills it in; reached through the near pointer inplist). */
 struct Inplist {
     int16 x, y;                         /* relative to the region that took the click */
@@ -90,7 +90,7 @@ void far new_IconUnselect(int index);
 void far new_IconSelect(int index);
 void far do_option_shortcut(int keycode);
 
-/* Input codes from do_keyboard_input (seg015): the key's code in the low byte, codes
+/* Input codes from MOUSE.C's do_keyboard_input: the key's code in the low byte, codes
    from 0x80 being the special keys, with these added for the shift keys held. */
 #define KEY_CTRL        0x100
 #define KEY_ALT         0x200
@@ -308,8 +308,8 @@ typedef char (far *AreaMapFn)(int x, int y, int16 *arg);
    builds it). The block contents are read from the file itself, decoded with its own
    Huffman tree: block 1's first string is "Hey, its all the game strings", block 4 is the
    item names (items.h), block 6 the spell names, block 9 the text string traps' messages
-   (ovr166 indexes it by the trap's quality and owner), block 10 the descriptions of
-   walls and floors (seg026 prints them when the player looks at one). */
+   (TRIGGER.C indexes it by the trap's quality and owner), block 10 the descriptions of
+   walls and floors (INTERACT.C's look_nothing prints them when the player looks at one). */
 #define STR_GAME        0x200           /* block 1: the game's messages (game_sprint) */
 #define STR_CHARGEN     0x400           /* block 2: character creation: sexes, classes,
                                            skills, attribute labels */
@@ -323,9 +323,9 @@ typedef char (far *AreaMapFn)(int x, int y, int16 *arg);
 #define STR_TRAPTEXT    0x1200          /* block 9: the text string traps' messages */
 #define STR_TEXTURES    0x1400          /* block 10: wall and floor descriptions */
 /* Block numbers themselves (read_string, make_string, clear_dynamics): */
-#define STRBLK_DYNAMIC  0x7C            /* strings a conversation builds (ovr095, ovr103) */
-#define STRBLK_PLAYER   0x7D            /* the player's name (ovr143's make_string) */
-#define STRBLK_CUTSCENE 0xC00           /* + n: cutscene n's text (ovr108) */
+#define STRBLK_DYNAMIC  0x7C            /* strings a conversation builds (BABL.C, CONVERSE.C) */
+#define STRBLK_PLAYER   0x7D            /* the player's name (PLAYER.C's make_string) */
+#define STRBLK_CUTSCENE 0xC00           /* + n: cutscene n's text (CUTS.C) */
 #define STRBLK_CONVERSATION 0xE00       /* + n: conversation n's strings (STRINGS.PAK's
                                            blocks 0xE00 and up) */
 

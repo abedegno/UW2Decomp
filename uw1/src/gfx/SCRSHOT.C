@@ -58,6 +58,8 @@ HOST_LAYOUT_END
 static void far ovr112_149(int bits);
 static void far ovr112_1C3(int fd, int code);
 
+/* Saves the screen as the first free uwpicNNN.gif (NNN octal, so up to 512 files); seg
+   is the scratch segment the encoder's tables are laid out in (see the file comment). */
 void far save_screenshot(int seg)
 {
     int number = 0;
@@ -68,14 +70,14 @@ void far save_screenshot(int seg)
     register int i;
 
     screen = MK_FP(seg, 0);
-    while ((fd = open(name, 0x8001)) != -1) {
+    while ((fd = open(name, O_RDONLY | O_BINARY)) != -1) {
         close(fd);
         number++;
         name[7] = (number & 7) + '0';
         name[6] = ((number >> 3) & 7) + '0';
         name[5] = ((number >> 6) & 7) + '0';
     }
-    if ((fd = open(name, 0x8102, 0x180)) == -1) return;
+    if ((fd = open(name, O_WRONLY | O_CREAT | O_BINARY, S_IREAD | S_IWRITE)) == -1) return;
     gif.codes = screen;
     gif.hash = gif.codes + 0x138B;
     gif.suffix = (unsigned char far *)(gif.hash + 0x138B);

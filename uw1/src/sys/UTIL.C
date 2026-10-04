@@ -1,8 +1,8 @@
 /* target: seg041_37AA */
 /* opts: -mm -1 -G -O -Y -d */
 /* Small helpers: stepping a value within a limit, moving a point along a heading, waiting
-   a number of ticks, and rolling dice. The whole of DOS resident segment seg041_35D7, in
-   original order. Function names are the originals from the FM Towns symbol table where
+   a number of ticks, and rolling dice. The whole of UW1's DOS resident segment seg041_37AA (UW2's
+   seg041_35D7), in original order. Function names are the originals from the FM Towns symbol table where
    it has them. Callers are spread across the game: mvcheck by STATS.C and PLAYER.C,
    move_along by combat, missiles, spells, physics, skills and world events, rollem by
    combat, damage, spells, treasure and character creation.

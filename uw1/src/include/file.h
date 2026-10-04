@@ -33,17 +33,16 @@ struct Arc {
 void far flip_bool(char *p);
 void far print_path_to(char far *s, int px, int py, int ignored, int ox, int oy, int previous,
                        int radius);
-/* name: FM Towns get_theta_ (IDA's DartSatelliteVectoring_ovr167_313). */
 void far errmsg(char *a, char *b);
 void far check_dirs(void);
 void far check_fds(void);
 int far FarWrite_ovr167_627(int fd, void far *buf, unsigned n);
-/* Far-buffer file reads and writes in ovr167. FM Towns, being flat, calls the library's
-   read() and write() here; DOS cannot (_read is the near-buffer library call at 0E72:1FCD).
-   name: the DOS helpers' original names are not known, so these are the IDA names. */
+/* Far-buffer file reads and writes (MISCUTIL.C, UW1's ovr154; UW2's ovr167). FM Towns,
+   being flat, calls the library's read() and write() here; DOS cannot (the library's _read
+   takes a near buffer). name: the DOS helpers' original names are not known, so these
+   keep UW2's IDA names. */
 int far intoFarBuffer_ovr167_5DA(int fd, void far *buf, unsigned n);
-/* name: FM Towns bltfromdrive_ (read_file_to_mbuf_ and load_sound_driver_ call it where
-   DOS calls 65E0:007A). */
+/* Opens a file in DATA\ with stdio (MISCUTIL.C). */
 FILE * far data_fopen(char *name, char *mode);
 int far mpos(char x, char y);
 int far xorread(int fd, unsigned char key, unsigned char far *buf, unsigned n);

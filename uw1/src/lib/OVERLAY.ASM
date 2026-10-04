@@ -16,7 +16,7 @@
 ; others, and patches the stubs. UWEDIT.C sizes the buffer through _ovrbuffer. The game's own
 ; code never calls the manager except for _OvrInitEms.
 ;
-; name: inferred (map/filenames.tsv): named after the library, OVERLAY.LIB, whose five
+; name: inferred (UW2Decomp's map/filenames.tsv): named after the library, OVERLAY.LIB, whose five
 ; modules it holds.
 ;
 ; Borland's VROOMM overlay manager, from OVERLAY.LIB of Turbo C++ 1.01 (XLIB.ZIP on disk 3).

@@ -5,7 +5,7 @@
 ; marked UW1/UW2 where they occur. Other remarks are UW2's unless they say UW1.
 ;
 ; _C10: a far routine that only returns. INSTANCE.ASM's render_3d calls it on a stack in
-; seg_370D in the middle of each frame, so it is probably a hook left empty in this build (a
+; seg048 (UW2's seg_370D) in the middle of each frame, so it is probably a hook left empty in this build (a
 ; debugging or timing call in the development version; nothing in UW2 shows which).
 ;
 ; name: descriptive (module 16 of seg019); its job is not known beyond being empty.
