@@ -28,11 +28,20 @@ _AddToEmptySlot	5A1A:006B	provisional
 _AddTogether	5A1A:0057	provisional
 _AddToInventory	5A11:006B	provisional
 _AddToOccupiedSlot	5A1A:007F	provisional
+_adjust	DS:08E3	provisional
+_adjust_compass	2E9A:1080	provisional
+_adjust_dragons	2E9A:0A20	provisional
+_adjust_eyes	2E9A:1207	provisional
+_adjust_flasks	2E9A:06EC	provisional
 _adjust_height	128A:3061	provisional
+_adjust_panel	2E9A:11B3	provisional
+_adjust_power	2E9A:110D	provisional
+_adjust_weapon	2E9A:1529	provisional
 _adr_chrpic	5991:0034	provisional
 _adr_const	59F1:0075	provisional
 _adr_convpic	599C:007F	provisional
 _adr_opbtn	5A61:0034	provisional
+_adr_weapon	2E9A:12C6	provisional
 _adrnew_ems	59F1:007A	provisional
 _adrnew_vram	59F1:006B	provisional
 _adrold_ems	59F1:007F	provisional
@@ -156,6 +165,7 @@ _browse_chain	598A:002A	provisional
 _browse_hide	598A:0020	provisional
 _browse_redisplay	598A:0039	provisional
 _browse_show	598A:0025	provisional
+_bubbling	DS:07D8	provisional
 _build_corpse	128A:0005	provisional
 _build_grid	2ABA:115E	provisional
 _build_new_obj	311A:0564	provisional
@@ -184,6 +194,7 @@ _Change_AnimPtr	3707:03AE	provisional
 _change_critter_goal	59B1:0025	provisional
 _change_music_maybe	1BD8:160D	provisional
 _change_screen	59D3:005C	provisional
+_change_sprite	0000:00A6	provisional
 _change_state	DS:13AC	provisional
 _change_terrain	59C8:0066	provisional
 _ChangeAutoMapLevel	595C:007A	provisional
@@ -305,6 +316,7 @@ _cr_class	DS:5652	provisional
 _cr_type	DS:4A30	provisional
 _creat_spell	311A:0E45	provisional
 _create_player	5991:0025	provisional
+_create_sprite	0000:0002	provisional
 _CreatedObjectFound_dseg_5c99_1D9	DS:1D9A	provisional
 _CreateObj	2E86:003E	provisional
 _Creature	DS:4A52	provisional
@@ -477,6 +489,7 @@ _do_objsort	2D02:043B	provisional
 _do_of	5A23:0020	provisional
 _do_offer	597E:003E	provisional
 _do_option_shortcut	5A3D:007F	provisional
+_do_panel_frame	2E9A:1AD5	provisional
 _do_partition	2D02:015E	provisional
 _do_physics	2939:000B	provisional
 _do_play_scroll	3603:007A	provisional
@@ -491,6 +504,7 @@ _do_spell	311A:0078	provisional
 _do_teleport	59C8:0052	provisional
 _do_that_jump_kinda_thing	128A:2679	provisional
 _do_trap_hack	5A9C:003E	provisional
+_do_weapload	2E9A:136C	provisional
 _do_zbounce	2939:0C93	provisional
 _DoAnimO	DS:0AAF	provisional
 _DoClosingDoors	5A9C:0048	provisional
@@ -519,7 +533,9 @@ _DragonSkinBoots_dseg_5c99_1B01	DS:1B01	provisional
 _draw3dMouse	1ADC:0D56	provisional
 _draw_conv_edges	3603:0163	provisional
 _draw_edges	3603:011E	provisional
+_draw_mask	0000:0120	provisional
 _draw_scroll	3603:07A1	provisional
+_draw_sprite	0000:00EB	provisional
 _draw_start_buttons	5A61:003E	provisional
 _drawMouse	1ADC:0CF2	provisional
 _drawopt	5991:0061	provisional
@@ -560,6 +576,7 @@ _end_barter	597E:0025	provisional
 _EndGameMode_dseg_1C8F	DS:1C8F	provisional
 _EndInventory	5A1A:0039	provisional
 _eof	0EC5:1856	provisional
+_erase_sprite	0000:0155	provisional
 _errmsg	5AA4:0075	provisional
 _errno	DS:0096	provisional
 _error_code	59DB:0020	provisional
@@ -570,6 +587,9 @@ _ExecTsteq_ovr095_1BD0	5964:00D9	provisional
 _exit	0EC5:032C	provisional
 _ExitAutoMap	595C:004D	provisional
 _ExplodingBook_ovr107_1259	59C8:0025	provisional
+_eyes	DS:08B3	provisional
+_eyes_frame	DS:08B5	provisional
+_eyes_seq	DS:08A9	provisional
 _fade_buffer	4423:0000	provisional
 _fadein	59E9:0057	provisional
 _fadein3d	59E9:003E	provisional
@@ -618,12 +638,15 @@ _FixOpenBag	59FE:0048	provisional
 _FixPlayerEquips	5A4D:002A	provisional
 _fiz_update	DS:00D3	provisional
 _fizix_update	193D:0D85	provisional
+_FL_X	DS:079C	provisional
 _flask_info	22EF:010F	provisional
 _flaskMshandle	DS:26A2	provisional
 _flat_case	DS:312D	provisional
 _flat_move	2939:08A4	provisional
 _flciel	DS:0515	provisional
 _flip_bool	5AA4:0048	provisional
+_flip_column	2E9A:230F	provisional
+_flip_scale	2E9A:213B	provisional
 _flog_list	2674:0D44	provisional
 _flood_path	128A:12BB	provisional
 _floor_terrainrelated_dseg_5c99_7	DS:717C	provisional
@@ -643,6 +666,7 @@ _free_cuts_ems	59B8:0034	provisional
 _free_demscr	59D3:0020	provisional
 _free_input	1A6F:005A	provisional
 _free_mem	35D3:00E5	provisional
+_free_panelflip	2E9A:1AA0	provisional
 _free_scrgr	2E9A:03D5	provisional
 _free_sounds	1BD8:1569	provisional
 _free_speech_stuff	1BD8:1CDE	provisional
@@ -712,6 +736,7 @@ _give_ptr_npc	599C:00B6	provisional
 _glocs	DS:2890	provisional
 _go_fish	59C8:003E	provisional
 _go_into_dying_sequence	15AB:3577	provisional
+_goal	DS:3628	provisional
 _gr_ccall	DS:313C	provisional
 _gr_entry	37FF:00FC	provisional
 _gr_fcall	DS:3138	provisional
@@ -806,6 +831,7 @@ _init_lighting	5A73:0020	provisional
 _init_mem	35D3:0005	provisional
 _init_mouse	1ADC:000E	provisional
 _init_objects	5A3A:0025	provisional
+_init_panelflip	2E9A:18D1	provisional
 _init_player	5A53:0020	provisional
 _init_save	5A69:0020	provisional
 _init_scrgr	2E9A:016E	provisional
@@ -850,6 +876,7 @@ _IsMobElem	2674:0A52	provisional
 _ItemFitsSlot	5A1A:005C	provisional
 _ItemWeight	5A11:004D	provisional
 _itoa	0EC5:1DFF	provisional
+_jiggle_weapon	2E9A:14C8	provisional
 _kcurhndl	DS:00E4	provisional
 _kdispcnt	DS:24A6	provisional
 _key	1F3A:0971	provisional
@@ -861,6 +888,7 @@ _KeyLook	5A23:003E	provisional
 _kill_effect	1BD8:0BFD	provisional
 _kill_triggers	5A9C:0025	provisional
 _labs	0EC5:0B1F	provisional
+_last_weap	DS:0794	provisional
 _LastActiveMob	DS:2732	provisional
 _lastbin	DS:00C4	provisional
 _lastcombattime	DS:2482	provisional
@@ -873,9 +901,12 @@ _lblrefs	DS:7456	provisional
 _lcldblen	DS:288C	provisional
 _LeftPanel	DS:1A30	provisional
 _lengset	DS:0AAE	provisional
+_level	DS:08CF	provisional
 _lighton	DS:054D	provisional
 _Lights	DS:5B3A	provisional
 _line_of_sight	128A:1BD1	provisional
+_liquid_h	DS:07BC	provisional
+_liquid_y	DS:07A0	provisional
 _load_adr	DS:15E6	provisional
 _load_all_gr	59F1:0039	provisional
 _load_doors	59F1:0043	provisional
@@ -1015,8 +1046,10 @@ _move_opbtn	5A61:002F	provisional
 _move_physics	2D9C:0518	provisional
 _move_player	2D9C:0604	provisional
 _move_reload_obj_ems	59F1:008E	provisional
+_move_sprite	0000:018B	provisional
 _move_to_next	2ABA:0C99	provisional
 _move_vram	59F1:002F	provisional
+_move_weapon	2E9A:131E	provisional
 _MoveCamera	DS:0762	provisional
 _MoveCrits	DS:1B36	provisional
 _movedata	0EC5:1EDD	provisional
@@ -1053,6 +1086,8 @@ _myzpos	DS:2461	provisional
 _nail_1area	311A:0E00	provisional
 _nail_area	311A:0DBA	provisional
 _near_mob_put_at	2529:12E5	provisional
+_nedl_x	DS:07DC	provisional
+_nedl_y	DS:07FC	provisional
 _new_IconSelect	22EF:1349	provisional
 _new_IconUnselect	22EF:138F	provisional
 _new_player_pos	59D3:002F	provisional
@@ -1172,6 +1207,7 @@ _palette	DS:23BC	provisional
 _Palettes	DS:573E	provisional
 _PalStore	DS:5940	provisional
 _panel_check_hpmp	30F9:01B9	provisional
+_panel_dispatch	DS:08C3	provisional
 _parse_aspells	5A4D:0025	provisional
 _parse_effect	2D9C:093D	provisional
 _parse_player_terr	193D:003D	provisional
@@ -1183,6 +1219,7 @@ _pathlen	DS:245E	provisional
 _paths	55ED:0000	provisional
 _pathsq	55DD:0000	provisional
 _PBot	DS:735E	provisional
+_pbuf	DS:08A2	provisional
 _pfatal	59DB:002A	provisional
 _pfatal_code	59DB:0025	provisional
 _pFPS	DS:2496	provisional
@@ -1395,6 +1432,7 @@ _rorEffect	DS:074A	provisional
 _rotate_bank	210D:0005	provisional
 _Run_FPS	DS:00CE	provisional
 _runcutscene	59B8:0089	provisional
+_rune_x	DS:08B7	provisional
 _save_player_data	5A4D:003E	provisional
 _save_rect	004E:01D5	provisional
 _save_screenshot	59E1:0020	provisional
@@ -1521,9 +1559,11 @@ _set_the_color	0090:5174	provisional
 _set_the_window	0090:52BA	provisional
 _set_up_target	15AB:326B	provisional
 _set_workspace	35D3:0223	provisional
+_set_yoff	0000:01F9	provisional
 _SetCursorObj	5A1A:007A	provisional
 _SetOffTrap	5A9C:0057	provisional
 _SetPnt	1DF0:0001	provisional
+_setting	DS:35E2	provisional
 _setup_converse_data	59AE:0025	provisional
 _setup_font	0090:4CB1	provisional
 _setup_to_barter	597E:0039	provisional
@@ -1589,6 +1629,7 @@ _speech_over	1BD8:1C78	provisional
 _speechok	DS:0139	provisional
 _spell_delay	DS:16E2	provisional
 _spell_fire	2456:02B1	provisional
+_spell_x	DS:08BD	provisional
 _spellMshandle	DS:26A4	provisional
 _spells	56CF:0000	provisional
 _sphdriver	DS:013E	provisional
@@ -1644,6 +1685,7 @@ _subprocess	1DF0:0526	provisional
 _swap_tmap	5A4D:0034	provisional
 _swap_ws_out	59E5:0034	provisional
 _SwapItemsInBag	59FE:002A	provisional
+_swishing	DS:07DA	provisional
 _take_from_npc_inv	5977:0034	provisional
 _takeFromSlot	5A11:007A	provisional
 _talisman_desc	5A23:002A	provisional
@@ -1788,15 +1830,22 @@ _water_eff	DS:077E	provisional
 _water_set	193D:000B	provisional
 _watertime	DS:077F	provisional
 _wbot	DS:23F0	provisional
+_wbuf	DS:08A4	provisional
 _wd_bool	3603:09F1	provisional
 _wd_replace	3603:097B	provisional
 _wdialog	3603:0A5E	provisional
 _weap_frame	DS:0796	provisional
+_weap_offs	DS:35EC	provisional
+_weap_x	DS:35AA	provisional
+_weap_y	DS:35C6	provisional
+_weapid	DS:0793	provisional
 _Weapons	DS:5972	provisional
+_wfo	DS:079A	provisional
 _whack_thing	59C8:0057	provisional
 _WhatsInSlot	5A11:005C	provisional
 _WizEye	DS:0284	provisional
 _wleft	DS:23F8	provisional
+_wlstate	DS:0795	provisional
 _work_bullfrog_tiles	59C8:007A	provisional
 _WorkPath	DS:5668	provisional
 _wright	DS:23F4	provisional
@@ -1804,6 +1853,7 @@ _write	0EC5:1476	provisional
 _ws_active	DS:0A4A	provisional
 _wsize	DS:2656	provisional
 _wtop	DS:23EC	provisional
+_wxo	DS:0798	provisional
 _wyorn	3603:0F51	provisional
 _x_obj_pos	5977:0039	provisional
 _x_obj_stuff	5977:0043	provisional

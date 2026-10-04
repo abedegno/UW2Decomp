@@ -104,3 +104,10 @@ Things agents found that belong to the shared headers or the map, to settle in t
 - CUTS.C (ovr105): the stub order renamed six entries from UW2's names: get_cut_banks (was get_cuts_ems), get_cuts_block (set_cuts_ems), free_block (ovr105_3AB), runcutscene (show_cutscene), init_cutscene (ovr105_14E3), cuts_skipline (ovr105_1639; fgets(line, 99, fp)); value_cuts is PANELS.C's writeCutsValue. Renamed in every caller and in gfx.h. New for their keys: anm_lptab, read_anim_hdr, read_lp_inc, do_sound, cutsop_stop (UW2's cutsop_next). UW1 has 16 cutscene opcodes.
 - TMPALLOC.C's conv_ws is public (CUTS.C's init_cutscene reads it); the bytes are unchanged.
 - Headers should take: UW1's CutsState, 0x4A bytes, no repeat43, speech43/fade45/fade47 at 0x43/45/47, flags at 0x49, bit 0 "drawing"; fadein/fadeout(src, count); speech_available returns char; seg002_A(src, dst), the delta decoder.
+
+## From wave 4 (C, panels)
+
+- PANELS.C (seg036_3087): adjust_eyes's row hid the publics adr_weapon (+0x12C6) and move_weapon (+0x131E): split. New in UW1: two animated dragons (adjust_dragons, elements 4 and 5); the right panel turning over in a pseudo-3D squeeze from three EMS handles (init_panelflip, do_panel_frame, flip_scale, flip_column), plain redraws without them; weapons.dat holds positions only; player_look_shaft and player_look_grave call the cutscene module (value_cuts).
+- BSS layout, tested: uninitialised function-level statics come first in _BSS, in definition order and not word-aligned (update_screen's old_time at DS:359A, adjust_dragons' dcount[2] at the odd DS:359B); file-scope names follow from 35A0.
+- Matching tricks: jiggle_weapon's case 1 as if/else, case 2 a ternary with no break, wfo = 1 in every case; an empty `case 1: case 2:` gives adjust_weapon its jump table; `ok &= (char)read_gr_far(...)` gives a byte `and`.
+- Headers should take: `extern unsigned char far seg051_C377` (UW2's scrgr_fpage); EMS.C's seg012_10F/141/15E/1B1; init_panelflip(panel, x, y, w, h); RightPanel unsigned char; `int16 dseg_5c99_720C[]`; UW1 player record: shelf 0x47, lefty bit 0 and body bits 2-4 of 0x64, detail bits 4-7 of 0xB5.
