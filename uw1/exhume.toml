@@ -45,3 +45,13 @@ original_label = "UW2 kin"
 [repocheck]
 # UW1's data formats, never to be committed (tools/repocheck.py)
 ban = ["GR", "DAT", "BYT", "TR", "ARK", "PAK", "OLB", "CM", "CFG", "VOC", "XMI", "ADV", "N00", "N01", "N02", "N03", "N04", "N05", "N06", "N07", "N08", "N09", "N10"]
+
+[gate]
+# tools/gate.py: the build driver and the gate (Exhume's skills/readability-pass). The exact
+# link is byte-identical to UW.EXE, so there are no known_diffs (docs/LINKING.md).
+link = "{python} tools/link.py --config {config}"
+mod_link = "{python} tools/link.py --mod --config {config}"
+exact_exe = "LINK/out/UW.EXE"
+mod_exe = "MODLINK/out/UW.EXE"
+# `gate.py boot`: the title, then the main menu
+boot = ["w:8000", "s:title", "k:Escape", "w:4000", "s:menu"]

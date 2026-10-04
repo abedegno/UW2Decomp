@@ -15,7 +15,7 @@ The relinked EXE is identical to `UW.EXE` (the same MD5) and boots to the main m
 Still to do ([docs/PLAN.md](docs/PLAN.md)):
 
 1. The rest of the data as source.
-2. The gate, the layout audit for the modding build, and the readability pass: shared headers that match UW1 (the matched files still declare some of UW1's differences from UW2 locally), named constants and struct fields, and notes on what each file does in the game.
+2. The layout audit for the modding build, and the readability pass: shared headers that match UW1 (the matched files still declare some of UW1's differences from UW2 locally), named constants and struct fields, and notes on what each file does in the game.
 3. A port, on the same port layer as UW2Decomp's.
 
 [docs/NOTES.md](docs/NOTES.md) collects what matching found: where UW1 differs from UW2 (an earlier sound library, a graphics library of 18 modules where UW2 has 14, a 3D renderer of 9 modules with no 386 code, an options panel and screen-frame dragons of its own), the module boundaries, and items for the readability pass.
@@ -31,6 +31,10 @@ This needs your own `UW.EXE`, the Turbo C++ 1.01 disk images (which Borland rele
 `exhume.toml` names where things are, each overridable from the environment: `UW1_EXE` (default `~/UWGOG/UW1/UW.EXE`), `UW1_ASM` (the disassembly listing that the map was made from), and `EXHUME_TC` and `EXHUME_TASM` (the Borland toolchain). With Exhume checked out:
 
 ```sh
+make check                                                 # the gate: every source matches and verifies,
+                                                           # symbols.tsv rebuilds, the exact link is UW.EXE,
+                                                           # the modding build with no change is the same
+make hooks                                                 # git push runs the gate first
 python3 path/to/Exhume/tools/match.py src/ui/OPTIONS.C     # compile in DOS and compare with the segment
 python3 path/to/Exhume/tools/verify.py src/ui/OPTIONS.C    # fixups, data and names
 python3 path/to/Exhume/tools/build.py --all                # every object
@@ -38,7 +42,7 @@ python3 tools/link.py                                      # build/LINK/out/UW.E
 python3 tools/link.py --mod                                # the modding build
 ```
 
-The tools find Exhume through `$EXHUME`, or a checkout named `Exhume` next to this one.
+The tools find Exhume through `$EXHUME`, or a checkout named `Exhume` next to this one (the Makefile: `$EXHUME`, default `~/Exhume`).
 
 `python3 tools/repocheck.py` runs the checks CI runs on every push: no game data or Borland binary is committed, and the Markdown links resolve.
 

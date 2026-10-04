@@ -738,7 +738,6 @@ _dsdata	DS:0142	provisional
 _dseg_5c99_10C	DS:010C	provisional
 _dseg_5c99_12B6	DS:12B6	provisional
 _dseg_5c99_2404	DS:2404	provisional
-_dseg_5c99_5626	DS:5626	provisional
 _dseg_5c99_7178	DS:7178	provisional
 _dseg_5c99_761	DS:0761	provisional
 _dseg_5c99_A48	DS:0A48	provisional
@@ -1199,7 +1198,6 @@ _MaxPlayerAccel	DS:00C8	provisional
 _maybe_cast_defensive_spell	15AB:0FF2	provisional
 _MaybePlayerDayLoadrelated_ovr142	5A4D:0043	provisional
 _MaybeTangent_seg019_BD4	1F3A:0BD4	provisional
-_MazeNavigationTextureMaybe_dseg_	DS:7184	provisional
 _MazeSpell	DS:1B02	provisional
 _mbuttons	1F3A:09F0	provisional
 _mcurhndl	DS:24A2	provisional
@@ -1529,8 +1527,8 @@ _player_sleep	5A76:0057	provisional
 _player_sqhandler	193D:0BB3	provisional
 _player_use_skill	5A76:0093	provisional
 _PlayerBank	DS:358A	provisional
-_PlayerDat	DS:7288	provisional
 _playerdat	DS:7272	provisional
+_PlayerDat	DS:7288	provisional
 _PlayerFacing	DS:727A	provisional
 _PlayerHeading	DS:727C	provisional
 _PlayerInput	DS:075A	provisional
@@ -2380,8 +2378,8 @@ _ThePlayer	DS:7274	provisional
 _thgt	DS:05A3	provisional
 _tile_to_five	DS:0525	provisional
 _tile_walls	DS:1D8A	provisional
-_Time	DS:2364	provisional
 _time	0EC5:1010	provisional
+_Time	DS:2364	provisional
 _TimeStop	DS:0282	provisional
 _timetodo	15AB:3825	provisional
 _titlescr	59D3:0052	provisional
