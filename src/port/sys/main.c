@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
     const char *data = NULL, *home = getenv("UW2PORT_HOME"), *replay = NULL;
     const char *sound = NULL, *roms = NULL, *wav = NULL, *ail_log = NULL, *hw_log = NULL, *mouse = NULL;
     char mouse_buf[16];
-    int audio_device = 1, interactive, recording = 1;
+    int audio_device = 1, interactive, recording = 1, status;
     PlatConfig cfg;
     PlatHooks hooks;
     int i;
@@ -381,5 +381,10 @@ int main(int argc, char *argv[])
     hooks.key = kbd_byte;
     hooks.pointer = mouse_event;
     hooks.lifecycle = on_lifecycle;
-    return plat_run(&cfg, &hooks, game, NULL);
+    status = plat_run(&cfg, &hooks, game, NULL);
+    /* the window closed (or --exit-after) with the game still running: the recording's last
+       runs and chunks, which only the game's own exit or a fault wrote before, so that a
+       replay of it does not end at a stream it never got */
+    port_blackbox_close(0);
+    return status;
 }

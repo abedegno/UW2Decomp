@@ -256,10 +256,10 @@ def read_dump(path):
 
 def read_log(path):
     """RECORD.OUT (src/replay/REPLAY.C): the streams' runs decoded. Returns {stream: [runs]},
-    each run (count, value), a SOUND run (count, value, moment) in version 3, and the call
-    count the recording stopped at."""
+    each run (count, value), a SOUND run (count, value, moment) from version 3 (version 4's
+    repeats expanded), and the call count the recording stopped at."""
     d = open(path, 'rb').read()
-    if d[:4] != b'UW2R' or d[4] not in (2, 3): raise SystemExit(f'{path}: not a version 2 or 3 recording')
+    if d[:4] != b'UW2R' or d[4] not in (2, 3, 4): raise SystemExit(f'{path}: not a version 2, 3 or 4 recording')
     ver = d[4]
     stop = struct.unpack_from('<I', d, 8)[0]
     data = {}; p = 12
@@ -276,6 +276,11 @@ def read_log(path):
                 else: runs.append(({8: 'SRAND', 9: 'CKPT'}.get(tag, tag), struct.unpack_from('<H', b, q)[0])); q += 2
                 continue
             c = struct.unpack_from('<H', b, q)[0]; q += 2
+            if s == 8 and ver >= 4 and c == 0:       # a repeat: the last k runs, n times
+                k, n = struct.unpack_from('<BH', b, q); q += 3
+                pat = runs[-k:]
+                for _ in range(n): runs.extend(pat)
+                continue
             if s == 1:
                 dt = b[q]; q += 1
                 if dt == 0xFF: t = struct.unpack_from('<I', b, q)[0]; q += 4

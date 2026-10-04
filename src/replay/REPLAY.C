@@ -21,8 +21,8 @@
    in the same order on replay, so the streams need not say how they interleave. Each stream
    is written in chunks as its buffer fills: a stream number (byte), a length (word) and the
    bytes, so the file is one sequence of chunks of the seven streams mixed. RECORD.OUT (and
-   REPLAY.IN, the same), little-endian: "UW2R", version (word, 3; 2 is read too, and differs
-   only in SOUND), 0 (word), the number of
+   REPLAY.IN, the same), little-endian: "UW2R", version (word, 4; 2 and 3 are read too, and
+   differ only in SOUND), 0 (word), the number of
    hook calls at which the recording stopped (dword, 0 if it never did); then the chunks.
      1 TIME     count, then a byte d: the clock is the last run's plus d, or d = FFh and the
                 clock (dword) follows
@@ -43,6 +43,8 @@
                 run's first read: PIT input clocks since the start of the tick of the clock
                 the game last read (pit_moment), FFFFh for none. Sessions with no sound card
                 never read one, so the recordings made before the stream existed hold none.
+                (Version 4) count 0 is a repeat: k (byte) and n (word), the last k runs
+                again, n times over (snd_entry).
    Recording stops at F12 (scan code 58h), which the game never sees: the call count goes
    into the header. Replay stops at that call, or when a stream runs out, with a last dump;
    then the game shuts down as at the end of main (free_world) and exits, through C0's null
@@ -163,7 +165,7 @@ const char *rp_blackbox_name;
 #define NO_STOP 0
 #endif
 static int16 rp_mode = -1;              /* RP_OFF, RP_RECORD or RP_REPLAY once started */
-static int16 rp_version = 3;            /* of the file replayed: 2 has no SOUND moments */
+static int16 rp_version = 4;            /* of the file replayed: 2 has no SOUND moments, 3 no repeats */
 static int16 log_fd = -1, dump_fd = -1;
 static struct Stream st[NSTREAMS];
 static unsigned char bounce[512];
@@ -193,6 +195,18 @@ static void desync(int want, int got);
 static uint16 snd_moment = 0xFFFF;      /* SOUND: rp_sound_at's moment of the read in hand */
 static char snd_have;                   /* replaying: rp_sound_at has taken the read's value */
 static uint16 snd_value;
+/* SOUND's repeats. A game polling two digital buffers' status (SOUND.C's st[0] and st[1])
+   reads 2, 0, 2, 0 ..., a run of one call each, and the port, which records no moments, made
+   150 million such runs in six minutes of play, 900 MB of black box. So a SOUND run that
+   continues a repeat of the last 1 to SND_REP runs is not written; the repeat is, as count 0,
+   k and n (version 4). Both sides keep the last runs in snd_hist, newest last, the runs a
+   repeat stands for included. */
+#define SND_REP 4
+struct SndRun { uint16 count, v, sub; };
+static struct SndRun snd_hist[SND_REP], snd_pat[SND_REP];
+static int snd_nhist, snd_k, snd_pos;   /* the repeat in hand: its period, where in it */
+static uint16 snd_n;                    /* recording: its whole periods so far */
+static uint32 snd_left;                 /* replaying: its runs still to come */
 /* replaying in DOS: the reads where DOS's own driver gave another value than the recording's,
    and the clock ticks they spanned (SNDCHECK.OUT), the noise floor of the port's count */
 static uint32 snd_reads, snd_diffs, snd_diff_ticks, snd_diff_clock;
@@ -230,6 +244,72 @@ static void put_dword(int s, uint32 d)
     put_word(s, (unsigned)(d >> 16));
 }
 
+static void snd_push(struct SndRun *r)
+{
+    if (snd_nhist == SND_REP) {
+        memmove(snd_hist, snd_hist + 1, (SND_REP - 1) * sizeof *snd_hist);
+        snd_nhist--;
+    }
+    snd_hist[snd_nhist++] = *r;
+}
+
+static int snd_same(struct SndRun *a, struct SndRun *b)
+{
+    return a->count == b->count && a->v == b->v && a->sub == b->sub;
+}
+
+static void snd_put(struct SndRun *r)
+{
+    if (st[S_SOUND].len > CHUNK - 8) chunk_out(S_SOUND);
+    put_word(S_SOUND, r->count);
+    put_word(S_SOUND, r->v);
+    put_word(S_SOUND, r->sub);
+}
+
+/* the repeat in hand written: its whole periods as one entry, the runs of a period it had
+   begun as they are */
+static void snd_rep_out(void)
+{
+    int i;
+    if (!snd_k) return;
+    if (snd_n) {
+        if (st[S_SOUND].len > CHUNK - 8) chunk_out(S_SOUND);
+        put_word(S_SOUND, 0);
+        put_byte(S_SOUND, snd_k);
+        put_word(S_SOUND, snd_n);
+    }
+    for (i = 0; i < snd_pos; i++) snd_put(&snd_pat[i]);
+    snd_k = 0;
+}
+
+/* a finished SOUND run: it continues the repeat in hand, or starts one, or is written */
+static void snd_entry(struct SndRun *r)
+{
+    int k;
+    if (snd_k) {
+        if (snd_same(r, &snd_pat[snd_pos])) {
+            snd_push(r);
+            if (++snd_pos == snd_k) {
+                snd_pos = 0;
+                if (++snd_n == 0xFFFF) snd_rep_out();
+            }
+            return;
+        }
+        snd_rep_out();
+    }
+    for (k = 1; k <= snd_nhist; k++)
+        if (snd_same(r, &snd_hist[snd_nhist - k])) {
+            memcpy(snd_pat, snd_hist + snd_nhist - k, k * sizeof *snd_pat);
+            snd_k = k;
+            snd_n = k == 1;
+            snd_pos = k == 1 ? 0 : 1;
+            snd_push(r);
+            return;
+        }
+    snd_put(r);
+    snd_push(r);
+}
+
 /* the run in hand of stream s, written out (an entry is under 300 bytes, so a stream's
    buffer is written whenever it might not hold the next) */
 static void run_out(int s)
@@ -237,6 +317,15 @@ static void run_out(int s)
     struct Stream *p = &st[s];
     int i;
     if (!p->count) return;
+    if (s == S_SOUND) {
+        struct SndRun r;
+        r.count = p->count;
+        r.v = (uint16)p->v1;
+        r.sub = p->sub;
+        snd_entry(&r);
+        p->count = 0;
+        return;
+    }
     if (p->len > CHUNK - 8 || (s == S_KEY && p->len + 4 + (p->kn == 0xFF ? KSTATE_LEN : 2 * p->kn) > CHUNK))
         chunk_out(s);
     put_word(s, p->count);
@@ -259,10 +348,6 @@ static void run_out(int s)
         break;
     case S_BUTTONS:
         put_word(s, (unsigned)p->v1);
-        break;
-    case S_SOUND:
-        put_word(s, (unsigned)p->v1);
-        put_word(s, p->sub);
         break;
     default:                            /* MOUSE, JOY, JOYB */
         put_word(s, (unsigned)p->v1);
@@ -330,13 +415,47 @@ static uint32 get_dword(int s)
     return lo | (uint32)get_word(s) << 16;
 }
 
+/* SOUND's next run: from the repeat in hand, or read, which may start a repeat */
+static void snd_next(struct Stream *p)
+{
+    struct SndRun r;
+    int c;
+    if (!snd_left) {
+        c = get_byte(S_SOUND);
+        if (c < 0) rp_finish(CK_END);
+        r.count = c | get_byte(S_SOUND) << 8;
+        if (r.count == 0 && rp_version >= 4) {
+            snd_k = get_byte(S_SOUND);
+            snd_left = (uint32)get_word(S_SOUND) * snd_k;
+            if (snd_k < 1 || snd_k > snd_nhist || !snd_left) desync(S_SOUND, 0);
+            memcpy(snd_pat, snd_hist + snd_nhist - snd_k, snd_k * sizeof *snd_pat);
+            snd_pos = 0;
+        } else {
+            r.v = get_word(S_SOUND);
+            r.sub = rp_version >= 3 ? get_word(S_SOUND) : 0xFFFF;
+        }
+    }
+    if (snd_left) {
+        r = snd_pat[snd_pos];
+        if (++snd_pos == snd_k) snd_pos = 0;
+        snd_left--;
+    }
+    if (r.count == 0) desync(S_SOUND, 0);
+    snd_push(&r);
+    p->count = r.count;
+    p->v1 = r.v;
+    p->sub = r.sub;
+}
+
 /* the next call of stream s: when its run is used up the next run is read (and a key run's
    state applied); a stream that has run out ends the replay */
 static struct Stream *replayed(int s)
 {
     struct Stream *p = &st[s];
     int i, c, n;
-    if (p->count == 0) {
+    if (p->count == 0 && s == S_SOUND)
+        snd_next(p);
+    else if (p->count == 0) {
         c = get_byte(s);
         if (c < 0) rp_finish(CK_END);
         p->count = c | get_byte(s) << 8;
@@ -359,10 +478,6 @@ static struct Stream *replayed(int s)
         case S_BUTTONS:
             p->v1 = get_word(s);
             break;
-        case S_SOUND:
-            p->v1 = get_word(s);
-            p->sub = rp_version >= 3 ? get_word(s) : 0xFFFF;
-            break;
         default:
             p->v1 = get_word(s);
             p->v2 = get_word(s);
@@ -378,7 +493,7 @@ static struct Stream *replayed(int s)
 
 static void rp_start(void)
 {
-    static char hdr[] = "UW2R\3\0\0\0\0\0\0\0";
+    static char hdr[] = "UW2R\4\0\0\0\0\0\0\0";
     int s;
     if (rp_mode >= 0) return;
     rp_mode = RP_OFF;
@@ -387,7 +502,7 @@ static void rp_start(void)
         log_fd = open("REPLAY.IN", O_RDONLY | O_BINARY);
         if (log_fd >= 0) {
             read(log_fd, bounce, HDR_LEN);
-            if (memcmp(bounce, hdr, 4) || (bounce[4] != 2 && bounce[4] != 3) || bounce[5]) {
+            if (memcmp(bounce, hdr, 4) || (bounce[4] < 2 || bounce[4] > 4) || bounce[5]) {
                 close(log_fd);
                 return;
             }
@@ -426,19 +541,23 @@ static void rp_start(void)
     }
 }
 
-/* recording: every run and chunk written, and the call count it stopped at in the header */
+/* recording: every run and chunk written, and the call count it stopped at in the header; a
+   black box's is always FFFFFFFFh (NO_STOP), however it ended (rp_blackbox_close, rp_halt, the
+   game's exit) */
 static void record_close(void)
 {
     unsigned char b[4];
+    uint32 n = BLACKBOX ? 0xFFFFFFFFUL : events;
     int s;
     for (s = 1; s < NSTREAMS; s++) {
         run_out(s);
+        if (s == S_SOUND) snd_rep_out();
         chunk_out(s);
     }
-    b[0] = (unsigned char)events;
-    b[1] = (unsigned char)(events >> 8);
-    b[2] = (unsigned char)(events >> 16);
-    b[3] = (unsigned char)(events >> 24);
+    b[0] = (unsigned char)n;
+    b[1] = (unsigned char)(n >> 8);
+    b[2] = (unsigned char)(n >> 16);
+    b[3] = (unsigned char)(n >> 24);
     lseek(log_fd, 8, SEEK_SET);
     write(log_fd, b, 4);
 }
@@ -1069,17 +1188,14 @@ void far rp_checkpoint(int n)
 /* The black box's end: the streams' last runs and chunks written, and the header's call count
    left at FFFFFFFFh (NO_STOP), so that a replay goes on to the end of the streams, and after a
    crash into the code that crashed, instead of stopping at a count that has wrapped. Called
-   from the fault handler too, on the game thread that faulted, so it only writes. crashed is
-   for the log. */
+   from the fault handler too, on the game thread that faulted, so it only writes, and when the
+   window closes (main.c), for a --record session as well. crashed is for the log. */
 void rp_blackbox_close(int crashed)
 {
-    static const unsigned char none[4] = { 0xFF, 0xFF, 0xFF, 0xFF };
     (void)crashed;
-    if (!rp_blackbox || rp_mode != RP_RECORD || finishing) return;
+    if (rp_mode != RP_RECORD || finishing) return;
     finishing = 1;
     record_close();
-    lseek(log_fd, 8, SEEK_SET);
-    write(log_fd, none, 4);
     close(log_fd);
 }
 #endif

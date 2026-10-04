@@ -142,8 +142,9 @@ int port_blackbox_start(const char *home)
     return 0;
 }
 
-/* The fault handler's and exit's part: the recording's buffered streams written. */
+/* The fault handler's, exit's and the closed window's part: the recording's buffered streams
+   written (a --record session's too). */
 void port_blackbox_close(int crashed)
 {
-    if (rp_blackbox) rp_blackbox_close(crashed);
+    rp_blackbox_close(crashed);
 }
