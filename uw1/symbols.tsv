@@ -2048,6 +2048,7 @@ _seg015_1F9B_2A7	1DAE:02A7	provisional
 _seg015_1F9B_325	1DAE:0325	provisional
 _seg015_1F9B_366	1DAE:0366	provisional
 _seg015_1F9B_E8	1DAE:00E8	provisional
+_seg018_6	1F32:0006	provisional
 _seg019_0	1F3A:0000	provisional
 _seg019_1004	1F3A:1004	provisional
 _seg019_102B	1F3A:102B	provisional
@@ -2484,6 +2485,7 @@ _UsPtr	DS:2E10	provisional
 _uvline	0090:54A4	provisional
 _ValidLightSlots	DS:171E	provisional
 _valloc	004E:004A	provisional
+_valloc_stats	004E:02D1	provisional
 _value_cuts	59B8:0075	provisional
 _vcopy	0090:59C1	provisional
 _vcopyfb	0090:5974	provisional
@@ -2576,6 +2578,7 @@ restore_rect	004E:0268	provisional
 save_rect	004E:01EF	provisional
 seg048	3963:0000	provisional
 seg051	4723:0000	provisional
+seg053	5471:0000	provisional
 seg063	5624:0000	provisional
 setcol_common	06E7:3733	provisional
 sp_inf_tab	5477:0008	provisional

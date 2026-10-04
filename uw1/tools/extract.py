@@ -23,14 +23,14 @@ from a changed source.
 
 What is extracted, and the evidence for each piece:
 
-- Code with no source: seg016 (segment table entry 18, the divide-by-zero trap, 5Fh bytes),
-  SetPnt (the first 35h bytes of entry 19, seg017's segment, which GRIDDB.C fills after it),
-  seg018 (entry 20, 6Dh bytes) and the far routine after VALLOC.ASM's code in seg001 (B9h
-  bytes, one relocation). Found by subtracting what the objects cover from the segment
-  extents in the overlay manager's segment table (__SEGTABLE__: A1h entries of {paragraph,
-  end, flags, start} that TLINK writes for every segment, in order). Zero bytes between the
-  modules of seg003 (one, to a word), seg004 and seg019 (to a paragraph), and the 15 ending
-  seg019's segment, are TLINK's alignment padding, not extracted.
+- Code with no source: none. Every byte of code is a source's: the last pieces were seg016
+  (sys/INT0TRAP.ASM), SetPnt (3d/SETPNT.ASM), seg018 (gfx/PLANECPY.ASM) and the routine after
+  VALLOC.ASM's code in seg001 (gfx/VSTATS.ASM). Code no source covers is found by
+  subtracting what the objects cover from the segment extents in the overlay manager's
+  segment table (__SEGTABLE__: A1h entries of {paragraph, end, flags, start} that TLINK
+  writes for every segment, in order); any such range now stops the tool. Zero bytes between
+  the modules of seg003 (one, to a word), seg004 and seg019 (to a paragraph), and the 15
+  ending seg019's segment, are TLINK's alignment padding, not extracted.
 - The far data segments between C0's _FARDATA (entry 50) and the overlay manager's data
   (entries 51 to 76), each with the alignment its start implies: para when it starts on a
   fresh paragraph after a gap, byte when it starts exactly where the previous one ended, word
@@ -39,17 +39,19 @@ What is extracted, and the evidence for each piece:
   verify.py) are not declared here: TLINK places a segment where it first sees its name, so
   the C file's place in the link puts them where the EXE has them. The entries before one of
   those that no C file defines are declared, empty, in a module linked just before that C
-  file (XFnnn); XFAR, after the resident objects, holds the bytes of the rest.
+  file (XFnnn); XFAR, after the resident objects, holds the bytes of the rest. Entries a
+  source marked /* fardata */ fills (src/sys/FARDATA.ASM: entries 51, 53, 54 and 60 to 63,
+  the zero-filled buffers and the checkerboard) are declared empty in XFAR, and the source,
+  linked right after it, fills them.
   Entry 52 (seg048, the graphics modules' data) is filled by those modules' sources from
   their first relocation onwards (pieces placed by '# far' lines in their target tables);
   XFAR holds the EXE's bytes before the first piece. The sources name the segment's frame
   seg048 = 3963:0000, 8 bytes before the segment starts (it follows entry 51 in the same
   paragraph), so XFAR defines seg048 as an equate 10000h-8 bytes on from the segment's start,
   which TLINK resolves to 3963:0000 in 16-bit arithmetic.
-  Entries 58 and 72 (the 3D modules' data) have pieces of INSTANCE.ASM and TMAPOPS.ASM no
-  source holds yet: from each piece's first relocated pointer they go into library modules of
-  their own (XP004G, XP004H), put into the library just before those modules, since their
-  relocations sit among those modules' own in the relocation table.
+  Entries 58 and 72 (the 3D modules' data) are filled the same way, from INSTANCE.ASM's and
+  TMAPOPS.ASM's first relocated pointers in them onwards; XFAR holds the EXE's bytes before
+  those pieces.
 - DGROUP gaps: _DATA bytes and _BSS space between the objects' own data, as verify.py places
   it (or, for a file whose own code never refers to its data, as its publics' addresses in
   symbols.tsv and the other objects place it). Each gap becomes a byte-aligned module linked
@@ -66,7 +68,7 @@ What is extracted, and the evidence for each piece:
   the code flag only for a class ending in upper-case CODE (Exhume's
   profiles/borland-tc101/linker.md, "Segment classes"); the rest are CODE.
 - XPULL, an empty module, names one public of each library module nothing else names
-  (QUADFIT.ASM) and of the XP modules: TLINK takes a library module only for a reference to
+  (QUADFIT.ASM), and of any XP module: TLINK takes a library module only for a reference to
   it by name.
 
 Names: every name an object references (its externs, resolved against the EXE by verify.py's
@@ -433,16 +435,17 @@ for stem, ob in OBJS.items():
 
 # ---- the link order -------------------------------------------------------------------
 # Module order, from the relocation table (TLINK writes relocations module by module): C0,
-# seg006..seg015, seg016 (extracted: the divide-by-zero trap, one relocation), seg000, seg019's
-# first module (STARTUP), seg001 and the far routine after it (extracted, one relocation),
+# seg006..seg015, seg016 (INT0TRAP, the divide-by-zero trap, one relocation), seg000, seg019's
+# first module (STARTUP), seg001 (VALLOC) and VSTATS, the routine after it (one relocation),
 # seg020 (AIL), seg021..seg031, seg017's C (GRIDDB, whose _DATA is between seg031's and
 # seg032's too), seg032..seg044, the overlays in order, then the C library, then seg019's
 # other modules, seg003's, seg004's and seg045 interleaved (a second library: their _DATA
 # follows the C library's and seg045's _BSS is the last in DGROUP), then the overlay manager.
 # seg002 carries no relocations and no data, so its place is free; it goes next to seg001.
-# SetPnt (seg017's first 0x35 bytes, extracted) and seg018 (extracted, no relocations) must
-# be seen after seg016 and before STARTUP declares seg019's segment, since TLINK places
-# segments in the order it first sees their names; they go right after seg016.
+# SetPnt (SETPNT.ASM, seg017's first 0x35 bytes) and seg018 (PLANECPY.ASM, no relocations)
+# must be seen after seg016 and before STARTUP declares seg019's segment, since TLINK places
+# segments in the order it first sees their names; they go right after seg016, where the
+# extracted modules that held them were.
 #
 # The sources are named here by their DOS segment (their /* target: */ line, tools/sources.py),
 # not by file name: S('seg039') is the stem of the file whose target is seg039_3495, and
@@ -450,8 +453,9 @@ for stem, ob in OBJS.items():
 # first). So renaming or moving a source needs no change here.
 def S(seg): return by_segment(seg, TARGETS)
 def M(seg, letters): return [family(seg, TARGETS)[ord(c) - ord('A')] for c in letters]
-RES = [S('seg%03d' % n) for n in range(6, 15)] + ['XEMPTY16', S('seg015'), 'X016', 'XSETPNT', 'X018', 'XSEG019', S('seg000')] + \
-      M('seg019', 'A') + [S('seg001'), S('seg002'), S('seg020')] + \
+RES = [S('seg%03d' % n) for n in range(6, 15)] + ['XEMPTY16', S('seg015'), S('seg016'), S('seg017_1FDD_1'), S('seg018'),
+                                                   'XSEG019', S('seg000')] + \
+      M('seg019', 'A') + [S('seg001'), S('seg001_2D1'), S('seg002'), S('seg020')] + \
       [S('seg%03d' % n) for n in range(21, 32)] + [S('seg017')] + \
       [S('seg%03d' % n) for n in range(32, 45)] + ['XFAR']
 OVLNUMS = list(E_STUBS)
@@ -479,11 +483,11 @@ def uncovered(lo, hi):
         at = max(at, b)
     if at < hi: pieces.append((at, hi))
     return pieces
-# segment index -> (module, segment name) for code with no source, extracted from the EXE:
-# seg016 (entry 18, the divide-by-zero trap), SetPnt (the start of entry 19, seg017's
-# segment, which GRIDDB.C fills after it) and seg018 (entry 20). Any other uncovered range in
-# the resident code is a tail of the object before it (seg001's last routine).
-CODE_GAPS = {18: ('X016', 'SEG016_TEXT'), 19: ('XSETPNT', OBJS[S('seg017')]['codeseg']), 20: ('X018', 'SEG018_TEXT')}
+# segment index -> (module, segment name) for code with no source, extracted from the EXE;
+# empty now that seg016, SetPnt, seg018 and the routine after VALLOC.ASM have sources. An
+# uncovered range anywhere else in the resident code would be a tail of the object before
+# it (XT modules); there is none.
+CODE_GAPS = {}
 GAPS = {}; TAILS = {}
 for i, para, lo, hi, fl in SEGS[:E_OVRTEXT]:
     if i in (5, E_TEXT) or hi is None or hi <= lo: continue        # C0 and the C library: _TEXT
@@ -538,16 +542,17 @@ def dname(slot): return ('XA' if slot[0] == 'after' else 'XB') + sfx(slot[1])
 
 # every extracted range: (file lo, file hi, frame para or DS_PARA, module)
 RANGES = []
-# Far data pieces of library modules whose sources do not hold them yet: INSTANCE's in entries
-# 72 and 58 and TMAPOPS's in entry 58 (the 3D modules' data). Their relocations sit in the
-# relocation table among those modules' own (TLINK writes a module's relocations together,
-# its data's before its code's here), so the bytes from each piece's first relocated far
-# pointer to the next piece (or the segment's end) go into a module of their own, XPnnnL,
-# put into the library right before the module (XPULL names it, so TLINK takes it). Each
-# piece is given by the relocation-table entry of its first relocation, measured from UW.EXE:
-# 2639 (FD72) and 2640 (FD58) come between INTERP's and INSTANCE's code relocations, 2709
-# to 2720 (FD58) between GRDB's and TMAPOPS'.
-LIBFAR = {M('seg004', 'G')[0]: (2639, 2640), M('seg004', 'H')[0]: (2709,)}
+# Far data pieces of library modules whose sources do not hold them: a library module's far
+# data whose relocations sit in the relocation table among that module's own (TLINK writes a
+# module's relocations together, its data's before its code's here) would go, from each
+# piece's first relocated far pointer to the next piece (or the segment's end), into a module
+# of its own, XPnnnL, put into the library right before the module (XPULL names it, so TLINK
+# takes it). LIBFAR gives each such module's pieces by the relocation-table entry of their
+# first relocation. Empty: the last ones, INSTANCE's in entries 72 and 58 (from entries 2639
+# and 2640) and TMAPOPS's in entry 58 (from 2709), are in those sources now (3d/INSTANCE.ASM,
+# 3d/TMAPOPS.ASM, placed by '# far' lines in their target tables, like the graphics modules'
+# pieces of entry 52).
+LIBFAR = {}
 RELLIST = list(RELOCS)            # file offsets, in relocation table order
 LIBPIECES = {}                    # module -> [(entry, file lo)], in relocation order
 for k, firsts in LIBFAR.items():

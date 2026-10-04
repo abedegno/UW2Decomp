@@ -1,5 +1,7 @@
 # segment seg004_4980 base 0xE9F0 size 0x12A5 org 0x4980
 # cname: UW2 kin name (FM Towns, through UW2's sources; checked against UW1's opcode table), else the segment offset; SEG004 split at +4980..+5C25
+# far FD72 5624:04D5
+# far FD58 4723:2860
 seg004_4980	seg004_4980	0x0	0x7
 render_3d	seg004_4987	0x7	0x1BD
 scale_matrix	seg004_4B44	0x1C4	0x332

@@ -34,8 +34,13 @@
 ; Its relocations are entries 2721-2723 of UW.EXE's relocation table. Entries 2709-2720 come
 ; right before them: seg051 from 0B006h, starting with the mapper's far pointer (its segment
 ; word at 0B008h is seg003), as UW2's FD58 piece (mapper_rtn and the texture blocks) comes
-; right before UW2's TMAPOPS code. That data is probably this module's; it is not defined
-; here yet.
+; right before UW2's TMAPOPS code. That data is this module's, defined before the code
+; because those entries come before the code's: seg051 (segment table entry 58) from 4723:B006
+; to the segment's end at C4D9h. Where it starts is not known: it is taken from the mapper's
+; far pointer, as in UW2, and the bytes before it are INSTANCE.ASM's piece. The pointer's
+; offset is 01DAh in the EXE (the wall mapper); the texture block records follow, their far
+; pointers into seg_5DFD and checkerboard1, then UW2's first_anim and the page cache tables.
+; name: the labels are symbols.tsv's (provisional, UW2's where it has them).
 ;
 ; The routine comments are UW2's, with UW1's addresses, except where marked UW1.
 
@@ -49,10 +54,113 @@ OPCODE_TABLE    equ     2738h
         extrn   _seg003_1082:far
         extrn   _seg003_1DA:far
         extrn   _seg003_545:far
+        extrn   _checkerboard1:far
+        extrn   _seg_5DFD:far
 
 _DATA   segment word public 'DATA'
 _DATA   ends
 DGROUP  group   _DATA
+
+; seg051 from B006h to its end
+FD58    segment byte public 'FAR_DATA'
+        public  _first_anim, _seg051_C10F, _CmaptoPg, _PgtoCmap, _CmapFrm, _CmapCache
+        public  _crit_fpage, _crit_nlpages, _crit_inpage, _tmap_inpage, _seg051_C375
+        public  _seg051_C376, _seg051_C377, _seg051_C378, _seg051_C3B2, _seg051_C3EC
+        public  _seg051_C460, _obj_inpage1, _EmsBuff, _seg051_C4D7
+        dd      _seg003_1DA
+        db      0DAh,01h
+        db      72h dup (0)
+        db      10h,00h
+        dd      _seg_5DFD+0FFh
+        db      0F0h,00h,10h,00h
+        dd      _seg_5DFD+0FFh
+        db      0F0h,00h,20h,00h
+        dd      _seg_5DFD+3FFh
+        db      0E0h,03h,20h,00h
+        dd      _seg_5DFD+3FFh
+        db      0E0h,03h,40h,00h
+        dd      _seg_5DFD+0FFFh
+        db      0C0h,0Fh,40h,00h
+        dd      _seg_5DFD+0FFFh
+        db      0C0h,0Fh,40h,00h
+        dd      _seg_5DFD+17FFh
+        dd      _checkerboard1+1FC0h
+        db      10h,00h,10h,00h,08h,00h,10h,00h,04h,00h
+        dd      _checkerboard1+5h
+        db      10h,00h,10h,00h,08h,00h,10h,00h,04h,00h
+        dd      _seg_5DFD+5h
+        db      10h,00h,10h,00h,08h,00h,10h,00h,04h,00h
+        dd      _seg_5DFD+5h
+        db      10h,00h,10h,00h,08h,00h,10h,00h,04h,00h,05h,00h,00h,00h
+_first_anim label byte
+        db      00h,00h,00h,00h,00h,00h,01h,00h,01h,00h,63h,72h,69h,74h,5Ch,63h
+        db      72h,3Fh,3Fh,70h,61h,67h,65h,2Eh,6Eh,3Fh,3Fh,24h,00h,0FFh
+        db      1001h dup (0)
+_seg051_C10F label byte
+        db      80h dup (0)
+_CmaptoPg label byte
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+_PgtoCmap label byte
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+_CmapFrm label byte
+        db      0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h
+        db      0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h
+        db      0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h
+        db      0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h
+        db      0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h
+        db      0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h,0A0h
+_CmapCache label byte
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+        db      0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh,0FFh
+_crit_fpage label byte
+        db      00h,00h
+_crit_nlpages label byte
+        db      00h,00h
+_crit_inpage label byte
+        db      00h
+_tmap_inpage label byte
+        db      00h
+_seg051_C375 label byte
+        db      00h
+_seg051_C376 label byte
+        db      00h
+_seg051_C377 label byte
+        db      00h
+_seg051_C378 label byte
+        db      3Ah dup (0)
+_seg051_C3B2 label byte
+        db      3Ah dup (0)
+_seg051_C3EC label byte
+        db      74h dup (0)
+_seg051_C460 label byte
+        db      74h dup (0)
+_obj_inpage1 label byte
+        db      00h
+_EmsBuff label byte
+        db      00h,00h
+_seg051_C4D7 label byte
+        db      00h,00h
+FD58    ends
 
 SEG004_TEXT segment para public 'code'
         assume  cs:SEG004_TEXT, ds:DGROUP, ss:DGROUP

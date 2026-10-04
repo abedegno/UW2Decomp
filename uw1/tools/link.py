@@ -34,18 +34,26 @@ With no source changed it gives the exact link's EXE.
    them), or an overlay whose publics are listed out of the EXE's stub order (see
    stub_order_wrong), stops the link until it is corrected.
 4. In DOS (Exhume's tools/dosrun.mjs, in the DOS tools/dosbackend.mjs picks; with emu2 the
-   date needs tools/emu2-date.patch, and emu2 is given 512 KB, see main): the date is set to
-   12 May 1993 (TLINK records it), TASM assembles the generated modules, TLIB puts the second
-   library's modules (seg019's but its first, seg004's, seg003's, seg045 and the far data
-   pieces XP004G and XP004H) into UWLIB.LIB in the manifest's order, and TLINK links from
-   LINK.RSP:
+   date needs tools/emu2-date.patch): the date is set to 12 May 1993 (TLINK records it),
+   TASM assembles the generated modules, TLIB puts the second library's modules (seg019's
+   but its first, seg004's, seg003's and seg045) into UWLIB.LIB in the manifest's order,
+   and TLINK links from LINK.RSP:
 
-     TLINK /c /m /s XORDER C0UW1 <resident objects> /o <overlay objects> /o-,
+     TLINK /c /m /s /i XORDER C0UW1 <resident objects> /o <overlay objects> /o-,
            uwedit.exe, uwedit.map, CM.LIB UWLIB.LIB OVERLAY.LIB
 
    /c is case-sensitive (TCC -Y passes /c/x), /o overlays the modules that follow, /m /s
-   write the map. The name is uwedit.exe because TLINK stores it in the EXE (__EXENAME__)
-   and UW.EXE has that, as UW2.EXE does. UW1 uses no floating point, so EMU.LIB and MATHM.LIB
+   write the map. /i ("initialize all segments") makes TLINK write every byte of the image
+   it lays out, zero where no record gives one. Without it, the bytes no record covers
+   (alignment padding between modules' _DATA, and data a module leaves uninitialised, such
+   as part of CM.LIB's SETARGV) come from TLINK's buffers as it left them, and hold stale
+   bytes of an object it read earlier; which ones, and whether any, changed with the
+   emulator's memory size and with any change to the module list (16 to 40 bytes in
+   DGROUP, tested under emu2 with 512 and 640 KB). With /i they are 0, as in UW.EXE, under
+   emu2 with either memory size and under DOSBox-X, and the EXE is otherwise the same,
+   byte for byte and in size.
+   The name is uwedit.exe because TLINK stores it in the EXE (__EXENAME__) and UW.EXE has
+   that, as UW2.EXE does. UW1 uses no floating point, so EMU.LIB and MATHM.LIB
    (which TCC would add) contribute nothing; the C library's modules come before the second
    library's and the overlay manager's in UW.EXE, hence the library order.
 5. The EXE and map land in <build>/LINK/out (or --out) as UW.EXE and UW.MAP, and Exhume's
@@ -213,7 +221,7 @@ def main():
     for i in range(0, len(objs), 8):
         lines.append(' '.join(objs[i:i + 8]) + (' +' if i + 8 < len(objs) else ''))
     # the EXE's own name is stored too (__EXENAME__): uwedit.exe, in lower case
-    rsp = '/c /m /s ' + '\r\n'.join(lines) + '\r\nuwedit.exe\r\nuwedit.map\r\nCM.LIB UWLIB.LIB OVERLAY.LIB\r\n'
+    rsp = '/c /m /s /i ' + '\r\n'.join(lines) + '\r\nuwedit.exe\r\nuwedit.map\r\nCM.LIB UWLIB.LIB OVERLAY.LIB\r\n'
     open(os.path.join(LINKDIR, 'LINK.RSP'), 'w', newline='').write(rsp)
     files.append(os.path.join(LINKDIR, 'LINK.RSP'))
     batch.append('TLINK @LINK.RSP')
@@ -222,12 +230,8 @@ def main():
     for f in files: cmd += ['-f', f]
     for b in batch: cmd += ['-c', b]
     cmd += ['-o', 'UWEDIT.EXE', '-o', 'UWEDIT.MAP']
-    # TLINK writes bytes no record covers (alignment padding, data a module leaves
-    # uninitialised) from memory it does not clear. Under emu2 with its full 640 KB, 35 of
-    # them in DGROUP come out as stale bytes of an object it read earlier; with 512 KB
-    # (EMU2_LOWMEM), and under DOSBox-X, they are 0, as in UW.EXE. Other backends ignore it.
-    env = dict(os.environ); env.setdefault('EMU2_LOWMEM', '1')
-    r = subprocess.run(cmd, env=env)
+    # the bytes no record covers are 0 through TLINK's /i (above), whatever the DOS's memory
+    r = subprocess.run(cmd)
     for x in ('EXE', 'MAP'):
         if os.path.exists(os.path.join(out, 'UWEDIT.' + x)):
             os.replace(os.path.join(out, 'UWEDIT.' + x), os.path.join(out, 'UW.' + x))

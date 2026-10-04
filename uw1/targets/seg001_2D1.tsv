@@ -1,0 +1,3 @@
+# segment seg001_2D1 base 0x39B1 size 0xB9 org 0x2D1
+# cname: descriptive; the routine after VALLOC.ASM's code in seg001 (targets/seg001.tsv), no caller and no name in the listing
+valloc_stats	seg001_2D1	0x0	0xB9

@@ -1,5 +1,6 @@
 # segment seg004_5C30 base 0xFCA0 size 0xD14 org 0x5C30
 # cname: UW2 kin name (FM Towns, through UW2's sources; checked against UW1's opcode table), else the segment offset; SEG004 split at +5C30..+6944
+# far FD58 4723:B006
 do_set_tmctxt	seg004_5C30	0x0	0x15
 do_set_gmap_ctxt	seg004_5C45	0x15	0x19
 do_ctxt_gtmap	seg004_5C5E	0x2E	0xC
