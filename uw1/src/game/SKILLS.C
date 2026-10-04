@@ -59,7 +59,7 @@ unsigned char far player_eat(int nutrition);
 
 /* UW1: declarations that differ from the headers'. */
 unsigned char far grfx_load_font(char *name);
-void far Vortex_ovr143_E09();           /* PLAYER.C; this file passes it -1 */
+void far Vortex_ovr143_E09(int unused);   /* PLAYER.C; this file passes it -1, which it does not read */
 /* UW1: copy_visible_to_hidden is seg003_5350 (symbols.tsv's name; kin pairs it with
    UW2's). */
 /* UW1: ovr145 is not matched: panel_check's place in player_sleep, advance and

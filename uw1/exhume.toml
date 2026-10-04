@@ -11,6 +11,7 @@ matched = "${EXHUME_MATCHED:-matched.txt}"
 map = "${EXHUME_MAP:-map}"
 build = "${EXHUME_BUILD:-build}"
 queue = "queue"
+exclude = ["port"]                     # relative to src: the native port's own C (src/port), which the DOS build never compiles
 
 [binary]
 exe = "${UW1_EXE:-~/UWGOG/UW1/UW.EXE}"
@@ -75,6 +76,54 @@ library_objects = ["seg046"]
 # routine of seg003 in BP and call it with DS = ES = seg048 and SS = the word at seg048:558A,
 # which holds `dd seg048` (GRDISP's FD52 piece): DS = ES = SS = FD52
 dispatch = [{ register = "bp", ds = "FD52", es = "FD52", ss = "FD52" }]
+
+[port]
+# The native port (Exhume's docs/port.md): Exhume's tools/portcheck.py, portbuild.py,
+# portstubs.py, layoutcheck.py, intaudit.py. src/port holds UW1's bindings for Exhume's runtime
+# (portgame.h, asmgame.h, ailgame.h), the C that replaces UW1's assembly modules and DOS-only C,
+# the translated modules and the link stubs; the runtime (Exhume's runtime/, compiled in place,
+# never copied) is the rest, and src/include has UW1's hookgame.h and rpgame.h for portable.h
+# and replay.c.
+dir = "src/port"
+out = "port"                           # <build>/port, <build>/port-debug, <build>/port-cov
+exe = "uw1port"
+backend = "sdl3"
+optimise = ["3d", "gfx", "x86"]        # the translated modules, their machine and the graphics C: -O2
+extracted_by = "tools/extract.py"
+
+[port.stub_notes]
+# what each generated stub file's names are, for its header (tools/portstubs.py)
+"exedata.c" = "the far data tools/extract.py takes from UW.EXE"
+"dgroup.c" = "the DGROUP gaps tools/extract.py places (data no C source defines yet)"
+"borland.c" = "Borland's C library (the port's stand-in headers and compat.h)"
+
+[port.layout]
+# tools/layoutcheck.py: the records UW1 reads from or writes to its files, or lays over bytes
+# read from them; each must have the same layout on the host as under Turbo C
+io_calls = ['fread', 'fwrite', 'read', 'write', 'intoFarBuffer\w*', 'FarWrite\w*', 'movedata', 'memcpy',
+            'memmove', '_fmemcpy', 'xorread', 'xorwrite']
+# (not get_arc and put_arc: UW1's take the archive's struct Arc as their handle, and move the
+# block through a void far *)
+[port.layout.file_records]
+Player = "PLAYER.DAT: PLAYDATA.C's xorread and xorwrite move sizeof(struct Player), 0xD2 bytes"
+PlayerStore = "PlayerDat, the same 0xD2 bytes seen whole"
+LevelBlock = "a LEV.ARK level block, 0x7C08 bytes, read and written whole (MAP.C's get_arc and put_arc into mapdata)"
+Object = "the mobile object records inside a LevelBlock"
+StaticObj = "the 8-byte static object records inside a LevelBlock"
+Tile = "the tile map inside a LevelBlock"
+Link = "the link words inside objects and tiles"
+Anim = "the animation overlay records of LEV.ARK (EFFECT.C's get_arc and put_arc of animlist)"
+ATM = "the automap note records of LEV.ARK (AUTOMAP.C's get_arc and put_arc of ATM_Strings)"
+Creature = "OBJECTS.DAT critter records, 0x30 bytes each (CREATURE.C's fread)"
+ComObj = "COMOBJ.DAT, the common object table (OBJCLASS.C's fread)"
+Weapon = "OBJECTS.DAT weapon records (HACK.C's fread, 8 bytes each)"
+MissileInfo = "OBJECTS.DAT missile records (HACK.C's fread, 3 bytes each)"
+Armour = "OBJECTS.DAT armour records (HACK.C's fread, 4 bytes each)"
+Container = "OBJECTS.DAT container records (MISC.C's fread, 3 bytes each)"
+Light = "OBJECTS.DAT light records (MISC.C's fread, 2 bytes each)"
+AnimClass = "OBJECTS.DAT animation classes (ANIMOBJ.C's fread, 4 bytes each)"
+FontInfo = "the 12-byte header of a .SYS font file (GRFX.C's intoFarBuffer into cur_font)"
+Bitmap = "the header of a picture read from an art file (grs_unpack over the bytes read)"
 
 [replay]
 # The record and replay harness (Exhume's docs/port.md, "Verifying a port"; docs/BUILDING.md,

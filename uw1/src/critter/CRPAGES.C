@@ -189,7 +189,7 @@ int far ovr113_2A2(int count, int16 *out)
    ovr113_2A2's 759); no original name. */
 int far swap_ws_out(void)
 {
-    int pages[2];
+    int16 pages[2];
 
     ovr113_2A2(2, pages);
     if (pages[0] == 0xFF || pages[1] == 0xFF) {

@@ -126,8 +126,8 @@ unsigned char far put_arc(struct Arc far *arc, unsigned blk, void far *buf, unsi
         register unsigned chunk;
         chunk = off - pos > 0x2000 ? 0x2000 : off - pos;
         /* match: the count read is kept in diff's high word */
-        ((int *)&diff)[1] = intoFarBuffer_ovr167_5DA(arc->fd, stdat, chunk);
-        pos += FarWrite_ovr167_627(arc->tmpfd, stdat, ((int *)&diff)[1]);
+        ((int16 *)&diff)[1] = intoFarBuffer_ovr167_5DA(arc->fd, stdat, chunk);
+        pos += FarWrite_ovr167_627(arc->tmpfd, stdat, ((int16 *)&diff)[1]);
     }
     lseek(arc->fd, room, 1);
     while ((n = intoFarBuffer_ovr167_5DA(arc->fd, stdat, 0x2000)) > 0)

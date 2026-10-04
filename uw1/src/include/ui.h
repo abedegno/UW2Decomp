@@ -157,6 +157,7 @@ void far mous_3d_show(void);
 void far mouse_getxy(int16 *x, int16 *y);
 void far mouse_Qgetxy(int16 *x, int16 *y);
 void far mouse_clearQ(void);
+void far flush_keys(void);
 void far mouse_putxy(int x, int y);
 int far mouse_getbut(int16 *b);
 void far mouse_constrain(int x0, int y0, int x1, int y1);

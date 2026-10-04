@@ -163,7 +163,7 @@ char far Txm_Save(struct Arc *arc, int lev)
    the doors. At most 60 textures fit, so floor_num may be cut. */
 void far load_txtmaps(void)
 {
-    int n;
+    int16 n;
     char name[0x42];
     register char *p;
 

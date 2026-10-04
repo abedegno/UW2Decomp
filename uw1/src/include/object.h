@@ -360,7 +360,7 @@ unsigned char far Obj_Check(struct Object far *obj, unsigned char (far *fn)(stru
 struct Object far * far Obj_Alloc(char mobile);
 void far Obj_Add(union Link far *head, struct Object far *obj);
 void far Obj_AddEnd(union Link far *head, struct Object far *obj);
-unsigned char far Obj_Rem(union Link far *head, struct Object far *obj);
+void far Obj_Rem(union Link far *head, struct Object far *obj);
 struct Object far * far Obj_Punt(union Link far *head, struct Object far *obj, char force);
 struct Object far * far Obj_Find(union Link far *head, char recurse, int index);
 struct Object far * far Obj_InList(union Link far **head, char recurse, int major, int minor, int index);

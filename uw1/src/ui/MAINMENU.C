@@ -19,8 +19,7 @@
    colours 0x40..0x7F while it waits (ovr138_94, new in UW1); the screen is loaded from
    the file DATA\OPSCR.BYT (bltfromdrive and show, or ovr141's LoadBitMap_ovr141_0) where
    UW2 has block 5 of its art; the introduction is one
-   cutscene, not two; grfx_load_font takes the font's file name (the calls cast it to int,
-   UW2's index, as BAGS.C does); there is no music theme to set and no walking
+   cutscene, not two; grfx_load_font takes the font's file name; there is no music theme to set and no walking
    music to start.
 
    Data owned: the button pictures (opbuf, buttons) and the time of the last colour step.
@@ -38,6 +37,8 @@
 #include "ui.h"
 #include "file.h"
 
+unsigned char far grfx_load_font(char *name);    /* GRFX.C (gfx.h has why it is declared here) */
+
 /* Declared in each file that uses it, its own way (no header). */
 unsigned char far read_quikpal(int n, void far *dest);
 void far player_setup(int x, int y, int how);
@@ -51,7 +52,7 @@ unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
 
 /* name: FM Towns keeps these as statics in UW2, so their names are not known. */
 static unsigned char far *opbuf = 0;    /* where gronk_gr puts the next button picture */
-static unsigned cycle_time = 0;         /* the low word of *Time at the last colour step */
+static uint16 cycle_time = 0;           /* the low word of *Time at the last colour step */
 static struct Button *buttons;          /* the menu's buttons, on real_start's stack */
 
 /* gronk_gr's callbacks while loading the menu buttons: where to put the next picture, and
@@ -199,14 +200,14 @@ void far real_start(int intro)
 
                 msg = get_string(0x2A9);
                 LoadBitMap_ovr141_0(-1, "DATA\\opscr.byt");
-                grfx_load_font((int)"fontbig.sys");
+                grfx_load_font("fontbig.sys");
                 *foreground_color = 0xA2;
                 *background_color = 0xA2;
                 string_to_screen(msg, 0xA0 - string_width(msg) / 2, 0x5A);
                 mouse_show();
                 while (mouse_get_input() < 0)
                     ovr138_94();
-                grfx_load_font((int)"font5x6p.sys");
+                grfx_load_font("font5x6p.sys");
             } else if (done)
                 punt_fightmode();
             break;
@@ -275,7 +276,7 @@ int far parse_start_mouse(int n, struct Button far *b, unsigned char text)
         }
     } else {
         s = (char **)b;
-        grfx_load_font((int)"fontbig.sys");
+        grfx_load_font("fontbig.sys");
         while (mouse_get_input() > 0) {
             ovr138_94();
             mouse_getxy(&x, &y);
@@ -296,7 +297,7 @@ int far parse_start_mouse(int n, struct Button far *b, unsigned char text)
             if (i == n)
                 none = last == -1;
         }
-        grfx_load_font((int)"font5x6p.sys");
+        grfx_load_font("font5x6p.sys");
     }
     return last + (none ? 0 : n);
 }
@@ -310,9 +311,9 @@ int far parse_start_input(register int n, struct Button far *b, int text, int se
     register int cur = sel;
 
     while (result < -1) {
-        grfx_load_font((int)"fontbig.sys");
+        grfx_load_font("fontbig.sys");
         draw_start_buttons(n, b, text, cur);
-        grfx_load_font((int)"font5x6p.sys");
+        grfx_load_font("font5x6p.sys");
         while ((key = mouse_get_input()) < 0) {
             loop_music_maybe();
             ovr138_94();
@@ -394,11 +395,11 @@ int far do_journey(void)
         mouse_hide();
         LoadBitMap_ovr141_0(-1, "DATA\\opscr.byt");
         msg = get_string(0x301);
-        grfx_load_font((int)"fontbig.sys");
+        grfx_load_font("fontbig.sys");
         *foreground_color = 0xA2;
         *background_color = 0xA2;
         string_to_screen(msg, (0x140 - string_width(msg)) / 2 + 10, 0x5A);
-        grfx_load_font((int)"font5x6p.sys");
+        grfx_load_font("font5x6p.sys");
         if (RestoreGame(i + 1)) {
             load_weapcm();
             return 1;

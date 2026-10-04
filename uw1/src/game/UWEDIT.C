@@ -76,7 +76,7 @@ void far player_setup(int x, int y, int how);
 /* UW1: the working directory. */
 #define HomeDir "SAVE0\\"
 
-void far init_mem();
+void far init_mem(int unused);         /* TMPALLOC.C */
 char far grfx_init(void);
 /* UW1: start-up and UW.CFG routines with no name yet (the listing's). */
 

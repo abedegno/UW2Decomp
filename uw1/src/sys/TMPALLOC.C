@@ -38,7 +38,7 @@
 #include "view3d.h"
 
 /* Declared in each file that uses it, its own way (no header). */
-void far init_mem(void);
+void far init_mem(int unused);
 
 /* UW1: EMS.C's functions under their UW1 listing names, the console printer (UW2's
    PrintStringToConsole_seg017_DE) under its listing name, and the 3D renderer's page
@@ -63,7 +63,7 @@ uint16 conv_ws_seg;                     /* DS:364E, its first whole paragraph (p
    allocates six fewer than it got, then tells the overlay manager to swap overlays to EMS
    (_OvrInitEms(0, 0, 0)). UW1: then allocates the conventional workspace, four 16 KB
    pages and a paragraph, or stops with "Out of Low Memory" (B007). */
-void far init_mem(void)
+void far init_mem(int unused)          /* init_world passes 2, which UW1 does not read */
 {
     register int page;
     register int nws = 4;
@@ -86,7 +86,7 @@ void far init_mem(void)
             first_punt(ERR_EMS | 1);
         }
     }
-    if ((conv_ws = farmalloc(((long)nws << 14) + 0x10)) == 0L)
+    if ((conv_ws = farmalloc(((int32)nws << 14) + 0x10)) == 0L)
         first_punt(ERR_LOWMEM | 7);
     conv_ws_seg = FP_SEG(conv_ws) + 1;
     seg042_190();

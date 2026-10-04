@@ -44,6 +44,7 @@
 #include <io.h>
 #include <fcntl.h>
 #include <stdlib.h>
+#include "uw2.h"
 /* Turbo C lists publics with equal bssorder keys in the reverse of the order it first sees
    their names, and TLINK numbers the stub entries from that list (the link checks it):
    read_lp_inc must be seen before runcutscene (gfx.h) and cutsop_stop before cutsop_loop
@@ -51,7 +52,7 @@
 struct LpDesc;
 struct CutsState;
 int far read_lp_inc(int fd, unsigned page, struct LpDesc far *desc, unsigned n, void far *dst);
-int far cutsop_stop(unsigned far *code, struct CutsState *st);
+int far cutsop_stop(uint16 far *code, struct CutsState *st);
 #include "conv.h"
 #include "file.h"
 #include "gfx.h"

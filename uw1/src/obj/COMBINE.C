@@ -109,8 +109,8 @@ char far RemoveAfterCombine(struct Object far *obj, int combo)
    Returns 1 when the stew was made. */
 char far make_stew(void)
 {
-    int recipe[3] = { ITEM_DEAD_ROTWORM, ITEM_MUSHROOM, ITEM_FLASK_OF_PORT };
-    int found[3] = { 0, 0, 0 };
+    int16 recipe[3] = { ITEM_DEAD_ROTWORM, ITEM_MUSHROOM, ITEM_FLASK_OF_PORT };
+    int16 found[3] = { 0, 0, 0 };
     int16 where;
     struct Object far *bowl;
     struct Object far *obj;

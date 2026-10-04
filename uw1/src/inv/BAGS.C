@@ -44,6 +44,8 @@
 #include "ui.h"
 #include "uw2.h"
 
+unsigned char far grfx_load_font(char *name);    /* GRFX.C (gfx.h has why it is declared here) */
+
 /* PLAYER.C defines the record's storage as a byte array; this file reaches it as the
    union (player.h). */
 extern union PlayerStore PlayerDat;
@@ -463,7 +465,7 @@ char far PutObjectInBag(struct Object far *obj, int slot)
         FixOpenBag();
         displayInventoryArray(DISP_PACK, DISP_PACK_LAST);
     } else if (displayEnc(1))
-        grfx_load_font((int)"font5x6p.sys");  /* UW1: takes the font's file name; the cast is to UW2's index */
+        grfx_load_font("font5x6p.sys");  /* UW1: takes the font's file name */
     if (OBJ_ITEM(obj) >= FIRST_LIT_LIGHT && OBJ_ITEM(obj) < FIRST_WAND)
         SET_INCLASS(obj, OBJ_INCLASS(obj) - 4);
     return 1;

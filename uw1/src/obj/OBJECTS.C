@@ -282,9 +282,8 @@ void far Obj_AddEnd(union Link far *head, struct Object far *obj)
     p->f.index = MEMTPTR(obj);
 }
 
-/* UW1: returns no value; declared unsigned char as object.h (UW2's) has it, which
-   compiles the same with bare returns. */
-unsigned char far Obj_Rem(union Link far *head, struct Object far *obj)
+/* UW1: returns no value (UW2's returns whether obj was found). */
+void far Obj_Rem(union Link far *head, struct Object far *obj)
 {
     union Link far *p;
     struct Object far *o;

@@ -138,10 +138,21 @@ static char fx_on = 1;
 static char fx_ok = 1;
 static char music_ok = 1;
 char speechok = 0;
-/* match: UW.CFG's card numbers are read with %d into these bytes. */
+/* match: UW.CFG's card numbers are read with %d into these bytes (DS:13A, 13B), and %d
+   stores a 16-bit int: the music card's high byte goes into speech_card, which the speech
+   line then sets, and the speech card's into the low byte of music_driver (DS:13C), which
+   becomes 0FF00h for a card below 256 (init_sounds sets it again when it loads a music driver). The port keeps the three in
+   one record so that the stores land where DOS's do (its sscanf stores Borland's widths). */
+#ifdef __TURBOC__
 static unsigned char sound_card = 0;
 static unsigned char speech_card = 0;
 static int16 music_driver = -1;
+#else
+static struct { unsigned char sound_card, speech_card; int16 music_driver; } cfg_13A = { 0, 0, -1 };
+#define sound_card cfg_13A.sound_card
+#define speech_card cfg_13A.speech_card
+#define music_driver cfg_13A.music_driver
+#endif
 int16 sphdriver = -1;
 static int16 timbre_fd = -1;
 char far *dsdata[2] = { 0, 0 };

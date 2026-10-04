@@ -51,6 +51,7 @@
 #include "object.h"
 #include "player.h"
 #include "sound.h"
+#include "sys.h"
 #include "ui.h"
 
 /* This file's _BSS, DS:2760..2766 (UW2 DS:25BC..25C2). */

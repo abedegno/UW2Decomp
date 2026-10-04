@@ -527,7 +527,7 @@ static int far ovr093_BE7(int16 far *args)
     int flags;
     int id;
     int flag;
-    int ids[20];
+    int16 ids[20];
     char far *str[20];
     char far *conv[20];
     char buf[160];

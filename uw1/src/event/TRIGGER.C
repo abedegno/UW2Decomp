@@ -39,6 +39,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "combat.h"
+#include "conv.h"
 #include "critter.h"
 #include "event.h"
 #include "file.h"

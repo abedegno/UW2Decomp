@@ -51,6 +51,7 @@
 #include "motion.h"
 #include "object.h"
 #include "player.h"
+#include "sound.h"
 #include "sys.h"
 #include "ui.h"
 

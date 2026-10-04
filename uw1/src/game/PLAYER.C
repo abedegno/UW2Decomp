@@ -32,6 +32,7 @@
 #include "critter.h"
 #include "file.h"
 #include "gfx.h"
+#include "inv.h"
 #include "map.h"
 #include "motion.h"
 #include "object.h"
@@ -391,7 +392,7 @@ void far crystal_ball(struct Object far *obj, int x, int y)
 /* name: not in the FM Towns build; the name is provisional (IDA's
    LaunchPlayerAtMoongate_ovr143_E09), chosen so that its tools/bssorder.py key puts it in
    the EXE's overlay stub order. */
-void far Vortex_ovr143_E09(void)
+void far Vortex_ovr143_E09(int unused)  /* SKILLS.C passes -1, which UW1 does not read */
 {
     int32 xd, yd;
     int x, y;
