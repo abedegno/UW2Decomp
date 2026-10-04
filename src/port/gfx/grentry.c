@@ -146,20 +146,20 @@ void seg003_0272_6E4(uint8_t al)
 {
     struct seg003_regs r = { 0 };
     r.ax = al;
-    seg003_asm(0x6E4, r);
+    seg003_asm_far(0x6E4, r);
 }
 
 void seg003_0272_764(uint16_t cx)
 {
     struct seg003_regs r = { 0 };
     r.cx = cx;
-    seg003_asm(0x764, r);
+    seg003_asm_far(0x764, r);
 }
 
 void seg003_0272_788(uint16_t cx)
 {
     struct seg003_regs r = { 0 };
     r.cx = cx;
-    seg003_asm(0x788, r);
+    seg003_asm_far(0x788, r);
 }
 

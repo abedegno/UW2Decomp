@@ -100,7 +100,7 @@ void seg003_call(uint16_t off, uint16_t si)
     }
 }
 
-uint16_t seg003_asm(uint16_t off, struct seg003_regs r)
+static uint16_t seg003_run(uint16_t off, struct seg003_regs r, int is_far)
 {
     struct asm_state s;
     uint16_t ax;
@@ -112,11 +112,20 @@ uint16_t seg003_asm(uint16_t off, struct seg003_regs r)
     SET_DS(SEG370D);
     SET_ES(SEG370D);
     AX = r.ax; BX = r.bx; CX = r.cx; DX = r.dx; SI = r.si; DI = r.di; BP = r.bp;
-    asm_run_near(0x0085, off);
+    if (is_far) asm_run_far(0x0085, off);
+    else asm_run_near(0x0085, off);
     ax = AX;
     asm_restore(&s);
     return ax;
 }
+
+/* a near routine of seg003's translation, called as GRCORE's entries call it */
+uint16_t seg003_asm(uint16_t off, struct seg003_regs r) { return seg003_run(off, r, 0); }
+
+/* a far one (GRENTRY.ASM's cFillFB _6E4, cDimFB _764 and cLiteFB _788 end in retf): a near
+   call left its retf a word short, and the port stopped at the first level change by stairs,
+   where fadeout3d dims the view */
+uint16_t seg003_asm_far(uint16_t off, struct seg003_regs r) { return seg003_run(off, r, 1); }
 
 void setup_font(void) { seg003_0272_3BFD(); }
 void init_graphics(void) { seg003_0272_283D(); }

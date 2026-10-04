@@ -41,6 +41,7 @@ int seg003_handles(uint16_t off);               /* seg003_call has hand-written 
    own stack (370D:4FA8), as GRCORE.ASM's entries called them. Returns AX. */
 struct seg003_regs { uint16_t ax, bx, cx, dx, si, di, bp; };
 uint16_t seg003_asm(uint16_t off, struct seg003_regs r);
+uint16_t seg003_asm_far(uint16_t off, struct seg003_regs r);   /* a routine that ends in retf */
 
 /* VIDMODE.ASM */
 void seg003_0272_283D(void);                     /* init_graphics */
