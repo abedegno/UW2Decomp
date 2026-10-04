@@ -49,5 +49,5 @@ Candidates from `src/conv` for the project's findings page; [conversations.md](c
 ## Dead code
 
 - The text-mode debugging built-ins in [conv/BABL.C](../../src/conv/BABL.C) (`ovr093_9F8`, `ovr093_A7D`, `ovr093_ADB`, `ovr093_BE7`, `ovr093_E4B`, `ovr093_E61`): print, ask, menu, fmenu, say and respond on the console through scanf and dprintf. Nothing binds them.
-- `grdb_size`, `gr_getpre`, `gr_getlab` and `gr_freelab` in [conv/GRDB.C](../../src/conv/GRDB.C): nothing calls them. They carry latent faults: `gr_getlab` tests an unsigned stack pointer for being negative, and `gr_freelab` bounds its push at 0x5F where the stack has 32 entries.
+- `grdb_size`, `gr_getpre`, `gr_getlab` and `gr_freelab` in [3d/GRDB.C](../../src/3d/GRDB.C): nothing calls them. They carry latent faults: `gr_getlab` tests an unsigned stack pointer for being negative, and `gr_freelab` bounds its push at 0x5F where the stack has 32 entries.
 - `unbound` looks the current built-in up in the import table and does nothing with what it finds.

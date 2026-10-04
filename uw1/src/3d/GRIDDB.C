@@ -3,7 +3,7 @@
 /* GRIDDB.C: building the 3D view's render database from the map grid.
 
    The render database is a buffer of model interpreter bytecode (dbptr writes into it;
-   conv/GRDB.C's grdb_blank, Ref and gr_putlab manage its labels) that seg004's
+   3d/GRDB.C's grdb_blank, Ref and gr_putlab manage its labels) that seg004's
    render_3d runs when VIEW3D.C calls cRender. Each word this file emits is an opcode
    or an operand; the opcode numbers are those of seg004's opcode table, which follows
    FM Towns' numbering (docs/LAYOUT.md; UWReverseEngineering's "UW2 FM Towns/

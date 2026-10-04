@@ -11,7 +11,7 @@ This page describes how UW1 runs a conversation: starting it, the conversation s
 | [`BABLHACK.C`](../../src/conv/BABLHACK.C) | ovr094 | built-ins that reach into the game: attitudes, skills, game variables and quests, doors, objects' fields and positions |
 | [`BARTER.C`](../../src/conv/BARTER.C) | ovr095 | the trade slots, offers, demands, appraisal, the NPC's likes and dislikes, an object's value |
 | [`CONVVARS.C`](../../src/conv/CONVVARS.C) | ovr103 | handing the NPC's and the player's state to the script and taking it back |
-| [`GRDB.C`](../../src/conv/GRDB.C) | seg045 | the label table of the 3D view's render database (in `conv/` by UW2's placement; it has nothing to do with conversations) |
+| [`GRDB.C`](../../src/3d/GRDB.C) | seg045 | the label table of the 3D view's render database (in `conv/` by UW2's placement; it has nothing to do with conversations) |
 
 Names are UW2's (the FM Towns originals, or UW2Decomp's provisional names for FM Towns statics), the routines being the same; the listing's names (`name_ovrNNN_XXX`) remain where neither has one. The file names are UW2Decomp's.
 
