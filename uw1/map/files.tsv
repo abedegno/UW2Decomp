@@ -21,7 +21,7 @@ seg020	assembly	44	2297	0	0	0	23
 seg021	C	2	324	0	0	0	1			yes
 seg022_230E	C	20	6051	0	0	0	9			yes
 seg023	C	6	1346	0	0	0	2			yes
-seg024_24DC	C	33	5742	0	0	0	19			
+seg024_24DC	C	33	5742	0	0	0	19			yes
 seg025	C	8	3367	0	0	0	5			yes
 seg026	C	14	5303	0	0	0	0			yes
 seg027_2861	C	29	4673	0	0	0	6			yes
