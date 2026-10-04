@@ -6,13 +6,15 @@
 #   make check         the full gate; recompiles only sources changed since they last passed
 #   make check-all     the full gate, recompiling every source
 #   make boot          boot the modding build to the intro and screenshot it
-#   make setup         toolchain, Python venv, npm packages and emu2 (idempotent)
+#   make setup         toolchain, Python venv, npm packages, emu2 and Exhume (idempotent)
+#   make setup-exhume  only find or fetch Exhume, whose runtime the port and the gate compile
+#                      ($EXHUME, .exhume or ~/Exhume; tools/setup-exhume.sh)
 #   make setup-emu2    only build emu2, the fast DOS for the toolchain (tools/setup-emu2.sh)
 #   make setup-sound   fetch the port's OPL emulator, Nuked OPL3 (tools/setup-sound.sh)
 #   make setup-libs    build SDL3 and libmt32emu from source into tools/libs, where no package
 #                      has them (Linux; tools/setup-libs.sh)
-#   make setup-port    only what the native port needs, per OS (tools/setup-port.sh): no Borland
-#                      toolchain, DOS or game data
+#   make setup-port    only what the native port needs, per OS (tools/setup-port.sh, and
+#                      Exhume): no Borland toolchain, DOS or game data
 #   make hooks         install the git pre-push hook that runs make test
 #   make port-check    compile the C for the host, compile only (docs/PORT.md, Milestone 1)
 #   make port          compile the C for the host and link it with the stubs: build/port/uw2port
@@ -37,7 +39,7 @@ PY := $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 TC_DISKS ?=
 TASM_DISKS ?=
 
-.PHONY: game exact check check-all boot setup setup-emu2 setup-sound setup-libs setup-port hooks port-check port port-debug \
+.PHONY: game exact check check-all boot setup setup-emu2 setup-exhume setup-sound setup-libs setup-port hooks port-check port port-debug \
         port-release package help \
         test test-full verify golden fuzz coverage
 .DEFAULT_GOAL := game
@@ -74,11 +76,15 @@ setup:
 	@sh tools/setup-emu2.sh || echo "emu2: not built; the toolchain runs in DOSBox-X if installed (brew install dosbox-x), else js-dos"
 	@echo "DOS for the toolchain: $$(node tools/dosbackend.mjs) (docs/BUILDING.md, Choosing the DOS)"
 	@sh tools/setup-sound.sh || echo "nuked-opl3: not fetched; the port builds without FM music"
+	@sh tools/setup-exhume.sh
 	@[ -f "$${UW2_EXE:-$$HOME/UWGOG/UW2/UW2.EXE}" ] && echo "UW2.EXE: $${UW2_EXE:-$$HOME/UWGOG/UW2/UW2.EXE}" \
 	  || { echo "UW2.EXE not found: put the game at ~/UWGOG/UW2 or set UW2_EXE"; exit 1; }
 
 setup-emu2:
 	@sh tools/setup-emu2.sh
+
+setup-exhume:
+	@sh tools/setup-exhume.sh
 
 setup-sound:
 	@sh tools/setup-sound.sh
@@ -88,6 +94,7 @@ setup-libs:
 
 setup-port:
 	@sh tools/setup-port.sh
+	@sh tools/setup-exhume.sh
 
 hooks:
 	@sh tools/install-hooks.sh

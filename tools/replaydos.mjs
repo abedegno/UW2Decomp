@@ -64,7 +64,7 @@ if (stageDir) cpSync(stageDir, stage, { recursive: true });
 const t0 = Date.now();
 const log = (...m) => console.log(`[${((Date.now() - t0) / 1000).toFixed(1)}s]`, ...m);
 // UWRPCK (hex): the replay build's periodic dump interval in clock ticks; UWRPFULL, UWRPHOOK: full dumps in a clock or call range; UWRPFB: the 3D
-// frame buffer in every dump (src/replay/REPLAY.C)
+// frame buffer in every dump (src/include/rpgame.h)
 const env = ["UWRPCK", "UWRPTRACE", "UWRPFB", "UWRPFULL", "UWRPHOOK"].filter(k => process.env[k]).map(k => `set ${k}=${process.env[k]}`);
 const OUTFILES = ["RECORD.OUT", "STATE.OUT", "NULLTRAP.LOG", "TRACE.OUT", "SNDCHECK.OUT"];
 if (backend === "auto") backend = replay && binary("dosbox-x") ? "dosbox-x" : "jsdos";

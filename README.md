@@ -85,8 +85,7 @@ Each DOS code segment is one original source file. A file's DOS segment is its `
 | `src/sys/` | seg021's 17 system modules, memory and EMS, archives and compression, errors, helpers | [sys.md](docs/subsystems/sys.md) |
 | `src/lib/` | Borland's overlay manager (`OVERLAY.ASM`, from OVERLAY.LIB) | [sys.md](docs/subsystems/sys.md#the-overlay-manager) |
 | `src/include/` | the shared headers, one per subsystem | [CONTRIBUTING.md](docs/CONTRIBUTING.md#shared-headers) |
-| `src/replay/` | the record and replay hooks, shared by the replay DOS build and the port | [PORT.md](docs/PORT.md#the-differential-test-input-record-and-replay) |
-| `src/port/` | the native port: the portability layer (`compat.h`), stand-ins for Borland's headers, the C that replaces the assembly modules, the emulated hardware, the platform layer (SDL3) and the link stubs; never compiled by the DOS build | [PORT.md](docs/PORT.md) |
+| `src/port/` | the native port's UW2 half: the C that replaces UW2's assembly modules and DOS-only C, the translated modules, the port's main, UW2's bindings for Exhume's runtime and the link stubs; never compiled by the DOS build. The other half, the portability layer, the platform layer (SDL3), the emulated hardware, the sound library and record and replay, is [Exhume](https://github.com/abedegno/Exhume)'s runtime, compiled where it is | [PORT.md](docs/PORT.md#the-runtime) |
 
 No UW2 build names its source files, so the file names come from System Shock's source release, the FM Towns names, or what the file does. `map/filenames.tsv` gives the evidence for each ([MAP.md](docs/MAP.md#source-file-names)).
 

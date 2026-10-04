@@ -2,10 +2,10 @@
    installs. In DOS a divide that overflows raises int 0, and the renderer points int 0 at the
    handler of the moment, whose offset it keeps at FD71:05A5: saturate, halve and divide again,
    flag the polygon, or drop the interrupt frame and jump into a clipping path. Kept apart from
-   asmrt.c, the machine, which is Exhume's runtime/port/x86/asmrt.c (Exhume's
-   examples/uw2/prove-port.sh uses this file with it). */
+   asmrt.c, the machine, which is Exhume's runtime/port/x86/asmrt.c (docs/PORT.md, "The
+   runtime"). */
 #include <stdio.h>
-#include "asmrt.h"
+#include "x86/asmrt.h"
 
 /* The int 0 handlers of seg004 (INSTANCE.ASM, SMOOTH.ASM, INTERP.ASM, PROJPOLY.ASM), by the
    offset the renderer keeps at FD71:05A5. Each skips the faulting instruction by a fixed

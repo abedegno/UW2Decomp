@@ -318,8 +318,8 @@ void far look_nothing(unsigned char how, int txt)
         txt--;
         if (txt < 0x40)
             t = TxmID[txt];
-        else if (txt < 0x50)
-            t = 0x1FE - TxmTerr[txt];
+        else if (txt < 0x50)  /* past TxmTerr's 64 entries: in DOS, TxmID, which follows it */
+            t = 0x1FE - (uint16)TABLE_NEXT(TxmTerr, txt, 0x40, TxmID);
         else
             t = 0x1FF;
         scroll_print("You see ");

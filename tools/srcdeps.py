@@ -1,19 +1,22 @@
-"""What a source's object depends on besides its own text: the shared headers in src/include.
+"""What a source's object depends on besides its own text: the shared headers in src/include,
+and portable.h from Exhume's runtime/include (tools/exhume.py).
 
     source_hash(path)   SHA-1 of the source's bytes, followed by the name and bytes of each
-                        header it includes from src/include (#include "name.h", recursively,
-                        each once, in order of first inclusion). A source that includes none
-                        hashes to plain sha1(bytes), as before headers existed.
+                        shared header it includes (#include "name.h", recursively, each once,
+                        in order of first inclusion). A source that includes none hashes to
+                        plain sha1(bytes), as before headers existed.
     headers(path)       those headers' paths, in the same order.
 
 uw2.py (the gate's state), link.py (--mod: which sources changed) and extract.py (the base
 layout that --mod compares with) all use it, so editing a header recompiles every source that
-includes it. tcc.mjs copies src/include into the DOS build directory beside the source.
+includes it. tcc.mjs copies the same headers into the DOS build directory beside the source.
 """
 import os, re, hashlib
 
 here = os.path.dirname(os.path.abspath(__file__)); root = os.path.dirname(here)
-INCLUDE = os.path.join(root, 'src', 'include')
+import sys; sys.path.insert(0, here)
+import exhume
+INCLUDES = [os.path.join(root, 'src', 'include'), exhume.INCLUDE]
 _INC = re.compile(rb'^[ \t]*#[ \t]*include[ \t]*"([^"]+)"', re.M)
 
 
@@ -24,8 +27,8 @@ def headers(path):
             name = m.group(1).decode('latin1').lower()
             if name in seen: continue
             seen.add(name)
-            h = os.path.join(INCLUDE, name)
-            if not os.path.exists(h): continue     # the compiler reports it
+            h = next((p for p in (os.path.join(d, name) for d in INCLUDES) if os.path.exists(p)), None)
+            if not h: continue                      # the compiler reports it
             order.append(h); walk(h)
     walk(path)
     return order

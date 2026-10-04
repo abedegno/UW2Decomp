@@ -1,5 +1,5 @@
 r"""Record a session in DOS and replay it in DOS and in the port, comparing the state dumps
-(docs/PORT.md, "The differential test"; src/replay/REPLAY.C has the formats).
+(docs/PORT.md, "The differential test"; Exhume's runtime/replay/replay.c has the formats).
 
     python3 tools/replay.py build                       the replay DOS build: build/replay/UW2.EXE
     python3 tools/replay.py record OUT [step ...]       record a session in DOS (steps: tools/replaydos.mjs)
@@ -24,8 +24,8 @@ r"""Record a session in DOS and replay it in DOS and in the port, comparing the 
                                                         the goldens (tools/golden.py has both)
 
 The replay DOS build is the modding build with every source that uses the hooks of
-src/include/portable.h compiled with -DREPLAY (and every source with a NULLTRAP mark with
--DNULLTRAP, so the marked null pointers it reaches go to NULLTRAP.LOG), and src/replay/REPLAY.C
+portable.h compiled with -DREPLAY (and every source with a NULLTRAP mark with
+-DNULLTRAP, so the marked null pointers it reaches go to NULLTRAP.LOG), and Exhume's runtime/replay/replay.c
 linked in as one more resident module (tools/link.py --mod --add). Recording runs in js-dos
 (tools/replaydos.mjs), the DOS replays in DOSBox-X when it is installed and otherwise js-dos
 (replaydos.mjs --backend, or UW2_REPLAY_DOS); the port replays with --replay.
@@ -255,7 +255,7 @@ def read_dump(path):
 
 
 def read_log(path):
-    """RECORD.OUT (src/replay/REPLAY.C): the streams' runs decoded. Returns {stream: [runs]},
+    """RECORD.OUT (the runtime's replay/replay.c): the streams' runs decoded. Returns {stream: [runs]},
     each run (count, value), a SOUND run (count, value, moment) from version 3 (version 4's
     repeats expanded), and the call count the recording stopped at."""
     d = open(path, 'rb').read()
@@ -311,7 +311,7 @@ def log_summary(path):
 
 def scanout(secs):
     """The visible screen from the VGA and CRTC sections, as the CRT controller shows it
-    (src/port/gfx/vga.c's vga_scanout without pixel panning, which the dump does not hold):
+    (the runtime's gfx/vga.c, vga_scanout without pixel panning, which the dump does not hold):
     320 by 200 (or 400) palette indices."""
     vga, c = secs['VGA '], secs['CRTC']
     r07, r09, r0c, r0d, r13, r18 = c
@@ -360,7 +360,7 @@ def ranges(a, b, skip=()):
 
 def segment_words(x, y, sa, sb):
     """The words where x holds one far block's segment in its build and y the same block's in
-    the other (SEGS, src/replay/REPLAY.C): stored far pointers, equal in meaning."""
+    the other (SEGS, src/include/rpgame.h): stored far pointers, equal in meaning."""
     na, nb = struct.unpack(f'<{len(sa) // 2}H', sa), struct.unpack(f'<{len(sb) // 2}H', sb)
     pairs = {(u, v) for u, v in zip(na, nb) if u != v}
     # The EXE's own segments (the far data from 3705 to 6061, seg021's, DGROUP) all move by one

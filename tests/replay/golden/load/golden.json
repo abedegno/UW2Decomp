@@ -17,8 +17,8 @@
   }
  },
  "replay_build": {
-  "exe_sha256": "aab2aed765d56f9f6bc098a72ee405fa89c3a260d15636ffeb0f5b5d1ec32681",
-  "sources_key": "5ab3862ebbee6e9f1d0d9c03e13a7df8b26d86bc"
+  "exe_sha256": "fd000921d604bcaac36e12bd8f326f166dd8d2ddda1a5a125ac80d2100fdb728",
+  "sources_key": "8a77387af17e292a2f2aec26ff9853aa2ae8c0bf"
  },
  "dos": {
   "backend": "dosbox-x",

@@ -16,6 +16,7 @@ import os, re, sys, json, glob, shutil, subprocess, argparse, collections
 
 here = os.path.dirname(os.path.abspath(__file__)); root = os.path.dirname(here)
 sys.path.insert(0, here)
+import exhume
 PY = os.path.join(root, '.venv', 'bin', 'python')
 if not os.path.exists(PY): PY = sys.executable
 COV = os.path.join(root, 'build', 'coverage')
@@ -49,13 +50,26 @@ def export(profdata, objects):
     return json.loads(r.stdout)['data'][0]
 
 
-def area(path):
-    """The directory a source is counted under: src/<subsystem> for the game's C, src/port/<dir>
-    for the port's; None for what is not ours (Nuked OPL3, the SDK)."""
+def src_name(path):
+    """A source as the page names it: from the repository's root, or runtime/... for Exhume's
+    runtime, which the port compiles where it is (tools/exhume.py); None for what is neither
+    (Nuked OPL3, the SDK)."""
+    path = os.path.abspath(path)
+    if os.path.commonpath([path, exhume.RUNTIME]) == exhume.RUNTIME:
+        return 'runtime/' + os.path.relpath(path, exhume.RUNTIME).replace(os.sep, '/')
     rel = os.path.relpath(path, root)
     if rel.startswith('..') or rel.startswith('tools'): return None
-    parts = rel.split(os.sep)
-    if parts[:2] == ['src', 'port']: return '/'.join(parts[:3]) if len(parts) > 3 else 'src/port'
+    return rel.replace(os.sep, '/')
+
+
+def area(path):
+    """The directory a source is counted under: src/<subsystem> for the game's C, src/port/<dir>
+    for the port's, runtime/port/<dir> and runtime/replay for the runtime's; None for what is
+    not ours."""
+    n = src_name(path)
+    if not n: return None
+    parts = n.split('/')
+    if parts[:2] in (['src', 'port'], ['runtime', 'port']): return '/'.join(parts[:3]) if len(parts) > 3 else '/'.join(parts[:2])
     return '/'.join(parts[:2])
 
 
@@ -90,16 +104,16 @@ def main(argv):
         ar = area(f['filename'])
         if not ar: continue
         s = f['summary']
-        files[os.path.relpath(f['filename'], root)] = dict(area=ar, lines=(s['lines']['covered'], s['lines']['count']),
+        files[src_name(f['filename'])] = dict(area=ar, lines=(s['lines']['covered'], s['lines']['count']),
                                                            funcs=(s['functions']['covered'], s['functions']['count']),
                                                            regions=(s['regions']['covered'], s['regions']['count']))
-    rlines = {os.path.relpath(f['filename'], root): f['summary']['lines']['covered'] for f in rep['files']}
+    rlines = {src_name(f['filename']): f['summary']['lines']['covered'] for f in rep['files'] if src_name(f['filename'])}
     for p, d in files.items(): d['fuzz'] = d['lines'][0] - rlines.get(p, 0)
 
     def funcs(data):
         out = {}
         for fn in data['functions']:
-            fname = os.path.relpath(fn['filenames'][0], root)
+            fname = src_name(fn['filenames'][0])
             if fname not in files: continue
             name = fn['name'].split(':')[-1]
             out[(fname, name)] = max(out.get((fname, name), 0), fn['count'])
@@ -115,8 +129,10 @@ def main(argv):
                 for k in ('lines', 'funcs', 'regions'):
                     t[k + 'c'] += d[k][0]; t[k + 'n'] += d[k][1]
         return t
-    groups = [('The game\'s C (src/*, shared with DOS)', lambda p, d: not d['area'].startswith('src/port')),
-              ('The port\'s C written by hand', lambda p, d: d['area'].startswith('src/port') and not translated(p)
+    groups = [('The game\'s C (src/*, shared with DOS)', lambda p, d: d['area'].startswith('src/') and not d['area'].startswith('src/port')),
+              ('The port\'s C written by hand (src/port)', lambda p, d: d['area'].startswith('src/port') and not translated(p)
+               and not d['area'].endswith('stubs')),
+              ('Exhume\'s runtime, compiled in place (runtime/)', lambda p, d: d['area'].startswith('runtime/')
                and not d['area'].endswith('stubs')),
               ('The port\'s C translated from the assembly (tools/asm2c.py)', lambda p, d: translated(p)),
               ('Everything', lambda p, d: True)]

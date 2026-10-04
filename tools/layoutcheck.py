@@ -7,7 +7,7 @@ bitfields", Milestone 2 step 5).
     python3 tools/layoutcheck.py --show TAG print one record's fields from both sides
 
 The record list comes from clang's AST of one file that includes every header in src/include
-(with src/port/compat.h, as the port compiles). One generated C program, build/layout/
+(with the runtime's compat.h, as the port compiles; tools/portcheck.py's flags). One generated C program, build/layout/
 LPROBE.C, then sets each field of each record in turn to all ones in a zeroed buffer (a
 bitfield is assigned -1, any other field is filled with FFh bytes) and prints which bytes of
 the record changed, with their values, and the record's size. The same program is compiled
@@ -25,7 +25,7 @@ import os, re, sys, json, argparse, subprocess, shutil
 
 here = os.path.dirname(os.path.abspath(__file__)); root = os.path.dirname(here)
 sys.path.insert(0, here)
-import portcheck, sources
+import portcheck, sources, exhume
 
 OUT = os.path.join(root, 'build', 'layout')
 INC = os.path.join(root, 'src', 'include')
@@ -65,7 +65,8 @@ def ast_records():
     """[(kind, tag, [(path, is_bitfield, qualtype)])] for each record defined in src/include."""
     os.makedirs(OUT, exist_ok=True)
     tu = os.path.join(OUT, 'allheaders.c')
-    hs = [h for h in sorted(os.listdir(INC)) if h.endswith('.h') and h != 'portable.h']
+    # the bindings for Exhume's runtime (hookgame.h, rpgame.h) declare no records
+    hs = [h for h in sorted(os.listdir(INC)) if h.endswith('.h') and h not in ('portable.h', 'hookgame.h', 'rpgame.h')]
     open(tu, 'w').write(''.join(f'#include "{h}"\n' for h in hs))
     flags = [f for f in portcheck.FLAGS if not f.startswith('-W') and f not in ('-ferror-limit=0',)]
     r = subprocess.run([os.environ.get('CC', 'cc')] + flags + portcheck.layout_flags(os.environ.get('CC', 'cc')) + ['-fsyntax-only', '-Wno-comment',
@@ -189,8 +190,9 @@ def run_dos(probe, hs):
     dosout = os.path.join(OUT, 'dos')
     if os.path.isdir(dosout): shutil.rmtree(dosout)
     args = ['node', os.path.join(here, 'dosrun.mjs'), dosout, '-f', probe + '=LPROBE.C']
-    for h in sorted(os.listdir(INC)):
-        if h.endswith('.h'): args += ['-f', os.path.join(INC, h) + '=' + h.upper()]
+    for d in (INC, exhume.INCLUDE):          # the shared headers, and the runtime's portable.h
+        for h in sorted(os.listdir(d)):
+            if h.endswith('.h'): args += ['-f', os.path.join(d, h) + '=' + h.upper()]
     args += ['-c', 'TCC -mm -1 -f- -w- -IC:\\ -LC:\\ LPROBE.C > BUILD.TXT',
              '-c', 'LPROBE > OUT.TXT', '-o', 'OUT.TXT', '-o', 'BUILD.TXT', '-t', '400']
     r = subprocess.run(args, capture_output=True, text=True, cwd=root)

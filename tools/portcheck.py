@@ -7,8 +7,10 @@
     python3 tools/portcheck.py --cc CC      another compiler (default $CC, else clang, else cc)
 
 Each .C under src/ (tools/sources.py: not src/include, not src/port) is compiled with the host
-C compiler as C89 with GNU extensions, with src/port/compat.h force-included and the port's
-stand-ins for Borland's headers (src/port/include) ahead of the host's. No game source is
+C compiler as C89 with GNU extensions, with the portability layer of Exhume's runtime
+(tools/exhume.py) force-included, runtime/port/compat.h, which brings in UW2's
+src/port/portgame.h, and the runtime's stand-ins for Borland's headers (runtime/port/include)
+ahead of the host's; portable.h is the runtime's too (runtime/include). No game source is
 edited. Objects and the full log go to build/port/; nothing else is written.
 
 Diagnostics are counted once each (a header's are reported where they occur, not once per
@@ -19,22 +21,23 @@ data (to be replaced by port C), the far data taken from the EXE, Borland's libr
 provided by the port), and the port's own platform names (port_, bc_). That list is the
 platform layer's and the assembly replacement's workload; docs/PORT.md has the baseline.
 
-The DOS build is untouched: tools/tcc.mjs stages src/include only, tools/srcdeps.py hashes
-src/include only, and tools/sources.py skips src/port.
+The DOS build is untouched: tools/tcc.mjs stages src/include and the runtime's portable.h only,
+tools/srcdeps.py hashes those only, and tools/sources.py skips src/port.
 """
 import os, re, sys, json, shutil, ctypes, argparse, subprocess, collections
 from concurrent.futures import ThreadPoolExecutor
 
 here = os.path.dirname(os.path.abspath(__file__)); root = os.path.dirname(here)
 sys.path.insert(0, here)
-import sources
+import sources, exhume
 
 OUT = os.path.join(root, 'build', 'port')
-PORT = os.path.join(root, 'src', 'port')
+PORT = os.path.join(root, 'src', 'port')          # UW2's own port C and its bindings (portgame.h)
+RT = exhume.PORT                                   # the runtime's: compat.h, the stand-in headers
 FLAGS = ['-x', 'c', '-std=gnu89', '-fsigned-char', '-D_POSIX_C_SOURCE=200809L', '-ferror-limit=0', '-fno-color-diagnostics',
          '-fdiagnostics-show-option', '-fno-caret-diagnostics',
-         '-include', os.path.join(PORT, 'compat.h'), '-I', os.path.join(PORT, 'include'),
-         '-iquote', os.path.join(root, 'src', 'include'),
+         '-include', os.path.join(RT, 'compat.h'), '-I', PORT, '-I', os.path.join(RT, 'include'),
+         '-iquote', os.path.join(root, 'src', 'include'), '-iquote', exhume.INCLUDE,
          # widths: what a 16-bit int and 32-bit long become on a 64-bit host
          '-Wpointer-to-int-cast', '-Wint-to-pointer-cast', '-Wshorten-64-to-32',
          '-Wno-unused-value', '-Wno-parentheses', '-Wno-dangling-else',
@@ -143,7 +146,10 @@ def source_line(path, n):
 
 
 def rel(p):
+    """A path from the repository's root; runtime/... for Exhume's runtime."""
     p = os.path.normpath(os.path.join(root, p))
+    if os.path.commonpath([p, exhume.RUNTIME]) == exhume.RUNTIME:
+        return 'runtime/' + os.path.relpath(p, exhume.RUNTIME)
     return os.path.relpath(p, root)
 
 
@@ -191,10 +197,10 @@ BORLAND_HEADERS = ('dos.h', 'alloc.h', 'mem.h', 'io.h', 'stat.h', 'dir.h', 'coni
 
 
 def borland_names():
-    """Names declared by the port's stand-in headers and compat.h's Borland extensions."""
+    """Names declared by the runtime's stand-in headers and compat.h's Borland extensions."""
     names = {}
     for h in BORLAND_HEADERS + ('../compat.h',):
-        p = os.path.normpath(os.path.join(PORT, 'include', h))
+        p = os.path.normpath(os.path.join(RT, 'include', h))
         for m in re.finditer(r'\b(\w+)\s*\(|\bextern\b[^;(]*\b(\w+)\s*\[', open(p).read()):
             n = m.group(1) or m.group(2)
             if n in ('if', 'while', 'sizeof', 'return', 'defined'): continue
@@ -225,6 +231,7 @@ def main(argv):
     ap.add_argument('--list', metavar='CATEGORY')
     ap.add_argument('--json', action='store_true', help='also write build/port/summary.json')
     a = ap.parse_args(argv)
+    exhume.need()
     os.makedirs(OUT, exist_ok=True)
     srcs = [p for p in sources.all_sources() if p.upper().endswith('.C') and not dos_only(p)]
     srcs += sources.replay_sources()    # the record and replay hooks' code, which the port links too

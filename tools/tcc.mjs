@@ -3,8 +3,8 @@
 // .ASM files go to TASM with the options given (for example "/ml"), .C files to TCC -c.
 // The DOS is the one tools/dosbackend.mjs picks (UW2_DOS: emu2, dosbox-x, staging, jsdos).
 import { runStage } from "./dosbackend.mjs";
-import { cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, readdirSync, statSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
+import { tmpdir, homedir } from "node:os";
 import { join, basename } from "node:path";
 const [outDir, opts, ...files] = process.argv.slice(2);
 // an OMF object is a chain of records (type, 16-bit length, body) ending in MODEND; the
@@ -32,13 +32,20 @@ cpSync(process.env.UW2DECOMP_TC || join(here, "..", "TC"), stage, { recursive: t
 const tasmDir = process.env.UW2DECOMP_TASM || join(here, "..", "TASM");
 try { cpSync(join(tasmDir, "TASM.EXE"), join(stage, "TASM.EXE")); } catch { }
 // the shared headers in src/include sit beside the sources, where TCC finds #include "name.h"
-// (the current directory, and -IC:\); a name TC itself has would replace TC's header
+// (the current directory, and -IC:\); a name TC itself has would replace TC's header. So does
+// portable.h, from Exhume's runtime/include, found as tools/exhume.py finds it: $EXHUME, else
+// .exhume in this repository, else ~/Exhume
 const incDir = process.env.UW2DECOMP_INCLUDE || join(here, "..", "src", "include");
-let incs = [];
-try { incs = readdirSync(incDir).filter(n => /\.h$/i.test(n)); } catch { }
-for (const n of incs) {
-  try { statSync(join(stage, n.toUpperCase())); console.error(`tcc.mjs: src/include/${n} has the name of a TC file`); process.exit(1); } catch { }
-  cpSync(join(incDir, n), join(stage, n.toUpperCase()));
+const exhume = process.env.EXHUME || (existsSync(join(here, "..", ".exhume", "runtime")) ? join(here, "..", ".exhume") : join(homedir(), "Exhume"));
+const rtInc = join(exhume, "runtime", "include");
+for (const [dir, label] of [[incDir, "src/include"], [rtInc, "Exhume's runtime/include"]]) {
+  let incs = [];
+  try { incs = readdirSync(dir).filter(n => /\.h$/i.test(n)); } catch { }
+  if (dir === rtInc && !incs.length) { console.error(`tcc.mjs: no Exhume runtime at ${exhume} (set EXHUME)`); process.exit(1); }
+  for (const n of incs) {
+    try { statSync(join(stage, n.toUpperCase())); console.error(`tcc.mjs: ${label}/${n} has the name of a TC file or another header`); process.exit(1); } catch { }
+    cpSync(join(dir, n), join(stage, n.toUpperCase()));
+  }
 }
 for (const f of files) cpSync(f, join(stage, basename(f).toUpperCase()));
 const names = files.map(f => basename(f).toUpperCase());

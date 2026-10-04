@@ -7,12 +7,12 @@ Turbo C computes, where int is 16 bits.
     python3 tools/intaudit.py --file STEM     every finding in one source
 
 Each C source is compiled for the host as the port compiles it (tools/portcheck.py's flags,
-src/port/compat.h), and clang's AST (-Xclang -ast-dump=json) is walked. For every integer
+the runtime's compat.h), and clang's AST (-Xclang -ast-dump=json) is walked. For every integer
 expression the tool works out two types: the host's (from the AST) and the one Turbo C gives
 it, by the 16-bit rules: int and unsigned are 16 bits and do not promote, char promotes to
 int, an unsigned bitfield stays unsigned (MATCHING.md: `x > 0` on one compiles to `jbe`), a
 hex literal from 0x8000 to 0xFFFF is unsigned and a decimal one is long, and int16, uint16,
-int32 and uint32 (src/include/portable.h) are int, unsigned, long and unsigned long.
+int32 and uint32 (portable.h, the runtime's) are int, unsigned, long and unsigned long.
 
 Two things can make the host's value differ:
 

@@ -76,7 +76,7 @@ Declare it in its subsystem's header and delete the file's own declarations of i
 
 The sources also build the native port (PORT.md). Every change still has to pass the gate, and these keep a change portable:
 
-- Declare struct fields, globals and file-scope statics with the explicit widths of `src/include/portable.h` (`int16`, `uint16`, `int32`, `uint32`), and never write `long`. A pointer to an integer points to an explicit width. Plain `int` is fine for a scalar local, parameter or return value whose 16-bit wrap does not matter (PORT.md, "Integer widths and wrap"). `tools/widths.py FILE` applies the policy to a file.
+- Declare struct fields, globals and file-scope statics with the explicit widths of `portable.h` (Exhume's runtime; `int16`, `uint16`, `int32`, `uint32`), and never write `long`. A pointer to an integer points to an explicit width. Plain `int` is fine for a scalar local, parameter or return value whose 16-bit wrap does not matter (PORT.md, "Integer widths and wrap"). `tools/widths.py FILE` applies the policy to a file.
 - A value that carries a near pointer is a `NEARPTR`; a far pointer's offset is `FP_OFF(p)`; a far copy is `FAR_COPY(dst, src, n)`.
 - Cast handlers of another type where they are registered; never leave a call without a prototype.
 - A struct with pointer fields goes between `HOST_LAYOUT_BEGIN` and `HOST_LAYOUT_END`.
@@ -95,7 +95,7 @@ The sources also build the native port (PORT.md). Every change still has to pass
 
 Each of these is the original tokens under Turbo C (port-only C is never seen by it). After a change, `make port-check` should show no new error or warning, and `make test` must pass: it builds the port and replays every session against its golden.
 
-A session that differs from its golden after a change to the port is a bug in the change; fix the port, never the golden. The goldens are made again (`make golden`, or `make test-full`) only when a recording or the replay DOS build changes (a change to `src/replay/REPLAY.C` or to a source the replay build compiles with `-DREPLAY`), and the regenerated files go in the same commit as that change. `replay.py verify` says when a golden is stale or was made by another replay build.
+A session that differs from its golden after a change to the port is a bug in the change; fix the port, never the golden. The goldens are made again (`make golden`, or `make test-full`) only when a recording or the replay DOS build changes (a change to the runtime's `replay/replay.c`, to `src/include/rpgame.h`, or to a source the replay build compiles with `-DREPLAY`), and the regenerated files go in the same commit as that change. `replay.py verify` says when a golden is stale or was made by another replay build.
 
 ## Named constants
 

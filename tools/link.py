@@ -8,7 +8,7 @@ source without disturbing the matched build).
 
 --add (with --mod only) links one more resident module that no source in the matched build has,
 after the last resident code module: the replay DOS build adds the record and replay code
-(src/replay/REPLAY.C, tools/replay.py) this way.
+(Exhume's runtime/replay/replay.c, tools/replay.py) this way.
 
 --mod is the modding build (docs/LINKING.md, "The modding build"): sources may change by any size. The
 layout comes from the last exact run (build/LINK/base, written by extract.py when every object

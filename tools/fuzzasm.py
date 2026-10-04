@@ -577,7 +577,7 @@ def build_host(coverage=False):
     objs = [os.path.join(out, sources.stem(p) + '.o') for p in game]
     for p in portbuild.port_sources():
         if p.endswith(os.path.join('sys', 'main.c')): continue
-        objs.append(os.path.join(out, 'port', os.path.relpath(p, portbuild.PORT).replace(os.sep, '_')[:-2] + '.o'))
+        objs.append(portbuild.port_object(out, p))
     _, libs, extra = portbuild.sound_deps()
     objs += [os.path.join(out, 'deps', os.path.basename(p)[:-2] + '.o') for p in extra]
     host = os.path.join(root, 'build', 'fuzz' + ('-cov' if coverage else ''), 'fuzzhost')

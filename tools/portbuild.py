@@ -1,6 +1,7 @@
 """Build the native port (`make port`, docs/PORT.md): compile every game C source for the host as
-tools/portcheck.py does, compile the port's own C under src/port (the link stubs today), and
-link them into build/port/uw2port.
+tools/portcheck.py does, compile the port's own C, UW2's under src/port and the runtime's in
+Exhume's runtime/port (tools/exhume.py, where it is: nothing is copied), and link them into
+build/port/uw2port.
 
     python3 tools/portbuild.py          build and link; exit 1 if any step fails
     python3 tools/portbuild.py --run    then run it, passing UW2PORT_ARGS (docs/BUILDING.md)
@@ -20,11 +21,12 @@ link them into build/port/uw2port.
                                         (LLVM_PROFILE_FILE), for llvm-profdata and llvm-cov, to
                                         see which of the port's routines the replays run
 
-The port's own C is compiled with its headers and the game's; the platform backend (SDL3,
-src/port/platform/sdl3) with SDL's flags from pkg-config, and the link takes SDL's libraries.
-What the port does not replace yet is still the generated stubs (src/port/stubs, written by
-tools/portstubs.py), and the port stops at the first one it reaches. The DOS build is
-untouched.
+The port's own C is compiled with its headers and the game's: UW2's bindings and headers in
+src/port first, then the runtime's (docs/PORT.md, "The runtime"); the platform backend (SDL3,
+the runtime's platform/sdl3) with SDL's flags from pkg-config, and the link takes SDL's
+libraries. What the port does not replace yet is still the generated stubs (src/port/stubs,
+written by tools/portstubs.py), and the port stops at the first one it reaches. The DOS build
+is untouched.
 
 The sound hardware's emulators are not in the repository (docs/BUILDING.md, "Sound"): Nuked
 OPL3 is compiled from tools/nuked-opl3 when tools/setup-sound.sh has fetched it, and libmt32emu
@@ -37,23 +39,29 @@ from concurrent.futures import ThreadPoolExecutor
 
 here = os.path.dirname(os.path.abspath(__file__)); root = os.path.dirname(here)
 sys.path.insert(0, here)
-import sources, portcheck
+import sources, portcheck, exhume
 
 OUT = os.path.join(root, 'build', 'port')
 PORT = os.path.join(root, 'src', 'port')
+RT = exhume.PORT                # the runtime's port C (Exhume's runtime/port)
 EXE = os.path.join(OUT, 'uw2port')
 # The port's own C: C11, with the port's headers and the game's (port C that includes a game
-# header includes compat.h first, and gets Borland's stand-in headers through src/port/include).
+# header includes compat.h first, and gets Borland's stand-in headers through the runtime's
+# include). UW2's directory comes first, so its bindings (portgame.h, asmgame.h, ailgame.h) are
+# the ones the runtime's headers include; then the runtime's directories, whose headers UW2's
+# C includes as "port.h", "plat.h", "x86/asmrt.h", "sound/audio.h" and the generated stubs as
+# "stub.h"; then the game's headers and the runtime's portable.h.
 PORT_FLAGS = ['-x', 'c', '-std=gnu11', '-fsigned-char', '-D_POSIX_C_SOURCE=200809L', '-Wall', '-Wno-comment', '-Wno-unused-function',
-              '-Wno-pragma-pack', '-I', PORT, '-I', os.path.join(PORT, 'platform'),
-              '-I', os.path.join(PORT, 'include'), '-iquote', os.path.join(root, 'src', 'include')]
+              '-Wno-pragma-pack', '-I', PORT, '-I', RT, '-I', os.path.join(RT, 'platform'),
+              '-I', os.path.join(RT, 'include'), '-I', os.path.join(RT, 'sound'), '-I', os.path.join(RT, 'stubs'),
+              '-iquote', os.path.join(root, 'src', 'include'), '-iquote', exhume.INCLUDE]
 # The port's own C that only computes: the modules translated from the assembly, the machine
 # they run on, and the graphics and renderer C written by hand. It shares nothing with another
 # thread but what the platform layer reads to draw, so it is compiled with -O2, which makes the
 # replays two to four times faster (docs/BUILDING.md, "Testing"); the rest of the port's C (the
 # PIT and the other threads' code, the sound drivers, memory, the platform layer) and the game's
 # C stay unoptimised. The debug and coverage builds compile everything without optimisation.
-OPTIMISED = [os.path.join(PORT, d) + os.sep for d in ('3d', 'gfx', 'x86')]
+OPTIMISED = [os.path.join(d, x) + os.sep for d in (PORT, RT) for x in ('3d', 'gfx', 'x86')]
 OPT = ['-O2']
 # The one backend the port builds with today (docs/PORT.md, "The platform layer"): only files
 # under src/port/platform/<backend>/ see its headers, and the link takes its libraries.
@@ -102,34 +110,44 @@ def pkg_config(*args):
 
 
 def port_sources():
-    """Every .c under src/port but the stand-in headers, and the platform backends other than
-    BACKEND."""
+    """Every .c under src/port and the runtime's port directory but the stand-in headers, and
+    the platform backends other than BACKEND."""
     out = []
-    plat = os.path.join(PORT, 'platform')
-    for d, _, fs in os.walk(PORT):
-        if os.path.join(PORT, 'include') in d: continue
-        if d.startswith(plat + os.sep) and os.path.relpath(d, plat).split(os.sep)[0] != BACKEND: continue
-        out += [os.path.join(d, f) for f in sorted(fs) if f.endswith('.c')]
+    for top in (PORT, RT):
+        plat = os.path.join(top, 'platform')
+        for d, _, fs in os.walk(top):
+            if d.startswith(os.path.join(top, 'include')): continue
+            if d.startswith(plat + os.sep) and os.path.relpath(d, plat).split(os.sep)[0] != BACKEND: continue
+            out += [os.path.join(d, f) for f in sorted(fs) if f.endswith('.c')]
     return sorted(out)
 
 
+def port_object(out, path):
+    """The object of port source PATH in build directory OUT: UW2's under port/, the runtime's
+    under port/rt_ (two files may share a name, mem/ems.c and the runtime's mem/emm.c being
+    near it)."""
+    if path.startswith(RT + os.sep):
+        return os.path.join(out, 'port', 'rt_' + os.path.relpath(path, RT).replace(os.sep, '_')[:-2] + '.o')
+    return os.path.join(out, 'port', os.path.relpath(path, PORT).replace(os.sep, '_')[:-2] + '.o')
+
+
 def is_backend(path):
-    return os.path.join(PORT, 'platform', BACKEND) + os.sep in path
+    return any(os.path.join(top, 'platform', BACKEND) + os.sep in path for top in (PORT, RT))
 
 
 NUKED = os.path.join(root, 'tools', 'nuked-opl3')
 
 
 def sound_deps():
-    """The sound emulators found: (flags for src/port/sound/audio.c, link flags, extra sources)."""
+    """The sound emulators found: (flags for the runtime's sound/audio.c, link flags, extra sources)."""
     cflags, libs, extra = [], [], []
     if os.path.exists(os.path.join(NUKED, 'opl3.c')):
-        cflags += ['-DUW2_HAVE_OPL', '-I', NUKED]
+        cflags += ['-DAUDIO_HAVE_OPL', '-I', NUKED]
         extra.append(os.path.join(NUKED, 'opl3.c'))
     r = subprocess.run(['pkg-config', '--cflags', '--libs', 'mt32emu'], capture_output=True, text=True, env=pkg_env())
     if r.returncode == 0:
         flags = r.stdout.split()
-        cflags += ['-DUW2_HAVE_MT32EMU'] + [f for f in flags if f.startswith('-I')]
+        cflags += ['-DAUDIO_HAVE_MT32EMU'] + [f for f in flags if f.startswith('-I')]
         libs += [f for f in flags if not f.startswith('-I')]
     return cflags, libs, extra
 
@@ -189,7 +207,7 @@ def compile_port(cc, path, sound_cflags=()):
         r = subprocess.run([cc] + ARCHS + ['-x', 'c', '-std=c99', '-O2', '-w', '-c', '-o', obj, path],
                            capture_output=True, text=True, cwd=root)
         return path, r.returncode, r.stderr if r.returncode else '', obj if r.returncode == 0 else None
-    obj = os.path.join(OUT, 'port', os.path.relpath(path, PORT).replace(os.sep, '_')[:-2] + '.o')
+    obj = port_object(OUT, path)
     os.makedirs(os.path.dirname(obj), exist_ok=True)
     extra = pkg_config('--cflags') if is_backend(path) else []
     if path.endswith(os.path.join('sound', 'audio.c')): extra = list(sound_cflags)
@@ -238,6 +256,7 @@ def main(argv):
     if a.arch:
         ARCHS = [f for x in a.arch for f in ('-arch', x)]
         portcheck.FLAGS = portcheck.FLAGS + ARCHS
+    exhume.need(); exhume.check_pin()
     os.makedirs(OUT, exist_ok=True)
     game = [p for p in sources.all_sources() if p.upper().endswith('.C') and not portcheck.dos_only(p)]
     game += sources.replay_sources()     # the record and replay hooks' code, shared with the replay DOS build
@@ -250,20 +269,21 @@ def main(argv):
         print(f'{os.path.relpath(p, root)}: does not compile\n' + '\n'.join(l for l in e.split('\n') if 'error' in l)[:2000])
     if bad: return 1
     objs = [o for p, rc, e, o in gres + pres if o != 'opl3-shared']
+    print(f'runtime: {exhume.EXHUME}')
     print(f'compiled {len(gres)} game sources and {len(pres)} port sources'
           f' (layout flags: {" ".join(portcheck.layout_flags(a.cc)) or "none"})')
     warn = [(p, e) for p, rc, e, o in pres if o and 'warning' in e]
     for p, e in warn:
         print(f'{os.path.relpath(p, root)}: warnings\n' + '\n'.join(l for l in e.split('\n') if 'warning' in l)[:2000])
-    print('sound: ' + ', '.join([('Nuked OPL3' if '-DUW2_HAVE_OPL' in snd_cflags else 'no OPL emulator (tools/setup-sound.sh)'),
-                                 ('libmt32emu' if '-DUW2_HAVE_MT32EMU' in snd_cflags else 'no libmt32emu (brew install mt32emu, or make setup-libs)')]))
+    print('sound: ' + ', '.join([('Nuked OPL3' if '-DAUDIO_HAVE_OPL' in snd_cflags else 'no OPL emulator (tools/setup-sound.sh)'),
+                                 ('libmt32emu' if '-DAUDIO_HAVE_MT32EMU' in snd_cflags else 'no libmt32emu (brew install mt32emu, or make setup-libs)')]))
     # the sound drivers' threads: in the C library on macOS and on Linux's glibc 2.34 and later,
     # in winpthreads on Windows (MinGW), which -pthread links
     threads = [] if sys.platform == 'darwin' else ['-pthread']
     rpath = []
     if RELEASE:
         # the libraries beside the program, or in the package's lib (Linux) or Frameworks (macOS)
-        if '-DUW2_HAVE_OPL' in snd_cflags: snd_libs = ['-L', OUT, '-lnukedopl3'] + snd_libs
+        if '-DAUDIO_HAVE_OPL' in snd_cflags: snd_libs = ['-L', OUT, '-lnukedopl3'] + snd_libs
         if sys.platform == 'darwin':
             rpath = ['-Wl,-rpath,@executable_path', '-Wl,-rpath,@executable_path/../Frameworks', '-Wl,-headerpad_max_install_names']
         elif sys.platform.startswith('linux'):

@@ -22,7 +22,7 @@ void borland_init(void);
 void port_crash_handlers(void);
 
 int port_trace;
-extern int16_t rp_request;              /* src/replay/REPLAY.C: 0 off, 1 record, 2 replay */
+extern int16_t rp_request;              /* the runtime's replay/replay.c: 0 off, 1 record, 2 replay */
 
 void port_log(const char *fmt, ...)
 {

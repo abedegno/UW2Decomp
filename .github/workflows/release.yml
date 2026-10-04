@@ -32,6 +32,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      # Exhume, whose runtime the port, the gate and the replay build compile where it is, at
+      # the commit tools/exhume-ref names (docs/BUILDING.md, "Exhume")
+      - name: Exhume's commit
+        id: exhume
+        shell: bash
+        run: echo "ref=$(cut -d' ' -f1 tools/exhume-ref)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: abedegno/Exhume
+          ref: ${{ steps.exhume.outputs.ref }}
+          path: .exhume
+          persist-credentials: false
       - name: Homebrew packages
         env:
           HOMEBREW_NO_AUTO_UPDATE: "1"
@@ -155,6 +167,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      # Exhume, whose runtime the port, the gate and the replay build compile where it is, at
+      # the commit tools/exhume-ref names (docs/BUILDING.md, "Exhume")
+      - name: Exhume's commit
+        id: exhume
+        shell: bash
+        run: echo "ref=$(cut -d' ' -f1 tools/exhume-ref)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: abedegno/Exhume
+          ref: ${{ steps.exhume.outputs.ref }}
+          path: .exhume
+          persist-credentials: false
       - name: System packages (the compiler, and the headers SDL3 needs for a window and sound)
         run: |
           sudo apt-get update -qq
@@ -256,6 +280,18 @@ jobs:
         shell: pwsh
       - uses: actions/checkout@v4
         with:
+          persist-credentials: false
+      # Exhume, whose runtime the port, the gate and the replay build compile where it is, at
+      # the commit tools/exhume-ref names (docs/BUILDING.md, "Exhume")
+      - name: Exhume's commit
+        id: exhume
+        shell: bash
+        run: echo "ref=$(cut -d' ' -f1 tools/exhume-ref)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: abedegno/Exhume
+          ref: ${{ steps.exhume.outputs.ref }}
+          path: .exhume
           persist-credentials: false
       - uses: msys2/setup-msys2@v2
         with:

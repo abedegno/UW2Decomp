@@ -1,4 +1,4 @@
-"""Rewrite C declarations to the explicit-width types of src/include/portable.h (int16, uint16,
+"""Rewrite C declarations to the explicit-width types of portable.h (int16, uint16,
 int32, uint32), for the port (docs/PORT.md, "Integer widths and wrap", Milestone 2 step 4).
 
     python3 tools/widths.py [--check] PATH...     rewrite the files (or directories) in place

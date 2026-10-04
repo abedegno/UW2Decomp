@@ -12,7 +12,7 @@ instruction's address, length and operands exactly. A source line and its decode
 must agree on the mnemonic, or the tool stops.
 
 The C is one function per module, `uint32_t asm_mod_NAME(uint16_t entry)`, which starts at the
-entry's label and runs the instructions in order on the machine of src/port/x86/asmrt.h: the
+entry's label and runs the instructions in order on the machine of Exhume's runtime/port/x86/asmrt.h: the
 registers and flags are the 386's, memory is reached through the segment registers, the stack
 is the emulated one in DOS memory. A flag is computed only where some instruction that can see
 it reads it (a backward liveness pass over the module's flow graph, every exit counting as a

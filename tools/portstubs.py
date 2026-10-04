@@ -9,11 +9,12 @@ library, the far data taken from the EXE, the DGROUP gaps, the DOS-only C, and t
 layer's own port_ and bc_ names). Whether a name is a function or data, and its type, comes
 from clang's AST of the sources that use it.
 
-Names the port's own C under src/port (its replacements, outside src/port/stubs) already
-defines get no stub, so the stub list shrinks as replacements land.
+Names the port's own C already defines (UW2's replacements under src/port, outside
+src/port/stubs, and Exhume's runtime) get no stub, so the stub list shrinks as replacements
+land.
 
-Each function becomes `void NAME(void)` that reports itself and stops (port_stub, in
-src/port/stubs/stub.c): the stubs exist so that the port links, and every one of them is
+Each function becomes `void NAME(void)` that reports itself and stops (port_stub, in the
+runtime's port/stubs/stub.c): the stubs exist so that the port links, and every one of them is
 work for Milestone 3 and later. Each variable becomes a zeroed byte array of the size of its
 declared type (64 KB when the type is an array of unknown length). The stub files include no
 game header, so a stub's own type never has to agree with the game's declaration; the real
@@ -33,7 +34,8 @@ UNKNOWN_ARRAY = 0x10000
 
 
 def port_defined():
-    """Every name a C file under src/port defines, the stubs aside: the replacements."""
+    """Every name the port's own C defines (src/port and the runtime's), the stubs aside: the
+    replacements."""
     import portbuild
     srcs = [p for p in portbuild.port_sources() if os.sep + 'stubs' + os.sep not in p]
     with ThreadPoolExecutor(max_workers=os.cpu_count() or 4) as ex:
@@ -102,7 +104,8 @@ def sizes(decls):
     vars_ = {n: t for n, (k, t) in decls.items() if k == 'var'}
     out = {}
     probe = os.path.join(OUT, 'stubsizes.c')
-    hs = [h for h in sorted(os.listdir(os.path.join(root, 'src', 'include'))) if h.endswith('.h') and h != 'portable.h']
+    hs = [h for h in sorted(os.listdir(os.path.join(root, 'src', 'include')))
+          if h.endswith('.h') and h not in ('portable.h', 'hookgame.h', 'rpgame.h')]
     lines = [f'#include "{h}"' for h in hs] + ['#undef main', 'int main(void)', '{']
     for n, t in sorted(vars_.items()):
         if re.search(r'\[\]', t) or not t: continue

@@ -2,7 +2,7 @@
 
     python3 tools/ailcheck.py AIL_LOG HW_LOG [--driver FILE] [--max N]
 
-AIL_LOG and HW_LOG are written by the port's --ail-log and --hw-log (src/port/sound/ail.c):
+AIL_LOG and HW_LOG are written by the port's --ail-log and --hw-log (Exhume's runtime/port/sound/ail.c):
 every AIL call the game made to its music driver, with the data it passed (the XMIDI image,
 each timbre), every service tick of the driver, and every register write or MIDI byte the
 port's C driver made, each with the AIL tick it belongs to. This tool loads the user's own
@@ -29,7 +29,7 @@ except ImportError:
 
 DATA = os.environ.get('UW2_DIR') or (os.path.dirname(os.environ['UW2_EXE']) if os.environ.get('UW2_EXE')
                                      else os.path.expanduser('~/UWGOG/UW2'))
-# the driver files by the kind numbers of src/port/sound/aildrv.h
+# the driver files by the kind numbers of the runtime's port/sound/aildrv.h
 KIND_FILE = {1: 'DM02.ADV', 2: 'DM03.ADV', 3: 'DM04.ADV', 4: 'DM06.ADV', 5: 'DM07.ADV', 6: 'DM05.ADV'}
 # AIL.INC's driver function numbers
 FN = dict(init_driver=0x66, serve=0x67, shutdown=0x68, state_size=0x96, register_sequence=0x97,
