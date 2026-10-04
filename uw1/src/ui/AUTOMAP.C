@@ -55,10 +55,10 @@
 struct Arc {
     char b[11];
 };
-char far ovr091_0(char far *arc, char *name);           /* opens an archive into arc */
-char far ovr091_153(char far *arc);                     /* closes it */
-int far ovr091_61A(char far *arc, int block, void far *buf);           /* reads a block */
-char far ovr091_22C(char far *arc, int block, void far *buf, int len); /* writes one */
+char far open_arc(char far *arc, char *name);           /* opens an archive into arc */
+char far close_arc(char far *arc);                     /* closes it */
+int far get_arc(char far *arc, int block, void far *buf);           /* reads a block */
+char far put_arc(char far *arc, int block, void far *buf, int len); /* writes one */
 /* UW1: CRPAGES.C lends the critter pages to hold the workspace (UW2's get_workspace and
    release_workspace). */
 int far swap_ws_out(void);
@@ -136,13 +136,13 @@ unsigned char far SaveAutoMapLevel(struct Arc *arcp, int lev)
     struct Arc arc;
 
     if (arcp == 0) {
-        if (!ovr091_0((char far *)&arc, "SAVE0\\lev.ark"))
+        if (!open_arc((char far *)&arc, "SAVE0\\lev.ark"))
             return 0;
     } else
         arc = *arcp;
-    ok = ovr091_22C((char far *)&arc, lev + 0x1A, (char far *)PlayersMap, MAP_TILES);
+    ok = put_arc((char far *)&arc, lev + 0x1A, (char far *)PlayersMap, MAP_TILES);
     if (arcp == 0)
-        ovr091_153((char far *)&arc);
+        close_arc((char far *)&arc);
     else
         *arcp = arc;
     if (ok)
@@ -155,7 +155,7 @@ unsigned char far GetAutoMapLevel(struct Arc *arc, int lev)
 {
     register int n;
 
-    n = ovr091_61A((char far *)arc, lev + 0x1A, (char far *)PlayersMap);
+    n = get_arc((char far *)arc, lev + 0x1A, (char far *)PlayersMap);
     if (n != 0 && n != MAP_TILES)
         return 0;
     return 1;
@@ -172,9 +172,9 @@ void far ExitAutoMap(void)
     input_del(map_mouse);
     unforce_mouse_cursor(0);
     SaveTheWords(level);
-    if (level != PlayerLevel && ovr091_0((char far *)&arc, "SAVE0\\lev.ark")) {
+    if (level != PlayerLevel && open_arc((char far *)&arc, "SAVE0\\lev.ark")) {
         GetAutoMapLevel(&arc, PlayerLevel);
-        ovr091_153((char far *)&arc);
+        close_arc((char far *)&arc);
     }
     seg014_1DC5_15C5();
     grfx_clear();
@@ -587,10 +587,10 @@ void far SaveTheWords(int lev)
             num_words--;
         }
     }
-    if (ovr091_0((char far *)&arc, "SAVE0\\lev.ark")) {
-        if (!ovr091_22C((char far *)&arc, lev + 0x23, (char far *)ATM_Strings, num_words * sizeof(struct ATM)))
+    if (open_arc((char far *)&arc, "SAVE0\\lev.ark")) {
+        if (!put_arc((char far *)&arc, lev + 0x23, (char far *)ATM_Strings, num_words * sizeof(struct ATM)))
             ;
-        ovr091_153((char far *)&arc);
+        close_arc((char far *)&arc);
     }
 }
 
@@ -600,10 +600,10 @@ void far GetTheWords(int lev)
     struct Arc arc;
 
     old_strings = num_words = 0;
-    if (ovr091_0((char far *)&arc, "SAVE0\\lev.ark")) {
-        old_strings = num_words = ovr091_61A((char far *)&arc, lev + 0x23, (char far *)ATM_Strings) / sizeof(struct ATM);
+    if (open_arc((char far *)&arc, "SAVE0\\lev.ark")) {
+        old_strings = num_words = get_arc((char far *)&arc, lev + 0x23, (char far *)ATM_Strings) / sizeof(struct ATM);
         RedisplayStrings();
-        ovr091_153((char far *)&arc);
+        close_arc((char far *)&arc);
     }
 }
 
@@ -663,9 +663,9 @@ void far ChangeAutoMapLevel(register int lev)
 
     SaveTheWords(level);
     ClearAutoMap();
-    if (lev < 9 && ovr091_0((char far *)&arc, "SAVE0\\lev.ark")) {
+    if (lev < 9 && open_arc((char far *)&arc, "SAVE0\\lev.ark")) {
         GetAutoMapLevel(&arc, lev);
-        ovr091_153((char far *)&arc);
+        close_arc((char far *)&arc);
     }
     ShowAutoMapLevel(lev);
 }

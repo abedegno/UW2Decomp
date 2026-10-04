@@ -46,7 +46,7 @@ seg045	C	6	881	0	0	0	4			yes
 seg046	assembly	37	4657	0	0	0	30			yes
 ovr089	C	2	43	0	0	0	1			yes
 ovr090	C	7	44	0	0	0	7			yes
-ovr091	C	6	2121	0	0	0	5			
+ovr091	C	6	2121	0	0	0	5			yes
 ovr092	C	19	4416	0	0	0	13			yes
 ovr093	C	55	9500	0	0	0	16			yes
 ovr094	C	15	2949	0	0	0	4			yes

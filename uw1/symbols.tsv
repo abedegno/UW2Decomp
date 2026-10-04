@@ -155,6 +155,7 @@ _anti_magic_p	311A:0004	provisional
 _API_timer	2042:040A	provisional
 _aRb_4	DS:09F1	provisional
 _arc_buffer	DS:4826	provisional
+_arcstr	DS:0ABC	provisional
 _area1_spells	DS:09BF	provisional
 _area_spells	DS:09AF	provisional
 _Armor	DS:59F2	provisional
@@ -265,6 +266,7 @@ _ChangeLevel	5A69:0039	provisional
 _chdir	0EC5:16A1	provisional
 _check_alert	5A9C:0052	provisional
 _check_ammo	2121:0E78	provisional
+_check_arc	5958:002F	provisional
 _check_dirs	5AA4:0052	provisional
 _check_door	3707:0D50	provisional
 _check_fds	5AA4:003E	provisional
@@ -307,6 +309,7 @@ _cLightTabs	DS:2388	provisional
 _Clk	37FF:00E6	provisional
 _cllbck_tst	1BD8:000B	provisional
 _close	0EC5:02FE	provisional
+_close_arc	5958:002A	provisional
 _close_to_square	128A:24A8	provisional
 _CloseAllBags	59FE:0034	provisional
 _CloseDoor	333E:22FD	provisional
@@ -366,6 +369,7 @@ _copy_hidden_to_visible	0090:5314	provisional
 _copy_visible_to_hidden	0090:5350	provisional
 _coreleft	0EC5:1703	provisional
 _CornerShade_ovr094_9D2	595C:005C	provisional
+_count_arc	5958:0020	provisional
 _count_inv	599C:0039	provisional
 _count_list	2674:0E2D	provisional
 _CP	DS:284A	provisional
@@ -760,6 +764,7 @@ _generate_inventory	5A92:0039	provisional
 _generate_treasure	5A92:002A	provisional
 _generate_weapons	5A92:0025	provisional
 _get_animlen	3707:0CFC	provisional
+_get_arc	5958:0034	provisional
 _get_class_data	5A3A:0020	provisional
 _get_current_music	1BD8:0738	provisional
 _get_cut_banks	59B8:00BB	provisional
@@ -1235,10 +1240,12 @@ _objyloc	DS:34FC	provisional
 _objzloc	DS:34FE	provisional
 _oCollisions	DS:26C6	provisional
 _oCswap	2529:0E5A	provisional
+_offtab	DS:0AB8	provisional
 _oldPlayerInput	DS:075F	provisional
 _opcode_text	DS:0B4A	provisional
 _opcode_tstne_ovr095_1C12	5964:011F	provisional
 _open	0EC5:1F2A	provisional
+_open_arc	5958:0025	provisional
 _OpenBag	DS:1726	provisional
 _OpenBagList	DS:1722	provisional
 _OpenDoor	333E:21E6	provisional
@@ -1249,11 +1256,6 @@ _OverwriteAllTiles_ovr128_37	5A29:002A	provisional
 _ovr090_13	5953:002F	provisional
 _ovr090_1D	5953:0034	provisional
 _ovr090_5	5953:0039	provisional
-_ovr091_0	5958:0025	provisional
-_ovr091_153	5958:002A	provisional
-_ovr091_22C	5958:0039	provisional
-_ovr091_61A	5958:0034	provisional
-_ovr091_798	5958:002F	provisional
 _ovr097_CDB	597E:0093	provisional
 _ovr106_20	59C5:002A	provisional
 _ovr112_194	59E1:0025	provisional
@@ -1407,6 +1409,7 @@ _punt_fightmode	22EF:15C0	provisional
 _punt_idle_crpage	59E5:002A	provisional
 _Punt_player_inv	5A53:002F	provisional
 _push_missile	2456:0B51	provisional
+_put_arc	5958:0039	provisional
 _put_at	2529:122B	provisional
 _put_effect	3707:0A33	provisional
 _putInInv	5A05:0048	provisional
@@ -1472,6 +1475,7 @@ _RemoveAllFromSlot	5A11:002F	provisional
 _removeFromSlot	5A11:0020	provisional
 _RemoveOneFromSlot	5A11:0034	provisional
 _RemoveTrap	5A76:0066	provisional
+_rename	0EC5:2186	provisional
 _render_FB	2ABA:02F9	provisional
 _repair_item	59C8:0075	provisional
 _replace_string	32A8:021A	provisional

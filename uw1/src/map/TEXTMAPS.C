@@ -49,8 +49,8 @@
 /* UW1's declarations. */
 unsigned far seg009_38C(int n);         /* a picture's segment */
 void far dprintf(char *fmt, ...);
-int far ovr091_61A(char far *arc, int block, void far *buf);           /* reads a block */
-char far ovr091_22C(char far *arc, int block, void far *buf, int size); /* writes one */
+int far get_arc(char far *arc, int block, void far *buf);           /* reads a block */
+char far put_arc(char far *arc, int block, void far *buf, int size); /* writes one */
 extern uint16 dseg_5c99_7178;           /* TMPALLOC.C's workspace paragraph */
 /* The 3D view's texture tables (seg051, far): for textures 0..57 (48 walls, then the 10
    floors), the EMS page of the 64-pixel bitmap (0 in conventional memory), the page of the
@@ -140,7 +140,7 @@ unsigned char far Txm_Load(char *arc, int lev)
     register int i;
 
     ok = 1;
-    if (ovr091_61A(arc, lev + 0x11, buf) != 0x7A) {
+    if (get_arc(arc, lev + 0x11, buf) != 0x7A) {
         dprintf("bad tmap ids size\n");
         ok = 0;
     }
@@ -173,7 +173,7 @@ char far Txm_Save(char *arc, int lev)
         buf[i + 0x30] = floor_IDs[i];
     for (i = 0; i < 3; i++)
         buf[i + 0x3A] = (ActDoors[i * 2 + 1] << 8) | (ActDoors[i * 2] & 0xFF);
-    return ovr091_22C(arc, lev + 0x11, buf, 0x7A);
+    return put_arc(arc, lev + 0x11, buf, 0x7A);
 }
 
 /* 0x375: loads the level's textures: the first 12 walls and the floors into conventional

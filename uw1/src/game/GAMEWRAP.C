@@ -101,8 +101,8 @@ void far set_maze(char on);
 /* UW1: LEV.ARK's archive access (ovr091), the map's load and save (ovr123), the texture
    map's (ovr131) and the automap's (ovr092), none matched yet: the listing's names. arc
    is a 12-byte archive record. */
-char far ovr091_0(char far *arc, char *name);
-char far ovr091_153(char far *arc);
+char far open_arc(char far *arc, char *name);
+char far close_arc(char far *arc);
 char far Map_Load(char *arc, int level);
 char far Map_Save(char *arc, int level);
 void far ClearAutoMap(void);
@@ -165,7 +165,7 @@ int far GetLevel(register int level)
     SavePlayerInv(0);
     if (GrSq >= 0)
         GrSq = -1;
-    if (!ovr091_0(arc, "SAVE0\\lev.ark"))
+    if (!open_arc(arc, "SAVE0\\lev.ark"))
         return 0;
     ok = Map_Load(arc, level);
     RestorePlayerInv(0);
@@ -177,7 +177,7 @@ int far GetLevel(register int level)
         if (ok == 1)
             GetAutoMapLevel(arc, level);
     }
-    ovr091_153(arc);
+    close_arc(arc);
     return ok;
 }
 
@@ -194,11 +194,11 @@ char far SaveLevel(register int level)
         Obj_Rem(&(mapdata + GrSq)->objects, ThePlayer);
     GrSq = -1;
     SET_MAJOR(ThePlayer, 0);
-    if ((ok = ovr091_0(arc, "SAVE0\\lev.ark")) != 0) {
+    if ((ok = open_arc(arc, "SAVE0\\lev.ark")) != 0) {
         ok = Map_Save(arc, level);
         ok = ok && Txm_Save(arc, level);
         ok = ok && SaveAutoMapLevel(arc, level);
-        ok = ok && ovr091_153(arc);
+        ok = ok && close_arc(arc);
     }
     RestorePlayerInv(0);
     return ok;

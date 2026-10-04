@@ -66,9 +66,9 @@
 #include "ui.h"
 
 /* UW1: declarations the headers do not have (or have in UW2's form). */
-char far ovr091_0(char far *arc, char *name);          /* opens an archive into arc */
-char far ovr091_153(char far *arc);                    /* closes it */
-int far ovr091_61A(char far *arc, int block, void far *buf);
+char far open_arc(char far *arc, char *name);          /* opens an archive into arc */
+char far close_arc(char far *arc);                    /* closes it */
+int far get_arc(char far *arc, int block, void far *buf);
 void far dprintf(char *fmt, ...);
 char far * far seg039_3495_85A(char far *s);          /* UW2's seg039_3452_857 */
 int far seg039_3495_89D(char far *s);                 /* UW2's seg039_3452_89A */
@@ -397,12 +397,12 @@ int far load_script(char *name, char far *work)
     ovr093_0(work);
     seg066_0[0] = 0;
     file_name = name;
-    if (ovr091_0(arc, name)) {
+    if (open_arc(arc, name)) {
         if ((arc_buffer = bab_malloc(0x4000L)) == 0)
             pfatal_code(4);
         buffer = arc_buffer;
-        size = ovr091_61A(arc, cnv_id, arc_buffer);
-        ovr091_153(arc);
+        size = get_arc(arc, cnv_id, arc_buffer);
+        close_arc(arc);
         if (size <= 0) {
             scroll_print(get_string(0xe01));  /* "You get no response.\n" */
             return 1;

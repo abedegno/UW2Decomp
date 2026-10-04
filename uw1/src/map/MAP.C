@@ -47,10 +47,10 @@ struct Arc {
 };
 
 /* ovr091: LEV.ARK access */
-char far ovr091_0(char far *arc, char *name);
-char far ovr091_153(char far *arc);
-char far ovr091_22C(char far *arc, int block, void far *buf, int n);
-int far ovr091_61A(char far *arc, int block, void far *buf);
+char far open_arc(char far *arc, char *name);
+char far close_arc(char far *arc);
+char far put_arc(char far *arc, int block, void far *buf, int n);
+int far get_arc(char far *arc, int block, void far *buf);
 /* EFFECT.C */
 int far Anim_Load(char *arc, int level);
 char far Anim_Save(char *arc, int level);
@@ -102,13 +102,13 @@ char far Map_Load(struct Arc *arc, int level)
     struct Arc a;
 
     if (arc == 0) {
-        if (!ovr091_0((char far *)&a, "SAVE0\\lev.ark"))
+        if (!open_arc((char far *)&a, "SAVE0\\lev.ark"))
             return 0;
     } else
         a = *arc;
     end = &LEVEL->magic;
     *end = 0;
-    ovr091_61A((char far *)&a, level - 1, mapdata);
+    get_arc((char far *)&a, level - 1, mapdata);
     if (*end != LEVEL_MAGIC) {
         pfatal_code(3);
     } else {
@@ -119,7 +119,7 @@ char far Map_Load(struct Arc *arc, int level)
     }
     result = Anim_Load((char *)&a, level);
     if (arc == 0)
-        ovr091_153((char far *)&a);
+        close_arc((char far *)&a);
     return result;
 }
 
@@ -133,7 +133,7 @@ char far Map_Save(struct Arc *arc, int level)
     struct Arc a;
 
     if (arc == 0) {
-        if (!ovr091_0((char far *)&a, "SAVE0\\lev.ark"))
+        if (!open_arc((char far *)&a, "SAVE0\\lev.ark"))
             return 0;
     } else
         a = *arc;
@@ -145,9 +145,9 @@ char far Map_Save(struct Arc *arc, int level)
         - (int32)FP_OFF(objbot)) / 2L;
     *end = LEVEL_MAGIC;
     MapDirty = 0;
-    if ((result = ovr091_22C((char far *)&a, level - 1, mapdata, 0x7C08)) != 0)
+    if ((result = put_arc((char far *)&a, level - 1, mapdata, 0x7C08)) != 0)
         result = Anim_Save((char *)&a, level);
     if (arc == 0)
-        ovr091_153((char far *)&a);
+        close_arc((char far *)&a);
     return result;
 }

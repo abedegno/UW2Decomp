@@ -20,7 +20,7 @@
    UW1 against UW2: TalkTo has its own cases (item 0x157 is a shrine, ovr143; item 0x16E,
    a picture, answers "There is no reaction from the princess." when its texture's entry
    is 8), lets whoami 0x16, 0x8E and 0xE7 always talk, and has no goal-15 or TimeStop
-   refusal; the archive is checked by name (ovr091_798). strt_converse builds the screen
+   refusal; the archive is checked by name (check_arc). strt_converse builds the screen
    from art and draws the frame itself, and free_converse does no catching up, teleport
    or clean-up after the script. UW1 has no babl_hack, give_all_stuff, set_sequence,
    transform_talker, x_clock, x_exp, teleport or switch_pic built-ins, four trade slots a
@@ -66,7 +66,7 @@
 
 /* UW1: declarations the headers do not have (or have in UW2's form). */
 void far mantra_advance(int how);                   /* talking to a shrine */
-int far ovr091_798(char *file, int block);      /* the size of an archive block */
+int far check_arc(char *file, int block);      /* 1 if the block is there, 0 if not, -1 if the file cannot be read */
 extern int16 w64_types[];                  /* a word for each texture of the level */
 char far move_convpic(char far *image, int ok, int which);
 char far gronk_gr(char *art, int start, int count, ArtAllocFn adr, ArtMoveFn move);
@@ -158,7 +158,7 @@ void far TalkTo(struct Object far *thing)
     }
     if (who == 0) cnv_id = (unsigned)subclass + 0x100;
     else cnv_id = who;
-    if (ovr091_798(cnv_file, cnv_id) <= 0) {
+    if (check_arc(cnv_file, cnv_id) <= 0) {
         scroll_print(get_string(0xe01));  /* "You get no response.\n" */
         return;
     }

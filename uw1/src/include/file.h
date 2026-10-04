@@ -13,11 +13,9 @@ struct Object;
 #include "object.h"
 
 /* ARC.C: the .ark archives */
-unsigned char far open_arc(int which, char *dir);
-unsigned char far close_arc(int arc);
-unsigned char far put_arc(int arc, unsigned blk, char far *buf, unsigned len);
-unsigned far get_arc(int arc, unsigned blk, char far *buf);
-int far check_arc(int which, char *dir, int blk);
+/* UW1: the archive functions (sys/ARC.C: open_arc, close_arc, put_arc, get_arc, check_arc,
+   count_arc) take UW1's 11-byte struct Arc or a file name, not UW2's archive numbers; each
+   caller declares them for now (docs/NOTES.md, ARC.C), until the readability pass. */
 
 /* MISCUTIL.C: file I/O helpers */
 void far flip_bool(char *p);

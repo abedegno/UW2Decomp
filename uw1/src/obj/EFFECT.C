@@ -67,8 +67,8 @@ struct Anim animlist[0x40];             /* DS:369C */
 
 /* UW1: ovr091's LEV.ARK block reader and writer (unmatched; the listing's names). The reader
    returns the length read; the caller passes a far file name and the block number. */
-int far ovr091_61A(char far *name, int block, void far *buf);
-char far ovr091_22C(char far *name, int block, void far *buf, int len);
+int far get_arc(char far *name, int block, void far *buf);
+char far put_arc(char far *name, int block, void far *buf, int len);
 
 
 
@@ -488,7 +488,7 @@ int far Anim_Load(char *name, int level)
     register int ok = 1;
     int count;
 
-    if (ovr091_61A(name, level + 8, animlist) != 0x180) {
+    if (get_arc(name, level + 8, animlist) != 0x180) {
         animcount = 0;
         ok = 0;
     } else {
@@ -506,5 +506,5 @@ char far Anim_Save(char *name, int level)
 {
     if (animcount < 0x40)
         animlist[animcount].link.f.index = 0;
-    return ovr091_22C(name, level + 8, animlist, 0x180);
+    return put_arc(name, level + 8, animlist, 0x180);
 }
