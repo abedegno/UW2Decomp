@@ -48,7 +48,7 @@
 extern union PlayerStore PlayerDat;
 
 /* UW1: the paperdoll's pictures (UW2 0x206D): the body, then one per armour position */
-#define PIC_BODY        0x2091
+#define PIC_BODY        ICON_INV
 
 /* UW1: the font loader takes a file name (UW2: grfx_quikfont(int)). */
 unsigned char far grfx_load_font(char *name);
@@ -152,7 +152,7 @@ void far BeginInventory(void)
         }
         save_rect(SaveHandles[1], 0xEC, 0x77, 0x54, 0x29);
         save_rect(SaveHandles[0], 0x12B, 0x8D, 0x10, 0x0A);
-        panel_mouse = defineMouseRegion(0xF0, 0x52, 0x13B, 0xBD, 0x106C);
+        panel_mouse = defineMouseRegion(0xF0, 0x52, 0x13B, 0xBD, ICON_CURSORS);
         panel_input = input_addmouse(0xF0, 0x52, 0x13B, 0xBD, 0, 5, (InputFn)mous_in_panel);
     }
 }
@@ -400,9 +400,9 @@ void far DisplayInvObject(int slot)
             restore_rect(SaveHandles[slot]);
             if (slot == DISP_UP) {
                 if (InvUpArrow)
-                    pic = 0x101B;
+                    pic = ICON_BUTTONS + 0x1B;
             } else if (InvDownArrow)
-                pic = 0x101C;
+                pic = ICON_BUTTONS + 0x1C;
             if (pic >= 0) {
                 Transparency = 1;
                 pic_to_screen(pic, InvDisplay[slot].x, InvDisplay[slot].y, InvDisplay[slot].h,
@@ -504,7 +504,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
 {
     struct ComObj *com;
     struct Object far *cont;
-    char *cls;
+    struct Armour *cls;
     int major;
     int minor;
     int sub;
@@ -519,7 +519,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
     com = &ComObjData[id];
     major = OBJ_MAJOR(ActiveObj);
     minor = OBJ_MINOR(ActiveObj);
-    sub = ActiveObj->id & ID_INCLASS;
+    sub = OBJ_INCLASS(ActiveObj);
     if (slot == INV_BAG) {
         int j;
 
@@ -552,26 +552,26 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
         }
         if (OBJ_MINOR(obj) < 2)
             return 0;
-        cls = get_class_data();
+        cls = (struct Armour *)get_class_data();
         switch (slot) {
         case INV_TORSO:
-            return cls[3] == ARMOUR_BODY;
+            return cls->category == ARMOUR_BODY;
         case INV_LEGS:
-            return cls[3] == ARMOUR_LEGGINGS;
+            return cls->category == ARMOUR_LEGGINGS;
         case INV_GLOVES:
-            return cls[3] == ARMOUR_GLOVES;
+            return cls->category == ARMOUR_GLOVES;
         case INV_HEAD:
-            return cls[3] == ARMOUR_HAT;
+            return cls->category == ARMOUR_HAT;
         case INV_BOOTS:
-            return cls[3] == ARMOUR_BOOTS;
+            return cls->category == ARMOUR_BOOTS;
         }
         return 0;
     }
     if (slot == INV_RING || slot == INV_RING + 1) {
         if (major != MAJOR_HACK || OBJ_MINOR(obj) < MINOR_ARMOR)
             return 0;
-        cls = get_class_data();
-        return cls[3] == ARMOUR_RING;
+        cls = (struct Armour *)get_class_data();
+        return cls->category == ARMOUR_RING;
     }
     if (INV_WEAPON_HAND - player->lefty == slot && major == MAJOR_HACK && minor == 0) {
         if (cont != 0 && OBJ_ITEM(cont) == id
@@ -604,7 +604,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
                 }
             }
             BagWeight(&cont->ol.link, &weight);
-            cap = Containers[cont->id & ID_INCLASS].capacity;
+            cap = Containers[OBJ_INCLASS(cont)].capacity;
             ok &= cap == 0 || weight <= cap;
             if (!ok) {
                 if (!get_name(name, cont, 0, 0))
@@ -615,7 +615,7 @@ int far ItemFitsSlot(struct Object far *obj, int slot)
                 return 0;
             }
         }
-        cap = Containers[cont->id & ID_INCLASS].mask;
+        cap = Containers[OBJ_INCLASS(cont)].mask;
         if (cap >= 0) {
             char res;
 
@@ -798,7 +798,7 @@ void far DisplayInventory(void)
     if (RightPanel == 0) {
         shown_capacity = -1;
         if (OpenBag != 0)
-            pic_to_screen(0x2097, 0xEC, 0x77, 0x29, 0x54);
+            pic_to_screen(ICON_INV + 6, 0xEC, 0x77, 0x29, 0x54);
         else
             restore_rect(1);            /* match: FM Towns restores SaveHandles[1]; DOS pushes 1 */
         displayInventoryArray(6, DISP_DOWN);

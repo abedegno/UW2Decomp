@@ -127,7 +127,7 @@ void far setup_to_barter(void)
         /* Skip the first weapon, anything worthless and, once every slot has been
            filled, a random five in eight of the rest. */
         if ((OBJ_MINOR(obj) == 0 && !skipped_weapon) ||
-            ComObjData[obj->id & ID_ITEM].value == 0 ||
+            ComObjData[OBJ_ITEM(obj)].value == 0 ||
             (all_filled && (rand() & 7) < 5)) {
             if (OBJ_MINOR(obj) == 0) skipped_weapon = 1;
             obj = next;
@@ -421,7 +421,7 @@ void far drawTradeSlot_ovr097_A91(int side, register int slot)
     else index = barter_npc_ids[slot];
     if (index) {
         obj = Obj_IntTMem(index);
-        item = obj->id & ID_ITEM;
+        item = OBJ_ITEM(obj);
     }
     if (side) {
         restore_rect(play_undersave[slot]);
@@ -703,7 +703,7 @@ int far do_demand(int16 far *args)
                      Creature[OBJ_INMAJOR(talking_to)].avghit;
     else health = 1;
     bab_var_out("npc_attitude", &attitude, 1);
-    if OBJ_ALLY(talking_to) mood = -1;
+    if (OBJ_ALLY(talking_to)) mood = -1;
     else if (attitude < 2) mood = 1;
     else mood = 0;
     npc_score = crit->level + mood + health + demanded / 10;
@@ -719,7 +719,7 @@ int far do_demand(int16 far *args)
     }
     npc_say(get_string(wont_str));
     ReturnTradeObjectsToNPC_ovr097_F76(0);
-    change_critter_goal(talking_to, 5, 1);
+    change_critter_goal(talking_to, GOAL_ATTACK, 1);
     return 0;
 }
 
@@ -805,9 +805,9 @@ int far assess_value(int use_likes, int item, int accuracy)
     if (use_likes) {
         disposition = does_npc_like(item);
         if (disposition == -1) return 0;
-        value = ComObjData[obj->id & ID_ITEM].value;
+        value = ComObjData[OBJ_ITEM(obj)].value;
         if (disposition) value = value * 3 >> 1;
-    } else value = ComObjData[obj->id & ID_ITEM].value;
+    } else value = ComObjData[OBJ_ITEM(obj)].value;
     if (OBJ_ISQUANT(obj) && !(obj->ol.f.link & LINK_SPECIAL))
         quantity = obj->ol.f.link;
     else quantity = 1;
@@ -844,7 +844,7 @@ int far player_barter_items(int16 *items, int16 *indices)
         if (play_select[slot]) {
             obj = Obj_IntTMem(barter_ply_ids[slot]);
             indices[count] = barter_ply_ids[slot];
-            items[count] = obj->id & ID_ITEM;
+            items[count] = OBJ_ITEM(obj);
             count++;
         }
     }
@@ -1069,8 +1069,8 @@ int far does_npc_like(int index)
     register int i;
 
     obj = Obj_IntTMem(index);
-    if (ComObjData[obj->id & ID_ITEM].value == 0) return -1;
-    id = obj->id & ID_ITEM;
+    if (ComObjData[OBJ_ITEM(obj)].value == 0) return -1;
+    id = OBJ_ITEM(obj);
     cls = (id >> 4) + BARTER_CLASS;
     liked = 0;
     if (npc_likes)

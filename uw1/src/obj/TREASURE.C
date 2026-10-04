@@ -163,7 +163,7 @@ void far generate_weapons(struct Object far *npc)
         else
             quality = rand() % 64;
         obj->qn.f.quality = quality;
-        if (OBJ_MINOR(obj) == MINOR_MISSILE && (unsigned char)Missile[obj->id & ID_INCLASS].ammo == 0xC0)
+        if (OBJ_MINOR(obj) == MINOR_MISSILE && (unsigned char)Missile[OBJ_INCLASS(obj)].ammo == 0xC0)
             obj->ol.f.link = rand() % 8 + 4;
         Obj_Add(&npc->ol.link, obj);
     }
@@ -196,10 +196,10 @@ void far generate_inventory(struct Object far *npc)
 {
     int minor, index;
 
-    if OBJ_HAS_INV(npc)
+    if (OBJ_HAS_INV(npc))
         return;
     minor = OBJ_MINOR(npc);
-    index = npc->id & ID_INCLASS;
+    index = OBJ_INCLASS(npc);
     LootCreature = &Creature[(minor << 4) + index];
     generate_treasure(npc);
     generate_food(npc);

@@ -173,7 +173,7 @@ char far * far bab_malloc(int32 n)
             }
             current->next = current;
             tail = current;
-            result = (char far *)current + 8;
+            result = (char far *)(current + 1);
             TAG_SLOT(tail, (int)(current->size / 4) - 1) = TAG_VAL(result);
             break;
         }

@@ -109,11 +109,11 @@ char far find_good_x_and_y(struct Object far *obj, int x, int y,
                 for (link = &tile->objects; link->f.index;
                      link = &o->qn.link) {
                     o = Obj_PtrTMem(link);
-                    if (ComObjData[o->id & ID_ITEM].height || IsMobElem(o))
+                    if (ComObjData[OBJ_ITEM(o)].height || IsMobElem(o))
                         Obj_Punt(&tile->objects, o, 0);
                 }
             }
-            if (can_place(obj->id & ID_ITEM, Obj_MemTPtr(obj), tx * 8 + 3, ty * 8 + 3,
+            if (can_place(OBJ_ITEM(obj), Obj_MemTPtr(obj), tx * 8 + 3, ty * 8 + 3,
                           (tile->height << 3) + ((tile_walls[tile->type] & 0x20) ? 4 : 0),
                           0, 8)) {
                 *nx = tx;
@@ -315,7 +315,7 @@ unsigned char far go_fish(void)
     move_along(PlayerFacing >> 8, 0xB, &x, &y);
     tile = Map_GetAddr(x >> 3, y >> 3);
     if (tile->type != TILE_SOLID) {
-        if ((TxmTerr[tile->floor] >> 4) != 1)
+        if ((TxmTerr[tile->floor] >> 4) != TERRAIN_WATER)
             goto bad_place;
         if ((OBJ_Z(ThePlayer) >> 3) <= (uint16)(tile->height - 1))
             goto bad_place;
@@ -418,8 +418,8 @@ void far emerald_trap(struct Object far *trap, int x, int y)
         obj = CreateObj(ITEM_VAS_STONE, 0);
         tile = Map_GetAddr(x, y + 1);
         SET_Z(obj, 0x40);
-        obj->pos = obj->pos & 0x1FFF | 0x6000;
-        obj->pos = obj->pos & 0xE3FF | 0x0C00;
+        SET_FINEX(obj, 3);
+        SET_FINEY(obj, 3);
         Obj_Add(&tile->objects, obj);
         obj_deal(obj, x, y + 1, 1);
         for (dx = 0; dx < 4; dx++)
@@ -487,8 +487,8 @@ void far talking_door_trap(struct Object far *trap, int x, int y)
     struct Object far *door;
     door = CreateObj(FIRST_CREATURE, 1);
     door->whoami = 0x19;
-    SET_ATTITUDE(door, 3);
-    SET_GOAL(door, 0xA);
+    SET_ATTITUDE(door, ATT_FRIENDLY);
+    SET_GOAL(door, GOAL_TALK);
     TalkTo(door);
     Obj_Free(door);
 }
@@ -555,14 +555,14 @@ char far death_check(struct Object far *obj, char mode)
         break;
     case 0x16:
         if (!mode) {
-            if (!((obj->b0A & 0x70) >> 4)) {
-                obj->b0A = obj->b0A & 0x8F | 0x10;
+            if (!OBJ_TERRAIN(obj)) {
+                SET_TERRAIN(obj, 1);
                 player_get_exp(0x1F4);
             }
             obj->last_hit = 0;
             clear_fight_state();
-            obj->b15 = obj->b15 & 0xC0 | 0x20;
-            obj->goal_word = obj->goal_word & 0x0FFF;
+            SET_SEQ(obj, SEQ_STAND);
+            SET_FRAME(obj, 0);
             TalkTo(obj);
             return 0;
         }
@@ -593,10 +593,10 @@ char far death_check(struct Object far *obj, char mode)
 int far get_rep_diff(struct Object far *obj)
 {
     register int item;
-    switch OBJ_MAJOR(obj) {
+    switch (OBJ_MAJOR(obj)) {
     case MAJOR_HACK:
-        item = obj->id & ID_INCLASS;
-        switch OBJ_MINOR(obj) {
+        item = OBJ_INCLASS(obj);
+        switch (OBJ_MINOR(obj)) {
         case 0: return (char)Weapons[item].durability;
         case 1: return -1;
         case 2: ;
@@ -721,7 +721,7 @@ unsigned char far clear_loretry(struct Object far *obj)
 {
     if (IsMobElem(obj)) return 0;
     if (OBJ_MAJOR(obj) == MAJOR_RECT || OBJ_MAJOR(obj) == MAJOR_TRAP
-        || ComObjData[obj->id & ID_ITEM].render == 2) return 0;
+        || ComObjData[OBJ_ITEM(obj)].render == 2) return 0;
     SET_HEADING(obj, OBJ_HEADING(obj) & 3);
     return 0;
 }

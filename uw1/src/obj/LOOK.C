@@ -269,12 +269,12 @@ void far RectLook(struct Object far *obj, int look)
 
     base = 0x160;
     c = 0;
-    switch OBJ_INCLASS(obj) {
+    switch (OBJ_INCLASS(obj)) {
     case 14:
     case 15:
         if (look >= 0)
             look_nothing(2, obj->ol.f.owner + 1);
-        if (look > 0 && (w64_types[obj->ol.f.owner] & 0xFF) == 9)
+        if (look > 0 && (w64_types[obj->ol.f.owner] & 0xFF) == TERR_WINDOW)
             player_look_shaft();
         else if (look == -1)
             break;

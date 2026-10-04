@@ -105,7 +105,7 @@ int far UseTrigger(struct Object far *who, struct Object far *start,
     register int sub;
     register int result;
     minor = OBJ_MINOR(trig);
-    sub = trig->id & ID_INCLASS;
+    sub = OBJ_INCLASS(trig);
     if (minor != 2) return 2;
     if (type >= 0) {
         if (start != 0 && OBJ_CLASS(start) == CLASS_SWITCH &&
@@ -293,7 +293,7 @@ int far UseTrap(struct Object far *trap, int x, int y)
         if ((int)(((int32)rand() * 0x3F) / 0x8000L) < trap->qn.f.quality)
             return 2;
         continue_chain = 0;
-        if OBJ_ISQUANT(trap)
+        if (OBJ_ISQUANT(trap))
             break;
         linked = Obj_PtrTMem(&trap->ol.link);
         if (linked == 0)
@@ -478,8 +478,8 @@ void far delete_trap(union Link far *head, struct Object far *trap)
    and is_this_wandering's 793); no original name, UW2 having no such function. */
 char far gronkify_talkto_player(struct Object far *npc, NEARPTR arg)
 {
-    if (OBJ_GOAL(npc) == 7)
-        SET_GOAL(npc, 1);
+    if (OBJ_GOAL(npc) == GOAL_STAND_7)
+        SET_GOAL(npc, GOAL_GO_HOME);
     mouse_freereign();
     TalkTo(npc);
     return 0;

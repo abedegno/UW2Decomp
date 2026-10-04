@@ -260,7 +260,7 @@ struct Object far * far missile_fire(void)
         proj->ol.f.link = 1;
         SET_ITEM(proj, missile_item);
         if (missile_arc)
-            missile_arc = missile_src->b18 & 0x1F;
+            missile_arc = OBJ_FINEHEAD(missile_src);
         missile_arc = missile_arc + (OBJ_HEADING(missile_src) << 5);
         missile_arc += missile_trx;
         missile_arc = (missile_arc + 0x100) & 0xFF;

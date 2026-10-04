@@ -110,7 +110,7 @@ void far MakeBagClose(struct Bag far *bag)
     int cls;
 
     obj = Obj_IntTMem(bag->obj.f.index);
-    cls = obj->id & ID_INCLASS;
+    cls = OBJ_INCLASS(obj);
     if (cls < 12 && (cls & 1))
         SET_INCLASS(obj, cls - 1);
 }
@@ -288,7 +288,7 @@ void far OpenTheBag(int slot)
     } else {
         mouse_hide();
         if ((scrmode == 1 || scrmode == 4) && RightPanel == 0)
-            pic_to_screen(0x2097, 0xEC, 0x77, 0x29, 0x54);
+            pic_to_screen(ICON_INV + 6, 0xEC, 0x77, 0x29, 0x54);
         if (BagSaveHandles[0] == 0) {
             for (j = DISP_PACK; j <= DISP_PACK_LAST; j++) {
                 BagSaveHandles[j - DISP_PACK] = valloc(InvDisplay[j].w, InvDisplay[j].h);
@@ -330,7 +330,7 @@ void far OpenTheBag(int slot)
         }
     }
     cont = Obj_PtrTMem(&Inventory[INV_BAG]);
-    cls = cont->id & ID_INCLASS;
+    cls = OBJ_INCLASS(cont);
     if (cls < 12 && !(cls & 1))
         SET_INCLASS(cont, cls + 1);
     DisplayOpenBag();

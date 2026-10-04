@@ -22,5 +22,5 @@ void far animobj_load(FILE *fd)
 /* UW2 FM Towns: animobj_class_data. */
 char * far animobj_class_data(void)
 {
-    return (char *)&animclassd[ActiveObj->id & ID_INCLASS];
+    return (char *)&animclassd[OBJ_INCLASS(ActiveObj)];
 }

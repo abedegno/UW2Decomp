@@ -76,7 +76,7 @@ void far setup_converse_data(struct Object far *npc)
     who = npc->whoami;
     val = who ? (who + 0x10) | STR_CONV : OBJ_ITEM(npc) | STR_OBJNAMES;
     bab_var("npc_name", &val, 1);
-    if (OBJ_GOAL(npc) == 5 && OBJ_GTARG(npc) == 1)
+    if (OBJ_GOAL(npc) == GOAL_ATTACK && OBJ_GTARG(npc) == 1)
         val = 0;
     else if (OBJ_ALLY(npc))
         val = 6;
@@ -146,7 +146,7 @@ char far update_converse_data(struct Object far *npc)
     SET_TALKEDTO(npc, 1);
     bab_var_out("npc_attitude", &val, 1);
     if (val > 3) {
-        SET_ATTITUDE(npc, 3);
+        SET_ATTITUDE(npc, ATT_FRIENDLY);
         SET_ALLY(npc, 1);
     } else
         SET_ATTITUDE(npc, val);

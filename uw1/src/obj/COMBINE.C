@@ -56,8 +56,8 @@ int far ObjsBeCombinable(struct Object far *a, struct Object far *b)
     if (OBJ_ISQUANT(b) && b->ol.f.link > 1 ||
         !OBJ_ISQUANT(b) && b->ol.f.link > 0)
         return -1;
-    ids[1] = a->id & ID_ITEM;
-    ids[0] = b->id & ID_ITEM;
+    ids[1] = OBJ_ITEM(a);
+    ids[0] = OBJ_ITEM(b);
     dprintf("checking if %d and %d are combinable...\n", ids[1], ids[0]);
     entry = ObjectCombinations;
     for (i = 0; i < NUM_COMBINATIONS; entry++, i++) {
@@ -86,7 +86,7 @@ char far RemoveAfterCombine(struct Object far *obj, int combo)
     register int id;
     register uint16 *entry;
 
-    id = obj->id & ID_ITEM;
+    id = OBJ_ITEM(obj);
     entry = (uint16 *)&ObjectCombinations[combo];
     if ((*entry & ID_ITEM) == id)
         ;
@@ -120,8 +120,8 @@ char far make_stew(void)
     while (obj != 0) {
         ok = 0;
         for (i = 0; i < 3; i++) {
-            found[i] += recipe[i] == (obj->id & ID_ITEM);
-            ok |= recipe[i] == (obj->id & ID_ITEM);
+            found[i] += recipe[i] == OBJ_ITEM(obj);
+            ok |= recipe[i] == OBJ_ITEM(obj);
         }
         if (!ok)
             goto wrong;
@@ -135,7 +135,7 @@ char far make_stew(void)
     if (Obj_MemTPtr(bowl) == OpenBag->obj.f.index)
         CloseTheBag();
     Obj_FreeChain(&bowl->ol.link);
-    bowl->id = bowl->id & 0xFE00 | ITEM_ROTWORM_STEW;
+    SET_ITEM(bowl, ITEM_ROTWORM_STEW);
     DisplayInventory();
     game_sprint(0x95);
     return 1;

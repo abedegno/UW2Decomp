@@ -89,7 +89,7 @@ unsigned char hitangle;
 char criti;
 int16 fromwho;
 static struct Object far *curr_weapon;
-static unsigned char *weapon_data;
+static struct Weapon *weapon_data;
 unsigned char power;
 
 /* Picks the hit location (0..3) from the defender's bottom and top (dz, dtop) and the
@@ -523,7 +523,7 @@ int far check_ammo(int weapon)
    record for a bow or sling (returns 0, or -1 when there is no ammunition), else a
    Weapons record, else Weapons[15], the bare fist. Sets wsize, the weapon's reach, from
    ComObjData radius. Returns 1 for melee. */
-int far GetPlayerWeapon(unsigned char **wd, struct Object far **weap)
+int far GetPlayerWeapon(struct Weapon **wd, struct Object far **weap)
 {
     register int item;
 
@@ -533,19 +533,19 @@ int far GetPlayerWeapon(unsigned char **wd, struct Object far **weap)
         if (((item = OBJ_ITEM(*weap)) >> 4) == CLASS_MISSILE) {
             if (Missile[item & ID_INCLASS].ammo >= 0 && Missile[item & ID_INCLASS].ammo < 0x10) {
                 if (check_ammo(item & ID_INCLASS) >= 0) {
-                    *wd = (unsigned char *)&Missile[item & ID_INCLASS];
+                    *wd = (struct Weapon *)&Missile[item & ID_INCLASS];
                     return 0;
                 }
                 mouse_release(1);
                 return -1;
             }
         } else if ((item >> 4) == CLASS_WEAPON) {
-            *wd = (unsigned char *)&Weapons[item & ID_INCLASS];
+            *wd = &Weapons[item & ID_INCLASS];
             wsize = ComObjData[item].radius;
         }
     }
     if (*wd == 0) {
-        *wd = (unsigned char *)&Weapons[ITEM_FIST];
+        *wd = &Weapons[ITEM_FIST];
         wsize = ComObjData[ITEM_FIST].radius;
     }
     return 1;
@@ -557,14 +557,14 @@ int far GetPlayerWeapon(unsigned char **wd, struct Object far **weap)
    plus strength / 9; bare handed, 2/5 of the barehand skill plus strength / 6 plus 4
    (strength is attr[0] of the player's Creature record). A weapon enchantment of major
    class 0xC adds (effect & 7) + 1 to damage when bit 3 of the effect is set, else to hit. */
-void far DoPlayerWeapon(register unsigned char *wd, struct Object far *weap, int swing)
+void far DoPlayerWeapon(register struct Weapon *wd, struct Object far *weap, int swing)
 {
     int16 major;
     int16 effect;
     char flag;
     register int skill;
 
-    if ((skill = wd[6]) >= SKILL_MISSILE || skill < SKILL_BAREHAND)
+    if ((skill = wd->skill) >= SKILL_MISSILE || skill < SKILL_BAREHAND)
         skill = SKILL_BAREHAND;
     askill = (player->skills[SKILL_ATTACK] >> 1) + player->skills[skill];
     askill += player->dexterity / 7;
@@ -573,7 +573,7 @@ void far DoPlayerWeapon(register unsigned char *wd, struct Object far *weap, int
     if (skill == SKILL_BAREHAND)
         damage = player->skills[SKILL_BAREHAND] * 2 / 5 + Creature[ThePlayer->id & ID_INMAJOR].attr[0] / 6 + 4;
     else
-        damage = wd[swing_kind[swing - 1]] + Creature[ThePlayer->id & ID_INMAJOR].attr[0] / 9;
+        damage = wd->damage[swing_kind[swing - 1]] + Creature[ThePlayer->id & ID_INMAJOR].attr[0] / 9;
     fromwho = 1;
     towhere = swing;
     if (weap != 0) {
@@ -636,7 +636,7 @@ void far player_attack(int swing)
     char held STACK_JUNK(0);    /* read before it is set when there is no attack key (as
                                    in UW2) */
     int tx;
-    unsigned char *wd;
+    struct Weapon *wd;
 
     if (attackKey > 0)
         held = key_on[attackKey] != 0;
@@ -669,7 +669,7 @@ void far player_attack(int swing)
                     set_screen_frame(3, 9);
                     swing_state = 0;
                     GameInputMode += 4;
-                    force_mouse_cursor(0x1075);
+                    force_mouse_cursor(ICON_CURSORS + 9);
                     return;
                 }
                 if (!held) {
@@ -689,7 +689,7 @@ void far player_attack(int swing)
                 elapsed += (int)(GAME_TIME() - otime);
                 otime = GAME_TIME();
                 while (elapsed > 0x10) {
-                    play_pow += wd[4];
+                    play_pow += wd->speed;
                     if (play_pow > 100)
                         play_pow = 100;
                     set_screen_frame(3, play_pow / 12 + 1);
@@ -708,9 +708,9 @@ void far player_attack(int swing)
         if (pQatt <= -10)
             return;
         set_screen_frame(3, 0);
-        charge = wd[5] - wd[3];
+        charge = wd->max_charge - wd->min_charge;
         charge = charge * play_pow / 100;
-        play_pow = wd[3] + charge;
+        play_pow = wd->min_charge + charge;
         playerdat->noise = 15;
         power = play_pow;
         DoPlayerWeapon(wd, curr_weapon, swing_state);
@@ -816,7 +816,7 @@ void far player_killed_a(struct Object far *npc)
 
     if (OBJ_MAJOR(npc) == MAJOR_CREATURE) {
         set_screen_frame(4, 2);
-        set_new_music(9);
+        set_new_music(MUSIC_VICTORY);
         exp = Creature[npc->id & ID_INMAJOR].exp;
         exp = exp * 4 + rollem(2, exp);
         if (OBJ_POWERFUL(npc))

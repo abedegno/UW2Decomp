@@ -53,6 +53,8 @@ struct Spell {
     int16 runes;                        /* the three runes, 5 bits each */
     unsigned char sub;
 };
+/* A spell's class (SPELLC_*), from struct Spell's cls. */
+#define SPELL_CLASS(s)  (((s).cls & 0xF8) >> 3)
 
 /* COMBAT.C: combat */
 int far check_ammo(int weapon);

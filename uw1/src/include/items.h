@@ -29,8 +29,8 @@ enum ObjMajor {
     MAJOR_CREATURE,                     /* 0x040-0x07F: creatures, the player 0x7F */
     MAJOR_MISC,                         /* 0x080-0x0BF: containers, lights, wands,
                                            treasure and food */
-    MAJOR_STUFF,                        /* 0x0C0-0x0FF: scenery, the Key of Infinity's
-                                           parts and runestones */
+    MAJOR_STUFF,                        /* 0x0C0-0x0FF: scenery, the keys of Truth,
+                                           Love and Courage and runestones */
     MAJOR_SPEC,                         /* 0x100-0x13F: keys, quest items, magic items
                                            and books */
     MAJOR_RECT,                         /* 0x140-0x17F: doors, 3D objects and switches */
@@ -50,8 +50,8 @@ enum ObjMajor {
 #define CLASS_FOOD          0x0B        /* food, drink and the two potions */
 #define CLASS_SCENERY       0x0C        /* scenery and junk (UseUtil) */
 #define CLASS_SCENERY2      0x0D
-#define CLASS_KEY_PARTS     0x0E        /* the blank runestone, the Key of Infinity and its
-                                           parts (0xE1-0xE7), the runestones An to Ex */
+#define CLASS_KEY_PARTS     0x0E        /* the blank runestone, the keys 0xE1-0xE7, the
+                                           runestones An to Ex */
 #define CLASS_RUNESTONE     0x0F        /* the runestones Flam to Ylem */
 #define CLASS_KEY           0x10        /* keys, the lockpick and the lock (UseKey) */
 #define CLASS_UNIQUE        0x11        /* UseUnique */
@@ -129,7 +129,9 @@ enum TriggerType {
 #define FIRST_TREASURE      0x0A0
 #define FIRST_FOOD          0x0B0
 #define FIRST_STUFF         0x0C0
-#define FIRST_KEY_PART      0x0E1       /* the Key of Infinity's parts, 0xE1-0xE7 */
+#define FIRST_KEY_PART      0x0E1       /* ITEM_KEY_OF_TRUTH: the keys of Truth, Love
+                                           and Courage, the three pieces of the two
+                                           part key, the Key of Infinity (0xE1-0xE7) */
 #define FIRST_RUNESTONE     0x0E8       /* An; the 24 runes run in alphabetical order */
 #define FIRST_SPEC          0x100
 #define FIRST_BOOK          0x130
@@ -374,8 +376,8 @@ enum TriggerType {
 #define ITEM_BLOOD_STAIN_DE              0x0DE
 #define ITEM_BLOOD_STAIN_DF              0x0DF
 
-/* The blank runestone, the eight keys of the Key of Infinity and the 24 runestones
-   (classes 0x0E and 0x0F) */
+/* The blank runestone, the keys of Truth, Love and Courage, the two part key's pieces,
+   the Key of Infinity, and the 24 runestones (classes 0x0E and 0x0F) */
 #define ITEM_RUNESTONE                   0x0E0
 #define ITEM_KEY_OF_TRUTH                0x0E1
 #define ITEM_KEY_OF_LOVE                 0x0E2

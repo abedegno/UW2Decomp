@@ -56,8 +56,6 @@ void far player_setup(int x, int y, int how);
    union (player.h). */
 extern union PlayerStore PlayerDat;
 
-#define SPELL_CLASS(s)  (((s).cls & 0xF8) >> 3)
-
 extern struct Spell far spells[NUM_SPELLS];
 /* UW1's own routines, at the addresses of their stubs (the listing's names). */
 
@@ -116,7 +114,7 @@ char far do_spell(unsigned char cls, unsigned char sub, struct Object far *who,
             GameInputMode = 3;
             ObjectActing = ThePlayer;
             ObjectActorArg = sub;
-            force_mouse_cursor(0x1075);
+            force_mouse_cursor(ICON_CURSORS + 9);
         } else
             release_missile(who, sub);
         break;
@@ -376,9 +374,9 @@ char far sp_charm(int x, int y, struct Object far *target)
     if (check_res(target, 1, DMG_MAGIC)) {
         put_effect(target, 7, 4, 0, 7, x, y);
         if (!OBJ_ALLY(target))
-            change_critter_goal(target, 2, 0);
+            change_critter_goal(target, GOAL_WANDER, 0);
         SET_ALLY(target, 1);
-        SET_ATTITUDE(target, 3);
+        SET_ATTITUDE(target, ATT_FRIENDLY);
     }
     return 1;
 }
@@ -387,21 +385,21 @@ char far sp_charm(int x, int y, struct Object far *target)
 char far sp_confusion(int x, int y, struct Object far *target, struct Tile far *tile,
                       unsigned char src)
 {
-    return hit_critter_goal(2, 1, target, x, y);
+    return hit_critter_goal(GOAL_WANDER, ATT_UPSET, target, x, y);
 }
 
 /* Cause Fear: goal 6 (flee, inferred) unless resisted. */
 char far sp_fear(int x, int y, struct Object far *target, struct Tile far *tile,
                  unsigned char src)
 {
-    return hit_critter_goal(6, -1, target, x, y);
+    return hit_critter_goal(GOAL_FLEE, -1, target, x, y);
 }
 
 /* Paralyze: goal 7 and attitude 1 unless resisted. */
 char far sp_hold(int x, int y, struct Object far *target, struct Tile far *tile,
                  unsigned char src)
 {
-    return hit_critter_goal(7, 1, target, x, y);
+    return hit_critter_goal(GOAL_STAND_7, ATT_UPSET, target, x, y);
 }
 
 /* Calls fn on the squares of a w + 1 by h + 1 rectangle (clipped to the map), at most
@@ -623,7 +621,7 @@ void far creat_spell(struct Object far *caster, char which)
             if (caster == ThePlayer) {
                 SET_ALLY(obj, 1);
             } else {
-                SET_ATTITUDE(obj, 0);
+                SET_ATTITUDE(obj, ATT_HOSTILE);
                 SET_B19_0(obj, 1);
                 SET_DESTX(obj, OBJ_HOMEX(ThePlayer));
                 SET_DESTY(obj, OBJ_HOMEY(ThePlayer));
@@ -775,7 +773,7 @@ void far xt_spells(struct Object far *caster, char stab, char sub)
             ObjectActorArg = sub;
             ObjectActing = ThePlayer;
             ObjectActor = (ActorFn)obj_spells;
-            force_mouse_cursor(0x1076);
+            force_mouse_cursor(ICON_CURSORS + 10);
             break;
         case 6:                         /* cure poison */
             player->poison = 0;

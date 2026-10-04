@@ -117,7 +117,7 @@ void far TalkTo(struct Object far *thing)
         return;
     }
     if (OBJ_ITEM(thing) == ITEM_TMAP_C) {
-        if ((w64_types[thing->ol.f.owner] & 0xFF) == 8)
+        if ((w64_types[thing->ol.f.owner] & 0xFF) == TERR_PRINCESS)
             game_sprint(0x110);  /* "There is no reaction from the princess." */
         return;
     }
@@ -129,10 +129,10 @@ void far TalkTo(struct Object far *thing)
     who = talking_to->whoami;
     subclass = OBJ_INMAJOR(talking_to);
     if (who != 0x16 && who != 0x8E && who != 0xE7 &&
-        (((OBJ_GOAL(talking_to) == 5 || OBJ_GOAL(talking_to) == 6 ||
-           OBJ_GOAL(talking_to) == 9) && OBJ_GTARG(talking_to) == 1 ||
-          OBJ_ATTITUDE(talking_to) == 0) && !OBJ_ALLY(talking_to) || who == 0xff) &&
-        OBJ_GOAL(talking_to) != 10) {
+        (((OBJ_GOAL(talking_to) == GOAL_ATTACK || OBJ_GOAL(talking_to) == GOAL_FLEE ||
+           OBJ_GOAL(talking_to) == GOAL_CORNERED) && OBJ_GTARG(talking_to) == 1 ||
+          OBJ_ATTITUDE(talking_to) == ATT_HOSTILE) && !OBJ_ALLY(talking_to) || who == 0xff) &&
+        OBJ_GOAL(talking_to) != GOAL_TALK) {
         scroll_print(get_string(STR_CONV | 1));  /* "You get no response.\n" */
         return;
     }
@@ -175,7 +175,7 @@ void far strt_converse(void)
     char name[0x28];
     update_sprites();
     if ((convoWorkspace = get_workspace()) == 0) return;
-    set_new_music(0xD);
+    set_new_music(MUSIC_MAPS);
     change_music_maybe();
     convoScreen = MK_FP(convoWorkspace, 0);
     mouse_hide();

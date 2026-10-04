@@ -229,7 +229,7 @@ char far player_cast(unsigned char idx)
 
     level = idx / 6;
     level++;
-    cls = (spells[idx].cls & 0xF8) >> 3;
+    cls = SPELL_CLASS(spells[idx]);
     if ((player->level + 1) / 2 < level)
         return fail_spell(0);
     if (level * 3 > player->play_mana)

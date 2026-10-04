@@ -35,10 +35,10 @@ char * far misc_class_data(void)
     register int subclass;
     register int minor;
     minor = OBJ_MINOR(ActiveObj);
-    subclass = ActiveObj->id & ID_INCLASS;
+    subclass = OBJ_INCLASS(ActiveObj);
     switch (minor) {
-    case 0: return (char *)Containers + subclass * 3;
-    case 1: return (char *)Lights + subclass * 2;
+    case 0: return (char *)&Containers[subclass];
+    case 1: return (char *)&Lights[subclass];
     case 2: return 0;
     default: return Food + subclass;
     }

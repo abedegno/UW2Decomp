@@ -480,7 +480,7 @@ int far Anim_Load(char *name, int level)
     register int ok = 1;
     int count;
 
-    if (get_arc(name, level + 8, animlist) != ANIM_BLOCK_LEN) {
+    if (get_arc(name, LEVARK_ANIM(level), animlist) != ANIM_BLOCK_LEN) {
         animcount = 0;
         ok = 0;
     } else {
@@ -498,5 +498,5 @@ char far Anim_Save(char *name, int level)
 {
     if (animcount < MAX_ANIMS)
         animlist[animcount].link.f.index = 0;
-    return put_arc(name, level + 8, animlist, ANIM_BLOCK_LEN);
+    return put_arc(name, LEVARK_ANIM(level), animlist, ANIM_BLOCK_LEN);
 }

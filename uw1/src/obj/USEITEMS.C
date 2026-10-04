@@ -140,7 +140,7 @@ struct Object far * far UseObj(struct Object far *who, struct Object far *obj, c
                 game_sprint(9);
                 obj = place_new(0L, ITEM_SILVER_SEED);
                 player->tree = 0;
-                obj->id = obj->id & 0xDFFF | ID_DOORDIR;
+                SET_DOORDIR(obj, 1);
                 return 0;
             }
             break;
@@ -307,8 +307,8 @@ void far UseBonesOn(struct Object far *obj, char how)
                 obj->ol.f.link = 0x222;
                 tmp.id = 0;
                 SET_ITEM(&tmp, 0x7E);
-                tmp.goal_word = tmp.goal_word & 0xFFF0 | 7;
-                tmp.attitude_word = tmp.attitude_word & 0x3FFF | 0xC000;
+                SET_GOAL(&tmp, GOAL_STAND_7);
+                SET_ATTITUDE(&tmp, ATT_FRIENDLY);
                 tmp.whoami = 0x1B;
                 TalkTo(&tmp);
                 o = Obj_PtrTMem(&Map_GetAddr(0x36, 0x34)->objects);
@@ -371,7 +371,7 @@ void far UseUtil(struct Object far *obj, char how)
 char far seg040_352B_9EA(struct Object far *npc, int div)
 {
     npc->hp = npc->hp / div + 1;
-    npc->attitude_word = npc->attitude_word & 0xFDFF | 0x200;
+    SET_NOHEAL(npc, 1);
     return 0;
 }
 
@@ -411,7 +411,7 @@ void far seg040_352B_AFF(struct Object far *obj, char how)
     unforce_mouse_cursor(3);
     CursorObjPtr = 0;
     GameInputMode = 0;
-    if (OBJ_ITEM(obj) == ITEM_TMAP_C && (w64_types[obj->ol.f.owner] & 0xFF) == 0xB) {
+    if (OBJ_ITEM(obj) == ITEM_TMAP_C && (w64_types[obj->ol.f.owner] & 0xFF) == TERR_TEXTURED_DOOR) {
         using_punt(ObjectActing, how, 1);
         checkTrap(ThePlayer, obj, 7, MapObj_X, MapObj_Y);
     } else
@@ -553,7 +553,7 @@ int far UseFood(struct Object far *who, struct Object far *food, char how)
     } else if (!how)
         return -2;
     if (OBJ_CLASS(food) == CLASS_FOOD)
-        nutrition = Food[food->id & ID_INCLASS];
+        nutrition = Food[OBJ_INCLASS(food)];
     switch (OBJ_ITEM(food)) {
     case ITEM_BOTTLE_OF_WINE:
         game_sprint(0x7F);

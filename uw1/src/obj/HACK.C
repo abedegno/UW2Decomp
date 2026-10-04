@@ -36,12 +36,12 @@ char * far hack_class_data(void)
     register int subclass;
     register int minor;
     minor = OBJ_MINOR(ActiveObj);
-    subclass = ActiveObj->id & ID_INCLASS;
+    subclass = OBJ_INCLASS(ActiveObj);
     switch (minor) {
-    case 1: return (char *)Missile + subclass * 3;
-    case 0: return (char *)Weapons + subclass * 8;
+    case 1: return (char *)&Missile[subclass];
+    case 0: return (char *)&Weapons[subclass];
     case 3: subclass += 16;
-    case 2: return (char *)Armor + subclass * 4;
+    case 2: return (char *)&Armor[subclass];
     default: return 0;
     }
 }
