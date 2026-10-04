@@ -65,6 +65,10 @@ def lookup(path, keys):
     for r in rows:
         seg, off = r[1].rsplit('_', 1)
         spans.setdefault(seg.lower(), []).append((int(off, 16), int(r[2], 16), r))
+        # the listing may name a segment with its paragraph (seg032_2DCA) where a reference
+        # gives only the segment (seg032_6A9)
+        short = re.match(r'^((?:seg|ovr)\d{3})_[0-9A-Fa-f]{4}$', seg)
+        if short: spans.setdefault(short.group(1).lower(), []).append((int(off, 16), int(r[2], 16), r))
     for k in keys:
         r = byname.get(k)
         if not r:

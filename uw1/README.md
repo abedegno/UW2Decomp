@@ -22,7 +22,7 @@ Still to do ([docs/PLAN.md](docs/PLAN.md)):
 
 ## Finding a routine
 
-`map/crosswalk.tsv` lists every function by the disassembly listing's name and address (the names in UWReverseEngineering's `UW1_asm.asm`, which UnderworldGodot cites), with the matched source's name for it and the file and line that define it. `python3 tools/crosswalk.py --find NAME_OR_ADDRESS` looks one up; an address inside a routine (`ovr119_3CE`) finds the routine that holds it. `python3 tools/crosswalk.py` rebuilds the table from the target tables and the built objects. seg005 is Borland's C library and has no source line.
+`map/crosswalk.tsv` lists every function by the disassembly listing's name and address (the names in UWReverseEngineering's `UW1_asm.asm`, which UnderworldGodot cites), with the matched source's name for it and the file and line that define it. `python3 tools/crosswalk.py --find NAME_OR_ADDRESS` looks one up; an address inside a routine (`ovr119_3CE`) finds the routine that holds it, and a segment may be given with or without the listing's paragraph (`seg032_6A9` or `seg032_2DCA_6A9`). UW2Decomp has the same table for UW2. Segment numbers mean different code in the two games, so a bare address resolves in both, and the citing code's context says which game it means. Between the two tables, 1,077 of the 1,085 listing names and addresses UnderworldGodot's sources cite resolve to a matched routine. `python3 tools/crosswalk.py` rebuilds the table from the target tables and the built objects. seg005 is Borland's C library and has no source line.
 
 ## Names
 
