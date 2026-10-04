@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include "compat.h"
 #include "object.h"
+#include "sys.h"
 #include "view3d.h"
 #include "x86/asmrt.h"
 #include "3d/render.h"
@@ -65,10 +66,39 @@ static int counting_hook(const struct uw_sprite_draw *d)
     return 0;
 }
 
+/* The game moves the player by the time since the last frame (PLAYMOVE.C's check_physics,
+   on the 256 Hz clock *Time) and writes the position back in whole 1/256 tiles each frame,
+   dropping the fraction: down for a move in a positive direction, up for a negative one. A PC
+   of 1992 took 10 to 15 ticks to draw a frame, and the loss was small; the host draws one in
+   under a tick, and a slow move in a positive direction (walking backwards with x at 0.7 of a
+   unit a tick) went nowhere at all (rc8: "struggling to walk back whilst in the corridors").
+   DOSBox at high cycles does the same. So a 3D frame waits until FRAME_TICKS ticks have passed
+   since the last, 32 frames a second at most. Not under replay, whose clock is the
+   recording's. */
+#define FRAME_TICKS 8
+extern int16_t rp_request;
+void plat_sleep_ns(uint64_t ns);
+
+static void pace_frame(void)
+{
+    static uint32_t last;
+    static int started;
+    volatile uint32_t *now = (volatile uint32_t *)Time;     /* the timer thread advances it */
+    int ms;
+    if (rp_request == 2) return;
+    /* at most 40 ms, should the clock ever stand still */
+    if (started)
+        for (ms = 0; *now - last < FRAME_TICKS && ms < 40; ms++)
+            plat_sleep_ns(1000000);
+    started = 1;
+    last = *now;
+}
+
 void cRender(void)
 {
     struct uw_framebuffer fb;
     static int checked;
+    pace_frame();
     if (!checked) {
         checked = 1;
         if (getenv("UW2PORT_SPRITEHOOK")) port_set_sprite_hook(counting_hook);
