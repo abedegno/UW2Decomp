@@ -1,0 +1,10 @@
+# segment seg004_260 base 0xA2D0 size 0x7AB org 0x260
+# cname: UW2 kin name (FM Towns, through UW2's SMOOTH.ASM), else the segment offset; SEG004 split at +260..+A0B
+smooth_closure	seg004_260	0x0	0x198
+seg004_3F8	seg004_3F8	0x198	0x64
+seg004_45C	seg004_45C	0x1FC	0x132
+seg004_58E	seg004_58E	0x32E	0x136
+seg004_6C4	seg004_6C4	0x464	0x134
+seg004_7F8	seg004_7F8	0x598	0x138
+smooth_over	seg004_930	0x6D0	0xB5
+seg004_9E5	seg004_9E5	0x785	0x26

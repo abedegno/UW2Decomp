@@ -1,0 +1,11 @@
+# segment seg004_0 base 0xA070 size 0x256 org 0x0
+# cname: UW2 kin name (FM Towns, through UW2's EXPAND.ASM), else the segment offset; SEG004 split at +0..+256
+exp_8str	seg004_20	0x20	0x19
+exp_4str	seg004_39	0x39	0x2A
+seg004_63	seg004_63	0x63	0x68
+seg004_CB	seg004_CB	0xCB	0xE
+exp_4run	seg004_D9	0xD9	0x43
+exp_5run	seg004_11C	0x11C	0x6F
+exp_8run	seg004_18B	0x18B	0x2
+seg004_18D	seg004_18D	0x18D	0x7
+seg004_194	seg004_194	0x194	0xC2

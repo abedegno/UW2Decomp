@@ -3,7 +3,7 @@ seg000	C	9	1255	0	0	0	9			yes
 seg001	assembly	9	893	0	0	0	7			yes
 seg002	C	1	143	0	0	0	1			yes
 seg003	assembly	138	25938	0	0	0	138			yes
-seg004	assembly	95	32119	0	0	0	95			
+seg004	assembly	95	32119	0	0	0	95			yes
 seg005_10B2	mixed	167	15440	0	0	0	167			
 seg006_1477	C	26	12812	0	0	0	9			yes
 seg007_1798	C	34	14634	0	0	0	14			yes

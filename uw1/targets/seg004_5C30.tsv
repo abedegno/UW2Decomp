@@ -1,0 +1,25 @@
+# segment seg004_5C30 base 0xFCA0 size 0xD14 org 0x5C30
+# cname: UW2 kin name (FM Towns, through UW2's sources; checked against UW1's opcode table), else the segment offset; SEG004 split at +5C30..+6944
+do_set_tmctxt	seg004_5C30	0x0	0x15
+do_set_gmap_ctxt	seg004_5C45	0x15	0x19
+do_ctxt_gtmap	seg004_5C5E	0x2E	0xC
+do_ctxt_gmap	seg004_5C6A	0x3A	0xE
+do_gtri	seg004_5C78	0x48	0x6
+do_gtmap	seg004_5C7E	0x4E	0x8
+do_gwtmap	seg004_5C86	0x56	0x5F
+do_compact_map	seg004_5CE5	0xB5	0x8
+do_compact_tmap	seg004_5CED	0xBD	0x8
+do_compact_wtmap	seg004_5CF5	0xC5	0x7A
+do_bcompact_tmap	seg004_5D6F	0x13F	0x8
+do_bcompact_wtmap	seg004_5D77	0x147	0x7A
+do_tmap_tri	seg004_5DF1	0x1C1	0xB
+do_wtmap	seg004_5DFC	0x1CC	0x8
+do_tmap	seg004_5E04	0x1D4	0x2F1
+draw_solid_tmap	seg004_60F5	0x4C5	0x34
+seg004_6129	seg004_6129	0x4F9	0x7
+seg004_6130	seg004_6130	0x500	0x11B
+seg004_624B	seg004_624B	0x61B	0x17B
+seg004_63C6	seg004_63C6	0x796	0x17F
+seg004_6545	seg004_6545	0x915	0x17D
+seg004_66C2	seg004_66C2	0xA92	0x181
+do_scalebm	seg004_6843	0xC13	0x101

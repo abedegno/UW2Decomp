@@ -15,7 +15,7 @@ For each segment: copy its UW2 source (map/seeds.tsv) to the same path here, cha
 ## Milestones
 
 1. Map, kin, seeds, the toolchain proof. Done.
-2. Match every segment (C, then assembly). In progress: see matched.txt.
+2. Match every segment (C, then assembly). Done 2026-10-04: every code segment but seg005 (Borland's C runtime library, which the link takes from CM.LIB, as UW2's) matches whole and verifies, 353,727 of 369,167 bytes; seg003, seg004 and seg019 as per-module tables (docs/NOTES.md).
 3. Data to source, the link, an EXE byte-identical to UW.EXE (Exhume's link stage: UW2's examples/uw2/link.py as the reference).
 4. The gate, the modding build, the readability pass.
 5. The port, on Exhume's runtime and UW2Decomp's port layer.
