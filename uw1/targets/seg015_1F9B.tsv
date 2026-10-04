@@ -10,7 +10,7 @@ FindStringDelimiter	FindStringDelimiter_seg015_1F9B_179	0x16B	0x28
 str_str	seg015_1F9B_1A1	0x193	0x5B
 str_cmp	seg015_1F9B_1FC	0x1EE	0x29
 local_do_palette	seg015_1F9B_225	0x217	0x35
-gr_pixel	seg015_1F9B_25A	0x24C	0x4D
+seg015_1F9B_25A	seg015_1F9B_25A	0x24C	0x4D
 seg015_1F9B_2A7	seg015_1F9B_2A7	0x299	0x7E
 seg015_1F9B_325	seg015_1F9B_325	0x317	0x41
 seg015_1F9B_366	seg015_1F9B_366	0x358	0x55

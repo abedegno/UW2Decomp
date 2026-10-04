@@ -112,3 +112,11 @@ Things agents found that belong to the shared headers or the map, to settle in t
 - Matching tricks: jiggle_weapon's case 1 as if/else, case 2 a ternary with no break, wfo = 1 in every case; an empty `case 1: case 2:` gives adjust_weapon its jump table; `ok &= (char)read_gr_far(...)` gives a byte `and`.
 - Headers should take: `extern unsigned char far seg051_C377` (UW2's scrgr_fpage); EMS.C's seg012_10F/141/15E/1B1; init_panelflip(panel, x, y, w, h); RightPanel unsigned char; `int16 dseg_5c99_720C[]`; UW1 player record: shelf 0x47, lefty bit 0 and body bits 2-4 of 0x64, detail bits 4-7 of 0xB5.
 - TEXTMAPS.C (ovr131): the stub order renamed init_txtlib (ovr131_0), load_tr_mem (LoadTextureFile), Txm_Load (ApplyTerrainData), Txm_Save (ovr131_2E2); its BSS (DS:717A..726D) names chosen by key: f16p, floor_IDs (was floor_terrainrelated_dseg_5c99_717C), f32_buf, floor_num, w16_buf, w64_types, w64_buf, w64_num; TxmTerr and TxmID keep theirs. Callers follow. map.h now has UW1's Txm_Load(char *arc, int lev) (unsigned char), Txm_Save (char) and Load_Terrains(walls, floors); all 85 matched files rebuilt and verified after the change. Still to take: TxmID[0x30], TxmTerr[10], the far seg051 tables C378/C3B2 (bytes) and C3EC/C460 (words); errors go through pfatal_code.
+
+## From assembly wave 1
+
+- seg000 (SPRITE.ASM) and seg015_1F9B (MODEX.ASM) are assembly, as in UW2 (map/files.tsv says C). SPRITE is UW2's module byte for byte; its table starts at the sp_dirty word (+0). MODEX's mem_set has no odd-byte store after `rep stosw` (an odd count leaves the last byte).
+- seg020 (AIL.ASM) is an earlier AIL 2 release, version word 0CAh (UW2 0D3h): the int 8 vector through DOS (int 21h 35h/25h), register_timer does not set the period to -1, release_timer_handle has no -1 check, init_driver no null check after find_proc, no format_sound_buffer or format_VOC_file stubs. Its table ran into seg021 (+0CB5h).
+- seg046 (OVERLAY.ASM): the same five OVERLAY.LIB modules as UW2, at +0Ch (UW2 +5); __SEGTABEND__ 6A8h (13 fewer segment table entries). The table had run into padding and seg047's data.
+- seg001 (VALLOC.ASM): UW2's code at the same offsets; only far data moves (seg055's records 8 bytes later, seg048:4106h/4108h). valloc is the C entry at +4A.
+- Not yet in symbols.tsv: _dseg_5c99_2404, _seg001_5A, _seg003_522E, seg048, seg055, sp_inf_tab (5477:0008).
