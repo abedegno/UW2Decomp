@@ -93,7 +93,6 @@ _AnimObjInPipe	DS:2E1C	provisional
 _anm_cycle	59B8:0020	provisional
 _anm_lptab	59B8:0093	provisional
 _anti_magic_p	311A:0004	provisional
-_ApplyTerrainData_ovr131_20D	5A46:002A	provisional
 _aRb_4	DS:09F1	provisional
 _arc_buffer	DS:4826	provisional
 _area1_spells	DS:09BF	provisional
@@ -550,10 +549,6 @@ _dseg_5c99_10C	DS:010C	provisional
 _dseg_5c99_12B6	DS:12B6	provisional
 _dseg_5c99_5626	DS:5626	provisional
 _dseg_5c99_7178	DS:7178	provisional
-_dseg_5c99_717A	DS:717A	provisional
-_dseg_5c99_7190	DS:7190	provisional
-_dseg_5c99_71A6	DS:71A6	provisional
-_dseg_5c99_720C	DS:720C	provisional
 _dseg_5c99_761	DS:0761	provisional
 _dseg_5c99_A48	DS:0A48	provisional
 _DumpTheBag	333E:23EC	provisional
@@ -590,6 +585,8 @@ _ExplodingBook_ovr107_1259	59C8:0025	provisional
 _eyes	DS:08B3	provisional
 _eyes_frame	DS:08B5	provisional
 _eyes_seq	DS:08A9	provisional
+_f16p	DS:717A	provisional
+_f32_buf	DS:7190	provisional
 _fade_buffer	4423:0000	provisional
 _fadein	59E9:0057	provisional
 _fadein3d	59E9:003E	provisional
@@ -649,7 +646,8 @@ _flip_column	2E9A:230F	provisional
 _flip_scale	2E9A:213B	provisional
 _flog_list	2674:0D44	provisional
 _flood_path	128A:12BB	provisional
-_floor_terrainrelated_dseg_5c99_7	DS:717C	provisional
+_floor_IDs	DS:717C	provisional
+_floor_num	DS:71A6	provisional
 _flush_keys	1ADC:030A	provisional
 _Food	DS:5B5A	provisional
 _fopen	0EC5:07FC	provisional
@@ -842,6 +840,7 @@ _init_spells	5A4D:002F	provisional
 _init_strings	32A8:0003	provisional
 _init_timbres	1BD8:02EE	provisional
 _init_timers	1BD8:001D	provisional
+_init_txtlib	5A46:0020	provisional
 _init_voc	1BD8:1925	provisional
 _init_world	59D3:002A	provisional
 _InitPlayerRec	5A53:0039	provisional
@@ -919,12 +918,13 @@ _load_new_music	1BD8:041C	provisional
 _load_obj_ems	59F1:0061	provisional
 _load_script	5964:007F	provisional
 _load_sound_driver	1BD8:0573	provisional
+_Load_Terrains	5A46:0034	provisional
 _load_tr_ems	59F1:004D	provisional
+_load_tr_mem	5A46:0025	provisional
 _load_txtmaps	5A46:002F	provisional
 _load_weapcm	2E9A:16C5	provisional
 _load_weapon	2E9A:1347	provisional
 _LoadBitMap_ovr141_0	5A70:0020	provisional
-_LoadTextureFile_ovr131_49C	5A46:0025	provisional
 _loc	DS:7856	provisional
 _local_do_palette	1DAE:0225	provisional
 _locsqmod	DS:3172	provisional
@@ -1195,8 +1195,7 @@ _ovr113_2A2	59E5:0039	provisional
 _ovr127_0	5A35:0020	provisional
 _ovr130_0	5A3D:0034	provisional
 _ovr130_6D6	5A3D:002A	provisional
-_ovr131_0	5A46:0020	provisional
-_ovr131_2E2	5A46:0039	provisional
+_ovr131_1DD	5A46:003E	provisional
 _ovr137_0	5A5E:0020	provisional
 _ovr138_94	5A61:0043	provisional
 _ovr145_4FB	5A83:0048	provisional
@@ -1513,7 +1512,9 @@ _seg051_C375	4723:C375	provisional
 _seg051_C376	4723:C376	provisional
 _seg051_C377	4723:C377	provisional
 _seg051_C378	4723:C378	provisional
+_seg051_C3B2	4723:C3B2	provisional
 _seg051_C3EC	4723:C3EC	provisional
+_seg051_C460	4723:C460	provisional
 _seg051_C4D7	4723:C4D7	provisional
 _selopt	5991:0043	provisional
 _send_db	2ABA:0259	provisional
@@ -1747,6 +1748,8 @@ _turn_fx	1BD8:07FC	provisional
 _turn_music	1BD8:0768	provisional
 _turn_real_fine	15AB:2123	provisional
 _TurnInpRate	DS:0765	provisional
+_Txm_Load	5A46:002A	provisional
+_Txm_Save	5A46:0039	provisional
 _TxmID	DS:71AA	provisional
 _TxmTerr	DS:7192	provisional
 _txpos	DS:2448	provisional
@@ -1822,6 +1825,10 @@ _vort_timer	DS:357C	provisional
 _vort_x	DS:3598	provisional
 _vort_y	DS:3599	provisional
 _Vortex_ovr143_E09	5A53:0043	provisional
+_w16_buf	DS:71A8	provisional
+_w64_buf	DS:720A	provisional
+_w64_num	DS:726C	provisional
+_w64_types	DS:720C	provisional
 _wallmodtab	DS:05C1	provisional
 _wander_that_monster	59B1:0039	provisional
 _wandering_monster_check	59B1:004D	provisional

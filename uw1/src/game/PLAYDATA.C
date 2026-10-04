@@ -99,12 +99,12 @@ char far decode_obj_spell(struct Object far *obj, int16 *major, int16 *effect, c
 char far fx_is_on(void);
 char far music_is_on(void);
 /* UW1: ovr131's texture file loader (the listing's name; ovr131 is not matched). */
-void far LoadTextureFile_ovr131_49C(char *name, int16 *a, int16 *b, int16 n);
+void far load_tr_mem(char *name, int16 *a, int16 *b, int16 n);
 /* UW1: ovr131's floor texture data (the listing's names). */
-extern int16 floor_terrainrelated_dseg_5c99_717C[];
-extern int16 dseg_5c99_71A6[];
-extern int16 dseg_5c99_7190;
-extern int16 dseg_5c99_717A;
+extern int16 floor_IDs[];
+extern int16 floor_num[];
+extern int16 f32_buf;
+extern int16 f16p;
 extern int16 MazeNavigationTextureMaybe_dseg_5c99_7184;
 
 /* This file's _BSS, in UW1 DS:726E..727D (UW2 DS:8288..8297). player is the player
@@ -216,10 +216,10 @@ void far swap_tmap(unsigned char tex)
 {
     if (tex != 0xFF)
         MazeNavigationTextureMaybe_dseg_5c99_7184 = tex;
-    LoadTextureFile_ovr131_49C("DATA\\f32.tr", floor_terrainrelated_dseg_5c99_717C,
-                               dseg_5c99_71A6, dseg_5c99_7190);
-    LoadTextureFile_ovr131_49C("DATA\\f16.tr", floor_terrainrelated_dseg_5c99_717C,
-                               dseg_5c99_71A6, dseg_5c99_717A);
+    load_tr_mem("DATA\\f32.tr", floor_IDs,
+                               floor_num, f32_buf);
+    load_tr_mem("DATA\\f16.tr", floor_IDs,
+                               floor_num, f16p);
 }
 
 /* Turns the mushroom effect on or off. The first time ever it is set_cyb (an effect of

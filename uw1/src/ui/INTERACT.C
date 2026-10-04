@@ -85,7 +85,7 @@ struct Player1Scr {
 void far ovr130_0(int n);
 void far ovr130_6D6(int x, int y);
 void far seg014_1DC5_15C5(void);            /* the level's music again */
-extern int16 floor_terrainrelated_dseg_5c99_717C[];
+extern int16 floor_IDs[];
 void far stop_music(void);
 void far seg027_2861_EF9(void);
 void far EtherealVoidSpecialEffects_seg008_150(void);
@@ -441,7 +441,7 @@ struct Object far * far pick_3d(int how)
 
 /* No object under the pointer: describes the texture clicked when looking ('You see' and
    the texture's description from block 10: a wall texture (TxmID), one of the ten
-   others (floor_terrainrelated_dseg_5c99_717C), or nothing), else prints string 0x98 +
+   others (floor_IDs), or nothing), else prints string 0x98 +
    how. */
 void far look_nothing(unsigned char how, register int txt)
 {
@@ -452,7 +452,7 @@ void far look_nothing(unsigned char how, register int txt)
         if (txt < 0x30)
             t = TxmID[txt];
         else if (txt < 0x3A)
-            t = 0x1FE - floor_terrainrelated_dseg_5c99_717C[txt - 0x30];
+            t = 0x1FE - floor_IDs[txt - 0x30];
         else
             t = 0x1FF;
         scroll_print("You see ");

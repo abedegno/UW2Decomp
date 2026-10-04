@@ -117,7 +117,7 @@ void far TalkTo(struct Object far *npc);
 void far ExplodingBook_ovr107_1259(void);
 void far mantra_advance(int n);         /* SKILLS.C defines it (void); this caller pushes 0 */
 char far plant_seed(void);
-extern int16 dseg_5c99_720C[];
+extern int16 w64_types[];
 
 /* UW1's player record, the bytes used here (player.h has UW2's layout). */
 struct Player1Use {
@@ -491,7 +491,7 @@ void far TybalsOrb_seg040_A12(struct Object far *obj, char how, char other)
     }
 }
 
-/* Item 0xE7 used on object 0x16E standing on texture class 0xB (dseg_5c99_720C) is used
+/* Item 0xE7 used on object 0x16E standing on texture class 0xB (w64_types) is used
    up and sets off the object's traps with how 7; anything else, "It seems to have no
    effect." */
 void far seg040_352B_AFF(struct Object far *obj, char how)
@@ -499,7 +499,7 @@ void far seg040_352B_AFF(struct Object far *obj, char how)
     unforce_mouse_cursor(3);
     CursorObjPtr = 0;
     GameInputMode = 0;
-    if (OBJ_ITEM(obj) == 0x16E && (dseg_5c99_720C[obj->ol.f.owner] & 0xFF) == 0xB) {
+    if (OBJ_ITEM(obj) == 0x16E && (w64_types[obj->ol.f.owner] & 0xFF) == 0xB) {
         using_punt(ObjectActing, how, 1);
         checkTrap(ThePlayer, obj, 7, MapObj_X, MapObj_Y);
     } else

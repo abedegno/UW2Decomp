@@ -126,7 +126,7 @@ void far ovr145_4FB(void);
    name. */
 void far seg014_1DC5_15C5(void);
 /* UW1: the tile's floor texture numbers (ovr131, see PLAYDATA.C). */
-extern int16 floor_terrainrelated_dseg_5c99_717C[];
+extern int16 floor_IDs[];
 
 /* The use-skill key: only track (12) does anything, running mdetect(8, value) to
    report nearby creatures. Traps (10) and search (11) do nothing here; any other skill
@@ -801,7 +801,7 @@ char far plant_seed(void)
     tile = Map_GetAddr(x >> 3, y >> 3);
     if (tile->type != TILE_OPEN)
         return 0;
-    terrain = floor_terrainrelated_dseg_5c99_717C[tile->floor];
+    terrain = floor_IDs[tile->floor];
     if ((terrain < 5 || terrain > 11) && (terrain < 18 || terrain > 22)
         && (terrain < 27 || terrain > 31) && (terrain < 35 || terrain > 40))
         return 0;

@@ -103,7 +103,6 @@ char far LoadBitMap_ovr141_0(int pal, char *name);
 void far check_victory(void);
 /* UW1: start-up and UW.CFG routines with no name yet (the listing's). */
 void far memcheck(void);
-void far ovr131_0(void);
 void far init_lighting(void);
 void far seg014_1DC5_1D0D(FILE *fp);
 void far cuts_skipline(FILE *fp);
@@ -213,7 +212,7 @@ void far init_world(int argc, char *argv[])
         pfatal_code(2);
     if ((err = init_objects()) != 0)
         pfatal_code(err);
-    ovr131_0();
+    init_txtlib();
     init_3d();
     init_player();
     init_ai();

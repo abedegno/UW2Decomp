@@ -108,11 +108,12 @@ char far Map_Init(void);
 /* TEXTMAPS.C: a level's texture map */
 extern int16 TxmID[0x40];
 void far load_txtmaps(void);
-void far Load_Terrains(int16 *ids);
+void far Load_Terrains(int16 *walls, int16 *floors); /* UW1: walls and floors apart */
 extern uint16 TxmTerr[0x40];
 char far init_txtlib(void);
-unsigned char far Txm_Load(int arc, int lev, int flags);
-unsigned char far Txm_Save(int arc, int lev, int flags);
+/* UW1: an open archive (ovr091) and the level, as GAMEWRAP.C passes them */
+unsigned char far Txm_Load(char *arc, int lev);
+char far Txm_Save(char *arc, int lev);
 
 /* LIGHTING.C: lighting */
 void far init_lighting(void);

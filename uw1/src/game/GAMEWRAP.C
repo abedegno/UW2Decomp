@@ -105,8 +105,6 @@ char far ovr091_0(char far *arc, char *name);
 char far ovr091_153(char far *arc);
 char far Map_Load(char *arc, int level);
 char far Map_Save(char *arc, int level);
-void far ApplyTerrainData_ovr131_20D(char *arc, int level);
-char far ovr131_2E2(char *arc, int level);
 void far ClearAutoMap(void);
 void far GetAutoMapLevel(char *arc, int level);
 char far SaveAutoMapLevel(char *arc, int level);
@@ -172,7 +170,7 @@ int far GetLevel(register int level)
     ok = Map_Load(arc, level);
     RestorePlayerInv(0);
     if (ok > 0) {
-        ApplyTerrainData_ovr131_20D(arc, level);
+        Txm_Load(arc, level);
         ClearAutoMap();
         clear_paths();
         init_level_creature_stuff();
@@ -198,7 +196,7 @@ char far SaveLevel(register int level)
     SET_MAJOR(ThePlayer, 0);
     if ((ok = ovr091_0(arc, "SAVE0\\lev.ark")) != 0) {
         ok = Map_Save(arc, level);
-        ok = ok && ovr131_2E2(arc, level);
+        ok = ok && Txm_Save(arc, level);
         ok = ok && SaveAutoMapLevel(arc, level);
         ok = ok && ovr091_153(arc);
     }

@@ -258,10 +258,10 @@ void far BookLook(struct Object far *obj, int print)
 }
 
 /* UW1: a word for each texture of the level (CONVERSE.C's name); 9 is a shaft. */
-extern int16 dseg_5c99_720C[];
+extern int16 w64_types[];
 
 /* Looks at a decal: classes 14 and 15 describe the texture behind them (and a shaft
-   texture, dseg_5c99_720C 9, prompts player_look_shaft), class 4 is a bridge, class 5 a
+   texture, w64_types 9, prompts player_look_shaft), class 4 is a bridge, class 5 a
    gravestone and class 6 a plaque. A gravestone's picture number comes from
    DATA\GRAVE.DAT, indexed by its text number; with one, the scroll is cleared and the
    gravestone shown (player_look_grave), otherwise 'The gravestone reads: ' (or for a plaque
@@ -283,7 +283,7 @@ void far RectLook(struct Object far *obj, int look)
     case 15:
         if (look >= 0)
             look_nothing(2, obj->ol.f.owner + 1);
-        if (look > 0 && (dseg_5c99_720C[obj->ol.f.owner] & 0xFF) == 9)
+        if (look > 0 && (w64_types[obj->ol.f.owner] & 0xFF) == 9)
             player_look_shaft();
         else if (look == -1)
             break;

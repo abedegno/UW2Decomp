@@ -59,7 +59,7 @@ struct Player1Draw {
 /* UW1: GRSPIC.C's texture lookup: the segment of a texture's bitmap. */
 unsigned far seg009_38C(int index);
 /* UW1: a word for each texture of the level (CONVERSE.C and LOOK.C declare it too). */
-extern int16 dseg_5c99_720C[];
+extern int16 w64_types[];
 
 /* match: tmapson, lighton, curautocode and the other scalars at DS:546-550, and the tables
    after them up to DS:609, belong to GRIDDB.C, the file before this one in the data
@@ -265,7 +265,7 @@ void far do_obj(struct Object far *o)
             txtwal(0, sqmod, 4, o->ol.f.owner);
             *dbptr++ = 0xB2;
             *dbptr++ = cTmBm;
-            tm = dseg_5c99_720C[o->ol.f.owner] & 0xFF;
+            tm = w64_types[o->ol.f.owner] & 0xFF;
             if (tm == 3 || tm == 4) {
                 curautocode = 3;
                 tm = 1;
