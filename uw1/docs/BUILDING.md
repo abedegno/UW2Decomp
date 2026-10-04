@@ -54,7 +54,7 @@ These variables, when set, pass through to the replay DOS build (`replay.c`'s fi
 
 ### The sessions
 
-The recordings and their goldens are committed under `tests/replay`. They hold inputs and digests only, no game data.
+The recordings and their goldens are committed under `tests/replay`. The moves in `items` and `talk` use the step keys (Shift+W half a tile, Shift+A and Shift+D 45 degrees), which move by fixed amounts, so that the same steps reach the same place in every recording. They hold inputs and digests only, no game data.
 
 | Session | What it covers |
 | --- | --- |
@@ -64,6 +64,7 @@ The recordings and their goldens are committed under `tests/replay`. They hold i
 | `soundfm` | the same with the FM music alone (no speech card) |
 | `soundmt` | the same on a Roland MT-32 (MT32MPU.ADV at 330h), every wait doubled for the timbre uploads |
 | `items` | the sack by the start: picking it up, opening it, the map in it (the automap, with a note), look mode, the statistics panel, a save to slot I and a restore |
+| `talk` | the Red Key from the pack in the chest by the start, the locked door west of it unlocked and opened, the walk to Bragit's room in the human encampment, and a conversation with Bragit (whoami 67, the first man to talk to) with three answers. Talk mode clicks over a grid of the view in four directions, since Bragit wanders about his room: the misses say "You cannot talk to that", the first hit starts the conversation, and the rest fall in the conversation screen. Its golden is the largest (11 MB), since every click is a full checkpoint |
 | `load` | slot I, the save `items` makes, loaded from the main menu ("Journey Onward") |
 | `intro` | the title and the whole introduction, about four and a half minutes, to the main menu |
 
