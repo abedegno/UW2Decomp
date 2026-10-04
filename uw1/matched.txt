@@ -67,3 +67,8 @@ ovr113
 ovr101
 seg007_1798
 ovr153
+ovr099
+ovr122
+ovr145
+ovr121
+seg032_2DCA

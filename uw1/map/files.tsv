@@ -29,7 +29,7 @@ seg028_2985	C	5	1671	0	0	0	2			yes
 seg029_29EE	C	10	5000	0	0	0	3			yes
 seg030_2B26	C	19	6162	0	0	0	4			yes
 seg031	C	20	4647	0	0	0	1			yes
-seg032_2DCA	C	3	4684	0	0	0	2			
+seg032_2DCA	C	3	4684	0	0	0	2			yes
 seg033_2EEF	C	10	2452	0	0	0	2			yes
 seg034_2F89	C	13	3753	0	0	0	3			yes
 seg035_3073	C	2	325	0	0	0	0			yes
@@ -53,7 +53,7 @@ ovr094	C	15	2949	0	0	0	4			yes
 ovr095	C	35	8372	0	0	0	15			yes
 ovr096	C	7	38	0	0	0	7			yes
 ovr098	C	15	6069	0	0	0	4			yes
-ovr099	C	5	805	0	0	0	3			
+ovr099	C	5	805	0	0	0	3			yes
 ovr100	C	31	6513	0	0	0	17			yes
 ovr101	C	4	816	0	0	0	1			yes
 ovr103	C	2	1667	0	0	0	2			
@@ -72,8 +72,8 @@ ovr117	C	13	4238	0	0	0	2			yes
 ovr118	C	11	1907	0	0	0	1			yes
 ovr119	C	11	1502	0	0	0	5			yes
 ovr120	C	20	3733	0	0	0	0			yes
-ovr121	C	20	6470	0	0	0	7			
-ovr122	C	10	3430	0	0	0	6			
+ovr121	C	20	6470	0	0	0	7			yes
+ovr122	C	10	3430	0	0	0	6			yes
 ovr123	C	4	604	0	0	0	3			
 ovr125	C	2	137	0	0	0	1			yes
 ovr126	C	1	24	0	0	0	0			yes
@@ -91,7 +91,7 @@ ovr141	C	1	250	0	0	0	1
 ovr142	C	3	550	0	0	0	3			
 ovr143	C	23	6913	0	0	0	13			yes
 ovr144	mixed	2	14	0	0	0	2			yes
-ovr145	mixed	18	2583	0	0	0	8			
+ovr145	mixed	18	2583	0	0	0	8			yes
 ovr146	mixed	2	14	0	0	0	2			yes
 ovr149	mixed	2	45	0	0	0	2			yes
 ovr150	mixed	14	2874	0	0	0	2			yes
