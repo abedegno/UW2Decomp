@@ -81,6 +81,8 @@ _animlist	DS:369C	provisional
 _animobj_class_data	5950:0025	provisional
 _animobj_load	5950:0020	provisional
 _AnimObjInPipe	DS:2E1C	provisional
+_anm_cycle	59B8:0020	provisional
+_anm_lptab	59B8:0093	provisional
 _anti_magic_p	311A:0004	provisional
 _ApplyTerrainData_ovr131_20D	5A46:002A	provisional
 _aRb_4	DS:09F1	provisional
@@ -262,6 +264,7 @@ _constadr	DS:5734	provisional
 _constrain_movement	15AB:1FDC	provisional
 _Containers	DS:5B0A	provisional
 _control	DS:2440	provisional
+_conv_anmpal	59B8:0043	provisional
 _conv_buffer	DS:0EAB	provisional
 _conv_check_inv	599C:007A	provisional
 _conv_choice_ovr103_A13	599C:0084	provisional
@@ -280,6 +283,7 @@ _conv_play_menu	599C:0075	provisional
 _conv_print	599C:0048	provisional
 _conv_take_inv	599C:0070	provisional
 _conv_take_inv_id	599C:0089	provisional
+_conv_ws	DS:364A	provisional
 _conv_ws_seg	DS:364E	provisional
 _Converse	599C:002F	provisional
 _converse_event_loop	599C:00B1	provisional
@@ -361,6 +365,7 @@ _cTmHg	DS:3144	provisional
 _cTmSz	DS:2E14	provisional
 _Ctrl	DS:2340	provisional
 _cur_font	DS:23DC	provisional
+_cur_frame	DS:5658	provisional
 _cur_light_level	DS:1C50	provisional
 _curautocode	DS:054F	provisional
 _curBin	DS:248D	provisional
@@ -370,7 +375,26 @@ _curP	DS:2708	provisional
 _CursorObjPtr	DS:5B06	provisional
 _curvrad	DS:735A	provisional
 _curZoom	DS:2CFE	provisional
+_cuts_dispatch	DS:123A	provisional
+_cuts_screen	DS:565A	provisional
+_cuts_skipline	59B8:0025	provisional
 _CutsceneOrConversationStringBloc	DS:3644	provisional
+_cutsop_clang	59B8:00A2	provisional
+_cutsop_data	59B8:0098	provisional
+_cutsop_end	59B8:0057	provisional
+_cutsop_erase	59B8:00AC	provisional
+_cutsop_fadein	59B8:00A7	provisional
+_cutsop_fadeout	59B8:002A	provisional
+_cutsop_func	59B8:006B	provisional
+_cutsop_jump	59B8:0066	provisional
+_cutsop_loop	59B8:007F	provisional
+_cutsop_pause	59B8:00B1	provisional
+_cutsop_punt	59B8:0070	provisional
+_cutsop_say	59B8:0052	provisional
+_cutsop_skip	59B8:0061	provisional
+_cutsop_stop	59B8:007A	provisional
+_cutsop_txt	59B8:008E	provisional
+_cutsop_wait	59B8:005C	provisional
 _cWCol	DS:2E0A	provisional
 _cXfer	0090:1201	provisional
 _cycle_colors	210D:00A7	provisional
@@ -462,6 +486,7 @@ _do_rect	2BDD:0597	provisional
 _do_repair	59C8:0043	provisional
 _do_resurrect	5A76:0043	provisional
 _do_settings	1BD8:17ED	provisional
+_do_sound	59B8:002F	provisional
 _do_spell	311A:0078	provisional
 _do_teleport	59C8:0052	provisional
 _do_that_jump_kinda_thing	128A:2679	provisional
@@ -610,6 +635,7 @@ _foreground_color	DS:23D4	provisional
 _ForwInpRate	DS:0763	provisional
 _fread	0EC5:0954	provisional
 _free	0EC5:37F0	provisional
+_free_block	59B8:00B6	provisional
 _free_browse	598A:002F	provisional
 _free_converse	599C:0043	provisional
 _free_critter	2674:0A83	provisional
@@ -649,7 +675,8 @@ _generate_weapons	5A92:0025	provisional
 _get_animlen	3707:0CFC	provisional
 _get_class_data	5A3A:0020	provisional
 _get_current_music	1BD8:0738	provisional
-_get_cuts_ems	59B8:00BB	provisional
+_get_cut_banks	59B8:00BB	provisional
+_get_cuts_block	59B8:00C0	provisional
 _get_eye	2D9C:0B99	provisional
 _get_hp_back	311A:03BA	provisional
 _get_input	1ADC:0604	provisional
@@ -766,6 +793,7 @@ _init_browse	598A:0034	provisional
 _init_char	5991:0066	provisional
 _init_colors	0090:51B3	provisional
 _init_combinables	5998:002A	provisional
+_init_cutscene	59B8:0039	provisional
 _init_debug	59C5:0020	provisional
 _init_edit	59D3:0075	provisional
 _init_fx	1BD8:0F19	provisional
@@ -894,6 +922,7 @@ _make_path_from_flood_data	128A:1843	provisional
 _make_stew	5998:0034	provisional
 _make_string	32A8:0116	provisional
 _MakeBagClose	59FE:005C	provisional
+_makeFourChars_ovr108_671	59B8:003E	provisional
 _makePlayerInvCopy	5A05:0039	provisional
 _malloc	0EC5:38BF	provisional
 _ManageDungeonMap	595C:002A	provisional
@@ -1058,6 +1087,7 @@ _npc_say	599C:003E	provisional
 _npc_scroll	DS:0A75	provisional
 _npc_slot_hit_abs	597E:00A2	provisional
 _npp_func	DS:13BA	provisional
+_num_buf	DS:5656	provisional
 _nvokHgt	DS:2728	provisional
 _nvokTerr	DS:272C	provisional
 _Obj_Add	2674:0561	provisional
@@ -1122,9 +1152,6 @@ _ovr091_22C	5958:0039	provisional
 _ovr091_61A	5958:0034	provisional
 _ovr091_798	5958:002F	provisional
 _ovr097_CDB	597E:0093	provisional
-_ovr105_14E3	59B8:0039	provisional
-_ovr105_1639	59B8:0025	provisional
-_ovr105_3AB	59B8:00B6	provisional
 _ovr106_20	59C5:002A	provisional
 _ovr112_194	59E1:0025	provisional
 _ovr112_2A3	59E1:002A	provisional
@@ -1289,13 +1316,16 @@ _rand	0EC5:0DE7	provisional
 _random_light	5A73:002A	provisional
 _range	597E:0061	provisional
 _read	0EC5:20B1	provisional
+_read_anim_hdr	59B8:009D	provisional
 _read_file_to_mbuf	1BD8:06DB	provisional
 _read_fx_data	1BD8:0E0E	provisional
 _read_gr_far	59F1:0089	provisional
+_read_lp_inc	59B8:0084	provisional
 _read_player_data	5A4D:0039	provisional
 _read_quikpal	59E9:0061	provisional
 _read_string	32A8:0604	provisional
 _ReadCfg_ovr112_839	59D3:0066	provisional
+_readlp	59B8:004D	provisional
 _real_death	59D3:006B	provisional
 _real_start	5A61:0048	provisional
 _realDScheck	DS:12B3	provisional
@@ -1364,6 +1394,7 @@ _RollView_ovr143_F58	5A53:004D	provisional
 _rorEffect	DS:074A	provisional
 _rotate_bank	210D:0005	provisional
 _Run_FPS	DS:00CE	provisional
+_runcutscene	59B8:0089	provisional
 _save_player_data	5A4D:003E	provisional
 _save_rect	004E:01D5	provisional
 _save_screenshot	59E1:0020	provisional
@@ -1394,6 +1425,7 @@ _ScrollItemsUp	59FE:0020	provisional
 _sd_xmod	DS:32A2	provisional
 _sd_ymod	DS:32A4	provisional
 _seg001_023B_C	004E:000C	provisional
+_seg002_A	0086:000A	provisional
 _seg003_581E	0090:581E	provisional
 _seg007_1798_3E4	15AB:03E4	provisional
 _seg009_1	1A31:0001	provisional
@@ -1455,7 +1487,6 @@ _set_creatures_from_saved_game	59B1:0020	provisional
 _set_creatures_to_saved_game	59B1:005C	provisional
 _set_critter_vars	15AB:2356	provisional
 _set_curmagic	2798:0589	provisional
-_set_cuts_ems	59B8:00C0	provisional
 _set_cyb	2ABA:0099	provisional
 _set_drugged	5A4D:004D	provisional
 _set_effect	2D9C:0B6A	provisional
@@ -1503,9 +1534,9 @@ _ShadeSide	595C:0043	provisional
 _Shift	DS:2334	provisional
 _should_i_flee	15AB:3383	provisional
 _show	0090:57BB	provisional
+_show_anm	59B8:0048	provisional
 _show_atts	5991:0039	provisional
 _show_credits	5A32:0020	provisional
-_show_cutscene	59B8:0089	provisional
 _show_skills	5991:0048	provisional
 _show_version	5A53:0061	provisional
 _ShowAutoMapLevel	595C:0075	provisional
@@ -1731,6 +1762,7 @@ _UsingPole	DS:1B00	provisional
 _UsPtr	DS:2E10	provisional
 _ValidLightSlots	DS:171E	provisional
 _valloc	004E:004A	provisional
+_value_cuts	59B8:0075	provisional
 _vcopy	0090:59C1	provisional
 _vcopyfb	0090:5974	provisional
 _vfree	004E:0105	provisional

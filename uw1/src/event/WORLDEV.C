@@ -529,7 +529,7 @@ void far talking_door_trap(struct Object far *trap, int x, int y)
 void far do_arial_talking(struct Object far *trap, int x, int y)
 {
     update_animobj(4);
-    show_cutscene(3);
+    runcutscene(3);
 }
 
 /* Removes an NPC and its contents from the map (a gronk callback). */
@@ -555,7 +555,7 @@ void far TyballDeath_ovr107_13D1(void)
     union Link far *head;
     struct Object far *obj;
     struct Object far *next;
-    show_cutscene(2);
+    runcutscene(2);
     PLAYER1->b6E |= 4;
     for (i = 9; i > 0; i--)
         gronk_whoami(tyball_allies[i], 0, 0, (WhoamiFn)remove_whoami);
@@ -721,7 +721,7 @@ void far repair_item(struct Object far *obj, int skill, char who)
             return;
         }
     }
-    show_cutscene(0x104);
+    runcutscene(0x104);
     result = do_repair(obj, skill, &time);
     if (who) {
         playerdat->noise = 0xF;

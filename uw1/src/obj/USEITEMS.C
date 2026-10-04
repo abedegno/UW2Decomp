@@ -515,7 +515,7 @@ void far UseUnique(struct Object far *who, struct Object far *obj, char how)
         n = rand() % 3;
         if (PLAYER1->incense < 3)
             n = 3 - (PLAYER1->incense = PLAYER1->incense + 1);
-        show_cutscene(n + 0xB);
+        runcutscene(n + 0xB);
         SET_ITEM(obj, 0xD5);
         if (how)
             DisplayInventory();
@@ -941,7 +941,7 @@ void far UseBook(struct Object far *obj, char how)
             newscr(2);
     } else if (!(obj->id & ID_ENCHANT) || OBJ_MAJOR(obj) == MAJOR_RECT) {
         if (obj->id & ID_FLAG10)
-            show_cutscene((OBJ_LINK(obj) & 0x1FF) + 0x100);
+            runcutscene((OBJ_LINK(obj) & 0x1FF) + 0x100);
         else if ((OBJ_LINK(obj) & 0x1FF) < 0x100) {
             strcpy(text, "You read the ");
             if (!get_name(text + strlen(text), obj, 0, 0))

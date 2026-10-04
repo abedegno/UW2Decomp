@@ -98,3 +98,9 @@ Things agents found that belong to the shared headers or the map, to settle in t
 - seg014_1DC5's table started 0x12 bytes late: cllbck_tst, the 256 Hz timer callback init_timers registers (push seg seg014; push offset 0Bh), sits at +0xB outside every IDA proc. The table now starts there (org 0xB). Its row at +0x754 is fx_is_on. Its cnames are still mostly listing names: SOUND.C's names to copy in at the readability pass.
 - Renamed by the stub order: ovr154_2D1 do_beep, ovr154_374 memcheck, ovr142_11A init_lighting, ovr123_76 Map_Load, ovr123_16E Map_Save (callers AUTOMAP, UWEDIT, GAMEWRAP follow; GAMEWRAP renames map.h's UW2 Map_Load/Map_Save out of the way). New: dbg_break (int86 2), check_dirs, xorread, xorwrite; set_light, random_light.
 - Headers should take: plain char returns of music_is_on, fx_is_on, init_timbres, install_timbre, read_file_to_mbuf, read_fx_data, init_fx, music_over, init_speech, and bltfromdrive as its callers use it; load_sound_driver(name) alone; turn_music and turn_fx take a char; UW1's Map_Load/Map_Save(archive record, level). SOUND.C includes neither sound.h nor file.h for now.
+
+## From wave 5 (B, cutscenes)
+
+- CUTS.C (ovr105): the stub order renamed six entries from UW2's names: get_cut_banks (was get_cuts_ems), get_cuts_block (set_cuts_ems), free_block (ovr105_3AB), runcutscene (show_cutscene), init_cutscene (ovr105_14E3), cuts_skipline (ovr105_1639; fgets(line, 99, fp)); value_cuts is PANELS.C's writeCutsValue. Renamed in every caller and in gfx.h. New for their keys: anm_lptab, read_anim_hdr, read_lp_inc, do_sound, cutsop_stop (UW2's cutsop_next). UW1 has 16 cutscene opcodes.
+- TMPALLOC.C's conv_ws is public (CUTS.C's init_cutscene reads it); the bytes are unchanged.
+- Headers should take: UW1's CutsState, 0x4A bytes, no repeat43, speech43/fade45/fade47 at 0x43/45/47, flags at 0x49, bit 0 "drawing"; fadein/fadeout(src, count); speech_available returns char; seg002_A(src, dst), the delta decoder.

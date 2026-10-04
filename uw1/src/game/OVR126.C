@@ -14,6 +14,6 @@
 
 void far show_credits(void)
 {
-    show_cutscene(10);
+    runcutscene(10);
     editchng(0x7FFE);
 }

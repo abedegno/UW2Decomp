@@ -111,7 +111,7 @@ void far do_intro_scene(int intro)
     if (intro) {
         get_save_descs(descs, &found);
         if (found == 0)
-            show_cutscene(0);
+            runcutscene(0);
     }
 }
 
@@ -241,7 +241,7 @@ void far real_start(int intro)
             }
             break;
         case 0:
-            show_cutscene(0);
+            runcutscene(0);
             break;
         case -1:
             free_world(0);

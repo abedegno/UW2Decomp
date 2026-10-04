@@ -66,7 +66,7 @@ unsigned char saved_tmap_inpage = 0;    /* DS:0A4D */
 
 /* This file's _BSS, DS:364A..364F.
    name: chosen for layout (bssorder.py keys 219 and 331), no original names. */
-static void huge *conv_ws;              /* DS:364A, the conventional memory block; huge,
+void huge *conv_ws;                     /* DS:364A, the conventional memory block (public: CUTS.C reads it); huge,
                                            as the tests compare it through N_PCMP@ */
 static uint16 conv_ws_seg;              /* DS:364E, its first whole paragraph */
 

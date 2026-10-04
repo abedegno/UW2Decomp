@@ -177,7 +177,7 @@ char far do_spell(unsigned char cls, unsigned char sub, struct Object far *who,
         xt_spells(who, sub & 0xC0, sub & 0x3F);
         break;
     case 14:
-        show_cutscene(sub);
+        runcutscene(sub);
         update_animobj(4);
         break;
     case 13:

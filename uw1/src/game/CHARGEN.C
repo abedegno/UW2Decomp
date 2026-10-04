@@ -356,7 +356,7 @@ void far drawopt(struct ChrOpt far *opt)
 
         pic = chrbuf + chroff[opt->pic];
         hasq = opt->question != 0 ? 1 : 0;
-        set_cuts_ems(0);
+        get_cuts_block(0);
         w = pic[-4];
         h = pic[-3];
         opt->cols = (opt->count * (h + 4) - 4) / (0xC4 - (hasq ? 20 : 0)) + 1;
@@ -379,7 +379,7 @@ void far drawopt(struct ChrOpt far *opt)
         y += h + 4;
     if (opt->strings != 0) {
         Transparency = 0;
-        set_cuts_ems(0);
+        get_cuts_block(0);
         for (i = 0; opt->count > i; i++) {
             if (i % opt->cols == 0) {
                 x = 0xA0 - w;
@@ -439,7 +439,7 @@ void far selopt(struct ChrOpt far *opt, unsigned char new, unsigned char old)
         x = xbase + sel[j] % opt->cols * (w + opt->spacing);
         pic = chrbuf + chroff[opt->pic + j + 1];
         mouse_hide();
-        set_cuts_ems(0);
+        get_cuts_block(0);
         Transparency = 1;
         show(x, y, pic, h, w, 0, 0);
         mouse_show();
@@ -643,11 +643,11 @@ char far gen_char(unsigned char far *buf, unsigned char far *dat, struct ChrOpt 
         drawopt(&opts[stage]);
         selopt(&opts[stage], 0, 0xFF);
         grPageFlip();
-        set_cuts_ems(1);
+        get_cuts_block(1);
         show(0, 0xC7, chrbuf, 0xC8, 0x140, 0, 0);
         grSoftPageFlip();
         mouse_show();
-        set_cuts_ems(0);
+        get_cuts_block(0);
         choice = pickopt(&opts[stage]);
         if (choice < 0) {
             if (stage == 0)
@@ -696,7 +696,7 @@ char far gen_char(unsigned char far *buf, unsigned char far *dat, struct ChrOpt 
         case 4:
             Transparency = 1;
             k = chroff[PLAYER1->female * 5 + choice + 0x11];
-            set_cuts_ems(0);
+            get_cuts_block(0);
             w = buf[k - 4];
             h = buf[k - 3];
             x = (0x38 - w) / 2 + 0x10;
@@ -740,7 +740,7 @@ restart:
     }
     done = get_string(0x300);           /* UW2's string here is "awakens . . ." */
     mouse_hide();
-    set_cuts_ems(1);
+    get_cuts_block(1);
     grSoftPageFlip();
     show(0, 0xC7, chrbuf, 0xC8, 0x140, 0, 0);
     string_to_screen(name, (0xA0 - string_width(name)) / 2 + 0xA0, cur_font->height + 0x62);
@@ -787,8 +787,8 @@ char far strt_chargen(void)
     register int fd;
 
     buf = (unsigned char far *)stdat;
-    get_cuts_ems();
-    pic = chrbuf = set_cuts_ems(0);
+    get_cut_banks();
+    pic = chrbuf = get_cuts_block(0);
     chroff = offs;
     if (!gronk_gr("chrbtns", 0, -1, (ArtAllocFn)adr_chrpic, (ArtMoveFn)move_chrpic))
         goto fail;
@@ -813,7 +813,7 @@ char far strt_chargen(void)
     grfx_load_font("fontchar.sys");
     *foreground_color = 0x49;
     *background_color = 0x49;
-    set_cuts_ems(1);
+    get_cuts_block(1);
     pal = pic + 0xFA00;
     ok = bltfromdrive("DATA\\chargen.byt", pic, 0xFA00);
     ok &= read_quikpal(PAL_CHARGEN, pal);
@@ -821,11 +821,11 @@ char far strt_chargen(void)
         goto fail;
     mouse_hide();
     show(0, 0xC7, pic, 0xC8, 0x140, 0, 0);
-    set_cuts_ems(0);
+    get_cuts_block(0);
     drawopt(opts);
     selopt(opts, 0, 0xFF);
     mouse_show();
-    set_cuts_ems(1);
+    get_cuts_block(1);
     fadein(pal, 2);
     result = gen_char(chrbuf, buf, opts);
     grfx_load_font("font5x6p.sys");
@@ -833,7 +833,7 @@ char far strt_chargen(void)
     if (in_game)
         load_txtmaps();
     if (!result) {
-        set_cuts_ems(1);
+        get_cuts_block(1);
         fadeout(pal, 2);
     }
     return result;

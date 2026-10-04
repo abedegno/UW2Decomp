@@ -28,7 +28,7 @@ struct Tile;
 #define SPELLC_MANA     10              /* restore_mana */
 #define SPELLC_XT       11              /* xt_spells */
 #define SPELLC_SPECIAL  13              /* special_spells */
-#define SPELLC_CUTSCENE 14              /* show_cutscene */
+#define SPELLC_CUTSCENE 14              /* runcutscene */
 
 #define NUM_RUNES       0x18            /* An to Ylem, items FIRST_RUNESTONE on */
 #define RUNE_NONE       0x18            /* an empty place on the rune shelf */

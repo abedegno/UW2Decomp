@@ -148,7 +148,7 @@ char far bltfromdrive(char *name, void far *buf, unsigned n);
 char far seg012_10F(char physical, unsigned logical);
 int far ovr113_2A2(int count, int16 *out);
 /* CUTS.C (ovr105): the cutscenes' buffer (seg049:2100), lent to the speech. */
-char far * far ovr105_3AB(void);
+char far * far free_block(void);
 
 /* This file, called before their definitions */
 void far * far load_sound_driver(char *name);
@@ -1085,7 +1085,7 @@ char far speech_available(void)
     return speechok;
 }
 
-/* Gets the speech ready: the two buffers in the cutscenes' buffer (CUTS.C's ovr105_3AB),
+/* Gets the speech ready: the two buffers in the cutscenes' buffer (CUTS.C's free_block),
    and three critter page pairs to hold a .VOC. Without them the speech is off.
    name: chosen. */
 char far init_voc(void)
@@ -1093,7 +1093,7 @@ char far init_voc(void)
     if (!speechok)
         return 0;
     if (dsdata[0] == 0)
-        dsdata[0] = ovr105_3AB();
+        dsdata[0] = free_block();
     if (dsdata[1] == 0)
         dsdata[1] = dsdata[0] + 0x1000;
     if (ovr113_2A2(3, ems_pages) == 3)

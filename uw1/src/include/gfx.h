@@ -265,15 +265,15 @@ void far palette_fade(int step, int total, int first, int last, unsigned char fa
 int far virtual_screen(int w, int h, int split);
 int far lback_vscreen(int x, int y, unsigned n);
 void far show_anm(int cuts, int x, int y, int w, int h);
-int far get_cuts_ems(void);
-unsigned char far * far set_cuts_ems(int which);
+int far get_cut_banks(void);
+unsigned char far * far get_cuts_block(int which);
 void far free_cuts_ems(void);
 void far anm_sound_callback(void);
 void far init_cutscene(void);
 /* A task install_timebased_task runs from the timer interrupt. */
 typedef void (far *Task)(int task, int done);
 int far install_timebased_task(Task fn, int period, int total);
-void far show_cutscene(unsigned n);
+void far runcutscene(unsigned n);
 
 /* PANELS.C: the screen furniture around the 3D view */
 extern unsigned char wframe[0x1F];

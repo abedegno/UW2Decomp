@@ -106,10 +106,10 @@ void far memcheck(void);
 void far ovr131_0(void);
 void far init_lighting(void);
 void far seg014_1DC5_1D0D(FILE *fp);
-void far ovr105_1639(FILE *fp);
-/* match: kin names ovr105_14E3 reset_db, a false hit (VIEW3D.C has reset_db; both copy
+void far cuts_skipline(FILE *fp);
+/* match: kin names init_cutscene reset_db, a false hit (VIEW3D.C has reset_db; both copy
    a far pointer). */
-void far ovr105_14E3(void);
+void far init_cutscene(void);
 /* UW1: the automap's update flag (the listing's name, DS:0546). */
 extern char ProbablyAutomapEnabled_dseg_5c99_546;
 
@@ -199,7 +199,7 @@ void far init_world(int argc, char *argv[])
     ReadCfg_ovr112_839();
     init_sounds();
     init_timers();
-    ovr105_14E3();
+    init_cutscene();
     memcheck();
     if (!grfx_init())
         pfatal_code(ERR_READ | 3);
@@ -251,7 +251,7 @@ void far titlescr(void)
 {
     while (mouse_get_input() > 3)
         ;
-    show_cutscene(9);
+    runcutscene(9);
 }
 
 /* Records the optional command-line argument in dungeonf, binds Alt+X (0x278, 0x200 is
@@ -410,7 +410,7 @@ void far real_death(int how)
         set_screen_frame(2, 0);
         set_compass();
         set_flask(0);
-        show_cutscene(0x103);
+        runcutscene(0x103);
         scroll_clear(1);
     }
     editor_dispatch[scrnum][15]();
@@ -489,7 +489,7 @@ unsigned char far new_player_pos(void)
     return 1;
 }
 
-/* Reads DATA\UW.CFG: seg014_1DC5_1D0D reads from it first, then ovr105_1639 reads a line
+/* Reads DATA\UW.CFG: seg014_1DC5_1D0D reads from it first, then cuts_skipline reads a line
    of up to 99 characters. */
 /* name: UW2Decomp's provisional name for UW2's UW.CFG reader; its key also puts it in
    UW1's stub order. */
@@ -500,7 +500,7 @@ void far ReadCfg_ovr112_839(void)
     fp = fopen("DATA\\uw.cfg", "r");
     if (fp != 0) {
         seg014_1DC5_1D0D(fp);
-        ovr105_1639(fp);
+        cuts_skipline(fp);
         fclose(fp);
     }
 }

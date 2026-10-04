@@ -535,7 +535,7 @@ char far dream(int sleepfactor)
     }
     if (found >= 0 && !PLAYER1->garamon)
     {
-        show_cutscene(found + 0x18);
+        runcutscene(found + 0x18);
         PLAYER1->dreams ^= 1 << found;
         return 1;
     }
@@ -736,7 +736,7 @@ void far check_victory(void)
     {
         inplist->mode = 0;
         LeftPanel = 2;
-        show_cutscene(1);
+        runcutscene(1);
         mouse_hide();
         grfx_clear();
         LoadBitMap_ovr141_0(7, "DATA\\win1.byt");
@@ -927,7 +927,7 @@ void far player_is_dead(void)
         NewPlyFade = 3;
         if (ok)
         {
-            show_cutscene(0x102);
+            runcutscene(0x102);
             cFillFB(0xF1);
             scroll_clear(1);
         }

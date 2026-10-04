@@ -240,7 +240,7 @@ void far BookLook(struct Object far *obj, int print)
     if ((obj->id & ID_ENCHANT) && OBJ_MAJOR(obj) != MAJOR_RECT)
         return;
     if (obj->id & ID_FLAG10) {
-        show_cutscene((obj->ol.f.link & 0x1FF) + 0x100);
+        runcutscene((obj->ol.f.link & 0x1FF) + 0x100);
         return;
     }
     if ((obj->ol.f.link & 0x1FF) > 0xFF)
