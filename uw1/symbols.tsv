@@ -1986,6 +1986,7 @@ _YP	DS:247E	provisional
 _z_part	2D02:0233	provisional
 F_LDIV@	0EC5:3636	library
 F_LUDIV@	0EC5:363D	library
+F_LUMOD@	0EC5:364D	library
 F_LXLSH@	0EC5:36E4	library
 F_LXMUL@	0EC5:35FB	library
 F_LXRSH@	0EC5:3705	library
