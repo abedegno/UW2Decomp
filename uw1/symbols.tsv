@@ -287,6 +287,12 @@ _chg_plyp	5A53:0052	provisional
 _chg_plys	5A53:0057	provisional
 _chgtable	DS:0444	provisional
 _chkTenacious	2674:01A6	provisional
+_choose_detail	5A3D:007A	provisional
+_choose_music	5A3D:006B	provisional
+_choose_quit	5A3D:0061	provisional
+_choose_save	5A3D:0075	provisional
+_choose_sounds	5A3D:0070	provisional
+_choose_top	5A3D:005C	provisional
 _chrbuf	DS:48C2	provisional
 _chroff	DS:48C0	provisional
 _cInit3d	1F3A:0E1A	provisional
@@ -310,6 +316,7 @@ _Clk	37FF:00E6	provisional
 _cllbck_tst	1BD8:000B	provisional
 _close	0EC5:02FE	provisional
 _close_arc	5958:002A	provisional
+_close_option_panel	5A3D:0020	provisional
 _close_to_square	128A:24A8	provisional
 _CloseAllBags	59FE:0034	provisional
 _CloseDoor	333E:22FD	provisional
@@ -598,11 +605,18 @@ _dprintf	59C5:0025	provisional
 _DragonSkinBoots_dseg_5c99_1B01	DS:1B01	provisional
 _draw3dMouse	1ADC:0D56	provisional
 _draw_conv_edges	3603:0163	provisional
+_draw_detail_page	5A3D:0043	provisional
 _draw_edges	3603:011E	provisional
 _draw_mask	0000:0120	provisional
+_draw_music_and_sound_page	5A3D:0084	provisional
+_draw_options_back	5A3D:0048	provisional
+_draw_options_btn	5A3D:0052	provisional
+_draw_quit_yn_page	5A3D:004D	provisional
+_draw_save_page	5A3D:003E	provisional
 _draw_scroll	3603:07A1	provisional
 _draw_sprite	0000:00EB	provisional
 _draw_start_buttons	5A61:003E	provisional
+_draw_top_page	5A3D:0039	provisional
 _drawMouse	1ADC:0CF2	provisional
 _drawopt	5991:0061	provisional
 _drawTradeSlot_ovr097_A91	597E:0075	provisional
@@ -756,6 +770,7 @@ _game_sprint	32A8:0494	provisional
 _game_stats	5A76:0084	provisional
 _game_strings_3	32A8:04BD	provisional
 _GameInputMode	DS:26AC	provisional
+_gameopts_done	DS:7172	provisional
 _gctab	DS:0559	provisional
 _gen_char	5991:003E	provisional
 _generate_equipment	5A92:002F	provisional
@@ -854,6 +869,9 @@ _headmod	DS:045C	provisional
 _healing	311A:042C	provisional
 _hgt_val	DS:1992	provisional
 _hgtmodtab	DS:0589	provisional
+_hilite	5A3D:0066	provisional
+_hilite_pic	DS:7174	provisional
+_hilite_row	DS:7176	provisional
 _hit_critter_goal	311A:0889	provisional
 _hitadoor	DS:2473	provisional
 _hitangle	DS:2675	provisional
@@ -1250,6 +1268,10 @@ _OpenBag	DS:1726	provisional
 _OpenBagList	DS:1722	provisional
 _OpenDoor	333E:21E6	provisional
 _OpenTheBag	59FE:0025	provisional
+_options_handle_key	5A3D:0025	provisional
+_options_mouse_click	5A3D:002A	provisional
+_options_page	DS:1A32	provisional
+_options_quick	DS:1A34	provisional
 _out3d	59E9:0025	provisional
 _OutString	DS:09DA	provisional
 _OverwriteAllTiles_ovr128_37	5A29:002A	provisional
@@ -1263,8 +1285,6 @@ _ovr112_2A3	59E1:002A	provisional
 _ovr112_389	59D3:0057	provisional
 _ovr113_2A2	59E5:0039	provisional
 _ovr127_0	5A35:0020	provisional
-_ovr130_0	5A3D:0034	provisional
-_ovr130_6D6	5A3D:002A	provisional
 _ovr131_1DD	5A46:003E	provisional
 _ovr137_0	5A5E:0020	provisional
 _ovr138_94	5A61:0043	provisional
@@ -1272,6 +1292,9 @@ _ovr145_4FB	5A83:0048	provisional
 _ovr152_0	5A99:0025	provisional
 _ovr152_13	5A99:0020	provisional
 _ovr152_5	5A99:002A	provisional
+_page_draw	DS:1A35	provisional
+_page_pics	DS:1A6D	provisional
+_page_press	DS:1A51	provisional
 _palette	DS:23BC	provisional
 _Palettes	DS:573E	provisional
 _PalStore	DS:5940	provisional
@@ -1389,6 +1412,7 @@ _pQatt	DS:0242	provisional
 _prelblnum	DS:742C	provisional
 _preload_cr	59E5:0020	provisional
 _preset_grid	2ABA:04AB	provisional
+_press_options_btn	5A3D:0057	provisional
 _pretty_panelagain	2E9A:1A25	provisional
 _prime	5A76:0075	provisional
 _print_info	22EF:0032	provisional
@@ -1505,6 +1529,7 @@ _RollView_ovr143_F58	5A53:004D	provisional
 _rorEffect	DS:074A	provisional
 _rotate_bank	210D:0005	provisional
 _Run_FPS	DS:00CE	provisional
+_run_options_panel	5A3D:0034	provisional
 _runcutscene	59B8:0089	provisional
 _rune_x	DS:08B7	provisional
 _save_player_data	5A4D:003E	provisional
@@ -1648,6 +1673,7 @@ _set_mouse_data	1ADC:0802	provisional
 _set_mouse_in	3603:002F	provisional
 _set_new_music	1BD8:15BA	provisional
 _set_next_square_on_path	128A:23CB	provisional
+_set_options_page	5A3D:002F	provisional
 _set_osum	2D02:03CD	provisional
 _set_phys_data	2801:061A	provisional
 _set_PIT_divisor	2042:0582	provisional

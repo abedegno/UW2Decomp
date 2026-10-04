@@ -1,7 +1,7 @@
 # segment	kind	functions	bytes	named	size only	calls disagree	unpaired	first named	last named	matched
 seg000	C	9	1255	0	0	0	9			yes
 seg001	assembly	9	893	0	0	0	7			yes
-seg002	C	1	143	0	0	0	1			
+seg002	C	1	143	0	0	0	1			yes
 seg003	assembly	138	25938	0	0	0	138			
 seg004	assembly	95	32119	0	0	0	95			
 seg005_10B2	mixed	167	15440	0	0	0	167			
@@ -79,7 +79,7 @@ ovr125	C	2	137	0	0	0	1			yes
 ovr126	C	1	24	0	0	0	0			yes
 ovr127	C	1	7	0	0	0	1			yes
 ovr129	C	3	298	0	0	0	1			yes
-ovr130	C	21	2093	0	0	0	21			
+ovr130	C	21	2093	0	0	0	21			yes
 ovr131	C	7	1670	0	0	0	7			yes
 ovr133	C	12	2847	0	0	0	6			yes
 ovr134	C	16	3820	0	0	0	8			yes
@@ -87,7 +87,7 @@ ovr137	C	1	5	0	0	0	1			yes
 ovr138	C	9	2715	0	0	0	3			yes
 ovr139	C	1	7	0	0	0	1			yes
 ovr140	C	13	2537	0	0	0	10			yes
-ovr141	C	1	250	0	0	0	1			
+ovr141	C	1	250	0	0	0	1			yes
 ovr142	C	3	550	0	0	0	3			yes
 ovr143	C	23	6913	0	0	0	13			yes
 ovr144	mixed	2	14	0	0	0	2			yes

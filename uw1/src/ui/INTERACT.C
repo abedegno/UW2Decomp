@@ -82,8 +82,8 @@ struct Player1Scr {
 #define PLAYER1 ((struct Player1Scr *)player)
 
 /* UW1: declarations this file needs that the headers lack or give otherwise. */
-void far ovr130_0(int n);
-void far ovr130_6D6(int x, int y);
+void far run_options_panel(int n);
+void far options_mouse_click(int x, int y);
 void far seg014_1DC5_15C5(void);            /* the level's music again */
 extern int16 floor_IDs[];
 void far stop_music(void);
@@ -237,7 +237,7 @@ void far init_gamedisp(void)
         if (RightButtonThing != 0)
             new_IconSelect(RightButtonThing);
     } else
-        ovr130_0(1);
+        run_options_panel(1);
     display_scr();
     init_scrgr();
 }
@@ -807,12 +807,12 @@ void far deal_with_icons(register int mode)
         return;
     if (mode == -1) {
         if (LeftPanel != 0)
-            ovr130_6D6(inplist->x, inplist->y);
+            options_mouse_click(inplist->x, inplist->y);
         else if ((mode = (inplist->y + 2) / 0x12) > 5)
             return;
     }
     if (mode == 5)
-        ovr130_0(1);
+        run_options_panel(1);
     else {
         set_screen_frame(8, 6);
         PLAYER1->drawn = 0;
