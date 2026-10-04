@@ -1,0 +1,5 @@
+# segment seg003_422 base 0x3F22 size 0x4C5 org 0x422
+# cname: the listing name, UW1 offsets; SEG003 split at +422..+8E6 (UW2's POLYFILL.ASM, seg003_0272_EC, without its last routine)
+# far FD52 3963:07D2
+seg003_422	seg003_422	0x0	0x97
+seg003_4B9	seg003_4B9	0x97	0x42E

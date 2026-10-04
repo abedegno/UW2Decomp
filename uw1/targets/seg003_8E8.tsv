@@ -1,0 +1,3 @@
+# segment seg003_8E8 base 0x43E8 size 0x15D org 0x8E8
+# cname: the listing name; SEG003 split at +8E8..+A44 (UW2: the end of POLYFILL.ASM, seg003_0272_584 .. 6E0)
+seg003_8E8	seg003_8E8	0x0	0x15D

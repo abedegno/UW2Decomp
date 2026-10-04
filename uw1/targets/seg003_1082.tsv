@@ -1,0 +1,6 @@
+# segment seg003_1082 base 0x4B82 size 0x1B38 org 0x1082
+# cname: the listing name (cXfer: symbols.tsv); SEG003 split at +1082..+2BB9 (UW2's SCALEBM.ASM, seg003_0272_D1E)
+# far FD52 3963:0B0C
+seg003_1082	seg003_1082	0x0	0x17F
+cXfer	cXfer	0x17F	0xB58
+seg003_1D59	seg003_1D59	0xCD7	0xE61

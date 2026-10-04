@@ -1,0 +1,5 @@
+# segment seg003_3FDC base 0x7ADC size 0x157 org 0x3FDC
+# cname: the listing name, UW1 offsets; SEG003 split at +3FDC..+4133 (UW2's GRLIBH.ASM, seg003_0272_375C)
+seg003_3FDC	seg003_3FDC	0x0	0x62
+seg003_403E	seg003_403E	0x62	0x5E
+seg003_409C	seg003_409C	0xC0	0x97

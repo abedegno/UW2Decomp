@@ -1,0 +1,8 @@
+# segment seg003_0 base 0x3B00 size 0x60 org 0x0
+# cname: the listing name; SEG003 split at +0..+5F (module 1 of UW1's graphics library, UW2's GRMISC.ASM)
+seg003_0	seg003_0	0x0	0x8
+seg003_8	seg003_8	0x8	0x8
+seg003_10	seg003_10	0x10	0x8
+seg003_18	seg003_18	0x18	0x10
+seg003_28	seg003_28	0x28	0x1E
+seg003_46	seg003_46	0x46	0x1A
