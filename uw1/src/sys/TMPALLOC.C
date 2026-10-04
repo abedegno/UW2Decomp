@@ -97,7 +97,7 @@ void far free_mem(void)
     if (dseg_5c99_A48 > 0)
         seg012_A6();
     if (conv_ws != 0L)
-        farfree(conv_ws);
+        farfree((void far *)conv_ws);
 }
 
 /* Lays out the logical pages for a handle of `page` pages (see the top of the file) and

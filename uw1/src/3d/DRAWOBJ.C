@@ -175,7 +175,7 @@ void far do_obj(struct Object far *o)
         objxloc = (objxloc & 0xFF00) + x;
         objzloc = (objzloc & 0xFF00) + y;
     }
-    type = ComObjData[o->id & ID_ITEM].render;
+    type = ComObjData[OBJ_ITEM(o)].render;
     if (OBJ_MAJOR(o) == MAJOR_ANIMOBJ) {
         AnimObjInPipe = 1;
         item = o->ol.f.owner;
@@ -183,11 +183,11 @@ void far do_obj(struct Object far *o)
             if (item > 0)
                 item += FIRST_ANIMOBJ;
             else
-                item = o->id & ID_ITEM;
+                item = OBJ_ITEM(o);
         }
     }
     else
-        item = o->id & ID_ITEM;
+        item = OBJ_ITEM(o);
     switch (type) {
     case 2:
         item &= 0x3F;

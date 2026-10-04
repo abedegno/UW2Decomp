@@ -65,13 +65,13 @@ unsigned char far * far adr_opbtn(int size)
     return p;
 }
 
-int far move_opbtn(unsigned char far *p, int size, register int n)
+int far move_opbtn(struct Bitmap far *p, int size, register int n)
 {
-    buttons[n >> 1].img[n & 1] = p + 5;
+    buttons[n >> 1].img[n & 1] = p->u.b8.data;
     if (!(n & 1)) {
         n >>= 1;
-        buttons[n].w = p[1];
-        buttons[n].h = p[2];
+        buttons[n].w = p->width;
+        buttons[n].h = p->height;
     }
     return size != 0;
 }

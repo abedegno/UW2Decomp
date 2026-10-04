@@ -50,10 +50,10 @@
 unsigned char far bltfromdrive(char *name, void far *buf, unsigned n);
 void far grfx_clear(void);
 
-char far open_arc(char far *arc, char *name);           /* opens an archive into arc */
-char far close_arc(char far *arc);                     /* closes it */
-int far get_arc(char far *arc, int block, void far *buf);           /* reads a block */
-char far put_arc(char far *arc, int block, void far *buf, int len); /* writes one */
+char far open_arc(struct Arc far *arc, char *name);           /* opens an archive into arc */
+char far close_arc(struct Arc far *arc);                     /* closes it */
+int far get_arc(struct Arc far *arc, int block, void far *buf);           /* reads a block */
+char far put_arc(struct Arc far *arc, int block, void far *buf, int len); /* writes one */
 /* UW1: CRPAGES.C lends the critter pages to hold the workspace (UW2's get_workspace and
    release_workspace). */
 /* UW1: do_beep, called with (0x12C, 0xA) when a note will not take another
@@ -119,13 +119,13 @@ unsigned char far SaveAutoMapLevel(struct Arc *arcp, int lev)
     struct Arc arc;
 
     if (arcp == 0) {
-        if (!open_arc((char far *)&arc, "SAVE0\\lev.ark"))
+        if (!open_arc(&arc, "SAVE0\\lev.ark"))
             return 0;
     } else
         arc = *arcp;
-    ok = put_arc((char far *)&arc, LEVARK_AUTOMAP(lev), (char far *)PlayersMap, MAP_TILES);
+    ok = put_arc(&arc, LEVARK_AUTOMAP(lev), PlayersMap, MAP_TILES);
     if (arcp == 0)
-        close_arc((char far *)&arc);
+        close_arc(&arc);
     else
         *arcp = arc;
     if (ok)
@@ -138,7 +138,7 @@ unsigned char far GetAutoMapLevel(struct Arc *arc, int lev)
 {
     register int n;
 
-    n = get_arc((char far *)arc, LEVARK_AUTOMAP(lev), (char far *)PlayersMap);
+    n = get_arc(arc, LEVARK_AUTOMAP(lev), PlayersMap);
     if (n != 0 && n != MAP_TILES)
         return 0;
     return 1;
@@ -155,9 +155,9 @@ void far ExitAutoMap(void)
     input_del(map_mouse);
     unforce_mouse_cursor(0);
     SaveTheWords(level);
-    if (level != PlayerLevel && open_arc((char far *)&arc, "SAVE0\\lev.ark")) {
+    if (level != PlayerLevel && open_arc(&arc, "SAVE0\\lev.ark")) {
         GetAutoMapLevel(&arc, PlayerLevel);
-        close_arc((char far *)&arc);
+        close_arc(&arc);
     }
     seg014_1DC5_15C5();
     grfx_clear();
@@ -570,10 +570,10 @@ void far SaveTheWords(int lev)
             num_words--;
         }
     }
-    if (open_arc((char far *)&arc, "SAVE0\\lev.ark")) {
-        if (!put_arc((char far *)&arc, LEVARK_NOTES(lev), (char far *)ATM_Strings, num_words * sizeof(struct ATM)))
+    if (open_arc(&arc, "SAVE0\\lev.ark")) {
+        if (!put_arc(&arc, LEVARK_NOTES(lev), ATM_Strings, num_words * sizeof(struct ATM)))
             ;
-        close_arc((char far *)&arc);
+        close_arc(&arc);
     }
 }
 
@@ -583,10 +583,10 @@ void far GetTheWords(int lev)
     struct Arc arc;
 
     old_strings = num_words = 0;
-    if (open_arc((char far *)&arc, "SAVE0\\lev.ark")) {
-        old_strings = num_words = get_arc((char far *)&arc, LEVARK_NOTES(lev), (char far *)ATM_Strings) / sizeof(struct ATM);
+    if (open_arc(&arc, "SAVE0\\lev.ark")) {
+        old_strings = num_words = get_arc(&arc, LEVARK_NOTES(lev), ATM_Strings) / sizeof(struct ATM);
         RedisplayStrings();
-        close_arc((char far *)&arc);
+        close_arc(&arc);
     }
 }
 
@@ -646,9 +646,9 @@ void far ChangeAutoMapLevel(register int lev)
 
     SaveTheWords(level);
     ClearAutoMap();
-    if (lev < 9 && open_arc((char far *)&arc, "SAVE0\\lev.ark")) {
+    if (lev < 9 && open_arc(&arc, "SAVE0\\lev.ark")) {
         GetAutoMapLevel(&arc, lev);
-        close_arc((char far *)&arc);
+        close_arc(&arc);
     }
     ShowAutoMapLevel(lev);
 }

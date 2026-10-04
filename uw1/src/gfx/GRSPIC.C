@@ -73,15 +73,13 @@ void far seg009_6D(int icon, int x, int y, int16 height, int16 width)
 /* Returns the 8-bit pixels of a .GR bitmap: the data itself for an 8-bit bitmap, else
    cFrmtoRaw's expansion of a 4-bit one.
    name: FM Towns grs_unpack_ occupies this slot and has the same format-4/raw split. */
-void far * far grs_unpack(void far *data)
+void far * far grs_unpack(struct Bitmap far *data)
 {
     void far *result;
-    if (((struct Bitmap far *)data)->type != BM_8BIT)
-        result = cFrmtoRaw(&((struct Bitmap far *)data)->u.b4.size,
-                   Palettes[((struct Bitmap far *)data)->u.b4.auxpal],
-                   ((struct Bitmap far *)data)->type);
+    if (data->type != BM_8BIT)
+        result = cFrmtoRaw(&data->u.b4.size, Palettes[data->u.b4.auxpal], data->type);
     else
-        result = ((struct Bitmap far *)data)->u.b8.data;
+        result = data->u.b8.data;
     return result;
 }
 
@@ -130,14 +128,14 @@ void far pic_to_screen(int icon, int x, int y, int height, int width)
    addresses of the parameters themselves, so its result is lost. */
 static void far seg009_2C6(int icon, NEARPTR width, NEARPTR height)
 {
-    unsigned char far *p;
+    struct Bitmap far *p;
     icon = grs_which1(icon);
     if (icon >= first_vram)
         seg015_1F9B_325(grs_off[icon], (int16 far *)&width, (int16 far *)&height);
     else {
         p = seg009_1(icon);
-        *(int16 *)width = p[1];
-        *(int16 *)height = p[2];
+        *(int16 *)width = p->width;
+        *(int16 *)height = p->height;
     }
 }
 

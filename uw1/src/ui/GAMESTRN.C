@@ -167,7 +167,7 @@ void far clear_dynamics(int block)
    item name either). */
 int far get_name(char far *dst, struct Object far *obj, char article, char plural)
 {
-    int item = obj->id & ID_ITEM;
+    int item = OBJ_ITEM(obj);
     char far *name;
     unsigned char who;
     if (OBJ_MAJOR(obj) == MAJOR_CREATURE) {

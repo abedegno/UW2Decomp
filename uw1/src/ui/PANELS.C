@@ -115,7 +115,7 @@ static int16 flip_hpct[8] = { 0x64, 0x67, 0x69, 0x6A, 0x6A, 0x6A, 0x69, 0x67 };
 static int16 flip_wpct[8] = { 0x64, 0x5C, 0x47, 0x26, 0x00, 0x26, 0x47, 0x5C };
 /* UW1: three EMS handles for the turning panel's pictures (0 the old panel and the
    edge, 1 the new panel, 2 the work buffer). */
-static int16 flip_handle[3] = { 0, 0, 0 };     /* DS:89C */
+static uint16 flip_handle[3] = { 0, 0, 0 };     /* DS:89C */
 /* The turning panel's progress. */
 struct {
     unsigned char frame;
@@ -1274,7 +1274,7 @@ void far do_fbuf_bms(void)
         seg012_10F(2, seg051_C377);
         wbuf = (unsigned char far *)MK_FP(ems_frame, 0x8000) + weap_offs[n];
         obj_inpage1 = 0xFF;
-        p = grs_unpack(wbuf);
+        p = grs_unpack((struct Bitmap far *)wbuf);
         fbshow(p, weap_x[n] + wxo, weap_y[n], wbuf[1], wbuf[2]);
     }
     pic_to_fbuf(ICON_3DWIN, 0x3E, 3);

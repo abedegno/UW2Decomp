@@ -162,7 +162,7 @@ struct Bitmap {
 #define ICON_OPTB       0x20EB          /* optb.gr, the options panel's places */
 
 /* GRSPIC.C: graphic resource lookup, decoding, cursor drawing and image scaling */
-void far * far grs_unpack(void far *data);
+void far * far grs_unpack(struct Bitmap far *data);
 void far grs_fbplot(int icon, int x, int y);
 /* name: seg009 (1A6D): grs_which1 and pic_to_fbuf are FM Towns names, called the same
    way. FM Towns reads _grs_off[n] directly where DOS calls seg009_7, which maps the EMS

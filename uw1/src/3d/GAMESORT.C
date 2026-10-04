@@ -145,7 +145,7 @@ void far do_partition(char reverse, int16 *point, int skip, int count,
     for (i = 0; i < count;) {
         if (i != skip) {
             if (from_data == 0)
-                value = ((struct Object far *)Obj_IntTMem(objptrs[i]))->pos & POS_Z;
+                value = OBJ_Z((struct Object far *)Obj_IntTMem(objptrs[i]));
             else
                 value = sortdata[i][from_data];
             side = value > height;
@@ -169,8 +169,8 @@ void far do_partition(char reverse, int16 *point, int skip, int count,
 void far z_part(int index, int16 *point, int count)
 {
     int z;
-    z = Obj_IntTMem(objptrs[index])->pos & POS_Z;
-    do_partition((ThePlayer->pos & POS_Z) < z, point, index, count, z, 0);
+    z = OBJ_Z(Obj_IntTMem(objptrs[index]));
+    do_partition(OBJ_Z(ThePlayer) < z, point, index, count, z, 0);
 }
 
 /* Partition around a door along the axis it lies across. Which side is drawn first
@@ -180,7 +180,7 @@ void far door_part(int index, int16 *point, int count)
 {
     char reverse;
     int pos, axis;
-    if (!(((((struct Object far *)Obj_IntTMem(objptrs[index]))->pos & POS_HEADING) >> 7) + quad * 2 & 3)) {
+    if (!(OBJ_HEADING((struct Object far *)Obj_IntTMem(objptrs[index])) + quad * 2 & 3)) {
         axis = 2;
         pos = sortdata[index][2];
         reverse = 1;
@@ -202,7 +202,7 @@ void far set_sds(signed char *data, struct Object far *object)
             + trans_pos_x[((quad + 1) & 3) * 16 + OBJ_FINEY(object) * 2];
     data[2] = trans_pos_x[quad * 16 + OBJ_FINEX(object) * 2 + 1]
             + trans_pos_x[((quad + 1) & 3) * 16 + OBJ_FINEY(object) * 2 + 1];
-    data[3] = object->pos & POS_Z;
+    data[3] = OBJ_Z(object);
 }
 
 /* The sort key for the part of the row being drawn: distance along the view, plus
@@ -253,7 +253,7 @@ void far do_objsort(union Link far *link)
         if (word & 0x4000) data[2] += 8;
         set_osum(data);
         if (word & 0x8000) data[0]--;
-        word = next->id & ID_ITEM;
+        word = OBJ_ITEM(next);
         n++;
     }
     if (holdtmp[0])
@@ -266,7 +266,7 @@ void far do_objsort(union Link far *link)
     while (next && visited < 60) {
         register signed char *data;
         candidate = held = 0;
-        item = next->id & ID_ITEM;
+        item = OBJ_ITEM(next);
         if (item == ITEM_BRIDGE || (item >> 4) == CLASS_DOOR || item == ITEM_MOVING_DOOR) {
             partition = n + (item << 6);
         } else if (ComObjData[item].animated) {

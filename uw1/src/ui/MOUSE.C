@@ -551,12 +551,12 @@ char far mouse_check_reg(int x0, int y0, int x1, int y1)
    the hot spot is its middle. */
 void far set_mouse_data(int id)
 {
-    unsigned char far *p;
+    struct Bitmap far *p;
 
     _actual_mhide();
     p = seg009_1(grs_which1(id));
-    curs_w = p[1];
-    cur_h = p[2];
+    curs_w = p->width;
+    cur_h = p->height;
     hotspot_x = curs_w / 2 - 1;
     hotspot_y = cur_h / 2;
     m_cursor_pic = id;

@@ -23,6 +23,12 @@ struct Arc {
     unsigned char dirty;                /* 0x0A, offtab changed */
 };
 
+/* Where ARC.C keeps its data in stdat (FARDATA.ASM): the file names of the archive being
+   rewritten and its temporary file, one after the other (put_arc), and the offset table
+   open_arc reads. The names are ours. */
+#define STDAT_ARC_NAMES  0x2800
+#define STDAT_ARC_OFFTAB 0x8000
+
 /* MISCUTIL.C: file I/O helpers */
 void far flip_bool(char *p);
 void far print_path_to(char far *s, int px, int py, int ignored, int ox, int oy, int previous,

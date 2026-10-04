@@ -28,8 +28,8 @@
 #include "sys.h"
 
 /* This file's _DATA, DS:0AB8..0AC8: the offset table and the names, in stdat. */
-uint32 far *offtab = (uint32 far *)(stdat + 0x8000);
-char far *arcstr = (char far *)stdat + 0x2800;
+uint32 far *offtab = (uint32 far *)&stdat[STDAT_ARC_OFFTAB];
+char far *arcstr = (char far *)&stdat[STDAT_ARC_NAMES];
 
 /* 0x0: opens the archive name into arc, with its temporary file, and reads its offset
    table; 1 if all went well. */
