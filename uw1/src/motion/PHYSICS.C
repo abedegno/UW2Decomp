@@ -264,7 +264,7 @@ char far simple_fizix(int turn)
                 for (i = curP->first; i < curP->first + curP->count; i++)
                 {
                     obj = Obj_PtrTMem(&oCollisions[i].link);
-                    if (OBJ_ITEM(obj) == ITEM_MOVE_TRIGGER_1A0)
+                    if (OBJ_ITEM(obj) == ITEM_MOVE_TRIGGER)
                         UseTrigger(ThePlayer, 0L, obj, 0);
                 }
                 curP = oldP;

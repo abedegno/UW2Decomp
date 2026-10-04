@@ -60,7 +60,7 @@ void far creature_save_ovr101_17(FILE *fd)
 struct Creature * far creature_class_data(void)
 {
     cr_class = OBJ_MINOR(ActiveObj);
-    cr_type = ActiveObj->id & ID_INCLASS;
+    cr_type = OBJ_INCLASS(ActiveObj);
     return &Creature[cr_class * 16 + cr_type];
 }
 
@@ -82,7 +82,7 @@ char far creature_obj_init(void)
     SET_HOMEY(ActiveObj, y);
     ActiveObj->qn.f.quality = x;
     ActiveObj->ol.f.owner = y;
-    cst = &Creature[ActiveObj->id & ID_INMAJOR];
+    cst = &Creature[OBJ_INMAJOR_NOSHIFT(ActiveObj)];
     ActiveObj->hp = (cst->avghit * (rand() % 0x18 + 0x10)) / 0x20;
     ActiveObj->heading = OBJ_HEADING(ActiveObj) << 5;
     SET_GOAL(ActiveObj, GOAL_MILL);

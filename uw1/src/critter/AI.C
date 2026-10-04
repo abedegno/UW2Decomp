@@ -65,9 +65,6 @@
 /* Declared in each file that uses it, its own way (no header). */
 extern struct Spell far spells[53];
 
-/* UW1: set_htx (AI.C in UW2) is not a function; its three stores are written out at
-   each use (PATHFIND.C has the same macro). */
-#define set_htx(h) { meptr->heading = (h) << 5; SET_HEADING(meptr, (h)); SET_FINEHEAD(meptr, 0); }
 
 int16 lastXeye, lastYeye;               /* DS:248E, this file's _BSS (see below) */
 /* match: MISSILE.C's missile_try ties with that file's statics missile_src and missile_arc
@@ -415,7 +412,7 @@ unsigned char far crit_attack(register unsigned dist)
         SET_SEQ(meptr, SEQ_WALK);
         meptr->heading = head << 5;
         SET_SPEED(meptr, 2);
-    } else if (rand() % 0x40 < mycst->attr[1]) {
+    } else if (rand() % 0x40 < mycst->attr[ATTR_DEX]) {
         head = rand() % 8;
         SET_SEQ(meptr, SEQ_COMBAT);
         meptr->heading = head << 5;
@@ -550,7 +547,7 @@ unsigned char far crit_missile_attack(void)
         && line_of_sight(myxpost, myypost, OBJ_Z(meptr) + ComObjData[OBJ_ITEM(meptr)].height,
                          txpost, typost, OBJ_Z(mytarget) + ComObjData[OBJ_ITEM(mytarget)].height)
         && look_for_target(1)) {
-        if (rand() % 0xC0 <= mycst->attr[1]) {
+        if (rand() % 0xC0 <= mycst->attr[ATTR_DEX]) {
             SET_SPEED(meptr, 0);
             SET_SEQ(meptr, SEQ_FIRE);
             SET_FRAME(meptr, 0);
@@ -1018,7 +1015,7 @@ void far set_critter_vars(struct Object far *obj)
     myyhome = meptr->ol.f.owner;
     myoldheading = meptr->heading;
     myoldfacing = (OBJ_HEADING(meptr) << 5) + OBJ_FINEHEAD(meptr);
-    myoldspeed = meptr->b13 & 0x7F;
+    myoldspeed = OBJ_SPEED(meptr);
     myheight = ComObjData[OBJ_ITEM(meptr)].height;
     if (mycst->flier) {
         pn_act = &CN2;
@@ -1120,7 +1117,7 @@ unsigned char far critter_ai(void)
     myyhome = meptr->ol.f.owner;
     myoldheading = meptr->heading;
     myoldfacing = (OBJ_HEADING(meptr) << 5) + OBJ_FINEHEAD(meptr);
-    myoldspeed = meptr->b13 & 0x7F;
+    myoldspeed = OBJ_SPEED(meptr);
     myheight = ComObjData[OBJ_ITEM(meptr)].height;
     if (OBJ_GOAL(meptr) == GOAL_FLUTTER || OBJ_GOAL(meptr) == GOAL_FOLLOW)
         critter_mv();
@@ -1457,7 +1454,7 @@ unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
     register int ratio;
 
     minor = OBJ_MINOR(obj);
-    index = obj->id & ID_INCLASS;
+    index = OBJ_INCLASS(obj);
     cr = &Creature[(minor << 4) + index];
     SET_DAMAGE(obj, OBJ_DAMAGE(obj) + damage);
     if (from == 0)

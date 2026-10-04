@@ -93,7 +93,7 @@ unsigned char res_to_terr[18] = { 0, 0, 1, 0, 2, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0
    ComputeHeading finds (0 to 7, eighths of a turn) or by major * 2 for a plain wall
    across the major axis. */
 struct MotionParams MP = {
-    0, (int16 *)&Ppd, { 0 }, { 0 }, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, &Ppd.x, { 0 }, { 0 }, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     { 0, 0xE000, 0xC000, 0xA000, 0x8000, 0x6000, 0x4000, 0x2000 }
 };
 

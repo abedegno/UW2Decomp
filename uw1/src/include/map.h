@@ -81,11 +81,8 @@ enum TileType {
 #define MAP_SIZE        0x40            /* the map is 64 by 64 tiles (UW-Formats 4.2) */
 #define MAP_MASK        0x3F            /* keeps a tile coordinate on the map */
 #define MAP_TILES       0x1000          /* MAP_SIZE * MAP_SIZE: a byte a tile in PlayersMap */
-#define NUM_LEVELS      0x50            /* 80: LEV.ARK holds four blocks a level for 80
-                                           levels (UW-Formats 4.1) */
-#define LEVELS_PER_WORLD 8              /* each world has eight levels; (level - 1) / 8
-                                           is the world (Guide, "The Worlds and Level
-                                           Concept") */
+#define NUM_LEVELS      9               /* LEV.ARK holds five blocks a level for nine
+                                           levels (level.h's LEVARK_*); UW1 has no worlds */
 
 /* Levels the code treats specially (PlayerLevel, 1 to 9). The names are the Guide's
    (Ultima Underworld's levels: Tybal's Lair, the Ethereal Void endgame map); what each
@@ -147,8 +144,8 @@ void far Load_Terrains(int16 *walls, int16 *floors); /* UW1: walls and floors ap
 extern uint16 TxmTerr[TXM_FLOORS];
 char far init_txtlib(void);
 /* UW1: an open archive (ovr091) and the level, as GAMEWRAP.C passes them */
-unsigned char far Txm_Load(char *arc, int lev);
-char far Txm_Save(char *arc, int lev);
+unsigned char far Txm_Load(struct Arc *arc, int lev);
+char far Txm_Save(struct Arc *arc, int lev);
 extern uint16 f16p;
 extern int16 floor_IDs[TXM_FLOORS];
 extern uint16 f32_buf;

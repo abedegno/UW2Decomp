@@ -66,10 +66,9 @@
 
 char far blttodrive(void far *buf, char *name, unsigned n);
 
-/* LEV.ARK's archive access (ARC.C), declared as this file uses it: arc is a 12-byte buffer
-   holding the archive record (file.h's struct Arc). */
-char far open_arc(char far *arc, char *name);
-char far close_arc(char far *arc);
+/* LEV.ARK's archive access (ARC.C), declared as this file uses it. */
+char far open_arc(struct Arc far *arc, char *name);
+char far close_arc(struct Arc far *arc);
 
 /* Makes the SAVE0 directory, empties it, and checks for 0x9B0A0 bytes free on the
    current drive. Returns 0 (start-up then stops with "Not enough disk space") if not. */
@@ -98,24 +97,24 @@ char far init_save(void)
 int far GetLevel(register int level)
 {
     register int ok = 1;
-    char arc[12];
+    struct Arc arc;
 
     SavePlayerInv(0);
     if (GrSq >= 0)
         GrSq = -1;
-    if (!open_arc(arc, "SAVE0\\lev.ark"))
+    if (!open_arc(&arc, "SAVE0\\lev.ark"))
         return 0;
-    ok = Map_Load(arc, level);
+    ok = Map_Load(&arc, level);
     RestorePlayerInv(0);
     if (ok > 0) {
-        Txm_Load(arc, level);
+        Txm_Load(&arc, level);
         ClearAutoMap();
         clear_paths();
         init_level_creature_stuff();
         if (ok == 1)
-            GetAutoMapLevel(arc, level);
+            GetAutoMapLevel(&arc, level);
     }
-    close_arc(arc);
+    close_arc(&arc);
     return ok;
 }
 
@@ -124,7 +123,7 @@ int far GetLevel(register int level)
 char far SaveLevel(register int level)
 {
     char ok;
-    char arc[12];
+    struct Arc arc;
 
     SavePlayerInv(0);
     FreePlayerInv(&ThePlayer->ol.link);
@@ -132,11 +131,11 @@ char far SaveLevel(register int level)
         Obj_Rem(&(mapdata + GrSq)->objects, ThePlayer);
     GrSq = -1;
     SET_MAJOR(ThePlayer, 0);
-    if ((ok = open_arc(arc, "SAVE0\\lev.ark")) != 0) {
-        ok = Map_Save(arc, level);
-        ok = ok && Txm_Save(arc, level);
-        ok = ok && SaveAutoMapLevel(arc, level);
-        ok = ok && close_arc(arc);
+    if ((ok = open_arc(&arc, "SAVE0\\lev.ark")) != 0) {
+        ok = Map_Save(&arc, level);
+        ok = ok && Txm_Save(&arc, level);
+        ok = ok && SaveAutoMapLevel(&arc, level);
+        ok = ok && close_arc(&arc);
     }
     RestorePlayerInv(0);
     return ok;

@@ -80,6 +80,13 @@ struct Creature {
     unsigned char b2F;
 };
 
+/* struct Creature's attr[]: the three attributes, in the order of the character screen
+   (STRINGS.PAK block 2's "Str:", "Dex:", "Int:") and of the player record's strength,
+   dexterity and intelligence (PLAYDATA.C copies attr[0..2] to and from them). */
+#define ATTR_STR        0
+#define ATTR_DEX        1
+#define ATTR_INT        2
+
 /* A critter's goal, the low nibble of its goal word (OBJ_GOAL), with the goal target
    (OBJ_GTARG, a mobile index, 1 the player) beside it. The names are ours, from what
    AI.C's critter_mv runs for each; UW-Formats (7.x, npc_goal) knows only that 5 kills
@@ -124,6 +131,11 @@ struct Creature {
 #define SEQ_CAST        0xD             /* casting a spell */
 #define SEQ_STAND       0x20            /* standing */
 #define SEQ_WALK        0x2C            /* walking */
+
+/* Turns the current critter (meptr) to face eighth h (0 to 7): its heading byte, the
+   3-bit heading and a zero fine heading. UW2 has set_htx as a function in AI.C; UW1
+   writes the three stores out at each use (AI.C, PATHFIND.C), so it is a macro here. */
+#define set_htx(h) { meptr->heading = (h) << 5; SET_HEADING(meptr, (h)); SET_FINEHEAD(meptr, 0); }
 
 /* One square of a critter's path, 4 bytes. */
 struct PathSq { unsigned char x, y, unused, flag; };
@@ -190,9 +202,9 @@ extern int16 YP;
 extern unsigned char myoldheading;
 void far make_path_from_flood_data(unsigned char length, unsigned char x, unsigned char y);
 void far try_to_open_door(struct Object far *door);
-unsigned char far crit_hndlr_walk(struct Phys *pn);
-unsigned char far crit_hndlr_fly(struct Phys *pn);
-unsigned char far crit_hndlr_swim(struct Phys *pn);
+unsigned char far crit_hndlr_walk(uint16 *state);
+unsigned char far crit_hndlr_fly(uint16 *state);
+unsigned char far crit_hndlr_swim(uint16 *state);
 void far do_that_jump_kinda_thing(struct PathRec far *path);
 unsigned char far deltatotheta(char x, char y);
 unsigned char far add_to_beeline_path(unsigned char x, unsigned char y);
@@ -217,7 +229,6 @@ extern int16 lastXeye;
 extern int16 lastYeye;
 extern unsigned char hitx;
 extern unsigned char hity;
-void far set_htx(int heading);
 void far crit_drunkwalk(void);
 void far crit_mill(void);
 void far crit_guard(void);

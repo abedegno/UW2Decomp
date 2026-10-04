@@ -127,8 +127,26 @@ enum PlayerClass {
 #define STRN_MANTRAS    0x33
 #define NUM_MANTRAS     0x1A
 
-/* struct Player's quest_bytes[]: quests 32 to 35 (UW-Formats 7.8.1, UW1's quest flags;
-   0 to 31 are the bits of quests). */
+/* The quests (UW-Formats 7.8.1, UW1's quest flags): quests 0 to 31 are the bits of
+   struct Player's quests (QUEST_BIT gives the long mask of one), 32 to 35 the bytes of
+   quest_bytes, quest_bytes[n - FIRST_QUEST_BYTE] (BABLHACK.C's get_quest and set_quest).
+   The names are UW-Formats' descriptions; quests 12 to 31 and 33 to 35 are not listed
+   there, and 7 is described only as "conv #24, Murgo". */
+#define QUEST_MURGO_FREED   0           /* Dr. Owl's assistant Murgo freed */
+#define QUEST_HAGBARD       1           /* talked to Hagbard */
+#define QUEST_DR_OWL        2           /* met Dr. Owl (UW-Formats: probably) */
+#define QUEST_KETCHAVAL     3           /* permission to speak to King Ketchaval */
+#define QUEST_GAZER         4           /* Goldthirst's quest: the gazer killed */
+#define QUEST_TALISMANS     5           /* Garamon: find the talismans and throw them into
+                                           the lava */
+#define QUEST_LIZARDMEN     6           /* a friend of the lizardman folk */
+#define QUEST_MURGO_24      7           /* conversation 24, Murgo */
+#define QUEST_BRONUS_BOOK   8           /* the book from Bronus for Morlock */
+#define QUEST_GURSTANG      9           /* the "find Gurstang" quest */
+#define QUEST_ZAK           10          /* where to find Zak, for Delanrey */
+#define QUEST_RODRICK       11          /* Rodrick killed */
+#define QUEST_BIT(n)        (1L << (n))
+#define FIRST_QUEST_BYTE    0x20
 #define QB_CRUX         0               /* quest 32, the Knight of the Crux: 1 seek out
                                            Dorna Ironfist, 2 search for the writ of Lorne,
                                            3 the writ found, 4 the armoury opened */
@@ -161,6 +179,13 @@ enum PlayerClass {
 #define MB_LEVITATE     0x04
 #define MB_WATER_WALK   0x08            /* no swimming */
 #define MB_FLY          0x10
+
+/* An active spell word, struct Player's spells[]: the class (enum-like SPELLC_*,
+   combat.h) in bits 0-3, the subclass in bits 4-7 and the duration left, in duration
+   checks (PLAYTIME.C), in the high byte. */
+#define ASPELL_CLASS(s) ((s) & 0x0F)
+#define ASPELL_SUB(s)   (((s) & 0xF0) >> 4)
+#define ASPELL_STAB(s)  ((s) >> 8)
 
 /* SKILLS.C: skills, levelling, sleep, eating, death and traps (ovr154) */
 char far player_use_skill(int skill);

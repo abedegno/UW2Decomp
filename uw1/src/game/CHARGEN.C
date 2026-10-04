@@ -178,13 +178,13 @@ void far show_atts(void)
 
     set_the_color(0x106);
     rectangle(0x5D, 0x96, 0x8C, 0x4E);
-    itoa(playerdat->attr[0], buf, 10);
+    itoa(playerdat->attr[ATTR_STR], buf, 10);
     string_to_screen("Str:", 0x5D, 0x96);
     string_to_screen(buf, 0x8C - string_width(buf), 0x96);
-    itoa(playerdat->attr[1], buf, 10);
+    itoa(playerdat->attr[ATTR_DEX], buf, 10);
     string_to_screen("Dex:", 0x5D, 0x84);
     string_to_screen(buf, 0x8C - string_width(buf), 0x84);
-    itoa(playerdat->attr[2], buf, 10);
+    itoa(playerdat->attr[ATTR_INT], buf, 10);
     string_to_screen("Int:", 0x5D, 0x72);
     string_to_screen(buf, 0x8C - string_width(buf), 0x72);
     itoa(playerdat->avghit, buf, 10);

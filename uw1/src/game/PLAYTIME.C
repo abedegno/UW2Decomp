@@ -13,7 +13,7 @@
      every 3rd      poison damage, and a mana regeneration roll on the mana skill;
      every 24th     hunger, sobering up, a 1 in 4 chance of wandering monsters, the
                     critters' yearly_checkup, fatigue and two neighbouring bytes counted
-                    up, an HP regeneration roll on strength (inferred: attr[0]), and the
+                    up, an HP regeneration roll on strength (inferred: attr[ATTR_STR]), and the
                     count starts again.
    Entry points: duration_check, set_curmagic (the spells, to start an active spell),
    DegradeLights (also called with a larger amount when time passes quickly, probably by
@@ -41,12 +41,6 @@
 extern struct Spell far spells[53];
 unsigned char far player_eat(int nutrition);
 
-/* An active spell word, struct Player's spells[]: the class in bits 0 to 3, the
-   subclass in bits 4 to 7, the duration left (in duration checks) in the high byte. */
-
-#define SPELL_CLASS(s)  ((s) & 0x0F)
-#define SPELL_SUB(s)    (((s) & 0xF0) >> 4)
-#define SPELL_STAB(s)   ((s) >> 8)
 
 /* Ends active spell *i. Levitate and fly (class 1, motion, subclasses 3 and 5, per the
    Guide's table of motion spells) do not end at once: they become slow fall (subclass
@@ -56,20 +50,20 @@ unsigned char far player_eat(int nutrition);
    into the freed slot and *i is stepped back so the caller's loop sees it. */
 char far dispel_spell(int16 *i)
 {
-    if (SPELL_CLASS(player->spells[*i]) == SPELLC_MOTION
-        && (SPELL_SUB(player->spells[*i]) == 3 || SPELL_SUB(player->spells[*i]) == 5))
+    if (ASPELL_CLASS(player->spells[*i]) == SPELLC_MOTION
+        && (ASPELL_SUB(player->spells[*i]) == 3 || ASPELL_SUB(player->spells[*i]) == 5))
     {
         player->spells[*i] = (player->spells[*i] >> 8 << 8) + 0x21;
         player->spells[*i] = (player->spells[*i] & 0xFF) + 0x100;
     }
     else
     {
-        if (SPELL_CLASS(player->spells[*i]) == SPELLC_XT && SPELL_SUB(player->spells[*i]) == 1)
+        if (ASPELL_CLASS(player->spells[*i]) == SPELLC_XT && ASPELL_SUB(player->spells[*i]) == 1)
         {
             attach_eye(1);
             GameInputMode -= 8;
         }
-        if (SPELL_CLASS(player->spells[*i]) == SPELLC_MOTION)
+        if (ASPELL_CLASS(player->spells[*i]) == SPELLC_MOTION)
             fiz_update = 1;
         player->active_spells--;
         if ((*i)-- < player->active_spells)
@@ -89,7 +83,7 @@ void far duration_check(void)
     plyregen[1]++;
     for (i = 0; i < player->active_spells; i++)
     {
-        stab = SPELL_STAB(player->spells[i]);
+        stab = ASPELL_STAB(player->spells[i]);
         if (stab == 1)
             changed = dispel_spell(&i);
         else
@@ -137,7 +131,7 @@ void far duration_check(void)
         for (i = 0; i < 3; i++)
             if ((&player->fatigue)[i] < 0xFF)
                 (&player->fatigue)[i]++;
-        if (skill_check(playerdat->attr[0], 15) > 0)
+        if (skill_check(playerdat->attr[ATTR_STR], 15) > 0)
             restore_hp(ThePlayer, -1);
         plyregen[1] = 0;
     }
@@ -161,7 +155,7 @@ char far DegradeLights(int amount, unsigned char counter)
     {
         if ((obj = AskInventory(ValidLightSlots[i])) == 0)
             continue;
-        light = obj->id & ID_INCLASS;
+        light = OBJ_INCLASS(obj);
         if (OBJ_CLASS(obj) != CLASS_LIGHT || light < 4 || light >= 8)
             continue;
         if ((light = Lights[light].duration) == 0)

@@ -101,9 +101,9 @@ void far save_player_data(int fd)
 {
     unsigned char key;
     key = player->name[0] ^ 0xAA;
-    player->strength = playerdat->attr[0];
-    player->dexterity = playerdat->attr[1];
-    player->intelligence = playerdat->attr[2];
+    player->strength = playerdat->attr[ATTR_STR];
+    player->dexterity = playerdat->attr[ATTR_DEX];
+    player->intelligence = playerdat->attr[ATTR_INT];
     player->health = ThePlayer->hp;
     player->maxhealth = playerdat->avghit;
     player->saved_x = PN.x;
@@ -123,9 +123,9 @@ void far read_player_data(int fd)
     unsigned char key;
     read(fd, &key, 1);
     xorread(fd, key, (unsigned char far *)player, sizeof(struct Player));
-    playerdat->attr[0] = player->strength;
-    playerdat->attr[1] = player->dexterity;
-    playerdat->attr[2] = player->intelligence;
+    playerdat->attr[ATTR_STR] = player->strength;
+    playerdat->attr[ATTR_DEX] = player->dexterity;
+    playerdat->attr[ATTR_INT] = player->intelligence;
     ThePlayer->hp = player->health;
     playerdat->avghit = player->maxhealth;
     PN.x = player->saved_x;
@@ -297,8 +297,8 @@ void far parse_aspells(unsigned char *out)
     unsigned char i;
     memset(out, 0x15, 3);
     for (i = 0; i < player->active_spells; i++) {
-        out[i] = spell_class_values[player->spells[i] & 0xF];
-        out[i] = out[i] + ((player->spells[i] & 0xF0) >> 4);
+        out[i] = spell_class_values[ASPELL_CLASS(player->spells[i])];
+        out[i] = out[i] + ASPELL_SUB(player->spells[i]);
     }
 }
 
@@ -405,7 +405,7 @@ void far FixPlayerEquips(void)
     if (ActiveObj && OBJ_MAJOR(ActiveObj) == MAJOR_HACK &&
         OBJ_MINOR(ActiveObj) < MINOR_ARMOR) {
         if (OBJ_MINOR(ActiveObj) == MINOR_WEAPON) {
-            armour = Weapons[ActiveObj->id & ID_INCLASS].skill;
+            armour = Weapons[OBJ_INCLASS(ActiveObj)].skill;
             if (armour < 3) armour = 3;
             else if (armour > 5) armour = 5;
             load_weapon((unsigned char)armour + 0xFD);
@@ -432,11 +432,11 @@ void far FixPlayerEquips(void)
     }
     player->light = (brightness << 4) + best_slot;
     for (slot = 0; slot < player->active_spells; slot++)
-        player_affected_by(player->spells[slot] & 0xF,
-                           (player->spells[slot] & 0xF0) >> 4, &bonuses, -1);
+        player_affected_by(ASPELL_CLASS(player->spells[slot]),
+                           ASPELL_SUB(player->spells[slot]), &bonuses, -1);
     for (slot = 0; slot <= 10; slot++) {
         ActiveObj = AskInventory(slot);
-        if (ActiveObj && ObjWorn(ActiveObj->id & ID_ITEM, slot)) {
+        if (ActiveObj && ObjWorn(OBJ_ITEM(ActiveObj), slot)) {
             if (decode_obj_spell(ActiveObj, &major, &effect, &flag) && !flag) {
                 if (player_affected_by(major, effect, &bonuses, slot))
                     remove_spell(ActiveObj);

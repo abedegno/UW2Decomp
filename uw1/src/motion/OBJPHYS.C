@@ -106,7 +106,7 @@ void far missile_newhit(struct Object far *proj, struct Object far *hit)
     struct MissileInfo *mi;
     int scale;
 
-    mi = &Missile[proj->id & ID_INCLASS];
+    mi = &Missile[OBJ_INCLASS(proj)];
     damage = mi->damage;
     if (proj->last_hit == 1 && mi->ammo == -64) {
         scale = (player->skills[SKILL_MISSILE] << 3) + 0xC0;
@@ -240,7 +240,7 @@ void far get_phys_data(struct Object far *obj, struct Phys *pp)
             pp->y = obj->attitude_word;
             pp->z = obj->b0F;
         }
-        pp->speed = obj->b13 & 0x7F;
+        pp->speed = OBJ_SPEED(obj);
         if (OBJ_MAJOR(obj) != MAJOR_CREATURE && (pp->acc[2] | pp->vel[2]) == 0 && !co->no_hit) {
             /* UW1: light read as a signed char (cbw) */
             if ((char)pp->light * 2 + 2 >= pp->speed)

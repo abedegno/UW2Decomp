@@ -35,8 +35,8 @@
 #include "view3d.h"
 
 /* UW1's declarations. */
-int far get_arc(char far *arc, int block, void far *buf);           /* reads a block */
-char far put_arc(char far *arc, int block, void far *buf, int size); /* writes one */
+int far get_arc(struct Arc far *arc, int block, void far *buf);           /* reads a block */
+char far put_arc(struct Arc far *arc, int block, void far *buf, int size); /* writes one */
 /* The 3D view's texture tables (seg051, far): for textures 0..57 (48 walls, then the 10
    floors), the EMS page of the 64-pixel bitmap (0 in conventional memory), the page of the
    16-pixel one, and the two bitmaps' segments. */
@@ -110,7 +110,7 @@ void far ovr131_1DD(int n, int x, int y)
 /* 0x20D: reads level lev's texture block from the open archive arc into TxmID, floor_IDs
    and ActDoors, reads the terrain types, and loads the textures. A block that is not 0x7A
    bytes long makes the result 0, but the buffer is still used. */
-unsigned char far Txm_Load(char *arc, int lev)
+unsigned char far Txm_Load(struct Arc *arc, int lev)
 {
     unsigned char ok;
     int16 buf[0x40];
@@ -139,7 +139,7 @@ unsigned char far Txm_Load(char *arc, int lev)
 }
 
 /* 0x2E2: writes TxmID, floor_IDs and ActDoors back as level lev's texture block. */
-char far Txm_Save(char *arc, int lev)
+char far Txm_Save(struct Arc *arc, int lev)
 {
     int16 buf[0x40];
     register int i;

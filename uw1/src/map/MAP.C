@@ -32,10 +32,10 @@
 #include "sys.h"
 
 /* ovr091: LEV.ARK access */
-char far open_arc(char far *arc, char *name);
-char far close_arc(char far *arc);
-char far put_arc(char far *arc, int block, void far *buf, int n);
-int far get_arc(char far *arc, int block, void far *buf);
+char far open_arc(struct Arc far *arc, char *name);
+char far close_arc(struct Arc far *arc);
+char far put_arc(struct Arc far *arc, int block, void far *buf, int n);
+int far get_arc(struct Arc far *arc, int block, void far *buf);
 /* EFFECT.C */
 
 /* hgt_val converts a tile's 4-bit floor height to a z, 0x40 a step. mapdata is the level
@@ -85,13 +85,13 @@ char far Map_Load(struct Arc *arc, int level)
     struct Arc a;
 
     if (arc == 0) {
-        if (!open_arc((char far *)&a, "SAVE0\\lev.ark"))
+        if (!open_arc(&a, "SAVE0\\lev.ark"))
             return 0;
     } else
         a = *arc;
     end = &LEVEL->magic;
     *end = 0;
-    get_arc((char far *)&a, LEVARK_MAP(level), mapdata);
+    get_arc(&a, LEVARK_MAP(level), mapdata);
     if (*end != LEVEL_MAGIC) {
         pfatal_code(3);
     } else {
@@ -102,7 +102,7 @@ char far Map_Load(struct Arc *arc, int level)
     }
     result = Anim_Load((char *)&a, level);
     if (arc == 0)
-        close_arc((char far *)&a);
+        close_arc(&a);
     return result;
 }
 
@@ -116,7 +116,7 @@ char far Map_Save(struct Arc *arc, int level)
     struct Arc a;
 
     if (arc == 0) {
-        if (!open_arc((char far *)&a, "SAVE0\\lev.ark"))
+        if (!open_arc(&a, "SAVE0\\lev.ark"))
             return 0;
     } else
         a = *arc;
@@ -128,9 +128,9 @@ char far Map_Save(struct Arc *arc, int level)
         - (int32)FP_OFF(objbot)) / 2L;
     *end = LEVEL_MAGIC;
     MapDirty = 0;
-    if ((result = put_arc((char far *)&a, LEVARK_MAP(level), mapdata, LEVEL_SIZE)) != 0)
+    if ((result = put_arc(&a, LEVARK_MAP(level), mapdata, LEVEL_SIZE)) != 0)
         result = Anim_Save((char *)&a, level);
     if (arc == 0)
-        close_arc((char far *)&a);
+        close_arc(&a);
     return result;
 }

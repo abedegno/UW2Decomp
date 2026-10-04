@@ -95,13 +95,13 @@ void far player_compute(char restore)
 {
     register int mana;
 
-    playerdat->avghit = 30 + player->level * playerdat->attr[0] / 5;
-    mana = (player->skills[SKILL_MANA] + 1) * playerdat->attr[2] >> 3;
+    playerdat->avghit = 30 + player->level * playerdat->attr[ATTR_STR] / 5;
+    mana = (player->skills[SKILL_MANA] + 1) * playerdat->attr[ATTR_INT] >> 3;
     if (PlayerLevel == LEVEL_TYBAL)
         player->saved_mana = mana;
     else
         player->max_mana = mana;
-    player->max_weight = playerdat->attr[0] * 2 * 10;
+    player->max_weight = playerdat->attr[ATTR_STR] * 2 * 10;
     if (restore)
         player->play_mana = player->max_mana;
 }
