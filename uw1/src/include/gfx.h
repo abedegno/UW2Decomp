@@ -46,6 +46,10 @@ struct CutsState {
 HOST_LAYOUT_END
 
 /* SPRITE.ASM */
+/* create_sprite(layer) or create_sprite(layer, w, h): a sprite record, with a video memory
+   block of w by h for layers 1 to 3; its number, or -1 (SPRITE.ASM). Called with one argument
+   and with three, so old-style under Turbo C (OLDSTYLE) and variadic on the host. */
+int far create_sprite OLDSTYLE((int layer, ...));
 void far change_sprite(int spr, int x, int y, int w, int h);
 /* The sprite library, seg000. create_sprite is called with one argument and with three.
    match: its callers had no prototype for it, so Turbo C sees none (OLDSTYLE); the port

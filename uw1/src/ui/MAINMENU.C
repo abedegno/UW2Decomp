@@ -83,7 +83,7 @@ int far move_opbtn(struct Bitmap far *p, int size, register int n)
    into the VGA, while the menu waits for input. */
 void far ovr138_94(void)
 {
-    if ((unsigned)GAME_TIME() - cycle_time >= 0xE) {
+    if ((uint16)((uint16)GAME_TIME() - cycle_time) >= 0xE) {   /* 16-bit difference: the clock's low word wraps */
         rotate_bank(0x40, 0x40, 1);
         local_do_palette(0x40, 0x40);
         cycle_time = (unsigned)GAME_TIME();

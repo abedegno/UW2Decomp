@@ -76,3 +76,45 @@ The first set of stubs had 85 functions and 81 variables in 20 files. UW1's own 
 | `x86/modtab.c`, `x86/glue.c` | | the translated modules' and the glue's tables, empty until a module is translated |
 
 The stubs left are the graphics library (GRCORE.ASM 22 functions and 11 variables, MODEX.ASM 14, SPRITE.ASM 8, VALLOC.ASM 5, LPFDELTA.ASM 1), the 3D entry points (C3DENTRY.ASM 13 and 6), SETPNT, four Borland calls (`delay`, `int86`, `sound`, `nosound`) and `port_render_tag`.
+
+## Milestone 3: boot to the title, and the way to the game
+
+Run on 5 October 2026 (Apple clang 21, SDL 3, DOSBox-X for the DOS replays). The port boots the GOG release's data through the Origin and Blue Sky screens, the title, the introduction and the main menu, and through character creation to the game screen. Replayed against the goldens made in DOS (`make verify`, Exhume's `replay.py verify`), the screens and the game state are DOS's byte for byte all the way:
+
+| Session | Identical checkpoints | What they cover |
+| --- | --- | --- |
+| `intro` | all 73 | boot, the title, the whole introduction (four and a half minutes) and the main menu |
+| `newgame` | 39 of 41 | boot, the title, Escape into the introduction and out, the main menu, every screen of character creation, the name, the game screen drawn (`CHECKPOINT(4)`) |
+| `walk`, `sound`, `soundfm`, `items`, `talk` | the first 35 (to `CHECKPOINT(4)`) | the same way in; `sound` and `soundfm` with a Sound Blaster, through the runtime's sound library |
+| `soundmt` | the first 41 | the same with the MT-32 |
+
+Every session first differs at `CHECKPOINT(5)`, when the game screen has faded in: the 3D view and both side panels differ (milestone 4). `talk` stops at the `int 2` that do_uwsetup's opcode DAh leads to (06E7:7C5D, docs/NOTES.md), `items` crashes in the game, and `load`, which replays `items`' saved game, waits for it.
+
+### The graphics library and the rest of the assembly: translated
+
+UW1's port translates its assembly modules instruction by instruction with Exhume's `tools/asm2c.py`, where UW2Decomp's wrote much of its graphics library by hand: the routines the game's C calls with C arguments get a small entry in C that pushes the arguments as Turbo C's far call did and runs the translation from the routine's first instruction (`x86/entry.c`), so the library runs the original's own code from the call on, its data in seg048 is DOS's, and the one thing written by hand is how the arguments get there. `tools/asm2c_spec.py` is UW1's spec: 32 modules, about 92,000 lines of generated C.
+
+| Modules | Code | Entry points in C |
+| --- | --- | --- |
+| seg003, the graphics library: 17 modules (all but MAPDATA, which is data) | `gfx/*.c` | `gfx/grcore.c` (GRCORE.ASM's 25 C entries and its _DATA, the graphics globals) |
+| SPRITE (seg000), VALLOC (seg001), LPFDELTA (seg002), MODEX (seg015_1F9B) | `gfx/sprite.c`, `valloc.c`, `lpfdelta.c`, `modex.c` | `gfx/asmentry.c` |
+| seg004, the 3D renderer: all 9 modules | `3d/*.c` | through C3DENTRY |
+| IMATH and C3DENTRY (seg019) | `sys/imath.c`, `sys/c3dentry_x.c` | `sys/c3dentry.c` (the 13 entries and the far pointers of its _DATA) |
+
+What the translations need from UW1's side, all in `tools/asm2c_spec.py` or `src/port`:
+
+- Overrides for single instructions: MODEX.ASM's three loads of GRCORE's far pointers in DGROUP (`palette`, `dseg_5c99_2404`, C objects in the port); SPRITE.ASM's four `mov ax,DGROUP` (the C stack's segment); PGCACHE.ASM's `_Palettes` (as UW2's); EXPAND.ASM's patched `ret` at 01A6 (as UW2's); SCALEBM.ASM's call of the scaler its generators write at L1F3A, which `gfx/scalebm_code.c` interprets (UW2Decomp's interpreter, at UW1's address).
+- C3DENTRY's `_102B` (the renderer's MousQUp on DGROUP's stack) is C (`x86/glue.c`), with glue for the C that SPRITE.ASM calls (`mouse_hide`, `mouse_show`, `pic_to_screen`, `mask_to_screen`) and TICKREAD's and SYSLIBP's entries.
+- `x86/glue.c`'s `asm_int`: int 10h's mode set and display combination (a VGA with a colour display), int 21h's string print, set vector (int 0, which cRender points at its handler), and file calls, int 67h's page map.
+- `x86/divfault.c`: the renderer's divide fault handlers, by the handler offset it keeps at seg063:04D5: INSTANCE.ASM's three in C, the recovery paths run as translated code with the CPU's frame pushed.
+- The game clock is the doubleword at seg019:0710 in the code block, where DOS keeps it, so the translations and the C read the same clock.
+- `SETPNT.ASM` is UW2Decomp's `setpnt.c` (the module is UW2's byte for byte).
+
+### Found on the way
+
+- **The far heap starts where DOS's does.** DOS's first far heap block is 6955h paragraphs above the load segment (past the image, the stack and the overlay manager's buffer); the runtime's default heap start put the port's first block elsewhere, and seg048:55EA, the segment VIDMODE draws to, differed from the first key press on. `portgame.h` sets `PORT_HEAP_FIRST`.
+- **A 16-bit clock difference.** MAINMENU.C's colour cycling tests `(unsigned)GAME_TIME() - cycle_time >= 0xE`, which on the host is a 32-bit difference: when the clock passed 10000h the menu cycled the palette on every pass where DOS waited. Now `(uint16)((uint16)GAME_TIME() - cycle_time)`, the same bytes under Turbo C (the intro session found it, at the main menu after four minutes).
+- **`create_sprite`** is called with one argument and with three, and PANELS.C had no declaration; `gfx.h` now declares it `OLDSTYLE((int layer, ...))`, so the host's calls pass the variadic arguments as its definition reads them (Apple's arm64 passes variadic arguments on the stack).
+- **The player's saved games.** The DOS replays leave the game folder's SAVE1 to SAVE4 out (`[replay] data_skip`); the port's replays did not, so a port replay of `newgame` found saved games and skipped the introduction. Exhume's `replay.py` now gives the port the same view.
+
+Changes to shared sources in this milestone, each proved by `make check`: MAINMENU.C's clock difference, gfx.h's `create_sprite`. Stubs left: four Borland calls (`delay`, `int86`, `sound`, `nosound`) in one file.

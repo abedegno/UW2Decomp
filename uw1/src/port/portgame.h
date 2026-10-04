@@ -10,7 +10,8 @@
    window; how the game's folder is found and what the settings file is called; the sound
    library's environment variables; and the far data blocks of UW.EXE that no source defines
    yet (mem/fardata.c), whose initial bytes are read from the user's own UW.EXE at start-up,
-   never shipped. The load segment and the far heap are the runtime's defaults. */
+   never shipped. The load segment is the runtime's default; the far heap starts where DOS's
+   does (PORT_HEAP_FIRST, below). */
 #ifndef UW1_PORTGAME_H
 #define UW1_PORTGAME_H
 
@@ -25,6 +26,12 @@ void seg019_exit_chain(void);                   /* sys/sysentry.c */
    visible: renamed in the port, after compat.h has included the host's headers.
    dprintf is DEBUG.C's (ovr106_1B, UW1's debug print); POSIX's writes to a descriptor. */
 #define dprintf uw1_dprintf
+
+/* The far heap's first paragraph: DOS's heap starts 6955h paragraphs above the load segment,
+   past the image (6250h), the stack and the overlay manager's buffer, which the port does not
+   have. Measured: in the DOS replays of the newgame session the first block farmalloc gives
+   (the buffer seg048:55EA names at its checkpoint 4) is at the load segment plus 6955h. */
+#define PORT_HEAP_FIRST (0x6955u + 0x0800u)     /* the runtime's PORT_LOAD_SEG, 0800h, plus 6955h */
 
 /* the black box (sys/blackbox.c): stage/ leaves out the port's settings file */
 #define PORT_BLACKBOX 1

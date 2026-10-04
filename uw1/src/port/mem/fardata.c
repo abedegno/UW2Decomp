@@ -94,13 +94,13 @@ __asm__(
     ".p2align 4\n"
 );
 
-/* The code segments seg003 (the graphics library, 0090:0000) to seg004 (the renderer,
-   06E7:FFFF) as one block, as DOS loaded them. The translated assembly modules keep data in
-   their code segments and patch their own immediates, so the bytes are here and the code
-   reads and writes them (x86/asmrt.h, asmgame.h). The names the C reaches are labels inside
-   it: cXfer (SCALEBM.ASM's colour tables, 0090:1201). */
-#define CODE_FIRST 0x00900u
-#define CODE_SIZE  (0x06E70u - CODE_FIRST + 0x10010u)
+/* The program's code from its first paragraph (seg000, SPRITE.ASM) to seg019's 64 KB window
+   (1F3A:FFFF) as one block, as DOS loaded it. The translated assembly modules keep data in
+   their code segments and patch their own immediates, so the bytes are here and the code reads
+   and writes them (x86/asmrt.h, asmgame.h); the segments' windows overlap, as in DOS. The
+   names the C reaches are labels inside it: cXfer (SCALEBM.ASM's colour tables, 0090:1201) and lightabs (06E7:696E). */
+#define CODE_FIRST 0x00000u
+#define CODE_SIZE  0x2F3A0u
 #ifdef __APPLE__
 #define HEREC "Lport_code_block"
 #else
@@ -112,8 +112,9 @@ __asm__(
     ".p2align 4\n"
     ".globl " S(port_code_block) "\n"
     S(port_code_block) ":\n" HEREC ":\n"
-    ATC(cXfer, 0x1201)                          /* 0090:1201 */
-    ".org " HEREC " + 0x15580\n"
+    ATC(cXfer, 0x2101)                          /* 0090:1201 */
+    ATC(lightabs, 0xD7DE)                       /* 06E7:696E, PGCACHE.ASM's shading rows */
+    ".org " HEREC " + 0x2F3A0\n"
     ".p2align 4\n"
 );
 extern unsigned char port_code_block[];
@@ -227,6 +228,6 @@ int port_load_exe(const char *path)
     for (i = 0; i < sizeof segs / sizeof segs[0]; i++)
         pm_add(segs[i].name, port_far_block + (segs[i].lin - FAR_FIRST), segs[i].size, segs[i].seg + PORT_LOAD_SEG);
     pm_add("FD72 seg063", seg063, SEG063_SIZE, FD72_SEG + PORT_LOAD_SEG);
-    pm_add("seg003-seg004 code", port_code_block, CODE_SIZE, (CODE_FIRST >> 4) + PORT_LOAD_SEG);
+    pm_add("the code, seg000 to seg019", port_code_block, CODE_SIZE, (CODE_FIRST >> 4) + PORT_LOAD_SEG);
     return 0;
 }

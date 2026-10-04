@@ -17,13 +17,16 @@
 #include "compat.h"
 #include "sys.h"
 #include "port.h"
+#include "x86/asmrt.h"
 
 #define D seg063
 #define W(o) ((uint16_t)(D[(o)] | D[(o) + 1] << 8))
 #define SETW(o, v) port_setw(&D[(o)], (uint16_t)(v))
 
-/* TICKS.ASM: the game clock, 1/256 s, in seg019's code segment (SOUND.C's cllbck_tst counts it). */
-uint32 seg019_710;
+/* TICKS.ASM: the game clock, 1/256 s, a doubleword in seg019's code segment at 0710h (SOUND.C's
+   cllbck_tst counts it through Time), kept where DOS keeps it, in the code block (asmgame.h), so
+   that the translated modules that read it through cs: (C3DENTRY.ASM's cInit3d) see it. */
+#define CLOCK ((uint32 *)(CODE019 + 0x710))
 
 /* SYSENTRY.ASM's _DATA: the far pointers C reaches seg019's data through. UW1 has no cJoyInit. */
 int16 *joy_position = (int16 *)(seg063 + 0x1A0);
@@ -37,7 +40,7 @@ unsigned char *Asc = seg063 + 0x10;
 int16 *MouseDx = (int16 *)(seg063 + 0x448);
 int16 *MouseDy = (int16 *)(seg063 + 0x44A);
 int16 *MouseOn = (int16 *)(seg063 + 0x362);
-uint32 *Time = &seg019_710;
+uint32 *Time = CLOCK;
 int16 *cPerror = (int16 *)(seg063 + 0x190);
 char *cExitMessage = (char *)seg063 + 0x44C;
 
@@ -138,5 +141,5 @@ int mbuttons(void)
 /* TICKREAD.ASM's _C00: the low word of the clock. */
 unsigned seg019_C00(void)
 {
-    return (uint16_t)seg019_710;
+    return (uint16_t)*CLOCK;
 }

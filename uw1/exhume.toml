@@ -125,6 +125,11 @@ AnimClass = "OBJECTS.DAT animation classes (ANIMOBJ.C's fread, 4 bytes each)"
 FontInfo = "the 12-byte header of a .SYS font file (GRFX.C's intoFarBuffer into cur_font)"
 Bitmap = "the header of a picture read from an art file (grs_unpack over the bytes read)"
 
+[asm2c]
+# Exhume's tools/asm2c.py: the modules UW1's port translates, its code segments, hand-written
+# ranges and overrides (UW1's own, so they live here)
+spec = "tools/asm2c_spec.py"
+
 [replay]
 # The record and replay harness (Exhume's docs/port.md, "Verifying a port"; docs/BUILDING.md,
 # "Recording and replaying a session"): Exhume's tools/replay.py, golden.py, replaydos.mjs.
