@@ -49,10 +49,13 @@ def pinned():
 
 def check_pin(out=sys.stderr):
     """Warns when the checkout at EXHUME does not contain the commit tools/exhume-ref names;
-    True when it does (or cannot be told: not a git checkout)."""
+    True when it does (or cannot be told: not a git checkout, or no git on PATH)."""
     pin = pinned()
     if not pin or not os.path.isdir(os.path.join(EXHUME, '.git')): return True
-    r = subprocess.run(['git', '-C', EXHUME, 'merge-base', '--is-ancestor', pin, 'HEAD'], capture_output=True)
+    try:
+        r = subprocess.run(['git', '-C', EXHUME, 'merge-base', '--is-ancestor', pin, 'HEAD'], capture_output=True)
+    except OSError:
+        return True                     # no git on PATH (MSYS2's Python on Windows CI): cannot tell
     if r.returncode == 0: return True
     print(f'warning: Exhume at {EXHUME} does not contain {pin[:12]}, the commit tools/exhume-ref names '
           f'(git -C {EXHUME} pull)', file=out)
