@@ -24,6 +24,7 @@
 #include "sys.h"
 #include "ui.h"
 
+/* The game's main loop: until notdone is cleared, runs the change handlers when any change bit is set, then reads and dispatches input. */
 void far mainloop(void)
 {
     while (notdone)
@@ -34,6 +35,9 @@ void far mainloop(void)
     }
 }
 
+/* Runs editor_dispatch[scrnum][bit] for each change bit set (0 to 14), clearing the
+   bit first, then sets the screen's always-on bits again (change_state) and counts
+   pmouseHandled down, freeing the mouse when it reaches 0. */
 void far do_changes(void)
 {
     unsigned i;
@@ -59,6 +63,7 @@ void far do_changes(void)
     }
 }
 
+/* Asks for work on the next pass of the main loop: sets bits in changed. */
 void far editchng(int bits)
 {
     changed |= bits;

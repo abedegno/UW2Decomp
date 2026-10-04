@@ -19,9 +19,9 @@
    Changing level: ChangeLevel runs do_level_hacks for the level being left (mode 1), saves
    it, loads the new one and runs do_level_hacks for it (mode 0).
 
-   UW1 against UW2: LEV.ARK is opened and closed here, through a 12-byte archive record
-   that the map, texture and automap loaders take (ovr091, ovr123, ovr131, ovr092, not yet
-   matched); no DL.DAT, no schedules, no gruesome_door_hack; copy_file takes two whole
+   UW1 against UW2: LEV.ARK is opened and closed here, through an archive record
+   (struct Arc, file.h) that the map, texture and automap loaders take (ARC.C, MAP.C,
+   TEXTMAPS.C, AUTOMAP.C); no DL.DAT, no schedules, no gruesome_door_hack; copy_file takes two whole
    paths and copy_dir builds them; init_save wants 0x9B0A0 bytes free; the save
    descriptions' heading is a literal string; DoSaveRest has no panel redraws or
    parse_effect, and its messages start at 0xA0; do_level_hacks has no sound effects or
@@ -32,7 +32,12 @@
    UW1 has no symbol-bearing build: names are UW2's (the FM Towns symbol table) where the
    routine is the same.
    Name: original (copy_file is in System Shock's GAMEWRAP.C, saving and loading games in
-   both). */
+   both).
+
+   Entry points: init_save and copy_file (UWEDIT.C's init_world), DoSaveRest and
+   ShowSaveRest (OPTIONS.C, the options panel), ChangeLevel (UWEDIT.C's new_player_pos).
+   Neighbours: INVSAVE.C (PLAYER.DAT and the inventory), MAP.C, TEXTMAPS.C and AUTOMAP.C
+   (a level's blocks), ARC.C (LEV.ARK), CRITTIME.C (the critters between levels). */
 
 #include <string.h>
 #include <stdio.h>
@@ -41,8 +46,7 @@
 #include <io.h>
 #include <fcntl.h>
 #include <stat.h>                       /* sys\stat.h; the build keeps it flat */
-/* UW1: map.h (which other headers include too) has UW2's Map_Load and Map_Save; UW1's take
-   the archive record and the level (declared below). */
+/* UW1: map.h's Map_Load and Map_Save take the archive record and the level. */
 #include "combat.h"
 #include "critter.h"
 #include "event.h"
@@ -169,6 +173,9 @@ void far get_save_descs(char descs[][40], register int16 *found)
     }
 }
 
+/* Lists the four save slots' descriptions in the message scroll, as "I- " to "IV- "
+   and each slot's DESC (or "<not used yet>"), under the heading "Save Game
+   Descriptions". */
 void far ShowSaveRest(void)
 {
     int16 found;
@@ -222,6 +229,11 @@ void far DoSaveRest(int restore, int slot)
     game_sprint(msg + 0xA0);
 }
 
+/* Restores slot (1 to 4): empties SAVE0, copies SAVEn into it, resets the game
+   (reset_game), reads PLAYER.DAT and the inventory (RestorePlayerInv), loads the saved
+   level and runs its after-restore hacks (mode 3), and puts back the record of the last
+   critter hit. Prints "Restoring Game " and "..." after each step; returns 0 on the first
+   failure. */
 char far RestoreGame(char slot)
 {
     char path[30];
@@ -251,6 +263,10 @@ char far RestoreGame(char slot)
     return 0;
 }
 
+/* Saves to slot (1 to 4): asks for the description (Escape abandons the save), makes
+   and empties SAVEn, writes the description to SAVE0\DESC (blttodrive, raw, no
+   terminator), writes PLAYER.DAT and the inventory (SavePlayerInv) and the current level
+   (SaveLevel), then copies all of SAVE0 to SAVEn. Returns 0 on any failure. */
 char far SaveGame(char slot, register char *desc)
 {
     char path[30];
@@ -292,6 +308,8 @@ fail:
     return 0;
 }
 
+/* Deletes every file in the directory dir (a path ending in a backslash); returns 0 if
+   one cannot be deleted. */
 char far clear_dir(char *dir)
 {
     char path[66];
@@ -405,13 +423,14 @@ char far ChangeLevel(int from, int to)
 
 /* Per-level special cases. mode 0 is arriving, 1 leaving, 3 after a restore:
    - arriving anywhere the creatures are set up; leaving, the critters are moved on as if
-     time had passed. With bit 4 of the record's byte 0x60 set, arriving only runs
-     clearobj.
+     time had passed. With player->armageddon set (bit 4 of byte 0x60, the Armageddon
+     spell), arriving only runs clearobj.
    - level 7 (Tybal's lair), while the orb stands: arriving keeps the maximum mana aside
      and leaves none, and reapplies the maze spell; leaving restores the maximum and a
      quarter of it as mana.
    - level 9 (the void): the automap flag is kept aside and turned off on arrival, put back
-     when leaving, and turned off after a restore. */
+     when leaving, and turned off after a restore. It is kept in player->saved_mana, the
+     byte level 7 keeps the maximum mana in. */
 void far do_level_hacks(int level, register int mode)
 {
     if (player->armageddon && mode == 0) {

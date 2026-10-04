@@ -30,7 +30,7 @@
    stand off while his orb is whole; acceptable_danger is 0 for conversation 0x16 on
    level 6; crit_die plays the death cry by the current critter (mycst), not the victim;
    critter_ai's melee strike comes on frame 4 and resets to the combat stance; no victim,
-   seqptr or seq_len globals. The player record's layout differs (Player1AI below).
+   seqptr or seq_len globals. The player record's layout is UW1's (struct Player, player.h).
 
    A critter's "home" word (OBJ_HOMEX, OBJ_HOMEY) is the tile it stands on now; its home
    in the AI's sense, myxhome and myyhome, is kept in the quality and owner fields
@@ -45,7 +45,14 @@
    UW1 has no symbol-bearing build: function and global names are UW2's (the FM Towns
    originals) where the routine is the same, else the listing's.
    Name: UW2Decomp's (the job of System Shock's AI.C: critter goals and AI, critter_ai,
-   crit_attack). */
+   crit_attack).
+
+   Entry points: move_mobile, each frame from PLAYMOVE.C's move_physics; damage_critter, from
+   DAMAGE.C for every blow, missile and spell that hurts a critter or the player;
+   set_critter_vars and critter_set_goal, for CRITTIME.C. Neighbours: PATHFIND.C (the
+   per-critter globals, crit_head_for_loc, the collision handlers, move_me_joe), MOTION.C and
+   OBJPHYS.C (do_physics, get_phys_data, set_phys_data), COMBAT.C (critter_attack,
+   critter_fire), SPELLS.C (cast), CONVERSE.C (TalkTo). */
 
 #include <dos.h>
 #include <stdlib.h>
@@ -196,7 +203,8 @@ void far crit_drunkwalk(void)
 }
 
 /* UW1: a goal UW2 lacks (see critter_mv). Within about 1.4 tiles of the target the
-   critter faces it and stands (sequence 1); further than 8 tiles away it jumps to the
+   critter faces it and plays its first attack animation (SEQ_ATTACK1, without a blow:
+   critter_ai sends goal 3 straight to critter_mv); further than 8 tiles away it jumps to the
    target's side, a quarter of the way back along the line from the target to itself, onto
    the middle of that tile at floor height; in between it heads for the target's tile. */
 /* name: the listing's; UW2 has no such function. */
@@ -1032,8 +1040,11 @@ void far set_critter_vars(struct Object far *obj)
 /* One AI step for meptr. A critter more than 10 tiles from both the view and the player
    is skipped for half a cycle (its bin moves on 8), unless its goal is 3. Otherwise its
    motion is run through the physics engine (do_crit_phys), with lava (collision bit
-   0x20, a footprint corner on lava) ignored by creatures whose ComObjData resist has bit
-   8 (probably fire resistance). Then by
+   0x20, a footprint corner on lava) ignored by creatures whose ComObjData resist has 8
+   set (flameproof: PLAYDATA.C's damage_protection_flags give the Flameproof spell 8).
+   The handler is changed for the step and changed back by setting the bits, so a
+   flier's or swimmer's handler (CT2, CT4), which init_ai left without 0x20 in mask and
+   w6, keeps 0x20 there after a flameproof flier or swimmer has moved. Then by
    sequence: a dying critter at its last frame (3) is removed, its inventory generated and
    dropped and its corpse built (returns 0, so move_mobile revisits the slot); an attack
    sequence strikes on frame 4 (critter_attack with a random swing kind 0-8, the charge
@@ -1441,8 +1452,9 @@ unsigned char far crit_die(struct Object far *obj)
    shooter). A hit by the player on a critter that is not a loner is recorded (race,
    place, time) so the critter's kin join in (critter_mv). At zero hit points it dies
    (crit_die), crediting the player (player_killed_a); returns 1 then. Also picks the
-   combat music: 2 when a critter the player hits is below a quarter of its hit points,
-   4 when the player is below a quarter of theirs, else 3. */
+   combat music: MUSIC_FOE_HURT when a critter the player hits is below a quarter of its
+   hit points, MUSIC_DANGER when the player is below a quarter of theirs, else
+   MUSIC_COMBAT. */
 unsigned char far damage_critter(struct Object far *obj, unsigned char damage,
                                  struct Object far *from)
 {

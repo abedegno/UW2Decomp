@@ -40,7 +40,12 @@
 
    File names mentioned (MOTION.C, OBJPHYS.C) are UW2Decomp's.
    name: descriptive, UW2Decomp's (its map/filenames.tsv: terrain and object collision,
-   placing objects). */
+   placing objects).
+
+   Data owned: oCollisions (the objects in the way), curP (the collision record being
+   filled), centptr, nvokHgt and nvokTerr (can_place's results), stay_centered (for
+   drop_around_place), and the statics of the checks (tiles, pnt and the footprint
+   extent). */
 
 #include <mem.h>
 #include <stdlib.h>
@@ -55,7 +60,9 @@ unsigned char far IsMobElem(struct Object far *obj);
 
 /* A tile's terrain word: type 0-3, height 4-7, the floor texture's terrain byte from
    bit 4 (its class, read back as bits 8-9). */
-/* UW1: the terrain byte is shifted left 4 whole; UW2 masks TERR_CLASS (0xC0) and shifts 2. */
+/* UW1: the terrain byte is shifted left 4 whole, so TERRAIN.DAT's 0x10 (water) and 0x20
+   (lava) land in bits 8-9 as classes 1 and 2 (map.h's TERR_* and TERRAIN_*); UW2 masks
+   its 0xC0 class bits and shifts 2. */
 #define TILE_TERR(t)    (t)->type + ((t)->height << 4) + ((TxmTerr[(t)->floor] & 0xFF) << 4)
 
 /* A corner of the footprint, or (the fifth) its centre: which of the nine tiles around

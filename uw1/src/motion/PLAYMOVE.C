@@ -9,7 +9,7 @@
    is ours or the listing's; the source file's own name is not known. Callers and other
    files named here are UW2's.
 
-   UW1 against UW2: the player record is laid out differently (Player1Move below);
+   UW1 against UW2: the player record is laid out differently (struct Player, player.h);
    parse_playin and move_physics do not look at the Wizard Eye; make_noise has no swimming strokes and plain floor
    footsteps only (sounds 1 and 2); parse_effect has no early exit when motion_state is 0,
    no djinn step, spares a player wearing the dragon skin boots from lava, and has no
@@ -503,7 +503,7 @@ void far parse_effect(void)
         }
     }
     if (player->motion_state & MS_LAVA && !DragonSkinBoots_dseg_5c99_1B01 && rand() % 5 == 0)
-        damage_item(ThePlayer, 0L, 0, 0, 1, 8);
+        damage_item(ThePlayer, 0L, 0, 0, 1, DMG_FIRE);
     if (player->motion_state & MS_FLOAT)
         playerMod[0] = abs(0x10 - (tsteps >> 3)) * 3;
     if (player->motion_state & (MS_SHAKE | MS_TREMOR))

@@ -1,5 +1,6 @@
 /* player.h: The player: skills and levelling, timed updates, set-up, character creation,
-   the player record, and the player's physics. */
+   the player record, and the player's physics. docs/subsystems/game.md describes the
+   subsystem. */
 #ifndef PLAYER_H
 #define PLAYER_H
 

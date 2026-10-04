@@ -34,7 +34,9 @@
    paths (paths) with their free mask (freepaths), the flood frontiers, and the step
    tables (PathingOffset, path_turns, slope_for_dir). The flood search writes its
    per-square records (struct StaticTile, critter.h) into stdat, a 64 by 64 far buffer
-   shared with other code.
+   shared with other code. The handlers get the collision state word itself (MOTION.C
+   calls TP->special(&state)); UW2's sources type that argument struct Phys * and read
+   its first field.
 
    Path terrain: hyp_move's flags argument is the handler's noclimb word and costflags
    its w6 word (init_ai): 0x1000 asks for height checks, and bit 8 << class forbids
@@ -287,9 +289,14 @@ unsigned char far crit_hndlr_walk(uint16 *state) {
     }
     return failed && control;
 }
+/* The moving object's handler (CT3.special): its mask is 0, so it is never called; it would let everything through. */
 static unsigned char far crit_hndlr_obj(uint16 *state) {
     (void)state; return 0;
 }
+/* The flying critter's handler (CT2.special): a wall (0x200) fails; a floor too high
+   (0x100) lifts it (vertical speed 0x80, hitwall for adjust_height); an object in the way
+   (0x400) is noted in collobject. The bits arrive in *state, the collision state word
+   (MOTION.C's check_positions). */
 unsigned char far crit_hndlr_fly(uint16 *state) {
     control = 1;
     if (*state & 0x200) {
@@ -308,6 +315,9 @@ unsigned char far crit_hndlr_fly(uint16 *state) {
         return failed && control;
     }
 }
+/* The swimming critter's handler (CT4.special): a wall or high floor (0x300), an object
+   (0x400, noted in collobject) or a corner on a plain floor (8, leaving the water) stops it
+   and fails. */
 unsigned char far crit_hndlr_swim(uint16 *state) {
     if (*state & 0x300) {
         CN4.vel[0] = CN4.vel[1] = 0;
@@ -326,6 +336,7 @@ unsigned char far crit_hndlr_swim(uint16 *state) {
     }
     return failed && control;
 }
+/* Runs pn under tp for the critter's rate in time units (rate * 16): one AI step's worth of motion. */
 unsigned char far do_crit_phys(struct Phys *pn, struct Handler *tp) {
     pn->time = OBJ_RATE(meptr) << 4;
     do_physics(pn, tp);
@@ -1107,7 +1118,7 @@ void far crit_head_for_loc(unsigned char x, unsigned char y, char z) {
     blocked = 0;
     opening = 0;
     set_loc(x, y, z);
-    if (((meptr->b18 & 0x20) >> 5) && OBJ_B15_7(meptr)) {
+    if (OBJ_B18_5(meptr) && OBJ_B15_7(meptr)) {
         freepaths |= 1 << OBJ_PATH(meptr);
         SET_B15_7(meptr, 0);
     }
@@ -1171,11 +1182,11 @@ void far crit_head_for_loc(unsigned char x, unsigned char y, char z) {
             freepaths |= 1 << OBJ_PATH(meptr);
             SET_B15_7(meptr, 0);
         }
-    } else if (!((meptr->b18 & 0x20) >> 5) && OBJ_B18_7(meptr)) {
+    } else if (!OBJ_B18_5(meptr) && OBJ_B18_7(meptr)) {
         heading = deltatotheta(dx, dy);
         set_htx(heading);
         if (mycst->flier) adjust_height(x, y);
-    } else if (!((meptr->b18 & 0x20) >> 5) && OBJ_B18_6(meptr)) {
+    } else if (!OBJ_B18_5(meptr) && OBJ_B18_6(meptr)) {
         if (rand() % 8 == 0) SET_B18_6(meptr, 0);
         crit_drunkwalk();
         return;
@@ -1247,5 +1258,5 @@ void far try_to_open_door(struct Object far *door) {
         return;
     }
     if (rand() % 4 == 0)
-        damage_item(door, meptr, doorx, doory, rand() % mycst->attacks[0].damage, 4);
+        damage_item(door, meptr, doorx, doory, rand() % mycst->attacks[0].damage, DMG_PHYSICAL);
 }

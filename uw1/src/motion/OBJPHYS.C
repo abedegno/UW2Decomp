@@ -35,8 +35,8 @@
    no splash and no ice case, and its random speed and pitch come after a bounce as well;
    mob_to_static keeps nothing on level 9, and on level 8 an object of fate 10 (talismans,
    by the listing's name) landing in lava within 6 tiles of the map's centre while the
-   player lives is destroyed in an explosion, counting down player byte 0x6D (when bit 2
-   of player word 0x62 allows it; otherwise it sets bit 3 of player word 0x6E). Some flags and returns are read as signed
+   player lives is destroyed in an explosion, counting down player->talismans (when
+   player->talisman_ok allows it; otherwise it sets bit 3 of player->dreams). Some flags and returns are read as signed
    chars (cbw), marked where they are.
 
    name: descriptive, UW2Decomp's (its map/filenames.tsv: object physics, bounce_obj,
@@ -317,7 +317,7 @@ unsigned char far set_phys_data(struct Object far *obj, struct Phys *pp)
     else
         obj->qn.f.quality = pp->hp;
     if (pp->terrain & FOOT_LAVA && rand() % 5 == 0)
-        damage_item(obj, 0L, XP, YP, 1, 8);
+        damage_item(obj, 0L, XP, YP, 1, DMG_FIRE);
     if (OBJ_MAJOR(obj) != MAJOR_CREATURE) {
         if (obj > (struct Object far *)objdata) {
             if (pp->speed | pp->vel[2] | pp->acc[2])
@@ -564,7 +564,7 @@ again:
         if (ComObjData[OBJ_ITEM(obj)].qualclass == 3)
             destroy = 0;
         else
-            destroy = check_res(obj, 1, 8);
+            destroy = check_res(obj, 1, DMG_FIRE);
     } else if (!(curP->hits0 & 8) && deal_blocked == 0) {
         if (low) {
             retried = 1;

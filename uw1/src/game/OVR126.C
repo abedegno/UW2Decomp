@@ -11,6 +11,7 @@
 #include "gfx.h"
 #include "sys.h"
 
+/* Plays cutscene 10, the credits, and asks for every change bit but 0 (a full redraw of the current screen). */
 void far show_credits(void)
 {
     runcutscene(10);

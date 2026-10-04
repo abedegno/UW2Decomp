@@ -22,7 +22,7 @@
    UW1 against UW2: no Killorn countdown, sleep counter or hourly schedule (UW2's every 60th
    call); the slow work is every 24th call (UW2 30th); lights burn while time is stopped,
    go out at quality 0 and ValidLightSlots is signed; drowning flashes colour 0xC6.
-   struct Player differs (Player1Time below).
+   struct Player is UW1's (player.h).
    Data: none of its own; plyregen and the light tables are elsewhere.
    Name: descriptive (the player's timed updates: duration_check, DegradeLights). */
 
@@ -72,6 +72,11 @@ char far dispel_spell(int16 *i)
     return 1;
 }
 
+/* One tick of the player's slow clock (see the top of the file): counts plyregen[1] and
+   does that call's share of the work. An active spell whose duration is down to 1 ends
+   (dispel_spell), any other loses a step; lights burn; mushrooms wear off; a change
+   refits the equipment and redraws. Then regeneration, drowning, and on every 3rd and
+   24th call the slower work. */
 void far duration_check(void)
 {
     int16 i;
@@ -115,7 +120,7 @@ void far duration_check(void)
         if (player->poison)
         {
             dmg = player->poison--;
-            damage_item(ThePlayer, 0L, 0, 0, dmg, 0x10);
+            damage_item(ThePlayer, 0L, 0, 0, dmg, DMG_POISON);
         }
         if ((dmg = skill_check(player->skills[SKILL_MANA], 10)) > 0)
             restore_mana(ThePlayer, -dmg);
@@ -129,7 +134,7 @@ void far duration_check(void)
             DoWanderingMonsters(1);
         yearly_checkup();
         for (i = 0; i < 3; i++)
-            if ((&player->fatigue)[i] < 0xFF)
+            if ((&player->fatigue)[i] < 0xFF)  /* match: fatigue, food_heal and b3C through one field's address */
                 (&player->fatigue)[i]++;
         if (skill_check(playerdat->attr[ATTR_STR], 15) > 0)
             restore_hp(ThePlayer, -1);

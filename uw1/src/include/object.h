@@ -1,5 +1,15 @@
-/* object.h: Objects: the object lists and their storage, object classes and their data,
-   combining, damage, spilling, using and looking at objects, animated objects and timers. */
+/* object.h: Objects: the object store and its lists, object classes and their data,
+   combining, damage, spilling, using and looking at objects, and animated objects. The
+   header of src/obj (and DAMAGE.C, in src/combat): the record layouts (struct Object,
+   struct StaticObj, struct ComObj and the class tables of DATA\OBJECTS.DAT), the masks
+   and accessor macros for the packed words of an object, the sizes of the object store,
+   and the prototypes of the files named in each section below.
+
+   Where the names come from: the record fields from UW-Formats (4.2, the master object
+   list; 6.3, OBJECTS.DAT; the Underworld Adventures document for UW1's tables), the
+   function and global names from UW2's FM Towns symbol table through UW2Decomp, the
+   routines being the same, and names for fields the format leaves open from the code that
+   uses them (each says so). items.h has the item ids. */
 #ifndef OBJECT_H
 #define OBJECT_H
 
@@ -117,8 +127,7 @@ struct Anim {
 /* Per animation class (an object of class 7, by its low 4 bits): what to do each frame,
    and the run of frames it cycles through. */
 struct AnimClass {
-    uint16 flags;                       /* 1 cycle, 2 random, 4 door, 0x20 remove at end,
-                                           0x80 finish the motion first */
+    uint16 flags;                       /* ANIMF_* below */
     char start;
     unsigned char count;
 };
@@ -144,12 +153,12 @@ struct AnimClass {
 #define ID_FLAGS        0x1E00          /* bits 9-12; for a door, its state */
 #define ID_FLAG9        0x200           /* bit 9: a lock is locked (UW-Formats, 010f;
                                            UseKey, checkLock); a trigger may be set off
-                                           by creatures (ovr166) */
+                                           by creatures (TRIGGER.C) */
 #define ID_FLAG10       0x400           /* bit 10: a book plays a cutscene (UseBook);
-                                           a trigger keeps its trap after use (ovr166) */
+                                           a trigger keeps its trap after use (TRIGGER.C) */
 #define ID_FLAG11       0x800           /* bit 11: a spell object's charges are shown
-                                           (ovr126); a trigger may be set off by the
-                                           player (ovr166) */
+                                           (LOOK.C); a trigger may be set off by the
+                                           player (TRIGGER.C) */
 #define ID_ENCHANT      0x1000          /* bit 12, the object is enchanted */
 #define ID_DOORDIR      0x2000          /* bit 13: doordir in UW-Formats; chkTenacious
                                            keeps an object with it set from culling */
@@ -179,10 +188,11 @@ struct AnimClass {
    with only a byte and bit (OBJ_B19_4) are fields whose meaning is not known. */
 /* match: a shift by 0 is kept, because Turbo C emits it (shr ax,0). Two
    fields need a second spelling, because files compile them differently:
-   OBJ_INMAJOR_NOSHIFT leaves out the shift by 0 (one instruction fewer; ovr157, seg007),
+   OBJ_INMAJOR_NOSHIFT leaves out the shift by 0 (one instruction fewer; AI.C, CREATURE.C),
    and SET_FINEX_UNSIGNED casts the new value to unsigned, which stops Turbo C merging the
    macro's "& 7" with the same mask in the argument (SET_FINEX(o, x & 7) is one "and", the
-   _UNSIGNED form two; seg008, seg024, seg027, seg028, seg030). Other differences between
+   _UNSIGNED form two; COMBAT.C, MISSILE.C, SPELLS.C, PHYSICS.C, COLLIDE.C, OBJPHYS.C,
+   SKILLS.C). Other differences between
    the files' old copies (an unmasked value, a missing "<< 0") changed no bytes, because
    those files pass constants or values already masked. */
 /* The id word */
@@ -243,7 +253,7 @@ struct AnimClass {
 #define SET_FRAME(o, v)     ((o)->goal_word = (o)->goal_word & 0xFFF | ((v) & 0xF) << 12)
 /* The attitude word (0x0D): bits 0-3 the goal saved while another runs (npc_level in
    UW-Formats), 4-7 a target height (TargetZHeight, provisional), 8 a summoned, temporary critter (SpawnedCritter), 9 no healing
-   (StopHPRegen), 10 powerful (IsPowerful; ovr157 reads it as undead), 12 its inventory
+   (StopHPRegen), 10 powerful (IsPowerful), 12 its inventory
    has been generated (LootSpawnedFlag), 13 talked to, 14-15 the attitude */
 #define OBJ_OLDGOAL(o)      (((o)->attitude_word & 0xF) >> 0)
 #define OBJ_TARGETZ(o)      (((o)->attitude_word & 0xF0) >> 4)
@@ -301,6 +311,7 @@ struct AnimClass {
 #define OBJ_FINEHEAD(o)     ((o)->b18 & 0x1F)
 #define OBJ_B18_6(o)        (((o)->b18 & 0x40) >> 6)
 #define OBJ_B18_7(o)        (((o)->b18 & 0x80) >> 7)
+#define OBJ_B18_5(o)        (((o)->b18 & 0x20) >> 5)
 #define SET_FINEHEAD(o, v)  ((o)->b18 = (o)->b18 & 0xE0 | ((v) & 0x1F) << 0)
 #define SET_B18_5(o, v)     ((o)->b18 = (o)->b18 & 0xDF | (v) << 5)
 #define SET_B18_6(o, v)     ((o)->b18 = (o)->b18 & 0xBF | ((v) & 1) << 6)
@@ -408,7 +419,7 @@ struct Weapon {
 };
 
 /* One armour or wearable's properties, 4 bytes, 32 of them from OBJECTS.DAT (UW-Formats,
-   "Armour and wearables table"), in ovr120's Armor. */
+   "Armour and wearables table"), in HACK.C's Armor. */
 struct Armour {
     unsigned char protection;           /* 0x00 */
     unsigned char durability;           /* 0x01 */
@@ -438,12 +449,16 @@ struct Container {
     unsigned char capacity;             /* 0x00, 0 for no limit */
     int16 mask;                         /* 0x01, what it accepts: an item id, 0x200.. a kind, or -1 */
 };
-/* The kinds a container's mask can name, as INVPANEL.C's ItemFitsSlot tests them. */
+/* The kinds a container's mask can name, as INVPANEL.C's ItemFitsSlot tests them. UW1's
+   OBJECTS.DAT gives them to the rune bag (0x8F), the quiver (0x8D), the map case (0x88,
+   0x89) and the bowl (0x8E); every other container has mask -1 (anything). */
 #define CONT_RUNES      0x200           /* runestones (the rune bag) */
-#define CONT_MISSILES   0x201           /* sling stones, bolts, arrows and wands */
-#define CONT_SCROLLS    0x202           /* scrolls and maps */
-#define CONT_FOOD       0x203           /* food and reagents, not drinks */
-#define CONT_KEYS       0x204           /* keys, or a container of keys */
+#define CONT_MISSILES   0x201           /* sling stones, bolts and arrows (0x10..0x12) */
+#define CONT_SCROLLS    0x202           /* scrolls and the map (0x138..0x13F) */
+#define CONT_FOOD       0x203           /* class 0x0B, and the plants, candle, leeches,
+                                           rotworm stew and dead rotworm */
+#define CONT_KEYS       0x204           /* UW2's key ring: no UW1 container has it, and
+                                           ItemFitsSlot has no case for it */
 
 /* One entry per light source type (item class, lit types 4 to 7). */
 struct Light {
@@ -477,7 +492,7 @@ char far drop_link_chain(struct Object far *cont, int owner);
 void far drop_some_objects(struct Object far *critter);
 void far generate_inventory(struct Object far *npc);
 
-/* OBJUSE.C: using objects */
+/* USEITEMS.C: using objects (UW2's OBJUSE.C) */
 void far UseKey(struct Object far *obj, char how);
 void far UseWand(struct Object far *wand, char how);
 char far checkSpell(int x, int y, struct Object far *who, struct Object far *obj, char how);
@@ -493,7 +508,7 @@ struct Object far * far UseObj(struct Object far *who, struct Object far *obj, c
 int far using_punt(struct Object far *obj, char inv, char how);
 char far decode_obj_spell(struct Object far *obj, int16 *major, int16 *effect, char *flag);
 
-/* USEITEMS.C: using objects */
+/* USEITEMS.C: the item handlers (UW2's USEITEMS.C) */
 void far DumpTheBag(struct Object far *bag, char to_player);
 void far UseRockHammerOn(struct Object far *obj, char how, char other);
 /* match: declared before the rest of its file because TLINK numbers the overlay's stub
@@ -534,7 +549,7 @@ void far SpecialLook(struct Object far *obj, int print);
 void far LookAt(struct Object far *obj, int lore);
 char far talisman_desc(struct Object far *obj, struct ComObj *com);
 
-/* EFFECT.C: animated objects and timers */
+/* EFFECT.C: animated objects (UW1 has no timer list) */
 extern unsigned char DoAnimO;
 void far do_animobj(int n, int frames);
 unsigned char far check_door(int n, int frames);

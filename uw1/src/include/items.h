@@ -574,8 +574,6 @@ enum TriggerType {
 #define ITEM_STEP_ON_TRIGGER             0x1A4
 #define ITEM_OPEN_TRIGGER                0x1A5
 #define ITEM_UNLOCK_TRIGGER              0x1A6
-/* UW2's spelling of ITEM_MOVE_TRIGGER, kept while motion/PHYSICS.C still uses it. */
-#define ITEM_MOVE_TRIGGER_1A0            ITEM_MOVE_TRIGGER
 
 /* Animated objects (major class 7) */
 #define ITEM_BLOOD                       0x1C0

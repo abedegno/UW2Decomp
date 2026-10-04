@@ -20,7 +20,12 @@
    Names: UW2's (FM Towns) where the routine is the same and the stub order agrees
    (init_txtlib, Txm_Load, load_txtmaps, Load_Terrains, Txm_Save). load_tr_mem and the data
    names are ours, chosen so that their bssorder keys give the EXE's stub order and _BSS
-   layout (see each). Name: inferred, as UW2's. */
+   layout (see each). Name: inferred, as UW2's.
+
+   Entry points: init_txtlib (UWEDIT.C's init_world), Txm_Load and Txm_Save (GAMEWRAP.C's
+   GetLevel and SaveLevel), load_tr_mem (PLAYDATA.C's swap_tmap, the maze spell).
+   Neighbours: LOADGR.C (the walls in EMS), the 3D view (GRIDDB.C reads TxmID and TxmTerr),
+   COLLIDE.C and PATHFIND.C (TxmTerr, the floors' terrain class). */
 
 #include <stdio.h>
 #include <string.h>

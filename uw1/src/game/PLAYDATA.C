@@ -14,7 +14,7 @@
    the effects of active spells and of enchanted worn items (player_affected_by),
    stealth (plyNotice), the light level and the mushroom effect.
 
-   UW1 against UW2: the record is 0xD2 bytes with its own layout (Player1Data below); no
+   UW1 against UW2: the record is 0xD2 bytes with its own layout (struct Player, player.h); no
    DL.DAT (load_dl) and no per-level minimum light, no poison weapon or valor; two
    functions of UW1's own, swap_tmap (a body here, empty in UW2) and set_maze, the maze
    navigation spell (class 13 minor 4) that swaps the floor textures for the maze level,
@@ -97,6 +97,10 @@ static unsigned char damage_protection_flags[5] = {0x40, 0x08, 0x10, 0x01, 0x02}
    same place. */
 void far MaybePlayerDayLoadrelated_ovr142_0(void) {}
 
+/* Writes the player record to fd as PLAYER.DAT has it: first the values kept elsewhere
+   while playing are copied in (attributes and vitality from playerdat, HP from the player
+   object, PN's position, the facing and level, sound and music on, the footing), then a
+   key byte (name[0] xor 0xAA) and the whole record xor-encoded with it (xorwrite). */
 void far save_player_data(int fd)
 {
     unsigned char key;
@@ -118,6 +122,10 @@ void far save_player_data(int fd)
     xorwrite(fd, key, (unsigned char far *)player, sizeof(struct Player));
 }
 
+/* The reverse of save_player_data: reads the key and the record, and copies the values
+   kept elsewhere back out to playerdat, the player object, PN, the facing and level and
+   the sound settings; then the detail level (set_graphics_level) and the movement state
+   (newFPS). */
 void far read_player_data(int fd)
 {
     unsigned char key;
@@ -304,7 +312,7 @@ void far parse_aspells(unsigned char *out)
 
 /* UW1: turns the maze navigation spell's view on or off. On level 7 (the maze), turning
    it on swaps in floor texture 0x0C unless it is already that, and off restores 0x0E
-   when it was 0x0C; the record keeps the state (bit 4 of byte 0x62). */
+   when it was 0x0C; the record keeps the state (player->maze, bit 4 of byte 0x62). */
 /* name: descriptive, chosen to fit the stub order (bssorder key 835, between
    MaybePlayerDayLoadrelated_ovr142_0 749 and set_drugged 859). */
 void far set_maze(char on)

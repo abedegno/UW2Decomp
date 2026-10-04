@@ -23,12 +23,18 @@
    UW1 against UW2: no grant_skill_advance, cs_check, player_won_game, do_gem,
    do_dreamret, punt_mouse_obj, punt_void or go_void (no ethereal void dream, no
    blackrock gem); new mantra_advance, great_advance, report_advance, check_victory,
-   plant_seed and do_resurrect. The player record differs (Player1Skills below).
+   plant_seed and do_resurrect. The player record is UW1's (struct Player, player.h).
    Data: skill_rng, EndGameMode_dseg_1C8F.
    UW1 has no symbol-bearing build: names are UW2's (the FM Towns symbol table) where the
    routine is the same; the new functions' names are descriptive, chosen so that their
    bssorder keys reproduce the EXE's overlay stub order (see each).
-   Name: descriptive (skills, sleep, dreams, eating, death: use_skill, player_sleep). */
+   Name: descriptive (skills, sleep, dreams, eating, death: use_skill, player_sleep).
+
+   Entry points: player_use_skill and player_key_sleep (PLAYER.C's key bindings);
+   player_sleep, plant_seed and mantra_advance (USEITEMS.C, CONVERSE.C); check_victory
+   (UWEDIT.C's editor_dispatch, every frame); player_is_dead (INTERACT.C); DetectedTrap
+   and RemoveTrap (SPELLS.C, INTERACT.C); get_skill (BABLHACK.C, trainers); add_to_skill
+   (CHARGEN.C); advance (SKILLCHK.C). */
 
 #include <string.h>
 #include <stdlib.h>
@@ -83,6 +89,8 @@ char far use_skill(struct Object far *who, unsigned char skill, unsigned char va
     return 1;
 }
 
+/* The use-skill key (PLAYER.C binds F9 with 2): skill counts from SKILL_TRAPS, so 2 is
+   SKILL_TRACK. */
 char far player_use_skill(int skill)
 {
     return use_skill(ThePlayer, skill + SKILL_TRAPS, player->skills[skill + SKILL_TRAPS]);
@@ -118,7 +126,7 @@ void far advance(char levels)
     else
         s[0] = ' ';
     s[1] = player->level % 10 + '0';
-    game_sprint(0x93);                  /* "Congratulations! You've reached experience level " */
+    game_sprint(0x93);                  /* "You have attained experience level " */
     scroll_print(s);
     player->skill_points = player->skill_points + levels;
     player_compute(0);
@@ -301,13 +309,13 @@ void far mantra_advance(void)
                 return;
             case 1:
                 if (!player->key && place_new(0, ITEM_KEY_OF_TRUTH)) {
-                    game_sprint(0x1E);
+                    game_sprint(0x1E);  /* "None of your skills improved.": so the shipped strings say after the key appears */
                     player->key = 1;
                 }
                 seg041_35D7_E9(0x20);
                 return;
             case 2:
-                game_sprint(0x1F);
+                game_sprint(0x1F);  /* string 0x1F of block 1 is empty in the shipped STRINGS.PAK */
                 seg041_35D7_E9(0x20);
                 return;
             case 3: base = SKILL_ATTACK; size = 7; tries = 3; break;
@@ -491,7 +499,7 @@ void far drop_drunk_player(void)
     if ((player->motion_state & MS_FLOAT) && (motionbits & (MB_SLOW_FALL | MB_LEVITATE | MB_FLY)) == 0)
     {
         damage = rand() % 6 * 10 + 12;
-        damage_item(ThePlayer, 0L, 0, 0, damage, 0x10);
+        damage_item(ThePlayer, 0L, 0, 0, damage, DMG_POISON);
     }
     if (player->motion_state & (MS_SWIM | MS_LAVA))
         damage_item(ThePlayer, 0L, 0, 0, 0xFF, 0);
@@ -542,7 +550,7 @@ void far player_sleep(register int how)
     if (player->poison)
     {
         comfort = (player->poison + 1) * player->poison >> 1;
-        damage_item(ThePlayer, 0L, 0, 0, comfort, 0x10);
+        damage_item(ThePlayer, 0L, 0, 0, comfort, DMG_POISON);
         player->poison = 0;
     }
     if (how < 0)

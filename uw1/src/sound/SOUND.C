@@ -159,6 +159,7 @@ void far cllbck_tst(void)
     (*Time)++;
 }
 
+/* Starts the game clock: an AIL timer at 256 Hz calling cllbck_tst. Failing to get a timer is fatal (first_punt(1)). */
 unsigned char far init_timers(void)
 {
     htimer = AIL_register_timer(cllbck_tst);
@@ -285,6 +286,7 @@ fail:
     return 0;
 }
 
+/* Loads timbre bank, patch from the timbre library (load_global_timbre) and hands it to the music driver. Returns 0 if it is not in the library. */
 char far install_timbre(unsigned char bank, unsigned char patch)
 {
     void far *p;
@@ -364,6 +366,7 @@ void far * far load_sound_driver(char *name)
     return p;
 }
 
+/* Starts the loaded theme again if it is not playing, at volume 0x60. */
 void far play_music(void)
 {
     if (!music_ok || !music_on || xmi_sequence == -1)
@@ -396,6 +399,9 @@ fail:
     return 0;
 }
 
+/* Reads the whole file name into midi_buf (bltfromdrive). midi_buf is 6300 bytes
+   (init_sounds) and the length is not checked against it: the largest theme UW1 ships is
+   6248 bytes. */
 char far read_file_to_mbuf(char *name)
 {
     int32 len;
@@ -414,11 +420,13 @@ fail:
     return 0;
 }
 
+/* The theme playing (curmusic). */
 unsigned char far get_current_music(void)
 {
     return curmusic;
 }
 
+/* Whether music is on: 0 when the music could not be set up. */
 char far music_is_on(void)
 {
     if (!music_ok)
@@ -426,6 +434,7 @@ char far music_is_on(void)
     return music_on;
 }
 
+/* Whether sound effects are on: 0 when they could not be set up. */
 char far fx_is_on(void)
 {
     if (!fx_ok)
@@ -433,6 +442,8 @@ char far fx_is_on(void)
     return fx_on;
 }
 
+/* Music on or off (the options panel, PLAYDATA.C's read_player_data). Turning it on
+   with no theme loaded picks a walking theme (seg014_1DC5_15C5) and loads it. */
 void far turn_music(char on)
 {
     if (!music_ok)
@@ -458,6 +469,7 @@ static void far toggle_music(void)
     turn_music(!music_on);
 }
 
+/* Sound effects on or off; off silences the effects playing (seg014_1DC5_C7C). */
 void far turn_fx(char on)
 {
     if (!fx_ok)
@@ -481,6 +493,7 @@ static void far toggle_fx(void)
         seg014_1DC5_C7C();
 }
 
+/* Stops the theme playing, when music is on. */
 void far stop_music(void)
 {
     if (!music_ok || !music_on)
@@ -589,6 +602,7 @@ unsigned char far play_effect_here(unsigned char fx, unsigned char pan, char vol
     return fx_play(fx, e->patch, e->note, v, pan, e->length);
 }
 
+/* play_effect at obj's position (fine units). */
 unsigned char far play_effect_on_mobile(unsigned char fx, struct Object far *obj, char vol)
 {
     if (!fx_ok || !fx_on)
@@ -597,6 +611,8 @@ unsigned char far play_effect_on_mobile(unsigned char fx, struct Object far *obj
                        (OBJ_HOMEY(obj) << 3) + OBJ_FINEY(obj), vol);
 }
 
+/* Silences effect slot n (0 to 3) if it is playing: on the PC speaker by an all notes
+   off (controller 0x7B) on its channel, otherwise by releasing its locked channel. */
 void far kill_effect(unsigned char n)
 {
     if (fx_mask & (1 << n)) {
@@ -684,6 +700,7 @@ char far read_fx_data(void)
     return 1;
 }
 
+/* Starts the 16 Hz effects timer (fx_timer) and reads SOUNDS.DAT (read_fx_data). Returns 0 if either fails. */
 char far init_fx(void)
 {
     fx_mask = 0;
@@ -867,6 +884,7 @@ char far play_cup_tune(char *played)
     return 0;
 }
 
+/* Stops and releases the game clock's timer. */
 void far free_timers(void)
 {
     AIL_stop_timer(htimer);
@@ -884,6 +902,7 @@ void far free_sounds(void)
     farfree(midi_drv);
 }
 
+/* Asks for theme m; change_music_maybe starts it on its next call. */
 void far set_new_music(unsigned char m)
 {
     newmusic = m;
@@ -953,6 +972,7 @@ void far change_music_maybe(void)
     }
 }
 
+/* Whether the theme has ended (or none is loaded): the sequence's status is not 1, playing. */
 char far music_over(void)
 {
     if (xmi_sequence == -1)
@@ -998,6 +1018,7 @@ fail:
     return 0;
 }
 
+/* Whether there is a speech card and its driver is set up (speechok). */
 char far speech_available(void)
 {
     return speechok;
@@ -1110,6 +1131,7 @@ char far speech_over(void)
     return 0;
 }
 
+/* Stops the digital playback of the speech. */
 void far stop_speech(void)
 {
     if (!speechok)
@@ -1117,6 +1139,7 @@ void far stop_speech(void)
     AIL_stop_digital_playback(sphdriver);
 }
 
+/* Forgets the speech buffers and closes the .VOC being played. */
 void far free_speech_stuff(void)
 {
     dsdata[0] = dsdata[1] = 0;
@@ -1136,5 +1159,5 @@ void far seg014_1DC5_1D0D(FILE *fp)
     fgets(line, 99, fp);
     sscanf(line, "%d %d %x %d\n", &sound_card, &m_settings[0], &m_settings[1], &m_settings[2]);
     fgets(line, 99, fp);
-    sscanf(line, "%d %d %x %d\n", &speech_card, &speech_cfg[0], &speech_cfg[1], &speech_cfg[2]);
+    sscanf(line, "%d %d %x %d\n", &speech_card, &speech_cfg[0], &speech_cfg[1], &speech_cfg[2]);  /* %d stores 2 bytes */
 }

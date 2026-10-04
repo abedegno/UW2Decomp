@@ -15,7 +15,12 @@
    its DATA\ path, rather than through our_open); XFER.DAT is 0x600 bytes (UW2: 0x500).
 
    name: UW2's (the FM Towns names), which also keep the EXE's overlay stub order
-   (init_lighting 281, set_light 755, random_light 946). */
+   (init_lighting 281, set_light 755, random_light 946).
+
+   Entry points: init_lighting (UWEDIT.C's init_world); set_light (PLAYDATA.C's
+   FixPlayerEquips, the light spells and Wizard Eye; PLAYER.C at start-up and for the
+   crystal ball); random_light (PLAYDATA.C's set_drugged). Data owned: cur_light_level;
+   the tables it fills are the renderer's (cLightTabs, cXfer, the shading globals). */
 
 #include <dos.h>
 #include <io.h>

@@ -17,7 +17,7 @@
    pick one from, and each pick adds to that skill (SKILLS.C's add_to_skill).
    Data: sknow (skills chosen so far), chroff and chrbuf (the button pictures).
 
-   UW1 against UW2: the player record differs (Player1Gen below) and init_char sets UW1's
+   UW1 against UW2: the player record is UW1's (struct Player, player.h) and init_char sets UW1's
    fields (the game clock at 0x10B3000, one moonstone on level 2, eight talismans, game
    variable 0x1A at 0x35) with no random seed; selopt draws only the button, the
    answers being in the button pictures; the name question ends on Escape too and has no
@@ -172,6 +172,8 @@ char far set_sklmnu(unsigned char *idx, unsigned char *skills, struct ChrOpt far
     return 0;
 }
 
+/* Draws the attributes and vitality (Str, Dex, Int, Vit) in the box at x 0x5D to 0x8C,
+   the labels left and the numbers right-aligned, after clearing it with colour 0x106. */
 void far show_atts(void)
 {
     char buf[10];
@@ -192,6 +194,8 @@ void far show_atts(void)
     string_to_screen(buf, 0x8C - string_width(buf), 0x60);
 }
 
+/* Draws the skills held so far, at most six rows of 11 pixels from y 0x43, each name
+   from string block 2 and its value right-aligned at x 0x7D. */
 void far show_skills(void)
 {
     char buf[10];
@@ -323,6 +327,9 @@ void far drawopt(struct ChrOpt far *opt)
     }
 }
 
+/* Moves the highlight from answer old to answer new: redraws old's button with the plain
+   picture (opt->pic + 1) and new's with the highlighted one (opt->pic + 2), transparently,
+   at the positions drawopt lays the buttons out at. Nothing when they are the same. */
 void far selopt(struct ChrOpt far *opt, unsigned char new, unsigned char old)
 {
     int xbase, ybase, w;
@@ -676,6 +683,8 @@ unsigned char far * far adr_chrpic(int size)
     return p;
 }
 
+/* gronk_gr's move callback: records where picture n + 1 starts (chroff) from picture n's
+   size, the first at 5; p is unused. Returns whether the picture had any bytes. */
 int far move_chrpic(unsigned char far *p, int size, register int n)
 {
     if (n == 0)
@@ -761,6 +770,9 @@ fail:
     return 1;
 }
 
+/* The start menu's "create character": a blank record (init_char(1)), the chargen
+   screens (strt_chargen), then the weapon colour maps (load_weapcm). Returns
+   strt_chargen's result. */
 char far create_player(void)
 {
     char r;

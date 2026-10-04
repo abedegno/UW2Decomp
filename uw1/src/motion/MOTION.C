@@ -185,7 +185,7 @@ void far set_targz(char how)
                     }
                 } else if (solid && oCollisions[i].top >= MP.targz
                            && (MP.hit == -1 || !(oCollisions[MP.hit].link.f.low & 0x10)
-                               || !(!oCollisions[i].link.f.low & 0x10))) {
+                               || !(!oCollisions[i].link.f.low & 0x10))) {  /* always true: !x is 0 or 1 */
                     MP.targz = oCollisions[i].top;
                     MP.hit = i;
                 }
@@ -291,6 +291,7 @@ void far recalc_vecs(char how)
         MP.done = MP.steps + 1;
 }
 
+/* Stops the mover dead: no velocity, acceleration or speed, and the walk ends (MP.done past MP.steps). */
 void far stop_me(void)
 {
     CP->acc[2] = CP->vel[2] = CP->acc[0] = CP->vel[0] = CP->acc[1] = CP->vel[1] = 0;
@@ -298,6 +299,10 @@ void far stop_me(void)
     MP.done = MP.steps + 1;
 }
 
+/* Writes the cell position back into the physics record (x and y in 1/256 tiles, z in
+   1/8 units) with Ppd's heading. The player standing on a slope (hits0 0x2000, within
+   radius of the floor and not moving vertically) is put exactly on the slope's surface
+   (GetSlopeHgt), so walking up or down a slope does not bounce. */
 void far back_to_space(void)
 {
     CP->x = (MP.pos[0] << 5) + (MP.frac[0] >> 8);

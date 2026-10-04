@@ -226,6 +226,7 @@ void far mous_player(int left, register int bot, register int wid, int hgt)
     region_br = defineMouseRegion(left + wid - wid * 5 / 15, bot + hgt * 6 / 15, left + wid - 1, bot + hgt - 1, 0x1074);
 }
 
+/* Removes the 3D view's click region and its eight cursor regions (mous_player's). */
 void far demous_player(void)
 {
     input_del(PMsHndle);
@@ -259,6 +260,7 @@ void far report_loc(void)
     scroll_print(buf);
 }
 
+/* Alt+F7: prints the game's name and version, "F1.94S". */
 void far show_version(void)
 {
     game_sprint(0x113);                 /* "Ultima Underworld: The Stygian Abyss v" */
@@ -354,6 +356,7 @@ void far attach_eye(int mode)
     }
 }
 
+/* Puts the roaming camera at index (home_cam) and detaches the view from any object. */
 void far release_camera(int index)
 {
     home_cam(index);

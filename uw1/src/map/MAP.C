@@ -21,7 +21,12 @@
 
    name: UW2's (FM Towns Map_Init, Map_Load, Map_Save; UW2Decomp's OverwriteAllTiles_ovr128_37),
    which also keep the EXE's overlay stub order (Map_Load 597, Map_Init 661,
-   OverwriteAllTiles_ovr128_37 679, Map_Save 765). */
+   OverwriteAllTiles_ovr128_37 679, Map_Save 765).
+
+   Entry points: Map_Init (UWEDIT.C's init_world), Map_Load and Map_Save (GAMEWRAP.C's
+   GetLevel and SaveLevel). Neighbours: OBJECTS.C (Map_ObjFix, the object store inside the
+   block), EFFECT.C (the animation overlays), ARC.C (the archive), level.h (the block's
+   layout and its LEV.ARK block numbers). */
 
 #include <dos.h>
 #include <alloc.h>

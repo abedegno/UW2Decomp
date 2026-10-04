@@ -8,7 +8,11 @@
 
    name: descriptive (the file's own name is not known). UW1 has no symbol-bearing build:
    the function names are UW2's, from the FM Towns symbol table, the routines being the
-   same. */
+   same.
+
+   Entry points: Map_GetAddr, called from nearly every file that touches the map;
+   CreateObj, from the spells, traps, death and the silver tree (SKILLS.C), critter remains
+   (PATHFIND.C) and wherever else a new object is made. */
 
 #include "critter.h"
 #include "map.h"

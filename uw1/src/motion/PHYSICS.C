@@ -13,7 +13,7 @@
    three functions of its own at the end, before newFPS: BouncePlayer, DoTrapScreenShake
    and QuakeTrap (the listing's names), a quake trap's shake and throw. player_setup has
    no third argument, newFPS scales the speeds out of 10 with no swimming skill, and
-   do_player_input has no paralysis test. struct Player differs (UW1PlayerMotion below).
+   do_player_input has no paralysis test. struct Player is UW1's (player.h).
 
    The player's physics record is PN (motion.h, owned by MOTION.C) with the handler PT,
    whose special function is player_sqhandler. Each tick move_player calls
@@ -30,7 +30,14 @@
    GrSq is the player's tile as an index into mapdata.
 
    name: UW2Decomp's (its map/filenames.tsv: the player's physics, simple_fizix and
-   fizix_update; the job of System Shock's PHYSICS.C). */
+   fizix_update; the job of System Shock's PHYSICS.C).
+
+   Entry points: player_setup (UWEDIT.C's new_player_pos, SPELLS.C, MAINMENU.C);
+   set_player_phys_params and phys_affect_player (PLAYMOVE.C's move_player); simple_fizix
+   (PLAYMOVE.C's player_simple_move); parse_player_terr, fizix_update and newFPS
+   (PLAYDATA.C); QuakeTrap_seg008_DE7 (TRIGGER.C); EtherealVoidSpecialEffects_seg008_150
+   (INTERACT.C). Data owned: GrSq, pTurn, pFPS and the speeds, lastTerr, motionbits,
+   fiz_update, MaxPlayerAccel. */
 
 #include <stdlib.h>
 #include "event.h"

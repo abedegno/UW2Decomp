@@ -27,7 +27,7 @@
    minor class; critter_get_told has an extra exception for owner 0x0D (below), uses
    strings 0xE1.. of block 1 and does not capitalise the name; player_grabbed clears the
    owner up to 0x1B (UW2 0x1D) and leaves a container's contents alone. The player record's
-   layout differs (Player1Hit below).
+   layout is UW1's (struct Player, player.h).
 
    Data owned: wander_found and hostile_found (results of the area callbacks), and stolen
    and grab_owner for player_grabbed's callback.
@@ -91,7 +91,7 @@ void far yearly_checkup(void)
 /* Where in a tile of this type (map.h's tile types) to place a critter, as fine x and y
    (0-7): the middle of an open tile, the open corner of a diagonal. Returns 0 for a solid
    tile. Type 5 (TILE_DIAG_NW) gets (6, 1) like type 2, though its open corner would be
-   (1, 6); probably a slip in the original. */
+   (1, 6); probably a slip in the original, as in UW2 (FINDINGS). */
 char far set_gridx_and_y_based_on_tile_type(unsigned char type, unsigned char *x,
                                             unsigned char *y)  /* UW1: char (callers cbw) */
 {
@@ -414,7 +414,9 @@ static unsigned char grab_owner = 0;
    only) that has the stolen object within its sight range and in line of sight grows
    one step less friendly and says so, the name followed by string 0xE1 + the new
    attitude of block 1 (UW2's are 0xF0.., " is angered by your action." and so on).
-   UW1 only: race 0x0D does not care while the player record's byte 0x69 is 3 or more. */
+   UW1 only: owner 0x0D does not care once quest 32 (QB_CRUX, the Knight of the Crux)
+   is 3 or more, the writ of Lorne found (UW-Formats 7.8.1). That 0x0D is the knights'
+   race is an inference from the quest. */
 char far critter_get_told(int x, int y, struct Object far *target, struct Tile far *tile,
                           unsigned char src)
 {

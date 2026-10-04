@@ -1,5 +1,5 @@
 /* critter.h: Critters: their motion, AI and goals, their class data, and the critter art
-   pages. */
+   pages. docs/subsystems/critter.md describes the subsystem. */
 #ifndef CRITTER_H
 #define CRITTER_H
 

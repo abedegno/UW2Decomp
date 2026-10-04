@@ -40,7 +40,11 @@
    UW2Decomp's provisional names for its DOS-only functions) where the routine is the
    same; callees with no name yet keep the listing's.
    Name: inferred (UW2's uwedit.exe; this file has main and the editor's start-up and
-   exit, init_edit and editexit). */
+   exit, init_edit and editexit).
+
+   Entry point: main (the C start-up calls it). Neighbours: MAINLOOP.C (mainloop,
+   do_changes), MAINMENU.C (real_start), GAMEWRAP.C (ChangeLevel), every subsystem's
+   init_ and free_ functions. */
 
 #include <dos.h>
 #include <dir.h>
@@ -209,6 +213,7 @@ void far free_world(char flag)
     clear_dir(HomeDir);
 }
 
+/* Waits for the mouse buttons to be released, then plays cutscene 9, the title. */
 void far titlescr(void)
 {
     while (mouse_get_input() > 3)
@@ -236,11 +241,15 @@ void far init_edit(int argc, char *argv[])
     inplist->mode = 0;
 }
 
+/* Alt+X: ends the main loop at once (notdone 0). */
 void far editexit(int unused)
 {
     notdone = 0;
 }
 
+/* Empties the level's objects (Map_ObjFix) and redraws; the player is in no tile
+   (GrSq -1). The Armageddon spell (SPELLS.C) calls it, and do_level_hacks on every arrival
+   afterwards. */
 void far clearobj(int unused)
 {
     Map_ObjFix();
@@ -286,13 +295,15 @@ void far newscr(int mode)
         editchng(0x7FFE);
 }
 
+/* Copies the change bits into *bits. No matched source calls it, though it has an
+   overlay stub. */
 void far ovr112_389(int16 *bits)
 {
     *bits = changed;
 }
 
 /* Start handler of the 3D view: fades out, draws the game screen's frame (screen
-   image 4), places the 3D view at x 16, y 182, 208 by 128, renders one frame and fades
+   image 4), places the 3D view at x 0x34, y 0xB4, 0xAC by 0x71, renders one frame and fades
    back in with the game palette. */
 void far strt_demscr(void)
 {
@@ -315,6 +326,7 @@ void far strt_demscr(void)
     fadein(pal, 2);
 }
 
+/* The 3D view's exit handler: its mouse regions, the game screen's panels and the screen graphics are put away. */
 void far free_demscr(void)
 {
     demous_player();
@@ -392,6 +404,7 @@ void far real_death(int how)
     editor_dispatch[scrnum][0]();
 }
 
+/* The 3D view's change handler 1: draws the view (establish_view). */
 void far do_3d_view(void)
 {
     establish_view();
