@@ -23,13 +23,33 @@ unsigned char *port_frame_alloc(void);
 static unsigned char *frame;
 static int slot[4] = { -1, -1, -1, -1 };        /* the logical page in each frame slot */
 
+/* Slot s's page back to the store. In DOS a page mapped into two slots is one page seen
+   twice; here each slot has a copy, so when another slot holds the same page, the copy that
+   differs from the store is the one written since, and it goes to the store and to the other
+   slot. (After the cutscene the textures are reloaded through slots 0 to 2, and the renderer
+   then maps the same pages into slot 3: copied from the store alone, slot 3 got the
+   cutscene's pictures, the floor turned red after Lord British's talk in rc8.) */
+static void write_back(int s)
+{
+    unsigned char *page = store + (size_t)slot[s] * 0x4000, *mine = frame + s * 0x4000;
+    int q, shared = 0;
+    for (q = 0; q < 4; q++) shared |= q != s && slot[q] == slot[s];
+    if (!shared) { memcpy(page, mine, 0x4000); return; }
+    if (!memcmp(page, mine, 0x4000)) return;
+    memcpy(page, mine, 0x4000);
+    for (q = 0; q < 4; q++)
+        if (q != s && slot[q] == slot[s]) memcpy(frame + q * 0x4000, mine, 0x4000);
+}
+
 static int map(unsigned physical, unsigned logical)
 {
+    int q;
     if (ems_handle == 0xFFFF || physical > 3) return 0;
     if (logical != 0xFFFF && logical >= ems_pages) return 0;
-    if (slot[physical] >= 0)
-        memcpy(store + (size_t)slot[physical] * 0x4000, frame + physical * 0x4000, 0x4000);
+    if (slot[physical] >= 0) write_back((int)physical);
     if (logical == 0xFFFF) { slot[physical] = -1; return 1; }
+    for (q = 0; q < 4; q++)
+        if (q != (int)physical && slot[q] == (int)logical) write_back(q);
     memcpy(frame + physical * 0x4000, store + (size_t)logical * 0x4000, 0x4000);
     slot[physical] = (int)logical;
     return 1;
