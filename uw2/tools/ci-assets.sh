@@ -30,6 +30,7 @@ out=$dest; if command -v cygpath >/dev/null 2>&1; then out=$(cygpath -m "$dest")
 vars="UW2_EXE=$out/game/UW2/UW2.EXE
 UW2_DIR=$out/game/UW2
 TC_DISKS=$out/tc
-TASM_DISKS=$out/tasm"
+TASM_DISKS=$out/tasm
+MT32_ROMS=$out/mt32"
 echo "$vars"
 [ -z "${GITHUB_ENV:-}" ] || echo "$vars" >> "$GITHUB_ENV"

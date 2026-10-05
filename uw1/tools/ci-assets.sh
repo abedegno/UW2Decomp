@@ -9,4 +9,4 @@ set -eu
 here=$(cd "$(dirname "$0")/.." && pwd)
 exhume=${EXHUME:-$here/../exhume}
 exec sh "$exhume/tools/ci-assets.sh" "$1" "$2" --require game/UW1/UW.EXE \
-  --export UW1_DATA=game/UW1 --export UW1_EXE=game/UW1/UW.EXE --export TC_DISKS=tc --export TASM_DISKS=tasm
+  --export UW1_DATA=game/UW1 --export UW1_EXE=game/UW1/UW.EXE --export TC_DISKS=tc --export TASM_DISKS=tasm --export MT32_ROMS=mt32
