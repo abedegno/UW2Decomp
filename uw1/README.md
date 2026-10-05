@@ -58,6 +58,8 @@ The port is done to the same standard as UW2Decomp's: every recorded session is 
 
 `map/crosswalk.tsv` lists every function by the disassembly listing's name and address (the names in UWReverseEngineering's `UW1_asm.asm`, which UnderworldGodot cites), with the matched source's name for it and the file and line that define it. `python3 tools/crosswalk.py --find NAME_OR_ADDRESS` looks one up; an address inside a routine (`ovr119_3CE`) finds the routine that holds it, and a segment may be given with or without the listing's paragraph (`seg032_6A9` or `seg032_2DCA_6A9`). UW2Decomp has the same table for UW2. Segment numbers mean different code in the two games, so a bare address resolves in both, and the citing code's context says which game it means. Between the two tables, 1,077 of the 1,085 listing names and addresses UnderworldGodot's sources cite resolve to a matched routine. `python3 tools/crosswalk.py` rebuilds the table from the target tables and the built objects. seg005 is Borland's C library and has no source line.
 
+[docs/UW1-UW2-DIFFERENCES.md](docs/UW1-UW2-DIFFERENCES.md) summarises where UW1's rules differ from UW2's, routine by routine, and points to the full catalogue in UW2Decomp.
+
 ## Names
 
 UW1 has no build with symbols. Its names come from UW2's matched sources, whose names are the FM Towns build's originals: a UW1 function whose code pairs with a UW2 function (`tools/kin.py` in Exhume, `map/kin.tsv`) takes that name. Where the overlay manager's stub order rules a name out (the linker numbers an overlay's entries in the order of a hash of their names), a function takes a descriptive name whose hash fits, and the source says so.
