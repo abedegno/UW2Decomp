@@ -1,5 +1,9 @@
 # Underworld Exhumed
 
+**Ultima Underworld:** [![UW1 accuracy](https://github.com/abedegno/underworld-exhumed/actions/workflows/uw1-accuracy.yml/badge.svg?branch=main)](https://github.com/abedegno/underworld-exhumed/actions/workflows/uw1-accuracy.yml) [![UW1 port](https://github.com/abedegno/underworld-exhumed/actions/workflows/uw1-port.yml/badge.svg?branch=main)](https://github.com/abedegno/underworld-exhumed/actions/workflows/uw1-port.yml) [![UW1 release](https://img.shields.io/github/v/release/abedegno/underworld-exhumed?filter=uw1-*&include_prereleases&label=release)](https://github.com/abedegno/underworld-exhumed/releases)  
+**Ultima Underworld II:** [![UW2 accuracy](https://github.com/abedegno/underworld-exhumed/actions/workflows/uw2-accuracy.yml/badge.svg?branch=main)](https://github.com/abedegno/underworld-exhumed/actions/workflows/uw2-accuracy.yml) [![UW2 port](https://github.com/abedegno/underworld-exhumed/actions/workflows/uw2-port.yml/badge.svg?branch=main)](https://github.com/abedegno/underworld-exhumed/actions/workflows/uw2-port.yml) [![UW2 release](https://img.shields.io/github/v/release/abedegno/underworld-exhumed?filter=!uw1-*&label=release)](https://github.com/abedegno/underworld-exhumed/releases)  
+[![repocheck](https://github.com/abedegno/underworld-exhumed/actions/workflows/repocheck.yml/badge.svg?branch=main)](https://github.com/abedegno/underworld-exhumed/actions/workflows/repocheck.yml) [![Licence: MIT](https://img.shields.io/github/license/abedegno/underworld-exhumed)](LICENSE)
+
 *Ultima Underworld: The Stygian Abyss* (1992) and *Ultima Underworld II: Labyrinth of Worlds* (1993), dug out of their original DOS programs. For each game there is:
 
 - **Source code that rebuilds the original program byte for byte.** It compiles with the original Borland tools to exactly the shipped `UW.EXE` and `UW2.EXE`, with readable names, shared headers and notes on what each file does in the game.
@@ -10,6 +14,14 @@
 No game data is included: you need your own copy of each game (the GOG releases). This is a fan research project, not affiliated with or endorsed by the rights holders; see [Licence and legal notice](#licence-and-legal-notice).
 
 ## Play
+
+| | |
+| --- | --- |
+| ![Ultima Underworld: a dungeon corridor](docs/img/uw1-dungeon.png) | ![Ultima Underworld: talking to Bragit](docs/img/uw1-bragit.png) |
+| ![Ultima Underworld II: Lord British's castle](docs/img/uw2-castle.png) | ![Ultima Underworld II: Lord British's greeting](docs/img/uw2-lord-british.png) |
+
+*Screens from the recorded DOS sessions the ports are tested against: the ports draw exactly the same.*
+
 
 1. **Download** the package for your system from [Releases](https://github.com/abedegno/underworld-exhumed/releases). Each release is for one game: `uw1-v…` releases are *Ultima Underworld*, `uw2-v…` releases are *Ultima Underworld II*.
 2. **Install the game from GOG.** The port finds it in GOG's usual folders, including inside GOG's Mac app and its `game.gog` CD image, and on Windows where GOG's installer recorded it. If it finds nothing, it asks you to choose the folder, and remembers it. From a command line, `--data /path/to/game` names it.
