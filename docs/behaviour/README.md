@@ -14,7 +14,6 @@ The code-oriented notes on the same sources are in [docs/subsystems/](../subsyst
 | [magic.md](magic.md) | casting from runes, where magic fails, mana, active spells and their durations, every spell class, the UW2 spell list |
 | [conversations.md](conversations.md) | who will talk, the script machine, @-variables, the variables in and out, every built-in function, bartering, the Pits of Carnage |
 | [player-upkeep.md](player-upkeep.md) | the slow update, hunger, fatigue, healing, poison, drink, drowning, lights, sleep, dreams, experience and levels |
-
-Not yet written: traps and triggers. [subsystems/events.md](../subsystems/events.md#triggers-and-traps) lists the trap kinds, and `UseTrap` in [TRIGGER.C](../../src/event/TRIGGER.C) has a comment for each.
+| [traps-triggers.md](traps-triggers.md) | every trigger kind and who may set it off, pressure plates and timers, how traps chain and branch, every trap kind and its fields, the hack traps of both games, used triggers and removing traps, finding and disarming traps |
 
 Some formulas have test vectors made by running the original EXEs' own code, listed in [vectors/README.md](../../vectors/README.md) and linked from [combat.md](combat.md).
