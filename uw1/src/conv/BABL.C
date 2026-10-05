@@ -66,9 +66,9 @@
 #include "ui.h"
 
 /* UW1: declarations the headers do not have (or have in UW2's form). */
-char far open_arc(char far *arc, char *name);          /* opens an archive into arc */
-char far close_arc(char far *arc);                    /* closes it */
-int far get_arc(char far *arc, int block, void far *buf);
+char far open_arc(struct Arc far *arc, char *name);          /* opens an archive into arc */
+char far close_arc(struct Arc far *arc);                    /* closes it */
+int far get_arc(struct Arc far *arc, int block, void far *buf);
 
 /* A block of the script heap: its size in bytes (header and tag included) and, while
    free, the next free block. An allocated block points at itself and ends with a tag,
@@ -173,7 +173,7 @@ char far * far bab_malloc(int32 n)
             }
             current->next = current;
             tail = current;
-            result = (char far *)(current + 1);
+            result = (char far *)current + 8;   /* the header is 8 bytes in DOS (current + 1 on the host is 16) */
             TAG_SLOT(tail, (int)(current->size / 4) - 1) = TAG_VAL(result);
             break;
         }
@@ -389,17 +389,17 @@ int far load_script(char *name, char far *work)
 {
     char far *empty;
     char far *buffer;
-    char arc[12];
+    struct Arc arc;
     register int size;
     ovr093_0(work);
     seg066_0[0] = 0;
     file_name = name;
-    if (open_arc(arc, name)) {
+    if (open_arc(&arc, name)) {
         if ((arc_buffer = bab_malloc(0x4000L)) == 0)
             pfatal_code(4);
         buffer = arc_buffer;
-        size = get_arc(arc, cnv_id, arc_buffer);
-        close_arc(arc);
+        size = get_arc(&arc, cnv_id, arc_buffer);
+        close_arc(&arc);
         if (size <= 0) {
             scroll_print(get_string(STR_CONV | 1));  /* "You get no response.\n" */
             return 1;

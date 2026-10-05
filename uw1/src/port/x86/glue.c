@@ -14,12 +14,17 @@ int bc_close(int fd);
 void MousQUp(char from3d);                      /* ui/MOUSE.C */
 
 /* seg019's _102B (C3DENTRY.ASM), do_mouseq's: MousQUp(1) on DGROUP's small stack below
-   joy_position, with SI, DS and ES kept; the private stack it saves and restores around the
-   call is the emulated one, which the C does not touch. */
+   joy_position, with SI, DS and ES kept. Around the call it runs the translated _FDD and
+   _1004, which copy the used part of seg063's private stack away and back and keep the
+   frame's saved SS:SP (L0C24) in L0C20: MousQUp can come back into a seg019 entry (the
+   talk session's critter pages), which resets SP to 448h and saves its own caller's SS:SP
+   over the frame's, and cRender would then return on the nested call's stack. */
 static uint32_t g_102b(void)
 {
     uint16_t si = SI, ds = asm_ds, es = asm_es;
+    asm_run_near(0x1F3A, 0x0FDD);
     MousQUp(1);
+    asm_run_near(0x1F3A, 0x1004);
     SI = si;
     SET_DS(ds);
     SET_ES(es);
@@ -73,12 +78,17 @@ const struct asm_glue asm_glues[] = {
 };
 const int asm_nglues = sizeof asm_glues / sizeof asm_glues[0];
 
-/* The interrupts the translated modules make: int 10h's mode set (VIDMODE.ASM), int 21h's
+/* The interrupts the translated modules make: int 2 (does nothing), int 10h's mode set (VIDMODE.ASM), int 21h's
    string print (MODEX.ASM's console print) and file calls, int 67h's page mapping. Anything
    else stops the port with its number. */
 uint32_t asm_int(uint8_t n)
 {
     char why[80];
+    if (n == 0x02)                      /* the NMI vector: INTERP.ASM's do_uwsetup slot DAh runs an
+                                           int 2 (docs/NOTES.md, seg004). In the DOS replays' vector
+                                           table (the dumps' NULL section) it points at 0070:000E,
+                                           with ints 1, 3 and 4: DOS's default handler, an iret */
+        return 0;
     if (n == 0x10) {
         switch (AH) {
         case 0x00:
@@ -133,6 +143,17 @@ uint32_t asm_int(uint8_t n)
         case 0x44:
             AH = seg012_10F((char)AL, BX) ? 0 : 0x8A;
             return 0;
+        case 0x50: {                    /* map CX pages from the list at DS:SI (a logical page and
+                                           a physical page a word each, AL 0: physical page
+                                           numbers), PGCACHE.ASM's critter pages at seg051:B0F2;
+                                           the handle is the game's one (seg051:C4D7) */
+            uint16_t i, ok = 1;
+            if (AL != 0) break;
+            for (i = 0; i < CX && ok; i++)
+                ok = (uint16_t)seg012_10F((char)rw(pDS, (uint16_t)(SI + 4 * i + 2)), rw(pDS, (uint16_t)(SI + 4 * i)));
+            AH = ok ? 0 : 0x8A;
+            return 0;
+        }
         default:
             break;
         }
