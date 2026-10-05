@@ -36,7 +36,7 @@ try { cpSync(join(tasmDir, "TASM.EXE"), join(stage, "TASM.EXE")); } catch { }
 // portable.h, from Exhume's runtime/include, found as tools/exhume.py finds it: $EXHUME, else
 // .exhume in this repository, else ~/Exhume
 const incDir = process.env.UW2DECOMP_INCLUDE || join(here, "..", "src", "include");
-const exhume = process.env.EXHUME || (existsSync(join(here, "..", ".exhume", "runtime")) ? join(here, "..", ".exhume") : join(homedir(), "Exhume"));
+const exhume = process.env.EXHUME || [join(here, "..", "..", "exhume"), join(here, "..", ".exhume")].find((d) => existsSync(join(d, "tools", "gate.py"))) || join(homedir(), "Exhume");
 const rtInc = join(exhume, "runtime", "include");
 for (const [dir, label] of [[incDir, "src/include"], [rtInc, "Exhume's runtime/include"]]) {
   let incs = [];

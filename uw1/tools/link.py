@@ -160,7 +160,6 @@ def changed_sources():
                                    'run the exact link (python3 tools/link.py) once while every source matches')
 
 def main():
-    exhume.check_pin()          # advisory: a warning when the Exhume checkout lacks tools/exhume-ref's commit
     global LINKDIR
     a = ARGS
     mod = '--mod' in a

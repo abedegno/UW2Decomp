@@ -12,7 +12,7 @@
 #                      there is a port: HOOK="make test")
 #
 # A native port ([port] and [replay] in exhume.toml, docs/port.md):
-#   make setup-exhume  find Exhume ($EXHUME, .exhume, ~/Exhume), or clone it into .exhume at the
+#   make setup-exhume  find Exhume ($EXHUME, ../exhume, .exhume, ~/Exhume), or clone it into .exhume at the
 #                      commit tools/exhume-ref names
 #   make setup-port    what the port needs to build, per OS, and nothing else: no DOS
 #                      toolchain, DOS or game data (Exhume's tools/setup-port.sh)
@@ -38,7 +38,14 @@
 #                      only check that they regenerate byte-identical)
 #   make coverage      the port's coverage over the sessions and the fuzzing
 
-EXHUME ?= $(if $(wildcard .exhume/tools/gate.py),.exhume,$(HOME)/Exhume)
+# Exhume: $EXHUME, else the submodule ../exhume (a game folder of a repository that holds
+# several), else .exhume, else ~/Exhume
+EXHUME ?= $(firstword $(wildcard ../exhume/tools/gate.py .exhume/tools/gate.py))
+ifeq ($(EXHUME),)
+EXHUME := $(HOME)/Exhume
+else
+EXHUME := $(patsubst %/tools/gate.py,%,$(EXHUME))
+endif
 PY ?= $(if $(wildcard $(EXHUME)/.venv/bin/python),$(EXHUME)/.venv/bin/python,python3)
 GATE := $(PY) $(EXHUME)/tools/gate.py --config exhume.toml
 
@@ -72,12 +79,14 @@ hooks:
 	@sh $(EXHUME)/tools/install-hooks.sh . "$(HOOK)"
 
 setup-exhume:
-	@if [ -f "$(EXHUME)/tools/gate.py" ]; then echo "Exhume: $(EXHUME)"; \
+	@if [ -f ../.gitmodules ] && grep -q 'path = exhume' ../.gitmodules; then \
+	  git -C .. submodule update --init exhume && echo "Exhume: the submodule ../exhume"; \
+	elif [ -f "$(EXHUME)/tools/gate.py" ]; then echo "Exhume: $(EXHUME)"; \
 	else pin=$$(cut -d' ' -f1 tools/exhume-ref) && echo "Exhume: cloning it into .exhume at $$pin" && \
 	  git clone -q https://github.com/abedegno/Exhume.git .exhume && git -C .exhume checkout -q "$$pin"; fi
 
 setup-port: setup-exhume
-	@sh $(if $(wildcard .exhume/tools/gate.py),.exhume,$(EXHUME))/tools/setup-port.sh tools/libs tools/nuked-opl3
+	@sh $(EXHUME)/tools/setup-port.sh tools/libs tools/nuked-opl3
 
 setup-libs:
 	@sh $(EXHUME)/tools/setup-libs.sh tools/libs

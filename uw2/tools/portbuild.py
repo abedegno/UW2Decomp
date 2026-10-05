@@ -256,7 +256,7 @@ def main(argv):
     if a.arch:
         ARCHS = [f for x in a.arch for f in ('-arch', x)]
         portcheck.FLAGS = portcheck.FLAGS + ARCHS
-    exhume.need(); exhume.check_pin()
+    exhume.need()
     os.makedirs(OUT, exist_ok=True)
     game = [p for p in sources.all_sources() if p.upper().endswith('.C') and not portcheck.dos_only(p)]
     game += sources.replay_sources()     # the record and replay hooks' code, shared with the replay DOS build

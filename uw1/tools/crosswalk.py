@@ -18,7 +18,8 @@ one); without a build, or for a static function, it is the table's name."""
 import os, re, sys, glob
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-EXHUME = os.environ.get('EXHUME') or os.path.join(os.path.dirname(os.path.dirname(HERE)), 'Exhume')
+import exhume
+EXHUME = exhume.EXHUME
 try:
     sys.path.insert(0, os.path.join(EXHUME, 'tools'))
     import omf

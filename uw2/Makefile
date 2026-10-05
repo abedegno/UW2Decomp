@@ -8,7 +8,7 @@
 #   make boot          boot the modding build to the intro and screenshot it
 #   make setup         toolchain, Python venv, npm packages, emu2 and Exhume (idempotent)
 #   make setup-exhume  only find or fetch Exhume, whose runtime the port and the gate compile
-#                      ($EXHUME, .exhume or ~/Exhume; tools/setup-exhume.sh)
+#                      ($EXHUME, the submodule ../exhume, .exhume or ~/Exhume; tools/setup-exhume.sh)
 #   make setup-emu2    only build emu2, the fast DOS for the toolchain (tools/setup-emu2.sh)
 #   make setup-sound   fetch the port's OPL emulator, Nuked OPL3 (tools/setup-sound.sh)
 #   make setup-libs    build SDL3 and libmt32emu from source into tools/libs, where no package
@@ -40,8 +40,14 @@
 #   make setup TC_DISKS="/path/to/Turbo C++ 1.01" TASM_DISKS="/path/to/Turbo Assembler 2.0"
 
 PY := $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
-# Exhume's checkout, found as tools/exhume.py finds it ($EXHUME, else .exhume, else ~/Exhume)
-EXHUME ?= $(if $(wildcard .exhume/runtime),.exhume,$(HOME)/Exhume)
+# Exhume's checkout, found as tools/exhume.py finds it ($EXHUME, else the submodule ../exhume,
+# else .exhume, else ~/Exhume)
+EXHUME ?= $(firstword $(wildcard ../exhume/tools/gate.py .exhume/tools/gate.py))
+ifeq ($(EXHUME),)
+EXHUME := $(HOME)/Exhume
+else
+EXHUME := $(patsubst %/tools/gate.py,%,$(EXHUME))
+endif
 TC_DISKS ?=
 TASM_DISKS ?=
 
