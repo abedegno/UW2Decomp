@@ -211,6 +211,10 @@ def compile_port(cc, path, sound_cflags=()):
     os.makedirs(os.path.dirname(obj), exist_ok=True)
     extra = pkg_config('--cflags') if is_backend(path) else []
     if path.endswith(os.path.join('sound', 'audio.c')): extra = list(sound_cflags)
+    # the ROM finder needs libmt32emu's flags alone, as Exhume's [[port.pkg]] gives them
+    if path.endswith(os.path.join('sound', 'mt32roms.c')):
+        extra = [f for i, f in enumerate(sound_cflags) if f != '-DAUDIO_HAVE_OPL'
+                 and not (f == '-I' or (i and sound_cflags[i - 1] == '-I'))]
     opt = OPT if any(path.startswith(d) for d in OPTIMISED) else []
     # the game's struct layout (portcheck.layout_flags): port C that includes a game header
     # must see the same layout as the game's C

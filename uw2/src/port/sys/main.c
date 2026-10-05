@@ -16,6 +16,7 @@
 #include "port.h"
 #include "plat.h"
 #include "sound/audio.h"
+#include "sound/mt32roms.h"
 
 int uw2_main(int argc, char *argv[]);
 void borland_init(void);
@@ -153,8 +154,10 @@ static const char help_text[] =
     "                         5 Roland MT-32, 6 Pro Audio Spectrum, 7 Sound Blaster Pro 2;\n"
     "                         speech 0 none, 1 Sound Blaster, 2 Sound Blaster Pro,\n"
     "                         3 Pro Audio Spectrum\n"
-    "  --mt32-roms DIR        your MT-32 or CM-32L ROM images, kept until changed\n"
-    "                         (also $UW2PORT_MT32_ROMS)\n"
+    "  --mt32-roms PATH       your MT-32 or CM-32L ROM images (a folder, or a file in\n"
+    "                         it; any names), kept until changed (also $UW2PORT_MT32_ROMS);\n"
+    "                         without, the port looks in its home's roms/ folder, beside\n"
+    "                         the game and itself, and where DOSBox keeps MT-32 ROMs\n"
     "  --no-audio             open no audio device\n"
     "Window:\n"
     "  --scale N              initial window scale (3)\n"
@@ -258,7 +261,7 @@ static int home_dir(const char *p)
 
 int main(int argc, char *argv[])
 {
-    static char home_buf[1024], exe[1200], data_buf[1024], roms_buf[1024], abs_buf[1024];
+    static char home_buf[1024], exe[1200], data_buf[1024], abs_buf[1024];
     const char *data = NULL, *home = getenv("UW2PORT_HOME"), *replay = NULL;
     const char *sound = NULL, *roms = NULL, *wav = NULL, *ail_log = NULL, *hw_log = NULL, *mouse = NULL;
     char mouse_buf[16];
@@ -342,9 +345,19 @@ int main(int argc, char *argv[])
     else if (!mouse && port_config_get(home, "mouse", mouse_buf, sizeof mouse_buf) == 0)
         mouse = mouse_buf;
     cfg.mouse_lock = mouse && !strcmp(mouse, "lock");
-    if (roms && interactive) port_config_set(home, "mt32-roms", absolute(roms, abs_buf, sizeof abs_buf));
-    else if (!roms && !getenv("UW2PORT_MT32_ROMS") && port_config_get(home, "mt32-roms", roms_buf, sizeof roms_buf) == 0)
-        roms = roms_buf;
+    {
+        /* the MT-32 ROMs (Exhume's sound/mt32roms.c): --mt32-roms (a folder, or a file in it),
+           $UW2PORT_MT32_ROMS, the remembered setting, else a search of the home, the game, the
+           program's folder and other emulators' ROM folders; any file names. A folder given or
+           found is remembered by a run with a window. */
+        static char kept[1024], found[1024];
+        const char *src, *given = roms ? absolute(roms, abs_buf, sizeof abs_buf) : NULL;
+        if (port_config_get(home, "mt32-roms", kept, sizeof kept) != 0) kept[0] = 0;
+        src = mt32roms_locate(given, getenv("UW2PORT_MT32_ROMS"), kept, home, data, found, sizeof found);
+        roms = src ? found : NULL;
+        if (src && interactive && (!strcmp(src, "given") || !strcmp(src, "found")) && strcmp(found, kept))
+            port_config_set(home, "mt32-roms", found);
+    }
     /* The first run (no DATA\UW.CFG in the home directory yet): a Sound Blaster, its FM music
        and its digital effects; or, when MT-32 ROMs are set (--mt32-roms, $UW2PORT_MT32_ROMS or
        the remembered folder) and hold a ROM pair, the MT-32 for the music and the Sound Blaster
@@ -353,7 +366,7 @@ int main(int argc, char *argv[])
         char cfgpath[1200];
         FILE *f = NULL;
         if (plat_resolve("DATA\\UW.CFG", PLAT_CREATE, cfgpath, sizeof cfgpath) == 0 && !(f = fopen(cfgpath, "rb")))
-            sound = audio_mt32_roms_present(roms ? roms : getenv("UW2PORT_MT32_ROMS")) ? "5,1" : "3,1";
+            sound = audio_mt32_roms_present(roms) ? "5,1" : "3,1";
         else if (f)
             fclose(f);
     }

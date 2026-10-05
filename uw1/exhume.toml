@@ -107,7 +107,7 @@ missing = "no OPL emulator (make setup-sound)"
 # finds it
 name = "mt32emu"
 define = "AUDIO_HAVE_MT32EMU"
-for = "sound/audio.c"
+for = ["sound/audio.c", "sound/mt32roms.c"]
 label = "libmt32emu"
 missing = "no libmt32emu (brew install mt32emu, or make setup-libs)"
 

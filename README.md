@@ -34,7 +34,7 @@ The controls are the game's own: the mouse, and the keys in the game's manual. T
 
 Saved games and settings are kept in the port's home folder, never in the game folder: `~/.uw1port` or `~/.uw2port` on macOS and Linux, `%APPDATA%\uw1port` or `%APPDATA%\uw2port` on Windows.
 
-The first run gets a Sound Blaster with FM music and digitised speech or effects. For Roland MT-32 music, give your own MT-32 or CM-32L ROM images with `--mt32-roms DIR`. `--sound` picks other cards, and `--help` lists every option. Each game's README has its sound card numbers: [uw1](uw1/README.md), [uw2](uw2/README.md).
+The first run gets a Sound Blaster with FM music and digitised speech or effects. For Roland MT-32 music you need your own MT-32 or CM-32L ROM images. The port finds them by itself in a `roms` folder in its home folder, beside the game or the program, or where DOSBox keeps MT-32 ROMs; or give `--mt32-roms` a folder or one of the files. Any file names work: the ROMs are recognised by their contents. `--sound` picks other cards, and `--help` lists every option. Each game's README has its sound card numbers: [uw1](uw1/README.md), [uw2](uw2/README.md).
 
 **If something goes wrong,** [open an issue](https://github.com/abedegno/underworld-exhumed/issues/new/choose). Each play session's inputs are recorded to `recordings/` in the home folder (the newest five are kept). Zip the newest folder with the log beside it and attach it: it replays your session here exactly.
 

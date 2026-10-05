@@ -23,7 +23,7 @@ The controls are the game's own: the mouse, and the keys in the game's manual. T
 Options (`uw1port --help` lists them all):
 
 - `--sound MUSIC,SPEECH` chooses the sound cards, and is remembered. The first run gets a Sound Blaster with its FM music and digitised speech (`3,1`), or, when MT-32 ROMs are given (below), the MT-32 for the music and the Sound Blaster for the speech (`6,1`). Music: 0 none, 1 PC speaker, 2 Ad Lib, 3 Sound Blaster, 4 Sound Blaster Pro, 5 Pro Audio Spectrum, 6 Roland MT-32. Speech: 0 none, 1 Sound Blaster, 2 Sound Blaster Pro, 3 Pro Audio Spectrum.
-- Roland MT-32 music needs your own MT-32 or CM-32L ROM images, which are not included: `--mt32-roms DIR` on the first run (or `--sound 6,1 --mt32-roms DIR` later), with `CM32L_CONTROL.ROM` and `CM32L_PCM.ROM` (or `MT32_CONTROL.ROM` and `MT32_PCM.ROM`) in DIR. The folder is remembered.
+- Roland MT-32 music needs your own MT-32 or CM-32L ROM images, which are not included. The port finds them by itself (a `roms` folder in its home folder, beside the game or the program, or where DOSBox keeps MT-32 ROMs), under any file names, or you give them: `--mt32-roms DIR` on the first run (or `--sound 6,1 --mt32-roms DIR` later), with `CM32L_CONTROL.ROM` and `CM32L_PCM.ROM` (or `MT32_CONTROL.ROM` and `MT32_PCM.ROM`) in DIR. The folder is remembered.
 - `--scale N` sets the window's starting size, `--no-aspect` shows square pixels instead of a 4:3 CRT's shape, `--no-integer` scales freely.
 
 ## Build the port from source
