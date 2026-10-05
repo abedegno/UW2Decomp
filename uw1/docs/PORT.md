@@ -180,3 +180,11 @@ Done on 5 October 2026, on Exhume's generic tools, as UW2Decomp's port is:
 - The port now has its sound chips: Nuked OPL3 and libmt32emu (`[[port.vendor]]`, `[[port.pkg]]`), and a player's first run gets a Sound Blaster (`--sound 3,1`, or `6,1` with MT-32 ROMs), as the `sound`, `soundfm` and `soundmt` sessions check against DOS.
 - It finds the game inside GOG's Mac app, whose `game.gog` holds UW1 in the folder `UW` (`PORT_GAME_IMAGE_FOLDER`).
 - `make port-release` and `make package` make `UW1.app` in a zip on macOS, a tarball and an AppImage on Linux and a zip on Windows, with the project's own icon; `release.yml` builds all three on a tag ([BUILDING.md](BUILDING.md#releases)).
+
+### Saving with an object on the cursor
+
+A note from the replay harness's first recordings said that UW1 wrote past a structure when the game was saved with an object on the cursor. It does not. The recording that showed it (the `items` steps, with the sack put into its slot with the right button) was made before the replay DOS build ran its deep work on a stack of its own: its dump overflowed the game's small SYSENTRY stack into the heap's bookkeeping, a `realloc` then wrote DS:4, and the recording's own buffers held game bytes. The same inputs on the current replay build leave DS:4 to 7 at 0, and on a build of the old `replay.c` write 54 3F at DS:4.
+
+UW1 refuses to save with an object on the cursor. Ctrl+S and Ctrl+R are refused while an action is in progress (OPTIONS.C's `do_option_shortcut`, string 0xA0, "You cannot select options partway through an action."), a click on the icons does nothing (INTERACT.C's `deal_with_icons`), the save button is guarded the same way (`check_save`), and the options panel is modal, so the cursor cannot pick anything up while it is open. The one place the cursor object is copied, `makePlayerInvCopy` in input mode 1, is the nameless `SavePlayerInv` of a level change, which no session reaches yet.
+
+The tenth session, `savecursor`, holds the sack, is refused by Ctrl+S and Ctrl+R, has a click on the top icon ignored, puts the sack into its slot with the right button, saves and restores. It replays in the port, the UBSan build and the AddressSanitizer build identical to DOS at all 79 checkpoints, with the saved game identical, and no sanitizer reports anything in any of the ten sessions.

@@ -130,6 +130,7 @@ The recordings and their goldens are committed under `tests/replay`. The moves i
 | `talk` | the Red Key from the pack in the chest by the start, the locked door west of it unlocked and opened, the walk to Bragit's room in the human encampment, and a conversation with Bragit (whoami 67, the first man to talk to) with three answers. Talk mode clicks over a grid of the view in four directions, since Bragit wanders about his room: the misses say "You cannot talk to that", the first hit starts the conversation, and the rest fall in the conversation screen. Its golden is the largest (11 MB), since every click is a full checkpoint |
 | `load` | slot I, the save `items` makes, loaded from the main menu ("Journey Onward") |
 | `intro` | the title and the whole introduction, about four and a half minutes, to the main menu |
+| `savecursor` | the sack by the start held on the cursor, where Ctrl+S and Ctrl+R are refused ("You cannot select options partway through an action") and a click on the icons is ignored; then the sack into the first slot with the right button, a save to slot I and a restore |
 
 `load` replays the saved game `items` writes (`[replay] stage_from`); the golden tools take it from `items`' own DOS run. To replay `load` by hand, give it a directory holding that `SAVE1` with `--stage DIR`.
 

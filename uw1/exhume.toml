@@ -209,7 +209,7 @@ saves = ["SAVE1", "SAVE2", "SAVE3", "SAVE4"]
 shared_opts = "-mm -1 -G -O -Y -d"     # replay.c in the replay DOS build, as UW2's
 # the replay DOS build's link: the modding build, to which replay.py adds --out, --obj, --add
 link = "{python} tools/link.py --mod --config {config}"
-order = ["newgame", "walk", "sound", "soundfm", "soundmt", "items", "talk", "load", "intro"]
+order = ["newgame", "walk", "sound", "soundfm", "soundmt", "items", "talk", "load", "intro", "savecursor"]
 c0_signature_at = 8                    # DS:8, after DS:0..3 (an overlay stub's tail) and C0's DS:4..7
 stage_from = { load = "items" }
 # the port's driver logs, and the real drivers run against them (Exhume's tools/ailcheck.py)
@@ -293,6 +293,7 @@ items = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
 talk = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
 load = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
 intro = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+savecursor = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
 sound = "3 7 220 1 sound\r\n1 7 220 1 speech\r\n0 cuts\r\n"
 soundfm = "3 7 220 1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
 soundmt = "6 2 330 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
@@ -511,4 +512,19 @@ load = [
 intro = [
     "w:30000", "s:intro1", "w:60000", "s:intro2", "w:60000", "s:intro3", "w:60000", "s:intro4",
     "w:65000", "s:menu", "w:5000"
+]
+# saving with the sack on the cursor, which UW1 refuses: the way into the game, the sack by
+# the start picked up in get mode (F3, right button) and held; Ctrl+S and Ctrl+R (each
+# refused while an action is in progress, string 0xA0: OPTIONS.C's do_option_shortcut) and
+# a click on the top icon (INTERACT.C's deal_with_icons ignores it); then the sack into the
+# first slot with the right button (docs/PORT.md, "Saving with an object on the cursor"), a save to slot I
+# described "held" (Ctrl+S, Enter), a turn, a restore of slot I and a step
+savecursor = [
+    "@_chargen", "w:10000", "k:1", "w:600", "k:1", "w:600", "k:Shift+D", "w:800", "k:Shift+W",
+    "w:800", "k:F3", "w:500", "M", "m:262,238", "w:300", "c:right,200", "w:1500", "s:held",
+    "k:Control+s", "w:1500", "k:Control+r", "w:1500", "M", "m:40,40", "w:300", "c:left,200",
+    "w:1500", "s:refused", "M", "m:505,170", "w:300", "c:right,200", "w:1500", "s:placed",
+    "k:Control+s", "w:1500", "k:Enter", "w:1500", "t:held", "w:800", "k:Enter", "w:4000",
+    "s:saved", "h:a,1000", "w:800", "k:Control+r", "w:1500", "k:Enter", "w:5000", "s:restored",
+    "h:w,600", "w:1500", "s:end"
 ]
