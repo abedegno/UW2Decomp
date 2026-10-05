@@ -1,17 +1,16 @@
 # Release packages of the native port (docs/BUILDING.md, "Releases"): on a tag v*, build the port
 # on macOS (one universal app for arm64 and x86_64), Linux (x86-64, on Ubuntu 22.04 for glibc
 # 2.35: a tarball and an AppImage) and Windows (x86-64, MSYS2 CLANG64), package each with
-# Exhume's tools/package.py, and attach the packages and the source of the LGPL libraries to a
-# DRAFT release, which the owner reviews and publishes by hand. Run by hand (workflow_dispatch),
-# it builds the packages as workflow artifacts and makes no release.
+# tools/package.py, and attach the packages and the source of the LGPL libraries to a DRAFT
+# release, which the owner reviews and publishes by hand. Run by hand (workflow_dispatch), it
+# builds the packages as workflow artifacts and makes no release.
 # Only the sources are needed: no game data and no Borland toolchain. The only secrets are
-# Apple's, for the macOS app (docs/BUILDING.md, "Releases"): with CSC_LINK set it is signed with
-# the Developer ID identity, and on a tag (or by hand with notarise) notarised and stapled;
-# without them it is signed ad hoc and not notarised.
-name: release
+# Apple's, for the macOS app: with CSC_LINK set it is signed with the Developer ID identity, and
+# on a tag (or by hand with notarise) notarised and stapled; without them it is signed ad hoc.
+name: uw1-release
 on:
   push:
-    tags: ["v*"]
+    tags: ["uw1-v*"]
   workflow_dispatch:
     inputs:
       notarise:
@@ -21,30 +20,19 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: release-${{ github.ref }}
+  group: uw1-release-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   macos:
     runs-on: macos-15
     timeout-minutes: 60
     env:
-      NOTARISE: ${{ startsWith(github.ref, 'refs/tags/v') || inputs.notarise == true }}
+      NOTARISE: ${{ startsWith(github.ref, 'refs/tags/uw1-v') || inputs.notarise == true }}
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      # Exhume, whose tools and runtime the port, the gate and the replay build use where it is,
-      # at the commit tools/exhume-ref names (docs/BUILDING.md, "Exhume")
-      - name: Exhume's commit
-        id: exhume
-        shell: bash
-        run: echo "ref=$(cut -d' ' -f1 tools/exhume-ref)" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
-        with:
-          repository: abedegno/Exhume
-          ref: ${{ steps.exhume.outputs.ref }}
-          path: .exhume
-          persist-credentials: false
+          submodules: true
       - name: Homebrew packages
         env:
           HOMEBREW_NO_AUTO_UPDATE: "1"
@@ -53,19 +41,19 @@ jobs:
       - name: Cache the universal SDL3 and libmt32emu
         uses: actions/cache@v4
         with:
-          path: tools/libs
-          key: release-libs-macos-universal-${{ hashFiles('.exhume/tools/setup-libs.sh') }}
+          path: uw1/tools/libs
+          key: release-libs-macos-universal-${{ hashFiles('exhume/tools/setup-libs.sh') }}
       - name: Build SDL3 and libmt32emu for arm64 and x86_64, fetch Nuked OPL3
         env:
           SETUP_MACOS_ARCHS: "arm64;x86_64"
           MACOSX_DEPLOYMENT_TARGET: "11.0"
         run: |
-          sh .exhume/tools/setup-libs.sh tools/libs
-          sh .exhume/tools/setup-sound.sh tools/nuked-opl3
+          sh exhume/tools/setup-libs.sh uw1/tools/libs
+          sh exhume/tools/setup-sound.sh uw1/tools/nuked-opl3
       - name: Build
         env:
           MACOSX_DEPLOYMENT_TARGET: "11.0"
-        run: make EXHUME=.exhume port-release PORT_ARCHS="--arch arm64 --arch x86_64"
+        run: make -C uw1 port-release PORT_ARCHS="--arch arm64 --arch x86_64"
       # With CSC_LINK (a base64 .p12 holding the Developer ID Application certificate and its
       # key): a keychain of this job's own, removed at the end, holding only that identity;
       # package.py signs with it (UW1_CODESIGN_IDENTITY, its SHA-1). Nothing secret is printed.
@@ -109,7 +97,7 @@ jobs:
             fi
           fi
       - name: Package
-        run: make EXHUME=.exhume package PACKAGE_ARGS=--strict
+        run: make -C uw1 package PACKAGE_ARGS=--strict
       # Apple's notary service, with the App Store Connect API key, then the ticket stapled to
       # the app, and the zip made again with the stapled app
       - name: Notarise and staple
@@ -122,7 +110,7 @@ jobs:
           set -euo pipefail
           key="$RUNNER_TEMP/uw1-notary.p8"
           ( umask 077; printf '%s\n' "$APPLE_API_KEY" > "$key" ); chmod 600 "$key"
-          zip=$(echo build/dist/UW1-*-macos.zip); stage=${zip%.zip}
+          zip=$(echo uw1/build/dist/UW1-*-macos.zip); stage=${zip%.zip}
           auth=(--key "$key" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER")
           xcrun notarytool submit "$zip" "${auth[@]}" --wait --timeout 45m --output-format json > "$RUNNER_TEMP/notary.json"
           status=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("status"))' "$RUNNER_TEMP/notary.json")
@@ -135,7 +123,7 @@ jobs:
           ditto -c -k --norsrc --noextattr --keepParent "$stage" "$zip"
       - name: Check the package
         run: |
-          mkdir check && cd check && unzip -q ../build/dist/UW1-*-macos.zip
+          mkdir check && cd check && unzip -q ../uw1/build/dist/UW1-*-macos.zip
           app=$(echo UW1-*-macos/UW1.app)
           lipo -archs "$app/Contents/MacOS/uw1port" | grep -q x86_64
           lipo -archs "$app/Contents/MacOS/uw1port" | grep -q arm64
@@ -151,7 +139,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: macos
-          path: build/dist/UW1-*-macos.zip
+          path: uw1/build/dist/UW1-*-macos.zip
           if-no-files-found: error
       - name: Remove the signing keychain and keys
         if: always()
@@ -168,18 +156,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      # Exhume, whose tools and runtime the port, the gate and the replay build use where it is,
-      # at the commit tools/exhume-ref names (docs/BUILDING.md, "Exhume")
-      - name: Exhume's commit
-        id: exhume
-        shell: bash
-        run: echo "ref=$(cut -d' ' -f1 tools/exhume-ref)" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
-        with:
-          repository: abedegno/Exhume
-          ref: ${{ steps.exhume.outputs.ref }}
-          path: .exhume
-          persist-credentials: false
+          submodules: true
       - name: System packages (the compiler, and the headers SDL3 needs for a window and sound)
         run: |
           sudo apt-get update -qq
@@ -195,14 +172,14 @@ jobs:
       - name: Cache SDL3 and libmt32emu
         uses: actions/cache@v4
         with:
-          path: tools/libs
-          key: release-libs-linux-ubuntu2204-${{ runner.arch }}-${{ hashFiles('.exhume/tools/setup-libs.sh') }}
+          path: uw1/tools/libs
+          key: release-libs-linux-ubuntu2204-${{ runner.arch }}-${{ hashFiles('exhume/tools/setup-libs.sh') }}
       - name: Build SDL3 and libmt32emu, fetch Nuked OPL3
         run: |
-          sh .exhume/tools/setup-libs.sh tools/libs
-          sh .exhume/tools/setup-sound.sh tools/nuked-opl3
+          sh exhume/tools/setup-libs.sh uw1/tools/libs
+          sh exhume/tools/setup-sound.sh uw1/tools/nuked-opl3
       - name: Build
-        run: make EXHUME=.exhume port-release
+        run: make -C uw1 port-release
       # appimagetool and the AppImage runtime it embeds, at pinned releases, checked against
       # their SHA-256 (appimagetool would otherwise download the runtime itself, unpinned)
       - name: appimagetool
@@ -219,11 +196,11 @@ jobs:
             echo "APPIMAGE_RUNTIME=$PWD/runtime-x86_64"
           } >> "$GITHUB_ENV"
       - name: Package (the tarball and the AppImage)
-        run: make EXHUME=.exhume package PACKAGE_ARGS="--strict --appimage"
+        run: make -C uw1 package PACKAGE_ARGS="--strict --appimage"
       - name: Check the package
         run: |
           set -e
-          mkdir check && cd check && tar xzf ../build/dist/UW1-*-linux-*.tar.gz
+          mkdir check && cd check && tar xzf ../uw1/build/dist/UW1-*-linux-*.tar.gz
           cd UW1-*-linux-*
           # the run paths are $ORIGIN ones only (package.py checks this too)
           for f in bin/uw1port lib/*.so*; do
@@ -244,7 +221,7 @@ jobs:
       - name: Check the AppImage
         run: |
           set -e
-          ai=$(echo "$PWD"/build/dist/UW1-*-linux-*.AppImage)
+          ai=$(echo "$PWD"/uw1/build/dist/UW1-*-linux-*.AppImage)
           file "$ai"
           cd "$RUNNER_TEMP" && "$ai" --appimage-extract-and-run --help
       - name: The LGPL libraries' source
@@ -252,8 +229,8 @@ jobs:
           set -e
           mkdir -p src-out/third-party-sources
           cd src-out/third-party-sources
-          commit=$(sed -n 's/^commit=//p' ../../.exhume/tools/setup-sound.sh)
-          tag=$(sed -n 's/^mt_tag=//p' ../../.exhume/tools/setup-libs.sh)
+          commit=$(sed -n 's/^commit=//p' ../../exhume/tools/setup-sound.sh)
+          tag=$(sed -n 's/^mt_tag=//p' ../../exhume/tools/setup-libs.sh)
           curl -fsSL "https://github.com/nukeykt/Nuked-OPL3/archive/$commit.tar.gz" -o "Nuked-OPL3-$commit.tar.gz"
           curl -fsSL "https://github.com/munt/munt/archive/refs/tags/$tag.tar.gz" -o "munt-$tag.tar.gz"
           rt=20251108
@@ -263,14 +240,14 @@ jobs:
             "munt-$tag.tar.gz: https://github.com/munt/munt at tag $tag (libmt32emu, in its mt32emu directory)" \
             "type2-runtime-$rt.tar.gz: https://github.com/AppImage/type2-runtime at tag $rt, the AppImage's runtime (static, with libfuse 3), and the scripts that build it" \
             "THIRD-PARTY-NOTICES in each package says how they are built and how to replace them." > README.txt
-          cd .. && tar czf ../build/dist/third-party-sources.tar.gz third-party-sources
+          cd .. && tar czf ../uw1/build/dist/third-party-sources.tar.gz third-party-sources
       - uses: actions/upload-artifact@v4
         with:
           name: linux
           path: |
-            build/dist/UW1-*-linux-*.tar.gz
-            build/dist/UW1-*-linux-*.AppImage
-            build/dist/third-party-sources.tar.gz
+            uw1/build/dist/UW1-*-linux-*.tar.gz
+            uw1/build/dist/UW1-*-linux-*.AppImage
+            uw1/build/dist/third-party-sources.tar.gz
           if-no-files-found: error
 
   windows:
@@ -286,18 +263,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      # Exhume, whose tools and runtime the port, the gate and the replay build use where it is,
-      # at the commit tools/exhume-ref names (docs/BUILDING.md, "Exhume")
-      - name: Exhume's commit
-        id: exhume
-        shell: bash
-        run: echo "ref=$(cut -d' ' -f1 tools/exhume-ref)" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
-        with:
-          repository: abedegno/Exhume
-          ref: ${{ steps.exhume.outputs.ref }}
-          path: .exhume
-          persist-credentials: false
+          submodules: true
       - uses: msys2/setup-msys2@v2
         with:
           msystem: CLANG64
@@ -307,20 +273,20 @@ jobs:
       - name: Cache libmt32emu
         uses: actions/cache@v4
         with:
-          path: tools/libs
-          key: release-libs-windows-clang64-${{ hashFiles('.exhume/tools/setup-libs.sh') }}
+          path: uw1/tools/libs
+          key: release-libs-windows-clang64-${{ hashFiles('exhume/tools/setup-libs.sh') }}
       - name: Build libmt32emu (MSYS2 has no package of it), fetch Nuked OPL3
         run: |
-          SETUP_LIBS=mt32emu sh .exhume/tools/setup-libs.sh tools/libs
-          sh .exhume/tools/setup-sound.sh tools/nuked-opl3
+          SETUP_LIBS=mt32emu sh exhume/tools/setup-libs.sh uw1/tools/libs
+          sh exhume/tools/setup-sound.sh uw1/tools/nuked-opl3
       - name: Build
-        run: make EXHUME=.exhume PY=python port-release
+        run: make -C uw1 PY=python port-release
       - name: Package
-        run: make EXHUME=.exhume PY=python package PACKAGE_ARGS=--strict
+        run: make -C uw1 PY=python package PACKAGE_ARGS=--strict
       # package.py has checked that every DLL loads from the package or from Windows
       - name: Check the package (with only Windows's own directories on the PATH)
         run: |
-          mkdir check && cd check && unzip -q ../build/dist/UW1-*-windows-x86_64.zip
+          mkdir check && cd check && unzip -q ../uw1/build/dist/UW1-*-windows-x86_64.zip
           cd UW1-*-windows-x86_64
           PATH=/c/Windows/system32:/c/Windows /usr/bin/ldd uw1port.exe
           if PATH=/c/Windows/system32:/c/Windows /usr/bin/ldd uw1port.exe | grep -viE '=> (/c/windows/|'"$PWD"'/)'; then exit 1; fi
@@ -332,11 +298,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: windows
-          path: build/dist/UW1-*-windows-x86_64.zip
+          path: uw1/build/dist/UW1-*-windows-x86_64.zip
           if-no-files-found: error
 
   draft:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/uw1-v')
     needs: [macos, linux, windows]
     runs-on: ubuntu-24.04
     permissions:
@@ -351,6 +317,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
+          name: Ultima Underworld port ${{ github.ref_name }}
           prerelease: false
           generate_release_notes: true
           fail_on_unmatched_files: true

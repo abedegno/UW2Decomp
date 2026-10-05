@@ -13,10 +13,15 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: abedegno/Exhume
+          ref: ${{ vars.EXHUME_REF || 'master' }}
+          path: .exhume
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: python3 tools/repocheck.py
+      - run: python3 .exhume/tools/repocheck.py --root . --allow '^\.exhume/'

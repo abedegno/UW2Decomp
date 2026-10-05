@@ -7,10 +7,10 @@
 # Only the sources are needed: no game data and no Borland toolchain. The only secrets are
 # Apple's, for the macOS app: with CSC_LINK set it is signed with the Developer ID identity, and
 # on a tag (or by hand with notarise) notarised and stapled; without them it is signed ad hoc.
-name: release
+name: uw2-release
 on:
   push:
-    tags: ["v*"]
+    tags: ["uw2-v*"]
   workflow_dispatch:
     inputs:
       notarise:
@@ -20,30 +20,19 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: release-${{ github.ref }}
+  group: uw2-release-${{ github.ref }}
   cancel-in-progress: false
 jobs:
   macos:
     runs-on: macos-15
     timeout-minutes: 60
     env:
-      NOTARISE: ${{ startsWith(github.ref, 'refs/tags/v') || inputs.notarise == true }}
+      NOTARISE: ${{ startsWith(github.ref, 'refs/tags/uw2-v') || inputs.notarise == true }}
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      # Exhume, whose runtime the port, the gate and the replay build compile where it is, at
-      # the commit tools/exhume-ref names (docs/BUILDING.md, "Exhume")
-      - name: Exhume's commit
-        id: exhume
-        shell: bash
-        run: echo "ref=$(cut -d' ' -f1 tools/exhume-ref)" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
-        with:
-          repository: abedegno/Exhume
-          ref: ${{ steps.exhume.outputs.ref }}
-          path: .exhume
-          persist-credentials: false
+          submodules: true
       - name: Homebrew packages
         env:
           HOMEBREW_NO_AUTO_UPDATE: "1"
@@ -52,19 +41,19 @@ jobs:
       - name: Cache the universal SDL3 and libmt32emu
         uses: actions/cache@v4
         with:
-          path: tools/libs
-          key: release-libs-macos-universal-${{ hashFiles('tools/setup-libs.sh') }}
+          path: uw2/tools/libs
+          key: release-libs-macos-universal-${{ hashFiles('uw2/tools/setup-libs.sh') }}
       - name: Build SDL3 and libmt32emu for arm64 and x86_64, fetch Nuked OPL3
         env:
           UW2_MACOS_ARCHS: "arm64;x86_64"
           MACOSX_DEPLOYMENT_TARGET: "11.0"
         run: |
-          make setup-libs
-          make setup-sound
+          make -C uw2 setup-libs
+          make -C uw2 setup-sound
       - name: Build
         env:
           MACOSX_DEPLOYMENT_TARGET: "11.0"
-        run: make port-release PORT_ARCHS="--arch arm64 --arch x86_64"
+        run: make -C uw2 port-release PORT_ARCHS="--arch arm64 --arch x86_64"
       # With CSC_LINK (a base64 .p12 holding the Developer ID Application certificate and its
       # key): a keychain of this job's own, removed at the end, holding only that identity;
       # package.py signs with it (UW2_CODESIGN_IDENTITY, its SHA-1). Nothing secret is printed.
@@ -108,7 +97,7 @@ jobs:
             fi
           fi
       - name: Package
-        run: make package PACKAGE_ARGS=--strict
+        run: make -C uw2 package PACKAGE_ARGS=--strict
       # Apple's notary service, with the App Store Connect API key, then the ticket stapled to
       # the app, and the zip made again with the stapled app
       - name: Notarise and staple
@@ -121,7 +110,7 @@ jobs:
           set -euo pipefail
           key="$RUNNER_TEMP/uw2-notary.p8"
           ( umask 077; printf '%s\n' "$APPLE_API_KEY" > "$key" ); chmod 600 "$key"
-          zip=$(echo build/dist/UW2-*-macos.zip); stage=${zip%.zip}
+          zip=$(echo uw2/build/dist/UW2-*-macos.zip); stage=${zip%.zip}
           auth=(--key "$key" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER")
           xcrun notarytool submit "$zip" "${auth[@]}" --wait --timeout 45m --output-format json > "$RUNNER_TEMP/notary.json"
           status=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("status"))' "$RUNNER_TEMP/notary.json")
@@ -134,7 +123,7 @@ jobs:
           ditto -c -k --norsrc --noextattr --keepParent "$stage" "$zip"
       - name: Check the package
         run: |
-          mkdir check && cd check && unzip -q ../build/dist/UW2-*-macos.zip
+          mkdir check && cd check && unzip -q ../uw2/build/dist/UW2-*-macos.zip
           app=$(echo UW2-*-macos/UW2.app)
           lipo -archs "$app/Contents/MacOS/uw2port" | grep -q x86_64
           lipo -archs "$app/Contents/MacOS/uw2port" | grep -q arm64
@@ -150,7 +139,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: macos
-          path: build/dist/UW2-*-macos.zip
+          path: uw2/build/dist/UW2-*-macos.zip
           if-no-files-found: error
       - name: Remove the signing keychain and keys
         if: always()
@@ -167,18 +156,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      # Exhume, whose runtime the port, the gate and the replay build compile where it is, at
-      # the commit tools/exhume-ref names (docs/BUILDING.md, "Exhume")
-      - name: Exhume's commit
-        id: exhume
-        shell: bash
-        run: echo "ref=$(cut -d' ' -f1 tools/exhume-ref)" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
-        with:
-          repository: abedegno/Exhume
-          ref: ${{ steps.exhume.outputs.ref }}
-          path: .exhume
-          persist-credentials: false
+          submodules: true
       - name: System packages (the compiler, and the headers SDL3 needs for a window and sound)
         run: |
           sudo apt-get update -qq
@@ -186,18 +164,22 @@ jobs:
             clang pkg-config cmake ninja-build libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
             libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev wayland-protocols libdecor-0-dev libegl-dev \
             libgl-dev libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev >/dev/null
+      # Exhume's tools need Python 3.11 or later (tomllib); Ubuntu 22.04 has 3.10
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       # not port.yml's cache: that SDL3 is built without windows
       - name: Cache SDL3 and libmt32emu
         uses: actions/cache@v4
         with:
-          path: tools/libs
-          key: release-libs-linux-ubuntu2204-${{ runner.arch }}-${{ hashFiles('tools/setup-libs.sh') }}
+          path: uw2/tools/libs
+          key: release-libs-linux-ubuntu2204-${{ runner.arch }}-${{ hashFiles('uw2/tools/setup-libs.sh') }}
       - name: Build SDL3 and libmt32emu, fetch Nuked OPL3
         run: |
-          make setup-libs
-          make setup-sound
+          make -C uw2 setup-libs
+          make -C uw2 setup-sound
       - name: Build
-        run: make port-release
+        run: make -C uw2 port-release
       # appimagetool and the AppImage runtime it embeds, at pinned releases, checked against
       # their SHA-256 (appimagetool would otherwise download the runtime itself, unpinned)
       - name: appimagetool
@@ -214,11 +196,11 @@ jobs:
             echo "APPIMAGE_RUNTIME=$PWD/runtime-x86_64"
           } >> "$GITHUB_ENV"
       - name: Package (the tarball and the AppImage)
-        run: make package PACKAGE_ARGS="--strict --appimage"
+        run: make -C uw2 package PACKAGE_ARGS="--strict --appimage"
       - name: Check the package
         run: |
           set -e
-          mkdir check && cd check && tar xzf ../build/dist/UW2-*-linux-*.tar.gz
+          mkdir check && cd check && tar xzf ../uw2/build/dist/UW2-*-linux-*.tar.gz
           cd UW2-*-linux-*
           # the run paths are $ORIGIN ones only (package.py checks this too)
           for f in bin/uw2port lib/*.so*; do
@@ -239,7 +221,7 @@ jobs:
       - name: Check the AppImage
         run: |
           set -e
-          ai=$(echo "$PWD"/build/dist/UW2-*-linux-*.AppImage)
+          ai=$(echo "$PWD"/uw2/build/dist/UW2-*-linux-*.AppImage)
           file "$ai"
           cd "$RUNNER_TEMP" && "$ai" --appimage-extract-and-run --help
       - name: The LGPL libraries' source
@@ -247,8 +229,8 @@ jobs:
           set -e
           mkdir -p src-out/third-party-sources
           cd src-out/third-party-sources
-          commit=$(sed -n 's/^commit=//p' ../../tools/setup-sound.sh)
-          tag=$(sed -n 's/^mt_tag=//p' ../../tools/setup-libs.sh)
+          commit=$(sed -n 's/^commit=//p' ../../uw2/tools/setup-sound.sh)
+          tag=$(sed -n 's/^mt_tag=//p' ../../uw2/tools/setup-libs.sh)
           curl -fsSL "https://github.com/nukeykt/Nuked-OPL3/archive/$commit.tar.gz" -o "Nuked-OPL3-$commit.tar.gz"
           curl -fsSL "https://github.com/munt/munt/archive/refs/tags/$tag.tar.gz" -o "munt-$tag.tar.gz"
           rt=20251108
@@ -258,14 +240,14 @@ jobs:
             "munt-$tag.tar.gz: https://github.com/munt/munt at tag $tag (libmt32emu, in its mt32emu directory)" \
             "type2-runtime-$rt.tar.gz: https://github.com/AppImage/type2-runtime at tag $rt, the AppImage's runtime (static, with libfuse 3), and the scripts that build it" \
             "THIRD-PARTY-NOTICES in each package says how they are built and how to replace them." > README.txt
-          cd .. && tar czf ../build/dist/third-party-sources.tar.gz third-party-sources
+          cd .. && tar czf ../uw2/build/dist/third-party-sources.tar.gz third-party-sources
       - uses: actions/upload-artifact@v4
         with:
           name: linux
           path: |
-            build/dist/UW2-*-linux-*.tar.gz
-            build/dist/UW2-*-linux-*.AppImage
-            build/dist/third-party-sources.tar.gz
+            uw2/build/dist/UW2-*-linux-*.tar.gz
+            uw2/build/dist/UW2-*-linux-*.AppImage
+            uw2/build/dist/third-party-sources.tar.gz
           if-no-files-found: error
 
   windows:
@@ -281,18 +263,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      # Exhume, whose runtime the port, the gate and the replay build compile where it is, at
-      # the commit tools/exhume-ref names (docs/BUILDING.md, "Exhume")
-      - name: Exhume's commit
-        id: exhume
-        shell: bash
-        run: echo "ref=$(cut -d' ' -f1 tools/exhume-ref)" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
-        with:
-          repository: abedegno/Exhume
-          ref: ${{ steps.exhume.outputs.ref }}
-          path: .exhume
-          persist-credentials: false
+          submodules: true
       - uses: msys2/setup-msys2@v2
         with:
           msystem: CLANG64
@@ -302,20 +273,20 @@ jobs:
       - name: Cache libmt32emu
         uses: actions/cache@v4
         with:
-          path: tools/libs
-          key: release-libs-windows-clang64-${{ hashFiles('tools/setup-libs.sh') }}
+          path: uw2/tools/libs
+          key: release-libs-windows-clang64-${{ hashFiles('uw2/tools/setup-libs.sh') }}
       - name: Build libmt32emu (MSYS2 has no package of it), fetch Nuked OPL3
         run: |
           UW2_LIBS=mt32emu make setup-libs
-          make setup-sound
+          make -C uw2 setup-sound
       - name: Build
-        run: make PY=python port-release
+        run: make -C uw2 PY=python port-release
       - name: Package
-        run: make PY=python package PACKAGE_ARGS=--strict
+        run: make -C uw2 PY=python package PACKAGE_ARGS=--strict
       # package.py has checked that every DLL loads from the package or from Windows
       - name: Check the package (with only Windows's own directories on the PATH)
         run: |
-          mkdir check && cd check && unzip -q ../build/dist/UW2-*-windows-x86_64.zip
+          mkdir check && cd check && unzip -q ../uw2/build/dist/UW2-*-windows-x86_64.zip
           cd UW2-*-windows-x86_64
           PATH=/c/Windows/system32:/c/Windows /usr/bin/ldd uw2port.exe
           if PATH=/c/Windows/system32:/c/Windows /usr/bin/ldd uw2port.exe | grep -viE '=> (/c/windows/|'"$PWD"'/)'; then exit 1; fi
@@ -327,11 +298,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: windows
-          path: build/dist/UW2-*-windows-x86_64.zip
+          path: uw2/build/dist/UW2-*-windows-x86_64.zip
           if-no-files-found: error
 
   draft:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/uw2-v')
     needs: [macos, linux, windows]
     runs-on: ubuntu-24.04
     permissions:
@@ -346,6 +317,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
+          name: Ultima Underworld II port ${{ github.ref_name }}
           prerelease: false
           generate_release_notes: true
           fail_on_unmatched_files: true

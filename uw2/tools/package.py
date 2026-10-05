@@ -55,6 +55,8 @@ def version(arg):
     if not v:
         try: v = run(['git', 'describe', '--tags', '--always', '--dirty'], cwd=root).strip()
         except (OSError, subprocess.CalledProcessError): v = 'dev'
+    # a tag that names the game in a repository of several (uw2-v1.2.1) gives the version alone
+    v = re.sub(r'^[A-Za-z0-9]+-(?=v\d)', '', v)
     return re.sub(r'[^A-Za-z0-9._-]', '-', v)
 
 

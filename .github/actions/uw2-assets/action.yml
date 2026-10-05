@@ -36,5 +36,5 @@ runs:
         GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o UserKnownHostsFile=$hosts -o StrictHostKeyChecking=yes" \
           git clone -q --depth 1 git@github.com:abedegno/uw2-ci-assets.git "$tmp/uw2-ci-assets"
         rm -f "$key" "$hosts"
-        sh tools/ci-assets.sh "$tmp/uw2-ci-assets/uw2-ci-assets.tar.gz.age" "$tmp/uw2-assets"
+        sh uw2/tools/ci-assets.sh "$tmp/uw2-ci-assets/uw2-ci-assets.tar.gz.age" "$tmp/uw2-assets"
         rm -rf "$tmp/uw2-ci-assets"

@@ -1,9 +1,11 @@
-# Fetch and decrypt UW1's CI asset bundle (docs/BUILDING.md, "Continuous integration"): the
-# owner's UW1 game files and Borland disk images, from the private repository uw1-ci-assets,
-# with its read-only deploy key, decrypted with the age key into $RUNNER_TEMP/uw1-assets. Sets
-# UW1_DATA, UW1_EXE, TC_DISKS and TASM_DISKS for the later steps (tools/ci-assets.sh). Nothing
-# is listed or printed. The calling workflow removes $RUNNER_TEMP/uw1-assets, toolchain and
-# build in a final `if: always()` step, and never caches or uploads anything from them.
+# Fetch and decrypt the CI asset bundle (docs/BUILDING.md, "Continuous integration"): the
+# owner's UW2 game files and Borland disk images, from the private repository uw2-ci-assets,
+# with its read-only deploy key, decrypted with the age key into $RUNNER_TEMP/uw2-assets. Sets
+# UW2_EXE, UW2_DIR, TC_DISKS and TASM_DISKS for the later steps. Nothing is listed or printed.
+# The calling workflow must remove $RUNNER_TEMP/uw2-assets, TC, TASM and build in a final
+# `if: always()` step, and must never cache or upload anything from them. Needs git, ssh, tar
+# and age on the PATH: Linux and macOS runners (age from apt or Homebrew), and Windows, where
+# bash is Git Bash and the job puts the official age build on the PATH first (accuracy.yml).
 name: UW1 assets
 description: Fetch and decrypt the private game and toolchain bundle
 inputs:
@@ -34,5 +36,5 @@ runs:
         GIT_SSH_COMMAND="ssh -i $key -o IdentitiesOnly=yes -o UserKnownHostsFile=$hosts -o StrictHostKeyChecking=yes" \
           git clone -q --depth 1 git@github.com:abedegno/uw1-ci-assets.git "$tmp/uw1-ci-assets"
         rm -f "$key" "$hosts"
-        sh tools/ci-assets.sh "$tmp/uw1-ci-assets/uw1-ci-assets.tar.gz.age" "$tmp/uw1-assets"
+        sh uw1/tools/ci-assets.sh "$tmp/uw1-ci-assets/uw1-ci-assets.tar.gz.age" "$tmp/uw1-assets"
         rm -rf "$tmp/uw1-ci-assets"

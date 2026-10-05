@@ -1,12 +1,12 @@
-# The Linux tools for CI (docs/BUILDING.md, "Continuous integration"): system packages, Python
-# with Exhume's requirements in .exhume/.venv, Node with dos-mcp, and the tools built from
-# source (emu2, SDL3 and libmt32emu, Nuked OPL3), each cached by the script that pins it.
+# The Linux side of `make setup` for CI (docs/BUILDING.md, "Continuous integration"): system
+# packages, Python with tools/requirements.txt in .venv, Node with dos-mcp, and the tools built
+# from source (emu2, SDL3 and libmt32emu, Nuked OPL3), each cached by the script that pins it.
 # Nothing here touches the game or the Borland toolchain, so every cached path is free of both.
 name: Linux tools
 description: Install and cache the tools the gate and the port need on an Ubuntu runner
 inputs:
   full:
-    description: also install DOSBox-X and the LLVM tools (make EXHUME=.exhume test-full)
+    description: also install DOSBox-X and the LLVM tools (make -C uw2 test-full)
     default: "false"
 runs:
   using: composite
@@ -26,46 +26,46 @@ runs:
       with:
         python-version: "3.12"
         cache: pip
-        cache-dependency-path: .exhume/tools/requirements.txt
+        cache-dependency-path: uw2/tools/requirements.txt
     - name: Python packages
       shell: bash
       run: |
-        python -m venv .exhume/.venv
-        .exhume/.venv/bin/pip install -q -r .exhume/tools/requirements.txt
+        python -m venv uw2/.venv
+        uw2/.venv/bin/pip install -q -r uw2/tools/requirements.txt
     - uses: actions/setup-node@v4
       with:
         node-version: "22"
         cache: npm
-        cache-dependency-path: .exhume/package-lock.json
+        cache-dependency-path: uw2/package-lock.json
     - name: Node packages
       shell: bash
       # dos-mcp's headless Chrome is only for js-dos, which CI never uses (emu2 and DOSBox-X)
       env:
         PUPPETEER_SKIP_DOWNLOAD: "true"
-      run: npm ci --no-audit --no-fund --prefix .exhume
+      run: npm ci --no-audit --no-fund --prefix uw2
     - name: Cache emu2
       uses: actions/cache@v4
       with:
-        path: .exhume/tools/emu2
-        key: emu2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.exhume/tools/setup-emu2.sh', '.exhume/tools/emu2-date.patch') }}
+        path: uw2/tools/emu2
+        key: emu2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('uw2/tools/setup-emu2.sh', 'uw2/tools/emu2-date.patch') }}
     - name: Cache SDL3 and libmt32emu
       uses: actions/cache@v4
       with:
-        path: tools/libs
-        key: libs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.exhume/tools/setup-libs.sh') }}
+        path: uw2/tools/libs
+        key: libs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('uw2/tools/setup-libs.sh') }}
     - name: Cache Nuked OPL3
       uses: actions/cache@v4
       with:
-        path: tools/nuked-opl3
-        key: nuked-opl3-${{ hashFiles('.exhume/tools/setup-sound.sh') }}
+        path: uw2/tools/nuked-opl3
+        key: nuked-opl3-${{ hashFiles('uw2/tools/setup-sound.sh') }}
     - name: Build what is not cached
       shell: bash
       run: |
-        sh .exhume/tools/setup-emu2.sh
-        sh .exhume/tools/setup-libs.sh tools/libs
-        export PKG_CONFIG_PATH="$PWD/tools/libs/lib/pkgconfig"
-        sh .exhume/tools/setup-sound.sh tools/nuked-opl3
+        sh uw2/tools/setup-emu2.sh
+        sh uw2/tools/setup-libs.sh
+        export PKG_CONFIG_PATH="$PWD/uw2/tools/libs/lib/pkgconfig"
+        sh uw2/tools/setup-sound.sh
         {
           echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
-          echo "LD_LIBRARY_PATH=$PWD/tools/libs/lib"
+          echo "LD_LIBRARY_PATH=$PWD/uw2/tools/libs/lib"
         } >> "$GITHUB_ENV"

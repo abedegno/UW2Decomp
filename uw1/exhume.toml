@@ -145,10 +145,8 @@ AnimClass = "OBJECTS.DAT animation classes (ANIMOBJ.C's fread, 4 bytes each)"
 FontInfo = "the 12-byte header of a .SYS font file (GRFX.C's intoFarBuffer into cur_font)"
 Bitmap = "the header of a picture read from an art file (grs_unpack over the bytes read)"
 
-[ci]
-# Exhume's tools/citemplates.py writes .github/ from its templates with these values
-# (docs/BUILDING.md, "Continuous integration")
-vars = "tools/ci.toml"
+# CI: the repository's ci.toml, with both games' values (docs/BUILDING.md, "Continuous
+# integration" at the top of the repository)
 
 [package]
 # Exhume's tools/package.py (make package) and tools/icons.py: the players' packages, UW1.app on

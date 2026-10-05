@@ -1,0 +1,217 @@
+# Underworld Exhumed's CI values: python3 exhume/tools/citemplates.py --vars ci.toml .
+# writes .github/ from Exhume's templates. repocheck.yml once; each game's workflows from its [[games]] table.
+
+nightly_cron = "17 3 * * *"
+accuracy_comment = '''
+# make test, the accuracy suite (docs/BUILDING.md, "Testing" and "Continuous integration"):
+# the byte-exact DOS build gate, the port build, the quick routine fuzzing and every replay
+# session against their goldens, on Linux. Then the same sessions replayed by the port
+# built on Windows (MSYS2 CLANG64) and on macOS against the same goldens (make verify): the
+# goldens are DOS's, so these show the port on each OS runs the game as DOS does. They need
+# the game, and the gate the Borland toolchain, which come from the private bundle (the
+# game's assets action), so the jobs run only where the repository's secrets are given: pushes
+# to main, a manual run, and pull requests from branches of this repository. A pull request
+# from a fork gets port.yml and repocheck.yml, which need no secrets.'''
+nightly_comment = '''
+# make test-full, nightly (docs/BUILDING.md, "Testing" and "Continuous integration"): the gate,
+# both port builds, every golden made again from DOS in DOSBox-X (each session twice, checked
+# identical), the sessions in the port and in the UBSan build, the sound drivers against the
+# real ones, the deep routine fuzzing and the coverage report. Like accuracy.yml it needs the
+# private bundle, so it runs only on the schedule and by hand. The job fails when a regenerated
+# golden differs from the committed one, and the coverage totals go to the job summary.'''
+port_comment = '''
+# The native port builds on Linux, macOS and Windows (docs/BUILDING.md, "Continuous
+# integration"): make port (compile and link with SDL3) and make port-check (the compile-only
+# measurement). Only the sources are needed: no game data, no Borland toolchain and no secrets,
+# so this runs on every push and every pull request, forks included. Nothing is run.'''
+release_comment = '''
+# Release packages of the native port (docs/BUILDING.md, "Releases"): on a tag v*, build the port
+# on macOS (one universal app for arm64 and x86_64), Linux (x86-64, on Ubuntu 22.04 for glibc
+# 2.35: a tarball and an AppImage) and Windows (x86-64, MSYS2 CLANG64), package each with
+# tools/package.py, and attach the packages and the source of the LGPL libraries to a DRAFT
+# release, which the owner reviews and publishes by hand. Run by hand (workflow_dispatch), it
+# builds the packages as workflow artifacts and makes no release.
+# Only the sources are needed: no game data and no Borland toolchain. The only secrets are
+# Apple's, for the macOS app: with CSC_LINK set it is signed with the Developer ID identity, and
+# on a tag (or by hand with notarise) notarised and stapled; without them it is signed ad hoc.'''
+repocheck_comment = '''
+# tools/repocheck.py (Python and script syntax, Markdown links, no game data or Borland
+# binaries committed), which needs neither the Borland toolchain nor UW2.EXE, so it runs on
+# every push and pull request, forks included. The gate itself runs in the pre-push hook
+# (`make hooks`) and in accuracy.yml (docs/BUILDING.md, "Continuous integration").'''
+linux_tools_comment = '''
+# The Linux side of `make setup` for CI (docs/BUILDING.md, "Continuous integration"): system
+# packages, Python with tools/requirements.txt in .venv, Node with dos-mcp, and the tools built
+# from source (emu2, SDL3 and libmt32emu, Nuked OPL3), each cached by the script that pins it.
+# Nothing here touches the game or the Borland toolchain, so every cached path is free of both.'''
+assets_comment = '''
+# Fetch and decrypt the CI asset bundle (docs/BUILDING.md, "Continuous integration"): the
+# owner's UW2 game files and Borland disk images, from the private repository uw2-ci-assets,
+# with its read-only deploy key, decrypted with the age key into $RUNNER_TEMP/uw2-assets. Sets
+# UW2_EXE, UW2_DIR, TC_DISKS and TASM_DISKS for the later steps. Nothing is listed or printed.
+# The calling workflow must remove $RUNNER_TEMP/uw2-assets, TC, TASM and build in a final
+# `if: always()` step, and must never cache or upload anything from them. Needs git, ssh, tar
+# and age on the PATH: Linux and macOS runners (age from apt or Homebrew), and Windows, where
+# bash is Git Bash and the job puts the official age build on the PATH first (accuracy.yml).'''
+release_linux_python = '''
+      # Exhume's tools need Python 3.11 or later (tomllib); Ubuntu 22.04 has 3.10
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"'''
+test_full_summary = "==== test full:"
+setup_name = "Unpack Turbo C++ and TASM from the bundle's disk images"
+job_if = "vars.UW1_CI_ASSETS == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)"
+nightly_if = "    if: vars.UW1_CI_ASSETS == 'true'"
+repocheck_env = ""
+
+[[games]]
+test = "make -C uw1 test"
+test_full = "make -C uw1 test-full"
+setup = "sh exhume/profiles/borland-tc101/setup-tc.sh \"$TC_DISKS\" toolchain/TC && sh exhume/profiles/borland-tc101/setup-tasm.sh \"$TASM_DISKS\" toolchain/TASM && printf 'EXHUME_TC=%s\\nEXHUME_TASM=%s\\n' \"$PWD/toolchain/TC\" \"$PWD/toolchain/TASM\" >> \"$GITHUB_ENV\""
+setup_libs = "sh exhume/tools/setup-libs.sh uw1/tools/libs"
+setup_sound = "sh exhume/tools/setup-sound.sh uw1/tools/nuked-opl3"
+port = "make -C uw1 port"
+verify = "make -C uw1 verify"
+verify_windows = "make -C uw1 PY=python verify"
+setup_libs_windows = "SETUP_LIBS=mt32emu sh exhume/tools/setup-libs.sh uw1/tools/libs"
+port_check = "make -C uw1 port-check"
+port_windows = "make -C uw1 PY=python port"
+port_check_windows = "make -C uw1 PY=python port-check"
+port_release = "make -C uw1 port-release"
+package = "make -C uw1 package"
+port_release_windows = "make -C uw1 PY=python port-release"
+package_windows = "make -C uw1 PY=python package"
+requirements = "exhume/tools/requirements.txt"
+venv = "exhume/.venv"
+emu2_dir = "exhume/tools/emu2"
+emu2_script = "exhume/tools/setup-emu2.sh"
+emu2_patch = "exhume/tools/emu2-date.patch"
+libs_dir = "uw1/tools/libs"
+libs_script = "exhume/tools/setup-libs.sh"
+nuked_dir = "uw1/tools/nuked-opl3"
+sound_script = "exhume/tools/setup-sound.sh"
+verify_dir = "uw1/build/replay/verify"
+golden_dir = "uw1/tests/replay/golden"
+coverage_doc = "uw1/docs/COVERAGE.md"
+coverage_data = "uw1/build/coverage/all.profdata"
+libs_args = " uw1/tools/libs"
+sound_args = " uw1/tools/nuked-opl3"
+node_cache_path = "        cache-dependency-path: exhume/package-lock.json"
+npm_ci = "npm ci --no-audit --no-fund --prefix exhume"
+ci_assets = "sh uw1/tools/ci-assets.sh"
+cleanup = "toolchain uw1/build"
+verify_cleanup = "uw1/build"
+package_check_windows = "make -C uw1 PY=python port-release && make -C uw1 PY=python package && exe=$(python exhume/tools/pkgcheck.py \"$(ls uw1/build/dist/*-windows-x86_64.zip)\" --exe uw1port --data \"$UW1_DATA\" --unpack \"$RUNNER_TEMP/pkg\") && EXHUME_PORT=\"$exe\" make -C uw1 PY=python verify"
+pkg_name = "UW1"
+exe = "uw1port"
+icon = "uw1"
+launcher = "uw1"
+env = "UW1"
+tmp_prefix = "uw1"
+macos_archs_env = "SETUP_MACOS_ARCHS"
+assets_action = "uw1-assets"
+assets_title = "UW1 assets"
+deploy_secret = "UW1_ASSETS_DEPLOY_KEY"
+age_secret = "UW1_ASSETS_AGE_KEY"
+age_env = "ASSETS_AGE_KEY"
+bundle_repo = "abedegno/uw1-ci-assets"
+bundle_file = "uw1-ci-assets.tar.gz.age"
+tmp_assets = "uw1-assets"
+tmp_clone = "uw1-ci-assets"
+tmp_key = "uw1-assets-deploy-key"
+tmp_hosts = "uw1-known-hosts"
+job_if = "vars.UW1_CI_ASSETS == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)"
+nightly_if = "    if: vars.UW1_CI_ASSETS == 'true'"
+on_paths = '''
+
+    paths:
+      - 'uw1/**'
+      - 'exhume'
+      - 'docs/**'
+      - '.github/**'
+      - 'ci.toml'
+      - 'Makefile''''
+wf_prefix = "uw1-"
+linux_tools_action = "uw1-linux-tools"
+release_tags = "\"uw1-v*\""
+tag_prefix = "uw1-v"
+dist_dir = "uw1/build/dist"
+release_name = "          name: Ultima Underworld port ${{ github.ref_name }}"
+exhume_checkout = ""
+checkout_submodules = "          submodules: true"
+
+[[games]]
+test = "make -C uw2 test"
+test_full = "make -C uw2 test-full"
+setup = "make -C uw2 setup"
+setup_libs = "make -C uw2 setup-libs"
+setup_sound = "make -C uw2 setup-sound"
+port = "make -C uw2 port"
+verify = "make -C uw2 verify"
+verify_windows = "make -C uw2 PY=python verify"
+setup_libs_windows = "UW2_LIBS=mt32emu make setup-libs"
+port_check = "make -C uw2 port-check"
+port_windows = "make -C uw2 PY=python port"
+port_check_windows = "make -C uw2 PY=python port-check"
+port_release = "make -C uw2 port-release"
+package = "make -C uw2 package"
+port_release_windows = "make -C uw2 PY=python port-release"
+package_windows = "make -C uw2 PY=python package"
+requirements = "uw2/tools/requirements.txt"
+venv = "uw2/.venv"
+emu2_dir = "uw2/tools/emu2"
+emu2_script = "uw2/tools/setup-emu2.sh"
+emu2_patch = "uw2/tools/emu2-date.patch"
+libs_dir = "uw2/tools/libs"
+libs_script = "uw2/tools/setup-libs.sh"
+nuked_dir = "uw2/tools/nuked-opl3"
+sound_script = "uw2/tools/setup-sound.sh"
+verify_dir = "uw2/build/replay/verify"
+golden_dir = "uw2/tests/replay/golden"
+coverage_doc = "uw2/docs/COVERAGE.md"
+coverage_data = "uw2/build/coverage/all.profdata"
+libs_args = ""
+sound_args = ""
+node_cache_path = "        cache-dependency-path: uw2/package-lock.json"
+npm_ci = "npm ci --no-audit --no-fund --prefix uw2"
+ci_assets = "sh uw2/tools/ci-assets.sh"
+cleanup = "uw2/TC uw2/TASM uw2/build"
+verify_cleanup = "uw2/build"
+package_check_windows = "make -C uw2 PY=python port-release && make -C uw2 PY=python package && exe=$(python exhume/tools/pkgcheck.py \"$(ls uw2/build/dist/*-windows-x86_64.zip)\" --exe uw2port --data \"$UW2_DIR\" --unpack \"$RUNNER_TEMP/pkg\") && EXHUME_PORT=\"$exe\" make -C uw2 PY=python verify"
+pkg_name = "UW2"
+exe = "uw2port"
+icon = "uw2"
+launcher = "uw2"
+env = "UW2"
+tmp_prefix = "uw2"
+macos_archs_env = "UW2_MACOS_ARCHS"
+assets_action = "uw2-assets"
+assets_title = "UW2 assets"
+deploy_secret = "UW2_ASSETS_DEPLOY_KEY"
+age_secret = "UW2_ASSETS_AGE_KEY"
+age_env = "UW2_ASSETS_AGE_KEY"
+bundle_repo = "abedegno/uw2-ci-assets"
+bundle_file = "uw2-ci-assets.tar.gz.age"
+tmp_assets = "uw2-assets"
+tmp_clone = "uw2-ci-assets"
+tmp_key = "uw2-assets-deploy-key"
+tmp_hosts = "uw2-known-hosts"
+job_if = "github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository"
+nightly_if = ""
+on_paths = '''
+
+    paths:
+      - 'uw2/**'
+      - 'exhume'
+      - 'docs/**'
+      - '.github/**'
+      - 'ci.toml'
+      - 'Makefile''''
+wf_prefix = "uw2-"
+linux_tools_action = "uw2-linux-tools"
+release_tags = "\"uw2-v*\""
+tag_prefix = "uw2-v"
+dist_dir = "uw2/build/dist"
+release_name = "          name: Ultima Underworld II port ${{ github.ref_name }}"
+exhume_checkout = ""
+checkout_submodules = "          submodules: true"

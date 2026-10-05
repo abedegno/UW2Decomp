@@ -1,0 +1,95 @@
+# The native port builds on Linux, macOS and Windows (docs/BUILDING.md, "Continuous
+# integration"): make port (compile and link with SDL3) and make port-check (the compile-only
+# measurement). Only the sources are needed: no game data, no Borland toolchain and no secrets,
+# so this runs on every push and every pull request, forks included. Nothing is run.
+name: uw1-port
+on:
+  push:
+    paths:
+      - 'uw1/**'
+      - 'exhume'
+      - 'docs/**'
+      - '.github/**'
+      - 'ci.toml'
+      - 'Makefile'
+  pull_request:
+    paths:
+      - 'uw1/**'
+      - 'exhume'
+      - 'docs/**'
+      - '.github/**'
+      - 'ci.toml'
+      - 'Makefile'
+permissions:
+  contents: read
+concurrency:
+  group: uw1-port-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: System packages
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends clang ninja-build pkg-config >/dev/null
+      - name: Cache SDL3 and libmt32emu
+        uses: actions/cache@v4
+        with:
+          path: uw1/tools/libs
+          key: libs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('exhume/tools/setup-libs.sh') }}
+      - name: Build SDL3 and libmt32emu (when not cached), fetch Nuked OPL3
+        run: |
+          sh exhume/tools/setup-libs.sh uw1/tools/libs
+          echo "PKG_CONFIG_PATH=$PWD/uw1/tools/libs/lib/pkgconfig" >> "$GITHUB_ENV"
+          PKG_CONFIG_PATH=$PWD/uw1/tools/libs/lib/pkgconfig sh exhume/tools/setup-sound.sh uw1/tools/nuked-opl3
+      - run: make -C uw1 port
+      - run: make -C uw1 port-check
+
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Homebrew packages
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+        run: brew install sdl3 mt32emu pkgconf
+      - run: sh exhume/tools/setup-sound.sh uw1/tools/nuked-opl3
+      - run: make -C uw1 port
+      - run: make -C uw1 port-check
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      # the scripts must keep their LF line ends for MSYS2's sh
+      - run: git config --global core.autocrlf false
+        shell: pwsh
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: true
+      # MSYS2's CLANG64 environment: clang targeting the Universal C Runtime, SDL3 and
+      # pkg-config from its packages; no libmt32emu, so the Windows build has no MT-32
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANG64
+          update: false
+          install: make curl
+          pacboy: clang:p llvm:p pkgconf:p sdl3:p python:p
+      - run: sh exhume/tools/setup-sound.sh uw1/tools/nuked-opl3
+      - run: make -C uw1 PY=python port
+      - run: make -C uw1 PY=python port-check
