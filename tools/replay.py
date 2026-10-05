@@ -526,7 +526,10 @@ def run_dos(out, rec=None, steps=(), timeout=900, cfg=None, stage=None, log=None
 
 
 def port_exe(path):
-    """The port's program: path, or path.exe on Windows."""
+    """The port's program: path, or path.exe on Windows. EXHUME_PORT names another in place of
+    the plain build's (Exhume's tools/pkgcheck.py: the program from a player's package)."""
+    if os.environ.get('EXHUME_PORT') and os.path.basename(os.path.dirname(path)) == 'port':
+        return os.environ['EXHUME_PORT']
     return path + '.exe' if not os.path.exists(path) and os.path.exists(path + '.exe') else path
 
 
