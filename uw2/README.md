@@ -1,4 +1,7 @@
-# UW2Decomp
+# uw2: Ultima Underworld II: Labyrinth of Worlds
+
+This folder is *Ultima Underworld II: Labyrinth of Worlds* in [Underworld Exhumed](../README.md), with [uw1/](../uw1/README.md) (Ultima Underworld) beside it. The repository's [README](../README.md) is the place to start; this page has this game's details.
+
 
 Ultima Underworld II: Labyrinth of Worlds (DOS, 1993; developed by Looking Glass Technologies, published by Origin Systems), as source code. This repository has two products, built from the same sources:
 
@@ -9,7 +12,7 @@ Neither contains any of the game. You need your own copy of UW2 (the GOG release
 
 ## Play it
 
-1. Get the port: download the package for your system from the [releases](https://github.com/abedegno/UW2Decomp/releases) page, or [build it from source](#build-the-port-from-source).
+1. Get the port: download the package for your system from the [releases](https://github.com/abedegno/underworld-exhumed/releases) page, or [build it from source](#build-the-port-from-source).
 2. Install UW2 from GOG. The port finds it in GOG's usual folders (on Windows, where GOG's installer recorded it in the registry), including inside GOG's Mac app and its `game.gog` CD image. If it finds nothing, it asks you to choose the folder that holds `UW2.EXE` (or the GOG install folder), and remembers it. From a command line, `uw2port --data /path/to/UW2` names it.
 3. Start it: `UW2.app` on macOS (signed and notarised, so it opens like any app; a package whose `README.txt` says it is not notarised needs right-click and Open the first time), `uw2port.exe` on Windows, and on Linux the AppImage (`chmod +x UW2-*.AppImage`, then run it) or `./uw2` from the tarball. The Linux packages need glibc 2.35 or later (Ubuntu 22.04 or newer).
 

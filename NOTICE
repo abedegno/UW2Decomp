@@ -1,0 +1,16 @@
+Underworld Exhumed
+Copyright (c) 2026 abedegno
+
+This project is a fan research project. It is not affiliated with, endorsed by or sponsored by Electronic Arts, Origin Systems, Blue Sky Productions or Looking Glass Technologies.
+
+THE GAMES
+
+Ultima Underworld: The Stygian Abyss (1992, Blue Sky Productions, later Looking Glass Technologies) and Ultima Underworld II: Labyrinth of Worlds (1993, Looking Glass Technologies) were published by Origin Systems. Their copyright belongs to their owners (Electronic Arts). Ultima and Ultima Underworld are trademarks of Electronic Arts.
+
+The decompiled game code in uw1/ is derived from UW.EXE, and in uw2/ from UW2.EXE. This project claims no ownership of either game, and the MIT licence in LICENSE does not grant any right in them. No game data is included, in the repository or in any release package; to build or play anything you need your own copy of each game.
+
+uw1/NOTICE and uw2/NOTICE say, for each game, which files are derived from its program and which are this project's own work, and name the other code in the repository (Borland's overlay manager, the Miles Audio Interface Library). uw1/THIRD-PARTY-NOTICES and uw2/THIRD-PARTY-NOTICES list the libraries the release packages contain. Each release package carries its own game's NOTICE and THIRD-PARTY-NOTICES.
+
+EXHUME
+
+exhume/ is a git submodule: Exhume (https://github.com/abedegno/Exhume), by the same author under the same MIT licence. Its runtime is compiled into both ports and their release packages.

@@ -1,17 +1,20 @@
-# UW1Decomp
+# uw1: Ultima Underworld: The Stygian Abyss
+
+This folder is *Ultima Underworld: The Stygian Abyss* in [Underworld Exhumed](../README.md), with [uw2/](../uw2/README.md) (Ultima Underworld II) beside it. The repository's [README](../README.md) is the place to start; this page has this game's details.
+
 
 Ultima Underworld: The Stygian Abyss (DOS, 1992; developed by Blue Sky Productions, later Looking Glass Technologies, published by Origin Systems), as source code. This repository has two products, built from the same sources:
 
 - **A byte-matching decompilation.** The C and assembly in `src/` compile with the original Borland tools to the same bytes as the shipped `UW.EXE`.
 - **A native cross-platform port, uw1port.** The same C, compiled for macOS, Linux and Windows with SDL3, plays the game in a window with its music and speech. Ten recorded DOS sessions replay in it with DOS's game state and screen at every checkpoint ([docs/PORT.md](docs/PORT.md)).
 
-It is the sibling of [UW2Decomp](https://github.com/abedegno/UW2Decomp), the matched decompilation of Ultima Underworld II, and was seeded from it: the two games share a compiler, libraries and much of an engine, a year apart. It is built with [Exhume](https://github.com/abedegno/Exhume), the toolkit both projects use.
+It is the sibling of [uw2/](../uw2/README.md), the matched decompilation of Ultima Underworld II, and was seeded from it: the two games share a compiler, libraries and much of an engine, a year apart. It is built with [Exhume](https://github.com/abedegno/Exhume), the toolkit both projects use.
 
 No game data is included. You need your own copy of UW1 (the GOG release). This is a fan research project, not affiliated with or endorsed by the rights holders; see [Licence and legal notice](#licence-and-legal-notice).
 
 ## Play it
 
-1. Get the port: download the package for your system from the [releases](https://github.com/abedegno/UW1Decomp/releases) page, or [build it from source](#build-the-port-from-source).
+1. Get the port: download the package for your system from the [releases](https://github.com/abedegno/underworld-exhumed/releases) page, or [build it from source](#build-the-port-from-source).
 2. Install Ultima Underworld from GOG. The port finds it in GOG's usual folders (on Windows, where GOG's installer recorded it in the registry), including inside GOG's Mac app and its `game.gog` CD image. If it finds nothing, it asks you to choose the folder that holds `UW.EXE` (or the GOG install folder, or the GOG app), and remembers it. From a command line, `uw1port --data /path/to/UW1` names it.
 3. Start it: `UW1.app` on macOS (a package whose `README.txt` says it is not notarised needs right-click and Open the first time), `uw1port.exe` on Windows, and on Linux the AppImage (`chmod +x UW1-*.AppImage`, then run it) or `./uw1` from the tarball. The Linux packages need glibc 2.35 or later (Ubuntu 22.04 or newer).
 

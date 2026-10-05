@@ -1,0 +1,8 @@
+# Files whose bytes are checked by digest must not get CR LF line ends on a Windows checkout
+# (core.autocrlf): each game's replay recordings, their sound configurations and goldens (the
+# goldens name the recordings by SHA-256), and the shell scripts.
+**/tests/replay/*.rec binary
+**/tests/replay/*.cfg binary
+**/tests/replay/golden/** binary
+*.png binary
+*.sh text eol=lf

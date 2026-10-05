@@ -1,4 +1,4 @@
-UW2Decomp
+Underworld Exhumed: UW2 (the uw2/ folder of https://github.com/abedegno/underworld-exhumed)
 Copyright (c) 2026 abedegno
 
 This project is a fan research project. It is not affiliated with, endorsed by or sponsored by Electronic Arts, Origin Systems or Looking Glass Technologies.
@@ -17,7 +17,7 @@ The MIT licence in LICENSE covers only this project's original work: the tools (
 
 EXHUME'S RUNTIME
 
-The port's portability layer, emulated PC hardware, platform layer, sound library and drivers, x86 machine and record and replay code are Exhume's runtime (https://github.com/abedegno/Exhume, runtime/), by the same author under the same MIT licence (LICENSE, the same text), which the builds compile from an Exhume checkout at the commit tools/exhume-ref names; it is not copied into this repository, but it is compiled into the port and its release packages.
+The port's portability layer, emulated PC hardware, platform layer, sound library and drivers, x86 machine and record and replay code are Exhume's runtime (https://github.com/abedegno/Exhume, runtime/), by the same author under the same MIT licence (LICENSE, the same text), which the builds compile from the Exhume submodule (exhume/) at the commit the repository records; it is not copied into this repository's own files, but it is compiled into the port and its release packages.
 
 OTHER CODE IN THE REPOSITORY
 

@@ -13,16 +13,14 @@ Everything runs on your own machine: Turbo C++, TASM and TLINK run headless in a
 
 ## Exhume
 
-The port's generic half, the portability and platform layers, the emulated hardware, the sound library, the x86 machine and record and replay, is Exhume's `runtime/`, and this repository's builds compile it in place from an Exhume checkout ([PORT.md](PORT.md#the-runtime)): the port its `port/` C, the replay DOS build its `replay/replay.c`, and the gate and every DOS build its `include/portable.h`, which they stage beside `src/include`. The tools find the checkout at `$EXHUME`, else `.exhume` in this repository, else `~/Exhume`. `make setup-exhume` (part of `make setup` and `make setup-port`) says which it found, or clones Exhume into `.exhume` (ignored by git) at the commit `tools/exhume-ref` names when there is none.
+Exhume is a submodule of this repository at `exhume/`, one commit for both games; [docs/BUILDING.md](../../docs/BUILDING.md#exhume) says how the tools find it and how to take a newer one. Its runtime is the port's generic half ([PORT.md](PORT.md#the-runtime)): the port compiles its `port/` C, the replay DOS build its `replay/replay.c`, and the gate and every DOS build its `include/portable.h`, which they stage beside `src/include`. `make setup-exhume` initialises the submodule when it is empty.
 
-`tools/exhume-ref` is the Exhume commit this tree was last proved with: `make port` warns when the checkout does not contain it, and CI checks out exactly that commit. To take a change to the runtime, update the checkout, run `make test-full`, and commit the new commit in `tools/exhume-ref` with the change it needs. To change the runtime itself, change it in Exhume and prove it on UW2 there (`examples/uw2/prove-port.sh`) first.
-
-Optional, for speed: git, make and a C compiler (the Xcode command line tools), with which `make setup` builds emu2, a DOS that runs the toolchain about twenty times faster than js-dos ([Choosing the DOS](#choosing-the-dos)). Or DOSBox-X (`brew install dosbox-x`), nearly as fast. DOSBox-X is also where the replays' DOS side runs when it is installed, three and a half times faster than js-dos ([Testing](#testing)), The tests need Unicorn in the `.venv` for the routine fuzzing and `tools/ailcheck.py`; `make setup` installs it with iced-x86 from `tools/requirements.txt`.
+Optional, for speed: git, make and a C compiler (the Xcode command line tools), with which `make setup` builds emu2, a DOS that runs the toolchain about twenty times faster than js-dos ([Choosing the DOS](#choosing-the-dos)). Or DOSBox-X (`brew install dosbox-x`), nearly as fast. The tests need Unicorn in the `.venv` for the routine fuzzing and `tools/ailcheck.py`; `make setup` installs it with iced-x86 from `tools/requirements.txt`.
 
 Optional, for the map tools and the assembly drafts (see [MAP.md](MAP.md)):
 
-- The IDA listing `uw2_asm.asm` from [UWReverseEngineering](https://github.com/hankmorgan/UWReverseEngineering), expected at `~/UWReverseEngineering/uw2_asm.asm` (or set `UW2_ASM`). It is large and the shell's grep may skip it as binary; use `grep -a`. The modding build uses it, when present, to write the 3D model interpreter's opcode table as names.
-- The Japanese FM Towns release of UW2, for `tools/fmt.py`, which disassembles a function by its original name. Extract `UW2.EXP` from the disc and use `uw2fmt.py` from UWReverseEngineering's `UW2 FM Towns` folder to write `fmtowns/uw2fmt.img` (`unpack`) and `fmtowns/syms.tsv` (`syms`). `fmtowns/syms.tsv`, the 3,237 original names and their addresses, is committed: it is the same list as `UW2 FM Towns/uw2_symbols.tsv`, published in UWReverseEngineering. `verify.py --update` reads it to mark names in `symbols.tsv` as original. Only `tools/fmt.py` needs the FM Towns image itself, which stays out of the repo.
+- The IDA listing `uw2_asm.asm` from [UWReverseEngineering](https://github.com/hankmorgan/UWReverseEngineering), expected at `~/UWReverseEngineering/uw2_asm.asm` (or set `UW2_ASM`). It is large and the shell's grep may skip it as binary; use `grep -a`.
+- The Japanese FM Towns release of UW2, for `tools/fmt.py`, which disassembles a function by its original name; `fmtowns/syms.tsv`, the 3,237 original names, is committed. Only `tools/fmt.py` needs the FM Towns image itself, which stays out of the repository.
 
 ## Make targets
 
@@ -192,93 +190,15 @@ It recompiles only the sources whose text, headers or object have changed since 
 
 The pre-push hook runs the gate before anything leaves your machine, and CI runs it again ([Continuous integration](#continuous-integration)). The hook runs `make test`, the gate and the port's tests together ([Testing](#testing)); `make hooks` again updates a hook an older version installed. Bypass it for one push with `git push --no-verify` (or `SKIP_CHECK=1 git push`). It checks the working tree, not the commits being pushed, so commit or stash first. `tools/repocheck.py` checks script syntax, relative Markdown links, and that no game data or Borland binary is committed; run it locally with `.venv/bin/python tools/repocheck.py`.
 
-## Continuous integration
+## Continuous integration and releases
 
-Five workflows run on GitHub's standard hosted runners, in this public repository:
+One set of workflows serves both games; [docs/BUILDING.md](../../docs/BUILDING.md#continuous-integration) has them, the private bundle (`abedegno/uw2-ci-assets`) and its secrets, the releases (tags `uw2-vX.Y.Z`), signing and notarising.
 
-| Workflow | When | What it runs | Needs the bundle |
-| --- | --- | --- | --- |
-| `port.yml` | every push and pull request, forks included | `make port` and `make port-check` on Ubuntu 24.04, macOS and Windows (MSYS2 CLANG64); nothing is run | no |
-| `repocheck.yml` | every push and pull request, forks included | `tools/repocheck.py` | no |
-| `release.yml` | a tag `v*`, and by hand | the release packages for macOS, Linux and Windows ([Releases](#releases)); for a tag, a draft release with them | no (Apple's secrets, when set, sign and notarise the macOS app) |
-| `accuracy.yml` | pushes to `main`, pull requests from branches of this repository, and by hand | `make setup` and `make test` on Ubuntu 24.04: the gate, the port build, the quick fuzzing and the sessions against their goldens; and on Windows (MSYS2 CLANG64) and macOS 15, the port built there and the sessions against the same goldens (`make verify`, no DOS and no Borland toolchain), so the port on all three is shown to run the game as DOS does | yes |
-| `nightly.yml` | 03:17 UTC each day, and by hand | `make test-full` on Ubuntu 24.04, with DOSBox-X from Ubuntu (2024.03.01, whose goldens are the committed ones); fails if a regenerated golden differs from the committed one, and puts the step times and the coverage totals in the job summary | yes |
+Two things differ on Linux, and the tools allow for each. The file system is case-sensitive, and emu2 creates a file under the case the DOS program gave, so `tools/dosbackend.mjs` finds a DOS run's outputs without regard to case. And `make setup` takes `OVERLAY.LIB` from Turbo C++'s `XLIB.ZIP` as well. x86-64 found one difference of its own: BAGS.C's `OpenTheBag` writes past the end of `SlotToDisplay` into `DisplayToSlot`, as DOS does on purpose, so the port keeps the two in one array (`inv.h`, `INVPANEL.C`; the DOS build is unchanged).
 
-A pull request from a fork gets `port.yml` and `repocheck.yml` only: GitHub gives a fork's pull request no secrets, and `accuracy.yml` skips itself for one rather than fail.
+The Windows build replaces the port's few POSIX calls, opens every host file in binary mode, and is given `-mno-ms-bitfields`, since by default the compiler lays bitfields out as Microsoft's does, which is not Turbo C's ([PORT.md](PORT.md), "Struct layout and bitfields"). `.gitattributes` keeps the recordings byte for byte on a Windows checkout, since the goldens name them by SHA-256.
 
-Every job that builds (all but `repocheck.yml`) also checks out Exhume into `.exhume`, at the commit `tools/exhume-ref` names, for the runtime the port, the gate and the replay build compile ([Exhume](#exhume)). The workflows other than `release.yml` are Exhume's CI templates (`tools/templates/ci`) with UW2's values (Exhume's `examples/uw2/ci.toml`), byte for byte.
-
-### The bundle
-
-The gate and the replays need the game and the Borland toolchain, which cannot be published. They come from the private repository `abedegno/uw2-ci-assets` (its Actions are disabled), which holds one file, `uw2-ci-assets.tar.gz.age`: an [age](https://age-encryption.org)-encrypted tar.gz of `game/UW2` (the owner's GOG copy of the game), `tc/Disk01.img` to `Disk04.img` (Turbo C++ 1.01), `tasm/Disk01.img` (TASM 2.0), `MANIFEST.txt` and `SHA256SUMS`. Two secrets of this repository open it: `UW2_ASSETS_DEPLOY_KEY`, the private half of an ed25519 deploy key that can only read `uw2-ci-assets`, and `UW2_ASSETS_AGE_KEY`, the age secret key.
-
-The local action `.github/actions/uw2-assets` clones the bundle over SSH with the deploy key (written to `$RUNNER_TEMP` with mode 600 and deleted once the clone is done, and checked against GitHub's published host key), and `tools/ci-assets.sh` decrypts it into `$RUNNER_TEMP/uw2-assets`, with the age key on age's standard input rather than in a file. It checks every file against `SHA256SUMS` and prints only how many passed, and sets `UW2_EXE`, `UW2_DIR`, `TC_DISKS` and `TASM_DISKS`, which `make setup` and the tools read (on Windows, where the action runs in Git Bash, as `D:/...` paths, which the native Python and the port read; the Windows job first puts age's official Windows build, v1.3.2, checked by its SHA-256, on the PATH, and the macOS job takes age from Homebrew). `.github/actions/linux-tools` installs everything else: the Ubuntu packages, Python with `tools/requirements.txt` in `.venv`, Node with `npm ci` (without dos-mcp's Chrome, which only js-dos uses), and emu2, SDL3, libmt32emu and Nuked OPL3, built by their setup scripts.
-
-### What keeps the data private
-
-- Nothing decrypted, and nothing built from it, is cached. The caches hold only emu2 (`tools/emu2`), SDL3 and libmt32emu (`tools/libs`), Nuked OPL3 (`tools/nuked-opl3`), and pip's and npm's downloads, each keyed on the script or file that pins it.
-- A failed run uploads only pictures and text: the difference pictures of a session that differs from its golden (`diff_ck*.png`, the DOS and port screens beside each other), the port's log of each replay, the run's own output and, at night, the changed golden screens and the list of changed golden files. Never a state dump, a saved game, an object, an EXE or anything else under `build/`.
-- No step lists or prints the decrypted tree. `tools/ci-assets.sh` reports a count, and the tools print only the path of `UW2.EXE`.
-- The last step of each job, run whatever happened before it, deletes `$RUNNER_TEMP/uw2-assets`, `TC/`, `TASM/` and `build/`. The runner is discarded after the job in any case.
-- No workflow uses `pull_request_target`. The jobs with secrets run on pushes to `main`, on the schedule, by hand, and on pull requests whose branch is in this repository, whose authors can already push here.
-- The deploy key can read `uw2-ci-assets` and nothing else, and the bundle is useless without the age key.
-
-### Linux and Windows
-
-Two things differ on Linux, and the tools allow for each. The file system is case-sensitive, and emu2 creates a file under the case the DOS program gave (`TCC` writes `skills.obj`), so `tools/dosbackend.mjs` finds a DOS run's outputs, and the programs a batch runs, without regard to case. And `make setup` now takes `OVERLAY.LIB` from Turbo C++'s `XLIB.ZIP` as well: the link needs it, and `tools/setup-tc.sh` did not extract it before. With these, `make test` passes on Ubuntu 24.04 on x86-64 and on arm64, and so does every step of `make test-full` but the deep fuzzing, which was not tried there; DOSBox-X 2024.03.01 from Ubuntu makes goldens identical to the committed ones.
-
-x86-64 found one difference of its own. BAGS.C's `OpenTheBag` writes past the end of `SlotToDisplay` into `DisplayToSlot`, the next variable in DGROUP, as DOS does on purpose. On arm64 the host compiler happened to put the two arrays end to end, but x86-64 puts an array of 16 bytes or more on a 16-byte boundary, so the write missed and the `items` session went another way after a bag was opened. The port now keeps the two in one array (`inv.h`, `INVPANEL.C`; the DOS build is unchanged, and the gate proves it).
-
-The Windows build needs the port's few POSIX calls replaced: the EMS frame's double mapping (the runtime's `mem/frame.c`) uses a file mapping viewed twice, the crash handler prints no call stack, and `mkdir` and `unsetenv` have Windows forms. The runtime's `port/include/io.h` brings in MinGW's own `io.h`, which it would otherwise hide. On Windows `long` is 32 bits, as in DOS, where macOS and Linux have 64. The compiler is given `-mno-ms-bitfields`, since by default it lays bitfields out as Microsoft's compiler does, which is not Turbo C's layout ([PORT.md](PORT.md), "Struct layout and bitfields"). The game's streams are read and written on their handles by the port, since the UCRT's `fseek` can leave a stream's handle away from the stream's position. The C library's handles open in text mode by default on Windows, turning CR LF into LF and stopping at Ctrl-Z, so the port opens every host file in binary mode there (`O_BINARY`, and `b` in `fopen`'s mode), as POSIX hosts always do; Borland's own text mode is the port's (the runtime's `sys/borland.c`). `.gitattributes` keeps the recordings and their sound configurations byte for byte on a Windows checkout, since the goldens name them by SHA-256. The program is linked for the GUI subsystem (SDL3's `-mwindows`), so it opens no console window; its messages still go to a shell that starts it.
-
-### Releases
-
-`release.yml` builds the packages players download, from the sources alone: no game data and no Borland toolchain is involved, and the only secrets are Apple's, for the macOS app. On a tag `v*` it attaches them to a draft release with generated notes, which the owner checks and publishes by hand; run by hand, it only keeps them as the run's artifacts.
-
-| Package | Built on | What is in it |
-| --- | --- | --- |
-| `UW2-V-macos.zip` | macOS 15 | `UW2.app`, universal (arm64 and x86_64, macOS 11 on): the program in `Contents/MacOS`, SDL3, libmt32emu and Nuked OPL3 built for both architectures (`UW2_MACOS_ARCHS="arm64;x86_64" make setup-libs`) in `Contents/Frameworks` with `@rpath` install names, the icon in `Contents/Resources/uw2.icns`; signed with the Developer ID and notarised when the secrets are set ([Signing and notarising the macOS app](#signing-and-notarising-the-macos-app)), else signed ad hoc |
-| `UW2-V-linux-x86_64.tar.gz` | Ubuntu 22.04, so glibc 2.35 or later | `uw2` (a launcher), `bin/uw2port` (run path `$ORIGIN` and `$ORIGIN/../lib` only) and `lib/` with SDL3 (built with X11, Wayland, ALSA, PulseAudio and PipeWire, each loaded when present), libmt32emu and Nuked OPL3; `uw2.desktop` and `uw2.png` for a menu entry |
-| `UW2-V-linux-x86_64.AppImage` | Ubuntu 22.04 | the same program and libraries as one executable file: `AppRun` starts `usr/bin/uw2port`, which finds `usr/lib` by its run path; the `.desktop` entry, the icon and the text files are inside. Made by appimagetool 1.9.1 with the type 2 runtime of 20251108 (static, so it needs no libfuse2), both pinned by SHA-256 |
-| `UW2-V-windows-x86_64.zip` | Windows, MSYS2 CLANG64 | `uw2port.exe`, with the icon as a resource, and every DLL it loads that is not Windows's own: SDL3, libmt32emu, Nuked OPL3 and the compiler's runtime |
-| `third-party-sources.tar.gz` | Ubuntu | the source of Nuked OPL3 and libmt32emu at the versions built, for their LGPL |
-
-Each package also holds `README.txt` (`tools/dist/README-dist.txt`: starting it, finding the game, the options), `LICENSE.txt`, `NOTICE.txt`, `THIRD-PARTY-NOTICES.txt` and the libraries' licence texts in `licenses/`. Nuked OPL3 and libmt32emu are separate shared libraries a user can replace, which is how the LGPL is met ([THIRD-PARTY-NOTICES](../THIRD-PARTY-NOTICES)). (In a notarised app, a replaced library breaks the signature: re-sign the app ad hoc, `codesign --force --deep --sign - UW2.app`, after replacing one.)
-
-`tools/package.py` checks each package before it is written, and the workflow checks it again unpacked:
-
-- Linux: every run path in the program and the libraries is `$ORIGIN` or under it (`readelf -d`), so the build tree's `tools/libs/lib` can never be found before the package's own `lib/` (SDL3's `sdl3.pc` adds `-Wl,-rpath` to its directory, which `tools/portbuild.py --release` drops on Linux); the program, run with no `LD_LIBRARY_PATH`, loads each bundled library from `lib/`; nothing needs a glibc symbol newer than 2.35 (`objdump -T`); `./uw2 --help` runs; and the AppImage runs (`--appimage-extract-and-run --help`).
-- Windows: every DLL the program and the bundled DLLs load comes from the package or from Windows (`ldd` with only the package and Windows's directories on the PATH), the program has its icon, and `uw2port.exe --help` runs that way. MSYS2's licence folders may hold folders (libiconv's has `libcharset/`), which are copied whole.
-- macOS: both architectures, the signature (`codesign --verify --deep --strict`), no library from Homebrew's prefixes, the icon, and, when notarised, the stapled ticket (`stapler validate`) and Gatekeeper's verdict (`spctl -a -vvv -t exec`).
-
-The same on your own machine: `make port-release` (`tools/portbuild.py --release`: as `make port`, but Nuked OPL3 is a shared library beside the program, and the program looks for its libraries beside itself, in `../lib` and in `../Frameworks`; `PORT_ARCHS="--arch arm64 --arch x86_64"` for a universal macOS build, which needs universal libraries), then `make package` (`tools/package.py`, into `build/dist`; `PACKAGE_ARGS="--version V --strict"`, and `--appimage` on Linux with appimagetool on the PATH or in `$APPIMAGETOOL`). `UW2_CODESIGN_IDENTITY` names a signing identity in your keychain; without it the app is signed ad hoc, and a player opens it the first time with right-click and Open, or clears the quarantine with `xattr -dr com.apple.quarantine UW2.app` (the package's `README.txt` says so unless `UW2_NOTARISED=1`).
-
-#### Signing and notarising the macOS app
-
-With these secrets set in the repository, the macOS job signs the app with the owner's Developer ID and, on a tag (or by hand with the `notarise` input), notarises it:
-
-| Secret | What it is |
-| --- | --- |
-| `CSC_LINK` | the Developer ID Application certificate and its private key, as a `.p12`, base64 encoded |
-| `CSC_KEY_PASSWORD` | the `.p12`'s password |
-| `APPLE_API_KEY` | an App Store Connect API key's `.p8` file, its contents |
-| `APPLE_API_KEY_ID` | that key's ID |
-| `APPLE_API_ISSUER` | its issuer ID |
-| `APPLE_TEAM_ID` | the team ID; the signing identity must be that team's |
-
-The job imports the `.p12` into a keychain of its own (a random password, locked again after six hours, first in the search list), picks the `Developer ID Application` identity of `APPLE_TEAM_ID`, and `tools/package.py` signs from the inside out, the libraries in `Contents/Frameworks`, then the program, then the app, each with `codesign --force --options runtime --timestamp`: the hardened runtime and a secure timestamp, which notarisation needs. No entitlement is needed: the port has no JIT, loads only libraries signed with the same identity, and only plays sound. `xcrun notarytool submit --wait` sends the zip to Apple's notary service with the API key (written to `$RUNNER_TEMP` with mode 600), `xcrun stapler staple` attaches the ticket to the app, and the zip is made again with `ditto -c -k --keepParent`. A final step, whatever happened, deletes the keychain, the `.p12` and the key. Nothing secret is printed. Without `CSC_LINK` nothing changes: the app is signed ad hoc and the job passes.
-
-#### The icon
-
-The icon is the project's own: a stylised ankh in gold and bronze on a dark stone tile, not the Ultima logo and nothing from the game. `tools/dist/icon/uw2.svg` is its source, with `uw2-small.svg`, the same simplified for 16 to 32 pixels. `python3 tools/dist/icon/make-icons.py` (it needs `npm install` for puppeteer's Chrome, which renders the SVG, and `iconutil` on macOS) writes the committed files: `png/uw2-N.png` from 16 to 1024 pixels, `uw2.icns` (the `.app`'s, named in `Info.plist` as `CFBundleIconFile`), `uw2.ico` (16 to 256 pixels, the Windows program's resource, compiled by `tools/portbuild.py` with `llvm-windres`), `uw2.png` (256 pixels, for the Linux `.desktop` entry and the AppImage), and `src/port/platform/sdl3/icon.h`, the 48 pixel icon as RGBA bytes, which `SDL_SetWindowIcon` gives the window on Linux and Windows (on macOS the app's own icon is the Dock's).
-
-### Rotating the keys and the bundle
-
-The age key is kept in the owner's macOS Keychain, service `uw2-ci-assets-age` (`security find-generic-password -s uw2-ci-assets-age -w` prints it, and `... -w | age-keygen -y` its recipient).
-
-- A new bundle (new game files, say): put `game/UW2`, `tc/Disk01.img` to `Disk04.img`, `tasm/Disk01.img` and a `MANIFEST.txt` in an empty directory, and in it run `find game tc tasm MANIFEST.txt -type f | sort | xargs shasum -a 256 > SHA256SUMS`, then `COPYFILE_DISABLE=1 tar --no-xattrs -czf - game tc tasm MANIFEST.txt SHA256SUMS | age -r "$(security find-generic-password -s uw2-ci-assets-age -w | age-keygen -y)" -o uw2-ci-assets.tar.gz.age`. Commit that one file to `uw2-ci-assets` in place of the old one.
-- A new age key: `age-keygen -o new.key`, store its `AGE-SECRET-KEY-1...` line with `security add-generic-password -U -s uw2-ci-assets-age -a "$USER" -w "$(grep AGE-SECRET-KEY new.key)"`, make the bundle again with the new recipient (above), set the secret with `security find-generic-password -s uw2-ci-assets-age -w | gh secret set UW2_ASSETS_AGE_KEY -R abedegno/UW2Decomp`, and delete `new.key`. Until the new bundle is pushed, the jobs that need it fail.
-- A new deploy key: `ssh-keygen -t ed25519 -N '' -C 'UW2Decomp CI (read-only)' -f deploy`, `gh repo deploy-key add deploy.pub -R abedegno/uw2-ci-assets -t 'UW2Decomp CI (read-only)'` (read-only unless `-w` is given), `gh secret set UW2_ASSETS_DEPLOY_KEY -R abedegno/UW2Decomp < deploy`, then remove the old key (`gh repo deploy-key list -R abedegno/uw2-ci-assets`, `gh repo deploy-key delete ID -R abedegno/uw2-ci-assets`) and delete `deploy` and `deploy.pub`.
+The icon is the project's own: a stylised ankh in gold and bronze on a dark stone tile, not the Ultima logo and nothing from the game. `tools/dist/icon/uw2.svg` is its source; `python3 tools/dist/icon/make-icons.py` writes the committed sizes and formats.
 
 ## Choosing the DOS
 

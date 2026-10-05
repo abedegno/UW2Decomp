@@ -1,0 +1,44 @@
+name: Bug report
+description: Something in uw1port or uw2port does not work, or does not work as the DOS game does
+labels: [bug]
+body:
+  - type: dropdown
+    id: game
+    attributes:
+      label: Game
+      options:
+        - Ultima Underworld (uw1port)
+        - Ultima Underworld II (uw2port)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The release you downloaded, for example uw2-v1.2.1
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      description: Operating system and version, CPU, and graphics card
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you saw, what you expected, and when it started
+    validations:
+      required: true
+  - type: textarea
+    id: recording
+    attributes:
+      label: Recording and log
+      description: >
+        Zip the newest folder in recordings/ in the port's home folder (macOS and Linux:
+        ~/.uw1port or ~/.uw2port; Windows: %APPDATA%\uw1port or %APPDATA%\uw2port), with the
+        log beside it, and attach the zip here. It replays your session exactly.
+    validations:
+      required: true
