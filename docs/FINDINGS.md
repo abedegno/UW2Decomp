@@ -283,6 +283,15 @@ The others are not reached by any of the eight recorded sessions, which cover th
 - **Effect:** a search can give up, or pick a farther square, where a free one was nearer; and clearing a crowded square takes several visits. Which squares are skipped depends on the stack's leftover contents.
 - **For a port:** `visited[9]` is a write past the array on the host's stack, not into DOS's neighbouring variable, so a port must give the array room for it (or model DOS's stack layout) to stay memory-safe; matching DOS's skipped squares also means modelling the uncleared bytes.
 
+### A long step of the bin clock leaves a distant critter due for ever
+
+- **What happens:** `move_mobile` advances the critter update clock by the frames `check_physics` counted, and updates each active mobile until `timetodo` says it is no longer due. `critter_ai` moves a critter that is far from both the player and the eye on by 8 bins (`(bin + 8) % 16`) each time it runs. When one step advances the clock by 9 bins or more (mod 16), a bin and the bin 8 after it can both be due (with `curBin` 1 and `lastbin` 8: bin 0 by the first test, bin 8 by the wrap), so such a critter alternates between them and `move_mobile` never returns.
+- **Where:** `move_mobile`, `timetodo` and `critter_ai` in [critter/AI.C](../src/critter/AI.C); the step comes from `check_physics` in [motion/PLAYMOVE.C](../src/motion/PLAYMOVE.C).
+- **Evidence:** a UW2 player's recording from the port, replayed in DOS's replay build and in the port: both hang in this loop at the same point, identical at every checkpoint before it. The step there was 25; earlier steps of 6, 15 and 23 in the same recording did no harm (their remainder mod 16 was below 9). UW1 has the same code.
+- **Confidence:** confirmed for that input; unreachable in practice in DOS, whose clock moves a tick or so between `check_physics`' reads (a step of 5 at most).
+- **Effect:** in DOS, none known. In a port whose game runs on a thread the host can stop for a second between those reads, the game freezes for good.
+- **For a port:** cap the step at 8, which changes nothing DOS can reach (UW2Decomp's port does, in `move_mobile`).
+
 ### Smaller slips with no known effect
 
 - `SetOffTrap` ([event/TRIGGER.C](../src/event/TRIGGER.C)) has no return statement. Its callers use the result, which is `UseTrap`'s, still in AX because the stores after the call do not touch AX. It works by accident. Three more work the same way: `check_inv_quality` ([conv/CONVERSE.C](../src/conv/CONVERSE.C)) leaves the quality in AX, `do_migrations` ([event/SCHEDULE.C](../src/event/SCHEDULE.C)) `Sched_Save`'s result, and `readlp` ([gfx/CUTS.C](../src/gfx/CUTS.C)) the byte count read (all four now end with `AX_RESULT` or `AX_LAST`, read from the code).

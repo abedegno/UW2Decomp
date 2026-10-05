@@ -1553,6 +1553,15 @@ void far move_mobile(int delta)
     unsigned char far *p;
     unsigned char ok;
 
+#ifndef __TURBOC__
+    /* Port only. DOS's clock moves a tick or so between check_physics' reads, so delta is at
+       most 5. A port's game thread can be stopped by the host for a second or more between
+       them; a step of 9 or more bins (mod 16) can then leave a distant critter's bin and
+       bin + 8 both due, and critter_ai, which moves such a critter on by 8, loops here for
+       ever (a UW2 player's Windows 10 freeze; their recording hangs DOS's replay build the
+       same way). DOS never sees such a step, so capping it changes nothing DOS can do. */
+    if (delta > 8) delta = 8;
+#endif
     curBin = lastbin + delta & 0xF;
     meptr = 0;
     map_crit_pages();
