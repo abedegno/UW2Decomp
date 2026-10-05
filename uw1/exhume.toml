@@ -168,6 +168,14 @@ targets = "tools/fuzz_targets.py"
 host_glue = "tools/fuzzhost-uw1.c"
 main = "sys/main.c"                    # the port file fuzzhost replaces
 
+[vectors]
+# Exhume's tools/vectors.py (make vectors): game rules computed by UW.EXE's own routines, written
+# to vectors/ for reimplementations to be checked against (vectors/README.md); the port's side
+# (vectorhost-uw1.c) must agree with the EXE on every case
+targets = "tools/vector_targets.py"
+host_glue = "tools/vectorhost-uw1.c"
+out = "vectors"
+
 [asm2c]
 # Exhume's tools/asm2c.py: the modules UW1's port translates, its code segments, hand-written
 # ranges and overrides (UW1's own, so they live here)

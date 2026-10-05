@@ -33,6 +33,9 @@
 #   make golden-check  every session replayed in DOS twice by the replay DOS build and compared
 #                      with its committed golden, writing nothing (needs no port)
 #   make fuzz          the routine fuzzing (FUZZ=--deep for the long run)
+#   make vectors       the test vectors ([vectors]): the original's routines on synthetic inputs,
+#                      written to vectors/ and checked against the port's C (VECTORS=--check to
+#                      only check that they regenerate byte-identical)
 #   make coverage      the port's coverage over the sessions and the fuzzing
 
 EXHUME ?= $(if $(wildcard .exhume/tools/gate.py),.exhume,$(HOME)/Exhume)
@@ -44,7 +47,7 @@ PORT := $(PY) $(EXHUME)/tools
 
 .PHONY: game exact check check-all fast boot hooks repocheck help \
         setup-exhume setup-port setup-libs setup-sound port-check port port-debug port-release package icons \
-        test test-full verify golden golden-check fuzz coverage
+        test test-full verify golden golden-check fuzz vectors coverage
 .DEFAULT_GOAL := game
 
 game:
@@ -117,6 +120,10 @@ golden-check:
 
 fuzz:
 	@$(PORT)/fuzzasm.py --config exhume.toml $(FUZZ)
+
+vectors:
+	@$(PORT)/portbuild.py --config exhume.toml
+	@$(PORT)/vectors.py --config exhume.toml $(VECTORS)
 
 coverage:
 	@$(PORT)/coverage.py --config exhume.toml
