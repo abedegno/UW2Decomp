@@ -170,7 +170,7 @@ UnderworldGodot was not checked entry by entry for these.
 
 - **Carrying capacity.** UW1 is strength * 20 tenths of a stone ([UW1 src/game/SKILLS.C:112](https://github.com/abedegno/UW1Decomp/blob/main/src/game/SKILLS.C#L112)), and UW2 is strength * 13 + 300 ([UW2 src/game/SKILLS.C:81](../src/game/SKILLS.C#L81)). UnderworldGodot uses UW2's for both ([`src/player/playerdat.cs:794`](https://github.com/hankmorgan/UnderworldGodot/blob/d7025471a1362860afd9f68555e137a9ff4f131a/src/player/playerdat.cs#L794)), so a UW1 character of strength 20 can carry 56 stones instead of 40.
 - **Maximum mana on Tybal's level (UW1).** While the orb stands, a level gained there sets the kept-aside mana, not the maximum ([UW1 src/game/SKILLS.C:109](https://github.com/abedegno/UW1Decomp/blob/main/src/game/SKILLS.C#L109)). UnderworldGodot leaves a TODO for this in its level-up code ([`src/player/playerdat.cs:787`](https://github.com/hankmorgan/UnderworldGodot/blob/d7025471a1362860afd9f68555e137a9ff4f131a/src/player/playerdat.cs#L787)).
-- **Mana after a level change (UW2).** `player_compute` and `ChangeLevel` call `restore_mana(ThePlayer, 0)` ([UW2 src/game/SKILLS.C:84](../src/game/SKILLS.C#L84)), ([UW2 src/game/GAMEWRAP.C:401](../src/game/GAMEWRAP.C#L401)), which gives one point of mana outside the Academy. Not checked in UnderworldGodot.
+- **Mana after a level change (UW2).** `player_compute` and `ChangeLevel` call `restore_mana(ThePlayer, 0)` ([UW2 src/game/SKILLS.C:84](../src/game/SKILLS.C#L84)), ([UW2 src/game/GAMEWRAP.C:401](../src/game/GAMEWRAP.C#L401)), which adds nothing: an amount of 0 takes the branch that subtracts it ([UW2 src/combat/SPELLS.C:166](../src/combat/SPELLS.C#L166)).
 - **Hit points and mana.** The formulas are the same.
 
 ### Time, hunger, fatigue and healing
@@ -304,7 +304,7 @@ UnderworldGodot branches the speeds.
 ## Light, exploration and the automap
 
 - **Exploration experience.** Newly seen squares give `seen * PlayerLevel / 10` experience in UW1, except on level 9 ([UW1 src/3d/GRIDDB.C:247](https://github.com/abedegno/UW1Decomp/blob/main/src/3d/GRIDDB.C#L247)), and `seen * (PlayerLevel / 8 + 1) / 10` in UW2 ([UW2 src/3d/GRIDDB.C:246](../src/3d/GRIDDB.C#L246)). UW2's divides the level by 8 without subtracting 1 first, so level 8 already gets the multiplier of the second world (2), and level 16 that of the third. UnderworldGodot branches (`src/utility/visionlos.cs:281-288`), but it does not leave out UW1's level 9, and both games' gains then go through its halving (see [Experience](#experience)).
-- **Light.** UW2 lights the view by the brighter of the player's light and a second light level, `loc_lght`, whose source was not traced ([UW2 src/game/PLAYDATA.C:415](../src/game/PLAYDATA.C#L415)). UW1 uses the player's light alone.
+- **Light.** UW2 lights the view by the brighter of the player's light and a second light level, `loc_lght`, the level's minimum light from DL.DAT (`load_dl`) ([UW2 src/game/PLAYDATA.C:424](../src/game/PLAYDATA.C#L424)). UW1 uses the player's light alone.
 - **Automap.** In UW1 the map is off only on level 9. In UW2 the player can lose it, e.g., a teleport trap can switch it off, and the map scraps, the Map spell and world 8 change what it shows. See `AUTOMAP.C` in each repository.
 
 ## Systems in one game only
