@@ -238,6 +238,17 @@ Each entry was re-read against the source before it was written here, and each "
 - **The object list checker forgets a duplicate.** `count_list`, a debugging aid, sets `bad` when it meets an index twice, but then assigns the result of checking a container's contents to the same flag, so a duplicate earlier in the list is forgotten when the contents after it are clean. It affects only the "Problems in object list" report. Both games ([obj/OBJECTS.C](../src/obj/OBJECTS.C)).
 - **Slips in code nothing calls** (see [Dead code](#dead-code)): GRDB.C's `gr_getlab` tests an unsigned stack pointer for being negative and `gr_freelab` bounds its push at 0x5F where the stack has 32 entries (both games, [3d/GRDB.C](../src/3d/GRDB.C)); GRSPIC.C's `seg009_2C6` passes the addresses of its own parameters in its video memory branch, so its result would be lost ([gfx/GRSPIC.C](../src/gfx/GRSPIC.C)).
 
+### Finding room near a spot: the clearing pass stops early, and the visited table is half cleared
+
+- **What happens:** `find_good_x_and_y` searches outwards from a square, breadth first, for one where an object fits (a teleport's arrival, a critter or object put down). Two slips:
+  - With `clear` set it deletes the objects in its way. After `Obj_Punt` removes one, the loop steps on through that object's own link (`link = &o->qn.link`), which the removal has just cleared, so the walk ends at the first object it deletes: at most one object per square is cleared on each visit.
+  - `visited` is `uint16 visited[9]`, 18 bytes, but `memset(visited, 0, 9)` clears only the first 9, so the bits for the box's later columns start as whatever the stack held, and a square there may count as tried already. The box is 10 columns wide (`xmax = xmin + 9`), so a square in its last column sets `visited[9]`, one entry past the array, in the stack variable after it.
+- **Where:** `find_good_x_and_y` in [event/WORLDEV.C](../src/event/WORLDEV.C).
+- **Evidence:** code reading; both games (UW2Decomp `event/WORLDEV.C` has the same code). Not checked in the game.
+- **Confidence:** likely.
+- **Effect:** a search can give up, or pick a farther square, where a free one was nearer; and clearing a crowded square takes several visits. Which squares are skipped depends on the stack's leftover contents.
+- **For a port:** `visited[9]` is a write past the array on the host's stack, not into DOS's neighbouring variable, so a port must give the array room for it (or model DOS's stack layout) to stay memory-safe; matching DOS's skipped squares also means modelling the uncleared bytes.
+
 ### Candidates that did not hold up
 
 - **A dropped lit taper stays lit** (from [combat-findings.md](subsystems/combat-findings.md)): `ReturnObject` puts out a dropped light only for minor classes 4 to 6, and the lit taper is 7. But `mob_to_static` ([motion/OBJPHYS.C](../src/motion/OBJPHYS.C)), the other way a light comes to rest, stops at 6 too, in both games, and the lit taper (0x97) is the Taper of Sacrifice. Two places agreeing look deliberate; not a bug as far as the code shows.

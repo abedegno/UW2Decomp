@@ -62,7 +62,7 @@ The port is done to the same standard as UW2Decomp's: every recorded session is 
 
 [docs/FORMATS.md](docs/FORMATS.md) lists UW1's own data file layouts and points to UW2Decomp's FORMATS.md, which covers both games.
 
-UW2Decomp's [docs/behaviour/](https://github.com/abedegno/UW2Decomp/blob/main/docs/behaviour/README.md) describes what both games do, as rules with exact numbers, for readers who don't read the C: NPC AI, combat, magic, conversations and player upkeep, with UW1's rules marked and its sources linked.
+UW2Decomp's [docs/behaviour/](https://github.com/abedegno/UW2Decomp/blob/main/docs/behaviour/README.md) describes what both games do, as rules with exact numbers, for readers who don't read the C: NPC AI, combat, magic, conversations, player upkeep, and traps and triggers, with UW1's rules marked and its sources linked.
 
 ## Names
 
