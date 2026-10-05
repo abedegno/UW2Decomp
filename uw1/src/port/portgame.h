@@ -37,14 +37,17 @@ void seg019_exit_chain(void);                   /* sys/sysentry.c */
 #define PORT_BLACKBOX 1
 #define BLACKBOX_SKIP "uw1port.cfg"
 
-/* the window (plat.h): its title when main gives none; no icon of its own yet */
+/* the window (plat.h): its title when main gives none, and its icon, written by Exhume's
+   tools/icons.py from tools/dist/icon/uw1.svg (not on macOS, where the app's own icon is used) */
 #define PLAT_TITLE "UW1"
+#define PLAT_ICON "platform/sdl3/icon.h"
 
 /* finding the game (sys/gamedir.c): the GOG release's UW.EXE (port_check_exe, mem/fardata.c),
-   in a UW1 folder of an install or of GOG's CD image; GOG sells UW1 and UW2 as one product,
-   Ultima Underworld 1+2, 1207658937 (UW2Decomp's portgame.h) */
+   in a UW1 folder of an install, or the UW folder of GOG's CD image; GOG sells UW1 and UW2 as
+   one product, Ultima Underworld 1+2, 1207658937 (UW2Decomp's portgame.h) */
 #define PORT_GAME_EXE "UW.EXE"
 #define PORT_GAME_FOLDER "UW1"
+#define PORT_GAME_IMAGE_FOLDER "UW"             /* game.gog, the 1+2 CD in GOG's Mac app: UW\UW.EXE */
 #define PORT_GAME_HINTS "underworld", "uw1"
 #define PORT_GAME_DESC "the GOG release's UW.EXE"
 #define PORT_GOG_ID "1207658937"

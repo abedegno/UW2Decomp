@@ -3,7 +3,7 @@
 
 [project]
 name = "UW1"
-root = "${UW1DECOMP:-~/UW1Decomp}"
+root = "${UW1DECOMP:-.}"                # the directory this file is in, unless UW1DECOMP names another
 src = "${EXHUME_SRC:-src}"
 targets = "targets"
 symbols = "${EXHUME_SYMBOLS:-symbols.tsv}"
@@ -91,6 +91,26 @@ backend = "sdl3"
 optimise = ["3d", "gfx", "x86"]        # the translated modules, their machine and the graphics C: -O2
 extracted_by = "tools/extract.py"
 
+[[port.vendor]]
+# Nuked OPL3, the FM chips' emulator: fetched by Exhume's tools/setup-sound.sh (make setup-sound,
+# make setup-port), never committed (LGPL-2.1; Exhume's docs/third-party.md); a shared library
+# of its own in the release build
+name = "Nuked OPL3"
+dir = "tools/nuked-opl3"
+sources = ["opl3.c"]
+define = "AUDIO_HAVE_OPL"
+for = "sound/audio.c"
+missing = "no OPL emulator (make setup-sound)"
+
+[[port.pkg]]
+# libmt32emu (munt, LGPL-2.1-or-later), the MT-32's emulator, linked dynamically when pkg-config
+# finds it
+name = "mt32emu"
+define = "AUDIO_HAVE_MT32EMU"
+for = "sound/audio.c"
+label = "libmt32emu"
+missing = "no libmt32emu (brew install mt32emu, or make setup-libs)"
+
 [port.stub_notes]
 # what each generated stub file's names are, for its header (tools/portstubs.py)
 "exedata.c" = "the far data tools/extract.py takes from UW.EXE"
@@ -124,6 +144,29 @@ Light = "OBJECTS.DAT light records (MISC.C's fread, 2 bytes each)"
 AnimClass = "OBJECTS.DAT animation classes (ANIMOBJ.C's fread, 4 bytes each)"
 FontInfo = "the 12-byte header of a .SYS font file (GRFX.C's intoFarBuffer into cur_font)"
 Bitmap = "the header of a picture read from an art file (grs_unpack over the bytes read)"
+
+[ci]
+# Exhume's tools/citemplates.py writes .github/ from its templates with these values
+# (docs/BUILDING.md, "Continuous integration")
+vars = "tools/ci.toml"
+
+[package]
+# Exhume's tools/package.py (make package) and tools/icons.py: the players' packages, UW1.app on
+# macOS, as UW2Decomp's are UW2.app (docs/BUILDING.md, "Releases")
+name = "UW1"
+title = "Ultima Underworld"
+comment = "Native port of Ultima Underworld: The Stygian Abyss (needs your own copy of the game)"
+bundle_id = "io.github.abedegno.uw1port"
+launcher = "uw1"
+category = "public.app-category.role-playing-games"
+copyright = "Port code MIT licence, abedegno. Ultima Underworld is copyright Electronic Arts; bring your own copy."
+
+[fuzz]
+# Exhume's tools/fuzzasm.py (make fuzz, and make test's quick run): UW1's routine targets and
+# fuzzhost.c's UW1 side (the regions, the C entries)
+targets = "tools/fuzz_targets.py"
+host_glue = "tools/fuzzhost-uw1.c"
+main = "sys/main.c"                    # the port file fuzzhost replaces
 
 [asm2c]
 # Exhume's tools/asm2c.py: the modules UW1's port translates, its code segments, hand-written

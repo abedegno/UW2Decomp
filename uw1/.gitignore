@@ -3,3 +3,7 @@ build/
 __pycache__/
 symbols.tsv.bak
 .exhume/
+.venv/
+node_modules/
+tools/libs/
+tools/nuked-opl3/

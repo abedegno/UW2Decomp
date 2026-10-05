@@ -1,0 +1,102 @@
+# make test-full, nightly (docs/BUILDING.md, "Testing" and "Continuous integration"): the gate,
+# both port builds, every golden made again from DOS (each session twice, checked identical),
+# the sessions in the port and in the UBSan build, the sound drivers against the real ones, the
+# deep routine fuzzing and the coverage report. Like accuracy.yml it needs the private bundle,
+# so it is skipped until the repository variable UW1_CI_ASSETS is "true", and then runs on the
+# schedule and by hand. The job fails when a regenerated golden differs from the committed one.
+name: nightly
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+jobs:
+  make-test-full:
+    if: vars.UW1_CI_ASSETS == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      # Exhume, whose tools and runtime the port, the gate and the replay build use where it is,
+      # at the commit tools/exhume-ref names (docs/BUILDING.md, "Exhume")
+      - name: Exhume's commit
+        id: exhume
+        shell: bash
+        run: echo "ref=$(cut -d' ' -f1 tools/exhume-ref)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: abedegno/Exhume
+          ref: ${{ steps.exhume.outputs.ref }}
+          path: .exhume
+          persist-credentials: false
+      - uses: ./.github/actions/linux-tools
+        with:
+          full: "true"
+      - uses: ./.github/actions/uw1-assets
+        with:
+          deploy-key: ${{ secrets.UW1_ASSETS_DEPLOY_KEY }}
+          age-key: ${{ secrets.UW1_ASSETS_AGE_KEY }}
+      - name: Unpack Turbo C++ and TASM from the bundle's disk images
+        run: sh .exhume/profiles/borland-tc101/setup-tc.sh "$TC_DISKS" toolchain/TC && sh .exhume/profiles/borland-tc101/setup-tasm.sh "$TASM_DISKS" toolchain/TASM && printf 'EXHUME_TC=%s\nEXHUME_TASM=%s\n' "$PWD/toolchain/TC" "$PWD/toolchain/TASM" >> "$GITHUB_ENV"
+      - name: make EXHUME=.exhume test-full
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/logs"
+          make EXHUME=.exhume test-full 2>&1 | tee "$RUNNER_TEMP/logs/make-test-full.log"
+      - name: The goldens made again are the committed ones
+        if: success() || failure()
+        run: |
+          git status --porcelain --untracked-files=all -- tests/replay/golden > "$RUNNER_TEMP/logs/golden-changes.txt"
+          n=$(grep -c . "$RUNNER_TEMP/logs/golden-changes.txt" || true)
+          if [ "$n" != 0 ]; then
+            # the changed screens (DOS screenshots), for the artifact
+            git status --porcelain --untracked-files=all -- 'tests/replay/golden/*.png' | awk '{print $NF}' | while read -r f; do
+              [ -f "$f" ] && mkdir -p "$RUNNER_TEMP/golden-changed/$(dirname "$f")" && cp "$f" "$RUNNER_TEMP/golden-changed/$f"
+            done
+            echo "::error::$n files under tests/replay/golden differ from the committed goldens (golden-changes.txt in the artifact)"
+            exit 1
+          fi
+          echo "every regenerated golden is identical to the committed one"
+      - name: Summary
+        if: success() || failure()
+        run: |
+          {
+            echo "## make EXHUME=.exhume test-full"
+            echo '```'
+            sed -n '/^==== test full:/,$p' "$RUNNER_TEMP/logs/make-test-full.log" 2>/dev/null || echo "(no summary: make EXHUME=.exhume test-full did not finish)"
+            echo '```'
+            if [ -s "$RUNNER_TEMP/logs/golden-changes.txt" ]; then
+              echo "**Goldens:** $(grep -c . "$RUNNER_TEMP/logs/golden-changes.txt") files differ from the committed ones."
+            fi
+            if [ -f build/coverage/all.profdata ]; then
+              echo "## Coverage"
+              sed -n '/^## Totals/,/^## By directory/p' docs/COVERAGE.md | sed '1d;$d'
+              git diff --quiet -- docs/COVERAGE.md || echo "(tonight's docs/COVERAGE.md differs from the committed one)"
+            else
+              echo "No coverage report: the coverage step did not run."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      # Only pictures and text logs (see accuracy.yml). The regenerated goldens' screens are
+      # DOS screenshots and may go too; their golden.json files hold only digests.
+      - name: Upload the difference pictures and logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: make-test-full-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/logs/*.log
+            ${{ runner.temp }}/logs/*.txt
+            build/replay/verify/**/diff_ck*.png
+            build/replay/verify/**/port.log
+            ${{ runner.temp }}/golden-changed/**/*.png
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Remove the game data and everything built from it
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/uw1-assets" "$RUNNER_TEMP/uw1-ci-assets" "$RUNNER_TEMP/uw1-assets-deploy-key" toolchain build

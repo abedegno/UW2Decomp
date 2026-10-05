@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- uw1.svg simplified for 16 to 32 pixels: the tile fills the square, the ankh is bolder,
+       flat colours, aligned to the pixel grid. -->
+  <rect x="0" y="0" width="32" height="32" rx="6" fill="#262e3b"/>
+  <rect x="0.5" y="0.5" width="31" height="31" rx="5.5" fill="none" stroke="#56647a" stroke-width="1"/>
+  <path fill="#d5dce6" stroke="#2b3240" stroke-width="1" stroke-linejoin="round" fill-rule="evenodd" d="
+    M16 3 C 20 3 22.5 6.2 22.5 9.6 C 22.5 12 21.4 13.6 20 15
+    L 26 14 L 26 18 L 18.6 17.4 L 20 29 L 12 29 L 13.4 17.4 L 6 18 L 6 14 L 12 15
+    C 10.6 13.6 9.5 12 9.5 9.6 C 9.5 6.2 12 3 16 3 Z
+    M16 6 C 14.2 6 13 7.6 13 9.6 C 13 11.6 14.4 13.2 16 14.2 C 17.6 13.2 19 11.6 19 9.6 C 19 7.6 17.8 6 16 6 Z"/>
+</svg>

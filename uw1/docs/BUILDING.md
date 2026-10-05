@@ -1,6 +1,8 @@
 # Building
 
-The README's [Building](../README.md#building) section has what you need and the everyday commands. This page has the rest: where Exhume comes in, the make targets, and how to record and replay a session of the game in DOS and check it against its golden reference.
+The README's [Building](../README.md#building) section has what you need and the everyday commands. This page has the rest: where Exhume comes in, the make targets, the native port, how to record and replay a session of the game in DOS and check it against its golden reference, the tests, continuous integration and the release packages.
+
+To build only the native port, which needs none of the Borland toolchain, DOS or game data, see [Building the port](#building-the-port).
 
 ## Exhume
 
@@ -9,18 +11,79 @@ The gate, the links and the replay tools are Exhume's, and the DOS build also us
 - `runtime/include/portable.h` holds the macros the shared sources use to build for DOS and for a native port alike (explicit widths, `NULLTRAP`, `STACK_JUNK` and the record and replay hooks). The build stages it beside `src/include` for every compile, so the gate proves that it costs no byte. It includes UW1's `src/include/hookgame.h` first, which gives the original tokens of the hooks: `ORIG_GAME_TIME()` is `(*Time)`, `ORIG_KEY()` is `key()`, and so on.
 - `runtime/replay/replay.c` is the record and replay code. Only the replay DOS build compiles it, with UW1's `src/include/rpgame.h`, which says what the hooks read and what the state dumps hold.
 
-`tools/exhume.py` finds the checkout: `$EXHUME`, else `.exhume` in this repository, else a checkout named `Exhume` beside this one, else `~/Exhume`. `tools/exhume-ref` names the Exhume commit this tree was proved with. `tools/link.py`, which every `make check` and `make game` runs, prints a warning when your checkout does not contain that commit; the warning never stops the build, and nothing is said when `git` is not on your `PATH`. `python3 tools/exhume.py` prints the checkout and checks the commit on its own.
+`tools/exhume.py` finds the checkout: `$EXHUME`, else `.exhume` in this repository, else a checkout named `Exhume` beside this one, else `~/Exhume`. The Makefile takes `$EXHUME`, else `.exhume`, else `~/Exhume`, and `make setup-exhume` (part of `make setup-port`) clones Exhume into `.exhume` (ignored by git) at the commit `tools/exhume-ref` names when there is none. The port's tools (`portbuild.py`, `package.py`, `fuzzasm.py`, `replay.py` and the rest) are Exhume's too, run with this repository's `exhume.toml`; they need Python 3.11 or later. `tools/exhume-ref` names the Exhume commit this tree was proved with. `tools/link.py`, which every `make check` and `make game` runs, prints a warning when your checkout does not contain that commit; the warning never stops the build, and nothing is said when `git` is not on your `PATH`. `python3 tools/exhume.py` prints the checkout and checks the commit on its own.
 
 ## Make targets
+
+The Makefile is Exhume's template (`tools/templates/Makefile`); `make help` lists every target.
 
 | Target | What it does |
 | --- | --- |
 | `make check` | the gate: every source matches and verifies, symbols.tsv rebuilds, the exact link is your `UW.EXE`, and the modding build with no change is the same |
 | `make game` | the modding build, `build/MODLINK/out/UW.EXE` |
+| `make hooks` | a git pre-push hook that runs `make check` (`make hooks HOOK="make test"` for the port's tests) |
+| `make setup-port` | what the port needs to build on this OS, and nothing else ([Building the port](#building-the-port)); `make setup-libs` and `make setup-sound` do one part each |
+| `make port` | the port, `build/port/uw1port`; `make port-debug` the UBSan build, `build/port-debug/uw1port`; `make port-check` the compile-only measurement |
+| `make port-release`, `make package` | the build the players' packages are made from, and the package for this OS in `build/dist` ([Releases](#releases)) |
+| `make icons` | the icon files from their SVG sources ([The icon](#the-icon)) |
+| `make test` | the gate, the port, the quick routine fuzzing and every session against its golden ([Testing](#testing)) |
+| `make test-full` | the long tier ([Testing](#testing)) |
+| `make verify`, `make fuzz`, `make coverage` | one part of the tests each |
 | `make golden` | every session's golden reference made again from DOS (each replayed twice, checked identical) |
 | `make golden-check` | every session replayed twice in DOS by the replay DOS build and compared with its committed golden; writes nothing |
 
-The port targets (`make port`, `make verify`, `make test`) are there for the native port, which does not exist yet.
+Everything built goes under `build/`, which is never committed.
+
+## The native port
+
+The port ([PORT.md](PORT.md)) is a second build of the same C, for a modern host, on Exhume's runtime. It builds on macOS (Apple silicon and Intel), Linux and Windows (MSYS2's CLANG64 environment). The replays and the fuzzing pass on macOS; CI builds it on all three ([Continuous integration](#continuous-integration)).
+
+### Building the port
+
+No Turbo C, DOS or game data is needed to build the port, only to run it.
+
+```sh
+make setup-port     # Exhume, and the compiler check, SDL3, libmt32emu and Nuked OPL3, per OS
+make port           # build/port/uw1port
+```
+
+- macOS: the Xcode command line tools (`xcode-select --install`) and Homebrew; `make setup-port` runs `brew install sdl3 mt32emu pkgconf`.
+- Linux (Debian, Ubuntu): `make setup-port` prints the `apt-get install` line for clang, pkg-config, cmake, ninja and the X11, Wayland, ALSA and PulseAudio headers when any is missing, then builds SDL3 3.4.16 and libmt32emu 2.8.3 from source into `tools/libs` (Exhume's `tools/setup-libs.sh`; ignored by git). `make port` finds `tools/libs` by itself and links the program to load its libraries from there.
+- Windows: install MSYS2 and open its CLANG64 shell; `make setup-port` installs the packages with pacman and builds libmt32emu into `tools/libs`. Then `make PY=python port` links `build/port/uw1port.exe`, with the icon as a resource.
+
+### Running the port
+
+```sh
+build/port/uw1port                      # finds the game by itself, or asks
+build/port/uw1port --data ~/UWGOG/UW1   # names it
+```
+
+The port needs the user's own UW1: a directory with `UW.EXE`, `DATA`, `CRIT`, `CUTS` and `SOUND`, which it reads and never writes. It checks that `UW.EXE` is the GOG release's by its size and CRC-32. Without `--data` it looks at `$UW1PORT_DATA`, the folder it used last, the current directory and its own (and a `UW1` folder in either), on Windows the folders GOG's installers record in the registry, and GOG's install folders on each host and `~/UWGOG`, up to four levels into any folder whose name has "Underworld" or "UW1" in it (Exhume's `runtime/port/sys/gamedir.c`, with UW1's names in `src/port/portgame.h`). GOG's Mac app keeps the game in a CD image, `game.gog`, the Ultima Underworld 1 and 2 CD, where UW1 is the folder `UW` (`PORT_GAME_IMAGE_FOLDER`); when the search finds only the image, the port copies that folder once into `gog-cd/UW1` in its home directory and plays from there. When nothing is found and the port has a window, it asks with a folder picker.
+
+Files the game creates or changes (its scratch files, the saved games, `DATA\UW.CFG`) go to the home directory, `--home DIR`, else `$UW1PORT_HOME`, else `~/.uw1port` (`%APPDATA%\uw1port` on Windows when `HOME` is not set). Its settings file, `uw1port.cfg`, keeps the game folder and the MT-32 ROM folder of the last run with a window. The first such run with no `DATA\UW.CFG` in the home directory writes one for a Sound Blaster with its FM music and digitised speech (`--sound 3,1`), or, when MT-32 ROMs are set, for the MT-32's music and the Sound Blaster's speech (`--sound 6,1`). Runs with `--hidden`, `--record` or `--replay`, which are tests, never show a dialog, write no settings and get no sound card they were not given. `uw1port --help` lists the options.
+
+### Sound
+
+The emulated sound hardware comes from two libraries, neither in the repository: Nuked OPL3 (commit `765ec96`, LGPL-2.1), which `make setup-sound` fetches into `tools/nuked-opl3` and `make port` compiles in (`[[port.vendor]]` in `exhume.toml`), and libmt32emu 2.8.3 (LGPL-2.1-or-later), which `make port` links when pkg-config finds it (`[[port.pkg]]`). `make port` says which it found (`third-party: Nuked OPL3, libmt32emu`); without them it builds and those chips are silent. The MT-32 needs the user's own ROM images: `--mt32-roms DIR` (or `UW1PORT_MT32_ROMS`), with `CM32L_CONTROL.ROM` and `CM32L_PCM.ROM` or `MT32_CONTROL.ROM` and `MT32_PCM.ROM`.
+
+## Testing
+
+The port is tested against DOS in three ways, in two tiers (Exhume's `tools/test.py`):
+
+| Command | What it runs | Time |
+| --- | --- | --- |
+| `make test` | `make check`; `make port`; the routine fuzzing's quick run; every replay session in the port against its golden | about a minute |
+| `make test-full` | `make check`; `make port` and `make port-debug`; every golden made again from DOS, each session replayed twice and checked identical; every session against them in the port and in the UBSan build; the sound drivers against the real ones (`tools/ailcheck.py` on `sound`, `soundfm` and `soundmt`); the fuzzing's deep run; the coverage report | about 15 minutes, nine of them the deep fuzzing |
+
+Both print a summary of their steps with the time each took, and exit 1 if any failed. After `make test-full`, a golden the regenerated runs changed is reported: review it, and commit it with the change that explains it.
+
+### Routine fuzzing
+
+Exhume's `tools/fuzzasm.py` tests single routines on inputs no session gives them. For each target in `tools/fuzz_targets.py` it runs the routine's own bytes from your `UW.EXE` in Unicorn, and the port's code for it (the translation by `tools/asm2c.py`, or a C entry such as `cSqRt`) in Exhume's `tools/fuzzhost.c`, linked from the port's objects in place of `main.c` with `tools/fuzzhost-uw1.c` (the memory regions and the C entries), on the same registers and memory, and compares the registers, the flags the callers read and every byte of memory the routine changed. There are 34 targets: IMATH's sines, square roots and arctangents, near and far, and their four C entries; INSTANCE's matrix products, clip codes and `mxmul`; SPHERE's `sphere_check` and `get_dist`; GRENTRY's frame buffer span writers, fill, dim, light and `setup_frame_buf` (with the copier patch); and EXPAND's image decoders, palette builder and record decoder. `make fuzz` runs 200 cases of each (40 of the heavy ones) in about ten seconds; `make fuzz FUZZ=--deep` fifty times as many with a new seed. Unicorn must be in Exhume's `.venv`.
+
+### Coverage
+
+`make coverage` builds the port with clang's source-based coverage, replays every session in it, runs the fuzzing on the same objects, and writes [COVERAGE.md](COVERAGE.md).
 
 ## Recording and replaying a session
 
@@ -74,7 +137,7 @@ The recordings and their goldens are committed under `tests/replay`. The moves i
 
 ### Golden references
 
-A golden is what DOS did with a session: `tests/replay/golden/NAME/golden.json` holds, for each checkpoint, its header and a 64-bit digest of each section as DOS and a port are compared, and a PNG of the screen at each full checkpoint. `make golden` makes them again (each session replayed twice, the two runs required identical, and the null-pointer check passed); `make golden-check` replays every session twice with the current replay DOS build and compares both runs with the committed golden, writing nothing. Until there is a port, `make golden-check` is the test that the replay build and the sessions still agree with DOS.
+A golden is what DOS did with a session: `tests/replay/golden/NAME/golden.json` holds, for each checkpoint, its header and a 64-bit digest of each section as DOS and a port are compared, and a PNG of the screen at each full checkpoint. `make golden` makes them again (each session replayed twice, the two runs required identical, and the null-pointer check passed); `make golden-check` replays every session twice with the current replay DOS build and compares both runs with the committed golden, writing nothing. `make golden-check` needs no port: it tests that the replay build and the sessions still agree with DOS.
 
 Some bytes are the machinery of the graphics library rather than game state, and `exhume.toml` masks them with the reason for each (`[[replay.mask]]`): its two private stacks in seg048 (3963:4DFE..4FA6 and 547E..5546), which interrupts push onto whenever they come, the clock word its retrace wait keeps (0652), and, between DOS and a port, the stack pointer it saves (5588..558B). The far pointers stored in seg048 are compared as the blocks they name (`[replay.segments]`), since DOSBox-X, js-dos and a port load the program at different segments.
 
@@ -91,3 +154,61 @@ A recording is only as good as the replay build that made it: when the replay bu
 
 - **A stack-junk read in the cutscene player.** `src/gfx/CUTS.C`'s `show_anm` never sets its state's flag b7 (a pause that waits for the speech) before the pause loop reads it, so in DOS a pause waits or not by whatever the stack held. DOSBox-X and js-dos took different paths on the same recording. `STACK_JUNK_SET(st.flags.bit.b7, 0)` gives the replay build and a port the path with no wait; the DOS build is unchanged.
 - **The game polls the mouse buttons on a small stack.** Some of UW1's calls to `mbuttons()` run on the 0D4h-byte stack at the start of SYSENTRY.ASM's `_DATA` (DS:2444 in the replay build), just above the C library's near heap variables. A full dump made from that hook overran it, corrupted the near heap, and a later `realloc` wrote into DS:4. `replay.c` now does its deep work (its files, the dumps, the trace, the end) on a stack of its own.
+
+## Continuous integration
+
+The workflows in `.github/` are Exhume's CI templates (`tools/templates/ci`) with UW1's values (`tools/ci.toml`, `[ci]` in `exhume.toml`); `python3 $EXHUME/tools/citemplates.py --config exhume.toml .` writes them again. Every job that builds checks out Exhume into `.exhume` at the commit `tools/exhume-ref` names.
+
+| Workflow | When | What it runs | Needs game data |
+| --- | --- | --- | --- |
+| `port.yml` | every push and pull request, forks included | `make port` and `make port-check` on Ubuntu 24.04, macOS and Windows (MSYS2 CLANG64); nothing is run | no |
+| `repocheck.yml` | every push and pull request, forks included | `tools/repocheck.py` | no |
+| `release.yml` | a tag `v*`, and by hand | the release packages for macOS, Linux and Windows ([Releases](#releases)); for a tag, a draft release with them | no (Apple's secrets, when set, sign and notarise the macOS app) |
+| `accuracy.yml` | pushes to `main`, pull requests from branches of this repository, and by hand, once enabled | the gate and `make test` on Ubuntu 24.04; the sessions against their goldens on Windows and macOS (`make verify`) | yes |
+| `nightly.yml` | 03:17 UTC each day, and by hand, once enabled | `make test-full` on Ubuntu 24.04; fails if a regenerated golden differs from the committed one | yes |
+
+What CI can run without game data is the port's build on the three systems, its compile-only measurement, the repository check and the release packages. Every test of the port needs your `UW.EXE` (the fuzzing runs its bytes, the replays its data) and the gate needs the Borland toolchain, neither of which can be published, so `accuracy.yml` and `nightly.yml` are skipped: each of their jobs runs only when the repository variable `UW1_CI_ASSETS` is `true`.
+
+To enable them, do as UW2Decomp did for its `uw2-ci-assets` (Exhume's docs/ci-bundle.md has the pattern and the safeguards):
+
+1. Make a private repository `abedegno/uw1-ci-assets`, with its Actions disabled, holding one file, `uw1-ci-assets.tar.gz.age`: an age-encrypted tar.gz of `game/UW1` (the GOG release's UW1 folder), `tc/Disk01.img` to `Disk04.img` (Turbo C++ 1.01), `tasm/Disk01.img` (TASM 2.0), `MANIFEST.txt` and `SHA256SUMS` (Exhume's `tools/ci-assets.sh` has the commands).
+2. Add a read-only deploy key to it, and give this repository two secrets: `UW1_ASSETS_DEPLOY_KEY` (the deploy key's private half) and `UW1_ASSETS_AGE_KEY` (the age secret key).
+3. Set the repository variable `UW1_CI_ASSETS` to `true`.
+
+The local action `.github/actions/uw1-assets` then clones and decrypts the bundle into `$RUNNER_TEMP`, and `tools/ci-assets.sh` sets `UW1_DATA`, `UW1_EXE`, `TC_DISKS` and `TASM_DISKS`; the jobs unpack the toolchain into `toolchain/` (`EXHUME_TC`, `EXHUME_TASM`). Nothing decrypted is cached or uploaded, and the last step of each job deletes it. The `sound` session's goldens are made in js-dos (`[replay] dos_backend`), whose headless Chrome the CI's Linux tools leave out, so `nightly.yml` will need that before its golden step passes for `sound`; `accuracy.yml` replays goldens only in the port and does not.
+
+### Releases
+
+`release.yml` builds the packages players download, from the sources alone: no game data and no Borland toolchain is involved. On a tag `v*` it attaches them to a draft release with generated notes, which the owner checks and publishes by hand; run by hand, it keeps them as the run's artifacts.
+
+| Package | Built on | What is in it |
+| --- | --- | --- |
+| `UW1-V-macos.zip` | macOS 15 | `UW1.app`, universal (arm64 and x86_64, macOS 11 on): `Contents/MacOS/uw1port`, SDL3, libmt32emu and Nuked OPL3 in `Contents/Frameworks` with `@rpath` install names, the icon in `Contents/Resources/uw1.icns`; signed with the Developer ID and notarised when the secrets are set, else signed ad hoc |
+| `UW1-V-linux-x86_64.tar.gz` | Ubuntu 22.04, so glibc 2.35 or later | `uw1` (a launcher), `bin/uw1port` (run path `$ORIGIN` and `$ORIGIN/../lib` only) and `lib/` with SDL3, libmt32emu and Nuked OPL3; `uw1.desktop` and `uw1.png` for a menu entry |
+| `UW1-V-linux-x86_64.AppImage` | Ubuntu 22.04 | the same program and libraries as one executable file |
+| `UW1-V-windows-x86_64.zip` | Windows, MSYS2 CLANG64 | `uw1port.exe`, with the icon as a resource, and every DLL it loads that is not Windows's own |
+| `third-party-sources.tar.gz` | Ubuntu | the source of the LGPL libraries at the versions built |
+
+Each package also holds `README.txt` (`tools/dist/README-dist.txt`: starting it, finding the game, the options), `LICENSE.txt`, `NOTICE.txt`, `THIRD-PARTY-NOTICES.txt` and the libraries' licence texts in `licenses/`. Nuked OPL3 and libmt32emu are separate shared libraries a user can replace, which is how the LGPL is met ([THIRD-PARTY-NOTICES](../THIRD-PARTY-NOTICES)). Exhume's `tools/package.py` checks each package as it makes it (on Linux the run paths and that every bundled library loads from `lib/`; on Windows that every DLL comes from the package or Windows), and the workflow checks it again unpacked and runs `--help`.
+
+The same on your own machine: `make port-release` (as `make port`, but Nuked OPL3 is a shared library beside the program, and the program looks for its libraries beside itself, in `../lib` and in `../Frameworks`; `PORT_ARCHS="--arch arm64 --arch x86_64"` for a universal macOS build, which needs universal libraries), then `make package` (into `build/dist`; `PACKAGE_ARGS="--version V --strict"`, and `--appimage` on Linux with appimagetool on the PATH or in `$APPIMAGETOOL`). The names come from `[package]` in `exhume.toml`. `UW1_CODESIGN_IDENTITY` names a signing identity in your keychain; without it the app is signed ad hoc, and the package's `README.txt` tells a player to open it the first time with right-click and Open (unless `UW1_NOTARISED=1`).
+
+#### Signing and notarising the macOS app
+
+Without these secrets the macOS job signs the app ad hoc, does not notarise it, and passes. To sign and notarise, the owner adds the same six repository secrets UW2Decomp has to this repository (Settings, Secrets and variables, Actions):
+
+| Secret | What it is |
+| --- | --- |
+| `CSC_LINK` | the Developer ID Application certificate and its private key, as a `.p12`, base64 encoded |
+| `CSC_KEY_PASSWORD` | the `.p12`'s password |
+| `APPLE_API_KEY` | an App Store Connect API key's `.p8` file, its contents |
+| `APPLE_API_KEY_ID` | that key's ID |
+| `APPLE_API_ISSUER` | its issuer ID |
+| `APPLE_TEAM_ID` | the team ID; the signing identity must be that team's |
+
+With `CSC_LINK` set the job imports the `.p12` into a keychain of its own, picks the `Developer ID Application` identity of `APPLE_TEAM_ID`, and `tools/package.py` signs from the inside out with the hardened runtime and a secure timestamp. On a tag (or by hand with the `notarise` input), with the three API secrets set too, `xcrun notarytool submit --wait` notarises the zip, `xcrun stapler staple` attaches the ticket, and the zip is made again. A final step deletes the keychain and the keys. Nothing secret is printed.
+
+#### The icon
+
+The icon is the project's own drawing: a stylised silver ankh on a dark blue stone tile (UW2Decomp's design in other colours), not the Ultima logo and nothing from the game. `tools/dist/icon/uw1.svg` is its source, with `uw1-small.svg` for 16 to 32 pixels. `make icons` (Exhume's `tools/icons.py`; it needs `npm install` in Exhume for puppeteer's Chrome, and `iconutil` on macOS) writes the committed files: `png/uw1-N.png` from 16 to 1024 pixels, `uw1.icns` (the app's), `uw1.ico` (the Windows program's resource), `uw1.png` (Linux) and `src/port/platform/sdl3/icon.h`, the window icon on Linux and Windows (`PLAT_ICON`).
+

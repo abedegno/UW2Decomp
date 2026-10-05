@@ -150,8 +150,8 @@ static const char help_text[] =
     "                         ($UW1PORT_DATA, the last folder used, GOG's install folders)\n"
     "  --home DIR             where saved games and settings go ($UW1PORT_HOME, else ~/.uw1port)\n"
     "Sound:\n"
-    "  --sound MUSIC[,SPEECH] the sound cards, kept until changed (first run: 0,0, none,\n"
-    "                         until the port's sound has been checked against DOS):\n"
+    "  --sound MUSIC[,SPEECH] the sound cards, kept until changed (first run: 3,1, or 6,1\n"
+    "                         when MT-32 ROMs have been given):\n"
     "                         music 0 none, 1 PC speaker, 2 Ad Lib, 3 Sound Blaster,\n"
     "                         4 Sound Blaster Pro, 5 Pro Audio Spectrum, 6 Roland MT-32;\n"
     "                         speech 0 none, 1 Sound Blaster, 2 Sound Blaster Pro,\n"
@@ -348,14 +348,15 @@ int main(int argc, char *argv[])
     if (roms && interactive) port_config_set(home, "mt32-roms", absolute(roms, abs_buf, sizeof abs_buf));
     else if (!roms && !getenv("UW1PORT_MT32_ROMS") && port_config_get(home, "mt32-roms", roms_buf, sizeof roms_buf) == 0)
         roms = roms_buf;
-    /* The first run (no DATA\UW.CFG in the home directory yet): no sound cards, until the
-       port's sound library has been checked against UW1's drivers (docs/PORT.md). Kept until
-       --sound changes it. */
+    /* The first run (no DATA\UW.CFG in the home directory yet): a Sound Blaster, its FM music
+       and its digitised speech, or, when the user has given MT-32 ROMs by then, the Roland MT-32
+       for the music and the Sound Blaster for the speech, as the sound, soundfm and soundmt
+       sessions check against DOS (docs/PORT.md). Kept until --sound changes it. */
     if (interactive && !sound) {
         char cfgpath[1200];
         FILE *f = NULL;
         if (plat_resolve("DATA\\UW.CFG", PLAT_CREATE, cfgpath, sizeof cfgpath) == 0 && !(f = fopen(cfgpath, "rb")))
-            sound = "0,0";
+            sound = audio_mt32_roms_present(roms ? roms : getenv("UW1PORT_MT32_ROMS")) ? "6,1" : "3,1";
         else if (f)
             fclose(f);
     }

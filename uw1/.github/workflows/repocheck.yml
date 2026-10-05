@@ -1,6 +1,7 @@
-# tools/repocheck.py (Python syntax, Markdown links, no game data or Borland binaries
-# committed), which needs neither the Borland toolchain nor UW.EXE, so it runs on every push
-# and pull request, forks included.
+# tools/repocheck.py (Python and script syntax, Markdown links, no game data or Borland
+# binaries committed), which needs neither the Borland toolchain nor UW.EXE, so it runs on
+# every push and pull request, forks included. The gate itself runs in the pre-push hook
+# (`make hooks`) and, once the bundle is set up, in accuracy.yml.
 name: repocheck
 on:
   push:
@@ -15,4 +16,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - run: python3 tools/repocheck.py

@@ -1,0 +1,104 @@
+# UW1Decomp's values for Exhume's tools/citemplates.py ([ci] vars in exhume.toml), which writes
+# .github/ from Exhume's templates (docs/BUILDING.md, "Continuous integration"):
+#
+#   python3 $EXHUME/tools/citemplates.py --config exhume.toml .
+#
+# The jobs that build check out Exhume into .exhume at the commit tools/exhume-ref names. The
+# names in release.yml (UW1, uw1port, uw1) come from exhume.toml's [package] and [port].
+#
+# accuracy.yml and nightly.yml need UW1's private bundle (the game and the Borland disk images,
+# Exhume's docs/ci-bundle.md), which does not exist yet: their jobs run only once the repository
+# variable UW1_CI_ASSETS is "true", and are skipped until then.
+
+repocheck = "python3 tools/repocheck.py"
+repocheck_exhume_checkout = ""
+job_if = "vars.UW1_CI_ASSETS == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)"
+nightly_if = "    if: vars.UW1_CI_ASSETS == 'true'"
+tmp_prefix = "uw1"
+
+# the gate's toolchain, unpacked from the bundle's disk images, where exhume.toml's [toolchain]
+# looks for it (EXHUME_TC, EXHUME_TASM)
+setup_name = "Unpack Turbo C++ and TASM from the bundle's disk images"
+setup = "sh .exhume/profiles/borland-tc101/setup-tc.sh \"$TC_DISKS\" toolchain/TC && sh .exhume/profiles/borland-tc101/setup-tasm.sh \"$TASM_DISKS\" toolchain/TASM && printf 'EXHUME_TC=%s\\nEXHUME_TASM=%s\\n' \"$PWD/toolchain/TC\" \"$PWD/toolchain/TASM\" >> \"$GITHUB_ENV\""
+
+exhume_checkout = '''
+      # Exhume, whose tools and runtime the port, the gate and the replay build use where it is,
+      # at the commit tools/exhume-ref names (docs/BUILDING.md, "Exhume")
+      - name: Exhume's commit
+        id: exhume
+        shell: bash
+        run: echo "ref=$(cut -d' ' -f1 tools/exhume-ref)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: abedegno/Exhume
+          ref: ${{ steps.exhume.outputs.ref }}
+          path: .exhume
+          persist-credentials: false'''
+
+# the private bundle (not made yet): abedegno/uw1-ci-assets, as UW2Decomp's uw2-ci-assets, with
+# game/UW1 (the GOG release's UW1 folder), tc/ and tasm/
+assets_action = "uw1-assets"
+assets_title = "UW1 assets"
+deploy_secret = "UW1_ASSETS_DEPLOY_KEY"
+age_secret = "UW1_ASSETS_AGE_KEY"
+age_env = "ASSETS_AGE_KEY"
+bundle_repo = "abedegno/uw1-ci-assets"
+bundle_file = "uw1-ci-assets.tar.gz.age"
+tmp_assets = "uw1-assets"
+tmp_clone = "uw1-ci-assets"
+tmp_key = "uw1-assets-deploy-key"
+tmp_hosts = "uw1-known-hosts"
+ci_assets = "sh tools/ci-assets.sh"
+cleanup = "toolchain build"
+
+accuracy_comment = '''
+# make test, the accuracy suite (docs/BUILDING.md, "Testing" and "Continuous integration"): the
+# byte-exact DOS build gate, the port build, the quick routine fuzzing and the nine replay
+# sessions against their goldens, on Linux; then the same sessions replayed by the port built on
+# Windows (MSYS2 CLANG64) and on macOS against the same goldens (make verify). They need the
+# game, and the gate the Borland toolchain, from a private bundle (the uw1-assets action) that
+# is not set up yet: every job here is skipped until the repository variable UW1_CI_ASSETS is
+# "true" (docs/BUILDING.md says what it needs). Then they run on pushes to main, by hand, and
+# on pull requests from branches of this repository; a pull request from a fork gets port.yml
+# and repocheck.yml, which need no secrets.'''
+nightly_comment = '''
+# make test-full, nightly (docs/BUILDING.md, "Testing" and "Continuous integration"): the gate,
+# both port builds, every golden made again from DOS (each session twice, checked identical),
+# the sessions in the port and in the UBSan build, the sound drivers against the real ones, the
+# deep routine fuzzing and the coverage report. Like accuracy.yml it needs the private bundle,
+# so it is skipped until the repository variable UW1_CI_ASSETS is "true", and then runs on the
+# schedule and by hand. The job fails when a regenerated golden differs from the committed one.'''
+port_comment = '''
+# The native port builds on Linux, macOS and Windows (docs/BUILDING.md, "Continuous
+# integration"): make port (compile and link with SDL3) and make port-check (the compile-only
+# measurement). Only the sources are needed: no game data, no Borland toolchain and no secrets,
+# so this runs on every push and every pull request, forks included. Nothing is run: every test
+# of the port needs the game (accuracy.yml).'''
+repocheck_comment = '''
+# tools/repocheck.py (Python and script syntax, Markdown links, no game data or Borland
+# binaries committed), which needs neither the Borland toolchain nor UW.EXE, so it runs on
+# every push and pull request, forks included. The gate itself runs in the pre-push hook
+# (`make hooks`) and, once the bundle is set up, in accuracy.yml.'''
+release_comment = '''
+# Release packages of the native port (docs/BUILDING.md, "Releases"): on a tag v*, build the port
+# on macOS (one universal app for arm64 and x86_64), Linux (x86-64, on Ubuntu 22.04 for glibc
+# 2.35: a tarball and an AppImage) and Windows (x86-64, MSYS2 CLANG64), package each with
+# Exhume's tools/package.py, and attach the packages and the source of the LGPL libraries to a
+# DRAFT release, which the owner reviews and publishes by hand. Run by hand (workflow_dispatch),
+# it builds the packages as workflow artifacts and makes no release.
+# Only the sources are needed: no game data and no Borland toolchain. The only secrets are
+# Apple's, for the macOS app (docs/BUILDING.md, "Releases"): with CSC_LINK set it is signed with
+# the Developer ID identity, and on a tag (or by hand with notarise) notarised and stapled;
+# without them it is signed ad hoc and not notarised.'''
+linux_tools_comment = '''
+# The Linux tools for CI (docs/BUILDING.md, "Continuous integration"): system packages, Python
+# with Exhume's requirements in .exhume/.venv, Node with dos-mcp, and the tools built from
+# source (emu2, SDL3 and libmt32emu, Nuked OPL3), each cached by the script that pins it.
+# Nothing here touches the game or the Borland toolchain, so every cached path is free of both.'''
+assets_comment = '''
+# Fetch and decrypt UW1's CI asset bundle (docs/BUILDING.md, "Continuous integration"): the
+# owner's UW1 game files and Borland disk images, from the private repository uw1-ci-assets,
+# with its read-only deploy key, decrypted with the age key into $RUNNER_TEMP/uw1-assets. Sets
+# UW1_DATA, UW1_EXE, TC_DISKS and TASM_DISKS for the later steps (tools/ci-assets.sh). Nothing
+# is listed or printed. The calling workflow removes $RUNNER_TEMP/uw1-assets, toolchain and
+# build in a final `if: always()` step, and never caches or uploads anything from them.'''

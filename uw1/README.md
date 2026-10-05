@@ -1,10 +1,43 @@
 # UW1Decomp
 
-Ultima Underworld: The Stygian Abyss (DOS, 1992; developed by Blue Sky Productions, later Looking Glass Technologies, published by Origin Systems), as source code: a byte-matching decompilation. The C and assembly in `src/` compile with the original Borland tools to the same bytes as the shipped `UW.EXE`.
+Ultima Underworld: The Stygian Abyss (DOS, 1992; developed by Blue Sky Productions, later Looking Glass Technologies, published by Origin Systems), as source code. This repository has two products, built from the same sources:
+
+- **A byte-matching decompilation.** The C and assembly in `src/` compile with the original Borland tools to the same bytes as the shipped `UW.EXE`.
+- **A native cross-platform port, uw1port.** The same C, compiled for macOS, Linux and Windows with SDL3, plays the game in a window with its music and speech. Nine recorded DOS sessions replay in it with DOS's game state and screen at every checkpoint ([docs/PORT.md](docs/PORT.md)).
 
 It is the sibling of [UW2Decomp](https://github.com/abedegno/UW2Decomp), the matched decompilation of Ultima Underworld II, and was seeded from it: the two games share a compiler, libraries and much of an engine, a year apart. It is built with [Exhume](https://github.com/abedegno/Exhume), the toolkit both projects use.
 
 No game data is included. You need your own copy of UW1 (the GOG release). This is a fan research project, not affiliated with or endorsed by the rights holders; see [Licence and legal notice](#licence-and-legal-notice).
+
+## Play it
+
+1. Get the port: download the package for your system from the [releases](https://github.com/abedegno/UW1Decomp/releases) page, or [build it from source](#build-the-port-from-source).
+2. Install Ultima Underworld from GOG. The port finds it in GOG's usual folders (on Windows, where GOG's installer recorded it in the registry), including inside GOG's Mac app and its `game.gog` CD image. If it finds nothing, it asks you to choose the folder that holds `UW.EXE` (or the GOG install folder, or the GOG app), and remembers it. From a command line, `uw1port --data /path/to/UW1` names it.
+3. Start it: `UW1.app` on macOS (a package whose `README.txt` says it is not notarised needs right-click and Open the first time), `uw1port.exe` on Windows, and on Linux the AppImage (`chmod +x UW1-*.AppImage`, then run it) or `./uw1` from the tarball. The Linux packages need glibc 2.35 or later (Ubuntu 22.04 or newer).
+
+The controls are the game's own: the mouse, and the keys in the game's manual. The game's cursor follows the system pointer; `--mouse lock` captures the pointer on a click instead, as DOSBox does, with Ctrl+F10 to release it. Saved games and settings go to `~/.uw1port` (`%APPDATA%\uw1port` on Windows), never to the game folder. Each session's inputs are recorded to `recordings/` there (the newest five are kept; `--no-recording` turns it off), so if the game crashes, the newest folder there replays it exactly: please attach it to a bug report.
+
+Options (`uw1port --help` lists them all):
+
+- `--sound MUSIC,SPEECH` chooses the sound cards, and is remembered. The first run gets a Sound Blaster with its FM music and digitised speech (`3,1`), or, when MT-32 ROMs are given (below), the MT-32 for the music and the Sound Blaster for the speech (`6,1`). Music: 0 none, 1 PC speaker, 2 Ad Lib, 3 Sound Blaster, 4 Sound Blaster Pro, 5 Pro Audio Spectrum, 6 Roland MT-32. Speech: 0 none, 1 Sound Blaster, 2 Sound Blaster Pro, 3 Pro Audio Spectrum.
+- Roland MT-32 music needs your own MT-32 or CM-32L ROM images, which are not included: `--mt32-roms DIR` on the first run (or `--sound 6,1 --mt32-roms DIR` later), with `CM32L_CONTROL.ROM` and `CM32L_PCM.ROM` (or `MT32_CONTROL.ROM` and `MT32_PCM.ROM`) in DIR. The folder is remembered.
+- `--scale N` sets the window's starting size, `--no-aspect` shows square pixels instead of a 4:3 CRT's shape, `--no-integer` scales freely.
+
+## Build the port from source
+
+The port needs no Borland toolchain, DOS emulator or game data to build.
+
+```sh
+make setup-port     # Exhume (cloned into .exhume when you have none), and SDL3, libmt32emu and Nuked OPL3 for this OS
+make port           # build/port/uw1port
+build/port/uw1port  # or: build/port/uw1port --data /path/to/UW1
+```
+
+- macOS: the Xcode command line tools and Homebrew.
+- Linux (Debian, Ubuntu): `make setup-port` prints the `apt-get install` line it needs, then builds SDL3 and libmt32emu into `tools/libs`.
+- Windows: MSYS2's CLANG64 shell; then `make PY=python port`.
+
+[BUILDING.md](docs/BUILDING.md#the-native-port) has the details, and [Releases](docs/BUILDING.md#releases) how the packages are made.
 
 ## Status
 
@@ -16,7 +49,8 @@ Still to do ([docs/PLAN.md](docs/PLAN.md)):
 
 1. The rest of the data as source.
 2. The layout audit for the modding build, and the readability pass: shared headers that match UW1 (the matched files still declare some of UW1's differences from UW2 locally), named constants and struct fields, and notes on what each file does in the game.
-3. A port, on the same port layer as UW2Decomp's.
+
+The port is done to the same standard as UW2Decomp's: every recorded session is identical to DOS ([docs/PORT.md](docs/PORT.md)), and `make test` checks it ([Testing](docs/BUILDING.md#testing)).
 
 [docs/NOTES.md](docs/NOTES.md) collects what matching found: where UW1 differs from UW2 (an earlier sound library, a graphics library of 18 modules where UW2 has 14, a 3D renderer of 9 modules with no 386 code, an options panel and screen-frame dragons of its own), the module boundaries, and items for the readability pass. [docs/FINDINGS.md](docs/FINDINGS.md) collects what it revealed about the game: likely bugs in the shipped program, the game rules the code implements, engine findings, dead code and open questions.
 
@@ -46,7 +80,7 @@ python3 tools/link.py                                      # build/LINK/out/UW.E
 python3 tools/link.py --mod                                # the modding build
 ```
 
-The tools find Exhume through `tools/exhume.py`: `$EXHUME`, else `.exhume` in this repository, else a checkout named `Exhume` next to this one, else `~/Exhume` (the Makefile: `$EXHUME`, default `~/Exhume`). The DOS build depends on Exhume's runtime as well as its tools: the shared headers include its `runtime/include/portable.h`, which the build stages beside `src/include`, so the gate proves the runtime's macros cost no byte. `tools/exhume-ref` names the Exhume commit this tree was proved with; `tools/link.py` (so `make check` and `make game`) warns when your checkout does not contain it, and `python3 tools/exhume.py` checks it on its own. [docs/BUILDING.md](docs/BUILDING.md) has more, and how to record and replay sessions.
+The tools find Exhume through `tools/exhume.py`: `$EXHUME`, else `.exhume` in this repository, else a checkout named `Exhume` next to this one, else `~/Exhume` (the Makefile: `$EXHUME`, else `.exhume`, else `~/Exhume`; `make setup-exhume` clones it into `.exhume` at the pinned commit when there is none). The DOS build depends on Exhume's runtime as well as its tools: the shared headers include its `runtime/include/portable.h`, which the build stages beside `src/include`, so the gate proves the runtime's macros cost no byte. `tools/exhume-ref` names the Exhume commit this tree was proved with; `tools/link.py` (so `make check` and `make game`) warns when your checkout does not contain it, and `python3 tools/exhume.py` checks it on its own. [docs/BUILDING.md](docs/BUILDING.md) has more, and how to record and replay sessions.
 
 `python3 tools/repocheck.py` runs the checks CI runs on every push: no game data or Borland binary is committed, and the Markdown links resolve.
 
