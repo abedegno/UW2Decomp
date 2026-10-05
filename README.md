@@ -106,6 +106,7 @@ The rest of the top level: `docs/`; `tools/`, the build, matching, linking, port
 - [FINDINGS.md](docs/FINDINGS.md): likely bugs in the original, game rules, engine findings, dead code and open questions.
 - [UW1-UW2-DIFFERENCES.md](docs/UW1-UW2-DIFFERENCES.md): where UW1's and UW2's rules differ, routine by routine, and what UnderworldGodot does for each.
 - [docs/subsystems/](docs/subsystems/): one page per subsystem on its architecture, data, rules and open questions.
+- [docs/behaviour/](docs/behaviour/README.md): what the game does, as rules with exact numbers, for game programmers and modders who don't read the C: NPC AI, schedules, combat, magic, conversations and player upkeep, both games.
 - [CONTRIBUTING.md](docs/CONTRIBUTING.md): the rule every change follows, comments, renaming, shared headers, constants and struct fields.
 - [MATCHING.md](docs/MATCHING.md): the compiler switches, the assembler, and what Turbo C's output reveals about the original source.
 - [LINKING.md](docs/LINKING.md): the exact link, the segment classes, what is taken from your EXE, and the modding build.
