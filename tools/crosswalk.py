@@ -121,9 +121,9 @@ def main():
         table = os.path.basename(t)[:-4]
         with open(t) as f:
             head = f.readline()
-            h = re.match(r'#\s*segment\s+(\S+)\s+base\s+\S+\s+size\s+\S+\s+org\s+(\S+)', head)
+            h = re.match(r'#\s*segment\s+(\S+)\s+base\s+\S+\s+size\s+\S+(?:\s+org\s+(\S+))?', head)
             if not h: continue
-            org = int(h.group(2), 16)
+            org = int(h.group(2) or '0', 16)
             # the listing's segment: a table cut out of a segment at its org is named
             # <segment>_<org> (seg019_C20); its listing segment is the name without that
             seg = h.group(1)
