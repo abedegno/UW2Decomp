@@ -148,10 +148,10 @@ void far seg012_12C(unsigned handle, char far *name)
     geninterrupt(0x67);
 }
 
-/* The rest of the segment is not called from anywhere: allocating a one-page handle,
-   mapping a handle's page 0 into the next of the four physical pages in turn (forgetting
-   the pages TMPALLOC.C's callers think are mapped), and freeing a handle. Probably an
-   older or unused interface for small separate allocations. */
+/* The rest of the segment: allocating a one-page handle, mapping a handle's page 0 into
+   the next of the four physical pages in turn (forgetting the pages TMPALLOC.C's callers
+   think are mapped), and freeing a handle. PANELS.C's init_panelflip takes three such
+   handles for the panel turns and maps them with seg012_15E; seg012_1B1 frees them. */
 int far seg012_141(uint16 *handle)
 {
     _BX = 1;

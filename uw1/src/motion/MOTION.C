@@ -387,7 +387,7 @@ static void seg031_2CFA_A3F(void)
    (when the wall's heading equals the current one, from a corner of the cell picked at
    random), or are stopped by a nearly head-on wall (impact gains the whole speed).
    flags 0x40 refuses any change. Returns 0 when the mover cannot be redirected. */
-unsigned char far rehead(unsigned heading)
+unsigned char far rehead(uint16 heading)
 {
     register int16 diff;
     int t;

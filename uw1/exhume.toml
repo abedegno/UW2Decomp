@@ -168,6 +168,10 @@ dos_backend = { sound = "jsdos" }
 # and js-dos by exactly the difference of their load segments, or to be A000h in both.
 first_block_para = 0x3963
 exe_range = [0x395B, 0xA000]
+# SEGS word 6 is mapdata, a far heap block: the far heap starts where the build's size puts it
+# (the replay build's moved by a paragraph when USEITEMS.C's FARNULLTRAP marks made it 272 bytes
+# larger), so the heap blocks in the slots are compared by their distance from it
+heap_block = 6
 slots = { "GFX" = [0x7AF, 0x7D4, 0x95A, 0xB0E, 0xB1C, 0x558A, 0x55EA] }
 
 [replay.nulls]

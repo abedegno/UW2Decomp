@@ -1081,9 +1081,11 @@ void far checkTrap(struct Object far *who, struct Object far *obj, int how, int 
     union Link far *link;
     struct Object far *trap;
 
-    if (OBJ_ISQUANT(obj) || obj->ol.f.link == 0)
+    /* obj is 0 when INTERACT.C's inv_look calls this before it picks the object: DOS then
+       reads the interrupt vector table at 0000:0000 as the object */
+    if (OBJ_ISQUANT(FARNULLTRAP(obj)) || FARNULLTRAP(obj)->ol.f.link == 0)
         return;
-    link = &obj->ol.link;
+    link = &FARNULLTRAP(obj)->ol.link;
     trap = Obj_InList(&link, 0, MAJOR_TRAP, -1, -1);
     if (trap != 0) {
         if (OBJ_MINOR(trap) >= 2)
