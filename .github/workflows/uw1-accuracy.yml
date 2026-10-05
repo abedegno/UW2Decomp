@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true
@@ -85,7 +85,7 @@ jobs:
       # the recordings and scripts must keep their bytes and LF line ends (also .gitattributes)
       - run: git config --global core.autocrlf false
         shell: pwsh
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true
@@ -155,7 +155,7 @@ jobs:
       # the recordings and scripts must keep their bytes and LF line ends (also .gitattributes)
       - run: git config --global core.autocrlf false
         shell: pwsh
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true
@@ -215,7 +215,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true

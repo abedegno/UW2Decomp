@@ -29,7 +29,7 @@ jobs:
     env:
       NOTARISE: ${{ startsWith(github.ref, 'refs/tags/uw1-v') || inputs.notarise == true }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true
@@ -153,7 +153,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true
@@ -260,7 +260,7 @@ jobs:
       # the scripts must keep their LF line ends for MSYS2's sh
       - run: git config --global core.autocrlf false
         shell: pwsh
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true
