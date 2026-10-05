@@ -111,7 +111,7 @@ jobs:
           deploy-key: ${{ secrets.UW2_ASSETS_DEPLOY_KEY }}
           age-key: ${{ secrets.UW2_ASSETS_AGE_KEY }}
       - name: Cache libmt32emu
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: uw2/tools/libs
           key: libs-windows-clang64-${{ hashFiles('uw2/tools/setup-libs.sh') }}
@@ -181,7 +181,7 @@ jobs:
           deploy-key: ${{ secrets.UW2_ASSETS_DEPLOY_KEY }}
           age-key: ${{ secrets.UW2_ASSETS_AGE_KEY }}
       - name: Cache libmt32emu
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: uw2/tools/libs
           key: libs-windows-clang64-${{ hashFiles('uw2/tools/setup-libs.sh') }}

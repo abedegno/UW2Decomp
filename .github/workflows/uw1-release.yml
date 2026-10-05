@@ -39,7 +39,7 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: "1"
         run: brew install pkgconf ninja
       - name: Cache the universal SDL3 and libmt32emu
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: uw1/tools/libs
           key: release-libs-macos-universal-${{ hashFiles('exhume/tools/setup-libs.sh') }}
@@ -170,7 +170,7 @@ jobs:
           python-version: "3.12"
       # not port.yml's cache: that SDL3 is built without windows
       - name: Cache SDL3 and libmt32emu
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: uw1/tools/libs
           key: release-libs-linux-ubuntu2204-${{ runner.arch }}-${{ hashFiles('exhume/tools/setup-libs.sh') }}
@@ -271,7 +271,7 @@ jobs:
           install: make curl git unzip
           pacboy: clang:p llvm:p pkgconf:p sdl3:p python:p cmake:p ninja:p
       - name: Cache libmt32emu
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: uw1/tools/libs
           key: release-libs-windows-clang64-${{ hashFiles('exhume/tools/setup-libs.sh') }}
