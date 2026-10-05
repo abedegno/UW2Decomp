@@ -165,7 +165,7 @@ jobs:
             libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev wayland-protocols libdecor-0-dev libegl-dev \
             libgl-dev libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev >/dev/null
       # Exhume's tools need Python 3.11 or later (tomllib); Ubuntu 22.04 has 3.10
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       # not port.yml's cache: that SDL3 is built without windows
