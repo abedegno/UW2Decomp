@@ -155,6 +155,8 @@ name = "UW1"
 title = "Ultima Underworld"
 comment = "Native port of Ultima Underworld: The Stygian Abyss (needs your own copy of the game)"
 bundle_id = "io.github.abedegno.uw1port"
+# this game's release tags in underworld-exhumed (uw1-v1.0.0), for a local package's version
+tag_prefix = "uw1-"
 launcher = "uw1"
 category = "public.app-category.role-playing-games"
 copyright = "Port code MIT licence, abedegno. Ultima Underworld is copyright Electronic Arts; bring your own copy."

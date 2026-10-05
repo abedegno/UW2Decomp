@@ -15,7 +15,7 @@ make setup          # Exhume and its Python tools, then each game's setup
 `--recursive` fetches Exhume, a submodule at `exhume/`. Without it, `make setup` (or `make setup-exhume`) fetches it. The repository holds no game data and no Borland software. You need:
 
 - **Your own copies of the games.** UW1's `UW.EXE` at `~/UWGOG/UW1/UW.EXE` (or set `UW1_EXE`), and UW2's `UW2.EXE` at `~/UWGOG/UW2/UW2.EXE` (or set `UW2_EXE`). The GOG releases work.
-- **For the byte-matching builds:** the Turbo C++ 1.01 disk images (four 720K images, which Borland released free of charge) and the Turbo Assembler 2.0 disk image. `make -C uw2 setup TC_DISKS=DIR TASM_DISKS=DIR` unpacks them into `uw2/TC` and `uw2/TASM` (ignored by git); UW1's builds use the same toolchain from there (`uw1/exhume.toml`, or set `EXHUME_TC` and `EXHUME_TASM`).
+- **For the byte-matching builds:** the Turbo C++ 1.01 disk images (four 720K images, which Borland released free of charge) and the Turbo Assembler 2.0 disk image. `make setup-toolchain TC_DISKS=DIR TASM_DISKS=DIR` unpacks them into `uw2/TC` and `uw2/TASM` (ignored by git) and checks both are the expected builds; both games' builds use them from there (`uw1/exhume.toml`, or set `EXHUME_TC` and `EXHUME_TASM`), so UW1 alone can be set up without UW2. `make -C uw2 setup TC_DISKS=DIR TASM_DISKS=DIR` does the same as part of UW2's setup.
 - **Tools:** Node 20 or later, Python 3.11 or later, mtools and 7z (`brew install mtools p7zip` on macOS, `apt install mtools p7zip-full` on Ubuntu).
 
 ## Exhume

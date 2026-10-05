@@ -12,8 +12,8 @@
 #                      there is a port: HOOK="make test")
 #
 # A native port ([port] and [replay] in exhume.toml, docs/port.md):
-#   make setup-exhume  find Exhume ($EXHUME, ../exhume, .exhume, ~/Exhume), or clone it into .exhume at the
-#                      commit tools/exhume-ref names
+#   make setup-exhume  find Exhume ($EXHUME, ../exhume, .exhume, ~/Exhume), or clone it into .exhume (at
+#                      the commit tools/exhume-ref names, when there is one)
 #   make setup-port    what the port needs to build, per OS, and nothing else: no DOS
 #                      toolchain, DOS or game data (Exhume's tools/setup-port.sh)
 #   make setup-libs    build SDL3 and libmt32emu from source into tools/libs, where no package
@@ -91,8 +91,10 @@ setup-exhume:
 	@if [ -f ../.gitmodules ] && grep -q 'path = exhume' ../.gitmodules; then \
 	  [ -f ../exhume/tools/gate.py ] || git -C .. submodule update --init exhume; echo "Exhume: the submodule ../exhume"; \
 	elif [ -f "$(EXHUME)/tools/gate.py" ]; then echo "Exhume: $(EXHUME)"; \
-	else pin=$$(cut -d' ' -f1 tools/exhume-ref) && echo "Exhume: cloning it into .exhume at $$pin" && \
-	  git clone -q https://github.com/abedegno/Exhume.git .exhume && git -C .exhume checkout -q "$$pin"; fi
+	else git clone -q https://github.com/abedegno/Exhume.git .exhume && \
+	  if [ -f tools/exhume-ref ]; then pin=$$(cut -d' ' -f1 tools/exhume-ref); git -C .exhume checkout -q "$$pin"; \
+	    echo "Exhume: cloned into .exhume at $$pin (tools/exhume-ref)"; \
+	  else echo "Exhume: cloned into .exhume at its default branch (no tools/exhume-ref)"; fi; fi
 
 setup-port: setup-exhume
 	@sh $(EXHUME)/tools/setup-port.sh tools/libs tools/nuked-opl3

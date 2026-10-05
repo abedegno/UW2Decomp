@@ -21,7 +21,7 @@ The Makefile is Exhume's template (`tools/templates/Makefile`); `make help` list
 | --- | --- |
 | `make check` | the gate: every source matches and verifies, symbols.tsv rebuilds, the exact link is your `UW.EXE`, and the modding build with no change is the same |
 | `make game` | the modding build, `build/MODLINK/out/UW.EXE` |
-| `make hooks` | a git pre-push hook that runs `make check` (`make hooks HOOK="make test"` for the port's tests) |
+| `make hooks` | UW1's entry in the repository's git pre-push hook: `git push` runs `make check` in `uw1/` (`make hooks HOOK="make test"` for the port's tests). UW2's entry is separate, so you install only the games you have |
 | `make setup-port` | what the port needs to build on this OS, and nothing else ([Building the port](#building-the-port)); `make setup-libs` and `make setup-sound` do one part each |
 | `make port` | the port, `build/port/uw1port`; `make port-debug` the UBSan build, `build/port-debug/uw1port`; `make port-check` the compile-only measurement |
 | `make port-release`, `make package` | the build the players' packages are made from, and the package for this OS in `build/dist` ([Releases](#releases)) |

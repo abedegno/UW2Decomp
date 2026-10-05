@@ -5,6 +5,8 @@
 - **Source code that rebuilds the original program byte for byte.** It compiles with the original Borland tools to exactly the shipped `UW.EXE` and `UW2.EXE`, with readable names, shared headers and notes on what each file does in the game.
 - **A native port** for macOS, Windows and Linux, built from that same source. It plays the game in a window with its music, speech and effects, and is checked against recorded DOS sessions for every change.
 
+*Arrived from a UW2Decomp or UW1Decomp link?* Those repositories are now [`uw2/`](uw2/README.md) and [`uw1/`](uw1/README.md) here, with their full history; an old link to a shared page (this README, `docs/BUILDING.md`) lands on the page for both games, which links to each game's own.
+
 No game data is included: you need your own copy of each game (the GOG releases). This is a fan research project, not affiliated with or endorsed by the rights holders; see [Licence and legal notice](#licence-and-legal-notice).
 
 ## Play

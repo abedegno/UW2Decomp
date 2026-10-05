@@ -116,7 +116,7 @@ The rest of the top level: `docs/`; `tools/`, the build, matching, linking, port
 - [LAYOUT.md](docs/LAYOUT.md): every address written as a number, and what still depends on the original layout.
 - [MAP.md](docs/MAP.md): the map, the target tables, `symbols.tsv`, `matched.txt` and the source file names.
 - [COVERAGE.md](docs/COVERAGE.md): what the port's tests reach.
-- [map/crosswalk.tsv](map/crosswalk.tsv): every function by the disassembly listing's name and address (the names UnderworldGodot cites), with the matched source's name and the file and line that define it. `python3 tools/crosswalk.py --find NAME_OR_ADDRESS` looks one up, including an address inside a routine, with or without the segment's paragraph. UW1Decomp has the same table for UW1; segment numbers mean different code in the two games.
+- [map/crosswalk.tsv](map/crosswalk.tsv): every function by the disassembly listing's name and address (the names UnderworldGodot cites), with the matched source's name and the file and line that define it. `python3 tools/crosswalk.py --find NAME_OR_ADDRESS` looks one up, including an address inside a routine, with or without the segment's paragraph. [uw1/](../uw1/README.md) has the same table for UW1; segment numbers mean different code in the two games.
 
 ## Credits
 

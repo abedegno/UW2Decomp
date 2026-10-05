@@ -30,7 +30,7 @@ Optional, for the map tools and the assembly drafts (see [MAP.md](MAP.md)):
 - `make check` is the gate, below. `make check-all` is the same with every source recompiled.
 - `make boot` boots the modding build in headless DOS and saves screenshots of the title, the intro and the main menu under `build/boot/`. Look at them.
 - `make test` is the test every change to the port runs before it is pushed: the gate, the port build, the routine fuzzing's quick run and every replay session in the port against its golden ([Testing](#testing)). `make test-full` is the long tier. `make verify`, `make golden`, `make fuzz` and `make coverage` run one part each.
-- `make hooks` installs a git pre-push hook that runs `make test` and stops the push when it fails.
+- `make hooks` adds UW2's entry to the repository's git pre-push hook: `git push` runs `make test` in `uw2/` and stops when it fails. UW1's entry (`make -C uw1 hooks`) is separate, so you install only the games you have (Exhume's `tools/install-hooks.sh`).
 - `make port-check` compiles every C source for the host with clang, compile only, and summarises the errors, warnings and unresolved names ([PORT.md](PORT.md#milestone-1-baseline)). It never touches the DOS build.
 - `make port` compiles every C source for the host, compiles the port's own C (`src/port`, and Exhume's runtime where it is) and links them with SDL3 into `build/port/uw2port` ([the native port](#the-native-port), below). It never touches the DOS build either.
 - `make setup-port` installs only what the port needs to build ([Building the port](#building-the-port)); `make port-release` and `make package` build and package it for players ([Releases](#releases)).
@@ -245,7 +245,7 @@ All of them are in `tools/`, and each describes itself at the top.
 
 | Role | Tools |
 | --- | --- |
-| Make targets and the gate | `uw2.py` (behind the Makefile), `install-hooks.sh`, `repocheck.py` |
+| Make targets and the gate | `uw2.py` (behind the Makefile), `repocheck.py` (the hook installer is Exhume's) |
 | Toolchain setup | `setup-tc.sh`, `setup-tasm.sh`, `setup-port.sh` (only what the port needs, `make setup-port`), `setup-sound.sh` (the port's OPL emulator), `setup-libs.sh` (SDL3 and libmt32emu from source, for Linux, Windows and the macOS release), `requirements.txt` (the Python packages), `ci-assets.sh` (CI only: decrypts the asset bundle) |
 | Building in headless DOS | `tcc.mjs` (compile or assemble), `dosrun.mjs` (batch lines, used by the link), `dosbackend.mjs` (the DOS they run in), `dosbatch.py` (many sources at once, for the gate and `link.py --mod`), `setup-emu2.sh` with `emu2-date.patch`, `rungame.mjs` (boot and screenshot, always js-dos) |
 | Matching one file | `match.py`, `verify.py`, `bssorder.py` (predicts `_BSS` order), `asmgen.py` (first draft of an assembly module), `fmt.py` (FM Towns disassembly) |

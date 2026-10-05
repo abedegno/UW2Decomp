@@ -1,4 +1,4 @@
-Third-party software in UW2Decomp and its release packages
+Third-party software in Underworld Exhumed's UW2 port (uw2/) and its release packages
 
 None of the libraries below is committed to the repository. The release packages (.github/workflows/release.yml, tools/package.py) contain the first group, each as a separate shared library, with its licence text in the package's licenses/ folder. The rest are used to build, test or write the code and are never shipped.
 

@@ -61,8 +61,8 @@ With no source changed it gives the exact link's EXE.
 """
 import sys, os, json, subprocess, shutil, re
 here = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(here)
-# Exhume's tools: tools/exhume.py finds the checkout ($EXHUME, .exhume, a checkout beside this
-# one, ~/Exhume)
+# Exhume's tools: tools/exhume.py finds the checkout ($EXHUME, else the repository's submodule
+# ../exhume, else .exhume, else ~/Exhume)
 sys.path.insert(0, here)
 import exhume
 EXHUME = exhume.EXHUME

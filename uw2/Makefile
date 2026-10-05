@@ -1,4 +1,4 @@
-# UW2Decomp build driver. The work is done in headless DOS by the tools in tools/; this file
+# UW2's build driver (uw2/ of Underworld Exhumed). The work is done in headless DOS by the tools in tools/; this file
 # only names the entry points. tools/uw2.py holds the gate's logic.
 #
 #   make / make game   modding build (tools/link.py --mod), prints the EXE's path
@@ -117,8 +117,10 @@ setup-port:
 	@sh tools/setup-port.sh
 	@sh tools/setup-exhume.sh
 
+# git push runs this game's make test first (Exhume's tools/install-hooks.sh: an entry for uw2/ in the
+# repository's one hook, beside uw1's when that is installed too)
 hooks:
-	@sh tools/install-hooks.sh
+	@sh $(EXHUME)/tools/install-hooks.sh . "make test"
 
 port-check:
 	@$(PY) tools/portcheck.py

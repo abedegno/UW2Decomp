@@ -141,7 +141,13 @@ linux_tools_action = "uw1-linux-tools"
 release_tags = "\"uw1-v*\""
 tag_prefix = "uw1-v"
 dist_dir = "uw1/build/dist"
-release_name = "          name: Ultima Underworld port ${{ github.ref_name }}"
+release_name = "          name: Ultima Underworld port ${{ steps.ver.outputs.v }}"
+release_name_step = '''
+      - id: ver
+        run: echo "v=${GITHUB_REF_NAME#*-v}" >> "$GITHUB_OUTPUT"'''
+port_push_branches = '''
+
+    branches: ['**']'''
 exhume_checkout = ""
 checkout_submodules = "          submodules: true"
 
@@ -219,6 +225,12 @@ linux_tools_action = "uw2-linux-tools"
 release_tags = "\"uw2-v*\""
 tag_prefix = "uw2-v"
 dist_dir = "uw2/build/dist"
-release_name = "          name: Ultima Underworld II port ${{ github.ref_name }}"
+release_name = "          name: Ultima Underworld II port ${{ steps.ver.outputs.v }}"
+release_name_step = '''
+      - id: ver
+        run: echo "v=${GITHUB_REF_NAME#*-v}" >> "$GITHUB_OUTPUT"'''
+port_push_branches = '''
+
+    branches: ['**']'''
 exhume_checkout = ""
 checkout_submodules = "          submodules: true"

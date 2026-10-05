@@ -2,6 +2,8 @@
 # this one runs a target in both, or in one with GAME=uw1 or GAME=uw2.
 #
 #   make setup         Exhume (the submodule) and its Python tools, then each game's setup
+#   make setup-toolchain TC_DISKS=DIR TASM_DISKS=DIR   the Borland toolchain both games' DOS
+#                      builds use, into uw2/TC and uw2/TASM; needs neither game's EXE
 #   make check         each game's gate: every source matches, the exact link is the EXE
 #   make test          the gate, the port, quick fuzzing and every session against DOS
 #   make port          each game's native port
@@ -11,7 +13,7 @@ GAMES := $(if $(GAME),$(GAME),uw1 uw2)
 TARGETS := check test test-full port port-debug port-release package verify vectors \
            setup-port setup-libs setup-sound
 
-.PHONY: $(TARGETS) setup setup-exhume repocheck help
+.PHONY: $(TARGETS) setup setup-exhume setup-toolchain repocheck help
 $(TARGETS):
 	@set -e; for g in $(GAMES); do echo "==== $$g: make $@"; $(MAKE) -C $$g $@; done
 
@@ -24,6 +26,14 @@ setup-exhume:
 	@[ -d exhume/node_modules/dos-mcp ] || npm ci --no-audit --no-fund --prefix exhume
 	@sh exhume/tools/setup-emu2.sh || echo "emu2: not built; the toolchain runs in DOSBox-X if installed, else js-dos"
 	@echo "Exhume: exhume/ at $$(git -C exhume rev-parse --short HEAD)"
+
+# Turbo C++ 1.01 and TASM 2.0 from your disk images, checked by MD5, where both games' builds look
+# (uw2/TC and uw2/TASM; uw1/exhume.toml points there), so that UW1 alone can be set up
+setup-toolchain: setup-exhume
+	@[ -n "$(TC_DISKS)" ] && [ -n "$(TASM_DISKS)" ] || { echo "make setup-toolchain TC_DISKS=DIR TASM_DISKS=DIR (the folders holding the disk images)"; exit 2; }
+	@[ -f uw2/TC/TCC.EXE ] || sh exhume/profiles/borland-tc101/setup-tc.sh "$(TC_DISKS)" uw2/TC
+	@[ -f uw2/TASM/TASM.EXE ] || sh exhume/profiles/borland-tc101/setup-tasm.sh "$(TASM_DISKS)" uw2/TASM
+	@echo "toolchain: uw2/TC and uw2/TASM"
 
 # a game's own setup where it has one (uw2: the Borland toolchain, DOS, Node), else its port's
 setup: setup-exhume

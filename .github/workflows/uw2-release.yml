@@ -313,11 +313,13 @@ jobs:
           path: dist
           merge-multiple: true
       - run: ls -l dist
+      - id: ver
+        run: echo "v=${GITHUB_REF_NAME#*-v}" >> "$GITHUB_OUTPUT"
       # a draft only: nothing is published until the owner publishes it on GitHub
       - uses: softprops/action-gh-release@v2
         with:
           draft: true
-          name: Ultima Underworld II port ${{ github.ref_name }}
+          name: Ultima Underworld II port ${{ steps.ver.outputs.v }}
           prerelease: ${{ contains(github.ref_name, '-rc') }}
           generate_release_notes: true
           fail_on_unmatched_files: true

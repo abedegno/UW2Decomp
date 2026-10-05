@@ -53,7 +53,8 @@ def run(cmd, **kw):
 def version(arg):
     v = arg or os.environ.get('GITHUB_REF_NAME')
     if not v:
-        try: v = run(['git', 'describe', '--tags', '--always', '--dirty'], cwd=root).strip()
+        # this game's own release tags (uw2-v...), not the nearest tag of either game
+        try: v = run(['git', 'describe', '--tags', '--always', '--dirty', '--match', 'uw2-v*'], cwd=root).strip()
         except (OSError, subprocess.CalledProcessError): v = 'dev'
     # a tag that names the game in a repository of several (uw2-v1.2.1) gives the version alone
     v = re.sub(r'^[A-Za-z0-9]+-(?=v\d)', '', v)
