@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 150
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true
@@ -74,7 +74,7 @@ jobs:
       # DOS screenshots and may go too; their golden.json files hold only digests.
       - name: Upload the difference pictures and logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: make-test-full-${{ github.run_id }}
           path: |
@@ -85,6 +85,31 @@ jobs:
             ${{ runner.temp }}/golden-changed/**/*.png
           if-no-files-found: ignore
           retention-days: 14
+      - name: Remove the game data and everything built from it
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/uw2-assets" "$RUNNER_TEMP/uw2-ci-assets" "$RUNNER_TEMP/uw2-assets-deploy-key" uw2/TC uw2/TASM uw2/build
+
+  exhume-master:
+    # make test with Exhume's latest master in place of the pinned submodule: a change in Exhume
+    # that would break this game shows here before the submodule is moved to it
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Exhume's latest master
+        run: git -C exhume fetch -q origin master && git -C exhume checkout -q FETCH_HEAD && git -C exhume log --oneline -1
+      - uses: ./.github/actions/uw2-linux-tools
+      - uses: ./.github/actions/uw2-assets
+        with:
+          deploy-key: ${{ secrets.UW2_ASSETS_DEPLOY_KEY }}
+          age-key: ${{ secrets.UW2_ASSETS_AGE_KEY }}
+      - name: make setup (Turbo C++ and TASM from the bundle's disk images)
+        run: make -C uw2 setup
+      - name: make test against Exhume master
+        run: make -C uw2 test
       - name: Remove the game data and everything built from it
         if: always()
         run: rm -rf "$RUNNER_TEMP/uw2-assets" "$RUNNER_TEMP/uw2-ci-assets" "$RUNNER_TEMP/uw2-assets-deploy-key" uw2/TC uw2/TASM uw2/build

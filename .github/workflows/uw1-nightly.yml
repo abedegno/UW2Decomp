@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 150
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true
@@ -33,6 +33,12 @@ jobs:
           age-key: ${{ secrets.UW1_ASSETS_AGE_KEY }}
       - name: Unpack Turbo C++ and TASM from the bundle's disk images
         run: sh exhume/profiles/borland-tc101/setup-tc.sh "$TC_DISKS" toolchain/TC && sh exhume/profiles/borland-tc101/setup-tasm.sh "$TASM_DISKS" toolchain/TASM && printf 'EXHUME_TC=%s\nEXHUME_TASM=%s\n' "$PWD/toolchain/TC" "$PWD/toolchain/TASM" >> "$GITHUB_ENV"
+      # UW1's sound session replays only in js-dos (exhume.toml [replay] dos_backend), which runs
+      # in dos-mcp's headless Chrome; the Linux tools leave it out, so it is installed here
+      - name: dos-mcp's Chrome, for js-dos
+        run: |
+          sudo apt-get install -y -qq --no-install-recommends libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libpango-1.0-0 libasound2t64 libxfixes3 >/dev/null
+          npx --prefix exhume puppeteer browsers install chrome
       - name: make -C uw1 test-full
         run: |
           set -o pipefail
@@ -75,7 +81,7 @@ jobs:
       # DOS screenshots and may go too; their golden.json files hold only digests.
       - name: Upload the difference pictures and logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: make-test-full-${{ github.run_id }}
           path: |
@@ -86,6 +92,32 @@ jobs:
             ${{ runner.temp }}/golden-changed/**/*.png
           if-no-files-found: ignore
           retention-days: 14
+      - name: Remove the game data and everything built from it
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/uw1-assets" "$RUNNER_TEMP/uw1-ci-assets" "$RUNNER_TEMP/uw1-assets-deploy-key" toolchain uw1/build
+
+  exhume-master:
+    # make test with Exhume's latest master in place of the pinned submodule: a change in Exhume
+    # that would break this game shows here before the submodule is moved to it
+    if: vars.UW1_CI_ASSETS == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Exhume's latest master
+        run: git -C exhume fetch -q origin master && git -C exhume checkout -q FETCH_HEAD && git -C exhume log --oneline -1
+      - uses: ./.github/actions/uw1-linux-tools
+      - uses: ./.github/actions/uw1-assets
+        with:
+          deploy-key: ${{ secrets.UW1_ASSETS_DEPLOY_KEY }}
+          age-key: ${{ secrets.UW1_ASSETS_AGE_KEY }}
+      - name: Unpack Turbo C++ and TASM from the bundle's disk images
+        run: sh exhume/profiles/borland-tc101/setup-tc.sh "$TC_DISKS" toolchain/TC && sh exhume/profiles/borland-tc101/setup-tasm.sh "$TASM_DISKS" toolchain/TASM && printf 'EXHUME_TC=%s\nEXHUME_TASM=%s\n' "$PWD/toolchain/TC" "$PWD/toolchain/TASM" >> "$GITHUB_ENV"
+      - name: make test against Exhume master
+        run: make -C uw1 test
       - name: Remove the game data and everything built from it
         if: always()
         run: rm -rf "$RUNNER_TEMP/uw1-assets" "$RUNNER_TEMP/uw1-ci-assets" "$RUNNER_TEMP/uw1-assets-deploy-key" toolchain uw1/build

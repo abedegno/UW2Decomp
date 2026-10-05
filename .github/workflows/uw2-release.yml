@@ -17,6 +17,10 @@ on:
         description: notarise the macOS app (as a tag build does), when the Apple secrets are set
         type: boolean
         default: false
+  schedule:
+    # weekly, Mondays: the packages built and tested with no draft, so a change in the runners
+    # or a dependency shows between releases
+    - cron: '53 4 * * 1'
 permissions:
   contents: read
 concurrency:
@@ -29,7 +33,7 @@ jobs:
     env:
       NOTARISE: ${{ startsWith(github.ref, 'refs/tags/uw2-v') || inputs.notarise == true }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true
@@ -39,7 +43,7 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: "1"
         run: brew install pkgconf ninja
       - name: Cache the universal SDL3 and libmt32emu
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: uw2/tools/libs
           key: release-libs-macos-universal-${{ hashFiles('uw2/tools/setup-libs.sh') }}
@@ -136,7 +140,7 @@ jobs:
             spctl -a -vvv -t exec "$app"
           fi
           "$app/Contents/MacOS/uw2port" --help
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: macos
           path: uw2/build/dist/UW2-*-macos.zip
@@ -153,7 +157,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true
@@ -170,7 +174,7 @@ jobs:
           python-version: "3.12"
       # not port.yml's cache: that SDL3 is built without windows
       - name: Cache SDL3 and libmt32emu
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: uw2/tools/libs
           key: release-libs-linux-ubuntu2204-${{ runner.arch }}-${{ hashFiles('uw2/tools/setup-libs.sh') }}
@@ -241,7 +245,7 @@ jobs:
             "type2-runtime-$rt.tar.gz: https://github.com/AppImage/type2-runtime at tag $rt, the AppImage's runtime (static, with libfuse 3), and the scripts that build it" \
             "THIRD-PARTY-NOTICES in each package says how they are built and how to replace them." > README.txt
           cd .. && tar czf ../uw2/build/dist/third-party-sources.tar.gz third-party-sources
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux
           path: |
@@ -260,7 +264,7 @@ jobs:
       # the scripts must keep their LF line ends for MSYS2's sh
       - run: git config --global core.autocrlf false
         shell: pwsh
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true
@@ -271,7 +275,7 @@ jobs:
           install: make curl git unzip
           pacboy: clang:p llvm:p pkgconf:p sdl3:p python:p cmake:p ninja:p
       - name: Cache libmt32emu
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: uw2/tools/libs
           key: release-libs-windows-clang64-${{ hashFiles('uw2/tools/setup-libs.sh') }}
@@ -295,33 +299,199 @@ jobs:
           # broken pipe then failed the check although the icon was there
           res=$(llvm-readobj --coff-resources uw2port.exe)
           case "$res" in *'Type: ICON'*) echo "icon: present" ;; *) echo "::error::uw2port.exe has no icon"; exit 1 ;; esac
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: windows
           path: uw2/build/dist/UW2-*-windows-x86_64.zip
           if-no-files-found: error
 
+  test-windows:
+    # the Windows zip on each Windows: unpacked, started with only Windows's folders on the PATH,
+    # every session replayed with it, and the MT-32's audio
+    if: (startsWith(github.ref, 'refs/tags/uw2-v') || github.event_name != 'push') && github.actor != 'dependabot[bot]'
+    needs: [windows]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - run: git config --global core.autocrlf false
+        shell: pwsh
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: true
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANG64
+          update: false
+          install: make git
+          pacboy: python:p
+      - name: age
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'age.zip'
+          Invoke-WebRequest -Uri 'https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-windows-amd64.zip' -OutFile $zip
+          $sum = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          if ($sum -ne 'f48d8f8f9ebe903ab5027ed067652f2cc1db94bc206976430133b905dcd8e8c7') { throw "age: unexpected SHA-256 $sum" }
+          Expand-Archive $zip -DestinationPath (Join-Path $env:RUNNER_TEMP 'age-bin')
+          Join-Path $env:RUNNER_TEMP 'age-bin\age' | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+      - uses: ./.github/actions/uw2-assets
+        with:
+          deploy-key: ${{ secrets.UW2_ASSETS_DEPLOY_KEY }}
+          age-key: ${{ secrets.UW2_ASSETS_AGE_KEY }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: windows
+          path: dist
+      - name: The zip, as a player gets it
+        run: |
+          set -o pipefail
+          exe=$(python exhume/tools/pkgcheck.py "$(ls dist/UW2-*-windows-x86_64.zip)" --exe uw2port --data "$UW2_DIR" --unpack "$RUNNER_TEMP/pkg")
+          EXHUME_PORT="$exe" make -C uw2 PY=python verify
+          python exhume/tools/audiocheck.py --exe "$exe" --data "$UW2_DIR" --rec uw2/tests/replay/soundmt.rec --cfg uw2/tests/replay/soundmt.cfg --roms "$MT32_ROMS" --digests uw2/tests/replay/audio
+      - name: Remove the game data and everything built from it
+        if: always()
+        shell: bash
+        run: rm -rf "$RUNNER_TEMP/pkg" "$RUNNER_TEMP/uw2-assets" "$RUNNER_TEMP/uw2-ci-assets" "$RUNNER_TEMP/uw2-assets-deploy-key" dist uw2/build
+
+  test-macos:
+    # the app on each macOS: unpacked, started, every session replayed with it, the MT-32's audio,
+    # and on a tag Gatekeeper's verdict on the notarised app
+    if: (startsWith(github.ref, 'refs/tags/uw2-v') || github.event_name != 'push') && github.actor != 'dependabot[bot]'
+    needs: [macos]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: age
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+        run: brew install age
+      - uses: ./.github/actions/uw2-assets
+        with:
+          deploy-key: ${{ secrets.UW2_ASSETS_DEPLOY_KEY }}
+          age-key: ${{ secrets.UW2_ASSETS_AGE_KEY }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: macos
+          path: dist
+      - name: The app, as a player gets it
+        run: |
+          set -o pipefail
+          exe=$(python3 exhume/tools/pkgcheck.py "$(ls dist/UW2-*-macos.zip)" --exe uw2port --data "$UW2_DIR" --unpack "$RUNNER_TEMP/pkg")
+          EXHUME_PORT="$exe" make -C uw2 PY=python3 verify
+          python3 exhume/tools/audiocheck.py --exe "$exe" --data "$UW2_DIR" --rec uw2/tests/replay/soundmt.rec --cfg uw2/tests/replay/soundmt.cfg --roms "$MT32_ROMS" --digests uw2/tests/replay/audio
+      - name: Gatekeeper accepts the notarised app
+        if: startsWith(github.ref, 'refs/tags/uw2-v')
+        run: |
+          app=$(find "$RUNNER_TEMP/pkg" -maxdepth 3 -name '*.app' | head -1)
+          spctl -a -vv -t exec "$app" 2>&1 | tee /dev/stderr | grep -q 'source=Notarized Developer ID'
+      - name: Remove the game data and everything built from it
+        if: always()
+        shell: bash
+        run: rm -rf "$RUNNER_TEMP/pkg" "$RUNNER_TEMP/uw2-assets" "$RUNNER_TEMP/uw2-ci-assets" "$RUNNER_TEMP/uw2-assets-deploy-key" dist uw2/build
+
+  test-linux:
+    # the tarball and the AppImage in clean containers, from the oldest glibc promised (Ubuntu 22.04)
+    if: (startsWith(github.ref, 'refs/tags/uw2-v') || github.event_name != 'push') && github.actor != 'dependabot[bot]'
+    needs: [linux]
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["ubuntu:22.04", "ubuntu:24.04", "debian:12", "fedora:41"]
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    timeout-minutes: 60
+    steps:
+      - name: The container's tools (git, ssh, age, make, Python)
+        shell: sh
+        run: |
+          if command -v apt-get >/dev/null; then apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git openssh-client age make python3 ca-certificates >/dev/null
+          else dnf install -y -q git openssh-clients age make python3; fi
+          # Exhume's tools need Python 3.11 (tomllib); Ubuntu 22.04's python3 is 3.10
+          if ! python3 -c 'import tomllib' 2>/dev/null; then
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3.11 >/dev/null && ln -sf "$(command -v python3.11)" /usr/local/bin/python3
+          fi
+          python3 --version
+          git config --global --add safe.directory '*'
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: true
+      - uses: ./.github/actions/uw2-assets
+        with:
+          deploy-key: ${{ secrets.UW2_ASSETS_DEPLOY_KEY }}
+          age-key: ${{ secrets.UW2_ASSETS_AGE_KEY }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: linux
+          path: dist
+      - name: The tarball, as a player gets it
+        shell: bash
+        run: |
+          set -o pipefail
+          exe=$(python3 exhume/tools/pkgcheck.py "$(ls dist/UW2-*-linux-x86_64.tar.gz)" --exe uw2port --data "$UW2_DIR" --unpack "$RUNNER_TEMP/pkg")
+          EXHUME_PORT="$exe" make -C uw2 PY=python3 verify
+          python3 exhume/tools/audiocheck.py --exe "$exe" --data "$UW2_DIR" --rec uw2/tests/replay/soundmt.rec --cfg uw2/tests/replay/soundmt.cfg --roms "$MT32_ROMS" --digests uw2/tests/replay/audio
+      - name: The AppImage, as a player gets it
+        shell: bash
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          set -o pipefail
+          exe=$(python3 exhume/tools/pkgcheck.py "$(ls dist/UW2-*-linux-x86_64.AppImage)" --exe uw2port --data "$UW2_DIR" --unpack "$RUNNER_TEMP/pkg")
+          EXHUME_PORT="$exe" make -C uw2 PY=python3 verify
+          python3 exhume/tools/audiocheck.py --exe "$exe" --data "$UW2_DIR" --rec uw2/tests/replay/soundmt.rec --cfg uw2/tests/replay/soundmt.cfg --roms "$MT32_ROMS" --digests uw2/tests/replay/audio
+      - name: Remove the game data and everything built from it
+        if: always()
+        shell: bash
+        run: rm -rf "$RUNNER_TEMP/pkg" "$RUNNER_TEMP/uw2-assets" "$RUNNER_TEMP/uw2-ci-assets" "$RUNNER_TEMP/uw2-assets-deploy-key" dist uw2/build
   draft:
     if: startsWith(github.ref, 'refs/tags/uw2-v')
-    needs: [macos, linux, windows]
+    needs: [macos, linux, windows, test-windows, test-macos, test-linux]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
       - run: ls -l dist
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: uw2/CHANGELOG.md
+          sparse-checkout-cone-mode: false
+      # the version (uw2-v1.2.1-rc1 gives 1.2.1-rc1) and its notes: the CHANGELOG section of
+      # the version without its -rc part, "(unreleased)" for a candidate
       - id: ver
-        run: echo "v=${GITHUB_REF_NAME#*-v}" >> "$GITHUB_OUTPUT"
+        run: |
+          v=${GITHUB_REF_NAME#*-v}; echo "v=$v" >> "$GITHUB_OUTPUT"
+          base=${v%%-*}
+          awk -v b="## $base " 'index($0, b) == 1 { f = 1; next } /^## / { if (f) exit } f' uw2/CHANGELOG.md > notes.md
+          [ -s notes.md ] || { echo "::error::uw2/CHANGELOG.md has no section for $base"; exit 1; }
+          cat notes.md
       # a draft only: nothing is published until the owner publishes it on GitHub
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           draft: true
           name: Ultima Underworld II port ${{ steps.ver.outputs.v }}
           prerelease: ${{ contains(github.ref_name, '-rc') }}
-          generate_release_notes: true
+          body_path: notes.md
           fail_on_unmatched_files: true
           files: |
             dist/UW2-*-macos.zip

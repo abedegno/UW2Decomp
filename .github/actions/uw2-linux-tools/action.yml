@@ -22,7 +22,7 @@ runs:
         # shellcheck disable=SC2086
         sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $pkgs >/dev/null
         clang --version | head -1
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v7
       with:
         python-version: "3.12"
         cache: pip
@@ -32,7 +32,7 @@ runs:
       run: |
         python -m venv uw2/.venv
         uw2/.venv/bin/pip install -q -r uw2/tools/requirements.txt
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v7
       with:
         node-version: "22"
         cache: npm
@@ -44,17 +44,17 @@ runs:
         PUPPETEER_SKIP_DOWNLOAD: "true"
       run: npm ci --no-audit --no-fund --prefix uw2
     - name: Cache emu2
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: uw2/tools/emu2
         key: emu2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('uw2/tools/setup-emu2.sh', 'uw2/tools/emu2-date.patch') }}
     - name: Cache SDL3 and libmt32emu
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: uw2/tools/libs
         key: libs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('uw2/tools/setup-libs.sh') }}
     - name: Cache Nuked OPL3
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: uw2/tools/nuked-opl3
         key: nuked-opl3-${{ hashFiles('uw2/tools/setup-sound.sh') }}

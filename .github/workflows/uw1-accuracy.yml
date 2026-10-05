@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true
@@ -68,7 +68,7 @@ jobs:
           "$py" exhume/tools/audiocheck.py --exe uw1/build/port/uw1port --data "$UW1_DATA" --rec uw1/tests/replay/soundmt.rec --cfg uw1/tests/replay/soundmt.cfg --roms "$MT32_ROMS" --digests uw1/tests/replay/audio
       - name: Upload the difference pictures and logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: make-test-${{ github.run_id }}
           path: |
@@ -94,7 +94,7 @@ jobs:
       # the recordings and scripts must keep their bytes and LF line ends (also .gitattributes)
       - run: git config --global core.autocrlf false
         shell: pwsh
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true
@@ -120,7 +120,7 @@ jobs:
           deploy-key: ${{ secrets.UW1_ASSETS_DEPLOY_KEY }}
           age-key: ${{ secrets.UW1_ASSETS_AGE_KEY }}
       - name: Cache libmt32emu
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: uw1/tools/libs
           key: libs-windows-clang64-${{ hashFiles('exhume/tools/setup-libs.sh') }}
@@ -141,7 +141,7 @@ jobs:
           "$py" exhume/tools/audiocheck.py --exe uw1/build/port/uw1port --data "$UW1_DATA" --rec uw1/tests/replay/soundmt.rec --cfg uw1/tests/replay/soundmt.cfg --roms "$MT32_ROMS" --digests uw1/tests/replay/audio
       - name: Upload the difference pictures and logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: verify-windows-${{ github.run_id }}
           path: |
@@ -169,7 +169,7 @@ jobs:
       # the recordings and scripts must keep their bytes and LF line ends (also .gitattributes)
       - run: git config --global core.autocrlf false
         shell: pwsh
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true
@@ -195,7 +195,7 @@ jobs:
           deploy-key: ${{ secrets.UW1_ASSETS_DEPLOY_KEY }}
           age-key: ${{ secrets.UW1_ASSETS_AGE_KEY }}
       - name: Cache libmt32emu
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: uw1/tools/libs
           key: libs-windows-clang64-${{ hashFiles('exhume/tools/setup-libs.sh') }}
@@ -210,7 +210,7 @@ jobs:
           (make -C uw1 PY=python port-release && make -C uw1 PY=python package && exe=$(python exhume/tools/pkgcheck.py "$(ls uw1/build/dist/*-windows-x86_64.zip)" --exe uw1port --data "$UW1_DATA" --unpack "$RUNNER_TEMP/pkg") && EXHUME_PORT="$exe" make -C uw1 PY=python verify) 2>&1 | tee "$RUNNER_TEMP/logs/package-windows.log"
       - name: Upload the difference pictures and logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: package-windows-${{ github.run_id }}
           path: |
@@ -229,7 +229,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           submodules: true
@@ -256,7 +256,7 @@ jobs:
           "$py" exhume/tools/audiocheck.py --exe uw1/build/port/uw1port --data "$UW1_DATA" --rec uw1/tests/replay/soundmt.rec --cfg uw1/tests/replay/soundmt.cfg --roms "$MT32_ROMS" --digests uw1/tests/replay/audio
       - name: Upload the difference pictures and logs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: verify-macos-${{ github.run_id }}
           path: |
