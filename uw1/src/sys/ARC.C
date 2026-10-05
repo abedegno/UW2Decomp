@@ -37,7 +37,7 @@ unsigned char far open_arc(struct Arc far *arc, char *name)
 {
     unsigned char ok;
     int tmpfd;
-    unsigned count;
+    uint16 count;                       /* read from the file as 2 bytes: DOS's width */
     char path[0x50];
     register char *p;
     register int fd;

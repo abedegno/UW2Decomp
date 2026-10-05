@@ -252,7 +252,8 @@ char far * far bab_realloc(char far *p, int32 n)
             result = p + 8;
             if (block->size - n > 16) {
                 split = (struct BabBlock far *)(p + n);
-                split->next = current->next;
+                split->next = FARNULLREC(current, "wwf")->next;     /* current is 0 here: DOS
+                                                                      reads the vector table */
                 split->size = block->size - n;
                 free_list = split;
                 return result;

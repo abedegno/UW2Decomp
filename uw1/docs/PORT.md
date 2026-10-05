@@ -118,3 +118,56 @@ What the translations need from UW1's side, all in `tools/asm2c_spec.py` or `src
 - **The player's saved games.** The DOS replays leave the game folder's SAVE1 to SAVE4 out (`[replay] data_skip`); the port's replays did not, so a port replay of `newgame` found saved games and skipped the introduction. Exhume's `replay.py` now gives the port the same view.
 
 Changes to shared sources in this milestone, each proved by `make check`: MAINMENU.C's clock difference, gfx.h's `create_sprite`. Stubs left: four Borland calls (`delay`, `int86`, `sound`, `nosound`) in one file.
+
+## Milestone 4: into the game
+
+Run on 5 October 2026 (Apple clang 21, SDL 3, DOSBox-X and js-dos for the DOS replays, Unicorn 2.1.4 for the driver check). All nine sessions replay in the port identical to DOS at every checkpoint, the saves included (`make verify`), and so do the UBSan build (`make port-debug`) and an AddressSanitizer build, which reports nothing:
+
+| Session | Checkpoints | Also |
+| --- | --- | --- |
+| `newgame` | 41 | |
+| `walk` | 66 | |
+| `sound` | 70 | Sound Blaster FM and digital: every driver read DOS's |
+| `soundfm` | 70 | every driver read DOS's |
+| `soundmt` | 93 | MT-32: every driver read DOS's |
+| `items` | 100 | the saved game identical |
+| `talk` | 627 | |
+| `load` | 17 | the saved game identical |
+| `intro` | 73 | |
+
+The goldens were made again from DOS (twice each, identical), since the replay DOS build had changed since they were made.
+
+### Divergences found and fixed
+
+- **Self-modifying code the translation missed.** Both write into the code segment through a computed address, which asm2c's patch check cannot see: `check_flat` copies the flat or the general body over `mxmul` with `rep movs` (INSTANCE.ASM), and `setup_frame_buf` writes a `ret` into the unrolled frame-buffer copier at `_BEC` plus the frame's width (GRENTRY.ASM). Each is now an override in `tools/asm2c_spec.py` that runs what the code block holds: without them a level view's y came out 81 where DOS has 82, and the 3D view was copied over both side panels.
+- **A 32-bit parameter.** MOTION.C's `rehead(unsigned heading)`: on the host `heading += 0x8000` passed 16 bits and the compare with `Ppd.heading` failed, so a wall slide skipped a `rand()`. Now `uint16`.
+- **A null pointer.** INTERACT.C's `inv_look` calls `checkTrap` before it picks the object, with 0: DOS reads the vector table. `checkTrap` (USEITEMS.C) reads through `FARNULLTRAP`.
+- **The panel turns' EMS handles.** PANELS.C takes three one-page handles of its own (EMS.C's `seg012_141`, `_15E`, `_1B1`, which its comment said nothing calls); `mem/ems.c` has them, on the runtime's extra handles.
+- **The automap's picture pointer.** `MK_FP(conv_ws_seg, 0)` is a paragraph into a heap block; the paragraph map split it by the block, and seg048's row records differed by 10h. The runtime now keeps the far heap's `MK_FP(seg, 0)` results for an exact match.
+- **8.3 names.** PGCACHE.ASM opens the critter pages as `crit\crNNpage.nNN$`; DOS cuts the extension to three characters. The runtime's file layer now does too; the `int 2` at 06E7:7C5D that the talk session stopped at is the open's failure path.
+- **The NMI.** `int 2` (MISCUTIL.C's `dbg_break`, INTERP.ASM's unused opcodes) returns at once: in the DOS replays' vector table int 2 points at 0070:000E, DOS's default handler for ints 1 to 4. int 67h's function 5000h (map a list of pages) is emulated.
+- **A nested entry into seg019.** `do_mouseq` runs MousQUp in the middle of a frame (`_102B`), and MousQUp can come back into a seg019 entry, which saves its own caller's SS:SP over the frame's; the glue now runs the translated `_FDD` and `_1004` around the call, as C3DENTRY.ASM does.
+- **Host layouts in BABL.C.** `load_script` passed a `char arc[12]` to `open_arc` as a `struct Arc`, which is 24 bytes on the host (the stack protector stopped the port); it is a `struct Arc` now. `bab_malloc` returned `current + 1`, 16 bytes on the host, so every block's tag overwrote the end of its string ("Abyss.8"); now `(char far *)current + 8`, as UW2's.
+- **A local read from a file.** ARC.C's `open_arc` reads the block count as two bytes into an `unsigned`, whose upper bytes are junk on the host (under ASan's layout the archive failed to open); now `uint16`.
+- **A literal written through.** SCROLLIO.C's `scroll_wrap` passes `"\n"` to `scroll_print3`, which cuts a final newline off its text: in DOS the literal is `""` from the first time on. `PERSISTENT_STR` (portable.h) gives the host the same.
+
+### Sound
+
+UW1's drivers are AIL's 1991 release ("Copyright (C) 1991 John Miles"), which the runtime now recognises from the driver file. Comparing SBFM.ADV's code with UW2's DM03.ADV routine by routine, and with AIL 2.14's YAMAHA.INC and XMIDI.ASM, showed:
+
+- Origin's TVFX code (ALE.INC) is UW2's instruction for instruction, 0Dh bytes lower (0523h..0ACDh), so `src/port/sound/tvfx.c` is UW2Decomp's, plugged in as `uw1_tvfx` (`src/port/ailgame.h`, `[sound] extensions`).
+- YAMAHA.INC differs in four places: `timbre_status` returns the index + 1; `delete_LRU` keeps the channels' and keys' timbre indexes; `assign_voice` takes the first free voice from 0; `update_priority` returns when no more slots are active than there are voices, and has no test for 0. XMIDI.ASM in four: the beat fraction starts at 0 and `CLEAR_BEAT_BAR` sets it to 0; a time signature sets only the time fraction; `branch_index` leaves the FOR loops; `shutdown_driver` has no `init_OK` test and no `shutdown_synth`. The runtime has each, marked "1991".
+
+`tools/ailcheck.py` runs the user's own drivers in Unicorn against the port's: SBFM.ADV 21,820 register writes in `soundfm` and 21,836 in `sound`, MT32MPU.ADV 24,688 MIDI bytes in `soundmt`, all identical. In `sound`, js-dos's Sound Blaster ended the introduction's speech buffer 6.4 ms before its nominal end, past the runtime's 5 ms window; `ailgame.h` widens it to 8 ms (`AIL_SB_WIN_EARLY`). DOS replaying its own recordings differs from them in 5,711 reads (`sound`), 4 (`soundfm`) and 2 (`soundmt`); the port in none.
+
+### The last stubs
+
+Borland's `delay`, `int86`, `sound` and `nosound` are the runtime's now (`int86`: int 21h through `intdos`, ints 1 to 4 return; `sound`: a PC speaker square wave in the mixer), so the port links with no stubs. No session reaches them.
+
+### Host hazards
+
+- **Literals written through.** clang's `-Wwrite-strings` over the game's C lists 384 places a literal reaches a `char *`; read one by one (grouped by callee), one is written through, SCROLLIO.C's (above). The three UW2 found are UW1's too and were marked before.
+- **Reads past the end.** The AddressSanitizer build (with `-fsanitize-recover=address`) replays all nine sessions identically and reports nothing. Its other data layout found the two bugs above (ARC.C's count, and the paragraph map's windows, which were reused in turn: the third new window could take the first's slot while a pointer split through it was still in use, and a far copy then copied a string onto itself; windows are now reused least recently used first). GRCORE.ASM's string entries copy one byte past the string's 0, which on the host read past a literal; `gfx/grcore.c` gives them a padded copy (the byte is junk in DOS too, and not compared). `-fsanitize=array-bounds` reports only GRIDDB.C's `PlayersMap[0] + i`, an index into the whole 64 by 64 map, within the array (UW2 has the same).
+- **Null pointers.** clang's static analyzer over the game's C: of its five null dereferences and four uninitialised arguments, one is real, `bab_realloc`'s split with an empty free list (an original bug, now `FARNULLREC`); the rest are paths the code cannot take. UW2's null sites were checked in UW1's sources: TRIGGER.C's `who` and `TriggeringButton` and COMBINE.C's `OpenBag` (UW2's BAGS.C case) are marked as UW2's are.
+
+Changes to shared sources, each proved by `make check`: MOTION.C, USEITEMS.C, BABL.C, ARC.C, SCROLLIO.C, TRIGGER.C, COMBINE.C, EMS.C (a comment).

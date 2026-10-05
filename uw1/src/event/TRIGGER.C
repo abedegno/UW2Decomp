@@ -120,17 +120,17 @@ int far UseTrigger(struct Object far *who, struct Object far *start,
             return UseTrigger(who, start, trig, type);
         }
         if (Triggers[sub] != type) return 2;
-        if (OBJ_ITEM(who) == ITEM_ADVENTURER) {
+        if (OBJ_ITEM(FARNULLTRAP(who)) == ITEM_ADVENTURER) {
             if (!(trig->id & ID_FLAG11)) return 2;
             if (type == 5 && (trig->pos & POS_Z) > 0 &&
                 skill_check(player->skills[SKILL_SEARCH], trig->pos & POS_Z) <= 0)
                 return 2;
         } else {
-            if (OBJ_MAJOR(who) == MAJOR_CREATURE) {
+            if (OBJ_MAJOR(FARNULLTRAP(who)) == MAJOR_CREATURE) {
                 if (!(trig->id & ID_ENCHANT) ||
                     OBJ_MAJOR(trig) == MAJOR_RECT) return 2;
             }
-            if (OBJ_MAJOR(who) != MAJOR_CREATURE && (trig->id & ID_ENCHANT) &&
+            if (OBJ_MAJOR(FARNULLTRAP(who)) != MAJOR_CREATURE && (trig->id & ID_ENCHANT) &&
                 OBJ_MAJOR(trig) != MAJOR_RECT && !(trig->id & ID_FLAG11))
                 return 2;
         }
@@ -506,7 +506,7 @@ int far do_trap_hack(struct Object far *trap, register int x, register int y)
         break;
     case 3:
     case 4:
-        eight_pos_switch(OBJ_FLAGS(TriggeringButton), trap, x, y);
+        eight_pos_switch(OBJ_FLAGS(FARNULLTRAP(TriggeringButton)), trap, x, y);
         break;
     case 5:
         player_did_bad(trap->ol.f.owner);

@@ -137,7 +137,9 @@ char far make_stew(void)
         ok &= found[i] != 0;
     if (!ok)
         goto wrong;
-    if (Obj_MemTPtr(bowl) == OpenBag->obj.f.index)
+    /* OpenBag is 0 while no bag is open: DOS compares with the vector table's word at 0008h
+       (UW2's BAGS.C and INVDATA.C do the same) */
+    if (Obj_MemTPtr(bowl) == FARNULLREC(OpenBag, "ffww")->obj.f.index)
         CloseTheBag();
     Obj_FreeChain(&bowl->ol.link);
     SET_ITEM(bowl, ITEM_ROTWORM_STEW);

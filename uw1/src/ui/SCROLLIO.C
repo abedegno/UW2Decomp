@@ -388,7 +388,9 @@ void far scroll_wrap(char *text, int flag)
             *si = 0;
         } while (si > text && scroll->cur_x + string_width(text) >= scroll->bottom);
         if (si <= text) {
-            scroll_print3("\n", 1);
+            /* scroll_print3 cuts the newline off: in DOS this literal is "" from the
+               first time on (the byte before it is "[MORE]"'s 0) */
+            scroll_print3(PERSISTENT_STR("\n"), 1);
             scroll_print3(text, flag);
             return;
         }
