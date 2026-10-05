@@ -44,7 +44,16 @@ PY := $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 # else .exhume, else ~/Exhume)
 EXHUME ?= $(firstword $(wildcard ../exhume/tools/gate.py .exhume/tools/gate.py))
 ifeq ($(EXHUME),)
+# a repository that holds Exhume as a submodule uses it, never another checkout: an empty one is
+# an error (but not for the setup targets, which fill it)
+ifneq ($(shell grep -s 'path = exhume' ../.gitmodules),)
+ifeq ($(filter setup%,$(MAKECMDGOALS)),)
+$(error Exhume: the submodule ../exhume is empty: run git submodule update --init (or make setup-exhume))
+endif
+EXHUME := ../exhume
+else
 EXHUME := $(HOME)/Exhume
+endif
 else
 EXHUME := $(patsubst %/tools/gate.py,%,$(EXHUME))
 endif

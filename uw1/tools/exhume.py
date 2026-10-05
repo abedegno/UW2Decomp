@@ -17,8 +17,15 @@ def _find():
     """$EXHUME; else the repository's submodule, ../exhume; else .exhume here; else ~/Exhume."""
     e = os.environ.get('EXHUME')
     if e: return os.path.abspath(os.path.expanduser(e))
-    for d in (os.path.join(os.path.dirname(root), 'exhume'), os.path.join(root, '.exhume')):
-        if os.path.isfile(os.path.join(d, 'tools', 'gate.py')): return d
+    sub = os.path.join(os.path.dirname(root), 'exhume')
+    if os.path.isfile(os.path.join(sub, 'tools', 'gate.py')): return sub
+    try: declared = 'path = exhume' in open(os.path.join(os.path.dirname(root), '.gitmodules')).read()
+    except OSError: declared = False
+    # a repository that holds Exhume as a submodule uses it, never another checkout
+    if declared: raise SystemExit('Exhume: the submodule ../exhume is empty: run git submodule update --init '
+                                  '(or make setup-exhume at the top), or set EXHUME')
+    local = os.path.join(root, '.exhume')
+    if os.path.isfile(os.path.join(local, 'tools', 'gate.py')): return local
     return os.path.join(os.path.expanduser('~'), 'Exhume')
 
 

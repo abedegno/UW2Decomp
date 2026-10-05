@@ -318,7 +318,7 @@ jobs:
         with:
           draft: true
           name: Ultima Underworld port ${{ github.ref_name }}
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, '-rc') }}
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |

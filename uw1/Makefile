@@ -42,7 +42,16 @@
 # several), else .exhume, else ~/Exhume
 EXHUME ?= $(firstword $(wildcard ../exhume/tools/gate.py .exhume/tools/gate.py))
 ifeq ($(EXHUME),)
+# a repository that holds Exhume as a submodule uses it, never another checkout: an empty one is
+# an error (but not for the setup targets, which fill it)
+ifneq ($(shell grep -s 'path = exhume' ../.gitmodules),)
+ifeq ($(filter setup%,$(MAKECMDGOALS)),)
+$(error Exhume: the submodule ../exhume is empty: run git submodule update --init (or make setup-exhume))
+endif
+EXHUME := ../exhume
+else
 EXHUME := $(HOME)/Exhume
+endif
 else
 EXHUME := $(patsubst %/tools/gate.py,%,$(EXHUME))
 endif
@@ -80,7 +89,7 @@ hooks:
 
 setup-exhume:
 	@if [ -f ../.gitmodules ] && grep -q 'path = exhume' ../.gitmodules; then \
-	  git -C .. submodule update --init exhume && echo "Exhume: the submodule ../exhume"; \
+	  [ -f ../exhume/tools/gate.py ] || git -C .. submodule update --init exhume; echo "Exhume: the submodule ../exhume"; \
 	elif [ -f "$(EXHUME)/tools/gate.py" ]; then echo "Exhume: $(EXHUME)"; \
 	else pin=$$(cut -d' ' -f1 tools/exhume-ref) && echo "Exhume: cloning it into .exhume at $$pin" && \
 	  git clone -q https://github.com/abedegno/Exhume.git .exhume && git -C .exhume checkout -q "$$pin"; fi

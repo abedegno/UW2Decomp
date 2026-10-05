@@ -1,5 +1,5 @@
 Ultima Underworld II, native port @VERSION@
-https://github.com/abedegno/UW2Decomp
+https://github.com/abedegno/underworld-exhumed
 
 This is a native port of Ultima Underworld II: Labyrinth of Worlds (Looking Glass Technologies and Origin Systems, 1993), built from a byte-identical decompilation of the DOS game. It contains no game data. You need your own copy of the game: the GOG release ("Ultima Underworld II" or "Ultima Underworld 1+2") is the one it checks for.
 

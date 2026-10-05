@@ -1,5 +1,5 @@
 Ultima Underworld, native port @VERSION@
-https://github.com/abedegno/UW1Decomp
+https://github.com/abedegno/underworld-exhumed
 
 This is a native port of Ultima Underworld: The Stygian Abyss (Blue Sky Productions and Origin Systems, 1992), built from a byte-identical decompilation of the DOS game. It contains no game data. You need your own copy of the game: the GOG release ("Ultima Underworld 1+2", or "Ultima Underworld: The Stygian Abyss") is the one it checks for.
 

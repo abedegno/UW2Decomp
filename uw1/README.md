@@ -31,7 +31,7 @@ Options (`uw1port --help` lists them all):
 The port needs no Borland toolchain, DOS emulator or game data to build.
 
 ```sh
-make setup-port     # Exhume (cloned into .exhume when you have none), and SDL3, libmt32emu and Nuked OPL3 for this OS
+make setup-port     # SDL3, libmt32emu and Nuked OPL3 for this OS (Exhume is the submodule: clone with --recursive)
 make port           # build/port/uw1port
 build/port/uw1port  # or: build/port/uw1port --data /path/to/UW1
 ```
@@ -89,9 +89,9 @@ python3 tools/link.py                                      # build/LINK/out/UW.E
 python3 tools/link.py --mod                                # the modding build
 ```
 
-The tools find Exhume through `tools/exhume.py`: `$EXHUME`, else `.exhume` in this repository, else a checkout named `Exhume` next to this one, else `~/Exhume` (the Makefile: `$EXHUME`, else `.exhume`, else `~/Exhume`; `make setup-exhume` clones it into `.exhume` at the pinned commit when there is none). The DOS build depends on Exhume's runtime as well as its tools: the shared headers include its `runtime/include/portable.h`, which the build stages beside `src/include`, so the gate proves the runtime's macros cost no byte. `tools/exhume-ref` names the Exhume commit this tree was proved with; `tools/link.py` (so `make check` and `make game`) warns when your checkout does not contain it, and `python3 tools/exhume.py` checks it on its own. [docs/BUILDING.md](docs/BUILDING.md) has more, and how to record and replay sessions.
+The tools find Exhume through `tools/exhume.py`, as every tool in the repository does: `$EXHUME`, else the repository's submodule `../exhume` (an empty one is an error: `git submodule update --init`), else `.exhume`, else `~/Exhume` ([docs/BUILDING.md](../docs/BUILDING.md#exhume)). The DOS build depends on Exhume's runtime as well as its tools: the shared headers include its `runtime/include/portable.h`, which the build stages beside `src/include`, so the gate proves the runtime's macros cost no byte. The submodule's commit is the one both games were proved with.
 
-`python3 tools/repocheck.py` runs the checks CI runs on every push: no game data or Borland binary is committed, and the Markdown links resolve.
+`make repocheck` at the top of the repository runs the checks CI runs on every push: no game data or Borland binary is committed, and the Markdown links resolve.
 
 ## Licence and legal notice
 

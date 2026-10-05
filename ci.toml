@@ -60,9 +60,12 @@ release_linux_python = '''
           python-version: "3.12"'''
 test_full_summary = "==== test full:"
 setup_name = "Unpack Turbo C++ and TASM from the bundle's disk images"
-job_if = "vars.UW1_CI_ASSETS == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)"
-nightly_if = "    if: vars.UW1_CI_ASSETS == 'true'"
 repocheck_env = ""
+repocheck = "make repocheck"
+repocheck_exhume_checkout = '''
+        with:
+          submodules: true'''
+wf_prefix = ""
 
 [[games]]
 test = "make -C uw1 test"
@@ -120,13 +123,15 @@ tmp_assets = "uw1-assets"
 tmp_clone = "uw1-ci-assets"
 tmp_key = "uw1-assets-deploy-key"
 tmp_hosts = "uw1-known-hosts"
-job_if = "vars.UW1_CI_ASSETS == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)"
+job_if = "(vars.UW1_CI_ASSETS == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)) && github.actor != 'dependabot[bot]'"
 nightly_if = "    if: vars.UW1_CI_ASSETS == 'true'"
 on_paths = '''
 
     paths:
       - 'uw1/**'
       - 'exhume'
+      - '.gitmodules'
+      - '.gitattributes'
       - 'docs/**'
       - '.github/**'
       - 'ci.toml'
@@ -149,7 +154,7 @@ setup_sound = "make -C uw2 setup-sound"
 port = "make -C uw2 port"
 verify = "make -C uw2 verify"
 verify_windows = "make -C uw2 PY=python verify"
-setup_libs_windows = "UW2_LIBS=mt32emu make setup-libs"
+setup_libs_windows = "UW2_LIBS=mt32emu make -C uw2 setup-libs"
 port_check = "make -C uw2 port-check"
 port_windows = "make -C uw2 PY=python port"
 port_check_windows = "make -C uw2 PY=python port-check"
@@ -196,13 +201,15 @@ tmp_assets = "uw2-assets"
 tmp_clone = "uw2-ci-assets"
 tmp_key = "uw2-assets-deploy-key"
 tmp_hosts = "uw2-known-hosts"
-job_if = "github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository"
+job_if = "(github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]'"
 nightly_if = ""
 on_paths = '''
 
     paths:
       - 'uw2/**'
       - 'exhume'
+      - '.gitmodules'
+      - '.gitattributes'
       - 'docs/**'
       - '.github/**'
       - 'ci.toml'

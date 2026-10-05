@@ -3,7 +3,7 @@
 // .ASM files go to TASM with the options given (for example "/ml"), .C files to TCC -c.
 // The DOS is the one tools/dosbackend.mjs picks (UW2_DOS: emu2, dosbox-x, staging, jsdos).
 import { runStage } from "./dosbackend.mjs";
-import { cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, readdirSync, statSync, existsSync } from "node:fs";
+import { cpSync, mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";
 import { join, basename } from "node:path";
 const [outDir, opts, ...files] = process.argv.slice(2);
@@ -25,6 +25,15 @@ function wellFormed(b) {
   return false;
 }
 const here = new URL(".", import.meta.url).pathname;
+// Exhume, found as tools/exhume.py finds it: $EXHUME, else the repository's submodule
+// ../exhume (an empty one is an error), else .exhume here, else ~/Exhume
+const sub = join(here, "..", "..", "exhume");
+const declared = existsSync(join(here, "..", "..", ".gitmodules")) && readFileSync(join(here, "..", "..", ".gitmodules"), "utf8").includes("path = exhume");
+if (!process.env.EXHUME && declared && !existsSync(join(sub, "tools", "gate.py"))) {
+  console.error("Exhume: the submodule ../exhume is empty: run git submodule update --init (or make setup-exhume at the top), or set EXHUME");
+  process.exit(1);
+}
+const exhume = process.env.EXHUME || [sub, join(here, "..", ".exhume")].find((d) => existsSync(join(d, "tools", "gate.py"))) || join(homedir(), "Exhume");
 const stage = mkdtempSync(join(tmpdir(), "tcc-"));
 cpSync(process.env.UW2DECOMP_TC || join(here, "..", "TC"), stage, { recursive: true });
 // TASM 2.0, when present, sits beside TCC: .ASM files are assembled with it, and TCC needs it
@@ -33,10 +42,8 @@ const tasmDir = process.env.UW2DECOMP_TASM || join(here, "..", "TASM");
 try { cpSync(join(tasmDir, "TASM.EXE"), join(stage, "TASM.EXE")); } catch { }
 // the shared headers in src/include sit beside the sources, where TCC finds #include "name.h"
 // (the current directory, and -IC:\); a name TC itself has would replace TC's header. So does
-// portable.h, from Exhume's runtime/include, found as tools/exhume.py finds it: $EXHUME, else
-// .exhume in this repository, else ~/Exhume
+// portable.h, from Exhume's runtime/include
 const incDir = process.env.UW2DECOMP_INCLUDE || join(here, "..", "src", "include");
-const exhume = process.env.EXHUME || [join(here, "..", "..", "exhume"), join(here, "..", ".exhume")].find((d) => existsSync(join(d, "tools", "gate.py"))) || join(homedir(), "Exhume");
 const rtInc = join(exhume, "runtime", "include");
 for (const [dir, label] of [[incDir, "src/include"], [rtInc, "Exhume's runtime/include"]]) {
   let incs = [];

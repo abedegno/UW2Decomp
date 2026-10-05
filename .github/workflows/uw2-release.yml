@@ -277,7 +277,7 @@ jobs:
           key: release-libs-windows-clang64-${{ hashFiles('uw2/tools/setup-libs.sh') }}
       - name: Build libmt32emu (MSYS2 has no package of it), fetch Nuked OPL3
         run: |
-          UW2_LIBS=mt32emu make setup-libs
+          UW2_LIBS=mt32emu make -C uw2 setup-libs
           make -C uw2 setup-sound
       - name: Build
         run: make -C uw2 PY=python port-release
@@ -318,7 +318,7 @@ jobs:
         with:
           draft: true
           name: Ultima Underworld II port ${{ github.ref_name }}
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, '-rc') }}
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |

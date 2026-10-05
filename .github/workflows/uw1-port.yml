@@ -8,6 +8,8 @@ on:
     paths:
       - 'uw1/**'
       - 'exhume'
+      - '.gitmodules'
+      - '.gitattributes'
       - 'docs/**'
       - '.github/**'
       - 'ci.toml'
@@ -16,6 +18,8 @@ on:
     paths:
       - 'uw1/**'
       - 'exhume'
+      - '.gitmodules'
+      - '.gitattributes'
       - 'docs/**'
       - '.github/**'
       - 'ci.toml'

@@ -44,7 +44,7 @@ Every change to a shared source has to pass the gate. So a change made for the p
 | `src/port/mem/` | the far data loaded from the user's EXE and its check (`fardata.c`), EMS.C's entry points on the runtime's EMS memory (`ems.c`), and what DOS reads through a null pointer (`nulls.c`) | no |
 | `src/port/platform/sdl3/icon.h` | the window's icon (`PLAT_ICON`), written by `tools/dist/icon/make-icons.py` | no |
 | `src/port/stubs/` | the link stubs, one file per source of the names (written by `tools/portstubs.py`); a replacement deletes its stubs | no |
-| `tools/exhume.py`, `tools/exhume-ref` | where the Exhume checkout is, and the Exhume commit this tree was proved with | no |
+| `tools/exhume.py` | where the Exhume checkout is (the repository's submodule `exhume/`, whose commit is the one this tree is proved with) | no |
 | Exhume's `runtime/` | the runtime: `include/portable.h`, `replay/replay.c`, and `port/` (compat.h and the stand-in headers, port.h, the platform layer and its SDL3 backend, the paragraph map and far heap, the EMS memory, the VGA, Borland's library, the black box, the crash handler, finding the game and the settings file, the PIT, the sound library and its drivers, the x86 machine, the stubs' body) | `portable.h` (staged), `replay.c` (only the replay build) |
 | `tools/portcheck.py` | the compile measurement (`make port-check`) | no |
 | `tools/portbuild.py` | the port build and link (`make port`) | no |
@@ -72,7 +72,7 @@ Port files use lower-case `.c` names, and each one starts with a comment naming 
 
 ## The runtime
 
-The port's generic half is Exhume's `runtime/`, compiled where it is: nothing of it is copied into this repository. `tools/exhume.py` finds the checkout: `$EXHUME`, else `.exhume` in this repository (where CI checks it out), else `~/Exhume`; `tools/tcc.mjs` finds it the same way. `tools/exhume-ref` names the Exhume commit this tree was last proved with; `make port` warns when the checkout does not contain it, and CI checks out exactly that commit. [BUILDING.md](BUILDING.md#exhume) has the set-up.
+The port's generic half is Exhume's `runtime/`, compiled where it is: nothing of it is copied into this repository. `tools/exhume.py` finds the checkout: `$EXHUME`, else the repository's submodule `../exhume` (an empty one is an error: `git submodule update --init`), else `.exhume`, else `~/Exhume`; `tools/tcc.mjs` finds it the same way. The submodule's commit is the one this tree was last proved with, and CI checks out exactly that commit. [BUILDING.md](BUILDING.md#exhume) has the set-up.
 
 The builds take the runtime in place:
 
@@ -81,7 +81,7 @@ The builds take the runtime in place:
 - **The port** (`tools/portbuild.py`) compiles the game's C with the runtime's `compat.h` force-included and its stand-in headers, and the port's own C from both trees: `src/port` and the runtime's `port/`, sorted together, the runtime's objects named `rt_...` in `build/port/port/`. The include path puts `src/port` first, so the runtime's headers find UW2's bindings (`portgame.h`, `asmgame.h`, `ailgame.h`), then the runtime's `port/`, `port/platform`, `port/include`, `port/sound` and `port/stubs`, so UW2's C names the runtime's headers as `"port.h"`, `"plat.h"`, `"x86/asmrt.h"` and `"sound/audio.h"`, and the generated stubs `"stub.h"`. The translated modules, their machine and the graphics C are `-O2`, in either tree.
 - `tools/portcheck.py`, `portstubs.py`, `layoutcheck.py`, `intaudit.py`, `fuzzasm.py` and `coverage.py` see the same trees; `make coverage` counts the runtime's files under `runtime/`.
 
-What stays here is UW2's own: the bindings above; the far data loader and its check of `UW2.EXE` (`mem/fardata.c`); EMS.C's entry points (`mem/ems.c`, on the runtime's `emm.c`); seg021's start-up, keyboard and mouse driver (`sys/sysentry.c`, `keyqueue.c`, `mousedrv.c`); the divide trap's chain into the game (`sys/int0trap.c`); the port's main and its options (`sys/main.c`); the C written for the graphics library and the renderer, the 3D frame pacing (`3d/render.c`) and the translated modules; the glue and the divide fault handlers (`x86/`); the FM drivers' TVFX (`sound/tvfx.c`); and what DOS reads through UW2's null pointers (`mem/nulls.c`). Each holds UW2's facts or is translated from UW2's code, which Exhume never holds. A fix to the runtime is made in Exhume, proved there on UW2 (`examples/uw2/prove-port.sh`), and taken here by moving `tools/exhume-ref`.
+What stays here is UW2's own: the bindings above; the far data loader and its check of `UW2.EXE` (`mem/fardata.c`); EMS.C's entry points (`mem/ems.c`, on the runtime's `emm.c`); seg021's start-up, keyboard and mouse driver (`sys/sysentry.c`, `keyqueue.c`, `mousedrv.c`); the divide trap's chain into the game (`sys/int0trap.c`); the port's main and its options (`sys/main.c`); the C written for the graphics library and the renderer, the 3D frame pacing (`3d/render.c`) and the translated modules; the glue and the divide fault handlers (`x86/`); the FM drivers' TVFX (`sound/tvfx.c`); and what DOS reads through UW2's null pointers (`mem/nulls.c`). Each holds UW2's facts or is translated from UW2's code, which Exhume never holds. A fix to the runtime is made in Exhume, proved there on UW2 (`examples/uw2/prove-port.sh`), and taken here by moving the `exhume` submodule to it.
 
 ## The portability layer
 

@@ -13,6 +13,8 @@ on:
     paths:
       - 'uw2/**'
       - 'exhume'
+      - '.gitmodules'
+      - '.gitattributes'
       - 'docs/**'
       - '.github/**'
       - 'ci.toml'
@@ -22,6 +24,8 @@ on:
     paths:
       - 'uw2/**'
       - 'exhume'
+      - '.gitmodules'
+      - '.gitattributes'
       - 'docs/**'
       - '.github/**'
       - 'ci.toml'
@@ -34,7 +38,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   make-test:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
@@ -75,7 +79,7 @@ jobs:
   # The port only: no DOS and no Borland toolchain (replay.py verify needs neither; without
   # Turbo C++ it does not check the goldens against the replay DOS build).
   verify-windows:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]'
     runs-on: windows-latest
     timeout-minutes: 45
     defaults:
@@ -117,7 +121,7 @@ jobs:
           key: libs-windows-clang64-${{ hashFiles('uw2/tools/setup-libs.sh') }}
       - name: Build libmt32emu (when not cached), fetch Nuked OPL3
         run: |
-          UW2_LIBS=mt32emu make setup-libs
+          UW2_LIBS=mt32emu make -C uw2 setup-libs
           make -C uw2 setup-sound
       - run: make -C uw2 PY=python port
       - name: The sessions against the goldens
@@ -142,7 +146,7 @@ jobs:
         run: rm -rf "$RUNNER_TEMP/uw2-assets" "$RUNNER_TEMP/uw2-ci-assets" "$RUNNER_TEMP/uw2-assets-deploy-key" uw2/build
 
   package-windows:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]'
     # Windows Server 2022, the hosted Windows nearest Windows 10: the players' zip, unpacked and
     # started with only Windows's folders on the PATH (a DLL missing from the zip stops it), then
     # the sessions replayed by that program against the goldens (Exhume's tools/pkgcheck.py)
@@ -187,7 +191,7 @@ jobs:
           key: libs-windows-clang64-${{ hashFiles('uw2/tools/setup-libs.sh') }}
       - name: Build libmt32emu (when not cached), fetch Nuked OPL3
         run: |
-          UW2_LIBS=mt32emu make setup-libs
+          UW2_LIBS=mt32emu make -C uw2 setup-libs
           make -C uw2 setup-sound
       - name: The players' package, unpacked, started and replayed
         run: |
@@ -211,7 +215,7 @@ jobs:
         run: rm -rf "$RUNNER_TEMP/pkg" "$RUNNER_TEMP/uw2-assets" "$RUNNER_TEMP/uw2-ci-assets" "$RUNNER_TEMP/uw2-assets-deploy-key" uw2/build
 
   verify-macos:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]'
     runs-on: macos-15
     timeout-minutes: 45
     steps:

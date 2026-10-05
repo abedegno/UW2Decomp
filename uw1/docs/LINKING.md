@@ -4,7 +4,7 @@ There are two links. The exact link (`tools/link.py`) rebuilds `UW.EXE` from the
 
 ## Running it
 
-You need your own `UW.EXE`, Exhume checked out beside this repository (or `EXHUME` set to it) with its Python environment, and the toolchain `exhume.toml` names (UW2Decomp's `TC` and `TASM` directories). From the repository root:
+You need your own `UW.EXE`, Exhume (the repository's submodule `exhume/`, or `EXHUME` set to a checkout) with its Python environment (`make setup-exhume` at the top), and the toolchain `exhume.toml` names (`uw2/TC` and `uw2/TASM`, which `make -C uw2 setup` unpacks). From the repository root:
 
 ```sh
 PY=~/Exhume/.venv/bin/python3
