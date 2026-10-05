@@ -2,7 +2,7 @@
 
 This page describes how spells work in Ultima Underworld I and II: casting from runes and the checks it makes, mana, how long active spells last, and what each class of spell does. The spell list is UW2's. It is written for someone who wants to reproduce or mod the rules and will not read the C. Every number comes from the matched sources of UW2Decomp and [UW1Decomp](https://github.com/abedegno/UW1Decomp).
 
-Each rule is marked **both**, **UW1** or **UW2**. [UW1-UW2-DIFFERENCES.md](../UW1-UW2-DIFFERENCES.md#magic) lists the differences in more detail, and this page does not repeat all of them. UW1's own spell list (`spells[]` in UW1's [SPELLS.C:838](https://github.com/abedegno/UW1Decomp/blob/main/src/combat/SPELLS.C#L838)) is not tabulated here. Nothing here was checked in a running game.
+Each rule is marked **both**, **UW1** or **UW2**. [UW1-UW2-DIFFERENCES.md](../UW1-UW2-DIFFERENCES.md#magic) lists the differences in more detail, and this page does not repeat all of them. UW1's own spell list (`spells[]` in UW1's [SPELLS.C:838](../../uw1/src/combat/SPELLS.C#L838)) is not tabulated here. Nothing here was checked in a running game.
 
 Damage from spells goes through the resistance check described in [combat.md](combat.md#resistances). Spells cast by critters are chosen by the AI ([npc-ai.md](npc-ai.md#spells-and-missiles)).
 
@@ -34,7 +34,7 @@ Damage from spells goes through the resistance check described in [combat.md](co
 8. **Payment.** The cost is `3 * circle` mana. It is paid now, except for missile spells and spells aimed at one target (UW2) or missile spells only (UW1). Those keep the cost until they are released, and the player pays only if the spell found something to act on.
 9. **Cast.** If the spell does not take (e.g., an anti-magic square, or a fourth active spell), the game prints "Casting was not successful." A spell paid in step 8 is not refunded.
 
-Source: `try_cast`, `player_cast`, `fail_spell` ([RUNES.C:167](../../src/combat/RUNES.C#L167), [RUNES.C:219](../../src/combat/RUNES.C#L219), [RUNES.C:202](../../src/combat/RUNES.C#L202)); UW1 [RUNES.C:236](https://github.com/abedegno/UW1Decomp/blob/main/src/combat/RUNES.C#L236).
+Source: `try_cast`, `player_cast`, `fail_spell` ([RUNES.C:167](../../uw2/src/combat/RUNES.C#L167), [RUNES.C:219](../../uw2/src/combat/RUNES.C#L219), [RUNES.C:202](../../uw2/src/combat/RUNES.C#L202)); UW1 [RUNES.C:236](../../uw1/src/combat/RUNES.C#L236).
 
 ## Where magic fails
 
@@ -42,7 +42,7 @@ Source: `try_cast`, `player_cast`, `fail_spell` ([RUNES.C:167](../../src/combat/
 - **UW1.** On level 9, the Ethereal Void, no spell cast by the player or a critter works.
 - **UW2.** In the Ethereal Void (world 8), Map Area, Locate and Roaming Sight have no effect, and Tremor drops the floor's things instead of boulders.
 
-Source: `do_spell`, `anti_magic_p` ([SPELLS.C:83](../../src/combat/SPELLS.C#L83), [SPELLS.C:54](../../src/combat/SPELLS.C#L54)); UW1 [SPELLS.C:95](https://github.com/abedegno/UW1Decomp/blob/main/src/combat/SPELLS.C#L95).
+Source: `do_spell`, `anti_magic_p` ([SPELLS.C:83](../../uw2/src/combat/SPELLS.C#L83), [SPELLS.C:54](../../uw2/src/combat/SPELLS.C#L54)); UW1 [SPELLS.C:95](../../uw1/src/combat/SPELLS.C#L95).
 
 ## Mana
 
@@ -59,7 +59,7 @@ Mana never goes above the maximum.
 
 **UW2** also calls the mana routine with strength 0 after every level change and every recalculation of the player's figures. Strength 0 adds nothing, so the call only caps mana at the maximum and redraws the panel.
 
-Source: `restore_mana` ([SPELLS.C:155](../../src/combat/SPELLS.C#L155)), `duration_check` ([PLAYTIME.C:71](../../src/game/PLAYTIME.C#L71)); UW1 [SPELLS.C:168](https://github.com/abedegno/UW1Decomp/blob/main/src/combat/SPELLS.C#L168).
+Source: `restore_mana` ([SPELLS.C:155](../../uw2/src/combat/SPELLS.C#L155)), `duration_check` ([PLAYTIME.C:71](../../uw2/src/game/PLAYTIME.C#L71)); UW1 [SPELLS.C:168](../../uw1/src/combat/SPELLS.C#L168).
 
 ## Active spells and their durations
 
@@ -97,7 +97,7 @@ Source: `restore_mana` ([SPELLS.C:155](../../src/combat/SPELLS.C#L155)), `durati
 | 11, 14 | 1 hit point every update |
 | 11, 15 | 1 mana every update |
 
-Source: `set_curmagic`, `dispel_spell` ([PLAYTIME.C:246](../../src/game/PLAYTIME.C#L246), [PLAYTIME.C:47](../../src/game/PLAYTIME.C#L47)), `player_affected_by`, `parse_spells` ([PLAYDATA.C:197](../../src/game/PLAYDATA.C#L197), [PLAYDATA.C:294](../../src/game/PLAYDATA.C#L294)), the spell icons ([RUNES.C:135](../../src/combat/RUNES.C#L135)).
+Source: `set_curmagic`, `dispel_spell` ([PLAYTIME.C:246](../../uw2/src/game/PLAYTIME.C#L246), [PLAYTIME.C:47](../../uw2/src/game/PLAYTIME.C#L47)), `player_affected_by`, `parse_spells` ([PLAYDATA.C:197](../../uw2/src/game/PLAYDATA.C#L197), [PLAYDATA.C:294](../../uw2/src/game/PLAYDATA.C#L294)), the spell icons ([RUNES.C:135](../../uw2/src/combat/RUNES.C#L135)).
 
 ## The spell classes
 
@@ -117,7 +117,7 @@ Source: `set_curmagic`, `dispel_spell` ([PLAYTIME.C:246](../../src/game/PLAYTIME
 | 13 | special spells (below) |
 | 14 | a cutscene |
 
-Source: `do_spell`, `healing`, `backfire`, `release_missile` ([SPELLS.C:83](../../src/combat/SPELLS.C#L83), [SPELLS.C:207](../../src/combat/SPELLS.C#L207), [SPELLS.C:222](../../src/combat/SPELLS.C#L222), [SPELLS.C:246](../../src/combat/SPELLS.C#L246)).
+Source: `do_spell`, `healing`, `backfire`, `release_missile` ([SPELLS.C:83](../../uw2/src/combat/SPELLS.C#L83), [SPELLS.C:207](../../uw2/src/combat/SPELLS.C#L207), [SPELLS.C:222](../../uw2/src/combat/SPELLS.C#L222), [SPELLS.C:246](../../uw2/src/combat/SPELLS.C#L246)).
 
 ## Area spells
 
@@ -142,7 +142,7 @@ Source: `do_spell`, `healing`, `backfire`, `release_missile` ([SPELLS.C:83](../.
 
 **UW1.** Every area spell acts `rollem(3, 4)` times on squares within 2 of the square 4 ahead. UW1's Flame Wind also hits the four squares beside each target. See [UW1-UW2-DIFFERENCES.md](../UW1-UW2-DIFFERENCES.md#area-spells-class-6).
 
-Source: `nail_area`, `area_spells`, `process_area`, `gronk_area`, the handlers, `damage_square` ([SPELLS.C:746](../../src/combat/SPELLS.C#L746), [SPELLS.C:729](../../src/combat/SPELLS.C#L729), [SPELLS.C:602](../../src/combat/SPELLS.C#L602), [SPELLS.C:674](../../src/combat/SPELLS.C#L674), [SPELLS.C:277](../../src/combat/SPELLS.C#L277) to [SPELLS.C:581](../../src/combat/SPELLS.C#L581), [SPELLS.C:1061](../../src/combat/SPELLS.C#L1061)).
+Source: `nail_area`, `area_spells`, `process_area`, `gronk_area`, the handlers, `damage_square` ([SPELLS.C:746](../../uw2/src/combat/SPELLS.C#L746), [SPELLS.C:729](../../uw2/src/combat/SPELLS.C#L729), [SPELLS.C:602](../../uw2/src/combat/SPELLS.C#L602), [SPELLS.C:674](../../uw2/src/combat/SPELLS.C#L674), [SPELLS.C:277](../../uw2/src/combat/SPELLS.C#L277) to [SPELLS.C:581](../../uw2/src/combat/SPELLS.C#L581), [SPELLS.C:1061](../../uw2/src/combat/SPELLS.C#L1061)).
 
 ## Spells on a target
 
@@ -163,7 +163,7 @@ Only creatures are affected by Poison, Fear, Charm and Confusion. **UW1** has fi
 
 The held critter's count is in AI steps, and a held critter thinks at rate 7, about twice a second ([npc-ai.md](npc-ai.md#when-a-critter-thinks)).
 
-Source: `target_spells`, `area1_spells`, `sp_bleed`, `sp_fear`, `sp_ward_undead`, `sp_charm`, `sp_poison`, `sp_hold`, `sp_smite`, `hit_critter_goal` ([SPELLS.C:758](../../src/combat/SPELLS.C#L758), [SPELLS.C:739](../../src/combat/SPELLS.C#L739), [SPELLS.C:473](../../src/combat/SPELLS.C#L473), [SPELLS.C:533](../../src/combat/SPELLS.C#L533), [SPELLS.C:331](../../src/combat/SPELLS.C#L331), [SPELLS.C:379](../../src/combat/SPELLS.C#L379), [SPELLS.C:351](../../src/combat/SPELLS.C#L351), [SPELLS.C:581](../../src/combat/SPELLS.C#L581), [SPELLS.C:490](../../src/combat/SPELLS.C#L490), [SPELLS.C:364](../../src/combat/SPELLS.C#L364)), `sp_study_monster` ([SPELLS2.C:121](../../src/combat/SPELLS2.C#L121)).
+Source: `target_spells`, `area1_spells`, `sp_bleed`, `sp_fear`, `sp_ward_undead`, `sp_charm`, `sp_poison`, `sp_hold`, `sp_smite`, `hit_critter_goal` ([SPELLS.C:758](../../uw2/src/combat/SPELLS.C#L758), [SPELLS.C:739](../../uw2/src/combat/SPELLS.C#L739), [SPELLS.C:473](../../uw2/src/combat/SPELLS.C#L473), [SPELLS.C:533](../../uw2/src/combat/SPELLS.C#L533), [SPELLS.C:331](../../uw2/src/combat/SPELLS.C#L331), [SPELLS.C:379](../../uw2/src/combat/SPELLS.C#L379), [SPELLS.C:351](../../uw2/src/combat/SPELLS.C#L351), [SPELLS.C:581](../../uw2/src/combat/SPELLS.C#L581), [SPELLS.C:490](../../uw2/src/combat/SPELLS.C#L490), [SPELLS.C:364](../../uw2/src/combat/SPELLS.C#L364)), `sp_study_monster` ([SPELLS2.C:121](../../uw2/src/combat/SPELLS2.C#L121)).
 
 ## Spells on an object
 
@@ -186,7 +186,7 @@ Source: `target_spells`, `area1_spells`, `sp_bleed`, `sp_fear`, `sp_ward_undead`
 - A weapon with a class 12 enchantment goes up a tier while the tier is at most `(level - 8) / 4 + Casting / 11`, and is destroyed past that. An armour piece likewise while the tier is at most `level + Casting / 11 - 10`.
 - An unenchanted weapon or armour with nothing inside gets the lowest tier of one of its two kinds at random.
 
-Source: `obj_spells` ([SPELLS.C:806](../../src/combat/SPELLS.C#L806)), `sp_enchant`, `charge_object` ([SPELLS2.C:310](../../src/combat/SPELLS2.C#L310), [SPELLS2.C:262](../../src/combat/SPELLS2.C#L262)).
+Source: `obj_spells` ([SPELLS.C:806](../../uw2/src/combat/SPELLS.C#L806)), `sp_enchant`, `charge_object` ([SPELLS2.C:310](../../uw2/src/combat/SPELLS2.C#L310), [SPELLS2.C:262](../../uw2/src/combat/SPELLS2.C#L262)).
 
 ## Other spells
 
@@ -232,7 +232,7 @@ Summoned creatures are temporary, so they vanish when time passes for the level 
 | 8, 9 | the acid and snowball missiles |
 | 12 to 15 | mana of strength 3, 7, 11 and 15 |
 
-Source: `creat_spell`, `xt_spells`, `special_spells` ([SPELLS2.C:471](../../src/combat/SPELLS2.C#L471), [SPELLS2.C:695](../../src/combat/SPELLS2.C#L695), [SPELLS.C:944](../../src/combat/SPELLS.C#L944)).
+Source: `creat_spell`, `xt_spells`, `special_spells` ([SPELLS2.C:471](../../uw2/src/combat/SPELLS2.C#L471), [SPELLS2.C:695](../../uw2/src/combat/SPELLS2.C#L695), [SPELLS.C:944](../../uw2/src/combat/SPELLS.C#L944)).
 
 ## The UW2 spell list
 
@@ -312,11 +312,11 @@ Source: `creat_spell`, `xt_spells`, `special_spells` ([SPELLS2.C:471](../../src/
 
 **UW2, Iron Flesh and the djinn.** Casting Iron Flesh while the djinn quest stands at stage 4 (X clock 3) glazes the baked mud on the player and moves the quest to stage 5 ("The baked mud hardens into a clear glaze."). Casting Levitate or Fly gives a little upward bounce.
 
-Source: `spells[]` ([SPELLS.C:1033](../../src/combat/SPELLS.C#L1033)), `do_spell` ([SPELLS.C:83](../../src/combat/SPELLS.C#L83)).
+Source: `spells[]` ([SPELLS.C:1033](../../uw2/src/combat/SPELLS.C#L1033)), `do_spell` ([SPELLS.C:83](../../uw2/src/combat/SPELLS.C#L83)).
 
 ## Open questions
 
-- Two rows of the list do not match their names. Mass Paralyze (64) has class 6 minor 5, which is the Repel Undead handler with critters as the target mode. Local Teleport (66) has class 11 minor 0xD, which is Dispel Hunger. Either the name order is off there or these object spells do what their class says. [FINDINGS.md](../FINDINGS.md) lists the first.
+- Two rows of the list do not match their names. Mass Paralyze (64) has class 6 minor 5, which is the Repel Undead handler with critters as the target mode. Local Teleport (66) has class 11 minor 0xD, which is Dispel Hunger. Either the name order is off there or these object spells do what their class says. [FINDINGS.md](../../uw2/docs/FINDINGS.md) lists the first.
 - `cast` reads a byte that is a spell index only below 0x40, so how objects cast entries 64 to 68 was not traced.
 - Each spell row has three low bits in its class byte (e.g., 0x29 for Magic Arrow) whose use was not found.
 - Race 0x17 as the liche is inferred from the owner race strings.

@@ -30,7 +30,7 @@ Each rule is marked **both**, **UW1** or **UW2**. [UW1-UW2-DIFFERENCES.md](../UW
 | every 24th in UW1, 30th in UW2 (8 or 10 minutes) | hunger; sobering up; wandering monsters (chance 1 in 4); the critters' checkup; fatigue and the food counter count up; a hit point roll |
 | every 60th, UW2 (20 minutes) | the time of day moves on and the day's schedule runs ([schedules.md](schedules.md#game-time)) |
 
-Source: `duration_check` and its caller ([PLAYTIME.C:71](../../src/game/PLAYTIME.C#L71), [INTERACT.C:118](../../src/ui/INTERACT.C#L118)); UW1 [PLAYTIME.C:128](https://github.com/abedegno/UW1Decomp/blob/main/src/game/PLAYTIME.C#L128).
+Source: `duration_check` and its caller ([PLAYTIME.C:71](../../uw2/src/game/PLAYTIME.C#L71), [INTERACT.C:118](../../uw2/src/ui/INTERACT.C#L118)); UW1 [PLAYTIME.C:128](../../uw1/src/game/PLAYTIME.C#L128).
 
 ## Hunger and eating
 
@@ -43,13 +43,13 @@ Source: `duration_check` and its caller ([PLAYTIME.C:71](../../src/game/PLAYTIME
 - **The compass** reports hunger as one of nine words, by `hunger / 30`.
 - **Starving.** Hunger 0 has an effect only at sleep: the player takes 2 damage instead of healing.
 
-Source: `player_eat` ([SKILLS.C:578](../../src/game/SKILLS.C#L578)), eating ([USEITEMS.C:263](../../src/obj/USEITEMS.C#L263)), the compass ([GAMESCR.C:64](../../src/ui/GAMESCR.C#L64)); UW1 [SKILLS.C:640](https://github.com/abedegno/UW1Decomp/blob/main/src/game/SKILLS.C#L640).
+Source: `player_eat` ([SKILLS.C:578](../../uw2/src/game/SKILLS.C#L578)), eating ([USEITEMS.C:263](../../uw2/src/obj/USEITEMS.C#L263)), the compass ([GAMESCR.C:64](../../uw2/src/ui/GAMESCR.C#L64)); UW1 [SKILLS.C:640](../../uw1/src/game/SKILLS.C#L640).
 
 ## Fatigue
 
 **Both.** Fatigue counts the time since the player last slept: it goes up by 1 every 24 or 30 updates, to at most 255, and sleep sets it to 0. A new game starts it at 0x40 (UW1) or 0x30 (UW2). Fatigue does nothing while awake. At sleep it sets how much the night heals ([Sleep](#sleep)). The compass reports it as one of six words, by `fatigue / 23` (at most 5). Restoration (UW2) sets it to 0.
 
-Source: [PLAYTIME.C:147](../../src/game/PLAYTIME.C#L147), [GAMESCR.C:64](../../src/ui/GAMESCR.C#L64).
+Source: [PLAYTIME.C:147](../../uw2/src/game/PLAYTIME.C#L147), [GAMESCR.C:64](../../uw2/src/ui/GAMESCR.C#L64).
 
 ## Healing and mana while awake
 
@@ -66,7 +66,7 @@ The maxima, worked out again at every level and whenever the figures change:
 - Mana: `(Mana + 1) * intelligence / 8`. **UW1.** On Tybal's level the new value is put aside rather than set, while the orb stands.
 - Carrying capacity: **UW1** `strength * 20`, **UW2** `strength * 13 + 300`, in tenths of a stone.
 
-Source: [PLAYTIME.C:127](../../src/game/PLAYTIME.C#L127), [PLAYTIME.C:137](../../src/game/PLAYTIME.C#L137), `restore_hp`, `restore_mana` ([SPELLS.C:176](../../src/combat/SPELLS.C#L176), [SPELLS.C:155](../../src/combat/SPELLS.C#L155)), `player_compute` ([SKILLS.C:74](../../src/game/SKILLS.C#L74)); UW1 [SKILLS.C:112](https://github.com/abedegno/UW1Decomp/blob/main/src/game/SKILLS.C#L112).
+Source: [PLAYTIME.C:127](../../uw2/src/game/PLAYTIME.C#L127), [PLAYTIME.C:137](../../uw2/src/game/PLAYTIME.C#L137), `restore_hp`, `restore_mana` ([SPELLS.C:176](../../uw2/src/combat/SPELLS.C#L176), [SPELLS.C:155](../../uw2/src/combat/SPELLS.C#L155)), `player_compute` ([SKILLS.C:74](../../uw2/src/game/SKILLS.C#L74)); UW1 [SKILLS.C:112](../../uw1/src/game/SKILLS.C#L112).
 
 ## Poison
 
@@ -74,7 +74,7 @@ Source: [PLAYTIME.C:127](../../src/game/PLAYTIME.C#L127), [PLAYTIME.C:137](../..
 
 A critter's poisonous blow raises the poison to the critter's value ([combat.md](combat.md#a-critters-blow)).
 
-Source: [PLAYTIME.C:127](../../src/game/PLAYTIME.C#L127), sleep [SKILLS.C:475](../../src/game/SKILLS.C#L475).
+Source: [PLAYTIME.C:127](../../uw2/src/game/PLAYTIME.C#L127), sleep [SKILLS.C:475](../../uw2/src/game/SKILLS.C#L475).
 
 ## Drink
 
@@ -91,7 +91,7 @@ Drunkenness falls by 1 every 30 updates, by 16 on an interrupted sleep and by 32
 
 **Passing out** where the player stands: while swimming or on lava (motion state bits 0 and 1, inferred) the player dies. While in the air without Slow Fall, Levitate or Fly, the fall does `12 + 10 * (rand() % 6)` damage of type poison. In the Pits of Carnage, passing out kills.
 
-Source: [USEITEMS.C:297](../../src/obj/USEITEMS.C#L297), `drop_drunk_player` ([SKILLS.C:387](../../src/game/SKILLS.C#L387)).
+Source: [USEITEMS.C:297](../../uw2/src/obj/USEITEMS.C#L297), `drop_drunk_player` ([SKILLS.C:387](../../uw2/src/game/SKILLS.C#L387)).
 
 ## Drowning (UW2)
 
@@ -101,7 +101,7 @@ Source: [USEITEMS.C:297](../../src/obj/USEITEMS.C#L297), `drop_drunk_player` ([S
 2. If `skill_check(Swimming, load)` fails or is a near miss (result below 1), the counter rises by `rollem(3 - result, 4)`, while below 0x8C.
 3. Above 0x78 the player also takes `rollem(2, hurt + 2)` damage, where hurt is 2 minus a second Swimming check against the load, and the screen flashes. A great success on that check (hurt 0) avoids the damage.
 
-Source: `sink_sink_sink` ([PLAYTIME.C:219](../../src/game/PLAYTIME.C#L219)).
+Source: `sink_sink_sink` ([PLAYTIME.C:219](../../uw2/src/game/PLAYTIME.C#L219)).
 
 ## Lights
 
@@ -114,7 +114,7 @@ Source: `sink_sink_sink` ([PLAYTIME.C:219](../../src/game/PLAYTIME.C#L219)).
 
 **Burning.** Each update, every lit light in the four light slots with burn rate r (from its light data) loses 1 quality when the update counter is a multiple of r. Sleep burns 180 steps an hour at once, `hours * 180 / r + 1` quality. A light goes out at quality 0 in UW1 and at quality 1 in UW2, turning into its unlit item, and can't then be lit again. **UW2.** Lights do not burn while time is stopped.
 
-Source: `DegradeLights` ([PLAYTIME.C:174](../../src/game/PLAYTIME.C#L174)), `FixPlayerEquips` and `load_dl` ([PLAYDATA.C:401](../../src/game/PLAYDATA.C#L401), [PLAYDATA.C:428](../../src/game/PLAYDATA.C#L428)); UW1 [PLAYTIME.C:179](https://github.com/abedegno/UW1Decomp/blob/main/src/game/PLAYTIME.C#L179).
+Source: `DegradeLights` ([PLAYTIME.C:174](../../uw2/src/game/PLAYTIME.C#L174)), `FixPlayerEquips` and `load_dl` ([PLAYDATA.C:401](../../uw2/src/game/PLAYDATA.C#L401), [PLAYDATA.C:428](../../uw2/src/game/PLAYDATA.C#L428)); UW1 [PLAYTIME.C:179](../../uw1/src/game/PLAYTIME.C#L179).
 
 ## Sleep
 
@@ -143,7 +143,7 @@ Source: `DegradeLights` ([PLAYTIME.C:174](../../src/game/PLAYTIME.C#L174)), `Fix
    - the player may dream ([Dreams](#dreams)), and then reads "You feel rested." (comfort 1) or "Your sleep is uneasy." (comfort 0).
 8. **UW2.** A player who reached 0 hit points in the night is kept alive through the dream, and then dies.
 
-Source: `player_sleep` ([SKILLS.C:421](../../src/game/SKILLS.C#L421)); UW1 [SKILLS.C:525](https://github.com/abedegno/UW1Decomp/blob/main/src/game/SKILLS.C#L525).
+Source: `player_sleep` ([SKILLS.C:421](../../uw2/src/game/SKILLS.C#L421)); UW1 [SKILLS.C:525](../../uw1/src/game/SKILLS.C#L525).
 
 ## Dreams
 
@@ -156,7 +156,7 @@ Source: `player_sleep` ([SKILLS.C:421](../../src/game/SKILLS.C#L421)); UW1 [SKIL
 
 **UW1.** Garamon's dreams: dream 0 until it is seen, then dream 1 once the player is off level 1, then dreams 2 and 3 while their bits are set (by other code). With none due, chance 1 in `4 + 4 * comfort` of one of dreams 4 to 9 not yet seen. No dreams once Garamon is buried.
 
-Source: `dream` ([SKILLS.C:334](../../src/game/SKILLS.C#L334)), the counter ([PLAYTIME.C:123](../../src/game/PLAYTIME.C#L123)); UW1 [SKILLS.C:476](https://github.com/abedegno/UW1Decomp/blob/main/src/game/SKILLS.C#L476).
+Source: `dream` ([SKILLS.C:334](../../uw2/src/game/SKILLS.C#L334)), the counter ([PLAYTIME.C:123](../../uw2/src/game/PLAYTIME.C#L123)); UW1 [SKILLS.C:476](../../uw1/src/game/SKILLS.C#L476).
 
 ## Experience and levels
 
@@ -180,10 +180,10 @@ Source: `dream` ([SKILLS.C:334](../../src/game/SKILLS.C#L334)), the counter ([PL
 
 **Spending skill points** is described with the conversation built-in `x_skills` ([conversations.md](conversations.md#built-ins-quests-variables-skills-and-time)).
 
-Source: `player_get_exp`, `level_table` ([SKILLCHK.C:63](../../src/game/SKILLCHK.C#L63), [SKILLCHK.C:29](../../src/game/SKILLCHK.C#L29)), `advance` ([SKILLS.C:89](../../src/game/SKILLS.C#L89)); UW1 [SKILLCHK.C:70](https://github.com/abedegno/UW1Decomp/blob/main/src/game/SKILLCHK.C#L70).
+Source: `player_get_exp`, `level_table` ([SKILLCHK.C:63](../../uw2/src/game/SKILLCHK.C#L63), [SKILLCHK.C:29](../../uw2/src/game/SKILLCHK.C#L29)), `advance` ([SKILLS.C:89](../../uw2/src/game/SKILLS.C#L89)); UW1 [SKILLCHK.C:70](../../uw1/src/game/SKILLCHK.C#L70).
 
 ## Death
 
 **Both.** When the player's hit points reach 0, the outcome depends on the game and the place. [UW1-UW2-DIFFERENCES.md](../UW1-UW2-DIFFERENCES.md#death) has the rules: in UW1 the silver tree and the talismans, in UW2 jail, the Void, the pits and the blackrock gem. Death costs an eighth of the experience in UW1 and a ninth in UW2 where the game goes on.
 
-Source: `player_is_dead` ([SKILLS.C:802](../../src/game/SKILLS.C#L802)).
+Source: `player_is_dead` ([SKILLS.C:802](../../uw2/src/game/SKILLS.C#L802)).

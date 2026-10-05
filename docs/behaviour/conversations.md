@@ -33,7 +33,7 @@ Each rule is marked **both**, **UW1** or **UW2**. [UW1-UW2-DIFFERENCES.md](../UW
 6. Otherwise a critter refuses ("You get no response.") when its conversation number is 0xFF, or when it is hostile or is attacking, fleeing or cornered with the player as its target, unless it is an ally.
 7. The conversation is the critter's conversation number in `CNV.ARK`, or 0x100 plus its creature type for conversation 0 (a generic critter). If that conversation does not exist: "You get no response."
 
-Source: `TalkTo` ([CONVERSE.C:95](../../src/conv/CONVERSE.C#L95)); UW1 [CONVERSE.C:117](https://github.com/abedegno/UW1Decomp/blob/main/src/conv/CONVERSE.C#L117).
+Source: `TalkTo` ([CONVERSE.C:95](../../uw2/src/conv/CONVERSE.C#L95)); UW1 [CONVERSE.C:117](../../uw1/src/conv/CONVERSE.C#L117).
 
 ## A conversation from start to end
 
@@ -48,7 +48,7 @@ Source: `TalkTo` ([CONVERSE.C:95](../../src/conv/CONVERSE.C#L95)); UW1 [CONVERSE
 7. The last line stays on screen for a moment if the player spoke last, and not at all if the NPC spoke last or the script left the NPC hostile.
 8. When the screen closes: anything left in the trade slots goes back to its owner (the player's things to the player, the NPC's to the NPC, at their feet if need be). **UW2** then brings the schedules up to date ([schedules.md](schedules.md#how-a-schedule-runs)), runs 8 animation steps, carries out any teleport the script asked for, and plays a cutscene the script left pending.
 
-Source: `strt_converse`, `Converse`, `free_converse` ([CONVERSE.C:166](../../src/conv/CONVERSE.C#L166), [CONVERSE.C:256](../../src/conv/CONVERSE.C#L256), [CONVERSE.C:228](../../src/conv/CONVERSE.C#L228)), `load_script`, `bab_get_globals` ([BABL.C:367](../../src/conv/BABL.C#L367), [BABL.C:312](../../src/conv/BABL.C#L312)).
+Source: `strt_converse`, `Converse`, `free_converse` ([CONVERSE.C:166](../../uw2/src/conv/CONVERSE.C#L166), [CONVERSE.C:256](../../uw2/src/conv/CONVERSE.C#L256), [CONVERSE.C:228](../../uw2/src/conv/CONVERSE.C#L228)), `load_script`, `bab_get_globals` ([BABL.C:367](../../uw2/src/conv/BABL.C#L367), [BABL.C:312](../../uw2/src/conv/BABL.C#L312)).
 
 ## The script machine
 
@@ -85,7 +85,7 @@ Source: `strt_converse`, `Converse`, `free_converse` ([CONVERSE.C:166](../../src
 
 **Calling a built-in.** The script pushes the arguments' addresses and then their count, and executes CALLI with the built-in's number from its import table. The built-in's result replaces the count on the stack and goes into the result register. An import the game does not bind returns 0.
 
-Source: `babl_run` and the opcode routines ([BABL.C:756](../../src/conv/BABL.C#L756) to [BABL.C:1142](../../src/conv/BABL.C#L1142)).
+Source: `babl_run` and the opcode routines ([BABL.C:756](../../uw2/src/conv/BABL.C#L756) to [BABL.C:1142](../../uw2/src/conv/BABL.C#L1142)).
 
 ## Text and variable substitution
 
@@ -101,7 +101,7 @@ Before conversation text is shown, `@`-variables in it are replaced. Each is `@`
 - The index is another `@`-variable without the `@`, and only an integer one works.
 - `@@` is a literal `@`.
 
-Source: `convert_string`, `AtIndex` ([BABL.C:574](../../src/conv/BABL.C#L574), [BABL.C:646](../../src/conv/BABL.C#L646)).
+Source: `convert_string`, `AtIndex` ([BABL.C:574](../../uw2/src/conv/BABL.C#L574), [BABL.C:646](../../uw2/src/conv/BABL.C#L646)).
 
 ## Variables in and out
 
@@ -138,9 +138,9 @@ Source: `convert_string`, `AtIndex` ([BABL.C:574](../../src/conv/BABL.C#L574), [
 | `play_drawn` | weapon drawn | |
 | `play_name` | string id of the player's name | |
 
-A conversation "minute" is 0x3BC4 = 15,300 clock units, a little less than a minute of game time (15,360 units), so `game_mins` and `game_days` run about 0.4% fast against the game's hour (inferred from the two constants). UW1 hands over and takes back the same variables by name (see UW1's [CONVVARS.C](https://github.com/abedegno/UW1Decomp/blob/main/src/conv/CONVVARS.C)). How each value is worked out was compared only for the attitude, which is the same.
+A conversation "minute" is 0x3BC4 = 15,300 clock units, a little less than a minute of game time (15,360 units), so `game_mins` and `game_days` run about 0.4% fast against the game's hour (inferred from the two constants). UW1 hands over and takes back the same variables by name (see UW1's [CONVVARS.C](../../uw1/src/conv/CONVVARS.C)). How each value is worked out was compared only for the attitude, which is the same.
 
-Source: `setup_converse_data`, `update_converse_data` ([CONVVARS.C:40](../../src/conv/CONVVARS.C#L40), [CONVVARS.C:126](../../src/conv/CONVVARS.C#L126)).
+Source: `setup_converse_data`, `update_converse_data` ([CONVVARS.C:40](../../uw2/src/conv/CONVVARS.C#L40), [CONVVARS.C:126](../../uw2/src/conv/CONVVARS.C#L126)).
 
 ## Built-ins: talking and menus
 
@@ -158,7 +158,7 @@ Source: `setup_converse_data`, `update_converse_data` ([CONVVARS.C:40](../../src
 | `sex` | arg2, arg1 | | arg2 for a male player, arg1 for a female one |
 | `switch_pic` (UW2) | arg1 n | shows another portrait and name for the NPC: conversation n below 0x100, else generic head `n - 0x100` (up to 0x140) | 1 if a portrait loaded |
 
-Source: [CONVERSE.C:365](../../src/conv/CONVERSE.C#L365) to [CONVERSE.C:576](../../src/conv/CONVERSE.C#L576), `switch_pic` ([CONVERSE.C:821](../../src/conv/CONVERSE.C#L821)), `sex` ([BABLHACK.C:549](../../src/conv/BABLHACK.C#L549)).
+Source: [CONVERSE.C:365](../../uw2/src/conv/CONVERSE.C#L365) to [CONVERSE.C:576](../../uw2/src/conv/CONVERSE.C#L576), `switch_pic` ([CONVERSE.C:821](../../uw2/src/conv/CONVERSE.C#L821)), `sex` ([BABLHACK.C:549](../../uw2/src/conv/BABLHACK.C#L549)).
 
 ## Built-ins: strings and numbers
 
@@ -176,14 +176,14 @@ Source: [CONVERSE.C:365](../../src/conv/CONVERSE.C#L365) to [CONVERSE.C:576](../
 | `val` | arg1 string | its value as a decimal number |
 | `plural` | arg3 count, arg2 singular, arg1 plural | arg2's string id if count is 1 or less, else arg1's |
 
-Source: [BABL.C:415](../../src/conv/BABL.C#L415) to [BABL.C:549](../../src/conv/BABL.C#L549).
+Source: [BABL.C:415](../../uw2/src/conv/BABL.C#L415) to [BABL.C:549](../../uw2/src/conv/BABL.C#L549).
 
 ## Built-ins: quests, variables, skills and time
 
 | Built-in | Games | Arguments | What it does | Returns |
 | --- | --- | --- | --- | --- |
 | `get_quest` | both | arg1 quest | **UW2.** Quests 0 to 127 are flags, 128 to 143 the quest bytes, above that one byte of the player record whose meaning is not known. **UW1.** Quests 0 to 31 are flags, 32 to 35 bytes, above that the talisman count. Negative gives 0 | the value |
-| `set_quest` | both | arg2 quest, arg1 value | sets a quest. **UW2.** A flag's value is added unmasked, so a value other than 0 or 1 spills into the next flags. **UW1.** Any non-zero value sets the flag, but the bit is computed in 16 bits, so only quests 0 to 15 work and setting 15 also sets 16 to 31 (UW1Decomp's [FINDINGS.md](https://github.com/abedegno/UW1Decomp/blob/main/docs/FINDINGS.md)) | |
+| `set_quest` | both | arg2 quest, arg1 value | sets a quest. **UW2.** A flag's value is added unmasked, so a value other than 0 or 1 spills into the next flags. **UW1.** Any non-zero value sets the flag, but the bit is computed in 16 bits, so only quests 0 to 15 work and setting 15 also sets 16 to 31 (UW1Decomp's [FINDINGS.md](../../uw1/docs/FINDINGS.md)) | |
 | `x_traps` | both | arg2 variable, arg1 value | sets a game variable, the ones traps use. **UW1.** One of 64 variables, for values 0 to 0x3F. **UW2.** A numbered variable ([schedules.md](schedules.md#the-row-events)), for values 0 to 0x3FF, stored as a byte | the variable |
 | `x_skills` | both | arg2 skill, arg1 value | 0 to 30 sets the skill. 10000 raises it as a skill point would, without spending one. **UW2.** Above 10000 spends one of the player's skill points on the skill, or with a skill of -1, -2 or -3 on a random skill of a group (combat, magic, other) | the skill, or (above 10000) 1 if raised |
 | `x_clock` | UW2 | arg2 clock, arg1 value | a value above 0x100 reads X clock arg2. Otherwise sets it. Setting clock 0, the time of day, moves the game clock by 20 minutes for each step changed | the clock, or 0 |
@@ -191,7 +191,7 @@ Source: [BABL.C:415](../../src/conv/BABL.C#L415) to [BABL.C:549](../../src/conv/
 
 **Raising a skill** (both, as `x_skills` 10000 does and a trainer's skill point does): it fails if the skill is above twice its governing attribute or at 30. Otherwise the skill goes up by 1, by 1 more if the attribute is not strength and half the attribute is still above the skill, and by 1 more with chance `(attribute - skill) / d` while below the attribute, where d is 25, 30 or 15 for strength, dexterity or intelligence. At most 30.
 
-Source: [BABLHACK.C:382](../../src/conv/BABLHACK.C#L382) to [BABLHACK.C:546](../../src/conv/BABLHACK.C#L546), `get_skill`, `grant_skill_advance` ([SKILLS.C:157](../../src/game/SKILLS.C#L157), [SKILLS.C:192](../../src/game/SKILLS.C#L192)); UW1 [BABLHACK.C:103](https://github.com/abedegno/UW1Decomp/blob/main/src/conv/BABLHACK.C#L103), [BABLHACK.C:206](https://github.com/abedegno/UW1Decomp/blob/main/src/conv/BABLHACK.C#L206).
+Source: [BABLHACK.C:382](../../uw2/src/conv/BABLHACK.C#L382) to [BABLHACK.C:546](../../uw2/src/conv/BABLHACK.C#L546), `get_skill`, `grant_skill_advance` ([SKILLS.C:157](../../uw2/src/game/SKILLS.C#L157), [SKILLS.C:192](../../uw2/src/game/SKILLS.C#L192)); UW1 [BABLHACK.C:103](../../uw1/src/conv/BABLHACK.C#L103), [BABLHACK.C:206](../../uw1/src/conv/BABLHACK.C#L206).
 
 ## Built-ins: critters, doors and objects
 
@@ -213,7 +213,7 @@ Source: [BABLHACK.C:382](../../src/conv/BABLHACK.C#L382) to [BABLHACK.C:546](../
 | `x_obj_stuff` | arg9 object, arg8 set, arg7 heading, arg6 owner, arg5 flags, arg4 link, arg3 flag10, arg2 flag9, arg1 quality | with set non-zero writes these fields of the object, else reads them into the variables. A variable holding -1 is skipped. Read back, flag10 and flag9 are 0x400 and 0x200, not 1 | |
 | `x_obj_pos` | arg5 object, arg4 mode, arg3 x, arg2 y, arg1 z | mode 1 sets the fine position and height (z above 0x7F means the floor of square x, y), mode 2 reads the tile and height, others read the fine position and height. -1 skips | |
 
-Source: [BABLHACK.C:263](../../src/conv/BABLHACK.C#L263) to [BABLHACK.C:689](../../src/conv/BABLHACK.C#L689), `transform_creature` ([WORLDEV.C:1775](../../src/event/WORLDEV.C#L1775)).
+Source: [BABLHACK.C:263](../../uw2/src/conv/BABLHACK.C#L263) to [BABLHACK.C:689](../../uw2/src/conv/BABLHACK.C#L689), `transform_creature` ([WORLDEV.C:1775](../../uw2/src/event/WORLDEV.C#L1775)).
 
 ## Built-ins: trading
 
@@ -244,7 +244,7 @@ Source: [BABLHACK.C:263](../../src/conv/BABLHACK.C#L263) to [BABLHACK.C:689](../
 | `end_barter` | | returns everything in the slots | |
 | `give_all_stuff` (UW2) | | the NPC offers everything in its slots, as after an accepted offer | 1 if there was anything |
 
-Source: [CONVERSE.C:586](../../src/conv/CONVERSE.C#L586) to [CONVERSE.C:817](../../src/conv/CONVERSE.C#L817), [BARTER.C:81](../../src/conv/BARTER.C#L81) to [BARTER.C:1078](../../src/conv/BARTER.C#L1078).
+Source: [CONVERSE.C:586](../../uw2/src/conv/CONVERSE.C#L586) to [CONVERSE.C:817](../../uw2/src/conv/CONVERSE.C#L817), [BARTER.C:81](../../uw2/src/conv/BARTER.C#L81) to [BARTER.C:1078](../../uw2/src/conv/BARTER.C#L1078).
 
 ## How bartering works
 
@@ -278,7 +278,7 @@ Source: [CONVERSE.C:586](../../src/conv/CONVERSE.C#L586) to [CONVERSE.C:817](../
 
 **The player's appraisal** (`do_judgement`). Both sides are valued without likes, blurred by `50 - Appraise * 1.5` %, and the gain is worked out as for an offer, with a fudge value added to the NPC's side (set by a hack, below). The verdict runs from "a terrible deal" (gain above 50) through 35, 25, 10, -10, -25, -35 and -50 to "an excellent deal" (-50 or less). It is prefixed by a certainty from "I guess" (Appraise below 6) through 12, 18 and 24 to "I know".
 
-Source: `barter_init`, `setup_to_barter`, `assess_value`, `range`, `do_offer`, `do_demand`, `do_judgement`, `does_npc_like` ([BARTER.C:131](../../src/conv/BARTER.C#L131), [BARTER.C:81](../../src/conv/BARTER.C#L81), [BARTER.C:784](../../src/conv/BARTER.C#L784), [BARTER.C:818](../../src/conv/BARTER.C#L818), [BARTER.C:588](../../src/conv/BARTER.C#L588), [BARTER.C:649](../../src/conv/BARTER.C#L649), [BARTER.C:724](../../src/conv/BARTER.C#L724), [BARTER.C:1036](../../src/conv/BARTER.C#L1036)); UW1 [BARTER.C:719](https://github.com/abedegno/UW1Decomp/blob/main/src/conv/BARTER.C#L719).
+Source: `barter_init`, `setup_to_barter`, `assess_value`, `range`, `do_offer`, `do_demand`, `do_judgement`, `does_npc_like` ([BARTER.C:131](../../uw2/src/conv/BARTER.C#L131), [BARTER.C:81](../../uw2/src/conv/BARTER.C#L81), [BARTER.C:784](../../uw2/src/conv/BARTER.C#L784), [BARTER.C:818](../../uw2/src/conv/BARTER.C#L818), [BARTER.C:588](../../uw2/src/conv/BARTER.C#L588), [BARTER.C:649](../../uw2/src/conv/BARTER.C#L649), [BARTER.C:724](../../uw2/src/conv/BARTER.C#L724), [BARTER.C:1036](../../uw2/src/conv/BARTER.C#L1036)); UW1 [BARTER.C:719](../../uw1/src/conv/BARTER.C#L719).
 
 ## The Pits of Carnage and other hacks (UW2)
 
@@ -302,4 +302,4 @@ Source: `barter_init`, `setup_to_barter`, `assess_value`, `range`, `do_offer`, `
 
 Each fighter is a human (0x75 to 0x77 one time in 16, else 0x78 or 0x79). With chance power in 3 it is strong, and two in five of those become instead a human 0x7B or a great troll, not flagged strong. Fighters are temporary, hostile loners with conversation 0x66, attacking the player. Jospur's debt becomes 8, 12, 20 or 40 for 2, 3, 4 or 5 fighters placed, else 0.
 
-Source: `babl_hack`, `place_pitfighter` ([BABLHACK.C:97](../../src/conv/BABLHACK.C#L97), [BABLHACK.C:202](../../src/conv/BABLHACK.C#L202)).
+Source: `babl_hack`, `place_pitfighter` ([BABLHACK.C:97](../../uw2/src/conv/BABLHACK.C#L97), [BABLHACK.C:202](../../uw2/src/conv/BABLHACK.C#L202)).

@@ -4,7 +4,7 @@ This page describes what a critter (a monster or an NPC) in Ultima Underworld I 
 
 Each rule is marked **both**, **UW1** or **UW2**. Where the games differ only in a detail, both values are given in place. [UW1-UW2-DIFFERENCES.md](../UW1-UW2-DIFFERENCES.md) has the full list of differences between the games. Where the purpose of a rule is inferred rather than evident from the code, the text says so. Nothing here was checked in a running game.
 
-The code-oriented notes for the same sources are in [subsystems/critters.md](../subsystems/critters.md).
+The code-oriented notes for the same sources are in [subsystems/critters.md](../../uw2/docs/subsystems/critters.md).
 
 ## Contents
 
@@ -34,7 +34,7 @@ The code-oriented notes for the same sources are in [subsystems/critters.md](../
 - **Home** in this page means the square in the critter's quality and owner fields (`myxhome`, `myyhome`). The object's own "home" fields are its current tile.
 - **Ally** is bit 6 of byte 0x19. **Loner** is bit 7 of byte 0x0A. A loner does not count towards its race (see below).
 - Byte 0x19 also holds flags the code reads as "knows where its target is" (bit 0), "heard something" (bit 1), "keeps fighting when cornered" (bit 4) and "committed to the attack" (bit 5). The names come from how the code uses them.
-- **Creature values** come from the critter table in `OBJECTS.DAT` (`struct Creature` in [critter.h](../../src/include/critter.h)): hit points, dexterity, speed, run speed, hearing, sight, noise, visibility, laziness, alertness, nerve (the low 4 bits of byte 0x1C), range (its high 4 bits), the three attacks, the three spells and the caster value.
+- **Creature values** come from the critter table in `OBJECTS.DAT` (`struct Creature` in [critter.h](../../uw2/src/include/critter.h)): hit points, dexterity, speed, run speed, hearing, sight, noise, visibility, laziness, alertness, nerve (the low 4 bits of byte 0x1C), range (its high 4 bits), the three attacks, the three spells and the caster value.
 
 ## When a critter thinks
 
@@ -43,7 +43,7 @@ The code-oriented notes for the same sources are in [subsystems/critters.md](../
 - A critter more than 10 tiles from both the player and the point the 3D view was last drawn from (squared tile distance over 0x64 to each) does nothing. Its bin moves on by 8, so it is checked again half a second later. A critter with goal 3 is never skipped this way.
 - Critters stand still while time is stopped (`MoveCrits` is clear or the time stop spell is on).
 
-Source: `move_mobile`, `timetodo`, `critter_ai` ([AI.C:1551](../../src/critter/AI.C#L1551), [AI.C:1539](../../src/critter/AI.C#L1539), [AI.C:1026](../../src/critter/AI.C#L1026)); UW1 [AI.C:1539](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L1539), [AI.C:1055](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L1055); the clock in [PLAYMOVE.C:326](../../src/motion/PLAYMOVE.C#L326).
+Source: `move_mobile`, `timetodo`, `critter_ai` ([AI.C:1551](../../uw2/src/critter/AI.C#L1551), [AI.C:1539](../../uw2/src/critter/AI.C#L1539), [AI.C:1026](../../uw2/src/critter/AI.C#L1026)); UW1 [AI.C:1539](../../uw1/src/critter/AI.C#L1539), [AI.C:1055](../../uw1/src/critter/AI.C#L1055); the clock in [PLAYMOVE.C:326](../../uw2/src/motion/PLAYMOVE.C#L326).
 
 ## One step, in order
 
@@ -66,7 +66,7 @@ Source: `move_mobile`, `timetodo`, `critter_ai` ([AI.C:1551](../../src/critter/A
 
 UW2 looks up each animation's length in `CRIT\CR.AN`. In UW1 every sequence has 4 frames.
 
-Source: `critter_ai`, `constrain_movement` ([AI.C:1026](../../src/critter/AI.C#L1026), [AI.C:856](../../src/critter/AI.C#L856)), `crit_hndlr_walk` ([PATHFIND.C:387](../../src/critter/PATHFIND.C#L387)); UW1 [AI.C:1055](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L1055), [PATHFIND.C:236](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/PATHFIND.C#L236).
+Source: `critter_ai`, `constrain_movement` ([AI.C:1026](../../uw2/src/critter/AI.C#L1026), [AI.C:856](../../uw2/src/critter/AI.C#L856)), `crit_hndlr_walk` ([PATHFIND.C:387](../../uw2/src/critter/PATHFIND.C#L387)); UW1 [AI.C:1055](../../uw1/src/critter/AI.C#L1055), [PATHFIND.C:236](../../uw1/src/critter/PATHFIND.C#L236).
 
 ## Reacting before the goal
 
@@ -94,7 +94,7 @@ The record of the hit and the damage tally (`b11`, see fleeing) are then cleared
 
 Walking critters also play a footstep sound on odd frames of the walking sequence, chosen by the creature's sound kind. UW1 and UW2 use different sound numbers.
 
-Source: `critter_mv` ([AI.C:1168](../../src/critter/AI.C#L1168)); UW1 [AI.C:1194](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L1194).
+Source: `critter_mv` ([AI.C:1168](../../uw2/src/critter/AI.C#L1168)); UW1 [AI.C:1194](../../uw1/src/critter/AI.C#L1194).
 
 ## The goals
 
@@ -144,11 +144,11 @@ Goals 5, 6 and 9 need a living target. If the target has died, the critter drops
 - The critter stands at rate 6 and looks for the player. If it perceives the player at all and the player is within 2.5 tiles (squared fine distance under 0x190), it turns to face the player.
 - Within 1.5 tiles (under 0x90), if the player is facing it (the player's coarse heading points at the critter, within 45 degrees either side), it starts the conversation itself.
 
-Source: `critter_mv`, `crit_guard`, `crit_drunkwalk`, `crit_mill`, `crit_talk`, `check_out_player`, `crit_hover`, `critter_set_goal`, `critter_discard_goal` ([AI.C:1168](../../src/critter/AI.C#L1168), [AI.C:268](../../src/critter/AI.C#L268), [AI.C:150](../../src/critter/AI.C#L150), [AI.C:243](../../src/critter/AI.C#L243), [AI.C:693](../../src/critter/AI.C#L693), [AI.C:735](../../src/critter/AI.C#L735), [AI.C:756](../../src/critter/AI.C#L756), [AI.C:1393](../../src/critter/AI.C#L1393), [AI.C:1403](../../src/critter/AI.C#L1403)); UW1 [AI.C:211](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L211) (goal 3), [AI.C:275](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L275), [AI.C:726](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L726).
+Source: `critter_mv`, `crit_guard`, `crit_drunkwalk`, `crit_mill`, `crit_talk`, `check_out_player`, `crit_hover`, `critter_set_goal`, `critter_discard_goal` ([AI.C:1168](../../uw2/src/critter/AI.C#L1168), [AI.C:268](../../uw2/src/critter/AI.C#L268), [AI.C:150](../../uw2/src/critter/AI.C#L150), [AI.C:243](../../uw2/src/critter/AI.C#L243), [AI.C:693](../../uw2/src/critter/AI.C#L693), [AI.C:735](../../uw2/src/critter/AI.C#L735), [AI.C:756](../../uw2/src/critter/AI.C#L756), [AI.C:1393](../../uw2/src/critter/AI.C#L1393), [AI.C:1403](../../uw2/src/critter/AI.C#L1403)); UW1 [AI.C:211](../../uw1/src/critter/AI.C#L211) (goal 3), [AI.C:275](../../uw1/src/critter/AI.C#L275), [AI.C:726](../../uw1/src/critter/AI.C#L726).
 
 ## Perception
 
-**Both.** A critter perceives its target by hearing or by sight. Each creature has hearing and sight values, and each kind of target has noise and visibility values. The player's own entry is creature 63, and the game sets the player's noise and visibility each round from movement and the Stealth skill (`set_sound` in [PLAYMOVE.C](../../src/motion/PLAYMOVE.C)).
+**Both.** A critter perceives its target by hearing or by sight. Each creature has hearing and sight values, and each kind of target has noise and visibility values. The player's own entry is creature 63, and the game sets the player's noise and visibility each round from movement and the Stealth skill (`set_sound` in [PLAYMOVE.C](../../uw2/src/motion/PLAYMOVE.C)).
 
 - Hearing range, in tiles, is `hearing * noise / 16`, rounded down. Sight range is `sight * visibility / 16`.
 - The test uses the squared tile distance `d` between the critter's tile and the target's tile.
@@ -162,7 +162,7 @@ The critter decides in this order:
 
 While attacking, a critter rechecks its target one time in eight when the target has left the square it was heading for. If it still perceives the target clearly, or hears it faintly and wins a coin toss, it updates its destination. Otherwise it drops the goal. The two games set the "heard something" flag differently on dropping: UW1 sets it when the target was heard faintly, and UW2 sets it when the target was not perceived.
 
-Source: `target_found`, `crit_offense_find_target` ([AI.C:783](../../src/critter/AI.C#L783), [AI.C:452](../../src/critter/AI.C#L452)); UW1 [AI.C:820](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L820), [AI.C:464](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L464).
+Source: `target_found`, `crit_offense_find_target` ([AI.C:783](../../uw2/src/critter/AI.C#L783), [AI.C:452](../../uw2/src/critter/AI.C#L452)); UW1 [AI.C:820](../../uw1/src/critter/AI.C#L820), [AI.C:464](../../uw1/src/critter/AI.C#L464).
 
 ## Melee
 
@@ -191,7 +191,7 @@ So a critter that circles for a while before striking hits harder. The blow itse
 
 **UW1.** After a melee step, UW1's goal 5 also runs the closing-in step below, where UW2 stops. So one time in eight a UW1 critter in melee rechecks whether it perceives its target, and it drops the goal if it does not.
 
-Source: `crit_offense`, `crit_attack`, `atk_charge` ([AI.C:331](../../src/critter/AI.C#L331), [AI.C:383](../../src/critter/AI.C#L383), [AI.C:78](../../src/critter/AI.C#L78)); UW1 [AI.C:340](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L340), [AI.C:395](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L395).
+Source: `crit_offense`, `crit_attack`, `atk_charge` ([AI.C:331](../../uw2/src/critter/AI.C#L331), [AI.C:383](../../uw2/src/critter/AI.C#L383), [AI.C:78](../../uw2/src/critter/AI.C#L78)); UW1 [AI.C:340](../../uw1/src/critter/AI.C#L340), [AI.C:395](../../uw1/src/critter/AI.C#L395).
 
 ## Spells and missiles
 
@@ -210,7 +210,7 @@ If no ranged attack was possible, the critter closes in:
 
 **UW1, Tybal's guards.** On level 7, while Tybal's orb is whole, critters of race 0x13 never cast, neither attack spells nor defensive ones, and close right in to melee.
 
-Source: `crit_offense`, `maybe_cast_defensive_spell`, `crit_magik_attack`, `crit_missile_attack`, `compute_trz_or_try_rather`, `crit_offense_find_target` ([AI.C:331](../../src/critter/AI.C#L331), [AI.C:481](../../src/critter/AI.C#L481), [AI.C:499](../../src/critter/AI.C#L499), [AI.C:522](../../src/critter/AI.C#L522), [AI.C:949](../../src/critter/AI.C#L949), [AI.C:452](../../src/critter/AI.C#L452)); UW1 [AI.C:340](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L340), [AI.C:506](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L506), [AI.C:526](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L526).
+Source: `crit_offense`, `maybe_cast_defensive_spell`, `crit_magik_attack`, `crit_missile_attack`, `compute_trz_or_try_rather`, `crit_offense_find_target` ([AI.C:331](../../uw2/src/critter/AI.C#L331), [AI.C:481](../../uw2/src/critter/AI.C#L481), [AI.C:499](../../uw2/src/critter/AI.C#L499), [AI.C:522](../../uw2/src/critter/AI.C#L522), [AI.C:949](../../uw2/src/critter/AI.C#L949), [AI.C:452](../../uw2/src/critter/AI.C#L452)); UW1 [AI.C:340](../../uw1/src/critter/AI.C#L340), [AI.C:506](../../uw1/src/critter/AI.C#L506), [AI.C:526](../../uw1/src/critter/AI.C#L526).
 
 ## Fleeing and being cornered
 
@@ -236,7 +236,7 @@ So a critter with nerve 15 flees only after one heavy blow, and a critter with n
 - Beyond 2 tiles (squared tile distance over 4) it tries its defensive spell, then a spell attack if it is a caster, or a missile attack if it is an archer. A critter with neither flees for this step.
 - In between it stands in its combat stance and faces the target.
 
-Source: `should_i_flee`, `crit_flee`, `crit_defense`, `crit_avoid_player` ([AI.C:1355](../../src/critter/AI.C#L1355), [AI.C:579](../../src/critter/AI.C#L579), [AI.C:541](../../src/critter/AI.C#L541), [AI.C:652](../../src/critter/AI.C#L652)); UW1 [AI.C:1356](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L1356), [AI.C:610](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L610), [AI.C:571](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L571).
+Source: `should_i_flee`, `crit_flee`, `crit_defense`, `crit_avoid_player` ([AI.C:1355](../../uw2/src/critter/AI.C#L1355), [AI.C:579](../../uw2/src/critter/AI.C#L579), [AI.C:541](../../uw2/src/critter/AI.C#L541), [AI.C:652](../../uw2/src/critter/AI.C#L652)); UW1 [AI.C:1356](../../uw1/src/critter/AI.C#L1356), [AI.C:610](../../uw1/src/critter/AI.C#L610), [AI.C:571](../../uw1/src/critter/AI.C#L571).
 
 ## Getting to a square
 
@@ -279,7 +279,7 @@ A moving critter walks at its run speed when attacking (goal 5) and at its walki
 - A creature with a lock value uses the door. On a closed door it then tries the lock half the time, as a lock pick check with its lock value.
 - Otherwise, one time in four, it bashes the door for `rand() % (damage of its first attack)`.
 
-Source: `crit_head_for_loc`, `flood_path`, `hyp_move`, `acceptable_danger`, `try_to_open_door`, `do_that_jump_kinda_thing`, `adjust_height` ([PATHFIND.C:1240](../../src/critter/PATHFIND.C#L1240), [PATHFIND.C:749](../../src/critter/PATHFIND.C#L749), [PATHFIND.C:498](../../src/critter/PATHFIND.C#L498), [AI.C:1381](../../src/critter/AI.C#L1381), [PATHFIND.C:1392](../../src/critter/PATHFIND.C#L1392)); UW1 [PATHFIND.C:1113](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/PATHFIND.C#L1113), [PATHFIND.C:609](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/PATHFIND.C#L609), [AI.C:1382](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L1382), [PATHFIND.C:1248](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/PATHFIND.C#L1248).
+Source: `crit_head_for_loc`, `flood_path`, `hyp_move`, `acceptable_danger`, `try_to_open_door`, `do_that_jump_kinda_thing`, `adjust_height` ([PATHFIND.C:1240](../../uw2/src/critter/PATHFIND.C#L1240), [PATHFIND.C:749](../../uw2/src/critter/PATHFIND.C#L749), [PATHFIND.C:498](../../uw2/src/critter/PATHFIND.C#L498), [AI.C:1381](../../uw2/src/critter/AI.C#L1381), [PATHFIND.C:1392](../../uw2/src/critter/PATHFIND.C#L1392)); UW1 [PATHFIND.C:1113](../../uw1/src/critter/PATHFIND.C#L1113), [PATHFIND.C:609](../../uw1/src/critter/PATHFIND.C#L609), [AI.C:1382](../../uw1/src/critter/AI.C#L1382), [PATHFIND.C:1248](../../uw1/src/critter/PATHFIND.C#L1248).
 
 ## How hostility starts and spreads
 
@@ -298,7 +298,7 @@ Source: `crit_head_for_loc`, `flood_path`, `hyp_move`, `acceptable_danger`, `try
 
 Allies are not permanent. Every 30 duration checks in UW2 (24 in UW1), about every 10 minutes of play in UW2, the game clears the ally bit of every mobile object three times in four, and rolls each one's "fed" bit at random. Sleep and level changes clear the ally bit as well.
 
-Source: `damage_critter` ([AI.C:1469](../../src/critter/AI.C#L1469)), `critter_mv` ([AI.C:1168](../../src/critter/AI.C#L1168)), `player_grabbed`, `critter_get_told`, `yearly_checkup` ([CRITTIME.C:535](../../src/critter/CRITTIME.C#L535), [CRITTIME.C:474](../../src/critter/CRITTIME.C#L474), [CRITTIME.C:76](../../src/critter/CRITTIME.C#L76)), `player_did_bad` ([WORLDEV.C:578](../../src/event/WORLDEV.C#L578)), the conversation's attitude ([CONVVARS.C:145](../../src/conv/CONVVARS.C#L145)); UW1 [AI.C:1458](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L1458), [CRITTIME.C:420](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/CRITTIME.C#L420), [CRITTIME.C:470](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/CRITTIME.C#L470).
+Source: `damage_critter` ([AI.C:1469](../../uw2/src/critter/AI.C#L1469)), `critter_mv` ([AI.C:1168](../../uw2/src/critter/AI.C#L1168)), `player_grabbed`, `critter_get_told`, `yearly_checkup` ([CRITTIME.C:535](../../uw2/src/critter/CRITTIME.C#L535), [CRITTIME.C:474](../../uw2/src/critter/CRITTIME.C#L474), [CRITTIME.C:76](../../uw2/src/critter/CRITTIME.C#L76)), `player_did_bad` ([WORLDEV.C:578](../../uw2/src/event/WORLDEV.C#L578)), the conversation's attitude ([CONVVARS.C:145](../../uw2/src/conv/CONVVARS.C#L145)); UW1 [AI.C:1458](../../uw1/src/critter/AI.C#L1458), [CRITTIME.C:420](../../uw1/src/critter/CRITTIME.C#L420), [CRITTIME.C:470](../../uw1/src/critter/CRITTIME.C#L470).
 
 ## While the player is away or asleep
 
@@ -319,13 +319,13 @@ Then every critter that is not a loner shifts its attitude by its race's count, 
 
 **A monster may find the sleeper.** During sleep the game looks at the hostile critters in a 17 by 17 tile square round the player, one at a time. It skips each one half the time, and skips any that is further from the player than `range * sqrt(3)` tiles. For the first one that has a walking path to the player with no danger at all, at least 2 squares long, the game moves the critter to the square two before the player's, knowing where the player is. Ward traps on the path go off as it passes. The player then wakes.
 
-Source: `update_all_critters_whilst_player_snoozes`, `up_crit`, `up_mob`, `hostile_creatures_near`, `wander_that_monster`, `wandering_monster_check` ([CRITTIME.C:232](../../src/critter/CRITTIME.C#L232), [CRITTIME.C:130](../../src/critter/CRITTIME.C#L130), [CRITTIME.C:292](../../src/critter/CRITTIME.C#L292), [CRITTIME.C:305](../../src/critter/CRITTIME.C#L305), [CRITTIME.C:414](../../src/critter/CRITTIME.C#L414)), `gronk_area` ([SPELLS.C:674](../../src/combat/SPELLS.C#L674)); UW1 [CRITTIME.C:230](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/CRITTIME.C#L230), [CRITTIME.C:303](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/CRITTIME.C#L303).
+Source: `update_all_critters_whilst_player_snoozes`, `up_crit`, `up_mob`, `hostile_creatures_near`, `wander_that_monster`, `wandering_monster_check` ([CRITTIME.C:232](../../uw2/src/critter/CRITTIME.C#L232), [CRITTIME.C:130](../../uw2/src/critter/CRITTIME.C#L130), [CRITTIME.C:292](../../uw2/src/critter/CRITTIME.C#L292), [CRITTIME.C:305](../../uw2/src/critter/CRITTIME.C#L305), [CRITTIME.C:414](../../uw2/src/critter/CRITTIME.C#L414)), `gronk_area` ([SPELLS.C:674](../../uw2/src/combat/SPELLS.C#L674)); UW1 [CRITTIME.C:230](../../uw1/src/critter/CRITTIME.C#L230), [CRITTIME.C:303](../../uw1/src/critter/CRITTIME.C#L303).
 
 ## Death
 
 **Both.** When damage takes a critter to 0 hit points, it starts its dying sequence, unless it has a conversation and its scripted death (`death_check`) keeps it alive. Several plot NPCs surrender this way instead of dying. The kill is credited to whoever struck: the attacker, or for a missile or thrown object, its shooter. A kill by the player gives experience.
 
-**Death cry.** **UW2** plays a cry by the dying critter's death kind (none, or one of four sounds). **UW1** decides by the creature the AI processed last, which is a bug; see UW1Decomp's [FINDINGS.md](https://github.com/abedegno/UW1Decomp/blob/main/docs/FINDINGS.md).
+**Death cry.** **UW2** plays a cry by the dying critter's death kind (none, or one of four sounds). **UW1** decides by the creature the AI processed last, which is a bug; see UW1Decomp's [FINDINGS.md](../../uw1/docs/FINDINGS.md).
 
 **Combat music.** When the player damages a critter, the music becomes the "foe hurt" theme if the critter is below a quarter of its hit points (`hp * 64 / (max + 1)` under 16), else the combat theme. When a critter damages the player, the music becomes the "danger" theme if the player is below a quarter of his maximum, else the combat theme.
 
@@ -334,11 +334,11 @@ Source: `update_all_critters_whilst_player_snoozes`, `up_crit`, `up_mob`, `hosti
 - If the creature has blood (fluids), a blood stain of that kind is placed where it died, with quality 0x28.
 - If it has a corpse, the corpse is left 7 times in 16. **UW2.** In world 7 the corpse is always left. The corpse's owner field records the creature type.
 
-Source: `damage_critter`, `crit_die`, `go_into_dying_sequence` ([AI.C:1469](../../src/critter/AI.C#L1469), [AI.C:1432](../../src/critter/AI.C#L1432), [AI.C:1417](../../src/critter/AI.C#L1417)), `build_corpse` ([PATHFIND.C:146](../../src/critter/PATHFIND.C#L146)); UW1 [AI.C:1436](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/AI.C#L1436), [PATHFIND.C:146](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/PATHFIND.C#L146).
+Source: `damage_critter`, `crit_die`, `go_into_dying_sequence` ([AI.C:1469](../../uw2/src/critter/AI.C#L1469), [AI.C:1432](../../uw2/src/critter/AI.C#L1432), [AI.C:1417](../../uw2/src/critter/AI.C#L1417)), `build_corpse` ([PATHFIND.C:146](../../uw2/src/critter/PATHFIND.C#L146)); UW1 [AI.C:1436](../../uw1/src/critter/AI.C#L1436), [PATHFIND.C:146](../../uw1/src/critter/PATHFIND.C#L146).
 
 ## Open questions
 
 - The names of several creature bits come from how the code uses them, not from a source: "ignores fights" (byte 0x0A bit 1), "can jump" (byte 0x0A bit 5), "ranged-spell bit" (byte 0x2D bit 0), nerve and range (byte 0x1C). The meaning of the byte 0x19 flags is also inferred.
 - Which critters use goal 3 (follow) in UW1, and goal 11 (flutter) in either game, was not checked against the level data.
 - Fire resistance is inferred for resist bit 8, from the lava rule it unlocks.
-- [FINDINGS.md](../FINDINGS.md) lists the likely bugs in these routines, e.g., the critter placed in a north-west diagonal tile, and the flameproof critter that leaves lava marked in the shared walking rules.
+- [FINDINGS.md](../../uw2/docs/FINDINGS.md) lists the likely bugs in these routines, e.g., the critter placed in a north-west diagonal tile, and the flameproof critter that leaves lava marked in the shared walking rules.

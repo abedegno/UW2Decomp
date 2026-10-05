@@ -43,7 +43,7 @@ Every code segment is matched. All of UW2's C, 337,327 bytes in 99 files, compil
 
 Function and global names are the originals from the FM Towns build wherever it has them. The sources are grouped by subsystem, with shared headers, named constants and struct fields, and every file says what it does in the game. [FINDINGS.md](docs/FINDINGS.md) collects what matching revealed: likely bugs in the original, game rules and engine details.
 
-[FORMATS.md](docs/FORMATS.md) gives the layout of every data file both games read and write, from the code that reads it, with UW1's differences and corrections to the UW-Formats document.
+[FORMATS.md](../docs/FORMATS.md) gives the layout of every data file both games read and write, from the code that reads it, with UW1's differences and corrections to the UW-Formats document.
 
 ### How it is verified
 
@@ -104,9 +104,9 @@ The rest of the top level: `docs/`; `tools/`, the build, matching, linking, port
 - [BUILDING.md](docs/BUILDING.md): requirements, building and running the port, the make targets, testing, the gate, CI and releases, working on one file, and the tools.
 - [PORT.md](docs/PORT.md): the port's design, its milestones and their results.
 - [FINDINGS.md](docs/FINDINGS.md): likely bugs in the original, game rules, engine findings, dead code and open questions.
-- [UW1-UW2-DIFFERENCES.md](docs/UW1-UW2-DIFFERENCES.md): where UW1's and UW2's rules differ, routine by routine, and what UnderworldGodot does for each.
+- [UW1-UW2-DIFFERENCES.md](../docs/UW1-UW2-DIFFERENCES.md): where UW1's and UW2's rules differ, routine by routine, and what UnderworldGodot does for each.
 - [docs/subsystems/](docs/subsystems/): one page per subsystem on its architecture, data, rules and open questions.
-- [docs/behaviour/](docs/behaviour/README.md): what the game does, as rules with exact numbers, for game programmers and modders who don't read the C: NPC AI, schedules, combat, magic, conversations, player upkeep, and traps and triggers, both games.
+- [docs/behaviour/](../docs/behaviour/README.md): what the game does, as rules with exact numbers, for game programmers and modders who don't read the C: NPC AI, schedules, combat, magic, conversations, player upkeep, and traps and triggers, both games.
 - [CONTRIBUTING.md](docs/CONTRIBUTING.md): the rule every change follows, comments, renaming, shared headers, constants and struct fields.
 - [MATCHING.md](docs/MATCHING.md): the compiler switches, the assembler, and what Turbo C's output reveals about the original source.
 - [LINKING.md](docs/LINKING.md): the exact link, the segment classes, what is taken from your EXE, and the modding build.

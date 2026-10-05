@@ -4,7 +4,7 @@ This page describes how traps and triggers work in Ultima Underworld I and II: w
 
 Each rule is marked **both**, **UW1** or **UW2**. [UW1-UW2-DIFFERENCES.md](../UW1-UW2-DIFFERENCES.md#traps-and-triggers) lists the differences in short, and this page does not repeat its references. Statements about the shipped levels were measured from the GOG release's `DATA\LEV.ARK` of each game and say so. Nothing here was checked in a running game.
 
-The object layout is in [FORMATS.md](../FORMATS.md), the code-oriented notes in [subsystems/events.md](../subsystems/events.md#triggers-and-traps). The numbered variables that traps share with schedules and conversations are described in [schedules.md](schedules.md#the-row-events).
+The object layout is in [FORMATS.md](../FORMATS.md), the code-oriented notes in [subsystems/events.md](../../uw2/docs/subsystems/events.md#triggers-and-traps). The numbered variables that traps share with schedules and conversations are described in [schedules.md](schedules.md#the-row-events).
 
 ## Contents
 
@@ -54,7 +54,7 @@ A trigger lies on a tile's object list or inside an object (a door, a container,
 
 A trap's link is read like a container's contents. The first object it names is what happens next. For the condition traps, the object after that one in the same list (its "next") is the other branch. For the create-object, delete-object and door traps the linked object is a template, a target or a lock instead ([below](#create-delete-and-door)).
 
-Source: `trap_class_data` UW2 [TRIGGER.C:70](../../src/event/TRIGGER.C#L70), UW1 [TRIGGER.C:88](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L88); the id bits [object.h:133](../../src/include/object.h#L133); `trap_init` [TRIGGER.C:62](../../src/event/TRIGGER.C#L62).
+Source: `trap_class_data` UW2 [TRIGGER.C:70](../../uw2/src/event/TRIGGER.C#L70), UW1 [TRIGGER.C:88](../../uw1/src/event/TRIGGER.C#L88); the id bits [object.h:133](../../uw2/src/include/object.h#L133); `trap_init` [TRIGGER.C:62](../../uw2/src/event/TRIGGER.C#L62).
 
 ## The trigger kinds
 
@@ -80,7 +80,7 @@ Source: `trap_class_data` UW2 [TRIGGER.C:70](../../src/event/TRIGGER.C#L70), UW1
 
 **UW1.** No code reports mode 1, so a step on trigger never goes off. The shipped levels have none (measured).
 
-Source: `OBJECTS.DAT` and string block 4 of each game (measured); `Triggers[]` [TRIGGER.C:52](../../src/event/TRIGGER.C#L52).
+Source: `OBJECTS.DAT` and string block 4 of each game (measured); `Triggers[]` [TRIGGER.C:52](../../uw2/src/event/TRIGGER.C#L52).
 
 ## Setting a trigger off
 
@@ -93,7 +93,7 @@ Source: `OBJECTS.DAT` and string block 4 of each game (measured); `Triggers[]` [
    - **The player** needs id bit 11. A look trigger whose z is above 0 also needs `skill_check(Search, z)` to succeed (grade 1 or 2, [combat.md](combat.md#the-dice)).
    - **A critter** needs the enchanted bit (id bit 12).
    - **Any other object**, or nobody: **UW2** needs id bit 9. **UW1** goes off unless the trigger is enchanted and lacks bit 11, so a thrown object sets off almost any trigger. In the shipped UW1 levels 189 of the 190 move triggers that have a trap can be set off by an object this way (measured).
-   - A trigger set off by nobody reads its "who" through a null pointer and behaves as for an object ([FINDINGS.md](../FINDINGS.md), "A scheduled trigger reads the interrupt vector table").
+   - A trigger set off by nobody reads its "who" through a null pointer and behaves as for an object ([FINDINGS.md](../../uw2/docs/FINDINGS.md), "A scheduled trigger reads the interrupt vector table").
 5. **A trap?** If the trigger's link is empty, nothing happens.
 6. **Run the trap** at the target square (the trigger's quality and owner), remembering who set the chain off and the object acted on ([Running a chain](#running-a-chain)).
 7. **Used up.** If the trigger lacks id bit 10, its trap is deleted with its whole chain and every other trigger that points at it ([Used triggers and removing traps](#used-triggers-and-removing-traps)). The trigger itself goes with them.
@@ -101,7 +101,7 @@ Source: `OBJECTS.DAT` and string block 4 of each game (measured); `Triggers[]` [
 
 The critter test also refuses a trigger of major class 5, which a trigger never is, so that part of the test has no effect (it may have been meant for the object acted on; inferred).
 
-Source: `UseTrigger` UW2 [TRIGGER.C:86](../../src/event/TRIGGER.C#L86), UW1 [TRIGGER.C:104](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L104); `skill_check` [SKILLCHK.C:39](../../src/game/SKILLCHK.C#L39).
+Source: `UseTrigger` UW2 [TRIGGER.C:86](../../uw2/src/event/TRIGGER.C#L86), UW1 [TRIGGER.C:104](../../uw1/src/event/TRIGGER.C#L104); `skill_check` [SKILLCHK.C:39](../../uw2/src/game/SKILLCHK.C#L39).
 
 ## Where the actions come from
 
@@ -121,11 +121,11 @@ Source: `UseTrigger` UW2 [TRIGGER.C:86](../../src/event/TRIGGER.C#L86), UW1 [TRI
 | 9 | UW2 close | the user, or nobody | An open door starts to close; a moving door is turned round to close. |
 | 0xA | UW2 timer | the player | [Timer triggers](#timer-triggers-uw2). |
 | 0xB | UW2 unlock | the user | As UW1's mode 6. |
-| 0xC | UW2 scheduled | nobody | Schedule event 5 fires every trigger of index 0xC on a square ([schedules.md](schedules.md#the-row-events)). When the castle guards are called out (a castle person would be killed, [subsystems/events.md](../subsystems/events.md#world-events)), each scheduled trigger on square (0xF, 0x1D) has the object its trap links to sent to the place of the attack, made temporary and powerful with goal 1, and is then set off with mode -1, as by nobody. |
+| 0xC | UW2 scheduled | nobody | Schedule event 5 fires every trigger of index 0xC on a square ([schedules.md](schedules.md#the-row-events)). When the castle guards are called out (a castle person would be killed, [subsystems/events.md](../../uw2/docs/subsystems/events.md#world-events)), each scheduled trigger on square (0xF, 0x1D) has the object its trap links to sent to the place of the attack, made temporary and powerful with goal 1, and is then set off with mode -1, as by nobody. |
 
 **Both.** Some special cases set off the first trap or trigger on a square with mode -1: UW2's `fire_trigger_at` (after certain plot deaths, jail, Bliy Skup's chamber and entering certain levels), and a disarm that fails ([below](#finding-and-disarming-traps)).
 
-Source: UW2 `do_objhit` [OBJPHYS.C:135](../../src/motion/OBJPHYS.C#L135), `simple_fizix` [PHYSICS.C:195](../../src/motion/PHYSICS.C#L195), `release_3d` [INTERACT.C:333](../../src/ui/INTERACT.C#L333), `player_3dlook` [INTERACT.C:416](../../src/ui/INTERACT.C#L416), `UseObj` [OBJUSE.C:48](../../src/obj/OBJUSE.C#L48), `checkLock` [OBJUSE.C:301](../../src/obj/OBJUSE.C#L301), `damage_object` [DAMAGE.C:257](../../src/combat/DAMAGE.C#L257), `drop_link_chain` [TREASURE.C:37](../../src/obj/TREASURE.C#L37), `changeDoor`, `OpenDoor`, `CloseDoor` [USEITEMS.C:716](../../src/obj/USEITEMS.C#L716), [USEITEMS.C:738](../../src/obj/USEITEMS.C#L738), [USEITEMS.C:772](../../src/obj/USEITEMS.C#L772), `check_door` [EFFECT.C:445](../../src/obj/EFFECT.C#L445), `sp_true_sight` [SPELLS2.C:439](../../src/combat/SPELLS2.C#L439), `ev_trigger` [SCDEVENT.C:236](../../src/event/SCDEVENT.C#L236), `call_out_the_guards` [WORLDEV.C:931](../../src/event/WORLDEV.C#L931), `fire_trigger_at` [WORLDEV.C:1758](../../src/event/WORLDEV.C#L1758); UW1 `do_objhit` [OBJPHYS.C:141](https://github.com/abedegno/UW1Decomp/blob/main/src/motion/OBJPHYS.C#L141), `simple_fizix` [PHYSICS.C:188](https://github.com/abedegno/UW1Decomp/blob/main/src/motion/PHYSICS.C#L188), `release_3d` [INTERACT.C:433](https://github.com/abedegno/UW1Decomp/blob/main/src/ui/INTERACT.C#L433), `player_3dlook` [INTERACT.C:509](https://github.com/abedegno/UW1Decomp/blob/main/src/ui/INTERACT.C#L509), `checkLock` [USEITEMS.C:1004](https://github.com/abedegno/UW1Decomp/blob/main/src/obj/USEITEMS.C#L1004), `OpenDoor` [USEITEMS.C:1134](https://github.com/abedegno/UW1Decomp/blob/main/src/obj/USEITEMS.C#L1134).
+Source: UW2 `do_objhit` [OBJPHYS.C:135](../../uw2/src/motion/OBJPHYS.C#L135), `simple_fizix` [PHYSICS.C:195](../../uw2/src/motion/PHYSICS.C#L195), `release_3d` [INTERACT.C:333](../../uw2/src/ui/INTERACT.C#L333), `player_3dlook` [INTERACT.C:416](../../uw2/src/ui/INTERACT.C#L416), `UseObj` [OBJUSE.C:48](../../uw2/src/obj/OBJUSE.C#L48), `checkLock` [OBJUSE.C:301](../../uw2/src/obj/OBJUSE.C#L301), `damage_object` [DAMAGE.C:257](../../uw2/src/combat/DAMAGE.C#L257), `drop_link_chain` [TREASURE.C:37](../../uw2/src/obj/TREASURE.C#L37), `changeDoor`, `OpenDoor`, `CloseDoor` [USEITEMS.C:716](../../uw2/src/obj/USEITEMS.C#L716), [USEITEMS.C:738](../../uw2/src/obj/USEITEMS.C#L738), [USEITEMS.C:772](../../uw2/src/obj/USEITEMS.C#L772), `check_door` [EFFECT.C:445](../../uw2/src/obj/EFFECT.C#L445), `sp_true_sight` [SPELLS2.C:439](../../uw2/src/combat/SPELLS2.C#L439), `ev_trigger` [SCDEVENT.C:236](../../uw2/src/event/SCDEVENT.C#L236), `call_out_the_guards` [WORLDEV.C:931](../../uw2/src/event/WORLDEV.C#L931), `fire_trigger_at` [WORLDEV.C:1758](../../uw2/src/event/WORLDEV.C#L1758); UW1 `do_objhit` [OBJPHYS.C:141](../../uw1/src/motion/OBJPHYS.C#L141), `simple_fizix` [PHYSICS.C:188](../../uw1/src/motion/PHYSICS.C#L188), `release_3d` [INTERACT.C:433](../../uw1/src/ui/INTERACT.C#L433), `player_3dlook` [INTERACT.C:509](../../uw1/src/ui/INTERACT.C#L509), `checkLock` [USEITEMS.C:1004](../../uw1/src/obj/USEITEMS.C#L1004), `OpenDoor` [USEITEMS.C:1134](../../uw1/src/obj/USEITEMS.C#L1134).
 
 ## Pressure plates, enter and exit (UW2)
 
@@ -139,7 +139,7 @@ Source: UW2 `do_objhit` [OBJPHYS.C:135](../../src/motion/OBJPHYS.C#L135), `simpl
 3. **The plate's state.** After a plate goes off, every plate trigger on the tile flips bit 0. With fine y bit 1 set, the tile's floor texture also steps, up by one when pressed and down by one when released.
 4. If the tile had a plate of the other mode and nothing went off, the same weight test is made against it and, if it passes, the plates flip without going off.
 
-Source: `check_pplate`, `update_pplate`, `Ply_Weight` [TRIGGER.C:1091](../../src/event/TRIGGER.C#L1091), [TRIGGER.C:1147](../../src/event/TRIGGER.C#L1147), [TRIGGER.C:1079](../../src/event/TRIGGER.C#L1079), `check_weight` [OBJECTS.C:530](../../src/obj/OBJECTS.C#L530); callers `change_GrSq`, `hgt_change` [PHYSICS.C:779](../../src/motion/PHYSICS.C#L779), [PHYSICS.C:812](../../src/motion/PHYSICS.C#L812), `set_phys_data` [OBJPHYS.C:267](../../src/motion/OBJPHYS.C#L267), [INTERACT.C:385](../../src/ui/INTERACT.C#L385), [MISSILE.C:249](../../src/combat/MISSILE.C#L249).
+Source: `check_pplate`, `update_pplate`, `Ply_Weight` [TRIGGER.C:1091](../../uw2/src/event/TRIGGER.C#L1091), [TRIGGER.C:1147](../../uw2/src/event/TRIGGER.C#L1147), [TRIGGER.C:1079](../../uw2/src/event/TRIGGER.C#L1079), `check_weight` [OBJECTS.C:530](../../uw2/src/obj/OBJECTS.C#L530); callers `change_GrSq`, `hgt_change` [PHYSICS.C:779](../../uw2/src/motion/PHYSICS.C#L779), [PHYSICS.C:812](../../uw2/src/motion/PHYSICS.C#L812), `set_phys_data` [OBJPHYS.C:267](../../uw2/src/motion/OBJPHYS.C#L267), [INTERACT.C:385](../../uw2/src/ui/INTERACT.C#L385), [MISSILE.C:249](../../uw2/src/combat/MISSILE.C#L249).
 
 ## Timer triggers (UW2)
 
@@ -151,7 +151,7 @@ Source: `check_pplate`, `update_pplate`, `Ply_Weight` [TRIGGER.C:1091](../../src
 - It goes off as set off by the player, so it needs id bit 11.
 - Nothing runs while time is stopped.
 
-Source: `update_animobj` [EFFECT.C:243](../../src/obj/EFFECT.C#L243), `add_timer_obj`, `rem_timer_obj` [EFFECT.C:483](../../src/obj/EFFECT.C#L483), `Anim_Load` [MAP.C:147](../../src/map/MAP.C#L147).
+Source: `update_animobj` [EFFECT.C:243](../../uw2/src/obj/EFFECT.C#L243), `add_timer_obj`, `rem_timer_obj` [EFFECT.C:483](../../uw2/src/obj/EFFECT.C#L483), `Anim_Load` [MAP.C:147](../../uw2/src/map/MAP.C#L147).
 
 ## Traps held directly by an object
 
@@ -163,7 +163,7 @@ Source: `update_animobj` [EFFECT.C:243](../../src/obj/EFFECT.C#L243), `add_timer
 
 In the shipped UW2 levels three objects hold such a trap: a piece of cheese on level 9 and two green potions on level 17, each holding a damage trap (measured). UW1 has one, a red potion on level 2 holding a damage trap (measured).
 
-Source: `checkTrap` UW2 [OBJUSE.C:388](../../src/obj/OBJUSE.C#L388), UW1 [USEITEMS.C:1079](https://github.com/abedegno/UW1Decomp/blob/main/src/obj/USEITEMS.C#L1079).
+Source: `checkTrap` UW2 [OBJUSE.C:388](../../uw2/src/obj/OBJUSE.C#L388), UW1 [USEITEMS.C:1079](../../uw1/src/obj/USEITEMS.C#L1079).
 
 ## Running a chain
 
@@ -179,13 +179,13 @@ Source: `checkTrap` UW2 [OBJUSE.C:388](../../src/obj/OBJUSE.C#L388), UW1 [USEITE
 
 **A branch.** A condition trap that takes its other branch runs the object after its linked object (the linked object's next), a trigger with mode -1 or a trap at the same square, and the chain ends there. If there is no next object, the chain just ends. **UW1:** the check-variable trap is UW1's only branch, and its other branch must be a trigger; a trap there does nothing. Both such branches in the shipped UW1 levels are triggers (measured).
 
-Source: `SetOffTrap`, the end of `UseTrap`, `RUN_ELSE_CHAIN` UW2 [TRIGGER.C:135](../../src/event/TRIGGER.C#L135), [TRIGGER.C:702](../../src/event/TRIGGER.C#L702), [TRIGGER.C:234](../../src/event/TRIGGER.C#L234); UW1 [TRIGGER.C:152](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L152), [TRIGGER.C:426](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L426), [TRIGGER.C:270](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L270).
+Source: `SetOffTrap`, the end of `UseTrap`, `RUN_ELSE_CHAIN` UW2 [TRIGGER.C:135](../../uw2/src/event/TRIGGER.C#L135), [TRIGGER.C:702](../../uw2/src/event/TRIGGER.C#L702), [TRIGGER.C:234](../../uw2/src/event/TRIGGER.C#L234); UW1 [TRIGGER.C:152](../../uw1/src/event/TRIGGER.C#L152), [TRIGGER.C:426](../../uw1/src/event/TRIGGER.C#L426), [TRIGGER.C:270](../../uw1/src/event/TRIGGER.C#L270).
 
 ## Used triggers and removing traps
 
 **Both.** A trap's flags count the triggers that point at it. Deleting a trap (`delete_trap`) goes in this order.
 
-1. If the count is not 0, the game walks every tile list of the 64 by 64 map, and the contents of every object in them, and removes each trigger whose link is the trap, counting down. It stops when the count reaches 0. **UW2:** a removed timer trigger also leaves the timer list. **UW1:** the walk of one list stops at the first trigger it removes there, so a second trigger for the same trap later in that list is left behind ([UW1 FINDINGS.md](https://github.com/abedegno/UW1Decomp/blob/main/docs/FINDINGS.md)). No shipped UW1 list has two such triggers.
+1. If the count is not 0, the game walks every tile list of the 64 by 64 map, and the contents of every object in them, and removes each trigger whose link is the trap, counting down. It stops when the count reaches 0. **UW2:** a removed timer trigger also leaves the timer list. **UW1:** the walk of one list stops at the first trigger it removes there, so a second trigger for the same trap later in that list is left behind ([UW1 FINDINGS.md](../../uw1/docs/FINDINGS.md)). No shipped UW1 list has two such triggers.
 2. The trap is found in the given square's list (or inside an object there) and freed with everything its link reaches. Triggers met on the way are deleted as triggers (below), traps as traps.
 
 **Deleting a single trigger** (when a disarm or an object's destruction removes it): if it is the last trigger of its trap (count 1), the trap is deleted as above at the trigger's target square, which removes the trigger too. Otherwise the trigger is freed and the trap's count goes down by one.
@@ -198,7 +198,7 @@ Source: `SetOffTrap`, the end of `UseTrap`, `RUN_ELSE_CHAIN` UW2 [TRIGGER.C:135]
 - a delete-object trap names a trap or trigger;
 - an object holding triggers is destroyed or deleted.
 
-Source: `delete_trap`, `kill_triggers`, `trigger_obj_del`, `trap_obj_del` UW2 [TRIGGER.C:743](../../src/event/TRIGGER.C#L743), [TRIGGER.C:717](../../src/event/TRIGGER.C#L717), [TRIGGER.C:969](../../src/event/TRIGGER.C#L969), [TRIGGER.C:989](../../src/event/TRIGGER.C#L989), `Obj_FreeChain` [OBJECTS.C:316](../../src/obj/OBJECTS.C#L316); UW1 [TRIGGER.C:464](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L464), [TRIGGER.C:441](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L441), [TRIGGER.C:596](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L596).
+Source: `delete_trap`, `kill_triggers`, `trigger_obj_del`, `trap_obj_del` UW2 [TRIGGER.C:743](../../uw2/src/event/TRIGGER.C#L743), [TRIGGER.C:717](../../uw2/src/event/TRIGGER.C#L717), [TRIGGER.C:969](../../uw2/src/event/TRIGGER.C#L969), [TRIGGER.C:989](../../uw2/src/event/TRIGGER.C#L989), `Obj_FreeChain` [OBJECTS.C:316](../../uw2/src/obj/OBJECTS.C#L316); UW1 [TRIGGER.C:464](../../uw1/src/event/TRIGGER.C#L464), [TRIGGER.C:441](../../uw1/src/event/TRIGGER.C#L441), [TRIGGER.C:596](../../uw1/src/event/TRIGGER.C#L596).
 
 ## The trap kinds
 
@@ -232,7 +232,7 @@ The kind is the item's index within major class 6. Names are string block 4's.
 | 0x197 | | pit | [Changing the map](#changing-the-map) |
 | 0x198 | | bridge | [Changing the map](#changing-the-map) |
 
-A kind with no action ("does nothing", and any unlisted item) still passes the chain on. The UW2 flam and tym runes (0x19E, 0x19F) are trap-class items that act through being used, not through a chain ([subsystems/objects.md](../subsystems/objects.md#using-objects)). The UW1 pit trap appears once in the shipped levels (level 3), the tell and combination traps not at all (measured).
+A kind with no action ("does nothing", and any unlisted item) still passes the chain on. The UW2 flam and tym runes (0x19E, 0x19F) are trap-class items that act through being used, not through a chain ([subsystems/objects.md](../../uw2/docs/subsystems/objects.md#using-objects)). The UW1 pit trap appears once in the shipped levels (level 3), the tell and combination traps not at all (measured).
 
 In the sections below, "x, y" is the target square the trap runs at, and "who" is whoever set the chain off.
 
@@ -260,7 +260,7 @@ The disarm message calls it a "poison trap". In the shipped UW2 levels 9 damage 
 
 **Ward (both), and UW1's tell trap.** If `quality` is 0x3F (anyone) or equals the index of who's item within its class of 16, the player reads "Your Rune of Warding has been set off" with the direction to it, and who takes `3 + rand() * Casting / 0x8000` damage of type 4, Casting being the player's. The chain always ends. **UW1:** the Rune of Warding spell lays one ([below](#traps-laid-by-spells-wandering-monsters-ice-and-currents)). **UW2:** nothing in the code lays one and the shipped levels have none (measured).
 
-Source: UW2 [TRIGGER.C:506](../../src/event/TRIGGER.C#L506), `whack_thing` [WORLDEV.C:478](../../src/event/WORLDEV.C#L478), `trap_fire` [MISSILE.C:262](../../src/combat/MISSILE.C#L262), `do_sfx` [WORLDEV.C:635](../../src/event/WORLDEV.C#L635), `inanimate_spell` [WORLDEV.C:505](../../src/event/WORLDEV.C#L505), the ward [TRIGGER.C:680](../../src/event/TRIGGER.C#L680); UW1 [TRIGGER.C:280](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L280), [TRIGGER.C:403](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L403), `whack_thing` [WORLDEV.C:272](https://github.com/abedegno/UW1Decomp/blob/main/src/event/WORLDEV.C#L272).
+Source: UW2 [TRIGGER.C:506](../../uw2/src/event/TRIGGER.C#L506), `whack_thing` [WORLDEV.C:478](../../uw2/src/event/WORLDEV.C#L478), `trap_fire` [MISSILE.C:262](../../uw2/src/combat/MISSILE.C#L262), `do_sfx` [WORLDEV.C:635](../../uw2/src/event/WORLDEV.C#L635), `inanimate_spell` [WORLDEV.C:505](../../uw2/src/event/WORLDEV.C#L505), the ward [TRIGGER.C:680](../../uw2/src/event/TRIGGER.C#L680); UW1 [TRIGGER.C:280](../../uw1/src/event/TRIGGER.C#L280), [TRIGGER.C:403](../../uw1/src/event/TRIGGER.C#L403), `whack_thing` [WORLDEV.C:272](../../uw1/src/event/WORLDEV.C#L272).
 
 ## Teleport and jump
 
@@ -284,7 +284,7 @@ Source: UW2 [TRIGGER.C:506](../../src/event/TRIGGER.C#L506), `whack_thing` [WORL
 
 Below that speed nothing happens; heading 0 always acts. Of the 25 shipped jump traps (levels 33, 34, 46, 57 and 65), 9 have heading 3 and need a speed of 0x8D, and 16 have heading 0 (measured).
 
-Source: UW2 [TRIGGER.C:309](../../src/event/TRIGGER.C#L309), `do_teleport` [WORLDEV.C:180](../../src/event/WORLDEV.C#L180), `find_good_x_and_y` [WORLDEV.C:65](../../src/event/WORLDEV.C#L65), `new_player_pos` [UWEDIT.C:452](../../src/game/UWEDIT.C#L452), `player_newsq` [PHYSICS.C:627](../../src/motion/PHYSICS.C#L627), `set_jmp` [MOTION.C:843](../../src/motion/MOTION.C#L843); UW1 [TRIGGER.C:212](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L212), `do_teleport` [WORLDEV.C:175](https://github.com/abedegno/UW1Decomp/blob/main/src/event/WORLDEV.C#L175).
+Source: UW2 [TRIGGER.C:309](../../uw2/src/event/TRIGGER.C#L309), `do_teleport` [WORLDEV.C:180](../../uw2/src/event/WORLDEV.C#L180), `find_good_x_and_y` [WORLDEV.C:65](../../uw2/src/event/WORLDEV.C#L65), `new_player_pos` [UWEDIT.C:452](../../uw2/src/game/UWEDIT.C#L452), `player_newsq` [PHYSICS.C:627](../../uw2/src/motion/PHYSICS.C#L627), `set_jmp` [MOTION.C:843](../../uw2/src/motion/MOTION.C#L843); UW1 [TRIGGER.C:212](../../uw1/src/event/TRIGGER.C#L212), `do_teleport` [WORLDEV.C:175](../../uw1/src/event/WORLDEV.C#L175).
 
 ## Changing the map
 
@@ -297,7 +297,7 @@ Source: UW2 [TRIGGER.C:309](../../src/event/TRIGGER.C#L309), `do_teleport` [WORL
 | height | `z / 8` | UW1 14 or more, UW2 15 |
 | tile type | `heading * 2 + (quality & 1)`, with 15 read as 10 | 10 or more |
 
-The tile types are 0 solid, 1 open, 2 to 5 the diagonals and 6 to 9 the slopes ([map.h](../../src/include/map.h)).
+The tile types are 0 solid, 1 open, 2 to 5 the diagonals and 6 to 9 the slopes ([map.h](../../uw2/src/include/map.h)).
 
 When a tile's height changes, what stands on it moves with the floor. Objects below a rising floor are lifted onto it, those resting on a sinking floor go down with it, and the player's physics follows.
 
@@ -336,7 +336,7 @@ Mode 3 is not handled, and what it does depends on values left over in the routi
 - `owner / 16` is 1 to lay, 2 to remove, anything else to do nothing.
 - Laying puts a bridge (item 0x164) at the trap's height and heading, unless one with that height and heading is there, and sets the bridge's flags to `owner & 15`. Removing deletes the bridge with that height and heading.
 
-Source: UW2 [TRIGGER.C:324](../../src/event/TRIGGER.C#L324), [TRIGGER.C:397](../../src/event/TRIGGER.C#L397), [TRIGGER.C:401](../../src/event/TRIGGER.C#L401), [TRIGGER.C:450](../../src/event/TRIGGER.C#L450), [TRIGGER.C:469](../../src/event/TRIGGER.C#L469), `change_terrain` [WORLDEV.C:338](../../src/event/WORLDEV.C#L338), `do_change_grokking` [WORLDEV.C:422](../../src/event/WORLDEV.C#L422), `check_for_sunken_moongate` [TRIGGER.C:1247](../../src/event/TRIGGER.C#L1247), `place_bridge` [TRIGGER.C:1190](../../src/event/TRIGGER.C#L1190); UW1 [TRIGGER.C:218](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L218), `change_terrain` [WORLDEV.C:210](https://github.com/abedegno/UW1Decomp/blob/main/src/event/WORLDEV.C#L210).
+Source: UW2 [TRIGGER.C:324](../../uw2/src/event/TRIGGER.C#L324), [TRIGGER.C:397](../../uw2/src/event/TRIGGER.C#L397), [TRIGGER.C:401](../../uw2/src/event/TRIGGER.C#L401), [TRIGGER.C:450](../../uw2/src/event/TRIGGER.C#L450), [TRIGGER.C:469](../../uw2/src/event/TRIGGER.C#L469), `change_terrain` [WORLDEV.C:338](../../uw2/src/event/WORLDEV.C#L338), `do_change_grokking` [WORLDEV.C:422](../../uw2/src/event/WORLDEV.C#L422), `check_for_sunken_moongate` [TRIGGER.C:1247](../../uw2/src/event/TRIGGER.C#L1247), `place_bridge` [TRIGGER.C:1190](../../uw2/src/event/TRIGGER.C#L1190); UW1 [TRIGGER.C:218](../../uw1/src/event/TRIGGER.C#L218), `change_terrain` [WORLDEV.C:210](../../uw1/src/event/WORLDEV.C#L210).
 
 ## Create, delete and door
 
@@ -345,7 +345,7 @@ Source: UW2 [TRIGGER.C:324](../../src/event/TRIGGER.C#L324), [TRIGGER.C:397](../
 1. With chance `quality` in 63 nothing happens (`rand() * 63 / 0x8000 < quality`). So quality 0 always creates.
 2. Nothing happens if the trap has no link (or its link is a quantity).
 3. If the template (the linked object) is a critter and a created (temporary) object other than the player is within 4 squares of it on both axes, nothing happens.
-4. **UW2.** In world 6 (levels 49 to 56), once quest 7 is set, nothing happens. Praecor Loth's death sets quest 7 ([WORLDEV.C:805](../../src/event/WORLDEV.C#L805)).
+4. **UW2.** In world 6 (levels 49 to 56), once quest 7 is set, nothing happens. Praecor Loth's death sets quest 7 ([WORLDEV.C:805](../../uw2/src/event/WORLDEV.C#L805)).
 5. **UW2, the adventurer template.** If the template is item 0x7F, a random monster is chosen:
    - `lo = (level within world * 3 + castle clock) / 9`, at least 1, the level within the world being 1 to 8 and the castle clock X clock 1;
    - `range = player level + castle clock + 1`, at most 16;
@@ -370,7 +370,7 @@ The lock:
 - **UW1.** Every time, for a door at rest, before it opens or closes: the door's lock is removed, and if the trap has a link, a copy of the linked object (a lock template) becomes the door's lock. A door trap without a link therefore unlocks the door. The chain always ends. Of the 27 shipped UW1 door traps, 24 link a locked lock template (measured).
 - **UW2.** Only when the trap's owner is not 0, after the door moves, for either kind of door: the lock is replaced the same way, and the chain ends. With owner 0 the chain goes on.
 
-Source: UW2 [TRIGGER.C:523](../../src/event/TRIGGER.C#L523), [TRIGGER.C:594](../../src/event/TRIGGER.C#L594), [TRIGGER.C:649](../../src/event/TRIGGER.C#L649), `dont_create_wandering_monster_here` [TRIGGER.C:1011](../../src/event/TRIGGER.C#L1011), `eligible_castle_monster` [TRIGGER.C:1240](../../src/event/TRIGGER.C#L1240), `ToggleDoor` [USEITEMS.C:805](../../src/obj/USEITEMS.C#L805); UW1 [TRIGGER.C:297](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L297), [TRIGGER.C:339](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L339), [TRIGGER.C:387](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L387).
+Source: UW2 [TRIGGER.C:523](../../uw2/src/event/TRIGGER.C#L523), [TRIGGER.C:594](../../uw2/src/event/TRIGGER.C#L594), [TRIGGER.C:649](../../uw2/src/event/TRIGGER.C#L649), `dont_create_wandering_monster_here` [TRIGGER.C:1011](../../uw2/src/event/TRIGGER.C#L1011), `eligible_castle_monster` [TRIGGER.C:1240](../../uw2/src/event/TRIGGER.C#L1240), `ToggleDoor` [USEITEMS.C:805](../../uw2/src/obj/USEITEMS.C#L805); UW1 [TRIGGER.C:297](../../uw1/src/event/TRIGGER.C#L297), [TRIGGER.C:339](../../uw1/src/event/TRIGGER.C#L339), [TRIGGER.C:387](../../uw1/src/event/TRIGGER.C#L387).
 
 ## Variables, text and experience
 
@@ -385,7 +385,7 @@ Source: UW2 [TRIGGER.C:523](../../src/event/TRIGGER.C#L523), [TRIGGER.C:594](../
 
 **Experience (UW2).** Gives `(quality * 8 + (owner & 7) - 256) * 2^(owner / 8)` experience, from -256 up to 255 times 1 to 128. It goes through the usual rules for a gain or a loss ([player-upkeep.md](player-upkeep.md#experience-and-levels)).
 
-Source: UW2 [TRIGGER.C:338](../../src/event/TRIGGER.C#L338), `set_numbered_variable` [TRIGGER.C:169](../../src/event/TRIGGER.C#L169), [TRIGGER.C:695](../../src/event/TRIGGER.C#L695), [TRIGGER.C:501](../../src/event/TRIGGER.C#L501), `player_get_exp` [SKILLCHK.C:63](../../src/game/SKILLCHK.C#L63); UW1 [TRIGGER.C:229](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L229), [TRIGGER.C:418](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L418).
+Source: UW2 [TRIGGER.C:338](../../uw2/src/event/TRIGGER.C#L338), `set_numbered_variable` [TRIGGER.C:169](../../uw2/src/event/TRIGGER.C#L169), [TRIGGER.C:695](../../uw2/src/event/TRIGGER.C#L695), [TRIGGER.C:501](../../uw2/src/event/TRIGGER.C#L501), `player_get_exp` [SKILLCHK.C:63](../../uw2/src/game/SKILLCHK.C#L63); UW1 [TRIGGER.C:229](../../uw1/src/event/TRIGGER.C#L229), [TRIGGER.C:418](../../uw1/src/event/TRIGGER.C#L418).
 
 ## Condition traps
 
@@ -402,7 +402,7 @@ These test something. When the test says "go on", the chain continues through th
 - **UW2.** It must be there; with fine x not 0 it must be worn (in an armour slot, a ring slot, or a shield in the shield hand); and with z above 0, a stack must hold at least z. If any of these fails: branch. Otherwise go on.
 - **UW1.** If it is missing, or a stack holds fewer than z, the chain ends. Otherwise go on.
 
-**Skill (UW2).** The value tested is, by `quality`: 0 to 2 strength, dexterity or intelligence; 3 the number 15; 4 and up the player's skill `quality - 4` (0 Attack, 1 Defense, ... 9 Casting, 10 Traps, 11 Search, 13 Stealth, 16 Picklock, 17 Acrobat, 19 Swimming; the order of `enum Skill` in [player.h](../../src/include/player.h)). The difficulty is `owner * 3`.
+**Skill (UW2).** The value tested is, by `quality`: 0 to 2 strength, dexterity or intelligence; 3 the number 15; 4 and up the player's skill `quality - 4` (0 Attack, 1 Defense, ... 9 Casting, 10 Traps, 11 Search, 13 Stealth, 16 Picklock, 17 Acrobat, 19 Swimming; the order of `enum Skill` in [player.h](../../uw2/src/include/player.h)). The difficulty is `owner * 3`.
 
 - heading 1: a skill check, `skill_check(value, difficulty)`, failing at grade 0 or -1;
 - any other heading: a plain comparison, failing when the value is below the difficulty.
@@ -412,7 +412,7 @@ The 12 shipped skill traps test Casting, Search, Stealth, Picklock and the numbe
 
 **Proximity (UW2).** Tests where who stands: the tile must be within x to x + `quality` and y to y + `owner`, and its height must pass this test against the trap's z: `(fine x != 0 or height <= z) and (fine y != 0 or height > z)`. So with both fine x and fine y set any height passes, with only fine x set only heights above z, with only fine y set only heights at or below z, and with neither none. Inside: go on. Outside: branch. The shipped proximity traps are 5 with only fine y set and 3 with both (measured).
 
-Source: UW2 [TRIGGER.C:346](../../src/event/TRIGGER.C#L346), [TRIGGER.C:664](../../src/event/TRIGGER.C#L664), [TRIGGER.C:364](../../src/event/TRIGGER.C#L364), [TRIGGER.C:386](../../src/event/TRIGGER.C#L386), `get_numbered_variable` [TRIGGER.C:210](../../src/event/TRIGGER.C#L210), `FindObj` [INVDATA.C:126](../../src/inv/INVDATA.C#L126), `ObjWorn` [INVDATA.C:382](../../src/inv/INVDATA.C#L382); UW1 [TRIGGER.C:258](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L258), [TRIGGER.C:394](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L394).
+Source: UW2 [TRIGGER.C:346](../../uw2/src/event/TRIGGER.C#L346), [TRIGGER.C:664](../../uw2/src/event/TRIGGER.C#L664), [TRIGGER.C:364](../../uw2/src/event/TRIGGER.C#L364), [TRIGGER.C:386](../../uw2/src/event/TRIGGER.C#L386), `get_numbered_variable` [TRIGGER.C:210](../../uw2/src/event/TRIGGER.C#L210), `FindObj` [INVDATA.C:126](../../uw2/src/inv/INVDATA.C#L126), `ObjWorn` [INVDATA.C:382](../../uw2/src/inv/INVDATA.C#L382); UW1 [TRIGGER.C:258](../../uw1/src/event/TRIGGER.C#L258), [TRIGGER.C:394](../../uw1/src/event/TRIGGER.C#L394).
 
 ## Hack traps, UW1
 
@@ -433,7 +433,7 @@ Source: UW2 [TRIGGER.C:346](../../src/event/TRIGGER.C#L346), [TRIGGER.C:664](../
 | 0x3C to 0x3E | **Earthquake**, only when the player set it off: kind `quality - 0x3B` (bit 0 shakes the screen, bit 1 bounces the player), strength `owner`. |
 | 0x3F | **The end of the game**: the ending begins, mode `owner + 1`. |
 
-Source: `do_trap_hack` UW1 [TRIGGER.C:501](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L501), `crystal_ball` [PLAYER.C:369](https://github.com/abedegno/UW1Decomp/blob/main/src/game/PLAYER.C#L369), `work_bullfrog_tiles` [WORLDEV.C:355](https://github.com/abedegno/UW1Decomp/blob/main/src/event/WORLDEV.C#L355), `ExplodingBook_ovr107_1259` [WORLDEV.C:466](https://github.com/abedegno/UW1Decomp/blob/main/src/event/WORLDEV.C#L466).
+Source: `do_trap_hack` UW1 [TRIGGER.C:501](../../uw1/src/event/TRIGGER.C#L501), `crystal_ball` [PLAYER.C:369](../../uw1/src/game/PLAYER.C#L369), `work_bullfrog_tiles` [WORLDEV.C:355](../../uw1/src/event/WORLDEV.C#L355), `ExplodingBook_ovr107_1259` [WORLDEV.C:466](../../uw1/src/event/WORLDEV.C#L466).
 
 ## Hack traps, UW2
 
@@ -460,7 +460,7 @@ Source: `do_trap_hack` UW1 [TRIGGER.C:501](https://github.com/abedegno/UW1Decomp
 | 27 | Sets the linked object's quality to `owner`. |
 | 29 | Flips switches at random in the 5 by 2 squares from x, y. |
 | 30 | In the Pits of Carnage only: whoever set it off ran from the fight. The player loses the fight; an opponent counts as a win ([conversations.md](conversations.md#the-pits-of-carnage-and-other-hacks-uw2)). |
-| 31 | In the Pits only: tries to rescue each pit fighter from the fire. Whether this can ever work is an open question ([FINDINGS.md](../FINDINGS.md)). |
+| 31 | In the Pits only: tries to rescue each pit fighter from the fire. Whether this can ever work is an open question ([FINDINGS.md](../../uw2/docs/FINDINGS.md)). |
 | 32 | **The q\*bert floor** (from the name): a square changes colour in a sequence kept in game variables 100 and up; when the 5 by 5 pyramid is all one colour, the walls take it and the reward objects are set. |
 | 33 | Turns the empty bottles on x, y into coins. |
 | 34 | **Britannia goes dry**, by the castle plot's stage: plants wilt, fountains dry, mushrooms spread. |
@@ -477,7 +477,7 @@ Source: `do_trap_hack` UW1 [TRIGGER.C:501](https://github.com/abedegno/UW1Decomp
 | 55 | Travel through the blackrock gem's facet the player stands at. |
 | 62 | Sets the goal of who to `owner`, if the trap's link is who or is 1. |
 
-Source: `do_trap_hack` [TRIGGER.C:773](../../src/event/TRIGGER.C#L773), `do_ice_hack` [TRIGGER.C:1168](../../src/event/TRIGGER.C#L1168), `crystal_ball` [PLAYER.C:384](../../src/game/PLAYER.C#L384), the handlers in [WORLDEV.C](../../src/event/WORLDEV.C) (`eight_pos_switch` [WORLDEV.C:596](../../src/event/WORLDEV.C#L596), `toggle_object_height` [WORLDEV.C:614](../../src/event/WORLDEV.C#L614), `toggle_pillars_hack` [WORLDEV.C:1138](../../src/event/WORLDEV.C#L1138), `standing_wave` [WORLDEV.C:1313](../../src/event/WORLDEV.C#L1313), `cycle_floor` [WORLDEV.C:1333](../../src/event/WORLDEV.C#L1333), `do_graffiti` [WORLDEV.C:1364](../../src/event/WORLDEV.C#L1364), `reset_arrow_pillars` [WORLDEV.C:1406](../../src/event/WORLDEV.C#L1406), `go_vend` [WORLDEV.C:2176](../../src/event/WORLDEV.C#L2176)), `arena_opponent_runs` [CRITTIME.C:604](../../src/critter/CRITTIME.C#L604), `make_terrain_unseen` [AUTOMAP.C:922](../../src/ui/AUTOMAP.C#L922).
+Source: `do_trap_hack` [TRIGGER.C:773](../../uw2/src/event/TRIGGER.C#L773), `do_ice_hack` [TRIGGER.C:1168](../../uw2/src/event/TRIGGER.C#L1168), `crystal_ball` [PLAYER.C:384](../../uw2/src/game/PLAYER.C#L384), the handlers in [WORLDEV.C](../../uw2/src/event/WORLDEV.C) (`eight_pos_switch` [WORLDEV.C:596](../../uw2/src/event/WORLDEV.C#L596), `toggle_object_height` [WORLDEV.C:614](../../uw2/src/event/WORLDEV.C#L614), `toggle_pillars_hack` [WORLDEV.C:1138](../../uw2/src/event/WORLDEV.C#L1138), `standing_wave` [WORLDEV.C:1313](../../uw2/src/event/WORLDEV.C#L1313), `cycle_floor` [WORLDEV.C:1333](../../uw2/src/event/WORLDEV.C#L1333), `do_graffiti` [WORLDEV.C:1364](../../uw2/src/event/WORLDEV.C#L1364), `reset_arrow_pillars` [WORLDEV.C:1406](../../uw2/src/event/WORLDEV.C#L1406), `go_vend` [WORLDEV.C:2176](../../uw2/src/event/WORLDEV.C#L2176)), `arena_opponent_runs` [CRITTIME.C:604](../../uw2/src/critter/CRITTIME.C#L604), `make_terrain_unseen` [AUTOMAP.C:922](../../uw2/src/ui/AUTOMAP.C#L922).
 
 ## Finding and disarming traps
 
@@ -501,9 +501,9 @@ Source: `do_trap_hack` [TRIGGER.C:773](../../src/event/TRIGGER.C#L773), `do_ice_
 - **Failure (-1)** prints "Your bumbling attempts have set off the <trap>." and sets the trigger off with mode -1, or a plain trap directly and then deletes it.
 - **A near miss (0)** prints "Unable to defuse trap.".
 
-**UW2** names a null trap "trap" and a damage trap with owner not 0 "poison trap" in these messages. Naming a special effects trap overruns the name buffer by one byte ([FINDINGS.md](../FINDINGS.md)).
+**UW2** names a null trap "trap" and a damage trap with owner not 0 "poison trap" in these messages. Naming a special effects trap overruns the name buffer by one byte ([FINDINGS.md](../../uw2/docs/FINDINGS.md)).
 
-Source: `player_3dlook` UW2 [INTERACT.C:416](../../src/ui/INTERACT.C#L416), `DetectedTrap`, `RemoveTrap` [SKILLS.C:874](../../src/game/SKILLS.C#L874), [SKILLS.C:893](../../src/game/SKILLS.C#L893), the spells [SPELLS.C:845](../../src/combat/SPELLS.C#L845), [SPELLS.C:861](../../src/combat/SPELLS.C#L861); UW1 [INTERACT.C:509](https://github.com/abedegno/UW1Decomp/blob/main/src/ui/INTERACT.C#L509), [SKILLS.C:884](https://github.com/abedegno/UW1Decomp/blob/main/src/game/SKILLS.C#L884), [SKILLS.C:905](https://github.com/abedegno/UW1Decomp/blob/main/src/game/SKILLS.C#L905), `obj_spells` [SPELLS.C:734](https://github.com/abedegno/UW1Decomp/blob/main/src/combat/SPELLS.C#L734).
+Source: `player_3dlook` UW2 [INTERACT.C:416](../../uw2/src/ui/INTERACT.C#L416), `DetectedTrap`, `RemoveTrap` [SKILLS.C:874](../../uw2/src/game/SKILLS.C#L874), [SKILLS.C:893](../../uw2/src/game/SKILLS.C#L893), the spells [SPELLS.C:845](../../uw2/src/combat/SPELLS.C#L845), [SPELLS.C:861](../../uw2/src/combat/SPELLS.C#L861); UW1 [INTERACT.C:509](../../uw1/src/ui/INTERACT.C#L509), [SKILLS.C:884](../../uw1/src/game/SKILLS.C#L884), [SKILLS.C:905](../../uw1/src/game/SKILLS.C#L905), `obj_spells` [SPELLS.C:734](../../uw1/src/combat/SPELLS.C#L734).
 
 ## Traps laid by spells, wandering monsters, ice and currents
 
@@ -513,11 +513,11 @@ Source: `player_3dlook` UW2 [INTERACT.C:416](../../src/ui/INTERACT.C#L416), `Det
 
 **Wandering monsters (both)** are create-object traps with no trigger pointing at them and a critter template, run by the clock and by sleep ([schedules.md](schedules.md#other-timed-events)).
 
-**Ice and currents (UW2)** are not traps. They come from the floor texture's terrain class and belong to the movement code ([subsystems/motion.md](../subsystems/motion.md)). The traps that touch them are hack 17, thin ice, and the schedule's freezing of the ice caverns ([schedules.md](schedules.md#the-row-events)).
+**Ice and currents (UW2)** are not traps. They come from the floor texture's terrain class and belong to the movement code ([subsystems/motion.md](../../uw2/docs/subsystems/motion.md)). The traps that touch them are hack 17, thin ice, and the schedule's freezing of the ice caverns ([schedules.md](schedules.md#the-row-events)).
 
 **Changing level (both)** is the teleport trap with a level number ([above](#teleport-and-jump)). UW2's blackrock gem (hack 55) is the other way between worlds.
 
-Source: `cast_trap_spell` UW2 [TRIGGER.C:919](../../src/event/TRIGGER.C#L919), UW1 [TRIGGER.C:547](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L547), `creat_spell` UW1 [SPELLS.C:570](https://github.com/abedegno/UW1Decomp/blob/main/src/combat/SPELLS.C#L570), `wander_that_monster` UW2 [CRITTIME.C:305](../../src/critter/CRITTIME.C#L305), UW1 [CRITTIME.C:303](https://github.com/abedegno/UW1Decomp/blob/main/src/critter/CRITTIME.C#L303), `DoWanderingMonsters` [TRIGGER.C:1033](../../src/event/TRIGGER.C#L1033).
+Source: `cast_trap_spell` UW2 [TRIGGER.C:919](../../uw2/src/event/TRIGGER.C#L919), UW1 [TRIGGER.C:547](../../uw1/src/event/TRIGGER.C#L547), `creat_spell` UW1 [SPELLS.C:570](../../uw1/src/combat/SPELLS.C#L570), `wander_that_monster` UW2 [CRITTIME.C:305](../../uw2/src/critter/CRITTIME.C#L305), UW1 [CRITTIME.C:303](../../uw1/src/critter/CRITTIME.C#L303), `DoWanderingMonsters` [TRIGGER.C:1033](../../uw2/src/event/TRIGGER.C#L1033).
 
 ## Open questions
 

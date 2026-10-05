@@ -4,7 +4,7 @@ This page describes how Ultima Underworld II moves its NPCs through the day and 
 
 Each rule is marked **both**, **UW1** or **UW2**. The schedules are UW2 only. UW1 has no schedules and no X clocks, and its NPCs move only by their AI goals ([npc-ai.md](npc-ai.md)), by conversations and by traps. The timed events UW1 does have are listed in [Other timed events](#other-timed-events). Statements about the shipped data were measured from the GOG release's `DATA\SCD.ARK` and say so. Nothing here was checked in a running game.
 
-The file layout of `SCD.ARK` is in [FORMATS.md](../FORMATS.md#scdark). The code-oriented notes are in [subsystems/events.md](../subsystems/events.md#schedules).
+The file layout of `SCD.ARK` is in [FORMATS.md](../FORMATS.md#scdark). The code-oriented notes are in [subsystems/events.md](../../uw2/docs/subsystems/events.md#schedules).
 
 ## Contents
 
@@ -37,11 +37,11 @@ The player's slow updates (`duration_check`) run once every 20 seconds of game t
 
 **UW2.** A new game starts at clock 0x465000, which is 5:00 in the morning of day 1, X clock 0 step 15. **UW1** starts at 0x10B3000.
 
-Source: `duration_check` UW2 [PLAYTIME.C:71](../../src/game/PLAYTIME.C#L71), its caller [INTERACT.C:118](../../src/ui/INTERACT.C#L118), the clock [PLAYMOVE.C:298](../../src/motion/PLAYMOVE.C#L298); UW1 [PLAYTIME.C:128](https://github.com/abedegno/UW1Decomp/blob/main/src/game/PLAYTIME.C#L128); new game UW2 [CHARGEN.C:84](../../src/game/CHARGEN.C#L84).
+Source: `duration_check` UW2 [PLAYTIME.C:71](../../uw2/src/game/PLAYTIME.C#L71), its caller [INTERACT.C:118](../../uw2/src/ui/INTERACT.C#L118), the clock [PLAYMOVE.C:298](../../uw2/src/motion/PLAYMOVE.C#L298); UW1 [PLAYTIME.C:128](../../uw1/src/game/PLAYTIME.C#L128); new game UW2 [CHARGEN.C:84](../../uw2/src/game/CHARGEN.C#L84).
 
 ## The X clocks
 
-**UW2.** The player record holds 16 X clocks, one byte each (`xclock[16]` in [player.h](../../src/include/player.h)). Each schedule block in `SCD.ARK` follows the X clock with its number.
+**UW2.** The player record holds 16 X clocks, one byte each (`xclock[16]` in [player.h](../../uw2/src/include/player.h)). Each schedule block in `SCD.ARK` follows the X clock with its number.
 
 | Clock | Meaning | How it moves |
 | --- | --- | --- |
@@ -56,7 +56,7 @@ The other clocks are set by conversations (`x_clock`) and traps. When a conversa
 
 In the shipped `SCD.ARK`, only blocks 0, 1, 14 and 15 have rows: 51, 78, 6 and 84 rows (measured, see [FORMATS.md](../FORMATS.md#scdark)).
 
-Source: [player.h](../../src/include/player.h), `pass_time` ([WORLDEV.C:163](../../src/event/WORLDEV.C#L163)), `x_clock` ([BABLHACK.C:531](../../src/conv/BABLHACK.C#L531)).
+Source: [player.h](../../uw2/src/include/player.h), `pass_time` ([WORLDEV.C:163](../../uw2/src/event/WORLDEV.C#L163)), `x_clock` ([BABLHACK.C:531](../../uw2/src/conv/BABLHACK.C#L531)).
 
 ## How a schedule runs
 
@@ -83,7 +83,7 @@ Separately, every 60 slow updates the time of day moves on one step and block 0 
 
 So each level keeps its own place in each schedule. A level the player is not on does not change. When the player arrives, its schedules catch up on everything that fell due while he was away, in order.
 
-Source: `Sched_SetAllClocks`, `Sched_SetTime`, `Sched_WrapTime`, `FindSCDRowsToExecute` ([SCHEDULE.C:204](../../src/event/SCHEDULE.C#L204), [SCHEDULE.C:169](../../src/event/SCHEDULE.C#L169), [SCHEDULE.C:187](../../src/event/SCHEDULE.C#L187), [SCHEDULE.C:56](../../src/event/SCHEDULE.C#L56)), `Sched_DoEvent` ([SCDEVENT.C:488](../../src/event/SCDEVENT.C#L488)); callers [CONVERSE.C:238](../../src/conv/CONVERSE.C#L238), [GAMEWRAP.C:402](../../src/game/GAMEWRAP.C#L402), [WORLDEV.C:168](../../src/event/WORLDEV.C#L168), [TRIGGER.C:873](../../src/event/TRIGGER.C#L873), [WORLDEV.C:2327](../../src/event/WORLDEV.C#L2327), the hourly step [PLAYTIME.C:155](../../src/game/PLAYTIME.C#L155).
+Source: `Sched_SetAllClocks`, `Sched_SetTime`, `Sched_WrapTime`, `FindSCDRowsToExecute` ([SCHEDULE.C:204](../../uw2/src/event/SCHEDULE.C#L204), [SCHEDULE.C:169](../../uw2/src/event/SCHEDULE.C#L169), [SCHEDULE.C:187](../../uw2/src/event/SCHEDULE.C#L187), [SCHEDULE.C:56](../../uw2/src/event/SCHEDULE.C#L56)), `Sched_DoEvent` ([SCDEVENT.C:488](../../uw2/src/event/SCDEVENT.C#L488)); callers [CONVERSE.C:238](../../uw2/src/conv/CONVERSE.C#L238), [GAMEWRAP.C:402](../../uw2/src/game/GAMEWRAP.C#L402), [WORLDEV.C:168](../../uw2/src/event/WORLDEV.C#L168), [TRIGGER.C:873](../../uw2/src/event/TRIGGER.C#L873), [WORLDEV.C:2327](../../uw2/src/event/WORLDEV.C#L2327), the hourly step [PLAYTIME.C:155](../../uw2/src/game/PLAYTIME.C#L155).
 
 ## Which critters a row acts on
 
@@ -98,7 +98,7 @@ Source: `Sched_SetAllClocks`, `Sched_SetTime`, `Sched_WrapTime`, `FindSCDRowsToE
 
 "Active" means on the level the player is on.
 
-Source: `gronk_critid`, `gronk_race`, `gronk_all_critters` ([SCDEVENT.C:86](../../src/event/SCDEVENT.C#L86), [SCDEVENT.C:42](../../src/event/SCDEVENT.C#L42), [SCDEVENT.C:64](../../src/event/SCDEVENT.C#L64)), `gronk_whoami` ([SPELLS.C:703](../../src/combat/SPELLS.C#L703)).
+Source: `gronk_critid`, `gronk_race`, `gronk_all_critters` ([SCDEVENT.C:86](../../uw2/src/event/SCDEVENT.C#L86), [SCDEVENT.C:42](../../uw2/src/event/SCDEVENT.C#L42), [SCDEVENT.C:64](../../uw2/src/event/SCDEVENT.C#L64)), `gronk_whoami` ([SPELLS.C:703](../../uw2/src/combat/SPELLS.C#L703)).
 
 ## The row events
 
@@ -109,7 +109,7 @@ Source: `gronk_critid`, `gronk_race`, `gronk_all_critters` ([SCDEVENT.C:86](../.
 | 0, 6 | nothing | |
 | 1 | change goal | The critters (word at 5) get goal byte 7 with goal target byte 8. If the critter was guarding, guarding is remembered as its old goal ([npc-ai.md](npc-ai.md#the-goals)). |
 | 2 | teleport | Each critter (word at 7) is moved on its own level to square (byte 5, byte 6), unless the player could see the critter or the destination (below). Byte 10 set moves it even when seen. Byte 11 set makes the destination its home. If it could not move and byte 12 is above 0, a one-off copy of the row is added to block 0 for the time of day plus byte 12 (modulo 72), so it tries again then. Byte 9 is passed on but not used. |
-| 3 | kill | The critters (word at 5) die at once. If byte 7 is 0, the NPC the player is talking to is spared. In that case, if byte 8 is above 0, the row is not a "once" row and byte 6 of the schedule work area is 15, X clock 15 goes up by 1. What that last test was meant to see is an open question ([FINDINGS.md](../FINDINGS.md)). |
+| 3 | kill | The critters (word at 5) die at once. If byte 7 is 0, the NPC the player is talking to is spared. In that case, if byte 8 is above 0, the row is not a "once" row and byte 6 of the schedule work area is 15, X clock 15 goes up by 1. What that last test was meant to see is an open question ([FINDINGS.md](../../uw2/docs/FINDINGS.md)). |
 | 4 | set a quest bit | Quest flag byte 5 is set to byte 6 (0 or 1). |
 | 5 | fire triggers | Every scheduled trigger (trigger minor class 0xC) on square (byte 5, byte 6) of the level is set off, as by nobody. |
 | 7 | special case | Byte 5 picks a hack, below. |
@@ -145,7 +145,7 @@ Source: `gronk_critid`, `gronk_race`, `gronk_all_critters` ([SCDEVENT.C:86](../.
 
 A quest flag takes these rules instead: op 5 toggles it, op 1 leaves it as it is, and any other op sets it to 1 if the operand is above 0, else 0. A game variable is stored as a byte, so a result is kept modulo 256.
 
-Source: the handlers ([SCDEVENT.C:99](../../src/event/SCDEVENT.C#L99) to [SCDEVENT.C:482](../../src/event/SCDEVENT.C#L482)), the tables ([SCDEVENT.C:510](../../src/event/SCDEVENT.C#L510)), the row layout ([event.h:21](../../src/include/event.h#L21)), `do_math_op` and `set_numbered_variable` ([TRIGGER.C:151](../../src/event/TRIGGER.C#L151), [TRIGGER.C:169](../../src/event/TRIGGER.C#L169)).
+Source: the handlers ([SCDEVENT.C:99](../../uw2/src/event/SCDEVENT.C#L99) to [SCDEVENT.C:482](../../uw2/src/event/SCDEVENT.C#L482)), the tables ([SCDEVENT.C:510](../../uw2/src/event/SCDEVENT.C#L510)), the row layout ([event.h:21](../../uw2/src/include/event.h#L21)), `do_math_op` and `set_numbered_variable` ([TRIGGER.C:151](../../uw2/src/event/TRIGGER.C#L151), [TRIGGER.C:169](../../uw2/src/event/TRIGGER.C#L169)).
 
 ## Conditional blocks
 
@@ -158,7 +158,7 @@ Source: the handlers ([SCDEVENT.C:99](../../src/event/SCDEVENT.C#L99) to [SCDEVE
 
 In the shipped `SCD.ARK` every test row has count 1, operation 0 and invert 0, and compares with a value from 0 to 6 (measured). So in practice each test asks whether one variable equals a number.
 
-Source: `ev_checkvar` ([SCDEVENT.C:446](../../src/event/SCDEVENT.C#L446)).
+Source: `ev_checkvar` ([SCDEVENT.C:446](../../uw2/src/event/SCDEVENT.C#L446)).
 
 ## What the player can see
 
@@ -167,11 +167,11 @@ Source: `ev_checkvar` ([SCDEVENT.C:446](../../src/event/SCDEVENT.C#L446)).
 - **Seen** (`player_looking`) holds for a point when it is within 8 tiles of the player on both axes (each of |dx| and |dy| below 8) and the direction to it is within one eighth of a turn of the player's facing, on the coarse 8 directions. Walls are not considered.
 - **Near** (`check_alert`) holds when the point is within 8 tiles on both axes. Door closing and wandering monsters use this one, and a caller can turn it off.
 
-Source: `player_looking` ([SCDEVENT.C:120](../../src/event/SCDEVENT.C#L120)), `check_alert` ([TRIGGER.C:1020](../../src/event/TRIGGER.C#L1020)).
+Source: `player_looking` ([SCDEVENT.C:120](../../uw2/src/event/SCDEVENT.C#L120)), `check_alert` ([TRIGGER.C:1020](../../uw2/src/event/TRIGGER.C#L1020)).
 
 ## The castle household's day
 
-**UW2.** Lord British's household on level 1 moves round the castle by the time of day. Hack trap 36 runs the round. In the shipped data a scheduled trigger on level 1 sets it off from block 0 every six steps of the day clock, that is every two hours, while the player is on level 1 ([FINDINGS.md](../FINDINGS.md), measured).
+**UW2.** Lord British's household on level 1 moves round the castle by the time of day. Hack trap 36 runs the round. In the shipped data a scheduled trigger on level 1 sets it off from block 0 every six steps of the day clock, that is every two hours, while the player is on level 1 ([FINDINGS.md](../../uw2/docs/FINDINGS.md), measured).
 
 Each time it runs:
 
@@ -204,7 +204,7 @@ The own spots, for conversations 0x82 to 0x8F in order, are x 0x2A, 0x24, 0x15, 
 
 The room names in comments of other projects (lobby, throne room, kitchens) were not checked against the map here.
 
-Source: `move_folks_around` ([WORLDEV.C:1161](../../src/event/WORLDEV.C#L1161)), `maybe_go_hang_out`, `where_shall_we_hang_out` ([CRITTIME.C:617](../../src/critter/CRITTIME.C#L617), [CRITTIME.C:646](../../src/critter/CRITTIME.C#L646)).
+Source: `move_folks_around` ([WORLDEV.C:1161](../../uw2/src/event/WORLDEV.C#L1161)), `maybe_go_hang_out`, `where_shall_we_hang_out` ([CRITTIME.C:617](../../uw2/src/critter/CRITTIME.C#L617), [CRITTIME.C:646](../../uw2/src/critter/CRITTIME.C#L646)).
 
 ## Other timed events
 
@@ -216,10 +216,10 @@ Source: `move_folks_around` ([WORLDEV.C:1161](../../src/event/WORLDEV.C#L1161)),
 
 **Timer triggers (UW2)** fire on their own clock while the player is near. They are described with the traps.
 
-Source: `DoWanderingMonsters`, `DoClosingDoors` ([TRIGGER.C:1033](../../src/event/TRIGGER.C#L1033), [TRIGGER.C:1054](../../src/event/TRIGGER.C#L1054)), `yearly_checkup` ([CRITTIME.C:76](../../src/critter/CRITTIME.C#L76)), [PLAYTIME.C:143](../../src/game/PLAYTIME.C#L143), sleep [SKILLS.C:506](../../src/game/SKILLS.C#L506); UW1 [TRIGGER.C:656](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L656), [TRIGGER.C:677](https://github.com/abedegno/UW1Decomp/blob/main/src/event/TRIGGER.C#L677), [PLAYTIME.C:128](https://github.com/abedegno/UW1Decomp/blob/main/src/game/PLAYTIME.C#L128), [SKILLS.C:543](https://github.com/abedegno/UW1Decomp/blob/main/src/game/SKILLS.C#L543).
+Source: `DoWanderingMonsters`, `DoClosingDoors` ([TRIGGER.C:1033](../../uw2/src/event/TRIGGER.C#L1033), [TRIGGER.C:1054](../../uw2/src/event/TRIGGER.C#L1054)), `yearly_checkup` ([CRITTIME.C:76](../../uw2/src/critter/CRITTIME.C#L76)), [PLAYTIME.C:143](../../uw2/src/game/PLAYTIME.C#L143), sleep [SKILLS.C:506](../../uw2/src/game/SKILLS.C#L506); UW1 [TRIGGER.C:656](../../uw1/src/event/TRIGGER.C#L656), [TRIGGER.C:677](../../uw1/src/event/TRIGGER.C#L677), [PLAYTIME.C:128](../../uw1/src/game/PLAYTIME.C#L128), [SKILLS.C:543](../../uw1/src/game/SKILLS.C#L543).
 
 ## Open questions
 
-- Event 3's test of byte 6 of the work area, and `Sched_InsertLong`'s index fix-up, are listed in [FINDINGS.md](../FINDINGS.md) as probable slips.
+- Event 3's test of byte 6 of the work area, and `Sched_InsertLong`'s index fix-up, are listed in [FINDINGS.md](../../uw2/docs/FINDINGS.md) as probable slips.
 - Hack 7's loop (above) moves the critter row after row. Whether Mors Gotha's rows in the data make this visible was not checked.
 - What the plot meaning of each shipped row is was not traced here. The rows can be listed with a short script from the layout in [FORMATS.md](../FORMATS.md#scdark).
