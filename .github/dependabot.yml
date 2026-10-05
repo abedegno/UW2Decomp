@@ -1,9 +1,7 @@
+# Only the Exhume submodule. The workflows in .github/ are rendered from Exhume's CI templates
+# (ci.toml), so the actions they use are updated in Exhume, then here by the submodule.
 version: 2
 updates:
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: monthly
   - package-ecosystem: gitsubmodule
     directory: /
     schedule:
