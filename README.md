@@ -43,6 +43,8 @@ Every code segment is matched. All of UW2's C, 337,327 bytes in 99 files, compil
 
 Function and global names are the originals from the FM Towns build wherever it has them. The sources are grouped by subsystem, with shared headers, named constants and struct fields, and every file says what it does in the game. [FINDINGS.md](docs/FINDINGS.md) collects what matching revealed: likely bugs in the original, game rules and engine details.
 
+[FORMATS.md](docs/FORMATS.md) gives the layout of every data file both games read and write, from the code that reads it, with UW1's differences and corrections to the UW-Formats document.
+
 ### How it is verified
 
 - **The gate** (`make check`): every source compiles in DOS to its segment's bytes, with its fixups and data verified; `symbols.tsv` rebuilds from scratch to the committed file; the exact link equals `UW2.EXE`; the modding build with no change equals the exact link.
