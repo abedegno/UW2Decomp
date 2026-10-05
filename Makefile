@@ -30,18 +30,24 @@
 #   make verify        only the sessions against their goldens, in the port (tools/replay.py verify)
 #   make golden        regenerate every session's golden from DOS (tools/replay.py golden)
 #   make fuzz          the routine fuzzing, quick (tools/fuzzasm.py; FUZZ=--deep for the long run)
+#   make vectors       the test vectors: UW2.EXE's routines on synthetic inputs, written to vectors/
+#                      and checked against the port's C (Exhume's tools/vectors.py with
+#                      tools/vector_targets.py and tools/vectorhost-uw2.c; vectors/README.md);
+#                      VECTORS=--check only checks that they regenerate byte-identical
 #   make coverage      the port's coverage over the sessions and the fuzzing: docs/COVERAGE.md
 #
 # make setup needs the Borland disk images the first time:
 #   make setup TC_DISKS="/path/to/Turbo C++ 1.01" TASM_DISKS="/path/to/Turbo Assembler 2.0"
 
 PY := $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
+# Exhume's checkout, found as tools/exhume.py finds it ($EXHUME, else .exhume, else ~/Exhume)
+EXHUME ?= $(if $(wildcard .exhume/runtime),.exhume,$(HOME)/Exhume)
 TC_DISKS ?=
 TASM_DISKS ?=
 
 .PHONY: game exact check check-all boot setup setup-emu2 setup-exhume setup-sound setup-libs setup-port hooks port-check port port-debug \
         port-release package help \
-        test test-full verify golden fuzz coverage
+        test test-full verify golden fuzz vectors coverage
 .DEFAULT_GOAL := game
 
 game:
@@ -128,6 +134,11 @@ golden:
 
 fuzz:
 	@$(PY) tools/fuzzasm.py $(FUZZ)
+
+vectors:
+	@$(PY) tools/portbuild.py
+	@UW2DECOMP="$(CURDIR)" $(PY) $(EXHUME)/tools/vectors.py --config $(EXHUME)/examples/uw2/exhume.toml \
+	  --targets tools/vector_targets.py --glue tools/vectorhost-uw2.c --out vectors $(VECTORS)
 
 coverage:
 	@$(PY) tools/coverage.py
