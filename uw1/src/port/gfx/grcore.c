@@ -58,10 +58,24 @@ void grPageFlip(void)
 
 ENTRY0(grSoftPageFlip, 0x4F66)
 
+/* The string entries copy the string with its 0 and one byte more (up to 84h bytes) into
+   3963:4FA6; in DOS the byte after the 0 is whatever follows the string, which on the host
+   can be past the end of a literal or an array (an AddressSanitizer report). So the entries
+   are given a copy with a 0 after the string's 0: the copied bytes up to the 0 are the
+   string's, and the one after it is the junk replay.py's string_junk leaves uncompared. */
+static char *padded(const char *s)
+{
+    static char buf[0x88];
+    size_t n = strnlen(s, 0x86);
+    memcpy(buf, s, n);
+    memset(buf + n, 0, sizeof buf - n);
+    return buf;
+}
+
 void string_to_screen(char *s, int x, int y)
 {
     uint16_t w[4];
-    far_arg(s, w);
+    far_arg(padded(s), w);
     w[2] = W(x); w[3] = W(y);
     call_entry(0x4CED, w, 4, 0);
 }
@@ -69,7 +83,7 @@ void string_to_screen(char *s, int x, int y)
 int string_width(char *s)
 {
     uint16_t w[2];
-    far_arg(s, w);
+    far_arg(padded(s), w);
     return (int16_t)call_entry(0x4DCB, w, 2, 0);
 }
 

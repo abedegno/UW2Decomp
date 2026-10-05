@@ -130,6 +130,16 @@ Bitmap = "the header of a picture read from an art file (grs_unpack over the byt
 # ranges and overrides (UW1's own, so they live here)
 spec = "tools/asm2c_spec.py"
 
+[sound]
+# Exhume's tools/ailcheck.py: UW1's AIL 2 music drivers, by the kinds of Exhume's
+# runtime/port/sound/aildrv.h, in the game's directory ([replay] data): Ad Lib, Sound Blaster FM,
+# SB Pro (two YM3812s: its description table names "AD", not "OPL"), Pro Audio Spectrum, MT-32
+drivers = { 1 = "SOUND/ADLIB.ADV", 2 = "SOUND/SBFM.ADV", 3 = "SOUND/SBPFM.ADV", 4 = "SOUND/PASFM.ADV", 6 = "SOUND/MT32MPU.ADV" }
+# the project's own C for the sound library: the FM drivers' time-variant effects (Origin's
+# ALE.INC, UW2Decomp's translation, the same code in UW1's SBFM.ADV), which plug into the
+# runtime's sound/yamaha.c as uw1_tvfx (src/port/ailgame.h's AIL_FM_EXT)
+extensions = ["src/port/sound/tvfx.c"]
+
 [replay]
 # The record and replay harness (Exhume's docs/port.md, "Verifying a port"; docs/BUILDING.md,
 # "Recording and replaying a session"): Exhume's tools/replay.py, golden.py, replaydos.mjs.
@@ -151,6 +161,10 @@ link = "{python} tools/link.py --mod --config {config}"
 order = ["newgame", "walk", "sound", "soundfm", "soundmt", "items", "talk", "load", "intro"]
 c0_signature_at = 8                    # DS:8, after DS:0..3 (an overlay stub's tail) and C0's DS:4..7
 stage_from = { load = "items" }
+# the port's driver logs, and the real drivers run against them (Exhume's tools/ailcheck.py)
+port_sound_logs = ["--ail-log", "--hw-log"]
+driver_check = "{python} {exhume}/tools/ailcheck.py --config {config} {ail} {hw}"
+driver_marker = "register_driver"      # a session whose AIL log registers no driver has no music card
 # sound's DOS replays run in js-dos: in DOSBox-X (2026.10.01, sb16 or sbpro2, either core,
 # mixer on or off) the replay hangs once the introduction starts its speech on SBDIG.ADV, where
 # js-dos replays it to the end, twice identical. soundfm, with no speech card, replays in both.
@@ -172,6 +186,10 @@ exe_range = [0x395B, 0xA000]
 # (the replay build's moved by a paragraph when USEITEMS.C's FARNULLTRAP marks made it 272 bytes
 # larger), so the heap blocks in the slots are compared by their distance from it
 heap_block = 6
+# the far heap starts at the load segment + 6955h (the port, PORT_HEAP_FIRST) or 6956h (the
+# replay build as it stands), above the image (6250h), the stack and the overlay buffer; no
+# far data or stack segment in the slots is above 6900h
+heap_from = 0x6900
 slots = { "GFX" = [0x7AF, 0x7D4, 0x95A, 0xB0E, 0xB1C, 0x558A, 0x55EA] }
 
 [replay.nulls]

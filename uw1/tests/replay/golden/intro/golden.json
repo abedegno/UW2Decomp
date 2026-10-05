@@ -11,8 +11,8 @@
  },
  "stage": null,
  "replay_build": {
-  "exe_sha256": "8d7472736410773555fe2d34561ee39efb967a43dc563ef158abb3615e12837c",
-  "sources_key": "46e7a524b801778bbf4ad039bffb336e4c09d33b"
+  "exe_sha256": "cac099febe4185ae510d5d77998a45c49a17e17527b0bb79f44c1fcd0169eb80",
+  "sources_key": "6ae5f9baf5697aee842e66d4ec6eca9c0d3b0e09"
  },
  "dos": {
   "backend": "dosbox-x",
@@ -27,7 +27,7 @@
   {"i":2,"ck":[2,0,1849454,1024],"secs":{"PLYR":"c538c83f9e14ddbb","RAND":"8bd8c013246aa84c","CNTS":"69d7e005d9070379"}},
   {"i":3,"ck":[2,0,2652218,2048],"secs":{"PLYR":"c538c83f9e14ddbb","RAND":"8bd8c013246aa84c","CNTS":"e0773a8b5945e7d2"}},
   {"i":4,"ck":[2,0,3472798,3072],"secs":{"PLYR":"c538c83f9e14ddbb","RAND":"8bd8c013246aa84c","CNTS":"51df09dc82514c74"}},
-  {"i":5,"ck":[1,2,4529389,3866],"secs":{"PLYR":"c538c83f9e14ddbb","RAND":"8bd8c013246aa84c","CNTS":"feecef719b7c1d65","GFX":"dfad3a8ed49f852b","PAL":"2e404218780e5666","CRTC":"5820c1822f777b43","VGA":"ad5794b1984d7864"},"png":"ck0005.png"},
+  {"i":5,"ck":[1,2,4529389,3866],"secs":{"PLYR":"c538c83f9e14ddbb","RAND":"8bd8c013246aa84c","CNTS":"feecef719b7c1d65","GFX":"34d4d15f0e0041c7","PAL":"2e404218780e5666","CRTC":"5820c1822f777b43","VGA":"ad5794b1984d7864"},"png":"ck0005.png"},
   {"i":6,"ck":[2,0,5211194,4096],"secs":{"PLYR":"c538c83f9e14ddbb","RAND":"8bd8c013246aa84c","CNTS":"616cf4b59cc66d8b"}},
   {"i":7,"ck":[2,0,6825063,5120],"secs":{"PLYR":"c538c83f9e14ddbb","RAND":"8bd8c013246aa84c","CNTS":"bcdff39e6f9edb09"}},
   {"i":8,"ck":[2,0,9313829,6144],"secs":{"PLYR":"c538c83f9e14ddbb","RAND":"8bd8c013246aa84c","CNTS":"9a6c32eb086315ef"}},
