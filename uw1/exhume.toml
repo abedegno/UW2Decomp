@@ -31,8 +31,8 @@ listing_segments = { seg051 = 0x4723 }
 
 [toolchain]
 profile = "borland-tc101"
-home = "${EXHUME_TC:-~/UW2Decomp/TC}"
-stage = ["${EXHUME_TC:-~/UW2Decomp/TC}", "${EXHUME_TASM:-~/UW2Decomp/TASM}/TASM.EXE"]
+home = "${EXHUME_TC:-../uw2/TC}"
+stage = ["${EXHUME_TC:-../uw2/TC}", "${EXHUME_TASM:-../uw2/TASM}/TASM.EXE"]
 c_opts = "-mm -1 -G -O -Z"
 
 [map]
