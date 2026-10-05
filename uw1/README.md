@@ -60,6 +60,8 @@ The port is done to the same standard as UW2Decomp's: every recorded session is 
 
 [docs/UW1-UW2-DIFFERENCES.md](docs/UW1-UW2-DIFFERENCES.md) summarises where UW1's rules differ from UW2's, routine by routine, and points to the full catalogue in UW2Decomp.
 
+[docs/FORMATS.md](docs/FORMATS.md) lists UW1's own data file layouts and points to UW2Decomp's FORMATS.md, which covers both games.
+
 ## Names
 
 UW1 has no build with symbols. Its names come from UW2's matched sources, whose names are the FM Towns build's originals: a UW1 function whose code pairs with a UW2 function (`tools/kin.py` in Exhume, `map/kin.tsv`) takes that name. Where the overlay manager's stub order rules a name out (the linker numbers an overlay's entries in the order of a hash of their names), a function takes a descriptive name whose hash fits, and the source says so.
