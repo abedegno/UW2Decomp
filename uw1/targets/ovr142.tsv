@@ -1,0 +1,5 @@
+# segment ovr142 base 0x81010 size 0x229 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+set_light	OpenAndApplyShadesDat_ovr142_0	0x0	0x11A
+init_lighting	ovr142_11A	0x11A	0x67
+random_light	ovr142_181	0x181	0xA8

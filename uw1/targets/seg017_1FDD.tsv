@@ -1,0 +1,13 @@
+# segment seg017_1FDD base 0x21136 size 0x13F0 org 0x36
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name; SetPnt, the assembly routine before it, is targets/seg017_1FDD_1.tsv (as UW2's seg019_21BA_C)
+set_pix_xfer	seg017_1FDD_36	0x0	0x1A
+set_graphics_level	DetailLevel_seg017_50	0x1A	0x75
+process_grid	seg017_1FDD_C5	0x8F	0x27E
+do_3d_pickup	seg017_1FDD_343	0x30D	0x1E3
+subprocess	StartRendering_seg017_526	0x4F0	0x274
+polyflr	seg017_1FDD_79A	0x764	0xE6
+polycie	seg017_1FDD_880	0x84A	0xE4
+polywal	seg017_1FDD_964	0x92E	0xE6
+txtflr	seg017_1FDD_A4A	0xA14	0x1D1
+txtwal	seg017_1FDD_C1B	0xBE5	0x1A1
+grdb_elem	seg017_1FDD_DBC	0xD86	0x66A

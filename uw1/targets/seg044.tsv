@@ -1,0 +1,18 @@
+# segment seg044 base 0x3A274 size 0xF87 org 0x4
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+rem_anim_from_map	seg044_4	0x0	0x7A
+rem_anim_from_list	seg044_7E	0x7A	0x6B
+seg044_E9	seg044_E9	0xE5	0x2C5
+Change_AnimPtr	MoveAnimationOverlayLink_seg044_3AE	0x3AA	0x70
+add_animobj	ProbablyCreateAnimo_seg044_41E	0x41A	0x11E
+do_animobj	seg044_53C	0x538	0x1BD
+seg044_6F9	seg044_6F9	0x6F5	0x9B
+fireball_effect	SpawnMultipleAnimoCopies_seg044_794	0x790	0x1C6
+DetonateProjectile_seg044_95A	DetonateProjectile_seg044_95A	0x956	0xD9
+SpawnClass7Object_seg044_A33	SpawnClass7Object_seg044_A33	0xA2F	0x27D
+find_anim	seg044_CB0	0xCAC	0x4C
+get_animlen	seg044_CFC	0xCF8	0x2C
+set_animlen	seg044_D28	0xD24	0x28
+check_door	seg044_D50	0xD4C	0x1A3
+seg044_EF3	seg044_EF3	0xEEF	0x61
+seg044_F54	seg044_F54	0xF50	0x37

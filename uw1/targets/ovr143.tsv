@@ -1,0 +1,26 @@
+# segment ovr143 base 0x81270 size 0x1B01 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+use_skill	ovr143_0	0x0	0x70
+player_use_skill	ovr143_70	0x70	0x25
+ovr143_95	ovr143_95	0x95	0x85
+advance	LevelUp_ovr143_11A	0x11A	0x78
+prime	GetGoverningAttribute_ovr143_192	0x192	0x1D
+add_to_skill	ovr143_1AF	0x1AF	0xC2
+get_skill	SkillGain_ovr143_271	0x271	0x14F
+SkillAdvanceGreatlyMessage_ovr143_3C0	SkillAdvanceGreatlyMessage_ovr143_3C0	0x3C0	0x46
+NormalSkillAdvanceMessage_ovr143_406	NormalSkillAdvanceMessage_ovr143_406	0x406	0x87
+ChantMantraAtShrine_ovr143_48D	ChantMantraAtShrine_ovr143_48D	0x48D	0x2E2
+VictoryScreen_ovr143_76F	VictoryScreen_ovr143_76F	0x76F	0x404
+GaramonDream_ovr143_B73	GaramonDream_ovr143_B73	0xB73	0x107
+drop_drunk_player	SleepingOnDamagingSurface_ovr143_C7A	0xC7A	0xA5
+Sleep_ovr143_D1F	Sleep_ovr143_D1F	0xD1F	0x3B6
+player_key_sleep	MakeCampEvent_ovr143_10D5	0x10D5	0x32
+player_eat	ChangeHunger_ovr143_1107	0x1107	0x7F
+EndGameFunctions_ovr143_1186	EndGameFunctions_ovr143_1186	0x1186	0x175
+PlantSilverSeed_ovr143_12FB	PlantSilverSeed_ovr143_12FB	0x12FB	0x1B2
+moveto	FindTeleportToObject_ovr143_14AD	0x14AD	0x74
+Resurrection_ovr143_1521	Resurrection_ovr143_1521	0x1521	0xD3
+CallBackGateTravel_ovr143_15F4	CallBackGateTravel_ovr143_15F4	0x15F4	0x1C
+DeathAndResurrection_ovr143_1610	DeathAndResurrection_ovr143_1610	0x1610	0x219
+SearchForTrap_ovr143_1829	SearchForTrap_ovr143_1829	0x1829	0xA4
+RemoveTrap	DefuseTrap_ovr143_18CD	0x18CD	0x234

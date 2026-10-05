@@ -1,0 +1,4 @@
+# segment ovr116 base 0x77070 size 0x8D org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+ovr116_0	ovr116_0	0x0	0x3A
+hack_class_data	ovr116_3A	0x3A	0x53

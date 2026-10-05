@@ -1,0 +1,4 @@
+# segment seg003_60 base 0x3B60 size 0x34B org 0x60
+# cname: the listing name; SEG003 split at +60..+3AA (UW1's older wall mapper; UW2 has none)
+seg003_60	seg003_60	0x0	0xC1
+seg003_121	seg003_121	0xC1	0x28A

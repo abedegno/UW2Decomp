@@ -1,0 +1,21 @@
+# segment seg039_3495 base 0x35C83 size 0x95F org 0x3
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+init_strings	seg039_3495_3	0x0	0x80
+free_scrgr	seg039_3495_83	0x80	0xA
+get_string	GetStringByID_seg039_3495_8D	0x8A	0x89
+make_string	seg039_3495_116	0x113	0x104
+replace_string	seg039_3495_21A	0x217	0x7B
+clear_dynamics	seg039_3495_295	0x292	0x91
+get_name	GetItemName_seg039_326	0x323	0xB8
+fix_name_string	seg039_3495_3DE	0x3DB	0xB6
+game_sprint	WriteStringFromBlock1_seg039_3495_494	0x491	0x29
+game_strings_3	PrintMultipleBlock1Strings_seg039_4BD	0x4BA	0x7A
+seg039_3495_537	seg039_3495_537	0x534	0xAD
+seg039_3495_5E4	seg039_3495_5E4	0x5E1	0x20
+read_string	GetString_seg039_604	0x601	0x180
+seg039_3495_784	seg039_3495_784	0x781	0x31
+seg039_3495_7B5	seg039_3495_7B5	0x7B2	0x62
+seg039_3452_814	seg039_3495_817	0x814	0x43
+seg039_3495_85A	seg039_3495_85A	0x857	0x43
+seg039_3495_89D	seg039_3495_89D	0x89A	0x71
+str_cat	AppendString_seg039_90E	0x90B	0x54

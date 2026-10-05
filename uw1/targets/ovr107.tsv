@@ -1,0 +1,23 @@
+# segment ovr107 base 0x73170 size 0x1A29 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+find_good_x_and_y	ovr107_0	0x0	0x949
+Teleport_ovr107_949	Teleport_ovr107_949	0x949	0xAF
+ChangeTile_ovr107_9F8	ChangeTile_ovr107_9F8	0x9F8	0x2BA
+whack_thing	DamageTrap_ovr107_CB2	0xCB2	0xC2
+inanimate_spell	SpellTrap_ovr107_D74	0xD74	0x50
+Fishing_ovr107_DC4	Fishing_ovr107_DC4	0xDC4	0xDD
+Bullfrog_ovr107_EA1	Bullfrog_ovr107_EA1	0xEA1	0x16A
+EmeraldDoTrap_ovr107_100B	EmeraldDoTrap_ovr107_100B	0x100B	0x1AE
+TrespassTrap_ovr107_11B9	TrespassTrap_ovr107_11B9	0x11B9	0x19
+eight_pos_switch	do_trap_platform_ovr107_11D2	0x11D2	0x87
+ExplodingBook_ovr107_1259	ExplodingBook_ovr107_1259	0x1259	0xC0
+TalkingDoor_ovr107_1319	TalkingDoor_ovr107_1319	0x1319	0x5A
+ArialTalking_ovr107_1373	ArialTalking_ovr107_1373	0x1373	0x17
+remove_whoami	RemoveObject_ovr107_138A	0x138A	0x47
+TyballDeath_ovr107_13D1	TyballDeath_ovr107_13D1	0x13D1	0xCE
+SpecialDeathCases_ovr107_149F	SpecialDeathCases_ovr107_149F	0x149F	0x130
+GetItemDurability_ovr107_15CF	GetItemDurability_ovr107_15CF	0x15CF	0x6D
+do_repair	ovr107_163C	0x163C	0x118
+repair_item	ItemRepair_ovr107_1754	0x1754	0x1F2
+clear_loretry	ResetObjectIdentification_ovr107_1946	0x1946	0x76
+ResetObjectIdentifcation_ovr107_19BC	ResetObjectIdentifcation_ovr107_19BC	0x19BC	0x6D

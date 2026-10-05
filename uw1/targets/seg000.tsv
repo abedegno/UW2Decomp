@@ -1,0 +1,12 @@
+# segment seg000 base 0x3200 size 0x4EA org 0x0
+# cname: UW2 kin (FM Towns names, create_sprite_ .. update_sprites_, the same routines in the same order); the near helper at +229h sits inside set_yoff's range
+create_sprite	seg000_2	0x2	0x71
+destroy_sprite	seg000_2	0x73	0x33
+change_sprite	seg000_A6	0xA6	0x45
+draw_sprite	UIDrawRelated_seg000_EB	0xEB	0x35
+draw_mask	seg000_120	0x120	0x35
+erase_sprite	seg000_155	0x155	0x36
+move_sprite	seg000_18B	0x18B	0x37
+resize_sprite	seg000_18B	0x1C2	0x37
+set_yoff	seg000_1F9	0x1F9	0x137
+update_sprites	seg000_330	0x330	0x1BA

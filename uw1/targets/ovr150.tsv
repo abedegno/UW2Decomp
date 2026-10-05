@@ -1,0 +1,9 @@
+# segment ovr150 base 0x83500 size 0x59D org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+ovr150_0	ovr150_0	0x0	0x12E
+drop_some_objects	ovr150_12E	0x12E	0x2C
+generate_treasure	ovr150_15A	0x15A	0x161
+generate_food	ovr150_2BB	0x2BB	0x66
+generate_weapons	ovr150_321	0x321	0x121
+generate_equipment	ovr150_442	0x442	0xD4
+generate_inventory	ovr150_516	0x516	0x87

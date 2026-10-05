@@ -1,0 +1,22 @@
+# segment seg022_230E base 0x2441A size 0x17A3 org 0xA
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+pickloc	PickBodyHitPoint_seg022_A	0x0	0x79
+set_hitobj	TestForClosestAttackCollisionHit_seg022_83	0x79	0x24F
+find_wall_coll	SpawnImpactAnimo_seg022_2D2	0x2C8	0x194
+resolve_attack	CheckForAttackHit_seg022_466	0x45C	0x253
+CalculateAttackResults_seg022_230E_6B9	CalculateAttackResults_seg022_230E_6B9	0x6AF	0x1EC
+AttackerAppliesFinalDamage_seg022_8A5	AttackerAppliesFinalDamage_seg022_8A5	0x89B	0x384
+do_miss	CombatMissImpactSound_seg022_C29	0xC1F	0x11F
+compute_hitangle	CalcFlankingBonus_seg022_230E_D48	0xD3E	0x54
+do_attack	ExecuteAttack_seg022_D9C	0xD92	0xDC
+CheckForAmmo_seg022_E78	CheckForAmmo_seg022_E78	0xE6E	0x9E
+seg022_230E_F16	seg022_230E_F16	0xF0C	0xE0
+CalculateAttackScorePlayer_seg022_FF6	CalculateAttackScorePlayer_seg022_FF6	0xFEC	0x120
+missile_finish	seg022_230E_1116	0x110C	0x3C
+fin_attack	seg022_230E_1152	0x1148	0x31
+clear_fight_state	EndCombat_seg022_1183	0x1179	0x37
+PlayerCombat_seg022_11BA	PlayerCombat_seg022_11BA	0x11B0	0x305
+missile_thwack	MissileAttackHit_seg022_14BF	0x14B5	0x11F
+NPCExecuteAttack_seg022_15DE	NPCExecuteAttack_seg022_15DE	0x15D4	0x117
+seg022_230E_16F5	seg022_230E_16F5	0x16EB	0x30
+AwardKillEXP_seg022_1725	AwardKillEXP_seg022_1725	0x171B	0x88

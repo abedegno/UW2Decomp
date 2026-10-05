@@ -1,0 +1,5 @@
+# segment seg037_32E6 base 0x3419C size 0x208 org 0xC
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+skill_check	SkillCheck_seg037_32E6_C	0x0	0x3C
+EXPChange_seg037_48	EXPChange_seg037_48	0x3C	0x171
+RefreshPanels_seg037_32E6_1B9	RefreshPanels_seg037_32E6_1B9	0x1AD	0x5B

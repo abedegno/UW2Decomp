@@ -1,0 +1,5 @@
+# segment seg011_1CA3 base 0x1DD67 size 0xB4 org 0x7
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+mainloop	seg011_1CA3_7	0x0	0x25
+do_changes	seg011_1CA3_2C	0x25	0x83
+editchng	SetGameLoopBitField_seg011_AF	0xA8	0xC

@@ -1,0 +1,16 @@
+# segment seg008_1B2A base 0x1C5DB size 0xF36 org 0xB
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+SetPlayerDataOxB9_seg008_B	SetPlayerDataOxB9_seg008_B	0x0	0x32
+parse_player_terr	ProcessPlayerTileState_seg008_1B2A_3D	0x32	0x113
+EtherealVoidSpecialEffects_seg008_150	EtherealVoidSpecialEffects_seg008_150	0x145	0xC6
+simple_fizix	seg008_1B2A_216	0x20B	0x3CD
+PlayerMotionInitialCalc_seg008_5E3	PlayerMotionInitialCalc_seg008_5E3	0x5D8	0xEE
+PlacePlayerInTile_seg008_6D1	PlacePlayerInTile_seg008_6D1	0x6C6	0x23C
+ApplyPlayerMotion_seg008_90D	ApplyPlayerMotion_seg008_90D	0x902	0x2DF
+CalculateMotionFromCommand_seg008_BEC	CalculateMotionFromCommand_seg008_BEC	0xBE1	0x16F
+phys_bounce_up	StopFalling_seg008_D5B	0xD50	0x2A
+fizix_update	seg008_1B2A_D85	0xD7A	0x19
+BouncePlayer_seg008_D9E	BouncePlayer_seg008_D9E	0xD93	0x38
+DoTrapScreenShake_seg008_DD6	DoTrapScreenShake_seg008_DD6	0xDCB	0x11
+QuakeTrap_seg008_DE7	QuakeTrap_seg008_DE7	0xDDC	0x25
+UpdateMotionStateAndSwimming_seg008_E0C	UpdateMotionStateAndSwimming_seg008_E0C	0xE01	0x135

@@ -1,0 +1,3 @@
+# segment seg018 base 0x22526 size 0x6D org 0x6
+# cname: descriptive, as UW2's seg020_1 (src/gfx/PLANECPY.ASM); no name in symbols.tsv or the listing
+seg018_6	seg018_6	0x0	0x6D

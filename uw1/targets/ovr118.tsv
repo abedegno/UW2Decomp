@@ -1,0 +1,13 @@
+# segment ovr118 base 0x78270 size 0x776 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+makePlayerInvCopy	ovr118_0	0x0	0x12C
+SavePlayerInv	ovr118_12C	0x12C	0xDA
+InvSaveNexts	ovr118_206	0x206	0xE0
+replaceInInv	ovr118_2E6	0x2E6	0x54
+allocSaveObj	ovr118_33A	0x33A	0x1A
+getSaveObj	ovr118_354	0x354	0x22
+putInInv	ovr118_376	0x376	0x55
+InvRestoreNexts	ovr118_3CB	0x3CB	0xF3
+FreePlayerInv	ClearObjectList_ovr118_4BE	0x4BE	0xB5
+getPlayerInvCopy	ovr118_573	0x573	0xC6
+ovr118_639	ovr118_639	0x639	0x13D

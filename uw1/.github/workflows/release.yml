@@ -1,0 +1,362 @@
+# Release packages of the native port (docs/BUILDING.md, "Releases"): on a tag v*, build the port
+# on macOS (one universal app for arm64 and x86_64), Linux (x86-64, on Ubuntu 22.04 for glibc
+# 2.35: a tarball and an AppImage) and Windows (x86-64, MSYS2 CLANG64), package each with
+# Exhume's tools/package.py, and attach the packages and the source of the LGPL libraries to a
+# DRAFT release, which the owner reviews and publishes by hand. Run by hand (workflow_dispatch),
+# it builds the packages as workflow artifacts and makes no release.
+# Only the sources are needed: no game data and no Borland toolchain. The only secrets are
+# Apple's, for the macOS app (docs/BUILDING.md, "Releases"): with CSC_LINK set it is signed with
+# the Developer ID identity, and on a tag (or by hand with notarise) notarised and stapled;
+# without them it is signed ad hoc and not notarised.
+name: release
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      notarise:
+        description: notarise the macOS app (as a tag build does), when the Apple secrets are set
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      NOTARISE: ${{ startsWith(github.ref, 'refs/tags/v') || inputs.notarise == true }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      # Exhume, whose tools and runtime the port, the gate and the replay build use where it is,
+      # at the commit tools/exhume-ref names (docs/BUILDING.md, "Exhume")
+      - name: Exhume's commit
+        id: exhume
+        shell: bash
+        run: echo "ref=$(cut -d' ' -f1 tools/exhume-ref)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: abedegno/Exhume
+          ref: ${{ steps.exhume.outputs.ref }}
+          path: .exhume
+          persist-credentials: false
+      - name: Homebrew packages
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+          HOMEBREW_NO_INSTALL_CLEANUP: "1"
+        run: brew install pkgconf ninja
+      - name: Cache the universal SDL3 and libmt32emu
+        uses: actions/cache@v4
+        with:
+          path: tools/libs
+          key: release-libs-macos-universal-${{ hashFiles('.exhume/tools/setup-libs.sh') }}
+      - name: Build SDL3 and libmt32emu for arm64 and x86_64, fetch Nuked OPL3
+        env:
+          SETUP_MACOS_ARCHS: "arm64;x86_64"
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
+        run: |
+          sh .exhume/tools/setup-libs.sh tools/libs
+          sh .exhume/tools/setup-sound.sh tools/nuked-opl3
+      - name: Build
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
+        run: make EXHUME=.exhume port-release PORT_ARCHS="--arch arm64 --arch x86_64"
+      # With CSC_LINK (a base64 .p12 holding the Developer ID Application certificate and its
+      # key): a keychain of this job's own, removed at the end, holding only that identity;
+      # package.py signs with it (UW1_CODESIGN_IDENTITY, its SHA-1). Nothing secret is printed.
+      - name: The signing identity (when the Apple secrets are set)
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CSC_LINK" ]; then echo "no CSC_LINK: the app is signed ad hoc and not notarised"; exit 0; fi
+          kc="$RUNNER_TEMP/uw1-signing.keychain-db"; p12="$RUNNER_TEMP/uw1-signing.p12"
+          pw=$(openssl rand -hex 24)
+          ( umask 077; printf '%s' "$CSC_LINK" | base64 --decode > "$p12" )
+          security create-keychain -p "$pw" "$kc"
+          security set-keychain-settings -lut 21600 "$kc"
+          security unlock-keychain -p "$pw" "$kc"
+          security import "$p12" -k "$kc" -P "$CSC_KEY_PASSWORD" -T /usr/bin/codesign >/dev/null
+          rm -f "$p12"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$pw" "$kc" >/dev/null
+          # this keychain first in the search list, the others after it
+          old=$(security list-keychains -d user | tr -d '"' | tr '\n' ' ')
+          # shellcheck disable=SC2086
+          security list-keychains -d user -s "$kc" $old
+          echo "UW1_KEYCHAIN=$kc" >> "$GITHUB_ENV"
+          ids=$(security find-identity -v -p codesigning "$kc" | grep 'Developer ID Application' || true)
+          if [ -n "$APPLE_TEAM_ID" ]; then ids=$(echo "$ids" | grep "($APPLE_TEAM_ID)" || true); fi
+          id=$(echo "$ids" | awk 'NF { print $2; exit }')
+          if [ -z "$id" ]; then echo "::error::CSC_LINK holds no Developer ID Application identity${APPLE_TEAM_ID:+ of team $APPLE_TEAM_ID}"; exit 1; fi
+          echo "signing with: $(echo "$ids" | sed -n 's/.*"\(.*\)".*/\1/p' | head -1)"
+          echo "UW1_CODESIGN_IDENTITY=$id" >> "$GITHUB_ENV"
+          if [ "$NOTARISE" = true ]; then
+            # notarisation needs the API key, its id and the issuer; without them sign only
+            if [ -n "$APPLE_API_KEY" ] && [ -n "$APPLE_API_KEY_ID" ] && [ -n "$APPLE_API_ISSUER" ]; then
+              echo "UW1_NOTARISED=1" >> "$GITHUB_ENV"
+            else
+              echo "::warning::APPLE_API_KEY, APPLE_API_KEY_ID or APPLE_API_ISSUER is not set: signed with the Developer ID but not notarised"
+            fi
+          fi
+      - name: Package
+        run: make EXHUME=.exhume package PACKAGE_ARGS=--strict
+      # Apple's notary service, with the App Store Connect API key, then the ticket stapled to
+      # the app, and the zip made again with the stapled app
+      - name: Notarise and staple
+        if: env.UW1_NOTARISED == '1'
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          set -euo pipefail
+          key="$RUNNER_TEMP/uw1-notary.p8"
+          ( umask 077; printf '%s\n' "$APPLE_API_KEY" > "$key" ); chmod 600 "$key"
+          zip=$(echo build/dist/UW1-*-macos.zip); stage=${zip%.zip}
+          auth=(--key "$key" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER")
+          xcrun notarytool submit "$zip" "${auth[@]}" --wait --timeout 45m --output-format json > "$RUNNER_TEMP/notary.json"
+          status=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("status"))' "$RUNNER_TEMP/notary.json")
+          sub=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("id"))' "$RUNNER_TEMP/notary.json")
+          echo "notarisation $sub: $status"
+          if [ "$status" != Accepted ]; then xcrun notarytool log "$sub" "${auth[@]}" || true; exit 1; fi
+          xcrun stapler staple "$stage/UW1.app"
+          xcrun stapler validate "$stage/UW1.app"
+          rm "$zip"
+          ditto -c -k --norsrc --noextattr --keepParent "$stage" "$zip"
+      - name: Check the package
+        run: |
+          mkdir check && cd check && unzip -q ../build/dist/UW1-*-macos.zip
+          app=$(echo UW1-*-macos/UW1.app)
+          lipo -archs "$app/Contents/MacOS/uw1port" | grep -q x86_64
+          lipo -archs "$app/Contents/MacOS/uw1port" | grep -q arm64
+          codesign --verify --deep --strict "$app"
+          test -f "$app/Contents/Resources/uw1.icns"
+          if otool -L "$app"/Contents/MacOS/uw1port "$app"/Contents/Frameworks/*.dylib | grep -E '/(opt|usr/local)/'; then exit 1; fi
+          if [ "${UW1_NOTARISED:-}" = 1 ]; then
+            codesign -dvv "$app" 2>&1 | grep -E '^(Authority=Developer ID Application|TeamIdentifier|Runtime Version)'
+            xcrun stapler validate "$app"
+            spctl -a -vvv -t exec "$app"
+          fi
+          "$app/Contents/MacOS/uw1port" --help
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: build/dist/UW1-*-macos.zip
+          if-no-files-found: error
+      - name: Remove the signing keychain and keys
+        if: always()
+        run: |
+          if [ -n "${UW1_KEYCHAIN:-}" ]; then security delete-keychain "$UW1_KEYCHAIN" || true; fi
+          rm -f "$RUNNER_TEMP/uw1-signing.p12" "$RUNNER_TEMP/uw1-notary.p8" "$RUNNER_TEMP/notary.json"
+
+  # Ubuntu 22.04, so that the program and the libraries built with it need only glibc 2.35
+  # (accuracy.yml's Linux job stays on 24.04)
+  linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      # Exhume, whose tools and runtime the port, the gate and the replay build use where it is,
+      # at the commit tools/exhume-ref names (docs/BUILDING.md, "Exhume")
+      - name: Exhume's commit
+        id: exhume
+        shell: bash
+        run: echo "ref=$(cut -d' ' -f1 tools/exhume-ref)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: abedegno/Exhume
+          ref: ${{ steps.exhume.outputs.ref }}
+          path: .exhume
+          persist-credentials: false
+      - name: System packages (the compiler, and the headers SDL3 needs for a window and sound)
+        run: |
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+            clang pkg-config cmake ninja-build libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev wayland-protocols libdecor-0-dev libegl-dev \
+            libgl-dev libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev >/dev/null
+      # Exhume's tools need Python 3.11 or later (tomllib); Ubuntu 22.04 has 3.10
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # not port.yml's cache: that SDL3 is built without windows
+      - name: Cache SDL3 and libmt32emu
+        uses: actions/cache@v4
+        with:
+          path: tools/libs
+          key: release-libs-linux-ubuntu2204-${{ runner.arch }}-${{ hashFiles('.exhume/tools/setup-libs.sh') }}
+      - name: Build SDL3 and libmt32emu, fetch Nuked OPL3
+        run: |
+          sh .exhume/tools/setup-libs.sh tools/libs
+          sh .exhume/tools/setup-sound.sh tools/nuked-opl3
+      - name: Build
+        run: make EXHUME=.exhume port-release
+      # appimagetool and the AppImage runtime it embeds, at pinned releases, checked against
+      # their SHA-256 (appimagetool would otherwise download the runtime itself, unpinned)
+      - name: appimagetool
+        run: |
+          set -e
+          mkdir -p "$RUNNER_TEMP/appimage"; cd "$RUNNER_TEMP/appimage"
+          curl -fsSLo appimagetool https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage
+          curl -fsSLo runtime-x86_64 https://github.com/AppImage/type2-runtime/releases/download/20251108/runtime-x86_64
+          printf '%s\n' "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0  appimagetool" \
+            "2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d  runtime-x86_64" | sha256sum -c -
+          chmod +x appimagetool
+          {
+            echo "APPIMAGETOOL=$PWD/appimagetool"
+            echo "APPIMAGE_RUNTIME=$PWD/runtime-x86_64"
+          } >> "$GITHUB_ENV"
+      - name: Package (the tarball and the AppImage)
+        run: make EXHUME=.exhume package PACKAGE_ARGS="--strict --appimage"
+      - name: Check the package
+        run: |
+          set -e
+          mkdir check && cd check && tar xzf ../build/dist/UW1-*-linux-*.tar.gz
+          cd UW1-*-linux-*
+          # the run paths are $ORIGIN ones only (package.py checks this too)
+          for f in bin/uw1port lib/*.so*; do
+            readelf -d "$f" | grep -E '\((RPATH|RUNPATH)\)' || true
+            # shellcheck disable=SC2016
+            if readelf -d "$f" | sed -n 's/.*(R[UN]*PATH).*\[\(.*\)\]/\1/p' | tr ':' '\n' | grep -vxE '\$ORIGIN(/.*)?'; then
+              echo "::error::$f has a run path outside \$ORIGIN"; exit 1
+            fi
+          done
+          if env -u LD_LIBRARY_PATH ldd bin/uw1port | grep -E 'not found|tools/libs'; then exit 1; fi
+          env -u LD_LIBRARY_PATH ldd bin/uw1port | grep -E 'SDL3|mt32emu|nukedopl3' | grep -v "$PWD/" && exit 1
+          # the newest glibc symbol version any of them needs: 2.35 at most
+          need=$(objdump -T bin/uw1port lib/*.so* | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1)
+          echo "needs $need"
+          [ "$(printf '%s\n' "$need" GLIBC_2.35 | sort -V | tail -1)" = GLIBC_2.35 ]
+          ./uw1 --help
+          test -f uw1.png && test -f uw1.desktop
+      - name: Check the AppImage
+        run: |
+          set -e
+          ai=$(echo "$PWD"/build/dist/UW1-*-linux-*.AppImage)
+          file "$ai"
+          cd "$RUNNER_TEMP" && "$ai" --appimage-extract-and-run --help
+      - name: The LGPL libraries' source
+        run: |
+          set -e
+          mkdir -p src-out/third-party-sources
+          cd src-out/third-party-sources
+          commit=$(sed -n 's/^commit=//p' ../../.exhume/tools/setup-sound.sh)
+          tag=$(sed -n 's/^mt_tag=//p' ../../.exhume/tools/setup-libs.sh)
+          curl -fsSL "https://github.com/nukeykt/Nuked-OPL3/archive/$commit.tar.gz" -o "Nuked-OPL3-$commit.tar.gz"
+          curl -fsSL "https://github.com/munt/munt/archive/refs/tags/$tag.tar.gz" -o "munt-$tag.tar.gz"
+          rt=20251108
+          curl -fsSL "https://github.com/AppImage/type2-runtime/archive/refs/tags/$rt.tar.gz" -o "type2-runtime-$rt.tar.gz"
+          printf '%s\n' "The complete source of the LGPL libraries in the release packages, as built (unmodified):" \
+            "Nuked-OPL3-$commit.tar.gz: https://github.com/nukeykt/Nuked-OPL3 at commit $commit" \
+            "munt-$tag.tar.gz: https://github.com/munt/munt at tag $tag (libmt32emu, in its mt32emu directory)" \
+            "type2-runtime-$rt.tar.gz: https://github.com/AppImage/type2-runtime at tag $rt, the AppImage's runtime (static, with libfuse 3), and the scripts that build it" \
+            "THIRD-PARTY-NOTICES in each package says how they are built and how to replace them." > README.txt
+          cd .. && tar czf ../build/dist/third-party-sources.tar.gz third-party-sources
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: |
+            build/dist/UW1-*-linux-*.tar.gz
+            build/dist/UW1-*-linux-*.AppImage
+            build/dist/third-party-sources.tar.gz
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      # the scripts must keep their LF line ends for MSYS2's sh
+      - run: git config --global core.autocrlf false
+        shell: pwsh
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      # Exhume, whose tools and runtime the port, the gate and the replay build use where it is,
+      # at the commit tools/exhume-ref names (docs/BUILDING.md, "Exhume")
+      - name: Exhume's commit
+        id: exhume
+        shell: bash
+        run: echo "ref=$(cut -d' ' -f1 tools/exhume-ref)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: abedegno/Exhume
+          ref: ${{ steps.exhume.outputs.ref }}
+          path: .exhume
+          persist-credentials: false
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANG64
+          update: false
+          install: make curl git unzip
+          pacboy: clang:p llvm:p pkgconf:p sdl3:p python:p cmake:p ninja:p
+      - name: Cache libmt32emu
+        uses: actions/cache@v4
+        with:
+          path: tools/libs
+          key: release-libs-windows-clang64-${{ hashFiles('.exhume/tools/setup-libs.sh') }}
+      - name: Build libmt32emu (MSYS2 has no package of it), fetch Nuked OPL3
+        run: |
+          SETUP_LIBS=mt32emu sh .exhume/tools/setup-libs.sh tools/libs
+          sh .exhume/tools/setup-sound.sh tools/nuked-opl3
+      - name: Build
+        run: make EXHUME=.exhume PY=python port-release
+      - name: Package
+        run: make EXHUME=.exhume PY=python package PACKAGE_ARGS=--strict
+      # package.py has checked that every DLL loads from the package or from Windows
+      - name: Check the package (with only Windows's own directories on the PATH)
+        run: |
+          mkdir check && cd check && unzip -q ../build/dist/UW1-*-windows-x86_64.zip
+          cd UW1-*-windows-x86_64
+          PATH=/c/Windows/system32:/c/Windows /usr/bin/ldd uw1port.exe
+          if PATH=/c/Windows/system32:/c/Windows /usr/bin/ldd uw1port.exe | grep -viE '=> (/c/windows/|'"$PWD"'/)'; then exit 1; fi
+          PATH=/c/Windows/system32:/c/Windows ./uw1port.exe --help
+          # the whole listing first: grep -q stops at its match, and under pipefail the reader's
+          # broken pipe then failed the check although the icon was there
+          res=$(llvm-readobj --coff-resources uw1port.exe)
+          case "$res" in *'Type: ICON'*) echo "icon: present" ;; *) echo "::error::uw1port.exe has no icon"; exit 1 ;; esac
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: build/dist/UW1-*-windows-x86_64.zip
+          if-no-files-found: error
+
+  draft:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [macos, linux, windows]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - run: ls -l dist
+      # a draft only: nothing is published until the owner publishes it on GitHub
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/UW1-*-macos.zip
+            dist/UW1-*-linux-*.tar.gz
+            dist/UW1-*-linux-*.AppImage
+            dist/UW1-*-windows-x86_64.zip
+            dist/third-party-sources.tar.gz

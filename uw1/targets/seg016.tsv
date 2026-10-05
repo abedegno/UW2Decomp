@@ -1,0 +1,3 @@
+# segment seg016 base 0x210A2 size 0x5F org 0x2
+# cname: int0_trap is the provisional symbols.tsv name (UW2: src/sys/INT0TRAP.ASM); the 12 bytes before it are its variables
+int0_trap	a_i	0xC	0x53

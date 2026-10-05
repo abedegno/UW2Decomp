@@ -1,0 +1,17 @@
+# segment ovr104 base 0x70AF0 size 0xEE1 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+change_critter_goal	SetGoalAndGtarg_ovr104_0	0x0	0x3E
+yearly_checkup	ovr104_3E	0x3E	0x7D
+set_gridx_and_y_based_on_tile_type	ovr104_BB	0xBB	0x5A
+up_crit	CalmNPCS_ovr104_115	0x115	0x2F8
+up_mob	CalmMobileObjects_ovr104_40D	0x40D	0x129
+update_all_critters_whilst_player_snoozes	ResetMobileObjects_ovr104_536	0x536	0x148
+check_for_hostile_creature	ovr104_67E	0x67E	0x73
+CheckNearbyNPCHunger_ovr104_6F1	CheckNearbyNPCHunger_ovr104_6F1	0x6F1	0x2B
+wander_that_monster	ovr104_71C	0x71C	0x464
+UpdateNearByNPCMovements_ovr104_B80	UpdateNearByNPCMovements_ovr104_B80	0xB80	0x2B
+LoadCombatState_ovr104_BAB	LoadCombatState_ovr104_BAB	0xBAB	0x34
+SaveCombatState_ovr104_BDF	SaveCombatState_ovr104_BDF	0xBDF	0x44
+ovr104_C23	ovr104_C23	0xC23	0x14
+critter_get_told	AngerNPCByIllegalAction_ovr104_C37	0xC37	0x215
+ovr104_E4C	ovr104_E4C	0xE4C	0x95

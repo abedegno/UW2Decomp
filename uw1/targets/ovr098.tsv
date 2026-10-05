@@ -1,0 +1,17 @@
+# segment ovr098 base 0x6C830 size 0x17B5 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+InitPlayer_ovr098_0	InitPlayer_ovr098_0	0x0	0x258
+set_sklmnu	ovr098_258	0x258	0xEF
+show_atts	ovr098_347	0x347	0x150
+show_skills	ovr098_497	0x497	0xBE
+set_skills	ovr098_555	0x555	0x2D
+roll_stats	ovr098_582	0x582	0xD9
+drawopt	ovr098_65B	0x65B	0x2EF
+ovr098_94A	ovr098_94A	0x94A	0x165
+mousopt	ovr098_AAF	0xAAF	0x195
+pickopt	MaybeShrine_ovr098_C44	0xC44	0x323
+gen_char	ovr098_F67	0xF67	0x546
+ovr098_14AD	ovr098_14AD	0x14AD	0x22
+move_chrpic	ovr098_14CF	0x14CF	0x3F
+ovr098_150E	ovr098_150E	0x150E	0x289
+create_player	ovr098_1797	0x1797	0x1E

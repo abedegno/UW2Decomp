@@ -1,0 +1,4 @@
+# segment seg021 base 0x242D5 size 0x145 org 0x5
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+rotate_bank	seg021_5	0x0	0xA2
+seg021_A7	seg021_A7	0xA2	0xA3

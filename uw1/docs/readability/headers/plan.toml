@@ -1,0 +1,97 @@
+# UW1's plan for the shared headers (Exhume's skills/readability-pass, step 2).
+#
+# UW1's headers began as copies of UW2's (src/include), and the matched sources declared
+# locally, or renamed out of the way (#define name UW2_name around the includes), whatever
+# UW2's headers gave otherwise. This step rewrote the headers in place to UW1's
+# declarations rather than generating them (tools/headergen.py builds headers from the
+# sources' declarations alone, and would have dropped the structs, constants and comments
+# UW1 inherited): every declaration takes its definition's form, or force below; a header
+# declaration of a name UW1 neither defines nor uses is removed, as are drop; the sources'
+# copies and rename tricks go; a name declared only in sources goes to its owner's header
+# when it can be shared (not static anywhere, not a far variable, no file typedef, no order
+# tie); exclude stays declared in each file that uses it, its own way.
+#
+# The owner's header: stems first, else the source's directory.
+#
+# How it was run (scripts/, from a tree at the commit before this step):
+#   sh scripts/structs.sh            the structs: struct Player (structs/player.py, by
+#                                    tools/structrec.py through scripts/sr.py, which teaches it
+#                                    portable.h's typedefs), struct Arc, CutsState
+#   python3 scripts/hdr.py plan.toml BASE --stages drop,dups,retype,add
+#                                    BASE a copy of src after the structs; the tree is rebuilt
+#                                    from it each run, then `make fast`
+#   python3 scripts/post.py          hand edits: SaveGame's char, the joystick readers'
+#                                    UW1 names, comments that spoke of UW2's headers
+# exclude came from the gate: hdr.py --loop adds every suspect name of each failing source,
+# scripts/bisect.py puts back each name the fast gate allows; scripts/sight.py flags tie
+# groups whose first-sight order moved (a #define of the name counts as a sighting).
+
+default_header = "sys.h"
+exclude = [
+  # the storage of the player record: PLAYER.C defines a byte array, its users a union
+  "PlayerDat",
+  # called with other arguments than the definition takes (UW1's own mismatches, which
+  # the bytes keep): player_setup(0, 0, 0) against (x, y); mantra_advance(0) and
+  # init_mem(2) against (void); Vortex_ovr143_E09() and ExplodingBook_ovr107_1259() old-style
+  "player_setup", "mantra_advance", "init_mem", "Vortex_ovr143_E09", "ExplodingBook_ovr107_1259",
+  # a char parameter where callers push an int, and the other way round
+  "advance", "set_light",
+  # two callers pass the file name cast to int (UW2's index)
+  "grfx_load_font",
+  # a plain (signed) char in one file and unsigned char in another, return or parameter,
+  # and the bytes of a file depend on its own view (found by the gate, by bisection)
+  "EncumCheck", "IsMobElem", "UsingPole", "bltfromdrive", "blttodrive", "grfx_clear",
+  "grfx_init", "invRemoveObject", "move_mobile", "player_eat", "read_quikpal",
+  # stubs that return 0 as int (OVR139.C, OVR144.C, OVR146.C) and that OBJCLASS.C's class
+  # table holds as data handlers returning char *
+  "rect_class_data", "spec_class_data", "stuff_class_data",
+  # the archive functions: ARC.C takes struct Arc far *, its callers hold the record as
+  # bytes and pass (char far *) casts, and open_arc and put_arc compile differently with
+  # one shared declaration; kept per file until step 4 retypes the callers
+  "open_arc", "close_arc", "get_arc", "put_arc", "check_arc",
+  # TMPALLOC.C defines it void huge *, CUTS.C reads it as unsigned char far *
+  "conv_ws",
+  # order ties (Turbo C's public and _BSS order by first sight; found by the gate):
+  # CUTS.C declares these itself in the order the stub table needs (read_lp_inc and
+  # cutsop_stop before its includes, so before runcutscene and cutsop_loop), MISSILE.C's
+  # missile_try ties with missile_trx
+  "cutsop_skip", "cutsop_stop", "cutsop_wait", "read_lp_inc", "missile_try",
+  # TEXTMAPS.C's _BSS (int16 floor_num, uint16 w64_types[]) against PLAYDATA.C's view
+  # (floor_num an array) and the int16 view of w64_types elsewhere
+  "floor_num", "w64_types",
+]
+keep = []
+drop = []
+
+[dirs]
+3d = "view3d.h"
+combat = "combat.h"
+conv = "conv.h"
+critter = "critter.h"
+event = "event.h"
+game = "player.h"
+gfx = "gfx.h"
+inv = "inv.h"
+lib = "sys.h"
+map = "map.h"
+motion = "motion.h"
+obj = "object.h"
+sound = "sound.h"
+sys = "sys.h"
+ui = "ui.h"
+
+[stems]
+"file.h" = ["GAMEWRAP.C", "ARC.C", "MISCUTIL.C", "SCRSHOT.C"]
+"sys.h" = ["UWEDIT.C", "STATS.C"]
+"player.h" = ["PHYSICS.C"]
+"gfx.h" = ["PANELS.C"]
+
+[force]
+
+# Order fixes after the rewrite. Turbo C breaks ties in public order by first sight, and a
+# #define of the name counts: the rename tricks (#define cutsop_wait UW2_cutsop_wait) had
+# put cutsop_wait before cutsop_skip, so CUTS.C's own declarations must too.
+[[fixup]]
+file = "gfx/CUTS.C"
+move = "int far cutsop_wait("
+before = "int far cutsop_skip("

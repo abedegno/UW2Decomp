@@ -1,0 +1,9 @@
+# segment ovr131 base 0x7D5B0 size 0x687 org 0x0
+# cname: UW2's names where the routine is the same, chosen to keep the stub order otherwise (TEXTMAPS.C)
+init_txtlib	ovr131_0	0x0	0x1DD
+ovr131_1DD	ovr131_1DD	0x1DD	0x30
+Txm_Load	ApplyTerrainData_ovr131_20D	0x20D	0xD5
+Txm_Save	ovr131_2E2	0x2E2	0x93
+load_txtmaps	LoadT64AndDoorsGR_ovr131_375	0x375	0x127
+load_tr_mem	LoadTextureFile_ovr131_49C	0x49C	0x145
+Load_Terrains	BuildTerrainData_ovr131_5E1	0x5E1	0xA6

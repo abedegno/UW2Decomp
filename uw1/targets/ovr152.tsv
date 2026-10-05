@@ -1,0 +1,5 @@
+# segment ovr152 base 0x83AE0 size 0x18 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+mous_3d_show	ovr152_0	0x0	0x5
+ovr152_5	ovr152_5	0x5	0xE
+mous_3d_show	ovr152_13	0x13	0x5

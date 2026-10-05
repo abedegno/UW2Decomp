@@ -1,0 +1,530 @@
+# Exhume project configuration for Ultima Underworld: The Stygian Abyss (UW.EXE, DOS, 1992,
+# the GOG release). The same toolchain as UW2 (Turbo C++ 1.01, TASM 2.0, TLINK 3.01).
+
+[project]
+name = "UW1"
+root = "${UW1DECOMP:-.}"                # the directory this file is in, unless UW1DECOMP names another
+src = "${EXHUME_SRC:-src}"
+targets = "targets"
+symbols = "${EXHUME_SYMBOLS:-symbols.tsv}"
+matched = "${EXHUME_MATCHED:-matched.txt}"
+map = "${EXHUME_MAP:-map}"
+build = "${EXHUME_BUILD:-build}"
+queue = "queue"
+exclude = ["port"]                     # relative to src: the native port's own C (src/port), which the DOS build never compiles
+
+[binary]
+exe = "${UW1_EXE:-~/UWGOG/UW1/UW.EXE}"
+# DGROUP: fingerprint.py's suggestion from C0's copyright (DS:0 at file 0x5DCC0); to be
+# confirmed with a string the code addresses by DS offset
+dgroup_para = 0x5AAC
+overlay_segment = "ovr(\\d{3})"
+# UWReverseEngineering's UW1_asm.asm (input MD5 8AFC3C29EF5667A3AB6667E8CBC8D63A, the GOG UW.EXE);
+# a segment name's paragraph is the load paragraph + 0x1ED, as in UW2 (dseg_5c99 is DGROUP at 0x5AAC)
+listing = "${UW1_ASM:-~/UWReverseEngineering/UW1_asm.asm}"
+listing_para_bias = 0x1ED
+listing_stub_prefix = "stub"
+# the listing names segments without their paragraph; code segments are found through
+# map/segments.tsv, and the modding build needs seg051 (FD58, 4723), which holds the model
+# interpreter's opcode table at 2738h (docs/LAYOUT.md)
+listing_segments = { seg051 = 0x4723 }
+
+[toolchain]
+profile = "borland-tc101"
+home = "${EXHUME_TC:-~/UW2Decomp/TC}"
+stage = ["${EXHUME_TC:-~/UW2Decomp/TC}", "${EXHUME_TASM:-~/UW2Decomp/TASM}/TASM.EXE"]
+c_opts = "-mm -1 -G -O -Z"
+
+[map]
+library_segments = ["seg000"]
+
+[run]
+data = "${UW1_DATA:-~/UWGOG/UW1}"
+exe_name = "UW.EXE"
+
+[names]
+# UW1 has no build with symbols; its names come from UW2's matched sources through kin.py
+# (UW2's names are the FM Towns build's originals)
+original_label = "UW2 kin"
+
+[repocheck]
+# UW1's data formats, never to be committed (tools/repocheck.py)
+ban = ["GR", "DAT", "BYT", "TR", "ARK", "PAK", "OLB", "CM", "CFG", "VOC", "XMI", "ADV", "N00", "N01", "N02", "N03", "N04", "N05", "N06", "N07", "N08", "N09", "N10"]
+# the sound configurations recorded with the replay sessions are ours, not the game's
+allow = ["^tests/replay/[a-z]+\\.cfg$"]
+
+[gate]
+# tools/gate.py: the build driver and the gate (Exhume's skills/readability-pass). The exact
+# link is byte-identical to UW.EXE, so there are no known_diffs (docs/LINKING.md).
+link = "{python} tools/link.py --config {config}"
+mod_link = "{python} tools/link.py --mod --config {config}"
+exact_exe = "LINK/out/UW.EXE"
+mod_exe = "MODLINK/out/UW.EXE"
+# `gate.py boot`: the title, then the main menu
+boot = ["w:8000", "s:title", "k:Escape", "w:4000", "s:menu"]
+
+[layout]
+# tools/addrscan.py, which lists addresses written as numbers (docs/link.md, "Layout audits";
+# docs/LAYOUT.md). Segment table entry 50 is C0's empty _FARDATA; entries 51 to 76 are the far
+# data segments, reported as FD51..FD76 (FD52 is seg048, 3963, the graphics library's data;
+# FD72 seg063, seg019's).
+far_data_entries = [51, 76]
+# seg046 (src/lib/OVERLAY.ASM) is the overlay manager, which the link takes from OVERLAY.LIB
+# rather than from its object; named by segment, so a renamed file needs no change
+library_objects = ["seg046"]
+# seg003's dispatchers (GRDISP's _seg003_5B0B and the path at _seg003_5AF9) are handed a near
+# routine of seg003 in BP and call it with DS = ES = seg048 and SS = the word at seg048:558A,
+# which holds `dd seg048` (GRDISP's FD52 piece): DS = ES = SS = FD52
+dispatch = [{ register = "bp", ds = "FD52", es = "FD52", ss = "FD52" }]
+
+[port]
+# The native port (Exhume's docs/port.md): Exhume's tools/portcheck.py, portbuild.py,
+# portstubs.py, layoutcheck.py, intaudit.py. src/port holds UW1's bindings for Exhume's runtime
+# (portgame.h, asmgame.h, ailgame.h), the C that replaces UW1's assembly modules and DOS-only C,
+# the translated modules and the link stubs; the runtime (Exhume's runtime/, compiled in place,
+# never copied) is the rest, and src/include has UW1's hookgame.h and rpgame.h for portable.h
+# and replay.c.
+dir = "src/port"
+out = "port"                           # <build>/port, <build>/port-debug, <build>/port-cov
+exe = "uw1port"
+backend = "sdl3"
+optimise = ["3d", "gfx", "x86"]        # the translated modules, their machine and the graphics C: -O2
+extracted_by = "tools/extract.py"
+
+[[port.vendor]]
+# Nuked OPL3, the FM chips' emulator: fetched by Exhume's tools/setup-sound.sh (make setup-sound,
+# make setup-port), never committed (LGPL-2.1; Exhume's docs/third-party.md); a shared library
+# of its own in the release build
+name = "Nuked OPL3"
+dir = "tools/nuked-opl3"
+sources = ["opl3.c"]
+define = "AUDIO_HAVE_OPL"
+for = "sound/audio.c"
+missing = "no OPL emulator (make setup-sound)"
+
+[[port.pkg]]
+# libmt32emu (munt, LGPL-2.1-or-later), the MT-32's emulator, linked dynamically when pkg-config
+# finds it
+name = "mt32emu"
+define = "AUDIO_HAVE_MT32EMU"
+for = "sound/audio.c"
+label = "libmt32emu"
+missing = "no libmt32emu (brew install mt32emu, or make setup-libs)"
+
+[port.stub_notes]
+# what each generated stub file's names are, for its header (tools/portstubs.py)
+"exedata.c" = "the far data tools/extract.py takes from UW.EXE"
+"dgroup.c" = "the DGROUP gaps tools/extract.py places (data no C source defines yet)"
+"borland.c" = "Borland's C library (the port's stand-in headers and compat.h)"
+
+[port.layout]
+# tools/layoutcheck.py: the records UW1 reads from or writes to its files, or lays over bytes
+# read from them; each must have the same layout on the host as under Turbo C
+io_calls = ['fread', 'fwrite', 'read', 'write', 'intoFarBuffer\w*', 'FarWrite\w*', 'movedata', 'memcpy',
+            'memmove', '_fmemcpy', 'xorread', 'xorwrite']
+# (not get_arc and put_arc: UW1's take the archive's struct Arc as their handle, and move the
+# block through a void far *)
+[port.layout.file_records]
+Player = "PLAYER.DAT: PLAYDATA.C's xorread and xorwrite move sizeof(struct Player), 0xD2 bytes"
+PlayerStore = "PlayerDat, the same 0xD2 bytes seen whole"
+LevelBlock = "a LEV.ARK level block, 0x7C08 bytes, read and written whole (MAP.C's get_arc and put_arc into mapdata)"
+Object = "the mobile object records inside a LevelBlock"
+StaticObj = "the 8-byte static object records inside a LevelBlock"
+Tile = "the tile map inside a LevelBlock"
+Link = "the link words inside objects and tiles"
+Anim = "the animation overlay records of LEV.ARK (EFFECT.C's get_arc and put_arc of animlist)"
+ATM = "the automap note records of LEV.ARK (AUTOMAP.C's get_arc and put_arc of ATM_Strings)"
+Creature = "OBJECTS.DAT critter records, 0x30 bytes each (CREATURE.C's fread)"
+ComObj = "COMOBJ.DAT, the common object table (OBJCLASS.C's fread)"
+Weapon = "OBJECTS.DAT weapon records (HACK.C's fread, 8 bytes each)"
+MissileInfo = "OBJECTS.DAT missile records (HACK.C's fread, 3 bytes each)"
+Armour = "OBJECTS.DAT armour records (HACK.C's fread, 4 bytes each)"
+Container = "OBJECTS.DAT container records (MISC.C's fread, 3 bytes each)"
+Light = "OBJECTS.DAT light records (MISC.C's fread, 2 bytes each)"
+AnimClass = "OBJECTS.DAT animation classes (ANIMOBJ.C's fread, 4 bytes each)"
+FontInfo = "the 12-byte header of a .SYS font file (GRFX.C's intoFarBuffer into cur_font)"
+Bitmap = "the header of a picture read from an art file (grs_unpack over the bytes read)"
+
+[ci]
+# Exhume's tools/citemplates.py writes .github/ from its templates with these values
+# (docs/BUILDING.md, "Continuous integration")
+vars = "tools/ci.toml"
+
+[package]
+# Exhume's tools/package.py (make package) and tools/icons.py: the players' packages, UW1.app on
+# macOS, as UW2Decomp's are UW2.app (docs/BUILDING.md, "Releases")
+name = "UW1"
+title = "Ultima Underworld"
+comment = "Native port of Ultima Underworld: The Stygian Abyss (needs your own copy of the game)"
+bundle_id = "io.github.abedegno.uw1port"
+launcher = "uw1"
+category = "public.app-category.role-playing-games"
+copyright = "Port code MIT licence, abedegno. Ultima Underworld is copyright Electronic Arts; bring your own copy."
+
+[fuzz]
+# Exhume's tools/fuzzasm.py (make fuzz, and make test's quick run): UW1's routine targets and
+# fuzzhost.c's UW1 side (the regions, the C entries)
+targets = "tools/fuzz_targets.py"
+host_glue = "tools/fuzzhost-uw1.c"
+main = "sys/main.c"                    # the port file fuzzhost replaces
+
+[vectors]
+# Exhume's tools/vectors.py (make vectors): game rules computed by UW.EXE's own routines, written
+# to vectors/ for reimplementations to be checked against (vectors/README.md); the port's side
+# (vectorhost-uw1.c) must agree with the EXE on every case
+targets = "tools/vector_targets.py"
+host_glue = "tools/vectorhost-uw1.c"
+out = "vectors"
+
+[asm2c]
+# Exhume's tools/asm2c.py: the modules UW1's port translates, its code segments, hand-written
+# ranges and overrides (UW1's own, so they live here)
+spec = "tools/asm2c_spec.py"
+
+[sound]
+# Exhume's tools/ailcheck.py: UW1's AIL 2 music drivers, by the kinds of Exhume's
+# runtime/port/sound/aildrv.h, in the game's directory ([replay] data): Ad Lib, Sound Blaster FM,
+# SB Pro (two YM3812s: its description table names "AD", not "OPL"), Pro Audio Spectrum, MT-32
+drivers = { 1 = "SOUND/ADLIB.ADV", 2 = "SOUND/SBFM.ADV", 3 = "SOUND/SBPFM.ADV", 4 = "SOUND/PASFM.ADV", 6 = "SOUND/MT32MPU.ADV" }
+# the project's own C for the sound library: the FM drivers' time-variant effects (Origin's
+# ALE.INC, UW2Decomp's translation, the same code in UW1's SBFM.ADV), which plug into the
+# runtime's sound/yamaha.c as uw1_tvfx (src/port/ailgame.h's AIL_FM_EXT)
+extensions = ["src/port/sound/tvfx.c"]
+
+[replay]
+# The record and replay harness (Exhume's docs/port.md, "Verifying a port"; docs/BUILDING.md,
+# "Recording and replaying a session"): Exhume's tools/replay.py, golden.py, replaydos.mjs.
+# Sessions are tests/replay/NAME.rec with NAME.cfg, the DATA\UW.CFG it ran with; goldens
+# tests/replay/golden/NAME. The record and replay code is Exhume's runtime/replay/replay.c,
+# compiled where it is, with src/include/rpgame.h.
+sessions = "tests/replay"
+golden = "tests/replay/golden"
+magic = "UW1R"
+exe_name = "UW.EXE"
+data = "${UW1_DATA:-~/UWGOG/UW1}"
+# the saved games already in the game's directory: every session starts with none
+data_skip = ["SAVE1/", "SAVE2/", "SAVE3/", "SAVE4/"]
+cfg_path = "DATA/UW.CFG"
+saves = ["SAVE1", "SAVE2", "SAVE3", "SAVE4"]
+shared_opts = "-mm -1 -G -O -Y -d"     # replay.c in the replay DOS build, as UW2's
+# the replay DOS build's link: the modding build, to which replay.py adds --out, --obj, --add
+link = "{python} tools/link.py --mod --config {config}"
+order = ["newgame", "walk", "sound", "soundfm", "soundmt", "items", "talk", "load", "intro", "savecursor"]
+c0_signature_at = 8                    # DS:8, after DS:0..3 (an overlay stub's tail) and C0's DS:4..7
+stage_from = { load = "items" }
+# the port's driver logs, and the real drivers run against them (Exhume's tools/ailcheck.py)
+port_sound_logs = ["--ail-log", "--hw-log"]
+driver_check = "{python} {exhume}/tools/ailcheck.py --config {config} {ail} {hw}"
+driver_marker = "register_driver"      # a session whose AIL log registers no driver has no music card
+# sound's DOS replays run in js-dos: in DOSBox-X (2026.10.01, sb16 or sbpro2, either core,
+# mixer on or off) the replay hangs once the introduction starts its speech on SBDIG.ADV, where
+# js-dos replays it to the end, twice identical. soundfm, with no speech card, replays in both.
+dos_backend = { sound = "jsdos" }
+
+
+[replay.segments]
+# far pointers kept in game state. SEGS' first block is seg048 (EXE paragraph 3963h, the
+# graphics library's data, palette's segment), and every paragraph from the far data (FD51 at
+# 395Bh) up moves with the load segment, DGROUP and the far heap above the program included.
+# The slots are the segment words the sessions have in seg048's data: POLYFILL's texture
+# segment at 07AF (filled from the polygon record, a far heap block), the far pointers at 07D4,
+# 095A, 0B0E and 0B1C, GRDISP's saved SS at 558A, and at 55EA the segment VIDMODE.ASM draws to
+# (A000h, the screen, which SEGS lists, or a buffer). Each was seen to differ between DOSBox-X
+# and js-dos by exactly the difference of their load segments, or to be A000h in both.
+first_block_para = 0x3963
+exe_range = [0x395B, 0xA000]
+# SEGS word 6 is mapdata, a far heap block: the far heap starts where the build's size puts it
+# (the replay build's moved by a paragraph when USEITEMS.C's FARNULLTRAP marks made it 272 bytes
+# larger), so the heap blocks in the slots are compared by their distance from it
+heap_block = 6
+# the far heap starts at the load segment + 6955h (the port, PORT_HEAP_FIRST) or 6956h (the
+# replay build as it stands), above the image (6250h), the stack and the overlay buffer; no
+# far data or stack segment in the slots is above 6900h
+heap_from = 0x6900
+slots = { "GFX" = [0x7AF, 0x7D4, 0x95A, 0xB0E, 0xB1C, 0x558A, 0x55EA] }
+
+[replay.nulls]
+# DS:0..3 is the tail of the last overlay stub entry (the EXE has 3F F1 02 00 there, measured):
+# 3F F1 02 00 while its overlay is not loaded, and F1 02 and the overlay's segment while it is
+ds_forms = ["3ff10200", "f102????"]
+sum_from = 4                           # C0 sums DS:4..30h, from DATASEG@ (tools/link.py's c0_source)
+sum_to = 0x31
+sum_expect = 0xCA5
+
+[[replay.mask]]
+section = "GFX"
+lo = 0x4DFE
+hi = 0x4FA6
+scope = "always"
+why = "GRCORE.ASM's private stack (it switches to 3963:4FA6; UW2's is 370D:4E00..4FA8): interrupts push onto it whenever they come"
+[[replay.mask]]
+section = "GFX"
+lo = 0x547E
+hi = 0x5546
+scope = "always"
+why = "the stack GRENTRY.ASM and GRDISP.ASM switch to (SP 5546h, from 3963:5586; UW2's 5480..5548): interrupts push onto it"
+[[replay.mask]]
+section = "GFX"
+lo = 0x652
+hi = 0x654
+scope = "always"
+why = "GRMISC.ASM's _46: the low word of the real clock after each 3D frame, for the retrace wait's time-out"
+[[replay.mask]]
+section = "GFX"
+lo = 0x5588
+hi = 0x558C
+scope = "cross"
+why = "GRDISP.ASM's saved SP (5588) and SS (558A)"
+
+[[replay.string_junk]]
+# GRCORE's string entries copy the string, its 0 and one byte more to 3963:4FA6
+section = "GFX"
+start = 0x4FA6
+len = 0x84
+[replay.cfgs]
+# DATA\UW.CFG for each session (SOUND.C's seg014_1DC5_1D0D reads the first two lines, UWEDIT.C
+# skips the third): the music card (0 none, 3 Sound Blaster FM, SBFM.ADV, or 6 Roland MT-32,
+# MT32MPU.ADV, on the MPU-401 at 330h) and the speech card (0 none, 1 Sound Blaster digital,
+# SBDIG.ADV), each with its IRQ, port (hex) and DMA. Every session has one, so that none depends
+# on the configuration in the player's copy of the game.
+newgame = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+walk = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+items = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+talk = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+load = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+intro = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+savecursor = "0 -1 -1 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+sound = "3 7 220 1 sound\r\n1 7 220 1 speech\r\n0 cuts\r\n"
+soundfm = "3 7 220 1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+soundmt = "6 2 330 -1 sound\r\n0 -1 -1 -1 speech\r\n0 cuts\r\n"
+
+[replay.derive]
+# soundfm: sound with no speech card; soundmt: on a Roland MT-32, with every wait doubled
+# (MT32MPU.ADV uploads each theme's timbres before it plays, so the way in takes longer)
+soundfm = { from = "sound" }
+soundmt = { from = "sound", wait_scale = 2 }
+
+[replay.steps]
+# Steps for Exhume's tools/replaydos.mjs. Timings are generous: the recording does not depend on
+# them, only on the inputs arriving where the game reads them. "@NAME" takes NAME's steps; a
+# name starting with _ is not a session. Pointer moves are a corner slam (M), then a move in
+# the 640 by 400 frame. In UW1 the right button does what the mode icon says and the left moves.
+# The way into the game: the title, Escape (no saved game, so the introduction starts), Escape
+# (the main menu), Enter (Create Character), Enter for every default (male, right-handed,
+# fighter, the skill picks, the portrait, standard difficulty), the name Avatar, Enter, and Yes
+_chargen = [
+    "w:9000", "k:Escape", "w:3000", "k:Escape", "w:3000", "k:Enter", "w:3000", "k:Enter",
+    "w:2000", "k:Enter", "w:2000", "k:Enter", "w:2000", "k:Enter", "w:2000", "k:Enter", "w:2000",
+    "k:Enter", "w:2000", "k:Enter", "w:2000", "k:Enter", "w:2000", "t:Avatar", "w:1000", "k:Enter",
+    "w:2000", "k:Enter"
+]
+# boot, the title, the main menu, a new character, sixteen seconds in the game;
+# tools/replaydos.mjs then sends F12
+newgame = ["@_chargen", "w:4000", "s:ingame1", "w:6000", "s:ingame2", "w:6000"]
+# the way into the game, then about forty seconds in the 3D view: walk forward (w held), turn
+# left and right (a, d), look up and down and level again (3, 1, 2), step back (s), slide (z,
+# c) and press the left button in the view, so that frames from many positions, a pitched view
+# and a pick frame are compared
+walk = [
+    "@_chargen", "w:6000", "s:ingame1", "h:w,1200", "w:800", "h:a,700", "w:600", "h:w,1500",
+    "w:600", "h:d,1400", "w:600", "k:3", "w:800", "k:3", "w:800", "s:lookup", "k:1", "w:600",
+    "k:1", "w:600", "k:1", "w:800", "s:lookdown", "k:2", "w:800", "h:s,600", "w:600", "h:z,600",
+    "w:600", "h:c,600", "w:600", "h:d,900", "w:600", "h:w,2000", "w:800", "s:ingame2",
+    "c:left,150", "w:2000", "h:a,1200", "w:600", "h:w,1500", "w:3000", "s:ingame3"
+]
+# the way into the game with a sound card ([replay.cfgs]), then fight mode (F5, which asks for
+# the combat theme), swings into the air (the right button held in the view), walking and
+# turning, and the music playing on long enough for the theme to end and the game to choose
+# the next
+sound = [
+    "@_chargen", "w:6000", "s:ingame1", "k:F5", "w:800", "c:right,1200", "w:1500", "c:right,1200",
+    "w:1500", "h:w,1200", "w:800", "h:a,700", "w:600", "c:right,1200", "w:1500", "h:w,1500",
+    "w:600", "h:d,1400", "w:600", "c:right,1500", "w:2000", "s:ingame2", "w:12000", "s:ingame3",
+    "w:40000", "s:ingame4"
+]
+# the sack by the start: look down twice (1), a quarter turn right and a step (Shift+D,
+# Shift+W, which move by fixed amounts); get mode (F3) and the sack (right button), into the
+# first slot (left button); use mode (F6) on it, which opens it; the map in it, which opens the
+# automap; a note there, "hello"; Escape back; look mode (F4) at the fish; the statistics panel
+# and back (F7 twice); a save to slot I described "first" (Ctrl+S, Enter), a turn, a restore of
+# slot I (Ctrl+R, Enter) and a few steps
+items = [
+    "@_chargen", "w:10000", "k:1", "w:600", "k:1", "w:600", "k:Shift+D", "w:800", "k:Shift+W",
+    "w:800", "k:F3", "w:500", "M", "m:262,238", "w:300", "c:right,200", "w:1500", "M",
+    "m:505,170", "w:300", "c:left,200", "w:1500", "s:items1", "k:F6", "w:500", "M", "m:505,170",
+    "w:300", "c:right,200", "w:2000", "s:items2", "M", "m:575,180", "w:300", "c:right,200",
+    "w:3000", "M", "m:300,200", "w:300", "c:left,200", "w:1500", "t:hello", "w:500", "k:Enter",
+    "w:1500", "s:automap", "k:Escape", "w:2500", "k:F4", "w:500", "M", "m:612,180", "w:300",
+    "c:right,200", "w:2000", "k:F7", "w:2000", "s:stats", "k:F7", "w:2000", "k:Control+s",
+    "w:1500", "k:Enter", "w:1500", "t:first", "w:800", "k:Enter", "w:4000", "s:saved", "h:a,1000",
+    "w:800", "k:Control+r", "w:1500", "k:Enter", "w:5000", "s:restored", "h:w,600", "w:1500",
+    "s:items3"
+]
+# Bragit (whoami 67, string block 7's entry 83), the first man to talk to, in the human
+# encampment west of the entrance: the way into the game; the pack in the chest by the start
+# (look down, a step to (23,5), a step north), picked up (F3) into the first slot and opened
+# (F6), whose Red Key (0x106, owner 1) opens the locked doors west and north; back to (23,5),
+# facing west, the key used on the door at (22,5) and the door opened; west and north to
+# (18,6) with fixed steps (Shift+W half a tile, Shift+A and Shift+D 45 degrees); then talk mode
+# (F2) and the right button over a grid of the view, facing north, north-west, west and
+# south-west,
+# since Bragit wanders about his room and the first click on him starts the conversation (the
+# other clicks say "You cannot talk to that"); then answers 1, three times
+talk = [
+    "@_chargen", "w:10000", "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600",
+    "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600",
+    "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600",
+    "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+A", "w:600",
+    "k:Shift+A", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600",
+    "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600",
+    "k:Shift+W", "w:600", "k:Shift+A", "w:600", "k:Shift+A", "w:600", "k:Shift+W", "w:600",
+    "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600",
+    "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600",
+    "k:Shift+W", "w:600", "k:Shift+D", "w:600", "k:Shift+D", "w:600", "k:Shift+W", "w:600",
+    "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600",
+    "k:Shift+W", "w:600", "k:Shift+D", "w:600", "k:Shift+D", "w:600", "k:Shift+W", "w:600",
+    "k:Shift+W", "w:600", "k:Shift+A", "w:600", "k:Shift+A", "w:600", "k:Shift+W", "w:600",
+    "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+W", "w:600", "k:Shift+D", "w:600",
+    "k:Shift+D", "w:600", "k:1", "w:500", "k:1", "w:600", "k:Shift+W", "w:700",
+    "k:1", "w:500", "k:1", "w:500", "k:F3", "w:500", "M", "m:185,240",
+    "w:300", "c:right,200", "w:1500", "M", "m:505,170", "w:300", "c:left,200", "w:1500",
+    "k:F6", "w:500", "M", "m:505,170", "w:300", "c:right,200", "w:2000", "k:2",
+    "w:500", "k:Shift+A", "w:600", "k:Shift+A", "w:600", "k:Shift+A", "w:600", "k:Shift+A",
+    "w:600", "k:Shift+W", "w:700", "k:Shift+D", "w:600", "k:Shift+D", "w:600", "M",
+    "m:505,182", "w:300", "c:right,200", "w:1500", "M", "m:300,150", "w:300", "c:right,200",
+    "w:2000", "M", "m:300,150", "w:300", "c:right,200", "w:5000", "k:Shift+W", "w:1100",
+    "k:Shift+W", "w:1100", "k:Shift+W", "w:1100", "k:Shift+W", "w:1100", "k:Shift+W", "w:1100",
+    "k:Shift+W", "w:1100", "k:Shift+W", "w:1100", "k:Shift+W", "w:1100", "k:Shift+W", "w:1100",
+    "k:Shift+W", "w:1100", "k:Shift+D", "w:1100", "k:Shift+D", "w:1100", "k:Shift+W", "w:1100",
+    "k:Shift+W", "w:1100", "w:1100", "k:F2", "w:600", "M", "m:120,70", "w:150",
+    "c:right,120", "w:350", "M", "m:165,70", "w:150", "c:right,120", "w:350", "M",
+    "m:210,70", "w:150", "c:right,120", "w:350", "M", "m:255,70", "w:150", "c:right,120",
+    "w:350", "M", "m:300,70", "w:150", "c:right,120", "w:350", "M", "m:345,70",
+    "w:150", "c:right,120", "w:350", "M", "m:390,70", "w:150", "c:right,120", "w:350",
+    "M", "m:430,70", "w:150", "c:right,120", "w:350", "M", "m:120,110", "w:150",
+    "c:right,120", "w:350", "M", "m:165,110", "w:150", "c:right,120", "w:350", "M",
+    "m:210,110", "w:150", "c:right,120", "w:350", "M", "m:255,110", "w:150", "c:right,120",
+    "w:350", "M", "m:300,110", "w:150", "c:right,120", "w:350", "M", "m:345,110",
+    "w:150", "c:right,120", "w:350", "M", "m:390,110", "w:150", "c:right,120", "w:350",
+    "M", "m:430,110", "w:150", "c:right,120", "w:350", "M", "m:120,150", "w:150",
+    "c:right,120", "w:350", "M", "m:165,150", "w:150", "c:right,120", "w:350", "M",
+    "m:210,150", "w:150", "c:right,120", "w:350", "M", "m:255,150", "w:150", "c:right,120",
+    "w:350", "M", "m:300,150", "w:150", "c:right,120", "w:350", "M", "m:345,150",
+    "w:150", "c:right,120", "w:350", "M", "m:390,150", "w:150", "c:right,120", "w:350",
+    "M", "m:430,150", "w:150", "c:right,120", "w:350", "M", "m:120,190", "w:150",
+    "c:right,120", "w:350", "M", "m:165,190", "w:150", "c:right,120", "w:350", "M",
+    "m:210,190", "w:150", "c:right,120", "w:350", "M", "m:255,190", "w:150", "c:right,120",
+    "w:350", "M", "m:300,190", "w:150", "c:right,120", "w:350", "M", "m:345,190",
+    "w:150", "c:right,120", "w:350", "M", "m:390,190", "w:150", "c:right,120", "w:350",
+    "M", "m:430,190", "w:150", "c:right,120", "w:350", "M", "m:120,230", "w:150",
+    "c:right,120", "w:350", "M", "m:165,230", "w:150", "c:right,120", "w:350", "M",
+    "m:210,230", "w:150", "c:right,120", "w:350", "M", "m:255,230", "w:150", "c:right,120",
+    "w:350", "M", "m:300,230", "w:150", "c:right,120", "w:350", "M", "m:345,230",
+    "w:150", "c:right,120", "w:350", "M", "m:390,230", "w:150", "c:right,120", "w:350",
+    "M", "m:430,230", "w:150", "c:right,120", "w:350", "s:talk1", "k:Shift+A", "w:800",
+    "M", "m:120,70", "w:150", "c:right,120", "w:350", "M", "m:165,70", "w:150",
+    "c:right,120", "w:350", "M", "m:210,70", "w:150", "c:right,120", "w:350", "M",
+    "m:255,70", "w:150", "c:right,120", "w:350", "M", "m:300,70", "w:150", "c:right,120",
+    "w:350", "M", "m:345,70", "w:150", "c:right,120", "w:350", "M", "m:390,70",
+    "w:150", "c:right,120", "w:350", "M", "m:430,70", "w:150", "c:right,120", "w:350",
+    "M", "m:120,110", "w:150", "c:right,120", "w:350", "M", "m:165,110", "w:150",
+    "c:right,120", "w:350", "M", "m:210,110", "w:150", "c:right,120", "w:350", "M",
+    "m:255,110", "w:150", "c:right,120", "w:350", "M", "m:300,110", "w:150", "c:right,120",
+    "w:350", "M", "m:345,110", "w:150", "c:right,120", "w:350", "M", "m:390,110",
+    "w:150", "c:right,120", "w:350", "M", "m:430,110", "w:150", "c:right,120", "w:350",
+    "M", "m:120,150", "w:150", "c:right,120", "w:350", "M", "m:165,150", "w:150",
+    "c:right,120", "w:350", "M", "m:210,150", "w:150", "c:right,120", "w:350", "M",
+    "m:255,150", "w:150", "c:right,120", "w:350", "M", "m:300,150", "w:150", "c:right,120",
+    "w:350", "M", "m:345,150", "w:150", "c:right,120", "w:350", "M", "m:390,150",
+    "w:150", "c:right,120", "w:350", "M", "m:430,150", "w:150", "c:right,120", "w:350",
+    "M", "m:120,190", "w:150", "c:right,120", "w:350", "M", "m:165,190", "w:150",
+    "c:right,120", "w:350", "M", "m:210,190", "w:150", "c:right,120", "w:350", "M",
+    "m:255,190", "w:150", "c:right,120", "w:350", "M", "m:300,190", "w:150", "c:right,120",
+    "w:350", "M", "m:345,190", "w:150", "c:right,120", "w:350", "M", "m:390,190",
+    "w:150", "c:right,120", "w:350", "M", "m:430,190", "w:150", "c:right,120", "w:350",
+    "M", "m:120,230", "w:150", "c:right,120", "w:350", "M", "m:165,230", "w:150",
+    "c:right,120", "w:350", "M", "m:210,230", "w:150", "c:right,120", "w:350", "M",
+    "m:255,230", "w:150", "c:right,120", "w:350", "M", "m:300,230", "w:150", "c:right,120",
+    "w:350", "M", "m:345,230", "w:150", "c:right,120", "w:350", "M", "m:390,230",
+    "w:150", "c:right,120", "w:350", "M", "m:430,230", "w:150", "c:right,120", "w:350",
+    "s:talk2", "k:Shift+A", "w:800", "M", "m:120,70", "w:150", "c:right,120", "w:350",
+    "M", "m:165,70", "w:150", "c:right,120", "w:350", "M", "m:210,70", "w:150",
+    "c:right,120", "w:350", "M", "m:255,70", "w:150", "c:right,120", "w:350", "M",
+    "m:300,70", "w:150", "c:right,120", "w:350", "M", "m:345,70", "w:150", "c:right,120",
+    "w:350", "M", "m:390,70", "w:150", "c:right,120", "w:350", "M", "m:430,70",
+    "w:150", "c:right,120", "w:350", "M", "m:120,110", "w:150", "c:right,120", "w:350",
+    "M", "m:165,110", "w:150", "c:right,120", "w:350", "M", "m:210,110", "w:150",
+    "c:right,120", "w:350", "M", "m:255,110", "w:150", "c:right,120", "w:350", "M",
+    "m:300,110", "w:150", "c:right,120", "w:350", "M", "m:345,110", "w:150", "c:right,120",
+    "w:350", "M", "m:390,110", "w:150", "c:right,120", "w:350", "M", "m:430,110",
+    "w:150", "c:right,120", "w:350", "M", "m:120,150", "w:150", "c:right,120", "w:350",
+    "M", "m:165,150", "w:150", "c:right,120", "w:350", "M", "m:210,150", "w:150",
+    "c:right,120", "w:350", "M", "m:255,150", "w:150", "c:right,120", "w:350", "M",
+    "m:300,150", "w:150", "c:right,120", "w:350", "M", "m:345,150", "w:150", "c:right,120",
+    "w:350", "M", "m:390,150", "w:150", "c:right,120", "w:350", "M", "m:430,150",
+    "w:150", "c:right,120", "w:350", "M", "m:120,190", "w:150", "c:right,120", "w:350",
+    "M", "m:165,190", "w:150", "c:right,120", "w:350", "M", "m:210,190", "w:150",
+    "c:right,120", "w:350", "M", "m:255,190", "w:150", "c:right,120", "w:350", "M",
+    "m:300,190", "w:150", "c:right,120", "w:350", "M", "m:345,190", "w:150", "c:right,120",
+    "w:350", "M", "m:390,190", "w:150", "c:right,120", "w:350", "M", "m:430,190",
+    "w:150", "c:right,120", "w:350", "M", "m:120,230", "w:150", "c:right,120", "w:350",
+    "M", "m:165,230", "w:150", "c:right,120", "w:350", "M", "m:210,230", "w:150",
+    "c:right,120", "w:350", "M", "m:255,230", "w:150", "c:right,120", "w:350", "M",
+    "m:300,230", "w:150", "c:right,120", "w:350", "M", "m:345,230", "w:150", "c:right,120",
+    "w:350", "M", "m:390,230", "w:150", "c:right,120", "w:350", "M", "m:430,230",
+    "w:150", "c:right,120", "w:350", "s:talk3", "k:Shift+A", "w:800", "M", "m:120,70",
+    "w:150", "c:right,120", "w:350", "M", "m:165,70", "w:150", "c:right,120", "w:350",
+    "M", "m:210,70", "w:150", "c:right,120", "w:350", "M", "m:255,70", "w:150",
+    "c:right,120", "w:350", "M", "m:300,70", "w:150", "c:right,120", "w:350", "M",
+    "m:345,70", "w:150", "c:right,120", "w:350", "M", "m:390,70", "w:150", "c:right,120",
+    "w:350", "M", "m:430,70", "w:150", "c:right,120", "w:350", "M", "m:120,110",
+    "w:150", "c:right,120", "w:350", "M", "m:165,110", "w:150", "c:right,120", "w:350",
+    "M", "m:210,110", "w:150", "c:right,120", "w:350", "M", "m:255,110", "w:150",
+    "c:right,120", "w:350", "M", "m:300,110", "w:150", "c:right,120", "w:350", "M",
+    "m:345,110", "w:150", "c:right,120", "w:350", "M", "m:390,110", "w:150", "c:right,120",
+    "w:350", "M", "m:430,110", "w:150", "c:right,120", "w:350", "M", "m:120,150",
+    "w:150", "c:right,120", "w:350", "M", "m:165,150", "w:150", "c:right,120", "w:350",
+    "M", "m:210,150", "w:150", "c:right,120", "w:350", "M", "m:255,150", "w:150",
+    "c:right,120", "w:350", "M", "m:300,150", "w:150", "c:right,120", "w:350", "M",
+    "m:345,150", "w:150", "c:right,120", "w:350", "M", "m:390,150", "w:150", "c:right,120",
+    "w:350", "M", "m:430,150", "w:150", "c:right,120", "w:350", "M", "m:120,190",
+    "w:150", "c:right,120", "w:350", "M", "m:165,190", "w:150", "c:right,120", "w:350",
+    "M", "m:210,190", "w:150", "c:right,120", "w:350", "M", "m:255,190", "w:150",
+    "c:right,120", "w:350", "M", "m:300,190", "w:150", "c:right,120", "w:350", "M",
+    "m:345,190", "w:150", "c:right,120", "w:350", "M", "m:390,190", "w:150", "c:right,120",
+    "w:350", "M", "m:430,190", "w:150", "c:right,120", "w:350", "M", "m:120,230",
+    "w:150", "c:right,120", "w:350", "M", "m:165,230", "w:150", "c:right,120", "w:350",
+    "M", "m:210,230", "w:150", "c:right,120", "w:350", "M", "m:255,230", "w:150",
+    "c:right,120", "w:350", "M", "m:300,230", "w:150", "c:right,120", "w:350", "M",
+    "m:345,230", "w:150", "c:right,120", "w:350", "M", "m:390,230", "w:150", "c:right,120",
+    "w:350", "M", "m:430,230", "w:150", "c:right,120", "w:350", "s:talk4", "k:1",
+    "w:3000", "s:talk5", "k:1", "w:3000", "s:talk6", "k:1", "w:3000", "s:talk7"
+]
+# a saved game loaded from the main menu ([replay] stage_from: the one items saves): the
+# title, Escape (with a saved game the menu comes at once), Journey Onward (Enter), slot I
+# "first" (Enter), and a step
+load = [
+    "w:9000", "k:Escape", "w:3000", "s:menu", "k:Enter", "w:3000", "s:slots", "k:Enter",
+    "w:6000", "s:loaded", "h:w,800", "w:1500", "s:load_end"
+]
+# boot with no saved game and no key at all: the title, then the whole introduction (about
+# four and a half minutes), to the main menu. The only session that plays a cutscene through
+intro = [
+    "w:30000", "s:intro1", "w:60000", "s:intro2", "w:60000", "s:intro3", "w:60000", "s:intro4",
+    "w:65000", "s:menu", "w:5000"
+]
+# saving with the sack on the cursor, which UW1 refuses: the way into the game, the sack by
+# the start picked up in get mode (F3, right button) and held; Ctrl+S and Ctrl+R (each
+# refused while an action is in progress, string 0xA0: OPTIONS.C's do_option_shortcut) and
+# a click on the top icon (INTERACT.C's deal_with_icons ignores it); then the sack into the
+# first slot with the right button (docs/PORT.md, "Saving with an object on the cursor"), a save to slot I
+# described "held" (Ctrl+S, Enter), a turn, a restore of slot I and a step
+savecursor = [
+    "@_chargen", "w:10000", "k:1", "w:600", "k:1", "w:600", "k:Shift+D", "w:800", "k:Shift+W",
+    "w:800", "k:F3", "w:500", "M", "m:262,238", "w:300", "c:right,200", "w:1500", "s:held",
+    "k:Control+s", "w:1500", "k:Control+r", "w:1500", "M", "m:40,40", "w:300", "c:left,200",
+    "w:1500", "s:refused", "M", "m:505,170", "w:300", "c:right,200", "w:1500", "s:placed",
+    "k:Control+s", "w:1500", "k:Enter", "w:1500", "t:held", "w:800", "k:Enter", "w:4000",
+    "s:saved", "h:a,1000", "w:800", "k:Control+r", "w:1500", "k:Enter", "w:5000", "s:restored",
+    "h:w,600", "w:1500", "s:end"
+]

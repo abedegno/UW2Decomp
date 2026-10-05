@@ -1,0 +1,4 @@
+# segment ovr103 base 0x70400 size 0x683 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+setup_converse_data	ImportConversationVariables_ovr103_0	0x0	0x492
+update_converse_data	RetrieveImportedVariablesAfterConversation_ovr103_492	0x492	0x1F1

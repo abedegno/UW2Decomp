@@ -1,0 +1,17 @@
+# segment seg003_A46 base 0x4546 size 0x63C org 0xA46
+# cname: the listing name, UW1 offsets; SEG003 split at +A46..+1081 (UW2's GRENTRY.ASM, seg003_0272_6E2)
+# far FD52 3963:0958
+seg003_A46	seg003_A46	0x0	0x2
+seg003_A48	seg003_A48	0x2	0x14
+seg003_A5C	seg003_A5C	0x16	0x31
+seg003_A8D	seg003_A8D	0x47	0x3B
+seg003_AC8	seg003_AC8	0x82	0x24
+seg003_AEC	seg003_AEC	0xA6	0x20
+seg003_B0C	seg003_B0C	0xC6	0x51
+seg003_B5D	seg003_B5D	0x117	0x8F
+seg003_BEC	seg003_BEC	0x1A6	0x141
+seg003_D2D	seg003_D2D	0x2E7	0x33
+seg003_D60	seg003_D60	0x31A	0x83
+seg003_DE3	seg003_DE3	0x39D	0x11C
+seg003_EFF	seg003_EFF	0x4B9	0x78
+seg003_F77	seg003_F77	0x531	0x10B

@@ -1,0 +1,23 @@
+# segment seg043_37F0 base 0x39236 size 0x103E org 0x6
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+seg043_37F0_6	seg043_37F0_6	0x0	0x29
+set_mouse_in	seg043_37F0_2F	0x29	0x1F
+seg043_37F0_4E	seg043_37F0_4E	0x48	0x16
+seg043_37F0_64	seg043_37F0_64	0x5E	0x16
+seg043_37F0_7A	seg043_37F0_7A	0x74	0x16
+scroll_wait	seg043_37F0_90	0x8A	0x8E
+seg043_37F0_11E	seg043_37F0_11E	0x118	0x45
+seg043_37F0_163	seg043_37F0_163	0x15D	0x67
+scroll_up	seg043_37F0_1CA	0x1C4	0x8D
+scroll_more	WriteTextWithMore_seg043_37F0_257	0x251	0x93
+scroll_print	WriteMultipleStringsToMessageScroll_seg043_37F0_2EA	0x2E4	0x130
+scroll_print1	seg043_37F0_41A	0x414	0x52
+scroll_print2	seg043_37F0_46C	0x466	0x53
+seg043_37F0_4BF	seg043_37F0_4BF	0x4B9	0x1EA
+seg043_37F0_6A9	seg043_37F0_6A9	0x6A3	0xF8
+seg043_3619_669	seg043_37F0_7A1	0x79B	0x14A
+seg043_37F0_8EB	seg043_37F0_8EB	0x8E5	0x90
+wd_replace	seg043_37F0_97B	0x975	0x76
+seg043_37F0_9F1	seg043_37F0_9F1	0x9EB	0x6D
+wdialog	ProcessTypedInput_seg043_37F0_A5E	0xA58	0x4F3
+wyorn	AskAYesNoQuestion_seg043_F51	0xF4B	0xF3

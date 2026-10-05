@@ -1,0 +1,7 @@
+# segment seg003_5AE8 base 0x95E8 size 0x81 org 0x5AE8
+# cname: the listing name, UW1 offsets; SEG003 split at +5AE8..+5B69 (UW2's GRDISP.ASM, seg003_0272_52EE)
+# far FD52 3963:5588
+seg003_5AF9	seg003_5AF9	0x11	0x12
+seg003_5B0B	seg003_5B0B	0x23	0x52
+seg003_5B5D	seg003_5B5D	0x75	0x8
+seg003_5B65	seg003_5B65	0x7D	0x4

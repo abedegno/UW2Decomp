@@ -1,0 +1,10 @@
+# segment seg042 base 0x38F35 size 0x301 org 0x5
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+seg042_5	seg042_5	0x0	0xE0
+seg042_E5	seg042_E5	0xE0	0x33
+seg042_118	seg042_118	0x113	0x78
+seg042_190	seg042_190	0x18B	0xB
+seg042_19B	seg042_19B	0x196	0x26
+seg042_1C1	seg042_1C1	0x1BC	0x62
+seg042_223	seg042_223	0x21E	0x53
+release_workspace	seg042_276	0x271	0x90

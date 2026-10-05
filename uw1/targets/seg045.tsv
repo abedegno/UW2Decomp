@@ -1,0 +1,8 @@
+# segment seg045 base 0x3B1FB size 0x332 org 0xB
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+seg045_B	seg045_B	0x0	0xDB
+seg045_E6	seg045_E6	0xDB	0x16
+seg045_FC	seg045_FC	0xF1	0xF
+reset_db	seg045_10B	0x100	0x13
+seg045_11E	seg045_11E	0x113	0x154
+gr_putlab	seg045_272	0x267	0xCB

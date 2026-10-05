@@ -1,0 +1,11 @@
+# segment seg004_1370 base 0xB3E0 size 0xC56 org 0x1370
+# cname: UW2 kin name (FM Towns, through UW2's sources; checked against UW1's opcode table), else the segment offset; SEG004 split at +1370..+1FC6
+sphere_check	seg004_1370	0x0	0x1AF
+get_dist	seg004_151F	0x1AF	0x8D
+seg004_15AC	seg004_15AC	0x23C	0x1FF
+seg004_17AB	seg004_17AB	0x43B	0x2E2
+seg004_1A8D	seg004_1A8D	0x71D	0x157
+do_obj	seg004_1BE4	0x874	0x15F
+seg004_1D43	seg004_1D43	0x9D3	0x136
+seg004_1E79	seg004_1E79	0xB09	0xB
+seg004_1E84	seg004_1E84	0xB14	0x142

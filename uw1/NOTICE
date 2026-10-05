@@ -1,0 +1,22 @@
+UW1Decomp
+Copyright (c) 2026 abedegno
+
+This project is a fan research project. It is not affiliated with, endorsed by or sponsored by Electronic Arts, Origin Systems or Looking Glass Technologies.
+
+THE GAME
+
+Ultima Underworld: The Stygian Abyss was developed by Blue Sky Productions (later Looking Glass Technologies) and published by Origin Systems in 1992. Its copyright belongs to its owners (Electronic Arts). Ultima and Ultima Underworld are trademarks of Electronic Arts.
+
+The decompiled game code in this repository is derived from the game's program, UW.EXE. That is the game's C and assembly under src/, with the shared headers in src/include. The tables in map/, targets/ and symbols.tsv describe UW.EXE. This project claims no ownership of the game, and the MIT licence in LICENSE does not grant any right in it.
+
+No game data is included: no executable, art, sound, map, text or other file of the game. To build anything you need your own copy of the game; the GOG release is the one the tools check for.
+
+THIS PROJECT'S OWN WORK
+
+The MIT licence in LICENSE covers only this project's original work: the tools (tools/ and the workflows in .github/), the documentation (docs/ and the README), and the comments, names and structure added to the decompiled code. Where a file holds both, the licence applies to this project's contribution only.
+
+OTHER CODE IN THE REPOSITORY
+
+- src/lib/OVERLAY.ASM is Borland's VROOMM overlay manager, rebuilt from OVERLAY.LIB of Turbo C++ 1.01, which UW.EXE links. Its copyright belongs to its owner (Borland, now Embarcadero). The Turbo C++ and Turbo Assembler programs themselves are not included.
+- src/sound/AIL.ASM is the Audio Interface Library API of John Miles (Miles Design), which its author released on 26 May 2000 as freeware "usable by anyone for any purpose, commercial or otherwise, without restriction or limitation", in effect public domain.
+- tools/repocheck.py is from Exhume (https://github.com/abedegno/Exhume), under its MIT licence.

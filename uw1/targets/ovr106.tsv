@@ -1,0 +1,5 @@
+# segment ovr106 base 0x73140 size 0x25 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+ovr106_0	ovr106_0	0x0	0x1B
+SetBasePtrToStackPtr_ovr106_1B	SetBasePtrToStackPtr_ovr106_1B	0x1B	0x5
+ovr106_20	ovr106_20	0x20	0x5

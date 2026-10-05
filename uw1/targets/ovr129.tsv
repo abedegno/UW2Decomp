@@ -1,0 +1,5 @@
+# segment ovr129 base 0x7CB90 size 0x12B org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+init_objects	ovr129_0	0x0	0xEE
+ovr129_EE	ovr129_EE	0xEE	0x7
+get_class_data	ovr129_F5	0xF5	0x36

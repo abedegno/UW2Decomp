@@ -1,0 +1,12 @@
+# segment seg033_2EEF base 0x30229 size 0x997 org 0x9
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+seg033_2EEF_9	seg033_2EEF_9	0x0	0xE4
+sort_obj	seg033_2EEF_ED	0xE4	0x56
+build_sort	seg033_2EEF_143	0x13A	0x1B
+do_partition	seg033_2EEF_15E	0x155	0xD5
+seg033_2EEF_233	seg033_2EEF_233	0x22A	0x4E
+door_part	seg033_2EEF_281	0x278	0xA8
+set_sds	seg033_2EEF_329	0x320	0xA4
+set_osum	seg033_2EEF_3CD	0x3C4	0x39
+clear_objsort	seg033_2EEF_406	0x3FD	0x35
+do_objsort	seg033_2EEF_43B	0x432	0x565

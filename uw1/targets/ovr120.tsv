@@ -1,0 +1,22 @@
+# segment ovr120 base 0x79070 size 0xE96 org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+RedisplayInvSlot	ovr120_0	0x0	0x15
+AskInventory	GetItemInSlot_ovr120_15	0x15	0x17
+FindEmptySlot	ovr120_2C	0x2C	0x2B
+AddToInventory	ovr120_57	0x57	0xF3
+FindSlot	ovr120_14A	0x14A	0xD2
+FindObj	FindObjectInInventory_ovr120_21C	0x21C	0x230
+find_obj	ovr120_44C	0x44C	0xF3
+pick_inv	ovr120_53F	0x53F	0x65
+AskInventory	ovr120_5A4	0x5A4	0x17
+InvRemoveObject	ovr120_5BB	0x5BB	0x15
+InvRemoveOneObject	RemoveObjectFromInventory_ovr120_5D0	0x5D0	0x15
+invRemoveObject	RemoveQTYFromPlayerInventory_ovr120_5E5	0x5E5	0x1B0
+RemoveAllFromSlot	ovr120_795	0x795	0x88
+RemoveOneFromSlot	ovr120_81D	0x81D	0x88
+removeFromSlot	ovr120_8A5	0x8A5	0x30
+takeFromSlot	ovr120_8D5	0x8D5	0x2CD
+ObjWorn	ovr120_BA2	0xBA2	0x6D
+DamageInventory	ovr120_C0F	0xC0F	0x1CE
+ItemWeight	ovr120_DDD	0xDDD	0x97
+EncumCheck	ovr120_E74	0xE74	0x22

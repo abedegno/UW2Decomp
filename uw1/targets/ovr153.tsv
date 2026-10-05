@@ -1,0 +1,19 @@
+# segment ovr153 base 0x83B00 size 0x16AA org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+ovr153_0	ovr153_0	0x0	0x17
+ovr153_17	ovr153_17	0x17	0x24
+ovr153_3B	ovr153_3B	0x3B	0x20F
+SetOffTrap	ovr153_24A	0x24A	0x4C
+ovr153_296	ovr153_296	0x296	0xAFC
+ovr153_D92	ovr153_D92	0xD92	0xF1
+delete_trap	ovr153_E83	0xE83	0xBE
+ovr153_F41	ovr153_F41	0xF41	0x3A
+ovr153_F7B	ovr153_F7B	0xF7B	0x173
+cast_trap_spell	ovr153_10EE	0x10EE	0x26E
+ovr153_135C	ovr153_135C	0x135C	0xA6
+trap_obj_del	ovr153_1402	0x1402	0x3B
+is_this_wandering	ovr153_143D	0x143D	0x51
+dont_create_wandering_monster_here	ovr153_148E	0x148E	0x36
+check_alert	ovr153_14C4	0x14C4	0x53
+DoWanderingMonsters	ovr153_1517	0x1517	0xAD
+DoClosingDoors	ovr153_15C4	0x15C4	0xE6

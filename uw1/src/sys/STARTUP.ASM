@@ -1,0 +1,245 @@
+; /* target: seg019_0 */
+; /* opts: /ml */
+;
+; UW1: UW2's module (src/sys in UW2Decomp), matched to UW.EXE's seg019; the differences are
+; marked UW1/UW2 where they occur. Other remarks are UW2's unless they say UW1.
+;
+; System module, startup part: the entry glue init returns through (seg019_0, _17), the
+; EGA palette save and restore (_65, _A1), and setting the DOS clock from the real-time clock
+; (_E9, _112, _11B).
+;
+; seg019 split into its original modules, as UW2's seg021: module 1 of 17, +0..+150
+; of the segment (file 225A0h), linked as an object, not from the library.
+; Procs: seg019_0, seg019_17, seg019_65, seg019_A1, seg019_E9,
+; seg019_112, seg019_11B.
+; Evidence for the bounds: it starts the segment; it ends where the next module's paragraph
+; padding begins. Its three relocations (UW.EXE entries 692-694; UW2 860-862) sit between
+; seg000's (654-691) and seg001's (695-708), apart from the other seg019 entries (2555
+; onwards), so, as in UW2, this one module was linked as an object in the resident list and
+; the rest of the segment came from the library.
+;
+; How seg019 runs (UW2's seg021). seg019 is a library of small assembly modules (the system layer: start-up
+; and shutdown, the keyboard, mouse, joystick and timer, integer maths, and the entry points
+; into the 3D code). It has its own data segment, seg063 (UW1 5624:0000;
+; UW2's FD71, 60B9:0000, taken from the EXE at link time), and its own stack at the top of
+; that segment's first 448h bytes (UW1; UW2 510h). C calls it only through the far entry points in SYSENTRY.ASM and
+; C3DENTRY.ASM, which save the caller's SS:SP in the code segment, load DS, ES and SS with
+; seg063 and SP with 448h (UW2 510h), call the near routine and switch back. So in every module
+; of the segment, `ds:[n]` is offset n of seg063, whatever the `assume ds:DGROUP`
+; says (the assume only gives TASM a default; the addresses are plain numbers).
+; SYSENTRY.ASM's header has a map of that segment.
+;
+; This module: GRFX.C's grfx_init calls _755 (SYSENTRY.ASM), which runs seg019_0, and
+; grfx_close calls _791, which runs seg019_17.
+; name: descriptive (system module 1, start-up).
+
+; The BIOS clock (int 1Ah) functions used here.
+RTC_GET_TIME    equ     02h
+RTC_GET_DATE    equ     04h
+; The BIOS video (int 10h) functions used here.
+VID_PALETTE     equ     10h
+; The DOS (int 21h) functions used here.
+DOS_SET_DATE    equ     2Bh
+DOS_SET_TIME    equ     2Dh
+
+        .186
+
+_DATA   segment word public 'DATA'
+        extrn   __psp:word                      ; C0's, at DS:92
+_DATA   ends
+DGROUP  group   _DATA
+
+SEG019_TEXT segment para public 'CODE'
+        assume  cs:SEG019_TEXT, ds:DGROUP, ss:DGROUP
+        extrn   _init:near
+        extrn   _seg019_174:near
+        extrn   _seg019_73E:near
+        public  _seg019_0
+        public  _seg019_112
+        public  _seg019_11B
+        public  _seg019_17
+        public  _seg019_65
+        public  _seg019_A1
+        public  _seg019_E9
+
+; Start-up. Stores the PSP segment (C0's __psp, from DGROUP) as the segment of the far
+; pointer at DS:0, whose offset is 000Ah: so DS:0 points at the PSP's terminate address,
+; which init (SYSINIT.ASM) replaces with its exit routine. Then saves the EGA palette and
+; runs init.
+_seg019_0 proc near
+        push    es
+        mov     ax,DGROUP
+        mov     es,ax
+        mov     bx,offset DGROUP:__psp
+        mov     ax,word ptr es:[bx]
+        mov     word ptr ds:[2],ax
+        pop     es
+        call    _seg019_65
+        call    _init
+        ret
+_seg019_0 endp
+
+; seg019_17  (+17)
+; Shutdown, the reverse of init: restores the video mode and equipment byte (_73E, in
+; SYSLIBL.ASM), the int 24h vector (_174), the EGA palette (_A1), and sets the DOS clock from
+; the real-time clock (_E9), probably because the game's timer interrupt handling leaves
+; the DOS time wrong. init also jumps here when it fails.
+; The 49 bytes after the ret are the palette save area: L0054, the 17 bytes of palette
+; registers int 10h/1009h returns (16 registers and the overscan), and L0024/L0025/L0026,
+; three interleaved byte arrays for the 16 registers' red, green and blue DAC values (each
+; entry 3 bytes apart; L0026 runs 2Eh bytes so that the last triple fits).
+_seg019_17 proc near
+        call    _seg019_73E
+        call    _seg019_174
+        call    _seg019_A1
+        call    _seg019_E9
+        ret
+L0024:
+        db      0h
+L0025:
+        db      0h
+L0026:
+        db      2Eh dup (0)
+L0054:
+        db      11h dup (0)
+_seg019_17 endp
+
+; seg019_65  (+65)
+; Saves the EGA palette: reads the 16 palette registers and overscan (int 10h 1009h) into
+; L0054, then for each of the 16 registers reads the DAC colour it selects (1015h) into
+; the triples at L0024.
+_seg019_65 proc near
+        push    si
+        push    di
+        push    es
+        mov     ax,(VID_PALETTE shl 8) + 9
+        mov     dx,SEG019_TEXT
+        mov     es,dx
+        mov     dx,54h
+        int     10h
+        mov     di,0
+        mov     si,0
+L007B:
+        mov     ax,(VID_PALETTE shl 8) + 15h
+        mov     bl,byte ptr cs:L0054[si]
+        int     10h
+        mov     byte ptr cs:L0024[di],dh
+        mov     byte ptr cs:L0025[di],ch
+        mov     byte ptr cs:L0026[di],cl
+        inc     si
+        add     di,3
+        cmp     di,30h
+        jne     L007B
+        pop     es
+        pop     di
+        pop     si
+        ret
+_seg019_65 endp
+
+; MaybePaletteCycling_seg019_A1  (+A1)
+; Restores what _65 saved: the palette registers (1002h) and the 16 DAC colours (1010h).
+; Not palette cycling, whatever IDA's name says.
+_seg019_A1 proc near
+        push    si
+        push    di
+        mov     ax,(VID_PALETTE shl 8) + 2
+        mov     dx,SEG019_TEXT
+        push    es
+        mov     es,dx
+        mov     dx,54h
+        mov     bx,0
+        mov     cx,10h
+        int     10h
+        mov     cx,10h
+        mov     si,0
+        mov     di,0
+        mov     bx,0
+L00C3:
+        mov     ax,(VID_PALETTE shl 8) + 10h
+        mov     bl,byte ptr cs:L0054[si]
+        mov     dh,byte ptr cs:L0024[di]
+        mov     ch,byte ptr cs:L0025[di]
+        mov     cl,byte ptr cs:L0026[di]
+        int     10h
+        add     di,3
+        inc     si
+        cmp     si,10h
+        jne     L00C3
+        pop     es
+        pop     di
+        pop     si
+        ret
+_seg019_A1 endp
+
+; seg019_E9  (+E9)
+; Sets the DOS date and time from the real-time clock: int 1Ah function 4 (date, BCD in
+; CX:DX) and function 2 (time, BCD in CX:DX), converted to binary by _112 and _11B and set
+; with int 21h 2Dh (time) and 2Bh (date, century * 100 + year).
+_seg019_E9 proc near
+        mov     ah,RTC_GET_DATE
+        int     1Ah
+        push    cx
+        push    dx
+        mov     ah,RTC_GET_TIME
+        int     1Ah
+        call    _seg019_112
+        xor     dl,dl
+        mov     ah,DOS_SET_TIME
+        int     21h
+        pop     dx
+        pop     cx
+        call    _seg019_112
+        xor     al,al
+        xchg    ah,al
+        mov     ch,64h
+        mul     ch
+        xor     ch,ch
+        add     cx,ax
+        mov     ah,DOS_SET_DATE
+        int     21h
+        ret
+_seg019_E9 endp
+
+; seg019_112  (+112)
+; Converts four packed BCD bytes to binary: CX and DX in, both returned converted (each
+; byte separately). It converts DX by calling _11B and then falls through into _11B for CX,
+; so the two share its ret.
+_seg019_112 proc near
+        push    cx
+        mov     ax,dx
+        call    _seg019_11B
+        mov     dx,ax
+        pop     ax
+_seg019_112 endp
+
+; seg019_11B  (+11B)
+; Converts the two packed BCD bytes of AX to binary, each byte separately, returning the
+; result in both AX and CX; BX is scratch.
+_seg019_11B proc near
+        xor     bx,bx
+        mov     cx,4
+        xchg    ch,ah
+        xchg    ch,al
+        ror     ax,cl
+        shr     ah,cl
+        xchg    bh,ah
+        mov     cl,0Ah
+        mul     cl
+        add     al,bh
+        xchg    ch,al
+        xor     ah,ah
+        mov     cl,4
+        ror     ax,cl
+        shr     ah,cl
+        xchg    bl,ah
+        mov     cl,0Ah
+        mul     cl
+        add     al,bl
+        mov     ah,ch
+        mov     cl,al
+        ret
+_seg019_11B endp
+
+SEG019_TEXT ends
+
+        end

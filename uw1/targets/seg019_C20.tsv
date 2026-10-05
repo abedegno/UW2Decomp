@@ -1,0 +1,18 @@
+# segment seg019_C20 base 0x231c0 size 0x451 org 0xc20
+# cname: UW2 kin name (FM Towns original where UW2 has one), else the UW1 listing name; seg019 split at module bounds
+cZoom	seg019_C34	0x14	0x4A
+cFBtoScreen	seg019_C7E	0x5E	0x6
+cFillFB	seg019_C84	0x64	0x33
+seg019_CB7	seg019_CB7	0x97	0x33
+seg019_CEA	seg019_CEA	0xCA	0x33
+cPlaceFB	seg019_D1D	0xFD	0x5D
+cRender	seg019_D7A	0x15A	0xA0
+cInit3d	seg019_E1A	0x1FA	0x49
+cFstSinCos	seg019_E63	0x243	0x4B
+cSinCos	seg019_EAE	0x28E	0x4D
+cAtan2	seg019_EFB	0x2DB	0x44
+cSqRt	seg019_F3F	0x31F	0x44
+cFrmtoRaw	seg019_F83	0x363	0x5A
+seg019_FDD	seg019_FDD	0x3BD	0x27
+seg019_1004	seg019_1004	0x3E4	0x27
+seg019_102B	seg019_102B	0x40B	0x46

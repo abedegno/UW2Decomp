@@ -1,0 +1,4 @@
+# segment ovr089 base 0x65710 size 0x2C org 0x0
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+animobj_load	ovr089_0	0x0	0x17
+ovr089_17	ovr089_17	0x17	0x15

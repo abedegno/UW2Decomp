@@ -1,0 +1,208 @@
+/* sys.h: the program's start-up, main loop and shutdown, memory and EMS, errors, small
+   helpers, debugging hooks, the C-like helpers in MODEX.ASM (seg015_1F9B), and the C side
+   of seg019, the assembly system layer (UW2's seg021): the input and timer drivers
+   (SYSENTRY.ASM) and the entry points into the 3D renderer (C3DENTRY.ASM). The far
+   pointers declared for seg019 (Alt, Asc, MouseDx, cPlayer ...) point into its own data
+   segment, seg063 (UW2's dseg062_62a6);
+   SYSENTRY.ASM's header has a map of it. docs/subsystems/sys.md describes the subsystem. */
+#ifndef SYS_H
+#define SYS_H
+
+#include "uw2.h"
+
+struct Camera;
+
+#include "view3d.h"
+
+/* UWEDIT.C: the program's main and its startup and shutdown */
+/* Screen modes (scrmode and inplist->mode, set by change_screen; the masks the input
+   tables are registered with): each is one bit, and change_screen maps it to the screen
+   number scrnum (0, 1 and 2), which picks the change handlers in editor_dispatch. The
+   names are ours. 8 sets another zoom in VIEW3D.C's place_3d_view and 0x10 is what the
+   empty overlays ovr090 and ovr152 switch to; neither is known to be used. */
+#define MODE_GAME       1               /* the 3D view, scrnum 0 */
+#define MODE_MAP        2               /* the automap, scrnum 1 */
+#define MODE_CONV       4               /* a conversation, scrnum 2 */
+extern char HomeDir[0x42];
+/* DS:5D60, FM Towns _scrmode.
+   name: IDA's label "InGameMode" here is wrong: a different global, DS:2506, exists
+   under that name already. */
+extern int16 scrmode;
+extern int16 scrnum;
+extern int16 notdone;
+extern int16 changed;
+extern int16 NewPlayerX;
+extern int16 NewPlayerY;
+extern int16 NewPlayerLevel;
+void far init_world(int argc, char *argv[]);
+void far titlescr(void);
+void far init_edit(int argc, char *argv[]);
+void far change_screen(int mode);
+void far strt_demscr(void);
+void far free_demscr(void);
+void far reset_game(void);
+void far do_3d_view(void);
+unsigned char far new_player_pos(void);
+void far ReadCfg_ovr112_839(void);
+extern void (far *editor_dispatch[3][16])();
+extern int16 change_state[3];
+extern char NewPlyFade;
+void far newscr(int mode);
+void far real_death(int how);
+extern char in_game;
+extern void (far *npp_func)();
+void far free_world(char flag);
+void far editexit(int unused);  /* callers pass an argument it ignores */
+void far clearobj(int unused);  /* callers pass an argument it ignores */
+
+/* MAINLOOP.C: the main loop and the per-screen change dispatcher */
+void far do_changes(void);
+void far mainloop(void);
+void far editchng(int bits);
+
+/* EMS.C: EMS (LIM expanded memory) driver calls */
+/* The segment of the EMS page frame, set by EMS.C (seg012) from INT 67h function 41h.
+   name: provisional; no FM Towns counterpart (FM Towns has no EMS). */
+extern uint16 ems_frame;
+int far seg012_B(unsigned min_pages, unsigned max_pages);
+void far seg012_A6(void);
+char far seg012_BB(unsigned physical, unsigned logical, int count);
+char far seg012_10F(char physical, unsigned logical);
+void far seg012_12C(unsigned handle, char far *name);
+int far seg012_141(uint16 *handle);
+void far *far seg012_15E(unsigned handle);
+void far seg012_1B1(unsigned handle);
+
+/* TMPALLOC.C: memory and the workspace */
+/* name: DOS A5 is FM Towns mem_setup: both initialise the page counts and invalidate
+   mappings. The IDA name is kept as the public symbol until its target-table entry is
+   renamed. */
+void far mem_setup(int page);
+void far free_mem(void);
+/* DOS only: maps the critter animation pages into the EMS frame. name: provisional. */
+int far set_workspace(void);
+void far release_workspace(void);
+extern char ws_active;
+int far get_workspace(void);
+extern uint16 conv_ws_seg;
+void far seg042_190(void);
+void far seg042_19B(void);
+
+/* Error codes for first_punt, pfatal_code and the init functions' returns: error_code
+   prints the top four bits as the kind (and as a letter, 'A' + kind) and the rest as
+   three octal digits. */
+#define ERR_LOWMEM      0x1000          /* "Out of Low Memory." */
+#define ERR_EMS         0x2000          /* "Out of EMS Memory." */
+#define ERR_READ        0x3000          /* "Could not read data." */
+#define ERR_WRITE       0x4000          /* "Could not write data." */
+
+/* ERROR.C: error reporting and fatal exit routines */
+void far first_punt(int code);
+void far pfatal_code(int code);
+void far pfatal(char *message);
+
+/* UTIL.C: small helpers */
+int far mvcheck(int16 *val, int limit, int step, int dir);
+void far move_along(int heading, int dist, int16 *x, int16 *y);
+int far rollem(int dice, int sides);
+void far seg041_35D7_E9(unsigned ticks);
+
+/* DEBUG.C: debugging hooks */
+void far init_debug(void);
+void far dprintf(char *fmt, ...);
+
+/* MODEX.ASM */
+char far * far FindStringDelimiter(char far *s, int c);
+void far grab(void far *dst, int x, int y, int w, int h);
+void far local_do_palette(int count, unsigned char first);
+void far mem_set(void far *p, int value, int count);  /* MODEX.ASM's far memset; our name */
+int far str_cmp(char far *a, char far *b);
+char far * far str_copy(char far *dst, char far *src);
+/* Far string routines (MODEX.ASM and GAMESTRN.C). */
+int far str_len(char far *s);
+void far str_ncopy(char far *dst, char far *src, int n);
+char far * far str_str(char far *s, char far *find);
+
+/* INT0TRAP.ASM */
+extern uint16 far int0_sp;
+extern uint16 far int0_ss;
+/* The divide-by-zero trap in INT0TRAP.ASM (seg016), and the two words in its code segment
+   where it finds the stack to return to. name: DOS only; the names are ours. */
+void interrupt far int0_trap();
+
+/* SYSENTRY.ASM */
+extern unsigned char far *Alt;  /* DS:2130 */
+extern unsigned char far *Asc;  /* DS:2148, FM Towns _Asc */
+/* DS:212C, a far pointer to the keyboard handler's caps lock state (it sets the LEDs from
+   it). name: ours; FM Towns has no counterpart. */
+extern unsigned char far *CapsLock;  /* DS:212C */
+extern unsigned char far *Ctrl;  /* DS:2134 */
+extern int16 far *MouseDx;  /* DS:214C, FM Towns _MouseDx */
+extern int16 far *MouseDy;  /* DS:2150, FM Towns _MouseDy */
+extern int16 far *MouseOn;  /* DS:2154, FM Towns _MouseOn */
+extern unsigned char far *Shift;  /* DS:2128 */
+extern char far *cExitMessage;
+/* The fatal-exit message: cPerror gets the offset of cExitMessage. */
+extern int16 far *cPerror;
+extern int16 far *joy_buttons;
+extern int16 far *joy_position;
+/* The asm input module (2110): FM Towns key_, mouse_ and mbuttons. key returns the next key
+   event (0 for none, else the character in the low byte and the scan code in the high);
+   mouse leaves the motion in *MouseDx and *MouseDy. */
+int far key(void);
+extern unsigned char far *key_on;  /* DS:2138 */
+int far mbuttons(void);
+void far mouse(void);
+void far seg019_7CD(void);       /* read the joystick into *joy_position */
+void far seg019_809(void);       /* read its buttons into *joy_buttons */
+extern uint32 far *Time;         /* DS:2158 */
+void far seg019_755(void);
+void far seg019_791(void);
+
+/* C3DENTRY.ASM: the C entry points into the 3D renderer (seg004) and the frame buffer
+   (seg003's GRENTRY.ASM). cRender draws a frame from the render database and in fact
+   returns the clock ticks it took in DX:AX; cPlaceFB puts the view's frame buffer on the
+   screen at (x, y), y counting up from the bottom; cFrmtoRaw decodes a picture. */
+int far cAtan2(int x, int y);
+extern int16 far *cDbase;  /* DS:216C, start of the bytecode buffer */
+extern int16 far *cDbbase;  /* DS:2180, where gr_entry records dbptr */
+extern int16 far *cEntryStrt;  /* DS:2170 */
+void far cFBtoScreen(void);
+void far cFillFB(int);
+void far * far cFrmtoRaw(void far *data, unsigned char far *pal, unsigned char mode);
+void far cFstSinCos(int angle, int16 *a, int16 *b);
+void far cInit3d(void);
+extern unsigned char far *cLightTabs;
+extern int16 far *cPixXferStuff;
+void far cPlaceFB(int x, int y, int w, int h);
+extern struct Camera far *cPlayer;
+void far cRender(void);
+void far cSinCos(int angle, int16 *x, int16 *y);
+int far cSqRt(int32 v);
+void far cZoom(unsigned zoom);
+void far seg019_CB7(int);
+void far seg019_CEA(int);
+
+/* SETPNT.ASM */
+int far SetPnt(char x, char y, char z);
+
+/* STATS.C: the character panel's statistics page */
+extern int16 spsave[3];  /* DS:1B9F; FM Towns reads _spsave+4 */
+void far sp_hp(void);
+void far sp_mp(void);
+void far sp_xp(void);
+void far RedispStat(void);
+void far mous_in_stat(void);
+void far ovr145_4FB(void);
+
+/* Defined where no source has it yet: data the link takes from the EXE. */
+
+extern char dseg_5c99_10C;
+
+/* FARDATA.ASM: fardata */
+extern unsigned char far fade_buffer[];
+
+/* OVR127.C */
+void far ovr127_0(void);
+
+#endif

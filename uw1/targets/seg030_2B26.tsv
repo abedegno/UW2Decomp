@@ -1,0 +1,21 @@
+# segment seg030_2B26 base 0x2C59B size 0x1812 org 0xB
+# cname: original (UW2 kin) name where the map anchors or confirms it, else the listing name
+CalculateMotion_seg030_B	CalculateMotion_seg030_B	0x0	0x86
+space_to_pos	seg030_2B26_91	0x86	0x7B
+set_targz	SetCollisionTarget_seg030_2B26_10C	0x101	0x304
+space_to_motion	InitalMotionCalc_seg030_410	0x405	0x378
+recalc_vecs	seg030_2B26_788	0x77D	0x35
+stop_me	seg030_2B26_7BD	0x7B2	0x41
+back_to_space	StoreNewXYZH_seg030_2B26_7FE	0x7F3	0xA6
+flat_move	LikelyTranslateXY_seg030_8A4	0x899	0x1A3
+seg030_2B26_A47	seg030_2B26_A47	0xA3C	0x198
+do_2dbounce	seg030_2B26_BDF	0xBD4	0x6A
+seg030_2B26_C49	seg030_2B26_C49	0xC3E	0x4A
+DoCollision_seg030_2B26_C93	DoCollision_seg030_2B26_C93	0xC88	0x34C
+full_move	MAYBEGRAVITYZ_seg030_FDF	0xFD4	0x180
+grid_move	ProcessCollisions_seg030_115F	0x1154	0x93
+set_resterr	seg030_2B26_11F2	0x11E7	0x67
+get_pcoll	GetCollisionHeightState_seg030_2B26_1259	0x124E	0x3E7
+check_positions	DoTileCollisionMaybe_seg030_2B26_1640	0x1635	0xCC
+IsaDoor	seg030_2B26_170C	0x1701	0xE9
+CollObject	seg030_2B26_17F5	0x17EA	0x28
