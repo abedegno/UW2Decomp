@@ -149,6 +149,86 @@ jobs:
         shell: bash
         run: rm -rf "$RUNNER_TEMP/uw1-assets" "$RUNNER_TEMP/uw1-ci-assets" "$RUNNER_TEMP/uw1-assets-deploy-key" build
 
+  package-windows:
+    if: vars.UW1_CI_ASSETS == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    # Windows Server 2022, the hosted Windows nearest Windows 10: the players' zip, unpacked and
+    # started with only Windows's folders on the PATH (a DLL missing from the zip stops it), then
+    # the sessions replayed by that program against the goldens (Exhume's tools/pkgcheck.py)
+    runs-on: windows-2022
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      # the recordings and scripts must keep their bytes and LF line ends (also .gitattributes)
+      - run: git config --global core.autocrlf false
+        shell: pwsh
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      # Exhume, whose tools and runtime the port, the gate and the replay build use where it is,
+      # at the commit tools/exhume-ref names (docs/BUILDING.md, "Exhume")
+      - name: Exhume's commit
+        id: exhume
+        shell: bash
+        run: echo "ref=$(cut -d' ' -f1 tools/exhume-ref)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: abedegno/Exhume
+          ref: ${{ steps.exhume.outputs.ref }}
+          path: .exhume
+          persist-credentials: false
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: CLANG64
+          update: false
+          install: make curl git
+          pacboy: clang:p llvm:p pkgconf:p sdl3:p python:p cmake:p ninja:p
+      # age's own Windows build at a pinned version, checked against its SHA-256, for the
+      # uw1-assets action (which runs in Git Bash)
+      - name: age
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'age.zip'
+          Invoke-WebRequest -Uri 'https://github.com/FiloSottile/age/releases/download/v1.3.2/age-v1.3.2-windows-amd64.zip' -OutFile $zip
+          $sum = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
+          if ($sum -ne 'f48d8f8f9ebe903ab5027ed067652f2cc1db94bc206976430133b905dcd8e8c7') { throw "age: unexpected SHA-256 $sum" }
+          Expand-Archive $zip -DestinationPath (Join-Path $env:RUNNER_TEMP 'age-bin')
+          Join-Path $env:RUNNER_TEMP 'age-bin\age' | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+      - uses: ./.github/actions/uw1-assets
+        with:
+          deploy-key: ${{ secrets.UW1_ASSETS_DEPLOY_KEY }}
+          age-key: ${{ secrets.UW1_ASSETS_AGE_KEY }}
+      - name: Cache libmt32emu
+        uses: actions/cache@v4
+        with:
+          path: tools/libs
+          key: libs-windows-clang64-${{ hashFiles('.exhume/tools/setup-libs.sh') }}
+      - name: Build libmt32emu (when not cached), fetch Nuked OPL3
+        run: |
+          SETUP_LIBS=mt32emu sh .exhume/tools/setup-libs.sh tools/libs
+          sh .exhume/tools/setup-sound.sh tools/nuked-opl3
+      - name: The players' package, unpacked, started and replayed
+        run: |
+          set -o pipefail
+          mkdir -p "$RUNNER_TEMP/logs"
+          (make EXHUME=.exhume PY=python port-release && make EXHUME=.exhume PY=python package && exe=$(python .exhume/tools/pkgcheck.py "$(ls build/dist/*-windows-x86_64.zip)" --exe uw1port --data "$UW1_DATA" --unpack "$RUNNER_TEMP/pkg") && EXHUME_PORT="$exe" make EXHUME=.exhume PY=python verify) 2>&1 | tee "$RUNNER_TEMP/logs/package-windows.log"
+      - name: Upload the difference pictures and logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-windows-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/logs/*.log
+            build/replay/verify/**/diff_ck*.png
+            build/replay/verify/**/port.log
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Remove the game data and everything built from it
+        if: always()
+        shell: bash
+        run: rm -rf "$RUNNER_TEMP/pkg" "$RUNNER_TEMP/uw1-assets" "$RUNNER_TEMP/uw1-ci-assets" "$RUNNER_TEMP/uw1-assets-deploy-key" build
+
   verify-macos:
     if: vars.UW1_CI_ASSETS == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: macos-15

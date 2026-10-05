@@ -49,6 +49,7 @@ tmp_clone = "uw1-ci-assets"
 tmp_key = "uw1-assets-deploy-key"
 tmp_hosts = "uw1-known-hosts"
 ci_assets = "sh tools/ci-assets.sh"
+package_check_windows = 'make EXHUME=.exhume PY=python port-release && make EXHUME=.exhume PY=python package && exe=$(python .exhume/tools/pkgcheck.py "$(ls build/dist/*-windows-x86_64.zip)" --exe uw1port --data "$UW1_DATA" --unpack "$RUNNER_TEMP/pkg") && EXHUME_PORT="$exe" make EXHUME=.exhume PY=python verify'
 cleanup = "toolchain build"
 
 accuracy_comment = '''
