@@ -1541,6 +1541,14 @@ void far move_mobile(char delta)        /* UW1: char delta */
     unsigned char far *p;
     char ok;                            /* UW1: signed (cbw) */
 
+#ifndef __TURBOC__
+    /* Port only, as UW2Decomp's: DOS's clock moves a tick or so between check_physics'
+       reads, so delta is at most 5. A host stall of the port's game thread can make it 9 or
+       more (mod 16), and then a distant critter's bin and bin + 8 are both due and
+       critter_ai, which moves it on by 8, loops here for ever (a UW2 player's freeze; the
+       same code in UW1). Unsigned, so a stall long enough to wrap the char is capped too. */
+    if ((unsigned char)delta > 8) delta = 8;
+#endif
     curBin = lastbin + delta & 0xF;
     meptr = 0;
     for (p = ActiveMob; p < LastActiveMob; p++) {
