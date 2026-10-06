@@ -1,0 +1,19 @@
+{
+ "format": 1,
+ "session": "skip-intro",
+ "made_by": "port",
+ "note": "made by the port, not DOS: a regression baseline for an enhancement DOS does not have",
+ "enhancements": [
+  "skip-intro"
+ ],
+ "recording": {
+  "path": "tests/replay/enhanced/skip-intro/session.rec",
+  "sha256": "0c23553631f13cb116b1fa6f4fc709873eafd2542e9e57c01c47e943f44c8e12"
+ },
+ "checkpoints": [
+  {"ck":[1,1,3,0],"secs":{"PLYR":"ce101300ca28c672","RAND":"f831b24b519669e2","CNTS":"43915fab795170cc","GFX":"c33d7847ddc110e9","PAL":"e1a92daa5cabe98e","CRTC":"b7a81f2b97e7f8a3","VGA":"755b83d5001a68b7"}},
+  {"ck":[3,32768,5,0],"secs":{"PLYR":"ce101300ca28c672","RAND":"f831b24b519669e2","CNTS":"ed3b3d1c9a86039a","GFX":"c33d7847ddc110e9","PAL":"e1a92daa5cabe98e","CRTC":"b7a81f2b97e7f8a3","VGA":"755b83d5001a68b7"}},
+  {"ck":[1,2,7,0],"secs":{"PLYR":"ce101300ca28c672","RAND":"f831b24b519669e2","CNTS":"34f3e2be2b65f9ab","GFX":"c33d7847ddc110e9","PAL":"e1a92daa5cabe98e","CRTC":"b7a81f2b97e7f8a3","VGA":"755b83d5001a68b7"}},
+  {"ck":[4,0,231606531,157],"secs":{"PLYR":"ce101300ca28c672","RAND":"f831b24b519669e2","CNTS":"1d7bbe77ca93919c","GFX":"f05e228d2eb1e501","PAL":"9ef9025a8aefd07d","CRTC":"b7a81f2b97e7f8a3","VGA":"ad1bd386a8bf90a8"}}
+ ]
+}

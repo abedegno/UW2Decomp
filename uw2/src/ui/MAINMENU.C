@@ -67,6 +67,9 @@ void far do_intro_scene(int intro)
     int16 found;
     char descs[4][40];
 
+#ifndef __TURBOC__
+    if (ENHANCED(ENH_SKIP_INTRO)) return;   /* port only: --enhance skip-intro; the menu still has it */
+#endif
     if (intro) {
         get_save_descs(descs, &found);
         if (found == 0) {
