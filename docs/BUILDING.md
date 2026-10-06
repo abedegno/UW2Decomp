@@ -71,7 +71,7 @@ The ports take `--input-script FILE`, for tests: keys and mouse events at set ti
 7200 click 160 100 left
 ```
 
-A bad line stops the run, naming it. The enhancements' sessions are made this way (`tests/replay/enhanced/*/session.script`; Exhume's `tools/enhcheck.py baseline record NAME`). Two recordings of one script differ in timing, since the events arrive between frames while the game reads its input on its own thread; a recording's replay is what is exact.
+A bad line stops the run, naming it. (A related test switch: `UW1PORT_TEXTURE_PROBE` makes UW1's texture mappers draw each face in a colour of its own, for Exhume's `tools/enhcheck.py coverage`.) The enhancements' sessions are made this way (`tests/replay/enhanced/*/session.script`; Exhume's `tools/enhcheck.py baseline record NAME`). Two recordings of one script differ in timing, since the events arrive between frames while the game reads its input on its own thread; a recording's replay is what is exact.
 
 ## Continuous integration
 
