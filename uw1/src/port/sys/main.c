@@ -140,6 +140,55 @@ static int write_uw_cfg(const char *spec)
     return 0;
 }
 
+/* The home directory, for the drop hook, which runs on the backend's thread. */
+static const char *port_home;
+
+/* The music and speech cards DATA\UW.CFG in the home directory names; -1 for each when it is
+   missing or unreadable. */
+static void read_uw_cfg(int *music, int *speech)
+{
+    char path[1200];
+    FILE *f;
+    *music = *speech = -1;
+    if (plat_resolve("DATA\\UW.CFG", PLAT_CREATE, path, sizeof path) || !(f = fopen(path, "rb"))) return;
+    if (fscanf(f, "%d %*s %*s %*s sound %d", music, speech) != 2) *speech = -1;
+    fclose(f);
+}
+
+/* The music on the Roland MT-32 (card 6), the speech card kept (else the Sound Blaster's). */
+static int music_to_mt32(void)
+{
+    char spec[16];
+    int music, speech;
+    read_uw_cfg(&music, &speech);
+    if (music == 6) return 0;
+    snprintf(spec, sizeof spec, "6,%d", speech >= 0 ? speech : 1);
+    return write_uw_cfg(spec);
+}
+
+/* A folder or file dropped on the window or the app: when it holds MT-32 or CM-32L ROMs (any
+   names, whole or in halves), they are remembered and the music goes to the MT-32 from the next
+   start, since the game has its sound driver loaded already; a message says which. */
+static void on_drop(const char *path)
+{
+    struct mt32roms_set set;
+    char text[1600];
+    if (!mt32roms_pick(path, &set)) {
+        snprintf(text, sizeof text, "No Roland MT-32 or CM-32L ROMs were found in %s.\n\nDrop the folder "
+                 "that holds a control ROM and its PCM ROM (any file names, whole images or their halves).", path);
+        plat_message(1, "Ultima Underworld: no MT-32 ROMs", text);
+        return;
+    }
+    port_config_set(port_home, "mt32-roms", set.dir);
+    port_config_set(port_home, "sound-auto", "0");
+    music_to_mt32();
+    fprintf(stderr, "uw1port: mt32: ROMs dropped %s (%s, %s); the MT-32 plays the music from the next start\n",
+            set.dir, set.ctrl_id, set.pcm_id);
+    snprintf(text, sizeof text, "%s ROMs found in %s.\n\nThe music will play on the Roland MT-32 from the next "
+             "time you start the game.", strncmp(set.ctrl_id, "ctrl_cm32l", 10) ? "MT-32" : "CM-32L", set.dir);
+    plat_message(0, "Ultima Underworld: MT-32 ROMs found", text);
+}
+
 static const char help_text[] =
     "usage: uw1port [options] [game arguments]\n"
     "\n"
@@ -161,6 +210,7 @@ static const char help_text[] =
     "                         it; any names), kept until changed (also $UW1PORT_MT32_ROMS);\n"
     "                         without, the port looks in its home's roms/ and mt32-roms/,\n"
     "                         beside the game and itself, and where DOSBox keeps them\n"
+    "                         (or drop the folder on the program or its window)\n"
     "  --no-audio             open no audio device\n"
     "Window:\n"
     "  --scale N              initial window scale (3)\n"
@@ -271,7 +321,8 @@ int main(int argc, char *argv[])
     int audio_device = 1, interactive, recording = 1, status;
     PlatConfig cfg;
     PlatHooks hooks;
-    int i;
+    int i, dropped = 0, first_run = 0;
+    static char spec_buf[16];
 
     memset(&cfg, 0, sizeof cfg);
     cfg.title = "Ultima Underworld";
@@ -312,6 +363,8 @@ int main(int argc, char *argv[])
         else if (!strcmp(a, "-v")) port_trace = 1;
         else if (!strcmp(a, "--help") || !strcmp(a, "-h")) usage(1);
         else if (a[0] == '-' && a[1] == '-') usage(0);
+        /* a folder or file dropped on the program's icon (Windows, Linux) arrives as an argument */
+        else if (!roms && a[0] != '-' && mt32roms_pick(a, NULL)) { roms = a; dropped = 1; }
         else game_argv[game_argc++] = argv[i];
     }
     if (!home) {
@@ -365,13 +418,30 @@ int main(int argc, char *argv[])
        and its digitised speech, or, when the user has given MT-32 ROMs by then, the Roland MT-32
        for the music and the Sound Blaster for the speech, as the sound, soundfm and soundmt
        sessions check against DOS (docs/PORT.md). Kept until --sound changes it. */
+    /* Later runs: the music goes to the MT-32 when ROMs turn up and either they were dropped on the
+       program or the port chose the Sound Blaster itself on the first run (sound-auto in the
+       settings, cleared by any --sound). */
+    if (interactive && sound) port_config_set(home, "sound-auto", "0");
+    else if (interactive && roms) {
+        char m[8];
+        int music, speech;
+        read_uw_cfg(&music, &speech);
+        if (music >= 0 && music != 6 && (dropped || (port_config_get(home, "sound-auto", m, sizeof m) == 0 && !strcmp(m, "1")))) {
+            snprintf(spec_buf, sizeof spec_buf, "6,%d", speech >= 0 ? speech : 1);
+            sound = spec_buf;
+            port_config_set(home, "sound-auto", "0");
+            fprintf(stderr, "uw1port: mt32: the music now plays on the Roland MT-32 (--sound changes it)\n");
+        }
+    }
     if (interactive && !sound) {
         char cfgpath[1200];
         FILE *f = NULL;
-        if (plat_resolve("DATA\\UW.CFG", PLAT_CREATE, cfgpath, sizeof cfgpath) == 0 && !(f = fopen(cfgpath, "rb")))
+        if (plat_resolve("DATA\\UW.CFG", PLAT_CREATE, cfgpath, sizeof cfgpath) == 0 && !(f = fopen(cfgpath, "rb"))) {
             sound = audio_mt32_roms_present(roms) ? "6,1" : "3,1";
-        else if (f)
+            first_run = 1;
+        } else if (f)
             fclose(f);
+        if (first_run) port_config_set(home, "sound-auto", strcmp(sound, "3,1") ? "0" : "1");
     }
     vga_window_init();
     if (rp_request != 1 && rp_request != 2) rp_request = 0;   /* the port reads the world */
@@ -397,6 +467,10 @@ int main(int argc, char *argv[])
     hooks.key = kbd_byte;
     hooks.pointer = mouse_event;
     hooks.lifecycle = on_lifecycle;
+    if (interactive) {
+        port_home = home;
+        hooks.drop = on_drop;
+    }
     status = plat_run(&cfg, &hooks, game, NULL);
     /* the window closed (or --exit-after) with the game still running: the recording's last
        runs and chunks, which only the game's own exit or a fault wrote before, so that a
