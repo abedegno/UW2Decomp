@@ -379,21 +379,53 @@ void far set_race_attitude(int16 far *args)
 /* x_skills(arg2 skill, arg1 value): above 10000 spend one of the player's skill points
    to advance the skill (1 if done, else 0); exactly 10000 calls get_skill; 0..30 sets
    the skill; anything else only reads it. Returns the skill's value. */
+#ifndef __TURBOC__
+/* Port only, --enhance skill-messages: "<Skill> increased to N." in the conversation, as
+   conv_print writes narration, for each skill whose value changed since before (a skill
+   point's advance may pick another skill of its group). */
+static void skill_messages(const unsigned char *before)
+{
+    char line[96];
+    unsigned i;
+    if (!ENHANCED(ENH_SKILL_MESSAGES)) return;
+    for (i = 0; i < sizeof player->skills; i++) {
+        if (player->skills[i] == before[i]) continue;
+        sprintf(line, "\\2%s increased to %d.\\0\n", get_string((i + 0x1F) | STR_CHARGEN), player->skills[i]);
+        do_npc_scroll();
+        scroll_print(line);
+        do_play_scroll();
+    }
+}
+#endif
+
 int far x_skills(int16 far *args)
 {
     int skill, val;
+#ifndef __TURBOC__
+    unsigned char before[sizeof player->skills];
+#endif
 
     skill = getmem(args[-2]);
     val = getmem(args[-1]);
+#ifndef __TURBOC__
+    memcpy(before, player->skills, sizeof before);
+#endif
     if (val > 10000) {
         if (player->skill_points > 0 && grant_skill_advance(skill)) {
             player->skill_points--;
+#ifndef __TURBOC__
+            skill_messages(before);     /* port only: --enhance skill-messages */
+#endif
             return 1;
         }
         return 0;
     }
-    if (val == 10000)
+    if (val == 10000) {
         get_skill(skill);
+#ifndef __TURBOC__
+        skill_messages(before);         /* port only: --enhance skill-messages */
+#endif
+    }
     else if (val >= 0 && val <= 30)
         player->skills[skill] = val;
     return player->skills[skill];

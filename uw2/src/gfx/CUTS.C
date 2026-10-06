@@ -731,7 +731,14 @@ int far cutsop_say(uint16 far *code, register struct CutsState *st)
         } else if (st->fade45 != 998) {
             if (big_speech_play(code[2], 0x7F, 0x40, sound_fpage, 4) == 0xFF)
                 cutsop_txt(code, st);
+#ifndef __TURBOC__
+            else {
+                st->flags.bit.b6 = 1;
+                if (ENHANCED(ENH_SUBTITLES)) cutsop_txt(code, st);   /* port only: --enhance subtitles */
+            }
+#else
             else st->flags.bit.b6 = 1;
+#endif
         }
     } else cutsop_txt(code, st);
     return 3;
