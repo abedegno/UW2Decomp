@@ -67,9 +67,20 @@ One set of workflows in `.github/` serves both games. They are rendered from Exh
 | --- | --- | --- | --- |
 | `port.yml` | every push and pull request, forks included | each port built, and its compile-only check, on Ubuntu 24.04, macOS and Windows (MSYS2 CLANG64) | no |
 | `repocheck.yml` | every push and pull request | `make repocheck` | no |
-| `accuracy.yml` | pushes to `main`, pull requests from branches of this repository, and by hand | per game: the gate and `make test` on Ubuntu 24.04; every session against its golden in the port built on Windows and on macOS; and the players' Windows zip, unpacked, started with only Windows's own folders on the PATH and replaying every session, on Windows Server 2022 (Exhume's `tools/pkgcheck.py`) | yes |
-| `nightly.yml` | 03:17 UTC daily, and by hand | per game: `make test-full` | yes |
-| `release.yml` | a tag `uw1-v*` or `uw2-v*`, and by hand | that game's packages for macOS, Linux and Windows; for a tag, a draft release | no (Apple's secrets sign and notarise the macOS app) |
+| `accuracy.yml` | pushes to `main`, pull requests from branches of this repository, and by hand | per game: the gate and `make test` on Ubuntu 24.04; every session against its golden in the port built on Windows and on macOS; the players' Windows zip, unpacked, started with only Windows's own folders on the PATH and replaying every session, on Windows Server 2022 (Exhume's `tools/pkgcheck.py`); and on all three, the MT-32 checks below | yes |
+| `nightly.yml` | 03:17 UTC daily, and by hand | per game: `make test-full` (UW1's with dos-mcp's Chrome, for its js-dos-only `sound` golden); and `make test` against Exhume's latest `master` instead of the pinned submodule (`exhume-master`), so a change in Exhume that would break a game shows within a day | yes |
+| `release.yml` | a tag `uw1-v*` or `uw2-v*`, weekly on Mondays, and by hand | that game's packages for macOS, Linux and Windows, each then tested as below; for a tag, once every test passes, a draft release | the tests do (Apple's secrets sign and notarise the macOS app) |
+
+### The MT-32 checks
+
+With the bundle's ROMs (`MT32_ROMS`), on Linux, macOS and Windows, after the sessions:
+
+- **How the port finds ROMs** (Exhume's `tools/romcheck.py`): each source in turn (`--mt32-roms` with a folder or a file, the environment variable, the remembered setting, and every searched folder on that system), their order, a CM-32L pair preferred to an MT-32 pair, and the wrong cases (half a pair, wrong files, split ROM halves, none), each in a fresh home.
+- **The MT-32's sound** (Exhume's `tools/audiocheck.py`): `soundmt` replayed with the ROMs, its whole audio written as a WAV, checked not silent, and its SHA-256 compared with `uwN/tests/replay/audio/soundmt.PLATFORM.sha256`. Floating point rounds differently between systems, so each platform has its own digest (`--update` writes one).
+
+### Testing the release packages
+
+Each game's release workflow tests the packages it has just built before it makes a draft: the Windows zip on Windows Server 2022 and 2025, the app on macOS 14 and 15 (Apple Silicon) and macOS 15 on Intel, and the tarball and the AppImage in clean Ubuntu 22.04, Ubuntu 24.04, Debian 12 and Fedora 41 containers. Each package is unpacked and started as a player gets it (`tools/pkgcheck.py`), replays every session against the goldens, and plays `soundmt`'s MT-32 audio against its digest; on a tag, Gatekeeper must accept the notarised app. The same runs weekly with no draft, so a change in GitHub's runners or a dependency shows between releases. These tests found a crash that only one Linux build had (UW2's FINDINGS, "Smaller slips").
 
 A pull request from a fork gets `port.yml` and `repocheck.yml` only: GitHub gives it no secrets, and the jobs that need them skip themselves rather than fail.
 
@@ -115,7 +126,7 @@ A tag names the game and the version: `uw2-v1.2.1`, `uw1-v1.0.0-rc2`. `release.y
 | `UWn-V-windows-x86_64.zip` | Windows, MSYS2 CLANG64 | `uw1port.exe` or `uw2port.exe`, with its icon, and every DLL it loads that is not Windows's own |
 | `third-party-sources.tar.gz` | Ubuntu | the source of the LGPL libraries at the versions built |
 
-Each package holds `README.txt`, the licence and notice files, and the libraries' licence texts. Nuked OPL3 and libmt32emu are separate shared libraries a player can replace, which is how the LGPL is met (each game's THIRD-PARTY-NOTICES: [uw1](../uw1/THIRD-PARTY-NOTICES), [uw2](../uw2/THIRD-PARTY-NOTICES)). Each game's `CHANGELOG.md` ([uw1](../uw1/CHANGELOG.md), [uw2](../uw2/CHANGELOG.md)) is where a release's notes are drafted from.
+Each package holds `README.txt`, the licence and notice files, and the libraries' licence texts. Nuked OPL3 and libmt32emu are separate shared libraries a player can replace, which is how the LGPL is met (each game's THIRD-PARTY-NOTICES: [uw1](../uw1/THIRD-PARTY-NOTICES), [uw2](../uw2/THIRD-PARTY-NOTICES)). Each game's `CHANGELOG.md` ([uw1](../uw1/CHANGELOG.md), [uw2](../uw2/CHANGELOG.md)) gives a draft its notes: the section for the tag's version, or for a candidate (`uw2-v1.2.1-rc1`) its version's "(unreleased)" section; the draft is titled with the game and the version.
 
 ### Signing and notarising the macOS apps
 
