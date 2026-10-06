@@ -443,8 +443,25 @@ void far RollView_ovr143_F58(int step)
    way. */
 void far chg_plyp(int step)
 {
+#ifndef __TURBOC__
+    /* port only: --enhance wide-pitch, three times the original's bound */
+    if (MoveCamera)
+        chg_plys(&camang[1], step, port_pitch_bound());
+    else
+        chg_plys(&PlayerPitch, step, port_pitch_bound());
+#else
     if (MoveCamera)
         chg_plys(&camang[1], step, 0x1000);
     else
         chg_plys(&PlayerPitch, step, 0x1000);
+#endif
 }
+
+#ifndef __TURBOC__
+/* The pitch's bound either way: the original's 0x1000, or with --enhance wide-pitch 0x3000
+   (UltimaHacks' pitchBound.asm). Mouse-look clamps to it too. */
+int port_pitch_bound(void)
+{
+    return ENHANCED(ENH_WIDE_PITCH) ? 0x3000 : 0x1000;
+}
+#endif
