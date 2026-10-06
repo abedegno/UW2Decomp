@@ -74,4 +74,8 @@ extern unsigned char seg063[];
 #define SEG051_SIZE 0xC4D9
 #define SEG063_SIZE 0x0AB0
 
+/* The enhancements (Exhume's runtime/port/sys/enhance.h; src/port/sys/enhtab.c): bits of
+   enhance_on, in the table's order. */
+enum { ENH_SKIP_INTRO, ENH_COUNT };
+
 #endif

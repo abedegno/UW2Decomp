@@ -221,6 +221,9 @@ void far titlescr(void)
 {
     while (mouse_get_input() > 3)
         ;
+#ifndef __TURBOC__
+    if (ENHANCED(ENH_SKIP_INTRO)) return;   /* port only: --enhance skip-intro */
+#endif
     runcutscene(9);
 }
 

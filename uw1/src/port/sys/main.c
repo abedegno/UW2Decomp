@@ -17,6 +17,9 @@
 #include "plat.h"
 #include "sound/audio.h"
 #include "sound/mt32roms.h"
+#include "sys/enhance.h"
+
+extern const struct enhance_flag enhance_table[];   /* src/port/sys/enhtab.c */
 
 int uw1_main(int argc, char *argv[]);
 void borland_init(void);
@@ -199,6 +202,10 @@ static const char help_text[] =
     "                         holding it or GOG's game.gog; found by itself when not given\n"
     "                         ($UW1PORT_DATA, the last folder used, GOG's install folders)\n"
     "  --home DIR             where saved games and settings go ($UW1PORT_HOME, else ~/.uw1port)\n"
+    "Enhancements (off by default; docs/ENHANCEMENTS.md):\n"
+    "  --enhance NAME[,NAME]  turn on changes the original game does not have, kept until\n"
+    "                         changed; --enhance list lists them\n"
+    "  --no-enhance NAME      turn one off\n"
     "Sound:\n"
     "  --sound MUSIC[,SPEECH] the sound cards, kept until changed (first run: 3,1, or 6,1\n"
     "                         when MT-32 ROMs are given or found):\n"
@@ -322,6 +329,8 @@ int main(int argc, char *argv[])
     PlatConfig cfg;
     PlatHooks hooks;
     int i, dropped = 0, first_run = 0;
+    const char *enh_on[16], *enh_off[16];   /* --enhance and --no-enhance lists, in order */
+    int n_on = 0, n_off = 0, enh_list = 0;
     static char spec_buf[16];
 
     memset(&cfg, 0, sizeof cfg);
@@ -353,6 +362,15 @@ int main(int argc, char *argv[])
         else if (!strcmp(a, "--exit-on-halt")) exit_on_halt = 1;
         else if (!strcmp(a, "--record")) rp_request = 1;
         else if (!strcmp(a, "--replay") && i + 1 < argc) { rp_request = 2; replay = argv[++i]; }
+        else if (!strcmp(a, "--enhance") && i + 1 < argc) {
+            if (!strcmp(argv[i + 1], "list")) { enh_list = 1; i++; }
+            else if (n_on < 16) enh_on[n_on++] = argv[++i];
+            else i++;
+        }
+        else if (!strcmp(a, "--no-enhance") && i + 1 < argc) {
+            if (n_off < 16) enh_off[n_off++] = argv[++i];
+            else i++;
+        }
         else if (!strcmp(a, "--sound") && i + 1 < argc) sound = argv[++i];
         else if (!strcmp(a, "--mt32-roms") && i + 1 < argc) roms = argv[++i];
         else if (!strcmp(a, "--audio-wav") && i + 1 < argc) wav = argv[++i];
@@ -366,6 +384,11 @@ int main(int argc, char *argv[])
         /* a folder or file dropped on the program's icon (Windows, Linux) arrives as an argument */
         else if (!roms && a[0] != '-' && mt32roms_pick(a, NULL)) { roms = a; dropped = 1; }
         else game_argv[game_argc++] = argv[i];
+    }
+    enhance_init(enhance_table, ENH_COUNT, "UW1");
+    if (enh_list) {
+        enhance_list(stdout);
+        return 0;
     }
     if (!home) {
         const char *h = getenv("HOME");
@@ -418,6 +441,33 @@ int main(int argc, char *argv[])
        and its digitised speech, or, when the user has given MT-32 ROMs by then, the Roland MT-32
        for the music and the Sound Blaster for the speech, as the sound, soundfm and soundmt
        sessions check against DOS (docs/PORT.md). Kept until --sound changes it. */
+    /* The enhancements (docs/ENHANCEMENTS.md), all off unless turned on: a replay's are its
+       recording's alone (format 5), and only a presentation one may be added to a replay of a
+       recording that has none; else the settings (a player's run only), then the options, which
+       a player's run keeps. */
+    {
+        uint32_t m = 0;
+        int carries = 0, k;
+        if (replay) {
+            if (enhance_from_recording(replay, &m, &carries) < 0) return 1;
+            if (carries && (n_on || n_off)) {
+                fprintf(stderr, "uw1port: enhance: a replay takes its recording's enhancements; give no --enhance or --no-enhance\n");
+                return 1;
+            }
+        } else if (!cfg.hidden)
+            enhance_load(home, &m);
+        for (k = 0; k < n_on; k++)
+            if (enhance_parse(enh_on[k], &m, 1, 1) < 0) return 1;
+        for (k = 0; k < n_off; k++)
+            if (enhance_parse(enh_off[k], &m, 0, 1) < 0) return 1;
+        if (replay && !carries && (m & ~enhance_kind_mask(ENH_PRESENTATION))) {
+            fprintf(stderr, "uw1port: enhance: only a presentation enhancement can be added to a replay of a recording made without them\n");
+            return 1;
+        }
+        if (interactive && (n_on || n_off)) enhance_save(home, m);
+        enhance_on = m;
+        enhance_log();
+    }
     /* Later runs: the music goes to the MT-32 when ROMs turn up and either they were dropped on the
        program or the port chose the Sound Blaster itself on the first run (sound-auto in the
        settings, cleared by any --sound). */
