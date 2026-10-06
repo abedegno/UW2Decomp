@@ -467,11 +467,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v8
-        with:
-          path: dist
-          merge-multiple: true
-      - run: ls -l dist
+      # the checkout (for the changelog's notes) first: a checkout cleans the workspace, so after
+      # the download it would delete the packages
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
@@ -486,6 +483,11 @@ jobs:
           awk -v b="## $base " 'index($0, b) == 1 { f = 1; next } /^## / { if (f) exit } f' uw2/CHANGELOG.md > notes.md
           [ -s notes.md ] || { echo "::error::uw2/CHANGELOG.md has no section for $base"; exit 1; }
           cat notes.md
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - run: ls -l dist
       # a draft only: nothing is published until the owner publishes it on GitHub
       - uses: softprops/action-gh-release@v3
         with:
