@@ -78,6 +78,10 @@ static int16_t row(void) { return (int16_t)rw(pDS, ROW); }
 /* a 32-bit difference as the assembly's sub eax takes it (wrapping), for its idiv */
 static int32_t diff32(int32_t a, int32_t b) { return (int32_t)((uint32_t)a - (uint32_t)b); }
 
+/* the assembly's idiv: the same quotient wherever it gives one; where x86 would fault (INT32_MIN
+   by -1) the quotient wraps instead of stopping the program, as C's own division would */
+static int32_t div32(int32_t a, int32_t b) { return (int32_t)(uint32_t)((int64_t)a / b); }
+
 /* vattr: Q, S, T of the vertex at bx */
 static void vattr(uint16_t bx, int32_t out[3])
 {
@@ -120,7 +124,7 @@ static int seed(int i, int from_qst)
             e->dx = (int32_t)((uint32_t)fr * 2u + ((uint32_t)(uint16_t)q1 << 16));
         }
         vattr(bx, t);
-        for (k = 0; k < 3; k++) e->dq[k] = diff32(t[k], e->q[k]) / cx;
+        for (k = 0; k < 3; k++) e->dq[k] = div32(diff32(t[k], e->q[k]), cx);
         return 1;
     }
 }
@@ -187,7 +191,7 @@ void persp_walk(int wall)
         int16_t count;
         for (k = 0; k < 3; k++) {
             f.qc[k] = f.e[0].q[k];
-            f.dqc[k] = diff32(f.e[1].q[k], f.e[0].q[k]) / div;
+            f.dqc[k] = div32(diff32(f.e[1].q[k], f.e[0].q[k]), div);
         }
         count = (int16_t)(w + 1);               /* the width as a pixel count */
         if (count <= 0) {
@@ -202,8 +206,8 @@ void persp_walk(int wall)
             f.count = (int16_t)(f.count - c);
             for (k = 0; k < 3; k++) f.qc[k] = (int32_t)((uint32_t)f.qc[k] + (uint32_t)f.dqc[k] * (uint32_t)c);
             uvc();
-            du = diff32(f.u1, u0) / c;
-            dv = diff32(f.v1, v0) / c;
+            du = div32(diff32(f.u1, u0), c);
+            dv = div32(diff32(f.v1, v0), c);
             u = u0;
             v = v0;
             while (c-- > 0) {

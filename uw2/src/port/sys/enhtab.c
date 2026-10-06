@@ -12,6 +12,6 @@ const struct enhance_flag enhance_table[ENH_COUNT] = {
     { "free-heading", "Sliding along a wall no longer turns your view", ENH_GAMEPLAY, UH, NULL },
     { "subtitles", "Cutscenes show their text while the speech plays", ENH_PRESENTATION, UH, NULL },
     { "skill-messages", "Says which skill a skill point or a trainer raised, and to what", ENH_PRESENTATION, UH, NULL },
-    { "perspective", "Floors, ceilings and walls stay straight when the view pitches", ENH_PRESENTATION, "uwpatch (SiENcE, MIT)", NULL },
+    { "perspective", "Floors and ceilings stay straight when the view pitches (walls keep the original's columns)", ENH_PRESENTATION, "uwpatch (SiENcE, MIT)", NULL },
     { "full-sprites", "Creatures and objects keep their size when the view pitches", ENH_PRESENTATION, UH, NULL },
 };
