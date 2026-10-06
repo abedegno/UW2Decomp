@@ -17,6 +17,30 @@ Windows packages only: the compiler's runtime from MSYS2's CLANG64 environment (
 
 Linux AppImage only: the AppImage type 2 runtime, release 20251108 (https://github.com/AppImage/type2-runtime, MIT licence, Copyright (c) 2004-23 probonopd), the small program at the start of the .AppImage file that mounts the rest and starts the port. It is a static executable that contains musl libc (MIT), libfuse 3 (GNU Lesser General Public License, version 2.1), squashfuse (BSD 2-clause) and zstd and zlib (BSD and zlib licences). appimagetool 1.9.1 (MIT) puts it there; appimagetool itself is not shipped. The runtime's source and build scripts at that release are in third-party-sources.tar.gz too, and running the AppImage with --appimage-extract unpacks the AppImage into a folder that runs without the runtime, so you may replace it, libfuse included, with your own build.
 
+ENHANCEMENTS FROM OTHER PROJECTS (docs/ENHANCEMENTS.md)
+
+The port's optional enhancements, all off by default, reimplement in C some changes from these projects. None of their code or files is shipped; their notices are kept here as their licence asks.
+
+UltimaHacks (https://github.com/JohnGlassmyer/UltimaHacks)
+Quality-of-life patches for Ultima Underworld I and II. MIT License:
+Copyright (c) 2016 John Glassmyer
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+uwpatch (https://github.com/SiENcE/uwpatch)
+Perspective-correct texture mapping for Ultima Underworld. MIT License:
+Copyright (c) 2026 SiENcE
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
 HOW THE LGPL IS MET
 
 Nuked OPL3 and libmt32emu are dynamically linked, each a separate shared library in the package (in UW2.app/Contents/Frameworks on macOS, in lib/ on Linux, beside uw2port.exe on Windows), loaded by name. You may replace either with your own build of the same library, or of a modified version with the same interface: the program uses only the library's public functions (OPL3_Reset, OPL3_WriteReg and OPL3_GenerateStream for Nuked OPL3, and libmt32emu's C API through mt32emu.h). On macOS, re-sign the app ad hoc after replacing a library (codesign --force --deep --sign - UW2.app). Neither library is modified. Their complete source, at the versions above, is at the addresses above, and each release on GitHub also carries it as third-party-sources.tar.gz beside the packages. The program's own source is this repository at the release's tag, with Exhume (https://github.com/abedegno/Exhume, MIT, the same author and licence text as this repository) at the commit the tag's submodule exhume/ records. The licence texts are in each package's licenses/ folder.

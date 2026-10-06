@@ -34,7 +34,7 @@ The top-level Makefile runs a target in both games, or in one with `GAME=uw1` or
 | --- | --- |
 | `make setup` | Exhume and its Python environment (`exhume/.venv`, with iced-x86 and Unicorn), then each game's setup |
 | `make check` | each game's gate: every source matches and verifies, `symbols.tsv` rebuilds, the exact link is the original EXE, and the modding build with no change is the same |
-| `make test` | the gate, the port, the quick routine fuzzing and every recorded session in the port against its DOS golden |
+| `make test` | the gate, the port, the quick routine fuzzing, every recorded session in the port against its DOS golden, and the enhancements (Exhume's `tools/enhcheck.py all`: the options and settings, presentation ones keeping DOS's game state, and the port-made baselines under `tests/replay/enhanced/`; [ENHANCEMENTS.md](ENHANCEMENTS.md)) |
 | `make test-full` | the long tier: goldens made again from DOS, the UBSan build, the sound drivers against the real ones, the deep fuzzing, the coverage report |
 | `make port` | each game's native port: `uw1/build/port/uw1port` and `uw2/build/port/uw2port` |
 | `make port-release`, `make package` | the players' builds and packages, into each game's `build/dist` |

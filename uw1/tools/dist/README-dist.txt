@@ -27,6 +27,8 @@ Sound: the first run sets up a Sound Blaster, its FM music and its digitised spe
 
 Roland MT-32 music needs your own MT-32 or CM-32L ROM images, which are not included: --sound 6,1. The port finds them by itself in a roms or mt32-roms folder in its home folder, beside the game or the program, or where DOSBox Staging keeps MT-32 ROMs; or give --mt32-roms a folder or one of the files. Any file names work, whole images or their halves: the ROMs are recognised by their contents, and a CM-32L pair is preferred to an MT-32 pair. The folder is remembered. Or drop the ROM folder onto the app (or the program, or its window): the music plays on the MT-32 from the next time you start the game.
 
+The port plays the original game exactly. A few optional changes the original does not have (enhancements) can be turned on: --enhance list shows them. All are off unless you turn them on.
+
 Window: --scale N sets the starting size (3), --no-aspect shows square pixels instead of the 4:3 shape of a CRT, --no-integer scales freely, --mouse lock captures the pointer as DOSBox does (Ctrl+F10 releases it). uw1port --help lists every option.
 
 LICENCES

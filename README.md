@@ -38,6 +38,8 @@ The first run gets a Sound Blaster with FM music and digitised speech or effects
 
 **If something goes wrong,** [open an issue](https://github.com/abedegno/underworld-exhumed/issues/new/choose). Each play session's inputs are recorded to `recordings/` in the home folder (the newest five are kept). Zip the newest folder with the log beside it and attach it: it replays your session here exactly.
 
+Optional enhancements, all off by default, are listed in [docs/ENHANCEMENTS.md](docs/ENHANCEMENTS.md).
+
 ## Study and modify
 
 Both games are byte-matching decompilations, made and checked with [Exhume](https://github.com/abedegno/Exhume), the toolkit both were built with. It is included here as a submodule.
