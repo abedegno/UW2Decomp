@@ -47,6 +47,9 @@ jobs:
             git status --porcelain --untracked-files=all -- 'uw2/tests/replay/golden/*.png' | awk '{print $NF}' | while read -r f; do
               [ -f "$f" ] && mkdir -p "$RUNNER_TEMP/golden-changed/$(dirname "$f")" && cp "$f" "$RUNNER_TEMP/golden-changed/$f"
             done
+            # what changed in the text files (golden.json), in the artifact and the log
+            git diff --text -- uw2/tests/replay/golden ':(exclude)*.png' > "$RUNNER_TEMP/logs/golden-diff.txt" || true
+            head -n 60 "$RUNNER_TEMP/logs/golden-diff.txt"
             echo "::error::$n files under uw2/tests/replay/golden differ from the committed goldens (golden-changes.txt in the artifact)"
             exit 1
           fi
