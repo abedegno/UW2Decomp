@@ -18,6 +18,7 @@
 #include "sound/audio.h"
 #include "sound/mt32roms.h"
 #include "sys/enhance.h"
+#include "sys/inscript.h"
 
 extern const struct enhance_flag enhance_table[];   /* src/port/sys/enhtab.c */
 
@@ -235,6 +236,7 @@ static const char help_text[] =
     "  --exit-after MS        quit MS milliseconds after start\n"
     "  --exit-on-halt         quit (status 3) where the port stops instead of leaving the window up\n"
     "  --record               record the session to RECORD.OUT in the home directory (F12 ends it)\n"
+    "  --input-script FILE    keys and mouse events at set times, for tests (docs/BUILDING.md)\n"
     "  --replay FILE          replay a recording instead of reading the clock, keyboard and mouse\n"
     "  --audio-wav FILE       write everything the sound cards play to a WAV file (44100 Hz)\n"
     "  --ail-log FILE         log every AIL call and driver service\n"
@@ -331,6 +333,7 @@ int main(int argc, char *argv[])
     int i, dropped = 0, first_run = 0;
     const char *enh_on[16], *enh_off[16];   /* --enhance and --no-enhance lists, in order */
     int n_on = 0, n_off = 0, enh_list = 0;
+    const char *input_script = NULL;    /* --input-script: keys and mouse at set times (inscript.c) */
     static char spec_buf[16];
 
     memset(&cfg, 0, sizeof cfg);
@@ -371,6 +374,7 @@ int main(int argc, char *argv[])
             if (n_off < 16) enh_off[n_off++] = argv[++i];
             else i++;
         }
+        else if (!strcmp(a, "--input-script") && i + 1 < argc) input_script = argv[++i];
         else if (!strcmp(a, "--sound") && i + 1 < argc) sound = argv[++i];
         else if (!strcmp(a, "--mt32-roms") && i + 1 < argc) roms = argv[++i];
         else if (!strcmp(a, "--audio-wav") && i + 1 < argc) wav = argv[++i];
@@ -517,6 +521,10 @@ int main(int argc, char *argv[])
     hooks.key = kbd_byte;
     hooks.pointer = mouse_event;
     hooks.lifecycle = on_lifecycle;
+    if (input_script) {
+        if (inscript_load(input_script, kbd_byte, mouse_event) < 0) return 1;
+        hooks.tick = inscript_tick;
+    }
     if (interactive) {
         port_home = home;
         hooks.drop = on_drop;
