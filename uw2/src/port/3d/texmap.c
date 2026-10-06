@@ -4,6 +4,8 @@
    C below its source line; the comments before a routine are the .ASM file's. */
 #include "x86/asmrt.h"
 
+#include "portgame.h"
+#include "sys/enhance.h"     /* ENHANCED */
 static int asm_jcc(uint8_t op)
 {
     switch (op & 0x0F) {

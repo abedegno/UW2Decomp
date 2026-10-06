@@ -53,6 +53,16 @@ CODESEGS = {'seg000': (0x0000, 'CODE000'), 'seg001': (0x004E, 'CODE001'), 'seg00
 # C written by hand for one instruction, (module, address) -> (C, why).
 FAR_FROM_C = '{{ unsigned s_, o_; port_fp_split_recent({p}, &s_, &o_); {reg} = (uint16_t)o_; SET_{sreg}(s_); }}'
 OVERRIDES = {
+    ('TMAPOPS', 0x6879): (
+        'if (ENHANCED(ENH_FULL_SPRITES)) { AX = (uint16_t)(AX >> 1); DX = AX; }  /* the view level, as UltimaHacks */\n'
+        'else imul16(rw(pDS, 0x160A));',
+        "do_scalebm: --enhance full-sprites keeps a sprite's height and position as with the view level "
+        "(UltimaHacks' dontShrinkSprites.asm: shr ax,1; mov dx,ax); else imul word ptr ds:[MAT_YY]"),
+    ('TMAPOPS', 0x6898): (
+        'if (ENHANCED(ENH_FULL_SPRITES)) { AX = (uint16_t)(AX >> 1); DX = AX; }  /* the view level, as UltimaHacks */\n'
+        'else imul16(rw(pDS, 0x160A));',
+        "do_scalebm: --enhance full-sprites keeps a sprite's height and position as with the view level "
+        "(UltimaHacks' dontShrinkSprites.asm: shr ax,1; mov dx,ax); else imul word ptr ds:[MAT_YY]"),
     ('MODEX', 0x0025): (FAR_FROM_C.format(p='dseg_5c99_2404', reg='DI', sreg='ES'),
                         "les di,_dseg_5c99_2404: GRCORE's far pointer to the screen's page offset (seg048:3838), "
                         "a C object in the port's DGROUP (gfx/grcore.c)"),
@@ -110,6 +120,7 @@ HANDWRITTEN = {
 }
 # The C names the overrides use, declared in their modules' files.
 EXTERNS = {
+    'TMAPOPS': ['#include "portgame.h"', '#include "sys/enhance.h"     /* ENHANCED: full-sprites */'],
     'SCALEBM': ['void scalebm_run_generated(uint16_t ip);   /* gfx/scalebm_code.c */'],
     'SPRITE': ['uint16_t port_dgroup_seg(void);        /* x86/entry.c */'],
     'PGCACHE': ['extern unsigned char Palettes[];         /* LOADGR.C */'],

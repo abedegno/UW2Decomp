@@ -5,6 +5,8 @@
 #include "x86/asmrt.h"
 
 uint32_t port_sprite_draw(void);        /* 3d/render.c */
+#include "portgame.h"
+#include "sys/enhance.h"     /* ENHANCED */
 static int asm_jcc(uint8_t op)
 {
     switch (op & 0x0F) {
@@ -1290,7 +1292,9 @@ L3FD5:
     AX = (uint16_t)(AX >> (CL & 31));
 L3FD7:
     /* 3FD7  imul    word ptr ds:[14BAh] */
-    imul16(rw(pDS, 0x14BA));
+    /* by hand: do_scalebm: --enhance full-sprites keeps a sprite's height and position as with the view level (UltimaHacks' dontShrinkSprites.asm: shr ax,1; mov dx,ax); else imul word ptr ds:[MAT_YY] */
+    if (ENHANCED(ENH_FULL_SPRITES)) { AX = (uint16_t)(AX >> 1); DX = AX; }  /* the view level, as UltimaHacks */
+    else imul16(rw(pDS, 0x14BA));
 L3FDB:
     /* 3FDB  add     word ptr [di+2],dx */
     ww(pDS, DI + 0x2, add16(rw(pDS, DI + 0x2), DX, 0));
@@ -1320,7 +1324,9 @@ L3FF4:
     AX = (uint16_t)(AX >> (CL & 31));
 L3FF6:
     /* 3FF6  imul    word ptr ds:[14BAh] */
-    imul16(rw(pDS, 0x14BA));
+    /* by hand: do_scalebm: --enhance full-sprites keeps a sprite's height and position as with the view level (UltimaHacks' dontShrinkSprites.asm: shr ax,1; mov dx,ax); else imul word ptr ds:[MAT_YY] */
+    if (ENHANCED(ENH_FULL_SPRITES)) { AX = (uint16_t)(AX >> 1); DX = AX; }  /* the view level, as UltimaHacks */
+    else imul16(rw(pDS, 0x14BA));
 L3FFA:
     /* 3FFA  mov     word ptr ds:[14AEh],dx */
     ww(pDS, 0x14AE, DX);

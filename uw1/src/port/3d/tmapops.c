@@ -4,6 +4,8 @@
    C below its source line; the comments before a routine are the .ASM file's. */
 #include "x86/asmrt.h"
 
+#include "portgame.h"
+#include "sys/enhance.h"     /* ENHANCED: full-sprites */
 static int asm_jcc(uint8_t op)
 {
     switch (op & 0x0F) {
@@ -5568,7 +5570,9 @@ L6877:
     AX = (uint16_t)(AX << (CL & 31));
 L6879:
     /* 6879  imul    word ptr ds:[MAT_YY] */
-    imul16(rw(pDS, 0x160A));
+    /* by hand: do_scalebm: --enhance full-sprites keeps a sprite's height and position as with the view level (UltimaHacks' dontShrinkSprites.asm: shr ax,1; mov dx,ax); else imul word ptr ds:[MAT_YY] */
+    if (ENHANCED(ENH_FULL_SPRITES)) { AX = (uint16_t)(AX >> 1); DX = AX; }  /* the view level, as UltimaHacks */
+    else imul16(rw(pDS, 0x160A));
 L687D:
     /* 687D  add     word ptr [di+2],dx */
     ww(pDS, DI + 0x2, add16(rw(pDS, DI + 0x2), DX, 0));
@@ -5598,7 +5602,9 @@ L6896:
     AX = (uint16_t)(AX << (CL & 31));
 L6898:
     /* 6898  imul    word ptr ds:[MAT_YY] */
-    imul16(rw(pDS, 0x160A));
+    /* by hand: do_scalebm: --enhance full-sprites keeps a sprite's height and position as with the view level (UltimaHacks' dontShrinkSprites.asm: shr ax,1; mov dx,ax); else imul word ptr ds:[MAT_YY] */
+    if (ENHANCED(ENH_FULL_SPRITES)) { AX = (uint16_t)(AX >> 1); DX = AX; }  /* the view level, as UltimaHacks */
+    else imul16(rw(pDS, 0x160A));
 L689C:
     /* 689C  mov     word ptr ds:[15FEh],dx */
     ww(pDS, 0x15FE, DX);

@@ -73,6 +73,16 @@ CODESEGS = {'seg003_0272': (0x0085, 'CODE003'), 'seg004_0849': (0x065C, 'CODE004
 # C written by hand for one instruction: (module, address) -> (C, why). The C replaces the
 # instruction's own; `next` falls through to the next instruction.
 OVERRIDES = {
+    ('TMAPOPS', 0x3FD7): (
+        'if (ENHANCED(ENH_FULL_SPRITES)) { AX = (uint16_t)(AX >> 1); DX = AX; }  /* the view level, as UltimaHacks */\n'
+        'else imul16(rw(pDS, 0x14BA));',
+        "do_scalebm: --enhance full-sprites keeps a sprite's height and position as with the view level "
+        "(UltimaHacks' dontShrinkSprites.asm: shr ax,1; mov dx,ax); else imul word ptr ds:[MAT_YY]"),
+    ('TMAPOPS', 0x3FF6): (
+        'if (ENHANCED(ENH_FULL_SPRITES)) { AX = (uint16_t)(AX >> 1); DX = AX; }  /* the view level, as UltimaHacks */\n'
+        'else imul16(rw(pDS, 0x14BA));',
+        "do_scalebm: --enhance full-sprites keeps a sprite's height and position as with the view level "
+        "(UltimaHacks' dontShrinkSprites.asm: shr ax,1; mov dx,ax); else imul word ptr ds:[MAT_YY]"),
     ('INSTANCE', 0x3534): (
         'if (memcmp(CODE004 + 0x3534, CODE004 + 0x35DA, 0x26) == 0) goto L35DA;\n'
         'AX = BX;',
@@ -895,6 +905,7 @@ def write_module(mod, patched, check):
     o.append('')
     if name == 'PGCACHE': o.append('extern unsigned char Palettes[];         /* LOADGR.C */')
     if name == 'TMAPOPS': o.append('uint32_t port_sprite_draw(void);        /* 3d/render.c */')
+    if name in ('TMAPOPS', 'TEXMAP'): o.extend(['#include "portgame.h"', '#include "sys/enhance.h"     /* ENHANCED */'])
     o.append('static int asm_jcc(uint8_t op)')
     o.append('{')
     o.append('    switch (op & 0x0F) {')
