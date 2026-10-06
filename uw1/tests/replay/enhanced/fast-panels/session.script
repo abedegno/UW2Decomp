@@ -1,0 +1,8 @@
+# fast-panels: from the menu, load the saved game the items session writes, then pull the
+# panel chain (F7) several times; each pull slides the right-hand panel over
+3000 key enter         # Journey Onward
+4500 key enter         # the first saved game
+10000 key f7
+11500 key f7
+13000 key f7
+14500 key f7
