@@ -53,13 +53,19 @@ CODESEGS = {'seg000': (0x0000, 'CODE000'), 'seg001': (0x004E, 'CODE001'), 'seg00
 # C written by hand for one instruction, (module, address) -> (C, why).
 FAR_FROM_C = '{{ unsigned s_, o_; port_fp_split_recent({p}, &s_, &o_); {reg} = (uint16_t)o_; SET_{sreg}(s_); }}'
 OVERRIDES = {
+    ('WALLMAP', 0x02E9): (
+        'wb(pES, DI, persp_probe() ? persp_probe_colour : rb(pDS, SI)); SI = (uint16_t)(SI + STEP(1)); DI = (uint16_t)(DI + STEP(1));',
+        "movsb, the affine mapper's texel: with UW1PORT_TEXTURE_PROBE (a test), the face's colour (gfx/perspmap.c)"),
+    ('POLYFILL', 0x0835): (
+        'wb(pES, DI, persp_probe() ? persp_probe_colour : AL); DI = (uint16_t)(DI + STEP(1));',
+        "stosb, the wall mapper's texel: with UW1PORT_TEXTURE_PROBE (a test), the face's colour (gfx/perspmap.c)"),
     ('WALLMAP', 0x01F5): (
-        'if (ENHANCED(ENH_PERSPECTIVE)) { persp_walk(0); goto L0363; }  /* gfx/perspmap.c, uwpatch\'s */\n'
+        'persp_probe_next();  /* the coverage test\'s face colour */\nif (ENHANCED(ENH_PERSPECTIVE)) { persp_walk(0); goto L0363; }  /* gfx/perspmap.c, uwpatch\'s */\n'
         'AX = 0xE;',
         "gfx_texture_poly_affine's body, after the stack switch: --enhance perspective walks the face "
         "perspective-correctly in gfx/perspmap.c (uwpatch's) and leaves by the original's exit"),
     ('POLYFILL', 0x056B): (
-        'if (ENHANCED(ENH_PERSPECTIVE)) { persp_walk(1); goto L0898; }  /* gfx/perspmap.c, uwpatch\'s */\n'
+        'persp_probe_next();\nif (ENHANCED(ENH_PERSPECTIVE)) { persp_walk(1); goto L0898; }  /* gfx/perspmap.c, uwpatch\'s */\n'
         'AX = CX;',
         "gfx_texture_poly_wall's body: as at WALLMAP 01F5, under the wall mapper's rules"),
     ('TMAPOPS', 0x6879): (
@@ -129,8 +135,8 @@ HANDWRITTEN = {
 }
 # The C names the overrides use, declared in their modules' files.
 EXTERNS = {
-    'WALLMAP': ['#include "portgame.h"', '#include "sys/enhance.h"     /* ENHANCED: perspective */', 'void persp_walk(int wall);               /* gfx/perspmap.c */'],
-    'POLYFILL': ['#include "portgame.h"', '#include "sys/enhance.h"     /* ENHANCED: perspective */', 'void persp_walk(int wall);               /* gfx/perspmap.c */'],
+    'WALLMAP': ['#include "portgame.h"', '#include "sys/enhance.h"     /* ENHANCED: perspective */', 'void persp_walk(int wall);               /* gfx/perspmap.c */', 'int persp_probe(void);', 'void persp_probe_next(void);', 'extern uint8_t persp_probe_colour;'],
+    'POLYFILL': ['#include "portgame.h"', '#include "sys/enhance.h"     /* ENHANCED: perspective */', 'void persp_walk(int wall);               /* gfx/perspmap.c */', 'int persp_probe(void);', 'void persp_probe_next(void);', 'extern uint8_t persp_probe_colour;'],
     'TMAPOPS': ['#include "portgame.h"', '#include "sys/enhance.h"     /* ENHANCED: full-sprites */'],
     'SCALEBM': ['void scalebm_run_generated(uint16_t ip);   /* gfx/scalebm_code.c */'],
     'SPRITE': ['uint16_t port_dgroup_seg(void);        /* x86/entry.c */'],

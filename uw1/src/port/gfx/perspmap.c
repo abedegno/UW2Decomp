@@ -25,7 +25,25 @@
    It writes, as the originals do, the ring's end (07AB), its last vertex (07A9), the vertices the
    walk may still use (07D1) and the row (07CF). */
 #include <stdint.h>
+#include <stdlib.h>
 #include "x86/asmrt.h"
+
+/* A test switch, UW1PORT_TEXTURE_PROBE (Exhume's tools/enhcheck.py coverage): each face, from either
+   mapper, is drawn in one colour of its own (a count of the faces, 1..254), so a frame shows which
+   pixels each face covers; the original mappers and this one must give the same frame. */
+int persp_probe(void)
+{
+    static int on = -1;
+    if (on < 0) on = getenv("UW1PORT_TEXTURE_PROBE") != NULL;
+    return on;
+}
+
+uint8_t persp_probe_colour;
+
+void persp_probe_next(void)
+{
+    if (persp_probe()) persp_probe_colour = (uint8_t)(persp_probe_colour % 254 + 1);
+}
 
 #define RING        0x659u
 #define RING_END    0x7ABu
@@ -191,7 +209,7 @@ void persp_walk(int wall)
             while (c-- > 0) {
                 uint16_t t = (uint16_t)((uint16_t)((uint32_t)v >> 8) & f.mask);
                 t = (uint16_t)(t + (uint16_t)((uint32_t)u >> 16));
-                wb(fb, di, rb(tex, t));
+                wb(fb, di, persp_probe() ? persp_probe_colour : rb(tex, t));
                 di = (uint16_t)(di + 1);
                 u = (int32_t)((uint32_t)u + (uint32_t)du);
                 v = (int32_t)((uint32_t)v + (uint32_t)dv);

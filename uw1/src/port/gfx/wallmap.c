@@ -7,6 +7,9 @@
 #include "portgame.h"
 #include "sys/enhance.h"     /* ENHANCED: perspective */
 void persp_walk(int wall);               /* gfx/perspmap.c */
+int persp_probe(void);
+void persp_probe_next(void);
+extern uint8_t persp_probe_colour;
 static int asm_jcc(uint8_t op)
 {
     switch (op & 0x0F) {
@@ -789,6 +792,7 @@ L01F4:
 L01F5:
     /* 01F5  mov     ax,0Eh */
     /* by hand: gfx_texture_poly_affine's body, after the stack switch: --enhance perspective walks the face perspective-correctly in gfx/perspmap.c (uwpatch's) and leaves by the original's exit */
+    persp_probe_next();  /* the coverage test's face colour */
     if (ENHANCED(ENH_PERSPECTIVE)) { persp_walk(0); goto L0363; }  /* gfx/perspmap.c, uwpatch's */
     AX = 0xE;
 L01F8:
@@ -1069,7 +1073,8 @@ L02E7:
     SI = (uint16_t)(SI + BX);
 L02E9:
     /* 02E9  movsb */
-    wb(pES, DI, rb(pDS, SI)); SI = (uint16_t)(SI + STEP(1)); DI = (uint16_t)(DI + STEP(1));
+    /* by hand: movsb, the affine mapper's texel: with UW1PORT_TEXTURE_PROBE (a test), the face's colour (gfx/perspmap.c) */
+    wb(pES, DI, persp_probe() ? persp_probe_colour : rb(pDS, SI)); SI = (uint16_t)(SI + STEP(1)); DI = (uint16_t)(DI + STEP(1));
 L02EA:
     /* 02EA  add     dx,1234h */
     DX = (uint16_t)(DX + rw(CODE003, 0x02EC));

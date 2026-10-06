@@ -7,6 +7,9 @@
 #include "portgame.h"
 #include "sys/enhance.h"     /* ENHANCED: perspective */
 void persp_walk(int wall);               /* gfx/perspmap.c */
+int persp_probe(void);
+void persp_probe_next(void);
+extern uint8_t persp_probe_colour;
 static int asm_jcc(uint8_t op)
 {
     switch (op & 0x0F) {
@@ -829,6 +832,7 @@ L056A:
 L056B:
     /* 056B  mov     ax,cx */
     /* by hand: gfx_texture_poly_wall's body: as at WALLMAP 01F5, under the wall mapper's rules */
+    persp_probe_next();
     if (ENHANCED(ENH_PERSPECTIVE)) { persp_walk(1); goto L0898; }  /* gfx/perspmap.c, uwpatch's */
     AX = CX;
 L056D:
@@ -1618,7 +1622,8 @@ L0834:
     AL = rb(pDS, BX + AL);
 L0835:
     /* 0835  stosb */
-    wb(pES, DI, AL); DI = (uint16_t)(DI + STEP(1));
+    /* by hand: stosb, the wall mapper's texel: with UW1PORT_TEXTURE_PROBE (a test), the face's colour (gfx/perspmap.c) */
+    wb(pES, DI, persp_probe() ? persp_probe_colour : AL); DI = (uint16_t)(DI + STEP(1));
 L0836:
     /* 0836  add     bp,1234h */
     BP = add16(BP, rw(CODE003, 0x0838), 0);

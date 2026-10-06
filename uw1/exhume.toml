@@ -195,6 +195,9 @@ extensions = ["src/port/sound/tvfx.c"]
 # the graphics engine's data (seg048 in UW1, seg003 in UW2): the renderer's working memory, which a
 # rendering enhancement changes by design; enhcheck.py presentation ignores it with the screen
 renderer_sections = ["GFX"]
+# the session enhcheck.py coverage replays to prove --enhance perspective covers the original
+# mappers' pixels exactly (UW1PORT_TEXTURE_PROBE; src/port/gfx/perspmap.c)
+coverage_session = "walk"
 # The record and replay harness (Exhume's docs/port.md, "Verifying a port"; docs/BUILDING.md,
 # "Recording and replaying a session"): Exhume's tools/replay.py, golden.py, replaydos.mjs.
 # Sessions are tests/replay/NAME.rec with NAME.cfg, the DATA\UW.CFG it ran with; goldens
