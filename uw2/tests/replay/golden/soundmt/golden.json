@@ -12,7 +12,7 @@
  "stage": null,
  "replay_build": {
   "exe_sha256": "7cfc9d36771565bda45b67ee3c513985fb01bfa51ad87ab8e9d31a33de24b2ef",
-  "sources_key": "1dd9d33a72cfdbc7de6b6afdb7a7b38400c038f5"
+  "sources_key": "544413eddfcb82ea4993aa0506f196f82f036ee2"
  },
  "dos": {
   "backend": "dosbox-x",
