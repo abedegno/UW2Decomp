@@ -59,6 +59,20 @@ uw1/build/port/uw1port --data ~/UWGOG/UW1   # or names it
 
 Each game's BUILDING.md has its options, its sound cards and where it keeps saves and recordings. [PORT.md](PORT.md) is how the ports work.
 
+## Input scripts
+
+The ports take `--input-script FILE`, for tests: keys and mouse events at set times, fed in as a player's would be (Exhume's `runtime/port/sys/inscript.c`), so a hidden run can record a session with no one at the keyboard. One event a line, at a time in milliseconds of the game's PIT clock (18.2 Hz, so about 55 ms apart at best) from the start; `#` starts a comment:
+
+```
+3000 key enter         press and release (names: a-z, 0-9, f1-f12, up, down, left, right,
+4500 down w            enter, space, esc, tab, shift, ctrl, alt, home, end, pgup, pgdn ...)
+6000 up w
+7000 move 160 100      the pointer to x, y of the 320 by 200 screen
+7200 click 160 100 left
+```
+
+A bad line stops the run, naming it. The enhancements' sessions are made this way (`tests/replay/enhanced/*/session.script`; Exhume's `tools/enhcheck.py baseline record NAME`). Two recordings of one script differ in timing, since the events arrive between frames while the game reads its input on its own thread; a recording's replay is what is exact.
+
 ## Continuous integration
 
 One set of workflows in `.github/` serves both games. They are rendered from Exhume's CI templates with this repository's values in `ci.toml` (`python3 exhume/tools/citemplates.py --vars ci.toml .`), so they are never edited by hand. Each job runs once per game, in that game's folder. A change under `uw1/` runs only UW1's jobs, and likewise `uw2/`; a change to `exhume`, `docs/`, `.github/` or `ci.toml` runs both.
