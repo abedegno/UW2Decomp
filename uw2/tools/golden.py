@@ -181,7 +181,9 @@ def golden_meta(name, d1, backend, stage_files):
         'recording': {'path': rel(rec), 'sha256': sha256(rec)},
         'cfg': {'path': rel(cfg), 'sha256': sha256(cfg)} if cfg else None,
         'stage': {'session': STAGE_FROM[name], 'files': stage_files} if name in STAGE_FROM else None,
-        'replay_build': {'exe_sha256': exe_sha(), 'sources_key': R.build_plan()[1]},
+        # the replay DOS build by its bytes only: its sources' key names its cache, and changes
+        # with any edit to a DOS source, even a port-only one that leaves the build the same
+        'replay_build': {'exe_sha256': exe_sha()},
         'dos': {'backend': backend, 'runs': 2, 'identical': True},
         'digest': 'BLAKE2b-64 of each section as DOS and the port are compared (tools/golden.py, canon)',
         'saves': save_hashes(d1),

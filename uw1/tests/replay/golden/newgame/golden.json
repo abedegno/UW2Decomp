@@ -11,8 +11,7 @@
  },
  "stage": null,
  "replay_build": {
-  "exe_sha256": "4f5ae6f594a50d58684e6f117ca80bf75a1e13d37234943c69bcbb9472fe7b03",
-  "sources_key": "41756ff61841bc505effd947938b4fe3cdd22892"
+  "exe_sha256": "4f5ae6f594a50d58684e6f117ca80bf75a1e13d37234943c69bcbb9472fe7b03"
  },
  "dos": {
   "backend": "dosbox-x",
