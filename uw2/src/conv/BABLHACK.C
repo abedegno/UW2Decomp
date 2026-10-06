@@ -394,6 +394,7 @@ static void skill_messages(const unsigned char *before)
         do_npc_scroll();
         scroll_print(line);
         do_play_scroll();
+        set_workspace();                /* the conversation's memory back in the frame, as conv_print does */
     }
 }
 #endif

@@ -394,6 +394,8 @@ int main(int argc, char *argv[])
         enhance_list(stdout);
         return 0;
     }
+    /* a bad input script stops the run before anything is written */
+    if (input_script && inscript_load(input_script, kbd_byte, mouse_event) < 0) return 1;
     if (!home) {
         const char *h = getenv("HOME");
 #ifdef _WIN32
@@ -521,10 +523,7 @@ int main(int argc, char *argv[])
     hooks.key = kbd_byte;
     hooks.pointer = mouse_event;
     hooks.lifecycle = on_lifecycle;
-    if (input_script) {
-        if (inscript_load(input_script, kbd_byte, mouse_event) < 0) return 1;
-        hooks.tick = inscript_tick;
-    }
+    if (input_script) hooks.tick = inscript_tick;
     if (interactive) {
         port_home = home;
         hooks.drop = on_drop;
