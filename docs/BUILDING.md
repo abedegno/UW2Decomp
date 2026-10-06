@@ -75,7 +75,7 @@ One set of workflows in `.github/` serves both games. They are rendered from Exh
 
 With the bundle's ROMs (`MT32_ROMS`), on Linux, macOS and Windows, after the sessions:
 
-- **How the port finds ROMs** (Exhume's `tools/romcheck.py`): each source in turn (`--mt32-roms` with a folder or a file, the environment variable, the remembered setting, and every searched folder on that system), their order, a CM-32L pair preferred to an MT-32 pair, and the wrong cases (half a pair, wrong files, split ROM halves, from the bundle's `mt32-split/`, none), each in a fresh home.
+- **How the port finds ROMs** (Exhume's `tools/romcheck.py`): each source in turn (`--mt32-roms` with a folder or a file, the environment variable, the remembered setting with a folder or a file, and every searched folder on that system), their order (a remembered folder that has gone falls through to the search), a CM-32L pair preferred to an MT-32 pair, and the wrong cases (half a pair, wrong files, split ROM halves, from the bundle's `mt32-split/`, a mistyped path, which finds none rather than its parent folder's, none), each in a fresh home.
 - **The MT-32's sound** (Exhume's `tools/audiocheck.py`): `soundmt` replayed with the ROMs, its whole audio written as a WAV, checked not silent, and its SHA-256 compared with `uwN/tests/replay/audio/soundmt.PLATFORM.sha256`. Floating point rounds differently between systems, so each platform has its own digest (`--update` writes one).
 
 ### Testing the release packages
