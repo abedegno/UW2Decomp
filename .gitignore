@@ -11,3 +11,6 @@ tools/emu2/
 tools/libs/
 tools/nuked-opl3/
 .exhume/
+
+# superpowers plan workspaces (ledgers, test logs): local only
+.superpowers/
