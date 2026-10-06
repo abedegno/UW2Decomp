@@ -40,6 +40,10 @@ jobs:
       - name: The goldens made again are the committed ones
         if: success() || failure()
         run: |
+          # why a session's two DOS runs differed, when they did (checkpoint and section names only)
+          for f in "$(dirname uw2/build/replay/verify)"/golden-work/*/determinism.txt; do
+            [ -f "$f" ] && cp "$f" "$RUNNER_TEMP/logs/determinism-$(basename "$(dirname "$f")").txt"
+          done
           git status --porcelain --untracked-files=all -- uw2/tests/replay/golden > "$RUNNER_TEMP/logs/golden-changes.txt"
           n=$(grep -c . "$RUNNER_TEMP/logs/golden-changes.txt" || true)
           if [ "$n" != 0 ]; then
