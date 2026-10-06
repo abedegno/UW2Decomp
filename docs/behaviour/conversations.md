@@ -1,6 +1,6 @@
 # Conversations
 
-This page describes how a conversation in Ultima Underworld I and II runs: who will talk, how a conversation script runs, every built-in function a script can call, the variables handed to the script and back, and bartering. It is written for someone who wants to reproduce the conversation system or write scripts for it and will not read the C. Every rule comes from the matched sources of UW2Decomp and [UW1Decomp](https://github.com/abedegno/UW1Decomp).
+This page describes how a conversation in Ultima Underworld I and II runs: who will talk, how a conversation script runs, every built-in function a script can call, the variables handed to the script and back, and bartering. It is written for someone who wants to reproduce the conversation system or write scripts for it and will not read the C. Every rule comes from the matched sources of both games in this repository ([uw1/](../../uw1/), [uw2/](../../uw2/)).
 
 Each rule is marked **both**, **UW1** or **UW2**. [UW1-UW2-DIFFERENCES.md](../UW1-UW2-DIFFERENCES.md#conversations) lists the differences in more detail. The script file format, `CNV.ARK`, is UW-Formats section 7; [FORMATS.md](../FORMATS.md) has corrections to it. Nothing here was checked in a running game.
 
@@ -183,7 +183,7 @@ Source: [BABL.C:415](../../uw2/src/conv/BABL.C#L415) to [BABL.C:549](../../uw2/s
 | Built-in | Games | Arguments | What it does | Returns |
 | --- | --- | --- | --- | --- |
 | `get_quest` | both | arg1 quest | **UW2.** Quests 0 to 127 are flags, 128 to 143 the quest bytes, above that one byte of the player record whose meaning is not known. **UW1.** Quests 0 to 31 are flags, 32 to 35 bytes, above that the talisman count. Negative gives 0 | the value |
-| `set_quest` | both | arg2 quest, arg1 value | sets a quest. **UW2.** A flag's value is added unmasked, so a value other than 0 or 1 spills into the next flags. **UW1.** Any non-zero value sets the flag, but the bit is computed in 16 bits, so only quests 0 to 15 work and setting 15 also sets 16 to 31 (UW1Decomp's [FINDINGS.md](../../uw1/docs/FINDINGS.md)) | |
+| `set_quest` | both | arg2 quest, arg1 value | sets a quest. **UW2.** A flag's value is added unmasked, so a value other than 0 or 1 spills into the next flags. **UW1.** Any non-zero value sets the flag, but the bit is computed in 16 bits, so only quests 0 to 15 work and setting 15 also sets 16 to 31 (UW1's [FINDINGS.md](../../uw1/docs/FINDINGS.md)) | |
 | `x_traps` | both | arg2 variable, arg1 value | sets a game variable, the ones traps use. **UW1.** One of 64 variables, for values 0 to 0x3F. **UW2.** A numbered variable ([schedules.md](schedules.md#the-row-events)), for values 0 to 0x3FF, stored as a byte | the variable |
 | `x_skills` | both | arg2 skill, arg1 value | 0 to 30 sets the skill. 10000 raises it as a skill point would, without spending one. **UW2.** Above 10000 spends one of the player's skill points on the skill, or with a skill of -1, -2 or -3 on a random skill of a group (combat, magic, other) | the skill, or (above 10000) 1 if raised |
 | `x_clock` | UW2 | arg2 clock, arg1 value | a value above 0x100 reads X clock arg2. Otherwise sets it. Setting clock 0, the time of day, moves the game clock by 20 minutes for each step changed | the clock, or 0 |

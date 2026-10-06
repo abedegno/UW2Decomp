@@ -38,7 +38,7 @@ The top-level Makefile runs a target in both games, or in one with `GAME=uw1` or
 | `make test-full` | the long tier: goldens made again from DOS, the UBSan build, the sound drivers against the real ones, the deep fuzzing, the coverage report |
 | `make port` | each game's native port: `uw1/build/port/uw1port` and `uw2/build/port/uw2port` |
 | `make port-release`, `make package` | the players' builds and packages, into each game's `build/dist` |
-| `make repocheck` | the whole repository: no game data or Borland software is tracked, every script compiles, every Markdown link resolves, and nothing links into the old UW1Decomp or UW2Decomp repositories' files |
+| `make repocheck` | the whole repository: no game data or Borland software is tracked, every script compiles, every Markdown link resolves, anchors included, and nothing links into the old UW1Decomp or UW2Decomp repositories' files |
 
 Everything built goes under each game's `build/`, which is never committed.
 
@@ -68,8 +68,8 @@ One set of workflows in `.github/` serves both games. They are rendered from Exh
 | `port.yml` | every push and pull request, forks included | each port built, and its compile-only check, on Ubuntu 24.04, macOS and Windows (MSYS2 CLANG64) | no |
 | `repocheck.yml` | every push and pull request | `make repocheck` | no |
 | `accuracy.yml` | pushes to `main`, pull requests from branches of this repository, and by hand | per game: the gate and `make test` on Ubuntu 24.04; every session against its golden in the port built on Windows and on macOS; the players' Windows zip, unpacked, started with only Windows's own folders on the PATH and replaying every session, on Windows Server 2022 (Exhume's `tools/pkgcheck.py`); and on all three, the MT-32 checks below | yes |
-| `nightly.yml` | 03:17 UTC daily, and by hand | per game: `make test-full` (UW1's with dos-mcp's Chrome, for its js-dos-only `sound` golden); and `make test` against Exhume's latest `master` instead of the pinned submodule (`exhume-master`), so a change in Exhume that would break a game shows within a day | yes |
-| `release.yml` | a tag `uw1-v*` or `uw2-v*`, weekly on Mondays, and by hand | that game's packages for macOS, Linux and Windows, each then tested as below; for a tag, once every test passes, a draft release | the tests do (Apple's secrets sign and notarise the macOS app) |
+| `nightly.yml` | 03:17 UTC daily, and by hand | per game: `make test-full` (UW1's with dos-mcp's Chrome, for its js-dos-only `sound` golden); and `make test` against Exhume's latest `master` instead of the pinned submodule (`exhume-master`), so a change in Exhume that would break a game shows within a day. A regenerated golden that differs from the committed one fails the run, and the artifact holds the list, the changed screens and the text diff of each `golden.json` (`golden-diff.txt`, printed in the log too) | yes |
+| `release.yml` | a tag `uw1-v*` or `uw2-v*`, weekly on Mondays, and by hand | that game's packages for macOS, Linux and Windows, each then tested as below; for a tag push, once every test passes, a draft release (a weekly or hand-made run never makes one, even on a tag) | the tests do (Apple's secrets sign and notarise the macOS app) |
 
 ### The MT-32 checks
 

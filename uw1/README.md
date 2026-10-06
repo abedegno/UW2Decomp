@@ -40,7 +40,7 @@ build/port/uw1port  # or: build/port/uw1port --data /path/to/UW1
 - Linux (Debian, Ubuntu): `make setup-port` prints the `apt-get install` line it needs, then builds SDL3 and libmt32emu into `tools/libs`.
 - Windows: MSYS2's CLANG64 shell; then `make PY=python port`.
 
-[BUILDING.md](docs/BUILDING.md#the-native-port) has the details, and [Releases](docs/BUILDING.md#releases) how the packages are made.
+[BUILDING.md](docs/BUILDING.md#the-native-port) has the details, and [Releases](../docs/BUILDING.md#releases) how the packages are made.
 
 ## Status
 

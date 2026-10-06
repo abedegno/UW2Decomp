@@ -95,7 +95,7 @@ The sources also build the native port (PORT.md). Every change still has to pass
 
 Each of these is the original tokens under Turbo C (port-only C is never seen by it). After a change, `make port-check` should show no new error or warning, and `make test` must pass: it builds the port and replays every session against its golden.
 
-A session that differs from its golden after a change to the port is a bug in the change; fix the port, never the golden. The goldens are made again (`make golden`, or `make test-full`) only when a recording or the replay DOS build changes (a change to the runtime's `replay/replay.c`, to `src/include/rpgame.h`, or to a source the replay build compiles with `-DREPLAY`), and the regenerated files go in the same commit as that change. `replay.py verify` says when a golden is stale or was made by another replay build.
+A session that differs from its golden after a change to the port is a bug in the change; fix the port, never the golden. The goldens are made again (`make golden`, or `make test-full`) only when a recording or the replay DOS build's bytes change (a change to the runtime's `replay/replay.c`, to `src/include/rpgame.h`, or to the DOS code of a source the replay build compiles with `-DREPLAY`; a port-only edit, under `#ifndef __TURBOC__`, leaves the build and the goldens the same), and the regenerated files go in the same commit as that change. `replay.py verify` says when a golden is stale or was made by another replay build.
 
 ## Named constants
 

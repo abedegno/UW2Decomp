@@ -149,15 +149,15 @@ static const char help_text[] =
     "  --home DIR             where saved games and settings go ($UW2PORT_HOME, else ~/.uw2port)\n"
     "Sound:\n"
     "  --sound MUSIC[,SPEECH] the sound cards, kept until changed (first run: 3,1, or 5,1\n"
-    "                         when --mt32-roms has ROMs):\n"
+    "                         when MT-32 ROMs are given or found):\n"
     "                         music 0 none, 2 Ad Lib, 3 Sound Blaster, 4 Sound Blaster Pro 1,\n"
     "                         5 Roland MT-32, 6 Pro Audio Spectrum, 7 Sound Blaster Pro 2;\n"
     "                         speech 0 none, 1 Sound Blaster, 2 Sound Blaster Pro,\n"
     "                         3 Pro Audio Spectrum\n"
     "  --mt32-roms PATH       your MT-32 or CM-32L ROM images (a folder, or a file in\n"
     "                         it; any names), kept until changed (also $UW2PORT_MT32_ROMS);\n"
-    "                         without, the port looks in its home's roms/ folder, beside\n"
-    "                         the game and itself, and where DOSBox keeps MT-32 ROMs\n"
+    "                         without, the port looks in its home's roms/ and mt32-roms/,\n"
+    "                         beside the game and itself, and where DOSBox keeps them\n"
     "  --no-audio             open no audio device\n"
     "Window:\n"
     "  --scale N              initial window scale (3)\n"
@@ -359,8 +359,8 @@ int main(int argc, char *argv[])
             port_config_set(home, "mt32-roms", found);
     }
     /* The first run (no DATA\UW.CFG in the home directory yet): a Sound Blaster, its FM music
-       and its digital effects; or, when MT-32 ROMs are set (--mt32-roms, $UW2PORT_MT32_ROMS or
-       the remembered folder) and hold a ROM pair, the MT-32 for the music and the Sound Blaster
+       and its digital effects; or, when a ROM pair is given or found (--mt32-roms,
+       $UW2PORT_MT32_ROMS, the remembered setting or the search: mt32roms_locate), the MT-32 for the music and the Sound Blaster
        for the effects. Kept until --sound changes it. */
     if (interactive && !sound) {
         char cfgpath[1200];

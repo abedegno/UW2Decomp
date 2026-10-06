@@ -38,7 +38,7 @@ build/port/uw2port  # or: build/port/uw2port --data /path/to/UW2
 - Linux (Debian, Ubuntu): `make setup-port` prints the `apt-get install` line it needs, then builds SDL3 and libmt32emu into `tools/libs`.
 - Windows: MSYS2's CLANG64 shell; then `make PY=python port`.
 
-[BUILDING.md](docs/BUILDING.md#building-the-port) has the details, and [Releases](docs/BUILDING.md#releases) how the packages are made.
+[BUILDING.md](docs/BUILDING.md#building-the-port) has the details, and [Releases](../docs/BUILDING.md#releases) how the packages are made.
 
 ## The decompilation
 
@@ -52,7 +52,7 @@ Function and global names are the originals from the FM Towns build wherever it 
 
 - **The gate** (`make check`): every source compiles in DOS to its segment's bytes, with its fixups and data verified; `symbols.tsv` rebuilds from scratch to the committed file; the exact link equals `UW2.EXE`; the modding build with no change equals the exact link.
 - **The port against DOS**: ten recorded sessions (character creation, walking, fighting with three sound cards, the inventory, a conversation, saving and loading, the introduction, and Lord British's conversation and the Guardian's cutscene) replay in the port and match golden references made from DOS at every checkpoint, the 3D frames and the saved games included. Single routines are fuzzed against the original's bytes in an x86 emulator.
-- `make test` runs the gate, the port build, the fuzzing and the replays in about 20 seconds. CI builds the port on macOS, Linux and Windows on every push and runs `make test` on Linux ([Continuous integration](docs/BUILDING.md#continuous-integration)).
+- `make test` runs the gate, the port build, the fuzzing and the replays in about 20 seconds. CI builds the port on macOS, Linux and Windows on every push and runs `make test` on Linux ([Continuous integration](docs/BUILDING.md#continuous-integration-and-releases)).
 
 ### Building the DOS EXE
 

@@ -1,6 +1,6 @@
 # How critters think
 
-This page describes what a critter (a monster or an NPC) in Ultima Underworld I and II does, step by step, in the order the game decides it. It is written for someone who wants to reproduce or mod the behaviour and will not read the C. Every number comes from the matched sources of UW2Decomp and [UW1Decomp](https://github.com/abedegno/UW1Decomp), which compile to the same bytes as the shipped `UW2.EXE` and `UW.EXE`.
+This page describes what a critter (a monster or an NPC) in Ultima Underworld I and II does, step by step, in the order the game decides it. It is written for someone who wants to reproduce or mod the behaviour and will not read the C. Every number comes from the matched sources of both games in this repository ([uw1/](../../uw1/), [uw2/](../../uw2/)), which compile to the same bytes as the shipped `UW2.EXE` and `UW.EXE`.
 
 Each rule is marked **both**, **UW1** or **UW2**. Where the games differ only in a detail, both values are given in place. [UW1-UW2-DIFFERENCES.md](../UW1-UW2-DIFFERENCES.md) has the full list of differences between the games. Where the purpose of a rule is inferred rather than evident from the code, the text says so. Nothing here was checked in a running game.
 
@@ -325,7 +325,7 @@ Source: `update_all_critters_whilst_player_snoozes`, `up_crit`, `up_mob`, `hosti
 
 **Both.** When damage takes a critter to 0 hit points, it starts its dying sequence, unless it has a conversation and its scripted death (`death_check`) keeps it alive. Several plot NPCs surrender this way instead of dying. The kill is credited to whoever struck: the attacker, or for a missile or thrown object, its shooter. A kill by the player gives experience.
 
-**Death cry.** **UW2** plays a cry by the dying critter's death kind (none, or one of four sounds). **UW1** decides by the creature the AI processed last, which is a bug; see UW1Decomp's [FINDINGS.md](../../uw1/docs/FINDINGS.md).
+**Death cry.** **UW2** plays a cry by the dying critter's death kind (none, or one of four sounds). **UW1** decides by the creature the AI processed last, which is a bug; see UW1's [FINDINGS.md](../../uw1/docs/FINDINGS.md).
 
 **Combat music.** When the player damages a critter, the music becomes the "foe hurt" theme if the critter is below a quarter of its hit points (`hp * 64 / (max + 1)` under 16), else the combat theme. When a critter damages the player, the music becomes the "danger" theme if the player is below a quarter of his maximum, else the combat theme.
 

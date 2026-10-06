@@ -1,6 +1,6 @@
 # Player upkeep
 
-This page describes what happens to the player over time in Ultima Underworld I and II: the slow update and what runs in it, hunger, fatigue, healing, poison, drink, lights, sleep and dreams, and experience and levels. It is written for someone who wants to reproduce or mod the rules and will not read the C. Every number comes from the matched sources of UW2Decomp and [UW1Decomp](https://github.com/abedegno/UW1Decomp).
+This page describes what happens to the player over time in Ultima Underworld I and II: the slow update and what runs in it, hunger, fatigue, healing, poison, drink, lights, sleep and dreams, and experience and levels. It is written for someone who wants to reproduce or mod the rules and will not read the C. Every number comes from the matched sources of both games in this repository ([uw1/](../../uw1/), [uw2/](../../uw2/)).
 
 Each rule is marked **both**, **UW1** or **UW2**. [UW1-UW2-DIFFERENCES.md](../UW1-UW2-DIFFERENCES.md#skills-experience-and-the-player-record) lists the differences in more detail. Nothing here was checked in a running game.
 

@@ -1,6 +1,6 @@
 # Data file formats, as the matched code reads and writes them
 
-This page gives the layout of each data file UW2 reads or writes, taken from the matched sources, which compile to the same bytes as `UW2.EXE`. Where UW1 differs, the difference is given beside it, from [UW1Decomp](https://github.com/abedegno/UW1Decomp), which matches `UW.EXE` the same way. [UW1 only](#uw1-only) lists the layouts UW1 has and UW2 does not.
+This page gives the layout of each data file UW2 reads or writes, taken from the matched sources, which compile to the same bytes as `UW2.EXE`. Where UW1 differs, the difference is given beside it, from [UW1's sources](../uw1/), which match `UW.EXE` the same way. [UW1 only](#uw1-only) lists the layouts UW1 has and UW2 does not.
 
 Every field cites the source line that reads or writes it. **measured** means a short script parsed the shipped GOG data (or DOS-written saves) and found the layout as stated; the scripts are not part of the repository. Field names are those of the matched headers. Many are provisional names taken from the code that uses a field; where a meaning is inferred from use rather than named by the code, the table says so.
 
@@ -197,7 +197,7 @@ The workspace ([INVSAVE.C:61](../uw2/src/inv/INVSAVE.C#L61)):
 
 So in UW2 the inventory head is at file offset 0x386, the player's hit points at 0x388, the slots at 0x3A3 and saved object 1 at 0x3E3; in UW1 0xDB, 0xDD, 0xF8 and 0x138.
 
-Measured: 21 UW1 saves written by DOS, and 19 UW2 saves written by UW2Decomp's native build of the same C in its replay runs, all have this exact length, 1 + record + 2 + 0x5B + 8 × count, and a key byte equal to the first letter of the name xor 0xAA.
+Measured: 21 UW1 saves written by DOS, and 19 UW2 saves written by the UW2 port, the same C built natively, in its replay runs, all have this exact length, 1 + record + 2 + 0x5B + 8 × count, and a key byte equal to the first letter of the name xor 0xAA.
 
 Two consequences of the order of loading. `read_player_data` copies the record's health byte (0x35) to the player object ([PLAYDATA.C:112](../uw2/src/game/PLAYDATA.C#L112)), and then `getPlayerInvCopy` overwrites the whole player object from the workspace ([INVSAVE.C:229](../uw2/src/inv/INVSAVE.C#L229)): the vitality the game ends up with is the workspace's hp byte. The flag saying a cursor object was saved is not in the file and is cleared when restoring from a file ([INVSAVE.C:261](../uw2/src/inv/INVSAVE.C#L261)), so a held object in the file is ignored. Both games.
 

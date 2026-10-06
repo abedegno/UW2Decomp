@@ -8,7 +8,8 @@ For players. Each release's notes are drafted from here. Releases are tagged `uw
 - **Fixed:** the game could freeze for good, most often on some Windows PCs, after the program was paused by the system for a second or more. A creature update loop in the original game never ended after such a pause; the port now caps the step, which changes nothing the DOS game can do.
 - **Fixed:** high CPU and GPU use, and a mouse pointer that stalled in other programs, when the graphics driver ignores vsync or the window is in the background. The port now never draws faster than the display refreshes, and draws nothing while minimised or hidden.
 - **Changed:** the log says which renderer and refresh rate the port uses and whether vsync held, to help with bug reports.
-- **Checked:** every release's Windows package is now tested on Windows Server 2022 before release, replaying the recorded sessions from the zip itself.
+- **Fixed:** the Linux build could crash in its first conversation, when the game printed an empty line (the original game reads the byte before an empty string; the port now skips that test for one).
+- **Checked:** every release's packages are now tested before release on nine systems (Windows Server 2022 and 2025, macOS 14, 15 and 15 on Intel, Ubuntu 22.04 and 24.04, Debian 12, Fedora 41), replaying the recorded sessions from the package itself, with the MT-32 music checked too.
 
 ## 1.2.0 (4 October 2026)
 

@@ -1,4 +1,4 @@
-# UW1Decomp: plan and state
+# UW1 decompilation: plan and state
 
 A byte-matching decompilation of Ultima Underworld: The Stygian Abyss (UW.EXE, DOS, 1992, the GOG release, MD5 8afc3c29ef5667a3ab6667e8cbc8d63a), built with [Exhume](https://github.com/abedegno/Exhume) and seeded from [UW2Decomp](https://github.com/abedegno/UW2Decomp), the matched decompilation of its sequel.
 

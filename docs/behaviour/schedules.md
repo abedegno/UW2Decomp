@@ -1,6 +1,6 @@
 # Schedules and timed events
 
-This page describes how Ultima Underworld II moves its NPCs through the day and moves the plot on: the X clocks, the schedules in `SCD.ARK` and what each row does, the castle household's daily round, and the other things that happen by the clock. It is written for someone who wants to reproduce or mod the behaviour and will not read the C. Every number comes from the matched sources of UW2Decomp and [UW1Decomp](https://github.com/abedegno/UW1Decomp).
+This page describes how Ultima Underworld II moves its NPCs through the day and moves the plot on: the X clocks, the schedules in `SCD.ARK` and what each row does, the castle household's daily round, and the other things that happen by the clock. It is written for someone who wants to reproduce or mod the behaviour and will not read the C. Every number comes from the matched sources of both games in this repository ([uw1/](../../uw1/), [uw2/](../../uw2/)).
 
 Each rule is marked **both**, **UW1** or **UW2**. The schedules are UW2 only. UW1 has no schedules and no X clocks, and its NPCs move only by their AI goals ([npc-ai.md](npc-ai.md)), by conversations and by traps. The timed events UW1 does have are listed in [Other timed events](#other-timed-events). Statements about the shipped data were measured from the GOG release's `DATA\SCD.ARK` and say so. Nothing here was checked in a running game.
 

@@ -1,6 +1,6 @@
 # Traps and triggers
 
-This page describes how traps and triggers work in Ultima Underworld I and II: what sets a trigger off and who may, how a trigger finds its trap, how traps chain and branch, what each kind of trap does with its fields, the special-case "hack" traps, how used triggers and their traps are removed, and finding and disarming traps on objects. It is written for someone who wants to reproduce or mod the rules and will not read the C. Every number comes from the matched sources of UW2Decomp and [UW1Decomp](https://github.com/abedegno/UW1Decomp).
+This page describes how traps and triggers work in Ultima Underworld I and II: what sets a trigger off and who may, how a trigger finds its trap, how traps chain and branch, what each kind of trap does with its fields, the special-case "hack" traps, how used triggers and their traps are removed, and finding and disarming traps on objects. It is written for someone who wants to reproduce or mod the rules and will not read the C. Every number comes from the matched sources of both games in this repository ([uw1/](../../uw1/), [uw2/](../../uw2/)).
 
 Each rule is marked **both**, **UW1** or **UW2**. [UW1-UW2-DIFFERENCES.md](../UW1-UW2-DIFFERENCES.md#traps-and-triggers) lists the differences in short, and this page does not repeat its references. Statements about the shipped levels were measured from the GOG release's `DATA\LEV.ARK` of each game and say so. Nothing here was checked in a running game.
 

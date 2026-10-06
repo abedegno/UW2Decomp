@@ -1,6 +1,6 @@
 # Combat
 
-This page describes how a blow, a missile or any other damage is worked out in Ultima Underworld I and II, in the order the game applies the steps. It covers the player's swing, a critter's blow, the to-hit roll, criticals, the damage roll, armour, resistances, damage to objects, missiles, poison, special weapons and the experience for a kill. It is written for someone who wants to reproduce or mod the rules and will not read the C. Every number comes from the matched sources of UW2Decomp and [UW1Decomp](https://github.com/abedegno/UW1Decomp).
+This page describes how a blow, a missile or any other damage is worked out in Ultima Underworld I and II, in the order the game applies the steps. It covers the player's swing, a critter's blow, the to-hit roll, criticals, the damage roll, armour, resistances, damage to objects, missiles, poison, special weapons and the experience for a kill. It is written for someone who wants to reproduce or mod the rules and will not read the C. Every number comes from the matched sources of both games in this repository ([uw1/](../../uw1/), [uw2/](../../uw2/)).
 
 Each rule is marked **both**, **UW1** or **UW2**. [UW1-UW2-DIFFERENCES.md](../UW1-UW2-DIFFERENCES.md#combat) lists the differences in more detail. Nothing here was checked in a running game.
 
@@ -98,7 +98,7 @@ Source: `do_attack`, `resolve_attack`, `set_hitobj`, `pickloc`, `compute_hitangl
 7. **Near miss (0)** misses.
 8. **Failure (-1)** misses. If the player made the blow and the target is not a passive creature, his weapon takes `rollem(2, 3)` wear.
 
-**Miss sounds.** A swing at nothing makes a whoosh (sound 10) unless it hit a wall. A blocked blow makes sound 7 for a blunt weapon, or a sharp weapon against metal armour, and sound 8 otherwise. On the player, leather pieces count as not metal. **UW2** records which kind of weapon the player swings, to choose these sounds. **UW1** plays fixed sounds, and its test of the attacker has a bug described in UW1Decomp's [FINDINGS.md](../../uw1/docs/FINDINGS.md).
+**Miss sounds.** A swing at nothing makes a whoosh (sound 10) unless it hit a wall. A blocked blow makes sound 7 for a blunt weapon, or a sharp weapon against metal armour, and sound 8 otherwise. On the player, leather pieces count as not metal. **UW2** records which kind of weapon the player swings, to choose these sounds. **UW1** plays fixed sounds, and its test of the attacker has a bug described in UW1's [FINDINGS.md](../../uw1/docs/FINDINGS.md).
 
 Source: `frp_check`, `do_miss`, `is_sharp` ([COMBAT.C:300](../../uw2/src/combat/COMBAT.C#L300), [COMBAT.C:466](../../uw2/src/combat/COMBAT.C#L466), [COMBAT.C:275](../../uw2/src/combat/COMBAT.C#L275)); UW1 [COMBAT.C:282](../../uw1/src/combat/COMBAT.C#L282), [COMBAT.C:429](../../uw1/src/combat/COMBAT.C#L429).
 

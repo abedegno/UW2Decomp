@@ -290,7 +290,7 @@ The others are not reached by any of the eight recorded sessions, which cover th
 - **Evidence:** a UW2 player's recording from the port, replayed in DOS's replay build and in the port: both hang in this loop at the same point, identical at every checkpoint before it. The step there was 25; earlier steps of 6, 15 and 23 in the same recording did no harm (their remainder mod 16 was below 9). UW1 has the same code.
 - **Confidence:** confirmed for that input; unreachable in practice in DOS, whose clock moves a tick or so between `check_physics`' reads (a step of 5 at most).
 - **Effect:** in DOS, none known. In a port whose game runs on a thread the host can stop for a second between those reads, the game freezes for good.
-- **For a port:** cap the step at 8, which changes nothing DOS can reach (UW2Decomp's port does, in `move_mobile`).
+- **For a port:** cap the step at 8, which changes nothing DOS can reach (this port does, in `move_mobile`, and so does UW1's).
 
 ### Smaller slips with no known effect
 

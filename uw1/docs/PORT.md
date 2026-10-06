@@ -179,7 +179,7 @@ Done on 5 October 2026, on Exhume's generic tools, as UW2Decomp's port is:
 - `make test` (the gate, the port, the quick routine fuzzing, the nine sessions against their goldens) passes in about a minute, and `make test-full` in about fifteen; the goldens made again from DOS are the committed ones. The routine fuzzing has UW1's own 34 targets (`tools/fuzz_targets.py`, `tools/fuzzhost-uw1.c`; [BUILDING.md](BUILDING.md#routine-fuzzing)), all agreeing with the original's bytes over the deep run.
 - The port now has its sound chips: Nuked OPL3 and libmt32emu (`[[port.vendor]]`, `[[port.pkg]]`), and a player's first run gets a Sound Blaster (`--sound 3,1`, or `6,1` with MT-32 ROMs), as the `sound`, `soundfm` and `soundmt` sessions check against DOS.
 - It finds the game inside GOG's Mac app, whose `game.gog` holds UW1 in the folder `UW` (`PORT_GAME_IMAGE_FOLDER`).
-- `make port-release` and `make package` make `UW1.app` in a zip on macOS, a tarball and an AppImage on Linux and a zip on Windows, with the project's own icon; `release.yml` builds all three on a tag ([BUILDING.md](BUILDING.md#releases)).
+- `make port-release` and `make package` make `UW1.app` in a zip on macOS, a tarball and an AppImage on Linux and a zip on Windows, with the project's own icon; `release.yml` builds all three on a tag ([BUILDING.md](../../docs/BUILDING.md#releases)).
 
 ### Saving with an object on the cursor
 

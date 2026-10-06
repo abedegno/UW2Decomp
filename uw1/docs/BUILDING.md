@@ -24,7 +24,7 @@ The Makefile is Exhume's template (`tools/templates/Makefile`); `make help` list
 | `make hooks` | UW1's entry in the repository's git pre-push hook: `git push` runs `make check` in `uw1/` (`make hooks HOOK="make test"` for the port's tests). UW2's entry is separate, so you install only the games you have |
 | `make setup-port` | what the port needs to build on this OS, and nothing else ([Building the port](#building-the-port)); `make setup-libs` and `make setup-sound` do one part each |
 | `make port` | the port, `build/port/uw1port`; `make port-debug` the UBSan build, `build/port-debug/uw1port`; `make port-check` the compile-only measurement |
-| `make port-release`, `make package` | the build the players' packages are made from, and the package for this OS in `build/dist` ([Releases](#releases)) |
+| `make port-release`, `make package` | the build the players' packages are made from, and the package for this OS in `build/dist` ([Releases](../../docs/BUILDING.md#releases)) |
 | `make icons` | the icon files from their SVG sources ([The icon](#the-icon)) |
 | `make test` | the gate, the port, the quick routine fuzzing and every session against its golden ([Testing](#testing)) |
 | `make test-full` | the long tier ([Testing](#testing)) |
@@ -36,7 +36,7 @@ Everything built goes under `build/`, which is never committed.
 
 ## The native port
 
-The port ([PORT.md](PORT.md)) is a second build of the same C, for a modern host, on Exhume's runtime. It builds on macOS (Apple silicon and Intel), Linux and Windows (MSYS2's CLANG64 environment). The replays and the fuzzing pass on macOS; CI builds it on all three ([Continuous integration](#continuous-integration)).
+The port ([PORT.md](PORT.md)) is a second build of the same C, for a modern host, on Exhume's runtime. It builds on macOS (Apple silicon and Intel), Linux and Windows (MSYS2's CLANG64 environment). The replays and the fuzzing pass on macOS; CI builds it on all three ([Continuous integration](#continuous-integration-and-releases)).
 
 ### Building the port
 
@@ -64,7 +64,11 @@ Files the game creates or changes (its scratch files, the saved games, `DATA\UW.
 
 ### Sound
 
-The emulated sound hardware comes from two libraries, neither in the repository: Nuked OPL3 (commit `765ec96`, LGPL-2.1), which `make setup-sound` fetches into `tools/nuked-opl3` and `make port` compiles in (`[[port.vendor]]` in `exhume.toml`), and libmt32emu 2.8.3 (LGPL-2.1-or-later), which `make port` links when pkg-config finds it (`[[port.pkg]]`). `make port` says which it found (`third-party: Nuked OPL3, libmt32emu`); without them it builds and those chips are silent. The MT-32 needs the user's own ROM images: `--mt32-roms DIR` (or `UW1PORT_MT32_ROMS`), with `CM32L_CONTROL.ROM` and `CM32L_PCM.ROM` or `MT32_CONTROL.ROM` and `MT32_PCM.ROM`.
+The emulated sound hardware comes from two libraries, neither in the repository: Nuked OPL3 (commit `765ec96`, LGPL-2.1), which `make setup-sound` fetches into `tools/nuked-opl3` and `make port` compiles in (`[[port.vendor]]` in `exhume.toml`), and libmt32emu 2.8.3 (LGPL-2.1-or-later), which `make port` links when pkg-config finds it (`[[port.pkg]]`). `make port` says which it found (`third-party: Nuked OPL3, libmt32emu`); without them it builds and those chips are silent. The MT-32 needs the user's own ROM images: the port finds them by their contents under any names: `--mt32-roms` with a folder or one of the files (or `UW1PORT_MT32_ROMS`), else the remembered setting, else a search of the home folder's `roms/` and `mt32-roms/`, the game folder, the program's folder and DOSBox Staging's MT-32 folders. A CM-32L pair is preferred to a CM-32LN pair, then an MT-32 pair, the newest control ROM first; split ROM halves are skipped, and a path to nothing finds none ([docs/BUILDING.md](../../docs/BUILDING.md) lists the folders).
+
+### The icon
+
+The icon is the project's own drawing: a stylised silver ankh on a dark blue stone tile (UW2's design in other colours), not the Ultima logo and nothing from the game. `tools/dist/icon/uw1.svg` is its source, with `uw1-small.svg` for 16 to 32 pixels. `make icons` (Exhume's `tools/icons.py`; it needs puppeteer's Chrome: after the top-level `make setup-exhume`, `npx --prefix exhume puppeteer browsers install chrome`, and `iconutil` on macOS) writes the committed files: `png/uw1-N.png` from 16 to 1024 pixels, `uw1.icns` (the app's), `uw1.ico` (the Windows program's resource), `uw1.png` (Linux) and `src/port/platform/sdl3/icon.h`, the window icon on Linux and Windows (`PLAT_ICON`).
 
 ## Testing
 

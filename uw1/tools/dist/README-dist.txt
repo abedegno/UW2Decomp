@@ -25,7 +25,7 @@ The controls are the game's own: the mouse, and the keys the game's manual lists
 
 Sound: the first run sets up a Sound Blaster, its FM music and its digitised speech (--sound 3,1); or, when you have given MT-32 ROMs (below) by then, the Roland MT-32 for the music and the Sound Blaster for the speech (--sound 6,1). --sound MUSIC,SPEECH chooses other cards and is remembered: music 0 none, 1 PC speaker, 2 Ad Lib, 3 Sound Blaster, 4 Sound Blaster Pro, 5 Pro Audio Spectrum, 6 Roland MT-32; speech 0 none, 1 Sound Blaster, 2 Sound Blaster Pro, 3 Pro Audio Spectrum. For example --sound 4,2 is a Sound Blaster Pro.
 
-Roland MT-32 music needs your own MT-32 or CM-32L ROM images, which are not included: --sound 6,1 --mt32-roms DIR, where DIR holds CM32L_CONTROL.ROM and CM32L_PCM.ROM, or MT32_CONTROL.ROM and MT32_PCM.ROM. The folder is remembered.
+Roland MT-32 music needs your own MT-32 or CM-32L ROM images, which are not included: --sound 6,1. The port finds them by itself in a roms or mt32-roms folder in its home folder, beside the game or the program, or where DOSBox Staging keeps MT-32 ROMs; or give --mt32-roms a folder or one of the files. Any file names work: the ROMs are recognised by their contents, and a CM-32L pair is preferred to an MT-32 pair. The folder is remembered.
 
 Window: --scale N sets the starting size (3), --no-aspect shows square pixels instead of the 4:3 shape of a CRT, --no-integer scales freely, --mouse lock captures the pointer as DOSBox does (Ctrl+F10 releases it). uw1port --help lists every option.
 

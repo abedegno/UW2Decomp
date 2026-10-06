@@ -1,6 +1,6 @@
 # Magic
 
-This page describes how spells work in Ultima Underworld I and II: casting from runes and the checks it makes, mana, how long active spells last, and what each class of spell does. The spell list is UW2's. It is written for someone who wants to reproduce or mod the rules and will not read the C. Every number comes from the matched sources of UW2Decomp and [UW1Decomp](https://github.com/abedegno/UW1Decomp).
+This page describes how spells work in Ultima Underworld I and II: casting from runes and the checks it makes, mana, how long active spells last, and what each class of spell does. The spell list is UW2's. It is written for someone who wants to reproduce or mod the rules and will not read the C. Every number comes from the matched sources of both games in this repository ([uw1/](../../uw1/), [uw2/](../../uw2/)).
 
 Each rule is marked **both**, **UW1** or **UW2**. [UW1-UW2-DIFFERENCES.md](../UW1-UW2-DIFFERENCES.md#magic) lists the differences in more detail, and this page does not repeat all of them. UW1's own spell list (`spells[]` in UW1's [SPELLS.C:838](../../uw1/src/combat/SPELLS.C#L838)) is not tabulated here. Nothing here was checked in a running game.
 

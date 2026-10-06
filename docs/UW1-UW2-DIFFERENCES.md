@@ -2,7 +2,7 @@
 
 Ultima Underworld I and II run on the same engine, a year apart, and most of their code is the same. This page lists the places where the two games play by different rules, routine by routine, so that a reimplementation such as [UnderworldGodot](https://github.com/hankmorgan/UnderworldGodot) knows where it needs a separate branch for each game.
 
-Every statement about what a game does is read from the matched sources of the two decompilations, which compile to the same bytes as the shipped `UW.EXE` and `UW2.EXE`. Links to UW1's sources go to [UW1Decomp](https://github.com/abedegno/UW1Decomp) on GitHub, and links to UW2's sources are to this repository. Where a constant's meaning in the game is not known, the entry says so. Statements about the effect in play are inferences from the code, and none was checked in a running game.
+Every statement about what a game does is read from the matched sources of the two decompilations, which compile to the same bytes as the shipped `UW.EXE` and `UW2.EXE`. Links go to each game's sources in this repository, [uw1/](../uw1/) and [uw2/](../uw2/). Where a constant's meaning in the game is not known, the entry says so. Statements about the effect in play are inferences from the code, and none was checked in a running game.
 
 Each entry also says what UnderworldGodot does today, at commit [`d7025471`](https://github.com/hankmorgan/UnderworldGodot/tree/d7025471a1362860afd9f68555e137a9ff4f131a). The verdict is one of these:
 
@@ -31,7 +31,7 @@ UnderworldGodot was read, not run, and none of its gaps below was confirmed in p
 
 ## How the comparison was made
 
-The two games' functions were paired first. UW1Decomp's `map/kin.tsv` pairs each UW1 procedure with its closest UW2 procedure, and each repository's `map/crosswalk.tsv` gives the matched function at each address. A UW1 function was paired with the UW2 function of the same name when both games have one (1,346 pairs), and otherwise through `kin.tsv` (346 pairs). The 28 functions of UW2's `src/game/SKILLS.C` are missing from UW2's `crosswalk.tsv`, so they were added from `targets/ovr154.tsv`.
+The two games' functions were paired first. UW1's `uw1/map/kin.tsv` pairs each UW1 procedure with its closest UW2 procedure, and each repository's `map/crosswalk.tsv` gives the matched function at each address. A UW1 function was paired with the UW2 function of the same name when both games have one (1,346 pairs), and otherwise through `kin.tsv` (346 pairs). The 28 functions of UW2's `src/game/SKILLS.C` are missing from UW2's `crosswalk.tsv`, so they were added from `targets/ovr154.tsv`.
 
 Each pair was then compared as machine code, with the instruction normaliser of Exhume's `tools/kin.py`. That normaliser hides the addresses of globals, calls and branches, so "identical" means the same instructions with the same constants. A pair that matches only once immediates and memory displacements are also hidden is counted as "constants only". Those pairs differ in numbers alone, e.g., structure offsets, string numbers or screen positions, but a changed number can still be a rule (e.g., `player_eat` divides by 8 in UW1 and by 6 in UW2), so they were read too. Every "different" and "constants only" pair in the subsystems below was read as a C diff of the two matched bodies.
 
@@ -99,7 +99,7 @@ UW2's Poison Weapon spell sets `PoisonWeap` ([UW2 src/game/PLAYDATA.C:225](../uw
 
 ### Sounds of combat
 
-UW2 records the kind of weapon the player swings (`player_weapon`, 0 fist, 1 a weapon that is not sharp, 2 a sharp one, 3 a missile weapon) and picks the hit, miss and wall sounds from it. UW1 plays fixed effects. `FINDINGS.md` in UW1Decomp describes UW1's `do_miss`, whose test of the attacker is wrong. UnderworldGodot branches (issue #108 in its tracker).
+UW2 records the kind of weapon the player swings (`player_weapon`, 0 fist, 1 a weapon that is not sharp, 2 a sharp one, 3 a missile weapon) and picks the hit, miss and wall sounds from it. UW1 plays fixed effects. [UW1's FINDINGS.md](../uw1/docs/FINDINGS.md) describes UW1's `do_miss`, whose test of the attacker is wrong. UnderworldGodot branches (issue #108 in its tracker).
 
 ## Magic
 
@@ -212,7 +212,7 @@ UnderworldGodot was not checked entry by entry for these.
 
 The two records are different files, and nothing in one can be read with the other's layout.
 
-- **UW1.** The record is 0xD2 bytes (`src/include/player.h` in UW1Decomp), written with `sizeof(struct Player)` ([UW1 src/game/PLAYDATA.C:122](../uw1/src/game/PLAYDATA.C#L122)). It holds 32 quest bits and 4 quest bytes, the talisman count, and 64 game variables of 6 bits each (`player->game_vars`).
+- **UW1.** The record is 0xD2 bytes ([uw1/src/include/player.h](../uw1/src/include/player.h)), written with `sizeof(struct Player)` ([UW1 src/game/PLAYDATA.C:122](../uw1/src/game/PLAYDATA.C#L122)). It holds 32 quest bits and 4 quest bytes, the talisman count, and 64 game variables of 6 bits each (`player->game_vars`).
 - **UW2.** The record is 0x37D bytes ([UW2 src/game/PLAYDATA.C:101](../uw2/src/game/PLAYDATA.C#L101)). It holds 128 quest flags packed four to a long and 16 quest bytes (`quests[32]` and `quest_bytes[16]` in [player.h](../uw2/src/include/player.h)), 256 numbered variables of 16 bits, and 16 X clocks.
 - **The cipher.** In UW1 each byte is XORed with a key that starts at the file's seed plus 3, grows by 3 a byte and restarts every 0x50 bytes ([UW1 src/sys/MISCUTIL.C:268](../uw1/src/sys/MISCUTIL.C#L268)). UW2 chains each byte to the one before ([UW2 src/sys/MISCUTIL.C:304](../uw2/src/sys/MISCUTIL.C#L304)).
 
@@ -227,7 +227,7 @@ The two records are different files, and nothing in one can be read with the oth
 - **Corpses.** In world 7 UW2 always leaves remains ([UW2 src/critter/PATHFIND.C:161](../uw2/src/critter/PATHFIND.C#L161)), where UW1 leaves them 7 times in 16 ([UW1 src/critter/PATHFIND.C:161](../uw1/src/critter/PATHFIND.C#L161)).
 - **Taking owned objects.** Owners up to race 0x1B care in UW1 ([UW1 src/critter/CRITTIME.C:480](../uw1/src/critter/CRITTIME.C#L480)) and up to 0x1D in UW2 ([UW2 src/critter/CRITTIME.C:545](../uw2/src/critter/CRITTIME.C#L545)). UW2 also clears the owner of everything inside a taken container ([UW2 src/critter/CRITTIME.C:548](../uw2/src/critter/CRITTIME.C#L548)). In UW1, race 0x0D stops caring once the Knight of the Crux quest byte reaches 3 ([UW1 src/critter/CRITTIME.C:442](../uw1/src/critter/CRITTIME.C#L442)).
 - **One NPC (UW1).** On level 6, the critter with whoami 0x16 accepts no danger on its paths, as a peaceful critter does, even when hostile ([UW1 src/critter/AI.C:1389](../uw1/src/critter/AI.C#L1389)).
-- **Death cries.** UW1 decides the cry from the critter the AI processed last (a bug, see UW1Decomp's `FINDINGS.md`) ([UW1 src/critter/AI.C:1441](../uw1/src/critter/AI.C#L1441)). UW2 picks one of four cries by the dying critter's death kind ([UW2 src/critter/AI.C:1437](../uw2/src/critter/AI.C#L1437)).
+- **Death cries.** UW1 decides the cry from the critter the AI processed last (a bug, see [UW1's FINDINGS.md](../uw1/docs/FINDINGS.md)) ([UW1 src/critter/AI.C:1441](../uw1/src/critter/AI.C#L1441)). UW2 picks one of four cries by the dying critter's death kind ([UW2 src/critter/AI.C:1437](../uw2/src/critter/AI.C#L1437)).
 - **Who angers whom (UW2).** Damage from a static object counts as from nobody ([UW2 src/critter/AI.C:1484](../uw2/src/critter/AI.C#L1484)).
 - **Animation.** UW1 critters have 4 frames to every sequence and strike on frame 4 ([UW1 src/critter/AI.C:1154](../uw1/src/critter/AI.C#L1154)). UW2 looks up each sequence's length and strikes on frame 3 ([UW2 src/critter/AI.C:1127](../uw2/src/critter/AI.C#L1127)). That is engine work, but it changes the time between a swing and the hit.
 
@@ -293,7 +293,7 @@ UnderworldGodot branches the speeds.
 
 ## Conversations
 
-- **Quests.** UW1's `get_quest` and `set_quest` cover 32 quest bits ([UW1 src/conv/BABLHACK.C:215](../uw1/src/conv/BABLHACK.C#L215)), 4 quest bytes and, above those, the talisman count ([UW1 src/conv/BABLHACK.C:236](../uw1/src/conv/BABLHACK.C#L236)). UW2's cover 128 flags ([UW2 src/conv/BABLHACK.C:504](../uw2/src/conv/BABLHACK.C#L504)) and 16 bytes, and a higher number reads a byte of the record whose meaning is not known ([UW2 src/conv/BABLHACK.C:525](../uw2/src/conv/BABLHACK.C#L525)). UW1's 16-bit shift breaks quests 15 to 31 (UW1Decomp `FINDINGS.md`).
+- **Quests.** UW1's `get_quest` and `set_quest` cover 32 quest bits ([UW1 src/conv/BABLHACK.C:215](../uw1/src/conv/BABLHACK.C#L215)), 4 quest bytes and, above those, the talisman count ([UW1 src/conv/BABLHACK.C:236](../uw1/src/conv/BABLHACK.C#L236)). UW2's cover 128 flags ([UW2 src/conv/BABLHACK.C:504](../uw2/src/conv/BABLHACK.C#L504)) and 16 bytes, and a higher number reads a byte of the record whose meaning is not known ([UW2 src/conv/BABLHACK.C:525](../uw2/src/conv/BABLHACK.C#L525)). UW1's 16-bit shift breaks quests 15 to 31 ([UW1's FINDINGS.md](../uw1/docs/FINDINGS.md)).
 - **Game variables.** `x_traps` stores 0 to 0x3F in UW1 ([UW1 src/conv/BABLHACK.C:125](../uw1/src/conv/BABLHACK.C#L125)) and 0 to 0x3FF in UW2 ([UW2 src/conv/BABLHACK.C:410](../uw2/src/conv/BABLHACK.C#L410)).
 - **Skill points (UW2).** `x_skills` with a value above 10,000 spends a skill point on a random skill of a group ([UW2 src/conv/BABLHACK.C:388](../uw2/src/conv/BABLHACK.C#L388)).
 - **Who will talk.** Both games refuse to talk to a critter that is fighting the player or hostile, unless it is an ally or its goal is talk. UW1 lets whoami 0x16, 0x8E and 0xE7 talk anyway ([UW1 src/conv/CONVERSE.C:136](../uw1/src/conv/CONVERSE.C#L136)), and UW2 lets 0x8C ([UW2 src/conv/CONVERSE.C:117](../uw2/src/conv/CONVERSE.C#L117)). UW2 also refuses while time is stopped ([UW2 src/conv/CONVERSE.C:113](../uw2/src/conv/CONVERSE.C#L113)) and to a held critter ([UW2 src/conv/CONVERSE.C:106](../uw2/src/conv/CONVERSE.C#L106)). In UW1, talking to a shrine starts a mantra ([UW1 src/conv/CONVERSE.C:120](../uw1/src/conv/CONVERSE.C#L120)). In UW2, talking to a wisp starts conversation 0x30 ([UW2 src/conv/CONVERSE.C:98](../uw2/src/conv/CONVERSE.C#L98)). UnderworldGodot has the wisp, but none of the refusals (`src/conversation/conversationinitialisation.cs:47` notes this as a TODO), so it talks to hostile critters in both games.
