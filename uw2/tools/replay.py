@@ -259,7 +259,7 @@ def read_log(path):
     each run (count, value), a SOUND run (count, value, moment) from version 3 (version 4's
     repeats expanded), and the call count the recording stopped at."""
     d = open(path, 'rb').read()
-    if d[:4] != b'UW2R' or d[4] not in (2, 3, 4): raise SystemExit(f'{path}: not a version 2, 3 or 4 recording')
+    if d[:4] != b'UW2R' or d[4] not in (2, 3, 4, 5): raise SystemExit(f'{path}: not a version 2 to 5 recording')
     ver = d[4]
     stop = struct.unpack_from('<I', d, 8)[0]
     data = {}; p = 12
@@ -268,6 +268,9 @@ def read_log(path):
         data.setdefault(s, bytearray()).extend(d[p:p + n]); p += n
     out = {}
     for s, b in data.items():
+        if s == 9:                     # format 5: the enhancements, names comma-separated
+            out['ENH'] = [x for x in b.decode('ascii', 'replace').split(',') if x]
+            continue
         runs = []; q = 0; t = 0
         while q < len(b):
             if s == 7:
@@ -505,11 +508,27 @@ def nulls(d):
 STAGE = None   # --stage DIR: files (a saved game) put into the game's directory, DOS's and the port's home
 
 
+def dos_can_replay(rec):
+    """(True, '') if the DOS build can replay recording rec; else (False, why). A format 5
+    recording was made in the port with enhancements, which DOS does not have."""
+    d = open(rec, 'rb').read(15)
+    if len(d) >= 5 and d[4] == 5:
+        names = ''
+        if len(d) >= 15 and d[12] == 9:
+            n = struct.unpack_from('<H', d, 13)[0]
+            names = open(rec, 'rb').read(15 + n)[15:].decode('ascii', 'replace')
+        return False, f'{rec} was recorded in the port with enhancements ({names}); DOS cannot replay it'
+    return True, ''
+
+
 def run_dos(out, rec=None, steps=(), timeout=900, cfg=None, stage=None, log=None, backend=None, exe=None):
     """Runs the replay DOS build in tools/replaydos.mjs: records with steps, or replays rec.
     stage (default --stage's) is put into the game's directory first; log, a file the run's
     output goes to instead of the terminal; backend, replaydos's --backend (jsdos, dosbox-x;
     by default DOSBox-X for a replay when it is installed)."""
+    if rec:
+        ok, why = dos_can_replay(rec)
+        if not ok: raise SystemExit('replay.py: ' + why)
     exe = exe or build()
     stage = stage or STAGE
     cmd = ['node', os.path.join(here, 'replaydos.mjs'), exe, out, '--timeout', str(timeout)]
