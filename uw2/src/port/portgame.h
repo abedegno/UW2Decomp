@@ -59,6 +59,7 @@ extern unsigned char dseg062_62a6[];       /* seg021's data (FD71) */
 
 /* The enhancements (Exhume's runtime/port/sys/enhance.h; src/port/sys/enhtab.c): bits of
    enhance_on, in the table's order. */
-enum { ENH_SKIP_INTRO, ENH_COUNT };
+enum { ENH_SKIP_INTRO, ENH_WRAP_MENU, ENH_FAST_PANELS, ENH_FREE_HEADING, ENH_SUBTITLES,
+       ENH_SKILL_MESSAGES, ENH_COUNT };
 
 #endif
