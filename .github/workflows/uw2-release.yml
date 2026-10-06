@@ -169,7 +169,7 @@ jobs:
             libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev wayland-protocols libdecor-0-dev libegl-dev \
             libgl-dev libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev >/dev/null
       # Exhume's tools need Python 3.11 or later (tomllib); Ubuntu 22.04 has 3.10
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       # not port.yml's cache: that SDL3 is built without windows
@@ -460,7 +460,8 @@ jobs:
         shell: bash
         run: rm -rf "$RUNNER_TEMP/pkg" "$RUNNER_TEMP/uw2-assets" "$RUNNER_TEMP/uw2-ci-assets" "$RUNNER_TEMP/uw2-assets-deploy-key" dist uw2/build
   draft:
-    if: startsWith(github.ref, 'refs/tags/uw2-v')
+    # a tag push only: a run by hand, even with a tag chosen as its ref, makes no release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/uw2-v')
     needs: [macos, linux, windows, test-windows, test-macos, test-linux]
     runs-on: ubuntu-24.04
     permissions:

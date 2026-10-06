@@ -55,7 +55,7 @@ assets_comment = '''
 # bash is Git Bash and the job puts the official age build on the PATH first (accuracy.yml).'''
 release_linux_python = '''
       # Exhume's tools need Python 3.11 or later (tomllib); Ubuntu 22.04 has 3.10
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"'''
 test_full_summary = "==== test full:"
@@ -334,7 +334,7 @@ mt32_step = '''
       - name: "MT-32: how the port finds the ROMs, and soundmt's audio"
         run: |
           py=$(command -v python3 || command -v python)
-          "$py" exhume/tools/romcheck.py --exe uw1/build/port/uw1port --data "$UW1_DATA" --roms "$MT32_ROMS" --env UW1PORT_MT32_ROMS --sound 6,1
+          "$py" exhume/tools/romcheck.py --exe uw1/build/port/uw1port --data "$UW1_DATA" --roms "$MT32_ROMS" --env UW1PORT_MT32_ROMS --sound 6,1 --split "$MT32_ROMS-split"
           "$py" exhume/tools/audiocheck.py --exe uw1/build/port/uw1port --data "$UW1_DATA" --rec uw1/tests/replay/soundmt.rec --cfg uw1/tests/replay/soundmt.cfg --roms "$MT32_ROMS" --digests uw1/tests/replay/audio'''
 exhume_checkout = ""
 checkout_submodules = "          submodules: true"
@@ -627,7 +627,7 @@ mt32_step = '''
       - name: "MT-32: how the port finds the ROMs, and soundmt's audio"
         run: |
           py=$(command -v python3 || command -v python)
-          "$py" exhume/tools/romcheck.py --exe uw2/build/port/uw2port --data "$UW2_DIR" --roms "$MT32_ROMS" --env UW2PORT_MT32_ROMS --sound 5,1
+          "$py" exhume/tools/romcheck.py --exe uw2/build/port/uw2port --data "$UW2_DIR" --roms "$MT32_ROMS" --env UW2PORT_MT32_ROMS --sound 5,1 --split "$MT32_ROMS-split"
           "$py" exhume/tools/audiocheck.py --exe uw2/build/port/uw2port --data "$UW2_DIR" --rec uw2/tests/replay/soundmt.rec --cfg uw2/tests/replay/soundmt.cfg --roms "$MT32_ROMS" --digests uw2/tests/replay/audio'''
 exhume_checkout = ""
 checkout_submodules = "          submodules: true"

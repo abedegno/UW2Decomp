@@ -64,7 +64,7 @@ jobs:
       - name: "MT-32: how the port finds the ROMs, and soundmt's audio"
         run: |
           py=$(command -v python3 || command -v python)
-          "$py" exhume/tools/romcheck.py --exe uw1/build/port/uw1port --data "$UW1_DATA" --roms "$MT32_ROMS" --env UW1PORT_MT32_ROMS --sound 6,1
+          "$py" exhume/tools/romcheck.py --exe uw1/build/port/uw1port --data "$UW1_DATA" --roms "$MT32_ROMS" --env UW1PORT_MT32_ROMS --sound 6,1 --split "$MT32_ROMS-split"
           "$py" exhume/tools/audiocheck.py --exe uw1/build/port/uw1port --data "$UW1_DATA" --rec uw1/tests/replay/soundmt.rec --cfg uw1/tests/replay/soundmt.cfg --roms "$MT32_ROMS" --digests uw1/tests/replay/audio
       - name: Upload the difference pictures and logs
         if: failure()
@@ -137,7 +137,7 @@ jobs:
       - name: "MT-32: how the port finds the ROMs, and soundmt's audio"
         run: |
           py=$(command -v python3 || command -v python)
-          "$py" exhume/tools/romcheck.py --exe uw1/build/port/uw1port --data "$UW1_DATA" --roms "$MT32_ROMS" --env UW1PORT_MT32_ROMS --sound 6,1
+          "$py" exhume/tools/romcheck.py --exe uw1/build/port/uw1port --data "$UW1_DATA" --roms "$MT32_ROMS" --env UW1PORT_MT32_ROMS --sound 6,1 --split "$MT32_ROMS-split"
           "$py" exhume/tools/audiocheck.py --exe uw1/build/port/uw1port --data "$UW1_DATA" --rec uw1/tests/replay/soundmt.rec --cfg uw1/tests/replay/soundmt.cfg --roms "$MT32_ROMS" --digests uw1/tests/replay/audio
       - name: Upload the difference pictures and logs
         if: failure()
@@ -252,7 +252,7 @@ jobs:
       - name: "MT-32: how the port finds the ROMs, and soundmt's audio"
         run: |
           py=$(command -v python3 || command -v python)
-          "$py" exhume/tools/romcheck.py --exe uw1/build/port/uw1port --data "$UW1_DATA" --roms "$MT32_ROMS" --env UW1PORT_MT32_ROMS --sound 6,1
+          "$py" exhume/tools/romcheck.py --exe uw1/build/port/uw1port --data "$UW1_DATA" --roms "$MT32_ROMS" --env UW1PORT_MT32_ROMS --sound 6,1 --split "$MT32_ROMS-split"
           "$py" exhume/tools/audiocheck.py --exe uw1/build/port/uw1port --data "$UW1_DATA" --rec uw1/tests/replay/soundmt.rec --cfg uw1/tests/replay/soundmt.cfg --roms "$MT32_ROMS" --digests uw1/tests/replay/audio
       - name: Upload the difference pictures and logs
         if: failure()
