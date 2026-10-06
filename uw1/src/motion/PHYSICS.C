@@ -406,7 +406,11 @@ void far phys_affect_player(void)
     {
         PlayerHeading = PN.heading;
         h = PN.heading - (plyMoType << 14);
+#ifndef __TURBOC__
+        if ((PN.flags & 0x80) && !ENHANCED(ENH_FREE_HEADING))  /* port only: --enhance free-heading */
+#else
         if (PN.flags & 0x80)
+#endif
         {
             if (abs((int16)(PlayerFacing - h)) < 0x400)
                 PlayerFacing = h;

@@ -467,7 +467,12 @@ void far adjust_panel(void)
             init_panelflip(goal[6]);
             RightPanel = 4;
         }
+#ifndef __TURBOC__
+        /* port only: --enhance fast-panels, two steps a frame, never one past the end */
+        if (do_panel_frame() == 1 || (ENHANCED(ENH_FAST_PANELS) && do_panel_frame() == 1)) {
+#else
         if (do_panel_frame() == 1) {
+#endif
             RightPanel = setting[6] = goal[6];
             pbuf.flag = 0;
             fast_adjust &= ~0x40;

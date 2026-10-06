@@ -669,7 +669,12 @@ void far adjust_panel(void)
             init_panelflip(goal[SCR_PANEL], 0xEC, 0xC0, 0x53, 0x72);
             RightPanel = PANEL_TURNING;
         }
+#ifndef __TURBOC__
+        /* port only: --enhance fast-panels, two steps a frame, never one past the end */
+        if (do_panel_frame() == 1 || (ENHANCED(ENH_FAST_PANELS) && do_panel_frame() == 1)) {
+#else
         if (do_panel_frame() == 1) {
+#endif
             RightPanel = setting[SCR_PANEL] = goal[SCR_PANEL];
             pbuf.flag = 0;
             slow_adjust &= ~(1 << SCR_PANEL);
