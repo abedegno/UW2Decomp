@@ -353,6 +353,14 @@ int far parse_start_input(register int n, struct Button far *b, int text, int se
             result = -1;
             break;
         }
+#ifndef __TURBOC__
+        if (ENHANCED(ENH_WRAP_MENU) && n > 0) {
+            if (cur < 0)                /* port only: --enhance wrap-menu */
+                cur = n - 1;
+            else if (cur >= n)
+                cur = 0;
+        } else
+#endif
         if (cur < 0)
             cur = 0;
         else if (cur >= n)
