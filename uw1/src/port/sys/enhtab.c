@@ -4,6 +4,6 @@
 #include "sys/enhance.h"
 
 const struct enhance_flag enhance_table[ENH_COUNT] = {
-    { "skip-intro", "Starts at the main menu, without the title sequence", ENH_TIMING,
+    { "skip-intro", "Starts at the main menu, without the title or the introduction", ENH_TIMING,
       "UltimaHacks (John Glassmyer, MIT)", NULL },
 };

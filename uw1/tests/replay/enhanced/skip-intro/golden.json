@@ -8,14 +8,13 @@
  ],
  "recording": {
   "path": "tests/replay/enhanced/skip-intro/session.rec",
-  "sha256": "7d88a7dc1c72fe88bcc1216a1901e32dd8581b42651e0253e0c31e7e6e4e66fe"
+  "sha256": "170450f68e020cc8339edb94c43438a0ec0b895499429c3520d16c266a6c744d"
  },
  "checkpoints": [
   {"ck":[1,1,1,0],"secs":{"PLYR":"c538c83f9e14ddbb","RAND":"8bd8c013246aa84c","CNTS":"9beb49d3cbb37d25","GFX":"65553ae13d465e15","PAL":"563d54ecf695bde1","CRTC":"b7a81f2b97e7f8a3","VGA":"afba826fc8f2ea41"}},
   {"ck":[3,32768,3,0],"secs":{"PLYR":"c538c83f9e14ddbb","RAND":"8bd8c013246aa84c","CNTS":"1497182f8b79238d","GFX":"65553ae13d465e15","PAL":"563d54ecf695bde1","CRTC":"b7a81f2b97e7f8a3","VGA":"afba826fc8f2ea41"}},
   {"ck":[1,2,5,0],"secs":{"PLYR":"c538c83f9e14ddbb","RAND":"8bd8c013246aa84c","CNTS":"56f7a81db4abd91e","GFX":"65553ae13d465e15","PAL":"563d54ecf695bde1","CRTC":"b7a81f2b97e7f8a3","VGA":"afba826fc8f2ea41"}},
-  {"ck":[2,0,130900322,1024],"secs":{"PLYR":"c538c83f9e14ddbb","RAND":"8bd8c013246aa84c","CNTS":"cb3e673d914d3eea"}},
-  {"ck":[2,0,200278633,2048],"secs":{"PLYR":"c538c83f9e14ddbb","RAND":"8bd8c013246aa84c","CNTS":"2d2c38718b1cc859"}},
-  {"ck":[4,0,200473049,2050],"secs":{"PLYR":"c538c83f9e14ddbb","RAND":"8bd8c013246aa84c","CNTS":"0c1435a483f50ba2","GFX":"fb77e7c061094212","PAL":"64bdacbfae0c1041","CRTC":"b7a81f2b97e7f8a3","VGA":"c918954f47f59422"}}
+  {"ck":[2,0,146287677,1024],"secs":{"PLYR":"c538c83f9e14ddbb","RAND":"8bd8c013246aa84c","CNTS":"85011ded4fcb6454"}},
+  {"ck":[4,0,254763007,2047],"secs":{"PLYR":"c538c83f9e14ddbb","RAND":"8bd8c013246aa84c","CNTS":"38dd9c2bedabb6f6","GFX":"5df3d65f7ea85bea","PAL":"b338154095f7c0e0","CRTC":"b7a81f2b97e7f8a3","VGA":"73fbb50265975ced"}}
  ]
 }

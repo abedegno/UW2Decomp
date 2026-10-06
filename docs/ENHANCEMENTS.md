@@ -12,7 +12,7 @@ They are kept in the settings file (`enhance=` in `uw1port.cfg` or `uw2port.cfg`
 
 | Name | Games | Kind | What it does | From |
 |---|---|---|---|---|
-| `skip-intro` | UW1, UW2 | timing | Starts at the main menu: UW1 without its title sequence; UW2 without its title or the introduction it plays when there are no saved games (the menu's Introduction still plays it) | the idea from [UltimaHacks](https://github.com/JohnGlassmyer/UltimaHacks) |
+| `skip-intro` | UW1, UW2 | timing | Starts at the main menu, without the title or the introduction the game plays when there are no saved games (the menu's Introduction still plays it) | the idea from [UltimaHacks](https://github.com/JohnGlassmyer/UltimaHacks) |
 
 **Kinds.** *Presentation*: how the game looks or is controlled; the game itself is unchanged, which the tests prove by replaying every session with it on. *Timing*: the same game, reached by a different path or frames. *Gameplay*: the rules change; the log adds "gameplay changed".
 
