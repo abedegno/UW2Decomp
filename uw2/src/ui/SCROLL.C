@@ -314,7 +314,16 @@ void far scroll_print3(char *text, int flag)
         scroll_wrap(si, flag);
     } else {
         idx = strlen(si) - 1;
+#ifdef __TURBOC__
         if (si[idx] == '\n') {
+#else
+        /* Port only. scroll_wrap passes the "" at DS:098D, so idx is -1 and DOS reads DS:098C,
+           scroll_esc, which is only ever 0 or 1: never '\n', so DOS never takes this branch for
+           an empty string. On the host si[-1] is whatever the compiler put before the literal;
+           in one Linux build it was a '\n', and the write into read-only data crashed the game
+           in its first conversation (found by the release package tests). */
+        if (idx >= 0 && si[idx] == '\n') {
+#endif
             si[idx] = 0;
             scroll->more_pending = 1;
         }
