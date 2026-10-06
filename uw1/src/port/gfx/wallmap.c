@@ -4,6 +4,9 @@
    C below its source line; the comments before a routine are the .ASM file's. */
 #include "x86/asmrt.h"
 
+#include "portgame.h"
+#include "sys/enhance.h"     /* ENHANCED: perspective */
+void persp_walk(int wall);               /* gfx/perspmap.c */
 static int asm_jcc(uint8_t op)
 {
     switch (op & 0x0F) {
@@ -785,6 +788,8 @@ L01F4:
     ;
 L01F5:
     /* 01F5  mov     ax,0Eh */
+    /* by hand: gfx_texture_poly_affine's body, after the stack switch: --enhance perspective walks the face perspective-correctly in gfx/perspmap.c (uwpatch's) and leaves by the original's exit */
+    if (ENHANCED(ENH_PERSPECTIVE)) { persp_walk(0); goto L0363; }  /* gfx/perspmap.c, uwpatch's */
     AX = 0xE;
 L01F8:
     /* 01F8  mov     ax,cx */

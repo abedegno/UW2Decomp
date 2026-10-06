@@ -4,6 +4,9 @@
    C below its source line; the comments before a routine are the .ASM file's. */
 #include "x86/asmrt.h"
 
+#include "portgame.h"
+#include "sys/enhance.h"     /* ENHANCED: perspective */
+void persp_walk(int wall);               /* gfx/perspmap.c */
 static int asm_jcc(uint8_t op)
 {
     switch (op & 0x0F) {
@@ -825,6 +828,8 @@ L056A:
     ;
 L056B:
     /* 056B  mov     ax,cx */
+    /* by hand: gfx_texture_poly_wall's body: as at WALLMAP 01F5, under the wall mapper's rules */
+    if (ENHANCED(ENH_PERSPECTIVE)) { persp_walk(1); goto L0898; }  /* gfx/perspmap.c, uwpatch's */
     AX = CX;
 L056D:
     /* 056D  shl     ax,1 */
