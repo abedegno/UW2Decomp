@@ -4,6 +4,8 @@
    C below its source line; the comments before a routine are the .ASM file's. */
 #include "x86/asmrt.h"
 
+#include "portgame.h"
+#include "sys/enhance.h"     /* ENHANCED */
 static int asm_jcc(uint8_t op)
 {
     switch (op & 0x0F) {
@@ -1269,6 +1271,8 @@ L50AC:
     goto L50DF;
 L50AE: /* L50AE */
     /* 50AE  or      bx,bx */
+    /* by hand: the classifier's depth test: --enhance perspective maps every polygon that is not flat to the view (a floor or ceiling once the view pitches, a model) perspective-correctly (AX = 2), where the original maps it linearly when its depth varies by less than double; walls still take their vertical columns below (L50CE) */
+    if (ENHANCED(ENH_PERSPECTIVE)) goto L50C9;  /* perspective, never linear */
     BX = logic16((uint16_t)(BX | BX));
 L50B0:
     /* 50B0  js      short L50C9 */

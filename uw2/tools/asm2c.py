@@ -73,6 +73,13 @@ CODESEGS = {'seg003_0272': (0x0085, 'CODE003'), 'seg004_0849': (0x065C, 'CODE004
 # C written by hand for one instruction: (module, address) -> (C, why). The C replaces the
 # instruction's own; `next` falls through to the next instruction.
 OVERRIDES = {
+    ('PROJPOLY', 0x50AE): (
+        'if (ENHANCED(ENH_PERSPECTIVE)) goto L50C9;  /* perspective, never linear */\n'
+        'BX = logic16((uint16_t)(BX | BX));',
+        "the classifier's depth test: --enhance perspective maps every polygon that is not flat to the "
+        "view (a floor or ceiling once the view pitches, a model) perspective-correctly (AX = 2), where "
+        "the original maps it linearly when its depth varies by less than double; walls still take their "
+        "vertical columns below (L50CE)"),
     ('TMAPOPS', 0x3FD7): (
         'if (ENHANCED(ENH_FULL_SPRITES)) { AX = (uint16_t)(AX >> 1); DX = AX; }  /* the view level, as UltimaHacks */\n'
         'else imul16(rw(pDS, 0x14BA));',
@@ -905,7 +912,7 @@ def write_module(mod, patched, check):
     o.append('')
     if name == 'PGCACHE': o.append('extern unsigned char Palettes[];         /* LOADGR.C */')
     if name == 'TMAPOPS': o.append('uint32_t port_sprite_draw(void);        /* 3d/render.c */')
-    if name in ('TMAPOPS', 'TEXMAP'): o.extend(['#include "portgame.h"', '#include "sys/enhance.h"     /* ENHANCED */'])
+    if name in ('TMAPOPS', 'TEXMAP', 'PROJPOLY'): o.extend(['#include "portgame.h"', '#include "sys/enhance.h"     /* ENHANCED */'])
     o.append('static int asm_jcc(uint8_t op)')
     o.append('{')
     o.append('    switch (op & 0x0F) {')
