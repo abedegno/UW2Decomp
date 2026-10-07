@@ -31,6 +31,9 @@
 
 #include <dos.h>
 #include <stdlib.h>
+#ifndef __TURBOC__
+#include <stdio.h>
+#endif
 #include "conv.h"
 #include "critter.h"
 #include "event.h"
@@ -262,13 +265,26 @@ int port_setpnt(char x, char y, char z)
     return SetPnt(x, y, z);
 }
 
-/* the queue guard: 1 when the render database is within 0x300 bytes of its end, the label _dblen
-   (FARDATA.ASM; UltimaHacks' enqueueDrawBlock keeps the same 0x300 back from the same address,
-   assuming no square adds more). The two passes queue more than the original's one, which never
-   comes near it. */
+/* the queue guard: 1 when a square may not be queued. The render database ends at the label _dblen
+   (FARDATA.ASM); the original's one pass never comes near it, the two passes queue more (measured
+   at most 6850 of the 15362 bytes after DbEntry in UW2, the back pass 2292). The back pass may use
+   a quarter of the space, so that the view ahead, queued after it, always has the rest; the view
+   ahead stops 0x300 bytes short of the end, as UltimaHacks' enqueueDrawBlock does (assuming no
+   square adds more). Rows are queued far to near, so what a full queue drops behind the player is
+   the nearest squares there, which the view ahead mostly covers. Reported once on stderr. */
 int port_queue_full(void)
 {
-    return port_two_passes && (char far *)dbptr > (char far *)&_dblen - 0x300;
+    static int told;
+    char far *end = (char far *)&_dblen;
+    char far *limit = port_drawing_behind ? (char far *)DbEntry + (end - (char far *)DbEntry) / 4 : end - 0x300;
+    if (!port_two_passes || (char far *)dbptr <= limit)
+        return 0;
+    if (!told) {
+        fprintf(stderr, "wide-pitch: the render queue is full; squares %s are left out\n",
+                port_drawing_behind ? "behind the player" : "ahead");
+        told = 1;
+    }
+    return 1;
 }
 
 /* the view's edge rays (init_grid's, heading -+ 0x2040) opened to a right angle either side: the

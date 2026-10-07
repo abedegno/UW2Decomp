@@ -756,6 +756,12 @@ void far moveMouse(void)
     if (_actual_mhide())
         mouse_saved = 0;
 #ifndef __TURBOC__
+    if (look_on && !(inplist->mode & 0x11)) {
+        /* port only: the view gone without change_screen (real_death sets the mode itself, for
+           the main menu): mouse-look off, remembered for the view's return, so the pointer moves */
+        look_was = 1;
+        mouse_look_set(0);
+    }
     if (look_on) {                      /* port only: mouse-look turns the view instead */
         mouse_look_step(dx, dy);
         dx = dy = 0;
