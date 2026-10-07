@@ -19,6 +19,7 @@
 #include "sound/mt32roms.h"
 #include "sys/enhance.h"
 #include "sys/inscript.h"
+#include "ui/settings.h"
 
 extern const struct enhance_flag enhance_table[];   /* src/port/sys/enhtab.c */
 
@@ -321,6 +322,17 @@ static int home_dir(const char *p)
     return stat(p, &st) == 0 && S_ISDIR(st.st_mode) ? 0 : -1;
 }
 
+/* The settings screen's table (ui/settings.h): two rows for now, the volume and the window's
+   full screen, which show the live options at work. */
+static int disp_scale, disp_aspect, disp_integer;
+static void set_fullscreen(int on) { plat_set_display(on, disp_scale, disp_aspect, disp_integer); }
+static const struct setting settings_table[] = {
+    { .tab = SET_TAB_SOUND, .label = "Volume", .kind = SET_SLIDER, .key = "volume", .lo = 0, .hi = 100, .step = 10,
+      .def = 100, .apply = audio_set_volume },
+    { .tab = SET_TAB_DISPLAY, .label = "Full screen", .kind = SET_BOOL, .key = "fullscreen", .def = 0,
+      .apply = set_fullscreen },
+};
+
 int main(int argc, char *argv[])
 {
     static char home_buf[1024], exe[1200], data_buf[1024], abs_buf[1024];
@@ -333,6 +345,7 @@ int main(int argc, char *argv[])
     int i, dropped = 0, first_run = 0;
     const char *enh_on[16], *enh_off[16];   /* --enhance and --no-enhance lists, in order */
     int n_on = 0, n_off = 0, enh_list = 0;
+    int cl_scale = 0, cl_aspect = 0, cl_integer = 0;   /* given on the command line: the settings file does not override them */
     const char *input_script = NULL;    /* --input-script: keys and mouse at set times (inscript.c) */
     static char spec_buf[16];
 
@@ -348,9 +361,9 @@ int main(int argc, char *argv[])
         const char *a = argv[i];
         if (!strcmp(a, "--data") && i + 1 < argc) data = argv[++i];
         else if (!strcmp(a, "--home") && i + 1 < argc) home = argv[++i];
-        else if (!strcmp(a, "--scale") && i + 1 < argc) cfg.scale = atoi(argv[++i]);
-        else if (!strcmp(a, "--no-aspect")) cfg.aspect = 0;
-        else if (!strcmp(a, "--no-integer")) cfg.integer_scale = 0;
+        else if (!strcmp(a, "--scale") && i + 1 < argc) { cfg.scale = atoi(argv[++i]); cl_scale = 1; }
+        else if (!strcmp(a, "--no-aspect")) { cfg.aspect = 0; cl_aspect = 1; }
+        else if (!strcmp(a, "--no-integer")) { cfg.integer_scale = 0; cl_integer = 1; }
         else if (!strcmp(a, "--mouse") && i + 1 < argc && (!strcmp(argv[i + 1], "follow") || !strcmp(argv[i + 1], "lock")))
             mouse = argv[++i];
         else if (!strcmp(a, "--hidden")) cfg.hidden = 1;
@@ -395,7 +408,7 @@ int main(int argc, char *argv[])
         return 0;
     }
     /* a bad input script stops the run before anything is written */
-    if (input_script && inscript_load(input_script, kbd_byte, mouse_event) < 0) return 1;
+    if (input_script && inscript_load(input_script, plat_key_byte, mouse_event) < 0) return 1;
     if (!home) {
         const char *h = getenv("HOME");
 #ifdef _WIN32
@@ -430,6 +443,16 @@ int main(int argc, char *argv[])
     else if (!mouse && port_config_get(home, "mouse", mouse_buf, sizeof mouse_buf) == 0)
         mouse = mouse_buf;
     cfg.mouse_lock = mouse && !strcmp(mouse, "lock");
+    {
+        /* the settings file's display and sound options; the command line's win */
+        char v[16];
+        if (!cl_scale && port_config_get(home, "scale", v, sizeof v) == 0 && atoi(v) > 0) cfg.scale = atoi(v);
+        if (!cl_aspect && port_config_get(home, "aspect", v, sizeof v) == 0) cfg.aspect = atoi(v) != 0;
+        if (!cl_integer && port_config_get(home, "integer", v, sizeof v) == 0) cfg.integer_scale = atoi(v) != 0;
+        if (port_config_get(home, "fullscreen", v, sizeof v) == 0) cfg.fullscreen = atoi(v) != 0;
+        if (port_config_get(home, "volume", v, sizeof v) == 0) audio_set_volume(atoi(v));
+        disp_scale = cfg.scale; disp_aspect = cfg.aspect; disp_integer = cfg.integer_scale;
+    }
     {
         /* --enhance mouse-look's speed, a percentage of the original's scale (mousedrv.c) */
         char ls[16];
@@ -522,6 +545,7 @@ int main(int argc, char *argv[])
 #else
     unsetenv("UWHOME");
 #endif
+    settings_init(home, settings_table, (int)(sizeof settings_table / sizeof settings_table[0]), "Ultima Underworld");
     pit_start();
     memset(&hooks, 0, sizeof hooks);
     hooks.scanout = vga_scanout;
