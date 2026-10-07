@@ -195,6 +195,9 @@ extensions = ["src/port/sound/tvfx.c"]
 # the graphics engine's data (seg048 in UW1, seg003 in UW2): the renderer's working memory, which a
 # rendering enhancement changes by design; enhcheck.py presentation ignores it with the screen
 renderer_sections = ["GFX"]
+# the colour the hole probe (enhcheck.py holes, UW1PORT_HOLE_PROBE) clears the 3D view to: one no
+# session's frames draw
+hole_mark = 42
 # the session enhcheck.py coverage replays to prove --enhance perspective covers the original
 # mappers' pixels exactly (UW1PORT_TEXTURE_PROBE; src/port/gfx/perspmap.c)
 coverage_session = "walk"

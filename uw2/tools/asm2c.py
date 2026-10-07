@@ -73,6 +73,10 @@ CODESEGS = {'seg003_0272': (0x0085, 'CODE003'), 'seg004_0849': (0x065C, 'CODE004
 # C written by hand for one instruction: (module, address) -> (C, why). The C replaces the
 # instruction's own; `next` falls through to the next instruction.
 OVERRIDES = {
+    ('GRENTRY', 0x06E2): (
+        'AX = (uint16_t)(port_hole_mark() >= 0 ? port_hole_mark() * 0x101 : 0);',
+        "clear_fbuf's xor ax,ax: the colour the 3D view is cleared to, 0; with the hole probe (a test, "
+        "gfx/holeprobe.c) its byte, so that uncovered pixels show"),
     ('PROJPOLY', 0x50AE): (
         'if (ENHANCED(ENH_PERSPECTIVE)) goto L50C9;  /* perspective, never linear */\n'
         'BX = logic16((uint16_t)(BX | BX));',
@@ -912,6 +916,7 @@ def write_module(mod, patched, check):
     o.append('')
     if name == 'PGCACHE': o.append('extern unsigned char Palettes[];         /* LOADGR.C */')
     if name == 'TMAPOPS': o.append('uint32_t port_sprite_draw(void);        /* 3d/render.c */')
+    if name == 'GRENTRY': o.append('int port_hole_mark(void);                /* gfx/holeprobe.c */')
     if name in ('TMAPOPS', 'TEXMAP', 'PROJPOLY'): o.extend(['#include "portgame.h"', '#include "sys/enhance.h"     /* ENHANCED */'])
     o.append('static int asm_jcc(uint8_t op)')
     o.append('{')

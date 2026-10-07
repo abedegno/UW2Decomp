@@ -53,6 +53,10 @@ CODESEGS = {'seg000': (0x0000, 'CODE000'), 'seg001': (0x004E, 'CODE001'), 'seg00
 # C written by hand for one instruction, (module, address) -> (C, why).
 FAR_FROM_C = '{{ unsigned s_, o_; port_fp_split_recent({p}, &s_, &o_); {reg} = (uint16_t)o_; SET_{sreg}(s_); }}'
 OVERRIDES = {
+    ('GRENTRY', 0x0A46): (
+        'AX = (uint16_t)(port_hole_mark() >= 0 ? port_hole_mark() * 0x101 : 0);',
+        "clear_fbuf's xor ax,ax: the colour the 3D view is cleared to, 0; with the hole probe (a test, "
+        "gfx/holeprobe.c) its byte, so that uncovered pixels show"),
     ('WALLMAP', 0x02E9): (
         'wb(pES, DI, persp_probe() ? persp_probe_colour : rb(pDS, SI)); SI = (uint16_t)(SI + STEP(1)); DI = (uint16_t)(DI + STEP(1));',
         "movsb, the affine mapper's texel: with UW1PORT_TEXTURE_PROBE (a test), the face's colour (gfx/perspmap.c)"),
@@ -135,6 +139,7 @@ HANDWRITTEN = {
 }
 # The C names the overrides use, declared in their modules' files.
 EXTERNS = {
+    'GRENTRY': ['int port_hole_mark(void);                /* gfx/holeprobe.c */'],
     'WALLMAP': ['#include "portgame.h"', '#include "sys/enhance.h"     /* ENHANCED: perspective */', 'void persp_walk(int wall);               /* gfx/perspmap.c */', 'int persp_probe(void);', 'void persp_probe_next(void);', 'extern uint8_t persp_probe_colour;'],
     'POLYFILL': ['#include "portgame.h"', '#include "sys/enhance.h"     /* ENHANCED: perspective */', 'void persp_walk(int wall);               /* gfx/perspmap.c */', 'int persp_probe(void);', 'void persp_probe_next(void);', 'extern uint8_t persp_probe_colour;'],
     'TMAPOPS': ['#include "portgame.h"', '#include "sys/enhance.h"     /* ENHANCED: full-sprites */'],

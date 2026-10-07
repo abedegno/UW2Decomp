@@ -1,0 +1,18 @@
+# wide-pitch: from the menu, load the saved game the items session writes; look as far down as
+# the pitch goes (past the original's limit), turn a full circle and walk on; then the same looking
+# all the way up. Turning and walking at a steep pitch is where the view ahead alone leaves holes
+# (enhcheck.py holes)
+3000 key enter         # Journey Onward
+4500 key enter         # the first saved game
+10000 down 1
+13000 down d           # turn right
+21000 up d
+21500 down w           # walk on
+27000 up w
+27500 up 1
+28000 down 3
+31000 down a           # turn left
+39000 up a
+39500 down w
+45000 up w
+45500 up 3

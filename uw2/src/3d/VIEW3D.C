@@ -241,6 +241,111 @@ void far reset_db(void)
     dbptr = DbEntry;
 }
 
+#ifndef __TURBOC__
+/* Port only: --enhance wide-pitch's view beyond the original's pitch (UltimaHacks'
+   setupPerspectiveAndEnqueueDraw, in our names). Two passes into the one render database: first
+   what is behind the player, the grid built with the heading turned by half a turn and kept to a
+   small diamond of squares, without their objects, each SetPnt turned back into the forward
+   frame (port_setpnt); then the view ahead, its edge rays opened to a right angle either side and
+   the squares beyond 45 degrees of the heading dropped unless within five squares. */
+int port_hole_mark(void);
+void port_hole_report(const unsigned char *fb, unsigned len, int pitch);
+void far init_grid(void);
+void far build_grid(void);
+
+int port_drawing_behind;                /* the back pass is queuing (GRIDDB.C's SetPnt, do_objsort) */
+int port_two_passes;                    /* either pass is (GRIDDB.C's queue guard) */
+
+int port_setpnt(char x, char y, char z)
+{
+    if (port_drawing_behind) return SetPnt((char)(33 - x), (char)(1 - y), z);
+    return SetPnt(x, y, z);
+}
+
+/* the queue guard: 1 when the render database is within 0x300 bytes of its end, the label _dblen
+   (FARDATA.ASM; UltimaHacks' enqueueDrawBlock keeps the same 0x300 back from the same address,
+   assuming no square adds more). The two passes queue more than the original's one, which never
+   comes near it. */
+int port_queue_full(void)
+{
+    return port_two_passes && (char far *)dbptr > (char far *)&_dblen - 0x300;
+}
+
+/* the view's edge rays (init_grid's, heading -+ 0x2040) opened to a right angle either side: the
+   sines -0x7FFF and 0x7FFF, cosines 0, scaled as init_grid scales its own (>> 4) */
+static void open_rays(void)
+{
+    gvecs[0].dx = -0x800;
+    gvecs[0].dy = 0;
+    gvecs[1].dx = 0x7FF;
+    gvecs[1].dy = 0;
+}
+
+/* keep row 0 within 3 columns of the eye, row 1 within 5, row 2 within 3; the rest dropped */
+static void cull_rearward(void)
+{
+    int row, col;
+    for (row = 0; row < 17; row++)
+        for (col = -16; col <= 16; col++) {
+            int lim = row == 0 ? 3 : row == 1 ? 5 : row == 2 ? 3 : -1;
+            if (col > lim || col < -lim) glocs[row][col + 16].flags = 0;
+        }
+}
+
+/* drop the squares outside 45 degrees of the heading, unless |column| + row <= 5 */
+static void cull_forward(void)
+{
+    int16 la = (int16)(cPlayer->heading - 0x2000), ra = (int16)(cPlayer->heading + 0x2000);
+    int16 ls, lc, rs, rc;
+    int row, col;
+    cSinCos(la, &ls, &lc);
+    cSinCos(ra, &rs, &rc);
+    for (row = 0; row < 17; row++) {
+        int left = la > -0x3F00 ? (int16)((int32)(row + 1) * ls / lc) - 1 : -16;
+        int right = ra < 0x3F00 ? (int16)((int32)(row + 1) * rs / rc) + 1 : 16;
+        if (left < -16) left = -16;
+        if (right > 16) right = 16;
+        for (col = -16; col <= 16; col++)
+            if (abs(col) + row > 5 && (col < left || col > right)) glocs[row][col + 16].flags = 0;
+    }
+}
+
+static void port_view_passes(void)
+{
+    reset_db();
+    port_two_passes = 1;
+    port_drawing_behind = 1;            /* behind: turned half round, the eye mirrored in its square */
+    PlayerFacing += 0x8000;
+    setup_vars();
+    cPlayer->x = (int16)(0xFF - cPlayer->x);
+    cPlayer->y = (int16)(0xFF - cPlayer->y);
+    init_grid();
+    open_rays();
+    build_grid();
+    cull_rearward();
+    process_grid();
+    PlayerFacing += 0x8000;             /* ahead: as the original, the rays opened and culled */
+    port_drawing_behind = 0;
+    setup_vars();
+    init_grid();
+    open_rays();
+    build_grid();
+    cull_forward();
+    MousQUp(0);
+    process_grid();
+    port_two_passes = 0;
+}
+
+/* the back pass is wanted: wide-pitch on and the pitch beyond the original's; a test switch,
+   UW2PORT_NO_BACK_PASS (Exhume's tools/enhcheck.py holes), leaves it out to show the holes it fills */
+static int port_steep(void)
+{
+    static int off = -1;
+    if (off < 0) off = getenv("UW2PORT_NO_BACK_PASS") != NULL;
+    return !off && ENHANCED(ENH_WIDE_PITCH) && (PlayerPitch > 0x1000 || PlayerPitch < -0x1000);
+}
+#endif
+
 /* Run the database: render into the frame buffer with the clip window set to the
    view, and copy the frame buffer to the screen. The window is put back to the full
    320x200 screen afterwards. */
@@ -272,9 +377,19 @@ void far do_3d_grab(void)
 
 void far render_FB(void)
 {
+#ifndef __TURBOC__
+    if (port_steep())                   /* port only: --enhance wide-pitch beyond the original's pitch */
+        port_view_passes();
+    else {
+        setup_vars();
+        reset_db();
+        do_2dclip();
+    }
+#else
     setup_vars();
     reset_db();
     do_2dclip();
+#endif
     gr_putlab(0xA0);
     *dbptr++ = 0;
     set_the_window(0, xhgt - 1, xwid - 1, 0);
@@ -286,6 +401,13 @@ void far render_FB(void)
 void far establish_view(void)
 {
     strtime = GAME_TIME();
+#ifndef __TURBOC__
+    if (port_steep()) {                 /* port only: --enhance wide-pitch beyond the original's pitch */
+        port_view_passes();
+        gr_putlab(0xA0);
+        *dbptr++ = 0;
+    } else
+#endif
     if (setup_vars()) {
         reset_db();
         do_2dclip();
@@ -293,6 +415,10 @@ void far establish_view(void)
         *dbptr++ = 0;
     }
     send_db();
+#ifndef __TURBOC__
+    if (port_hole_mark() >= 0)          /* port only: the hole probe's count (holeprobe.c) */
+        port_hole_report((const unsigned char far *)stdat, 0x69D6, PlayerPitch);
+#endif
 }
 
 /* Turn the camera into the first quadrant: the grid code only looks one way. The

@@ -4,6 +4,7 @@
    C below its source line; the comments before a routine are the .ASM file's. */
 #include "x86/asmrt.h"
 
+int port_hole_mark(void);                /* gfx/holeprobe.c */
 static int asm_jcc(uint8_t op)
 {
     switch (op & 0x0F) {
@@ -758,7 +759,8 @@ uint32_t asm_mod_GRENTRY(uint16_t entry)
        clear_fbuf (FM Towns): fill the frame buffer with colour 0 (falls into _A48). */
 L0A46: /* _seg003_A46 */
     /* 0A46  xor     ax,ax */
-    AX = (uint16_t)(AX ^ AX);
+    /* by hand: clear_fbuf's xor ax,ax: the colour the 3D view is cleared to, 0; with the hole probe (a test, gfx/holeprobe.c) its byte, so that uncovered pixels show */
+    AX = (uint16_t)(port_hole_mark() >= 0 ? port_hole_mark() * 0x101 : 0);
 
     /* seg003_A48  (+A48)
        fill_fbuf (far, cFillFB): AL = the colour. Fills 2667h words of the frame buffer segment from
