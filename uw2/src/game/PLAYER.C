@@ -33,6 +33,15 @@
 #include "ui.h"
 #include "view3d.h"
 #ifndef __TURBOC__
+void far port_key_attack(int type);      /* ui/keys.c, port only */
+void far port_key_panel(int panel);
+void far port_key_interact(int use);
+void far port_key_open_map(void);
+void far port_key_bag(int how);
+void far port_key_compass(void);
+void far port_key_flasks(void);
+void far port_key_pitch(int dir);
+void far port_key_rune(int ch);
 void far port_mouse_look_toggle(void);    /* ui/MOUSE.C, port only */
 #endif
 
@@ -181,6 +190,40 @@ void far init_player(void)
     if (ENHANCED(ENH_MOUSE_LOOK))       /* port only: --enhance mouse-look's toggle (ui/MOUSE.C) */
         _input_addkey('`', 0, 0x11, (InputFn)port_mouse_look_toggle);
 #endif
+#ifndef __TURBOC__
+    if (ENHANCED(ENH_MODERN_KEYS)) {   /* port only: UltimaHacks' keys (ui/keys.c), its input-mode masks */
+        _input_addkey(' ', 0, 1, (InputFn)port_key_attack);
+        _input_addkey('.', 3, 1, (InputFn)port_key_attack);
+        _input_addkey(';', 6, 1, (InputFn)port_key_attack);
+        _input_addkey('p', 9, 1, (InputFn)port_key_attack);
+        _input_addkey('r', 1, 1, (InputFn)port_key_panel);
+        _input_addkey('f', 2, 1, (InputFn)port_key_panel);
+        _input_addkey('q', 0, 1, (InputFn)port_key_interact);
+        _input_addkey('e', 1, 1, (InputFn)port_key_interact);
+        _input_addkey('z', 0, 1, (InputFn)port_key_open_map);
+        _input_addkey('c', 0, 1, (InputFn)port_key_bag);
+        _input_addkey('v', 1, 1, (InputFn)port_key_bag);
+        _input_addkey('b', 2, 1, (InputFn)port_key_bag);
+        _input_addkey('g', 0, 1, (InputFn)port_key_compass);
+        _input_addkey('h', 0, 1, (InputFn)port_key_flasks);
+        _input_addkey(KEY_CTRL | 0xA6, 0, 1, (InputFn)player_simple_move);      /* the grey arrows */
+        _input_addkey(KEY_CTRL | 0xAB, -2, 1, (InputFn)player_simple_move);
+        _input_addkey(KEY_CTRL | 0xA8, -1, 1, (InputFn)player_simple_move);
+        _input_addkey(KEY_CTRL | 0xA9, 1, 1, (InputFn)player_simple_move);
+        _input_addkey('1', 1, 0x11, (InputFn)port_key_pitch);
+        _input_addkey(0xA6, 1, 0x11, (InputFn)port_key_pitch);
+        _input_addkey('3', -1, 0x11, (InputFn)port_key_pitch);
+        _input_addkey(0xAB, -1, 0x11, (InputFn)port_key_pitch);
+        _input_addkey(KEY_PAD5, 0, 0x11, (InputFn)port_key_pitch);
+    }
+    if (ENHANCED(ENH_RUNE_KEYS)) {     /* port only: the rune keys (ui/keys.c) */
+        int c;
+        for (c = 'a'; c <= 'y'; c++)
+            _input_addkey(KEY_CTRL | KEY_ALT | c, c, 0x11, (InputFn)port_key_rune);
+        _input_addkey(KEY_CTRL | KEY_ALT | 8, 8, 0x11, (InputFn)port_key_rune);
+        _input_addkey(KEY_CTRL | KEY_ALT | ' ', ' ', 0x11, (InputFn)port_key_rune);
+    }
+#endif
     _input_addkey('j', 7, 0x1B, (InputFn)parse_playin);
     _input_addkey('J', 6, 0x1B, (InputFn)parse_playin);
     _input_addkey(KEY_F7, 0, 0x1B, (InputFn)pull_chain);
@@ -199,8 +242,17 @@ void far init_player(void)
     _input_addkey(KEY_F5, 2, 1, (InputFn)deal_with_icons);
     _input_addkey(KEY_F1, 1, 1, (InputFn)deal_with_icons);
     _input_addkey(KEY_F2, 0, 1, (InputFn)deal_with_icons);
+#ifndef __TURBOC__
+    if (!ENHANCED(ENH_MODERN_KEYS))     /* port only: modern-keys remembers the attack type */
+#endif
     _input_addkey('p', 9, 1, (InputFn)player_attack);
+#ifndef __TURBOC__
+    if (!ENHANCED(ENH_MODERN_KEYS))     /* port only: modern-keys remembers the attack type */
+#endif
     _input_addkey('.', 3, 1, (InputFn)player_attack);
+#ifndef __TURBOC__
+    if (!ENHANCED(ENH_MODERN_KEYS))     /* port only: modern-keys remembers the attack type */
+#endif
     _input_addkey(';', 6, 1, (InputFn)player_attack);
     _input_addkey(KEY_SHIFT | KEY_BACKTAB, KEY_SHIFT | KEY_BACKTAB, 7, (InputFn)keyboard_mouse);
     _input_addkey('\t', '\t', 7, (InputFn)keyboard_mouse);

@@ -93,10 +93,21 @@ static int16 map_mouse;
 
 /* Opens the map screen: registers its key handler once, plays theme 0xD, saves the
    current level's map and shows it, and adds the mouse handler (map_mouse). */
+#ifndef __TURBOC__
+void far port_map_key(int how);
+#endif
+
 void far AutoMap(void)
 {
     if (!registered) {
         _input_addkey(KEY_ESC, MODE_GAME, MODE_MAP, (InputFn)newscr);
+#ifndef __TURBOC__
+        if (ENHANCED(ENH_MODERN_KEYS)) {     /* port only: modern-keys' map keys */
+            _input_addkey('s', 1, MODE_MAP, (InputFn)port_map_key);
+            _input_addkey('w', -1, MODE_MAP, (InputFn)port_map_key);
+            _input_addkey('c', 2, MODE_MAP, (InputFn)port_map_key);
+        }
+#endif
         registered = 1;
     }
     set_new_music(MUSIC_MAPS);
@@ -661,3 +672,16 @@ void far automap_scr(void)
     loop_music_maybe();
 }
 
+#ifndef __TURBOC__
+/* --enhance modern-keys' map keys (UltimaHacks' mapControl, John Glassmyer, MIT): S a level on
+   (as the map's 0xFB button), W a level back (its 0xFC button), C the player's own level */
+void far port_map_key(int how)
+{
+    if (how == 1 && level < 0x63)
+        ChangeAutoMapLevel(level + 1);
+    else if (how == -1 && level > 1)
+        ChangeAutoMapLevel(level - 1);
+    else if (how == 2 && level != PlayerLevel)
+        ChangeAutoMapLevel(PlayerLevel);
+}
+#endif

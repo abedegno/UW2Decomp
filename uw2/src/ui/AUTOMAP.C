@@ -74,6 +74,10 @@ static int16 map_mouse;
    level's map, and shows this level, or without a map of it (player->automap clear) the
    level of the last map scrap read (player->map_scrap; its high bit marks a scrap to
    switch to). Walking music plays if none of the map themes is. */
+#ifndef __TURBOC__
+void far port_map_key(int how);
+#endif
+
 void far AutoMap(void)
 {
     char noauto;
@@ -81,6 +85,15 @@ void far AutoMap(void)
     noauto = !player->automap;
     if (!registered) {
         _input_addkey(KEY_ESC, 1, 2, (InputFn)newscr);
+#ifndef __TURBOC__
+        if (ENHANCED(ENH_MODERN_KEYS)) {     /* port only: modern-keys' map keys */
+            _input_addkey('s', 1, 2, (InputFn)port_map_key);
+            _input_addkey('w', -1, 2, (InputFn)port_map_key);
+            _input_addkey('c', 2, 2, (InputFn)port_map_key);
+            _input_addkey('d', 3, 2, (InputFn)port_map_key);
+            _input_addkey('a', 4, 2, (InputFn)port_map_key);
+        }
+#endif
         map_mouse = input_addmouse(0, 0, 0x13F, 0xC7, 0, 2, (InputFn)ManageDungeonMap);
         registered = 1;
     }
@@ -936,3 +949,25 @@ void far make_terrain_unseen(int x, int y, unsigned w, unsigned h)
         }
     }
 }
+
+#ifndef __TURBOC__
+/* --enhance modern-keys' map keys (UltimaHacks' mapControl, John Glassmyer, MIT): S a level on
+   within the world (as the map's 0xFB button), W a level back (its 0xFC button), C the player's
+   own level, D and A the previous and next world at the same depth (UltimaHacks'
+   adjacentRealmTable: from each world, the previous one and the next) */
+static const unsigned char adjacent_world[9][2] = {
+    { 8, 1 }, { 0, 2 }, { 1, 3 }, { 2, 4 }, { 3, 5 }, { 4, 7 }, { 7, 8 }, { 5, 6 }, { 6, 0 }
+};
+
+void far port_map_key(int how)
+{
+    if (how == 1 && (level & 7))
+        ChangeAutoMapLevel(level + 1);
+    else if (how == -1 && (level & 7) != 1)
+        ChangeAutoMapLevel(level - 1);
+    else if (how == 2 && level != PlayerLevel)
+        ChangeAutoMapLevel(PlayerLevel);
+    else if (how == 3 || how == 4)
+        ChangeAutoMapLevel((adjacent_world[(level - 1) >> 3][how - 3] << 3) + ((level - 1) & 7) + 1);
+}
+#endif
