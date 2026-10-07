@@ -17,6 +17,36 @@ Windows packages only: the compiler's runtime from MSYS2's CLANG64 environment (
 
 Linux AppImage only: the AppImage type 2 runtime, release 20251108 (https://github.com/AppImage/type2-runtime, MIT licence, Copyright (c) 2004-23 probonopd), the small program at the start of the .AppImage file that mounts the rest and starts the port. It is a static executable that contains musl libc (MIT), libfuse 3 (GNU Lesser General Public License, version 2.1), squashfuse (BSD 2-clause) and zstd and zlib (BSD and zlib licences). appimagetool 1.9.1 (MIT) puts it there; appimagetool itself is not shipped. The runtime's source and build scripts at that release are in third-party-sources.tar.gz too, and running the AppImage with --appimage-extract unpacks the AppImage into a folder that runs without the runtime, so you may replace it, libfuse included, with your own build.
 
+COMPILED INTO THE PROGRAM
+
+Spleen 8x16 (https://github.com/fcambus/spleen)
+The bitmap font of the settings screen, compiled into the program as a table of glyphs (Exhume's runtime/port/ui/font.c, generated from the BDF file in runtime/port/ui/third_party/). BSD 2-Clause licence:
+
+Copyright (c) 2018-2026, Frederic Cambus
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+  * Redistributions of source code must retain the above copyright
+    notice, this list of conditions and the following disclaimer.
+
+  * Redistributions in binary form must reproduce the above copyright
+    notice, this list of conditions and the following disclaimer in the
+    documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
 ENHANCEMENTS FROM OTHER PROJECTS (docs/ENHANCEMENTS.md)
 
 The port's optional enhancements, all off by default, reimplement in C some changes from these projects. None of their code or files is shipped; their notices are kept here as their licence asks.
