@@ -61,7 +61,8 @@ extern unsigned char dseg062_62a6[];       /* seg021's data (FD71) */
    enhance_on, in the table's order. */
 enum { ENH_SKIP_INTRO, ENH_WRAP_MENU, ENH_FAST_PANELS, ENH_FREE_HEADING, ENH_SUBTITLES,
        ENH_SKILL_MESSAGES, ENH_PERSPECTIVE, ENH_FULL_SPRITES,
-       ENH_WIDE_PITCH, ENH_MOUSE_LOOK, ENH_INVERT_LOOK, ENH_COUNT };
+       ENH_WIDE_PITCH, ENH_MOUSE_LOOK, ENH_INVERT_LOOK, ENH_MODERN_KEYS, ENH_RUNE_KEYS,
+       ENH_COUNT };
 int port_pitch_bound(void);                 /* game/PLAYER.C: the pitch's bound either way */
 
 #endif
