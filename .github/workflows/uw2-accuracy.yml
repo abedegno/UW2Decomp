@@ -40,7 +40,9 @@ jobs:
   make-test:
     if: (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    # make test with every enhancement's checks (each presentation enhancement replays every
+    # session): about 50 minutes on the hosted runners for UW1
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v7
         with:
