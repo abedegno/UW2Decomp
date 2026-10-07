@@ -405,7 +405,7 @@ int main(int argc, char *argv[])
         return 0;
     }
     /* a bad input script stops the run before anything is written */
-    if (input_script && inscript_load(input_script, plat_key_byte, mouse_event) < 0) return 1;
+    if (input_script && inscript_load(input_script, plat_key_byte, plat_pointer_event) < 0) return 1;
     if (!home) {
         const char *h = getenv("HOME");
 #ifdef _WIN32
