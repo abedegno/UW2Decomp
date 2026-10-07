@@ -215,6 +215,8 @@ void far init_player(void)
         _input_addkey('3', -1, 0x11, (InputFn)port_key_pitch);
         _input_addkey(0xAB, -1, 0x11, (InputFn)port_key_pitch);
         _input_addkey(KEY_PAD5, 0, 0x11, (InputFn)port_key_pitch);
+        _input_addkey(KEY_SHIFT | PORT_KEY_LSHIFT, 7, 0x11, (InputFn)parse_playin);      /* jump, as j */
+        _input_addkey(KEY_SHIFT | KEY_CTRL | PORT_KEY_LSHIFT, 6, 0x11, (InputFn)parse_playin);   /* standing long jump, as J */
     }
     if (ENHANCED(ENH_RUNE_KEYS)) {     /* port only: the rune keys (ui/keys.c) */
         int c;

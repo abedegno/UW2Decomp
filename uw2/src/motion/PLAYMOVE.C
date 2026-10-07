@@ -254,12 +254,20 @@ void far do_player_keyboard(void)
                 PlayerInput = 10;
                 break;
             case 0x12:
+#ifndef __TURBOC__
+                if ((motionbits & 0x14) == 0 && ENHANCED(ENH_MODERN_KEYS))
+                    break;              /* port only: UltimaHacks' fly keys do nothing on the ground */
+#endif
                 if ((motionbits & 0x14) == 0)
                     PlayerInput = 0;
                 else
                     PlayerInput = 12;
                 break;
             case 0x10:
+#ifndef __TURBOC__
+                if ((motionbits & 0x14) == 0 && ENHANCED(ENH_MODERN_KEYS))
+                    break;              /* port only: UltimaHacks' fly keys do nothing on the ground */
+#endif
                 if ((motionbits & 0x14) == 0)
                     PlayerInput = 0;
                 else

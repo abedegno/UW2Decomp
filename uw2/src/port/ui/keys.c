@@ -9,6 +9,7 @@
 #include "player.h"
 #include "combat.h"
 #include "sys.h"
+#include <stdlib.h>
 #include "view3d.h"
 #include "inv.h"
 #include "sound.h"
@@ -21,6 +22,8 @@ struct Object far * far pick_3d(int how);
 void far look_nothing(unsigned char how, int txt);
 void far player_3dlook(void);
 void far player_3duse(void);
+void far player_3dtalk(void);
+unsigned char far IsMobElem(struct Object far *obj);
 extern int16 pTxtId;                    /* the texture a pick found, for look_nothing */
 extern struct Object far *newPlObj;     /* the object picked, for player_3dlook and _3duse */
 
@@ -106,10 +109,12 @@ void far port_key_interact(int use)
             look_nothing(2, pTxtId);
         return;
     }
-    if (use)
-        player_3duse();
-    else
+    if (!use)
         player_3dlook();
+    else if ((IsMobElem(newPlObj) && OBJ_MAJOR(newPlObj) == 1) || (newPlObj->id & 0x1FF) == 0x1CD)
+        player_3dtalk();                /* a character (or item 0x1CD): talk, as UltimaHacks */
+    else
+        player_3duse();
 }
 
 /* Ctrl+Alt+letter, Backspace, Space (rune-keys, UltimaHacks' runeKey): a rune the player has goes
@@ -119,6 +124,14 @@ void far port_key_rune(int ch)
     int rune, col, row;
     int16 mode;
 
+    {  /* a test switch, UW2PORT_GRANT_RUNES (Exhume's tools/enhcheck.py keys): every rune, given at the
+           first rune key, since the staged saved game's player has none */
+        static int granted;
+        if (!granted && getenv("UW2PORT_GRANT_RUNES")) {
+            granted = 1;
+            player->runebag[0] = player->runebag[1] = player->runebag[2] = 0xFF;
+        }
+    }
     if (ch == ' ') {
         try_cast(1);
         return;
@@ -130,10 +143,11 @@ void far port_key_rune(int ch)
             return;
         rune = ch == 'y' ? 23 : ch - 'a';   /* no X rune: Y is Ylem, 23 */
         if (!(player->runebag[rune >> 3] >> (7 - (rune & 7)) & 1)) {
-            play_effect_here(3, 64, 0);     /* UltimaHacks' refusal: playSoundEffect(3, 64, 0) */
+            play_effect_here(45, 64, 0);    /* UltimaHacks' refusal: playSoundEffect(45, 64, 0) */
             return;
         }
     }
+    play_effect_here(rune < 0 ? 4 : 3, 64, 0);   /* UltimaHacks: 4 clearing, 3 a rune taken */
     col = rune & 3;                         /* mous_in_rune's slot, inverted: four to a row, */
     row = 5 - (rune >> 2);                  /* 20 to 23 at the top */
     mode = GameInputMode;

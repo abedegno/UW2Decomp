@@ -388,6 +388,26 @@ int far do_keyboard_input(char array)
 {
     int c;
 
+#ifndef __TURBOC__
+    {
+        /* port only: --enhance modern-keys binds a lone left Shift (UltimaHacks' jump). It has no
+           character, so KEY never gives it; a new press is seen in key_on (0x2A, its scan code),
+           which replays restore, and given as PORT_KEY_LSHIFT with the modifiers held */
+        static char lshift_was;
+        char now = key_on[0x2A] != 0;
+        char pressed = now && !lshift_was;
+        lshift_was = now;
+        if (pressed && ENHANCED(ENH_MODERN_KEYS)) {
+            key_time = GAME_TIME();
+            c = PORT_KEY_LSHIFT | KEY_SHIFT;
+            if (*Alt)
+                c |= KEY_ALT;
+            if (*Ctrl)
+                c |= KEY_CTRL;
+            return c;
+        }
+    }
+#endif
     c = KEY();
     if (array)
         c = do_keyarray_input();
