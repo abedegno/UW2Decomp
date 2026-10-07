@@ -80,6 +80,18 @@ char KeybUsed = 0;                      /* UW1: signed (cbw) */
    scan codes of w s a d z c x e q. */
 static unsigned char mouse_moves[3] = { PIN_LEFT, PIN_BACK, PIN_RIGHT };
 static unsigned char move_keys[9] = { 0x11, 0x1F, 0x1E, 0x20, 0x2C, 0x2E, 0x2D, 0x12, 0x10 };
+#ifndef __TURBOC__
+/* --enhance modern-keys: UltimaHacks' movementKeys (John Glassmyer, MIT), the key held for each of
+   move_keys' meanings (run, walk, turn left, turn right, slide left, slide right, back, fly up, fly
+   down): w, x, the grey Left and Right (key_on 0x69 and 0x6A: the keyboard code puts E0 keys at
+   0x60 and up), a, d, s, left Shift, left Ctrl */
+static unsigned char modern_keys[9] = { 0x11, 0x2D, 0x69, 0x6A, 0x1E, 0x20, 0x1F, 0x2A, 0x1D };
+
+static unsigned char port_move_key(int i)
+{
+    return ENHANCED(ENH_MODERN_KEYS) ? modern_keys[i] : move_keys[i];
+}
+#endif
 static uint32 last_time = 0;
 static unsigned char frame_inc = 0;
 /* UW1: nextstep, water_eff and watertime are here (UW2 keeps nextstep and watertime in
@@ -190,13 +202,33 @@ void far do_player_keyboard(void)
     int i;
 
     TurnInpRate = ForwInpRate = 0;
-    if ((*Shift || *CapsLock) && (*Shift == 0 || *CapsLock == 0))
-        return;
-    if (*Alt || *Ctrl)
-        return;
+#ifndef __TURBOC__
+    if (ENHANCED(ENH_MODERN_KEYS) || ENHANCED(ENH_RUNE_KEYS)) {
+        /* port only: UltimaHacks holds movement only while Ctrl and Alt are both down (the rune
+           keys); modern-keys moves with Shift or Ctrl held, its fly keys */
+        if (*Alt && *Ctrl)
+            return;
+        if (!ENHANCED(ENH_MODERN_KEYS)) {
+            if ((*Shift || *CapsLock) && (*Shift == 0 || *CapsLock == 0))
+                return;
+            if (*Alt || *Ctrl)
+                return;
+        }
+    } else
+#endif
+    {
+        if ((*Shift || *CapsLock) && (*Shift == 0 || *CapsLock == 0))
+            return;
+        if (*Alt || *Ctrl)
+            return;
+    }
     for (i = 0; i < 9; i++)
     {
+#ifndef __TURBOC__
+        if (key_on[port_move_key(i)])   /* port only: modern-keys' keys for the same meanings */
+#else
         if (key_on[move_keys[i]])
+#endif
         {
             switch (move_keys[i])
             {

@@ -1,0 +1,5 @@
+# modern-keys: from the menu, load the saved game the items session writes, then the keys
+3000 key enter         # Journey Onward
+4500 key enter         # the first saved game
+9000 down a
+10000 up a

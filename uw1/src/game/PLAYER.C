@@ -145,6 +145,9 @@ void far init_player(void)
     if (player_name_handle == 0)
         player_name_handle = make_string((char far *)player, STRBLK_PLAYER);
 
+#ifndef __TURBOC__
+    if (!ENHANCED(ENH_MODERN_KEYS)) {   /* port only: modern-keys gives these keys other meanings */
+#endif
     _input_addkey('w', 0x0E, 1, (InputFn)parse_playin);
     _input_addkey('s', 5, 1, (InputFn)parse_playin);
     _input_addkey('a', 3, 1, (InputFn)parse_playin);
@@ -154,15 +157,30 @@ void far init_player(void)
     _input_addkey('x', 8, 1, (InputFn)parse_playin);
     _input_addkey('e', 0x0C, 0x1B, (InputFn)parse_playin);
     _input_addkey('q', 0x0D, 0x1B, (InputFn)parse_playin);
+#ifndef __TURBOC__
+    }
+#endif
+#ifndef __TURBOC__
+    if (!ENHANCED(ENH_MODERN_KEYS)) {   /* port only: modern-keys steps with Ctrl and the arrows */
+#endif
     _input_addkey('A', -1, 1, (InputFn)player_simple_move);
     _input_addkey('D', 1, 1, (InputFn)player_simple_move);
     _input_addkey('S', 0, 1, (InputFn)player_simple_move);
     _input_addkey('X', -2, 1, (InputFn)player_simple_move);
     _input_addkey('W', 2, 1, (InputFn)player_simple_move);
+#ifndef __TURBOC__
+    }
+#endif
     input_addmouse(0x6B, 0x21, 0x7B, 0x2F, -1, 1, (InputFn)player_simple_move);
     input_addmouse(0x82, 0x1F, 0x92, 0x2C, 0, 1, (InputFn)player_simple_move);
     input_addmouse(0x9B, 0x21, 0xAA, 0x2F, 1, 1, (InputFn)player_simple_move);
+#ifndef __TURBOC__
+    if (!ENHANCED(ENH_MODERN_KEYS))     /* port only: modern-keys swaps 1 and 3 (1 looks up) */
+#endif
     _input_addkey('3', 1, 0x11, (InputFn)chg_plyp);
+#ifndef __TURBOC__
+    if (!ENHANCED(ENH_MODERN_KEYS))     /* port only: modern-keys swaps 1 and 3 (1 looks up) */
+#endif
     _input_addkey('1', -1, 0x11, (InputFn)chg_plyp);
     _input_addkey('2', 0, 0x11, (InputFn)chg_plyp);
 #ifndef __TURBOC__
