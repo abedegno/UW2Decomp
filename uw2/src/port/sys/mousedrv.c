@@ -31,16 +31,35 @@ static float frac_x, frac_y;
 
 void mouse_getxy(int16_t *x, int16_t *y);       /* ui/MOUSE.C: the game's cursor */
 
+/* mouse-look (ui/MOUSE.C, --enhance mouse-look): while it is on, every event's motion counts,
+   scaled by look-speed (the settings file's, a percentage), and none moves the game's cursor to
+   the host's pointer, which the platform captures. The scaling is here, before the motion is
+   recorded, so that a recording replays as it was played. */
+static _Atomic int look_on, look_pct = 100;
+
+void mouse_look_mode(int on)
+{
+    atomic_store(&look_on, on);
+    plat_pointer_capture(on);
+}
+
+void mouse_look_speed(int pct)
+{
+    atomic_store(&look_pct, pct < 10 ? 10 : pct > 400 ? 400 : pct);
+}
+
 void mouse_event(const PlatPointer *ev)
 {
     int x = (int)(ev->x * 2.0f), y = (int)ev->y;
-    if (ev->absolute) {
+    int look = atomic_load(&look_on);
+    float k = look ? (float)atomic_load(&look_pct) / 100.0f : 1.0f;
+    if (ev->absolute && !look) {
         int ax = (int)ev->x, ay = (int)ev->y;
         atomic_store(&abs_x, ax < 0 ? 0 : ax > 319 ? 319 : ax);
         atomic_store(&abs_y, ay < 0 ? 0 : ay > 199 ? 199 : ay);
         atomic_store(&moved, 1);
     } else {
-        float mx = ev->dx + frac_x, my = ev->dy + frac_y;
+        float mx = ev->dx * k + frac_x, my = ev->dy * k + frac_y;
         int ix = (int)mx, iy = (int)my;
         frac_x = mx - (float)ix;
         frac_y = my - (float)iy;

@@ -431,6 +431,11 @@ int main(int argc, char *argv[])
         mouse = mouse_buf;
     cfg.mouse_lock = mouse && !strcmp(mouse, "lock");
     {
+        /* --enhance mouse-look's speed, a percentage of the original's scale (mousedrv.c) */
+        char ls[16];
+        if (port_config_get(home, "look-speed", ls, sizeof ls) == 0) mouse_look_speed(atoi(ls));
+    }
+    {
         /* the MT-32 ROMs (Exhume's sound/mt32roms.c): --mt32-roms (a folder, or a file in it),
            $UW1PORT_MT32_ROMS, the remembered setting, else a search of the home, the game, the
            program's folder and other emulators' ROM folders; any file names. A folder given or

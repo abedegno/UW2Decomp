@@ -1,0 +1,10 @@
+# mouse-look: from the menu, load the saved game the items session writes; the ` key turns
+# mouse-look on, the mouse turns the view right and pitches it up, a click acts at the crosshair,
+# and ` turns it off again
+3000 key enter         # Journey Onward
+4500 key enter         # the first saved game
+9000 key grave
+9500 look 200 0
+10500 look 0 -50
+11500 click 160 100 left
+13000 key grave

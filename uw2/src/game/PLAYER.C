@@ -32,6 +32,9 @@
 #include "sys.h"
 #include "ui.h"
 #include "view3d.h"
+#ifndef __TURBOC__
+void far port_mouse_look_toggle(void);    /* ui/MOUSE.C, port only */
+#endif
 
 /* match: declared here, not in map.h: LIGHTING.C defines set_light(signed char), and this
    file's callers push an int. */
@@ -156,6 +159,10 @@ void far init_player(void)
     _input_addkey('3', 1, 0x11, (InputFn)chg_plyp);
     _input_addkey('1', -1, 0x11, (InputFn)chg_plyp);
     _input_addkey('2', 0, 0x11, (InputFn)chg_plyp);
+#ifndef __TURBOC__
+    if (ENHANCED(ENH_MOUSE_LOOK))       /* port only: --enhance mouse-look's toggle (ui/MOUSE.C) */
+        _input_addkey('`', 0, 0x11, (InputFn)port_mouse_look_toggle);
+#endif
     _input_addkey('j', 7, 0x1B, (InputFn)parse_playin);
     _input_addkey('J', 6, 0x1B, (InputFn)parse_playin);
     _input_addkey(KEY_F7, 0, 0x1B, (InputFn)pull_chain);

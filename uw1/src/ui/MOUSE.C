@@ -607,6 +607,89 @@ void far checkMouse(void)
     }
 }
 
+#ifndef __TURBOC__
+/* Port only: --enhance mouse-look (docs/ENHANCEMENTS.md), UltimaHacks' setMouseLookState and
+   mouseLookOrMoveCursor in our names (John Glassmyer, MIT). While it is on, the pointer stays at
+   the 3D view's centre as a crosshair, where clicks act, and the mouse's motion turns the view:
+   across the heading, 64 units a pixel, and up and down the pitch, 128 a pixel, within the
+   pitch's bound (PLAYER.C's port_pitch_bound, wide-pitch's or the original's). The mouse driver
+   (src/port/sys/mousedrv.c) is told, so that it passes the motion, scaled by the settings file's
+   look-speed, and the platform captures the pointer. */
+#include "object.h"
+void mouse_look_mode(int on);
+int port_pitch_bound(void);
+
+static char look_on;                    /* mouse-look is on */
+static char look_was;                   /* it was when the 3D view gave way (port_mouse_look_screen) */
+static int16 look_x, look_y;            /* the pointer before it */
+
+int port_mouse_look(void)
+{
+    return look_on;
+}
+
+static void mouse_look_set(int on)
+{
+    if (on == look_on)
+        return;
+    look_on = (char)on;
+    mouse_look_mode(on);
+    if (on) {
+        if (_actual_mhide())            /* the cursor off the screen where it was */
+            mouse_saved = 0;
+        look_x = mouse_x;
+        look_y = mouse_y;
+        mouse_x = m3dx + m3dw / 2;      /* the view's centre (m3dy its bottom edge) */
+        mouse_y = m3dy - m3dh / 2;
+        in_x0 = in_x1 = mouse_x;        /* a region of one point, so checkMouse keeps the cursor */
+        hit_y0 = in_y1 = mouse_y;
+        MousReSave();
+        if (GameInputMode == GIM_NONE)  /* not while carrying something: its picture stays */
+            set_mouse_data(ICON_CURSORS);
+    } else {
+        mouse_x = look_x;               /* the view's next frame clears the crosshair */
+        mouse_y = look_y;
+        MousReSave();
+        in_x0 = -1;
+        checkMouse();
+        drawMouse();
+    }
+}
+
+/* the ` key (PLAYER.C's init_player binds it with the flag on) */
+void far port_mouse_look_toggle(void)
+{
+    mouse_look_set(!look_on);
+    scroll_print(look_on ? "Mouse look enabled.\n" : "Mouse look disabled.\n");
+}
+
+/* change_screen (UWEDIT.C): off while the 3D view gives way (the map, a conversation), and back
+   as it was when it returns; leaving is_view 1 for 0 remembers, 0 for 1 restores */
+void port_mouse_look_screen(int leaving, int is_view)
+{
+    if (!is_view)
+        return;
+    if (leaving) {
+        look_was = look_on;
+        mouse_look_set(0);
+    } else
+        mouse_look_set(look_was);
+}
+
+static void mouse_look_step(int dx, int dy)
+{
+    long p;
+    int bound = port_pitch_bound();
+
+    PlayerFacing += (int16)(dx << 6);
+    p = (long)PlayerPitch - (long)(ENHANCED(ENH_INVERT_LOOK) ? -dy : dy) * 128;
+    PlayerPitch = (int16)(p > bound ? bound : p < -bound ? -bound : p);
+    SET_HEADING(ThePlayer, PlayerFacing >> 13);     /* as PHYSICS.C keeps them */
+    SET_FINEHEAD(ThePlayer, PlayerFacing >> 8);
+    editchng(2);                                    /* redraw the view */
+}
+#endif
+
 /* Moves the pointer by the driver's motion, or, with no motion, one step of a keyboard warp toward
    (warp_x, warp_y): every 10 ticks, up to m_warp_rate pixels per axis, the rate growing by
    8 to 40 while warping freely and halving once a held arrow key is released. Real
@@ -672,6 +755,12 @@ void far moveMouse(void)
     }
     if (_actual_mhide())
         mouse_saved = 0;
+#ifndef __TURBOC__
+    if (look_on) {                      /* port only: mouse-look turns the view instead */
+        mouse_look_step(dx, dy);
+        dx = dy = 0;
+    }
+#endif
     mouse_x += dx;
     mouse_y -= dy;
     if (mouse_x < con_x0)
@@ -802,6 +891,10 @@ void far keyboard_mouse(int key)
     case KEY_SHIFT | KEY_BACKTAB:
         if (warp_x >= 0)
             return;
+#ifndef __TURBOC__
+        if (look_on)                    /* port only: mouse-look holds the pointer */
+            return;
+#endif
         y = 0x82;
         if (mouse_x < 0x2E)
             x = 0x118;
@@ -813,6 +906,10 @@ void far keyboard_mouse(int key)
     case 9:
         if (warp_x >= 0)
             return;
+#ifndef __TURBOC__
+        if (look_on)                    /* port only: mouse-look holds the pointer */
+            return;
+#endif
         y = 0x82;
         if (mouse_x < 0x2E)
             x = 0x82;

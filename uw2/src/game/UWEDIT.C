@@ -74,6 +74,9 @@
 #include "sys.h"
 #include "ui.h"
 #include "view3d.h"
+#ifndef __TURBOC__
+void port_mouse_look_screen(int leaving, int is_view);     /* ui/MOUSE.C, port only */
+#endif
 
 /* This file's uninitialised data, DS:5D1E to DS:5E0B. */
 /* match: Turbo C lays _BSS out by its symbol table's order, not by declaration; with
@@ -271,6 +274,11 @@ void far clearobj(int unused)
    4 a conversation, anything else (1, the game) the 3D view. */
 void far change_screen(int mode)
 {
+#ifndef __TURBOC__
+    /* port only: --enhance mouse-look off while the 3D view gives way, and back as it was when
+       it returns: the input modes with a bit of 0x11, as UltimaHacks' setInterfaceMode tests */
+    port_mouse_look_screen(1, (inplist->mode & 0x11) != 0);
+#endif
     switch (scrmode = inplist->mode = mode) {
     case 2:
         scrnum = 1;
@@ -285,6 +293,9 @@ void far change_screen(int mode)
         scrnum = 0;
         break;
     }
+#ifndef __TURBOC__
+    port_mouse_look_screen(0, (inplist->mode & 0x11) != 0);
+#endif
 }
 
 /* Switches screens: runs the current screen's exit handler, then the new one's start
