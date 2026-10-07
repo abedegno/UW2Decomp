@@ -1,5 +1,33 @@
-# modern-keys: from the menu, load the saved game the items session writes, then the keys
+# modern-keys: from the menu, load the saved game the items session writes; then each of the
+# layout's keys once: run, back, slide, turn, pitch, look and use at the pointer, the map and its
+# levels, the panels, the compass and flasks, the bag keys, and Space in fight mode (F5)
 3000 key enter         # Journey Onward
 4500 key enter         # the first saved game
-9000 down a
-10000 up a
+9000 down w
+10000 up w
+10500 down s
+11000 up s
+11500 down a
+12000 up a
+12500 down left
+13000 up left
+13500 key up
+14000 key down
+14500 key q
+15000 key e
+15500 key z
+16500 key s
+17000 key w
+17500 key c
+18000 key esc
+19000 key r
+19500 key f
+20000 key f
+20500 key g
+21000 key h
+21500 key v
+22000 key b
+22500 key c
+23000 key f5          # fight mode
+23500 key space
+24500 key f5

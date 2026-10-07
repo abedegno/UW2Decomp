@@ -69,7 +69,7 @@ The ports take `--input-script FILE`, for tests: keys and mouse events at set ti
 6000 up w
 7000 move 160 100      the pointer to x, y of the 320 by 200 screen
 7200 click 160 100 left
-8000 key grave         the ` key
+8000 key grave         the ` key (also named: . and ;)
 8500 look 200 -40      relative motion, as a captured mouse gives (mouse-look): right and up
 ```
 
