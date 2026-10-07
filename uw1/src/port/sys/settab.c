@@ -135,3 +135,14 @@ void port_settings_list(FILE *f)
                 s->def, s->lo, s->hi, s->step, names, stored);
     }
 }
+
+/* The values this run really has (the command line over the settings file), for the screen to show
+   and to apply with; nothing is written to the file. */
+void port_settings_seed(int fullscreen, int scale, int aspect, int integer_scale, int lock)
+{
+    settings_set_value(R_FULL, fullscreen != 0);
+    settings_set_value(R_SCALE, scale < 1 ? 1 : scale > 8 ? 8 : scale);
+    settings_set_value(R_ASPECT, aspect != 0);
+    settings_set_value(R_INTEGER, integer_scale != 0);
+    settings_set_value(R_MOUSE, lock != 0);
+}

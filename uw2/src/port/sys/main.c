@@ -225,7 +225,7 @@ static const char help_text[] =
     "  --no-integer           scale freely (default: whole multiples)\n"
     "  --mouse follow|lock    follow: the game's cursor follows the system pointer (default);\n"
     "                         lock: a click captures the pointer, as in DOSBox, and Ctrl+F10\n"
-    "                         releases it; for this run (the settings screen, F11, keeps it)\n"
+    "                         releases it; kept until changed\n"
     "Testing and debugging:\n"
     "  --hidden               no window; the scan-out still runs\n"
     "  --screenshot-after MS  write the screen to a PNG MS milliseconds after start\n"
@@ -324,6 +324,7 @@ static int home_dir(const char *p)
 extern const struct setting port_settings[];     /* settab.c */
 extern const int port_settings_count;
 void port_settings_list(FILE *f);
+void port_settings_seed(int fullscreen, int scale, int aspect, int integer_scale, int lock);
 
 int main(int argc, char *argv[])
 {
@@ -437,7 +438,8 @@ int main(int argc, char *argv[])
         return 1;
     }
     if (interactive) port_config_set(home, "data", absolute(data, abs_buf, sizeof abs_buf));
-    if (!mouse && port_config_get(home, "mouse", mouse_buf, sizeof mouse_buf) == 0)
+    if (mouse && interactive) port_config_set(home, "mouse", mouse);
+    else if (!mouse && port_config_get(home, "mouse", mouse_buf, sizeof mouse_buf) == 0)
         mouse = mouse_buf;
     cfg.mouse_lock = mouse && !strcmp(mouse, "lock");
     {
@@ -544,6 +546,8 @@ int main(int argc, char *argv[])
 #endif
     port_home = home;
     settings_init(home, port_settings, port_settings_count, "Ultima Underworld II");
+    /* what this run really uses (the command line over the file) is what the screen shows and applies */
+    port_settings_seed(cfg.fullscreen, cfg.scale, cfg.aspect, cfg.integer_scale, cfg.mouse_lock);
     pit_start();
     memset(&hooks, 0, sizeof hooks);
     hooks.scanout = vga_scanout;
