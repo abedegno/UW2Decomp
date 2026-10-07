@@ -129,7 +129,7 @@ static int copy_to_home(const char *src, const char *home, const char *name)
    two lines, UWEDIT.C skips the third). Music cards are SOUND.C's music_drivers: 1 PC speaker,
    2 Ad Lib, 3 Sound Blaster, 4 Sound Blaster Pro, 5 Pro Audio Spectrum, 6 MT-32 on an MPU-401;
    speech cards its speech_drivers: 1 Sound Blaster, 2 Sound Blaster Pro, 3 Pro Audio Spectrum. */
-static int write_uw_cfg(const char *spec)
+int write_uw_cfg(const char *spec)
 {
     char path[1200];
     int music = atoi(spec), speech = strchr(spec, ',') ? atoi(strchr(spec, ',') + 1) : 0;
@@ -145,12 +145,13 @@ static int write_uw_cfg(const char *spec)
     return 0;
 }
 
-/* The home directory, for the drop hook, which runs on the backend's thread. */
-static const char *port_home;
+/* The home directory, for the drop hook, which runs on the backend's thread, and the settings
+   screen's rows (settab.c). */
+const char *port_home;
 
 /* The music and speech cards DATA\UW.CFG in the home directory names; -1 for each when it is
    missing or unreadable. */
-static void read_uw_cfg(int *music, int *speech)
+void read_uw_cfg(int *music, int *speech)
 {
     char path[1200];
     FILE *f;
@@ -227,7 +228,7 @@ static const char help_text[] =
     "  --no-integer           scale freely (default: whole multiples)\n"
     "  --mouse follow|lock    follow: the game's cursor follows the system pointer (default);\n"
     "                         lock: a click captures the pointer, as in DOSBox, and Ctrl+F10\n"
-    "                         releases it; kept until changed\n"
+    "                         releases it; for this run (the settings screen, F11, keeps it)\n"
     "Testing and debugging:\n"
     "  --hidden               no window; the scan-out still runs\n"
     "  --screenshot-after MS  write the screen to a PNG MS milliseconds after start\n"
@@ -242,6 +243,7 @@ static const char help_text[] =
     "  --audio-wav FILE       write everything the sound cards play to a WAV file (44100 Hz)\n"
     "  --ail-log FILE         log every AIL call and driver service\n"
     "  --hw-log FILE          log every register write and MIDI byte the drivers make\n"
+    "  --settings-list        print the settings screen's rows and exit\n"
     "  --no-recording         do not record this session (by default each session's inputs go\n"
     "                         to recordings/ in the home directory, the newest five kept, so\n"
     "                         that a crash can be replayed)\n"
@@ -322,16 +324,9 @@ static int home_dir(const char *p)
     return stat(p, &st) == 0 && S_ISDIR(st.st_mode) ? 0 : -1;
 }
 
-/* The settings screen's table (ui/settings.h): two rows for now, the volume and the window's
-   full screen, which show the live options at work. */
-static int disp_scale, disp_aspect, disp_integer;
-static void set_fullscreen(int on) { plat_set_display(on, disp_scale, disp_aspect, disp_integer); }
-static const struct setting settings_table[] = {
-    { .tab = SET_TAB_SOUND, .label = "Volume", .kind = SET_SLIDER, .key = "volume", .lo = 0, .hi = 100, .step = 10,
-      .def = 100, .apply = audio_set_volume },
-    { .tab = SET_TAB_DISPLAY, .label = "Full screen", .kind = SET_BOOL, .key = "fullscreen", .def = 0,
-      .apply = set_fullscreen },
-};
+extern const struct setting port_settings[];     /* settab.c */
+extern const int port_settings_count;
+void port_settings_list(FILE *f);
 
 int main(int argc, char *argv[])
 {
@@ -345,6 +340,7 @@ int main(int argc, char *argv[])
     int i, dropped = 0, first_run = 0;
     const char *enh_on[16], *enh_off[16];   /* --enhance and --no-enhance lists, in order */
     int n_on = 0, n_off = 0, enh_list = 0;
+    int settings_list = 0;
     int cl_scale = 0, cl_aspect = 0, cl_integer = 0;   /* given on the command line: the settings file does not override them */
     const char *input_script = NULL;    /* --input-script: keys and mouse at set times (inscript.c) */
     static char spec_buf[16];
@@ -393,6 +389,7 @@ int main(int argc, char *argv[])
         else if (!strcmp(a, "--audio-wav") && i + 1 < argc) wav = argv[++i];
         else if (!strcmp(a, "--no-audio")) audio_device = 0;
         else if (!strcmp(a, "--no-recording")) recording = 0;
+        else if (!strcmp(a, "--settings-list")) settings_list = 1;
         else if (!strcmp(a, "--ail-log") && i + 1 < argc) ail_log = argv[++i];
         else if (!strcmp(a, "--hw-log") && i + 1 < argc) hw_log = argv[++i];
         else if (!strcmp(a, "-v")) port_trace = 1;
@@ -401,6 +398,10 @@ int main(int argc, char *argv[])
         /* a folder or file dropped on the program's icon (Windows, Linux) arrives as an argument */
         else if (!roms && a[0] != '-' && mt32roms_pick(a, NULL)) { roms = a; dropped = 1; }
         else game_argv[game_argc++] = argv[i];
+    }
+    if (settings_list) {
+        port_settings_list(stdout);
+        return 0;
     }
     enhance_init(enhance_table, ENH_COUNT, "UW1");
     if (enh_list) {
@@ -439,8 +440,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     if (interactive) port_config_set(home, "data", absolute(data, abs_buf, sizeof abs_buf));
-    if (mouse && interactive) port_config_set(home, "mouse", mouse);
-    else if (!mouse && port_config_get(home, "mouse", mouse_buf, sizeof mouse_buf) == 0)
+    if (!mouse && port_config_get(home, "mouse", mouse_buf, sizeof mouse_buf) == 0)
         mouse = mouse_buf;
     cfg.mouse_lock = mouse && !strcmp(mouse, "lock");
     {
@@ -451,7 +451,7 @@ int main(int argc, char *argv[])
         if (!cl_integer && port_config_get(home, "integer", v, sizeof v) == 0) cfg.integer_scale = atoi(v) != 0;
         if (port_config_get(home, "fullscreen", v, sizeof v) == 0) cfg.fullscreen = atoi(v) != 0;
         if (port_config_get(home, "volume", v, sizeof v) == 0) audio_set_volume(atoi(v));
-        disp_scale = cfg.scale; disp_aspect = cfg.aspect; disp_integer = cfg.integer_scale;
+        if (port_config_get(home, "recording", v, sizeof v) == 0 && !strcmp(v, "0")) recording = 0;
     }
     {
         /* --enhance mouse-look's speed, a percentage of the original's scale (mousedrv.c) */
@@ -545,7 +545,8 @@ int main(int argc, char *argv[])
 #else
     unsetenv("UWHOME");
 #endif
-    settings_init(home, settings_table, (int)(sizeof settings_table / sizeof settings_table[0]), "Ultima Underworld");
+    port_home = home;
+    settings_init(home, port_settings, port_settings_count, "Ultima Underworld");
     pit_start();
     memset(&hooks, 0, sizeof hooks);
     hooks.scanout = vga_scanout;
@@ -556,6 +557,15 @@ int main(int argc, char *argv[])
     if (interactive) {
         port_home = home;
         hooks.drop = on_drop;
+    }
+    {
+        /* a player's run shows the settings screen first (the first run does, as nothing has said
+           otherwise), the game waiting; "Show this at start" in the Game tab turns it off */
+        char v[16];
+        if (interactive && (port_config_get(home, "settings-at-start", v, sizeof v) != 0 || strcmp(v, "0"))) {
+            settings_show(1);
+            port_pause(1);
+        }
     }
     status = plat_run(&cfg, &hooks, game, NULL);
     /* the window closed (or --exit-after) with the game still running: the recording's last

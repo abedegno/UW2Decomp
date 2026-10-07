@@ -1,0 +1,137 @@
+/* The settings screen's table (ui/settings.h): every row of the Sound, Controls, Display and Game
+   tabs; the Enhancements tab is generated from enhtab.c. Rows keep to the settings file (home
+   directory) by their key, except the sound cards, which DATA\UW.CFG holds (main.c's read_uw_cfg
+   and write_uw_cfg). `--settings-list` prints the table, for tools/setcheck.py. */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "port.h"
+#include "plat.h"
+#include "sound/audio.h"
+#include "sound/mt32roms.h"
+#include "ui/settings.h"
+
+void mouse_look_speed(int pct);             /* mousedrv.c */
+void read_uw_cfg(int *music, int *speech);  /* main.c */
+int write_uw_cfg(const char *spec);
+extern const char *port_home;
+
+/* The rows, in each tab's order; the display rows read each other's values */
+enum { R_MUSIC, R_SPEECH, R_ROMS, R_VOLUME, R_MOUSE, R_LOOK, R_FULL, R_SCALE, R_ASPECT, R_INTEGER, R_FOLDER, R_RECORD, R_START };
+
+static void apply_display(int unused)
+{
+    (void)unused;
+    plat_set_display(settings_value(R_FULL), settings_value(R_SCALE), settings_value(R_ASPECT), settings_value(R_INTEGER));
+}
+
+static void apply_mouse(int v) { plat_set_mouse_lock(v); }
+
+/* The sound cards: the cycle's index is a place in the list, the file's number is the card's (the
+   lists below). Either may be -1 for "no DATA\UW.CFG yet", which the screen shows as its default. */
+static const char *const music_names[] = { "None", "PC speaker", "Ad Lib", "Sound Blaster", "Sound Blaster Pro", "Pro Audio Spectrum", "Roland MT-32", NULL };
+static const char *const music_cards[] = { "0", "1", "2", "3", "4", "5", "6", NULL };
+static const char *const speech_names[] = { "None", "Sound Blaster", "Sound Blaster Pro", "Pro Audio Spectrum", NULL };
+static const char *const speech_cards[] = { "0", "1", "2", "3", NULL };
+
+static int card_index(const char *const *cards, int card)
+{
+    int i;
+    for (i = 0; cards[i]; i++)
+        if (atoi(cards[i]) == card) return i;
+    return -1;
+}
+
+static void write_cards(int music, int speech)
+{
+    char spec[16];
+    snprintf(spec, sizeof spec, "%d,%d", music, speech);
+    write_uw_cfg(spec);
+    if (port_home) port_config_set(port_home, "sound-auto", "0");    /* the player has chosen: the port does not */
+}
+
+static int music_get(void)
+{
+    int m, s;
+    read_uw_cfg(&m, &s);
+    return card_index(music_cards, m);
+}
+
+static void music_put(int index)
+{
+    int m, s;
+    read_uw_cfg(&m, &s);
+    write_cards(atoi(music_cards[index]), s >= 0 ? s : 1);
+}
+
+static int speech_get(void)
+{
+    int m, s;
+    read_uw_cfg(&m, &s);
+    return card_index(speech_cards, s);
+}
+
+static void speech_put(int index)
+{
+    int m, s;
+    read_uw_cfg(&m, &s);
+    write_cards(m >= 0 ? m : 3, atoi(speech_cards[index]));
+}
+
+static int roms_check(const char *path) { return !mt32roms_pick(path, NULL); }
+static int game_check(const char *path) { return port_game_dir_ok(path); }
+
+static const char *const mouse_names[] = { "Follow", "Lock", NULL };
+static const char *const mouse_stored[] = { "follow", "lock", NULL };
+
+const struct setting port_settings[] = {
+    [R_MUSIC]   = { .tab = SET_TAB_SOUND, .label = "Music", .kind = SET_CYCLE, .names = music_names, .stored = music_cards,
+                    .def = 3, .restart = 1, .get = music_get, .put = music_put },
+    [R_SPEECH]  = { .tab = SET_TAB_SOUND, .label = "Speech", .kind = SET_CYCLE, .names = speech_names, .stored = speech_cards,
+                    .def = 1, .restart = 1, .get = speech_get, .put = speech_put },
+    [R_ROMS]    = { .tab = SET_TAB_SOUND, .label = "MT-32 ROMs", .kind = SET_FOLDER, .key = "mt32-roms", .restart = 1,
+                    .check = roms_check, .refuse = "That folder does not hold MT-32 or CM-32L ROMs" },
+    [R_VOLUME]  = { .tab = SET_TAB_SOUND, .label = "Volume", .kind = SET_SLIDER, .key = "volume", .lo = 0, .hi = 100, .step = 10,
+                    .def = 100, .apply = audio_set_volume },
+    [R_MOUSE]   = { .tab = SET_TAB_CONTROLS, .label = "Mouse", .kind = SET_CYCLE, .key = "mouse", .names = mouse_names,
+                    .stored = mouse_stored, .def = 0, .apply = apply_mouse },
+    [R_LOOK]    = { .tab = SET_TAB_CONTROLS, .label = "Mouse-look speed", .kind = SET_SLIDER, .key = "look-speed", .lo = 10,
+                    .hi = 400, .step = 10, .def = 100, .apply = mouse_look_speed },
+    [R_FULL]    = { .tab = SET_TAB_DISPLAY, .label = "Fullscreen", .kind = SET_BOOL, .key = "fullscreen", .def = 0,
+                    .apply = apply_display },
+    [R_SCALE]   = { .tab = SET_TAB_DISPLAY, .label = "Window scale", .kind = SET_SLIDER, .key = "scale", .lo = 1, .hi = 8,
+                    .step = 1, .def = 3, .apply = apply_display },
+    [R_ASPECT]  = { .tab = SET_TAB_DISPLAY, .label = "4:3 aspect", .kind = SET_BOOL, .key = "aspect", .def = 1,
+                    .apply = apply_display },
+    [R_INTEGER] = { .tab = SET_TAB_DISPLAY, .label = "Whole-number scaling", .kind = SET_BOOL, .key = "integer", .def = 1,
+                    .apply = apply_display },
+    [R_FOLDER]  = { .tab = SET_TAB_GAME, .label = "Game folder", .kind = SET_FOLDER, .key = "data", .restart = 1,
+                    .check = game_check, .refuse = "That folder does not hold the game" },
+    [R_RECORD]  = { .tab = SET_TAB_GAME, .label = "Record sessions", .kind = SET_BOOL, .key = "recording", .def = 1,
+                    .restart = 1 },
+    [R_START]   = { .tab = SET_TAB_GAME, .label = "Show this at start", .kind = SET_BOOL, .key = "settings-at-start", .def = 1 },
+};
+const int port_settings_count = (int)(sizeof port_settings / sizeof port_settings[0]);
+
+static void join(const char *const *v, char *out, size_t n)
+{
+    size_t len = 0;
+    int i;
+    out[0] = 0;
+    for (i = 0; v && v[i]; i++) len += (size_t)snprintf(out + len, len < n ? n - len : 0, "%s%s", i ? "|" : "", v[i]);
+}
+
+/* One line a row, tab separated: tab, kind, key (- for the sound cards), label, def, lo, hi, step,
+   names, stored (the card numbers, for the cards). */
+void port_settings_list(FILE *f)
+{
+    int i;
+    char names[256], stored[256];
+    for (i = 0; i < port_settings_count; i++) {
+        const struct setting *s = &port_settings[i];
+        join(s->names, names, sizeof names);
+        join(s->stored, stored, sizeof stored);
+        fprintf(f, "%d\t%d\t%s\t%s\t%d\t%d\t%d\t%d\t%s\t%s\n", s->tab, s->kind, s->key ? s->key : "-", s->label,
+                s->def, s->lo, s->hi, s->step, names, stored);
+    }
+}
