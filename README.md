@@ -30,7 +30,7 @@ No game data is included: you need your own copy of each game (the GOG releases)
    - Windows: `uw1port.exe` or `uw2port.exe`.
    - Linux: the AppImage (`chmod +x`, then run it), or `./uw1` or `./uw2` from the tarball. The Linux packages need glibc 2.35 or later (Ubuntu 22.04 or newer).
 
-The controls are the game's own: the mouse, and the keys in the game's manual. F11 opens the port's settings screen ([SETTINGS.md](docs/SETTINGS.md)). The game's cursor follows the system pointer; `--mouse lock` captures the pointer on a click instead, as DOSBox does, with Ctrl+F10 to release it. With the `mouse-look` enhancement on, the `` ` `` key turns the view by the mouse instead ([ENHANCEMENTS.md](docs/ENHANCEMENTS.md)). With `modern-keys`, the keys are UltimaHacks' layout (WASD, Space to attack, Q and E to look and use).
+The controls are the game's own: the mouse, and the keys in the game's manual. F11 (or Cmd+, on macOS) opens the port's settings screen ([SETTINGS.md](docs/SETTINGS.md)). The game's cursor follows the system pointer; `--mouse lock` captures the pointer on a click instead, as DOSBox does, with Ctrl+F10 to release it. With the `mouse-look` enhancement on, the `` ` `` key turns the view by the mouse instead ([ENHANCEMENTS.md](docs/ENHANCEMENTS.md)). With `modern-keys`, the keys are UltimaHacks' layout (WASD, Space to attack, Q and E to look and use).
 
 Saved games and settings are kept in the port's home folder, never in the game folder: `~/.uw1port` or `~/.uw2port` on macOS and Linux, `%APPDATA%\uw1port` or `%APPDATA%\uw2port` on Windows.
 

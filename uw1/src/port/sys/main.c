@@ -123,43 +123,11 @@ static int copy_to_home(const char *src, const char *home, const char *name)
     return 0;
 }
 
-/* --sound MUSIC[,SPEECH]: DATA\UW.CFG in the home directory, the file UW1's install program
-   writes: the music card and the speech card, each with its IRQ, port (hex) and DMA, for the
-   cards' factory settings, and the cutscene line (SOUND.C's seg014_1DC5_1D0D reads the first
-   two lines, UWEDIT.C skips the third). Music cards are SOUND.C's music_drivers: 1 PC speaker,
-   2 Ad Lib, 3 Sound Blaster, 4 Sound Blaster Pro, 5 Pro Audio Spectrum, 6 MT-32 on an MPU-401;
-   speech cards its speech_drivers: 1 Sound Blaster, 2 Sound Blaster Pro, 3 Pro Audio Spectrum. */
-int write_uw_cfg(const char *spec)
-{
-    char path[1200];
-    int music = atoi(spec), speech = strchr(spec, ',') ? atoi(strchr(spec, ',') + 1) : 0;
-    FILE *f;
-    if (plat_resolve("DATA\\UW.CFG", PLAT_CREATE, path, sizeof path) || !(f = fopen(path, "wb"))) {
-        fprintf(stderr, "uw1port: cannot write DATA\\UW.CFG in the home directory\n");
-        return 1;
-    }
-    fprintf(f, "%d %s sound\r\n%d %s speech\r\n0 cuts\r\n", music,
-            music == 0 || music == 1 ? "-1 -1 -1" : music == 2 ? "-1 388 -1" : music == 6 ? "2 330 -1" : "7 220 1",
-            speech, speech == 0 ? "-1 -1 -1" : "7 220 1");
-    fclose(f);
-    return 0;
-}
-
-/* The home directory, for the drop hook, which runs on the backend's thread, and the settings
-   screen's rows (settab.c). */
-const char *port_home;
-
-/* The music and speech cards DATA\UW.CFG in the home directory names; -1 for each when it is
-   missing or unreadable. */
-void read_uw_cfg(int *music, int *speech)
-{
-    char path[1200];
-    FILE *f;
-    *music = *speech = -1;
-    if (plat_resolve("DATA\\UW.CFG", PLAT_CREATE, path, sizeof path) || !(f = fopen(path, "rb"))) return;
-    if (fscanf(f, "%d %*s %*s %*s sound %d", music, speech) != 2) *speech = -1;
-    fclose(f);
-}
+/* DATA\UW.CFG and the home directory: uwcfg.c (settab.c uses them too, and the fuzz host links
+   the port's files without this one) */
+int write_uw_cfg(const char *spec);
+void read_uw_cfg(int *music, int *speech);
+extern const char *port_home;
 
 /* The music on the Roland MT-32 (card 6), the speech card kept (else the Sound Blaster's). */
 static int music_to_mt32(void)
@@ -223,7 +191,7 @@ static const char help_text[] =
     "                         (or drop the folder on the program or its window)\n"
     "  --no-audio             open no audio device\n"
     "Window:\n"
-    "  --scale N              initial window scale (3)\n"
+    "  --scale N              initial window scale, 1 to 8 (3; scale= in the settings, F11)\n"
     "  --no-aspect            square pixels (default: 200 lines shown as 240, as on a 4:3 CRT)\n"
     "  --no-integer           scale freely (default: whole multiples)\n"
     "  --mouse follow|lock    follow: the game's cursor follows the system pointer (default);\n"
@@ -328,6 +296,8 @@ extern const struct setting port_settings[];     /* settab.c */
 extern const int port_settings_count;
 void port_settings_list(FILE *f);
 void port_settings_seed(int fullscreen, int scale, int aspect, int integer_scale, int lock);
+void port_settings_start(int *fullscreen, int *scale, int *aspect, int *integer_scale);
+void port_settings_roms(const char *dir);
 
 int main(int argc, char *argv[])
 {
@@ -358,7 +328,11 @@ int main(int argc, char *argv[])
         const char *a = argv[i];
         if (!strcmp(a, "--data") && i + 1 < argc) data = argv[++i];
         else if (!strcmp(a, "--home") && i + 1 < argc) home = argv[++i];
-        else if (!strcmp(a, "--scale") && i + 1 < argc) { cfg.scale = atoi(argv[++i]); cl_scale = 1; }
+        else if (!strcmp(a, "--scale") && i + 1 < argc) {
+            cfg.scale = atoi(argv[++i]);
+            cfg.scale = cfg.scale < 1 ? 1 : cfg.scale > 8 ? 8 : cfg.scale;   /* the screen's 1x to 8x */
+            cl_scale = 1;
+        }
         else if (!strcmp(a, "--no-aspect")) { cfg.aspect = 0; cl_aspect = 1; }
         else if (!strcmp(a, "--no-integer")) { cfg.integer_scale = 0; cl_integer = 1; }
         else if (!strcmp(a, "--mouse") && i + 1 < argc && (!strcmp(argv[i + 1], "follow") || !strcmp(argv[i + 1], "lock")))
@@ -446,19 +420,10 @@ int main(int argc, char *argv[])
         mouse = mouse_buf;
     cfg.mouse_lock = mouse && !strcmp(mouse, "lock");
     {
-        /* the settings file's display and sound options; the command line's win */
+        /* the display options, the volume and mouse-look's speed are read below, as the settings
+           screen reads them (settings_init) */
         char v[16];
-        if (!cl_scale && port_config_get(home, "scale", v, sizeof v) == 0 && atoi(v) > 0) cfg.scale = atoi(v);
-        if (!cl_aspect && port_config_get(home, "aspect", v, sizeof v) == 0) cfg.aspect = atoi(v) != 0;
-        if (!cl_integer && port_config_get(home, "integer", v, sizeof v) == 0) cfg.integer_scale = atoi(v) != 0;
-        if (port_config_get(home, "fullscreen", v, sizeof v) == 0) cfg.fullscreen = atoi(v) != 0;
-        if (port_config_get(home, "volume", v, sizeof v) == 0) audio_set_volume(atoi(v));
         if (port_config_get(home, "recording", v, sizeof v) == 0 && !strcmp(v, "0")) recording = 0;
-    }
-    {
-        /* --enhance mouse-look's speed, a percentage of the original's scale (mousedrv.c) */
-        char ls[16];
-        if (port_config_get(home, "look-speed", ls, sizeof ls) == 0) mouse_look_speed(atoi(ls));
     }
     {
         /* the MT-32 ROMs (Exhume's sound/mt32roms.c): --mt32-roms (a folder, or a file in it),
@@ -548,8 +513,14 @@ int main(int argc, char *argv[])
     unsetenv("UWHOME");
 #endif
     port_home = home;
+    /* the settings file as the screen reads it is what the run starts with: a value the screen
+       would not show (volume=abc, scale=99) is its default there and here; the command line's
+       display options win */
     settings_init(home, port_settings, port_settings_count, "Ultima Underworld");
     /* what this run really uses (the command line over the file) is what the screen shows and applies */
+    port_settings_start(&cfg.fullscreen, cl_scale ? NULL : &cfg.scale, cl_aspect ? NULL : &cfg.aspect,
+                        cl_integer ? NULL : &cfg.integer_scale);
+    port_settings_roms(roms);
     port_settings_seed(cfg.fullscreen, cfg.scale, cfg.aspect, cfg.integer_scale, cfg.mouse_lock);
     pit_start();
     memset(&hooks, 0, sizeof hooks);

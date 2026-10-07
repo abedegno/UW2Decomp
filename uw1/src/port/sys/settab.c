@@ -1,6 +1,6 @@
 /* The settings screen's table (ui/settings.h): every row of the Sound, Controls, Display and Game
    tabs; the Enhancements tab is generated from enhtab.c. Rows keep to the settings file (home
-   directory) by their key, except the sound cards, which DATA\UW.CFG holds (main.c's read_uw_cfg
+   directory) by their key, except the sound cards, which DATA\UW.CFG holds (uwcfg.c's read_uw_cfg
    and write_uw_cfg). `--settings-list` prints the table, for tools/setcheck.py. */
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,7 +12,7 @@
 #include "ui/settings.h"
 
 void mouse_look_speed(int pct);             /* mousedrv.c */
-void read_uw_cfg(int *music, int *speech);  /* main.c */
+void read_uw_cfg(int *music, int *speech);  /* uwcfg.c */
 int write_uw_cfg(const char *spec);
 extern const char *port_home;
 
@@ -22,8 +22,13 @@ enum { R_MUSIC, R_SPEECH, R_ROMS, R_VOLUME, R_MOUSE, R_LOOK, R_FULL, R_SCALE, R_
 static void apply_display(int unused)
 {
     (void)unused;
-    plat_set_display(settings_value(R_FULL), settings_value(R_SCALE), settings_value(R_ASPECT), settings_value(R_INTEGER));
+    plat_set_display(settings_value(R_FULL), settings_value(R_SCALE) + 1, settings_value(R_ASPECT), settings_value(R_INTEGER));
 }
+
+/* The window's scale, a cycle and not a slider: dragging a slider that resizes the window would
+   move the row under the pointer. The row's value is the scale less one. */
+static const char *const scale_names[] = { "1x", "2x", "3x", "4x", "5x", "6x", "7x", "8x", NULL };
+static const char *const scale_stored[] = { "1", "2", "3", "4", "5", "6", "7", "8", NULL };
 
 static void apply_mouse(int v) { plat_set_mouse_lock(v); }
 
@@ -79,6 +84,25 @@ static void speech_put(int index)
 }
 
 static int roms_check(const char *path) { return !mt32roms_pick(path, NULL); }
+
+/* The ROMs row shows whether the ROMs are there, not the folder: "found" when the folder the run
+   started with (main.c's search, mt32roms_locate: given, the variable, the remembered folder or the
+   search's) held a pair, or when a folder chosen on the screen does; else "not found". The font
+   has ASCII only, so no tick. A folder is read only when the row's text changes. */
+static const char *start_roms;          /* the folder the run found, or NULL */
+
+void port_settings_roms(const char *dir) { start_roms = dir && *dir ? dir : NULL; }
+
+static const char *roms_show(const char *path)
+{
+    static char last[1024];
+    static const char *word;
+    if (word && !strcmp(last, path)) return word;
+    snprintf(last, sizeof last, "%s", path);
+    word = start_roms || (*path && mt32roms_pick(path, NULL)) ? "found" : "not found";
+    fprintf(stderr, "settings: MT-32 ROMs: %s\n", word);
+    return word;
+}
 static int game_check(const char *path) { return port_game_dir_ok(path); }
 
 static const char *const mouse_names[] = { "Follow", "Lock", NULL };
@@ -90,7 +114,8 @@ const struct setting port_settings[] = {
     [R_SPEECH]  = { .tab = SET_TAB_SOUND, .label = "Speech", .kind = SET_CYCLE, .names = speech_names, .stored = speech_cards,
                     .def = 1, .restart = 1, .get = speech_get, .put = speech_put },
     [R_ROMS]    = { .tab = SET_TAB_SOUND, .label = "MT-32 ROMs", .kind = SET_FOLDER, .key = "mt32-roms", .restart = 1,
-                    .check = roms_check, .refuse = "That folder does not hold MT-32 or CM-32L ROMs" },
+                    .check = roms_check, .refuse = "That folder does not hold MT-32 or CM-32L ROMs",
+                    .show = roms_show },
     [R_VOLUME]  = { .tab = SET_TAB_SOUND, .label = "Volume", .kind = SET_SLIDER, .key = "volume", .lo = 0, .hi = 100, .step = 10,
                     .def = 100, .apply = audio_set_volume },
     [R_MOUSE]   = { .tab = SET_TAB_CONTROLS, .label = "Mouse", .kind = SET_CYCLE, .key = "mouse", .names = mouse_names,
@@ -99,8 +124,8 @@ const struct setting port_settings[] = {
                     .hi = 400, .step = 10, .def = 100, .apply = mouse_look_speed },
     [R_FULL]    = { .tab = SET_TAB_DISPLAY, .label = "Fullscreen", .kind = SET_BOOL, .key = "fullscreen", .def = 0,
                     .apply = apply_display },
-    [R_SCALE]   = { .tab = SET_TAB_DISPLAY, .label = "Window scale", .kind = SET_SLIDER, .key = "scale", .lo = 1, .hi = 8,
-                    .step = 1, .def = 3, .apply = apply_display },
+    [R_SCALE]   = { .tab = SET_TAB_DISPLAY, .label = "Window scale", .kind = SET_CYCLE, .key = "scale", .names = scale_names,
+                    .stored = scale_stored, .def = 2, .apply = apply_display },
     [R_ASPECT]  = { .tab = SET_TAB_DISPLAY, .label = "4:3 aspect", .kind = SET_BOOL, .key = "aspect", .def = 1,
                     .apply = apply_display },
     [R_INTEGER] = { .tab = SET_TAB_DISPLAY, .label = "Whole-number scaling", .kind = SET_BOOL, .key = "integer", .def = 1,
@@ -136,12 +161,25 @@ void port_settings_list(FILE *f)
     }
 }
 
+/* The run's start from the settings file, as the screen read it (a bad value is the row's
+   default, as the screen shows it): the display options into the pointers given (NULL for one the
+   command line gave), the volume and the mouse-look speed applied. */
+void port_settings_start(int *fullscreen, int *scale, int *aspect, int *integer_scale)
+{
+    if (fullscreen) *fullscreen = settings_value(R_FULL);
+    if (scale) *scale = settings_value(R_SCALE) + 1;
+    if (aspect) *aspect = settings_value(R_ASPECT);
+    if (integer_scale) *integer_scale = settings_value(R_INTEGER);
+    audio_set_volume(settings_value(R_VOLUME));
+    mouse_look_speed(settings_value(R_LOOK));
+}
+
 /* The values this run really has (the command line over the settings file), for the screen to show
    and to apply with; nothing is written to the file. */
 void port_settings_seed(int fullscreen, int scale, int aspect, int integer_scale, int lock)
 {
     settings_set_value(R_FULL, fullscreen != 0);
-    settings_set_value(R_SCALE, scale < 1 ? 1 : scale > 8 ? 8 : scale);
+    settings_set_value(R_SCALE, (scale < 1 ? 1 : scale > 8 ? 8 : scale) - 1);
     settings_set_value(R_ASPECT, aspect != 0);
     settings_set_value(R_INTEGER, integer_scale != 0);
     settings_set_value(R_MOUSE, lock != 0);
