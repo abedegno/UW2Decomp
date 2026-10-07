@@ -40,6 +40,8 @@
 void port_clock_read(uint32 t);                 /* the runtime's sound/ail.c */
 #define RP_PORT_CLOCK_READ(t) port_clock_read(t)
 #define RP_PORT_SOUND 1
+void port_idle(void);                           /* the runtime's sys/pit.c: rest while the game waits on the clock */
+#define RP_PORT_IDLE() port_idle()
 #endif
 
 /* The sections, in UW2's order:

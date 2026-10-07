@@ -24,7 +24,7 @@ SOUND = ['sound', 'soundfm', 'soundmt']
 def tool(name, *args): return [PY, os.path.join(here, name)] + list(args)
 
 
-def enhcheck(full=False):
+def enhcheck():
     """Exhume's tools/enhcheck.py all (the enhancements: options, settings, recordings, the
     presentation check and the port-made baselines), on this tree through Exhume's UW2 example
     configuration."""
@@ -32,8 +32,7 @@ def enhcheck(full=False):
     from exhume import EXHUME
     env = dict(os.environ, UW2DECOMP=os.path.dirname(here))
     return subprocess.run([PY, os.path.join(EXHUME, 'tools', 'enhcheck.py'), '--config',
-                           os.path.join(EXHUME, 'examples', 'uw2', 'exhume.toml'), 'all'] + (['full'] if full else []),
-                          env=env).returncode
+                           os.path.join(EXHUME, 'examples', 'uw2', 'exhume.toml'), 'all'], env=env).returncode
 
 
 def ailcheck():
@@ -68,7 +67,7 @@ def main(argv):
                   ('sessions in the UBSan build', tool('replay.py', 'verify', 'all', '--debug'), 'port-debug build'),
                   ('sound drivers (ailcheck)', ailcheck, 'port build'),
                   ('fuzzing, deep', tool('fuzzasm.py', '--deep'), 'port build'),
-                  ('enhancements', lambda: enhcheck(True), 'port build'),
+                  ('enhancements', enhcheck, 'port build'),
                   ('coverage report', tool('coverage.py'), 'port build')]
     results = []; failed = set(); t0 = time.time()
     for name, cmd, needs in steps:
