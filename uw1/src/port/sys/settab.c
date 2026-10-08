@@ -19,6 +19,12 @@ extern const char *port_home;
 /* The rows, in each tab's order; the display rows read each other's values */
 enum { R_MUSIC, R_SPEECH, R_ROMS, R_VOLUME, R_MOUSE, R_LOOK, R_FULL, R_SCALE, R_ASPECT, R_INTEGER, R_FOLDER, R_RECORD, R_START };
 
+/* Window scale offers only the scales whose window fits the display (with 4:3 as it stands) */
+static int scale_limit(void)
+{
+    return plat_max_scale(settings_value(R_ASPECT));
+}
+
 static void apply_display(int unused)
 {
     (void)unused;
@@ -125,7 +131,7 @@ const struct setting port_settings[] = {
     [R_FULL]    = { .tab = SET_TAB_DISPLAY, .label = "Fullscreen", .kind = SET_BOOL, .key = "fullscreen", .def = 0,
                     .apply = apply_display },
     [R_SCALE]   = { .tab = SET_TAB_DISPLAY, .label = "Window scale", .kind = SET_CYCLE, .key = "scale", .names = scale_names,
-                    .stored = scale_stored, .def = 2, .apply = apply_display },
+                    .stored = scale_stored, .def = 2, .apply = apply_display, .limit = scale_limit },
     [R_ASPECT]  = { .tab = SET_TAB_DISPLAY, .label = "4:3 aspect", .kind = SET_BOOL, .key = "aspect", .def = 1,
                     .apply = apply_display },
     [R_INTEGER] = { .tab = SET_TAB_DISPLAY, .label = "Whole-number scaling", .kind = SET_BOOL, .key = "integer", .def = 1,

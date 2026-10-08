@@ -47,7 +47,7 @@ The card numbers on the command line are in each port's `--help`. Choosing a car
 | Option | What it does | Settings-file key | When | Command line |
 |---|---|---|---|---|
 | Fullscreen | Fullscreen or a window | `fullscreen` | at once | none |
-| Window scale | The window's size as a multiple of the game's 320x200 screen, 1x to 8x (default 3x); a list rather than a slider, since the window changes size under the pointer | `scale` | at once | `--scale N` (1 to 8) |
+| Window scale | The window's size as a multiple of the game's 320x200 screen, 1x to 8x (default 3x), offering only the sizes whose window fits your display. A larger scale saved on a larger display opens at the largest that fits, and comes back on the larger display. A list rather than a slider, since the window changes size under the pointer | `scale` | at once | `--scale N` (1 to 8; above what fits, the largest that fits) |
 | 4:3 aspect | Shows the 200 lines as 240, as on a 4:3 CRT; off gives square pixels | `aspect` | at once | `--no-aspect` |
 | Whole-number scaling | Scales by whole multiples only; off scales freely to fit the window | `integer` | at once | `--no-integer` |
 
