@@ -1,8 +1,8 @@
 # Settings
 
-Each port has a settings screen. Press **F11** at any time to open it over the game, and F11 or Esc to close it. On macOS, where the desktop may take F11 for Show Desktop, **Cmd+,** opens and closes it too. While it is open the game's clock is stopped, and keys or mouse buttons you were holding when it opened are let go when it closes.
+Each port has a settings screen. Press **F11** at any time to open it over the game, and F11 or Esc to close it. On macOS press **Cmd+,** instead: the Mac takes F11 for Show Desktop, so it never reaches the game unless you turn that shortcut off (System Settings → Keyboard → Keyboard Shortcuts → Mission Control → Show Desktop). While it is open the game's clock is stopped, and keys or mouse buttons you were holding when it opened are let go when it closes.
 
-The first time you run a port, and on every start after that unless you turn it off, the screen opens before the game, which waits for you to close it. The **Show this at start** row on the Game tab turns that off; F11 still opens it.
+The first time you run a port, and on every start after that unless you turn it off, the screen opens before the game, which waits for you to close it. The **Show this at start** row on the Game tab turns that off; F11 (Cmd+, on macOS) still opens it.
 
 ![The Sound tab](img/settings-sound.png) ![The Enhancements tab](img/settings-enhancements.png)
 
@@ -14,7 +14,7 @@ The first time you run a port, and on every start after that unless you turn it 
 | Left, Right | change the row's value (on the tab bar: the previous or next tab) |
 | Enter | change the row's value (a switch flips, a list goes to the next choice, a folder row opens your system's folder picker) |
 | Tab | the next tab |
-| F11, Esc (and Cmd+, on macOS) | close the screen |
+| F11 (Cmd+, on macOS), Esc | close the screen |
 
 The mouse works too: click a tab, click a row to change it, drag a slider (Volume, Mouse-look speed).
 
