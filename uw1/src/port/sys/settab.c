@@ -97,7 +97,14 @@ static int roms_check(const char *path) { return !mt32roms_pick(path, NULL); }
    has ASCII only, so no tick. A folder is read only when the row's text changes. */
 static const char *start_roms;          /* the folder the run found, or NULL */
 
-void port_settings_roms(const char *dir) { start_roms = dir && *dir ? dir : NULL; }
+void port_settings_roms(const char *dir)
+{
+    char kept[1024];
+    start_roms = dir && *dir ? dir : NULL;
+    /* ROMs the port found itself, with no folder in the settings file: the row holds where they are,
+       so that its folder picker starts there */
+    if (start_roms && port_config_get(port_home, "mt32-roms", kept, sizeof kept) != 0) settings_set_path(R_ROMS, start_roms);
+}
 
 static const char *roms_show(const char *path)
 {
