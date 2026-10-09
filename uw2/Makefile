@@ -25,6 +25,7 @@
 #                      the libraries SETUP_WEB=1 setup-libs.sh built in tools/libs-web): build/web
 #                      for the page, build/web-node/uw2port for Node.js
 #   make webcheck      make web, then every session against its golden in the Node.js build
+#                      (an hour's --exit-after, EXHUME_EXIT_AFTER: it runs far slower)
 #   make package       package build/port-release for this OS into build/dist (tools/package.py)
 #   make test          check + port + routine fuzzing (quick) + every session against its golden
 #                      (docs/BUILDING.md, Testing); the pre-push hook runs it
@@ -142,7 +143,7 @@ web:
 	@. $(HOME)/emsdk/emsdk_env.sh >/dev/null 2>&1; $(PY) tools/portbuild.py --web
 
 webcheck: web
-	@EXHUME_PORT=$(CURDIR)/build/web-node/uw2port $(PY) tools/replay.py verify all
+	@EXHUME_EXIT_AFTER=3600000 EXHUME_PORT=$(CURDIR)/build/web-node/uw2port $(PY) tools/replay.py verify all
 
 package:
 	@$(PY) tools/package.py $(PACKAGE_ARGS)

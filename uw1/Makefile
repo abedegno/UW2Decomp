@@ -27,6 +27,7 @@
 #                      libraries SETUP_WEB=1 setup-libs.sh built in tools/libs-web): build/web for
 #                      the page, build/web-node/uw1port for Node.js
 #   make webcheck      make web, then every session against its golden in the Node.js build
+#                      (an hour's --exit-after, EXHUME_EXIT_AFTER: it runs far slower)
 #   make package       package the release build for this OS into build/dist (tools/package.py;
 #                      PACKAGE_ARGS="--strict --appimage" as CI does)
 #   make icons         the icon files from their SVG sources ([package]; tools/icons.py)
@@ -125,7 +126,7 @@ web:
 	@. $(HOME)/emsdk/emsdk_env.sh >/dev/null 2>&1; $(PORT)/portbuild.py --config exhume.toml --web
 
 webcheck: web
-	@EXHUME_PORT=$(CURDIR)/build/web-node/uw1port $(PORT)/replay.py --config exhume.toml verify all
+	@EXHUME_EXIT_AFTER=3600000 EXHUME_PORT=$(CURDIR)/build/web-node/uw1port $(PORT)/replay.py --config exhume.toml verify all
 
 package:
 	@$(PORT)/package.py --config exhume.toml $(PACKAGE_ARGS)

@@ -235,6 +235,30 @@ def compile_port(cc, path, sound_cflags=()):
     return path, r.returncode, r.stderr, obj if r.returncode == 0 else None
 
 
+# wasm-ld's signature mismatches the web build accepts, each with its reason (any other fails it)
+WEB_ALLOW_MISMATCH = {
+    'valloc': "UW2's valloc (src/port/gfx/valloc.c) replaces the C library's weak one, as on the desktop; "
+              "the library never calls it",
+}
+
+
+def web_mismatches(stderr):
+    """wasm-ld's signature mismatches in a link's messages: a direct call whose declaration
+    differs from the definition is linked as a trap, with only a warning, so each is a failure
+    unless WEB_ALLOW_MISMATCH names it. True when one is not. As Exhume's tools/portbuild.py."""
+    bad = []
+    for b in re.split(r'\n(?=wasm-ld: )', stderr):
+        m = re.match(r'wasm-ld: warning: function signature mismatch: (\S+)', b)
+        if not m: continue
+        if m.group(1) in WEB_ALLOW_MISMATCH:
+            print(f'portbuild.py: signature mismatch {m.group(1)} allowed: {WEB_ALLOW_MISMATCH[m.group(1)]}')
+        else: bad.append(b.strip())
+    if bad:
+        print('portbuild.py: the link makes these calls traps (a declaration differs from the definition; '
+              'an adapter, or WEB_ALLOW_MISMATCH with the reason):\n' + '\n'.join(bad))
+    return bool(bad)
+
+
 def link_web(cc, objs, libs):
     """--web's link, twice from the same objects: the page's program (EXE, uw2port.js and .wasm
     in build/web: a module the page starts itself, with the file system's IDBFS for the saved
@@ -245,10 +269,10 @@ def link_web(cc, objs, libs):
     # types, which Turbo C's and the desktop's calling conventions let through and
     # WebAssembly's call_indirect traps on ("function signature mismatch")
     common = ['-pthread', '-O2', '-sPTHREAD_POOL_SIZE=4', '-sALLOW_MEMORY_GROWTH=1', '-sINITIAL_MEMORY=128MB',
-              '-sSTACK_SIZE=1MB', '-sDEFAULT_PTHREAD_STACK_SIZE=1MB', '-sEXIT_RUNTIME=1', '-lidbfs.js',
+              '-sSTACK_SIZE=1MB', '-sDEFAULT_PTHREAD_STACK_SIZE=1MB', '-sEXIT_RUNTIME=1',
               '-sEMULATE_FUNCTION_POINTER_CASTS=1']
     name = os.path.basename(EXE)
-    page = [cc, '-o', EXE] + objs + libs + common + ['-sENVIRONMENT=web,worker', '-sMODULARIZE=1',
+    page = [cc, '-o', EXE] + objs + libs + common + ['-lidbfs.js', '-sENVIRONMENT=web,worker', '-sMODULARIZE=1',
             '-sEXPORT_NAME=uw2port', '-sEXPORTED_RUNTIME_METHODS=FS,IDBFS,callMain',
             '-sINVOKE_RUN=0', '-sEXPORTED_FUNCTIONS=_main']
     nodeout = os.path.join(root, 'build', 'web-node'); os.makedirs(nodeout, exist_ok=True)
@@ -258,6 +282,7 @@ def link_web(cc, objs, libs):
         if r.returncode:
             print(f'link failed ({os.path.relpath(cmd[2], root)})\n' + r.stderr[-3000:])
             return 1
+        if web_mismatches(r.stderr): return 1
     # Emscripten's output is CommonJS, which node reads as an ES module under a package.json
     # that says "type": "module" (UW2's, for its tools' .mjs): this directory says otherwise
     with open(os.path.join(nodeout, 'package.json'), 'w') as f: f.write('{"type": "commonjs"}\n')

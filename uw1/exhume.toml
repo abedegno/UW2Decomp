@@ -125,6 +125,10 @@ missing = "no libmt32emu (brew install mt32emu, or make setup-libs)"
 "src/combat/SPELLS.C" = ["player_setup=web_player_setup_how"]
 "src/game/UWEDIT.C" = ["player_setup=web_player_setup_how"]
 
+[port.web.allow_mismatch]
+# wasm-ld's signature mismatches the web build accepts (any other fails it)
+valloc = "the game's valloc (VALLOC.ASM, src/port/gfx/asmentry.c) replaces the C library's weak one, as on the desktop; the library never calls it"
+
 [port.stub_notes]
 # what each generated stub file's names are, for its header (tools/portstubs.py)
 "exedata.c" = "the far data tools/extract.py takes from UW.EXE"
