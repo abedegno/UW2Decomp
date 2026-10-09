@@ -56,6 +56,38 @@ jobs:
       - run: make -C uw1 port
       - run: make -C uw1 port-check
 
+  web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          submodules: true
+      # Emscripten, pinned to the version the web build is made with (docs/WEB.md), in ~/emsdk
+      # where the Makefile's web target sources it
+      - name: Cache Emscripten
+        uses: actions/cache@v6
+        with:
+          path: ~/emsdk
+          key: emsdk-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('exhume/tools/setup-emsdk.sh') }}
+      - name: Install Emscripten
+        run: EMSDK_VERSION=4.0.15 sh exhume/tools/setup-emsdk.sh
+      - name: Cache the web libraries
+        uses: actions/cache@v6
+        with:
+          path: uw1/tools/libs-web
+          key: libs-web-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('exhume/tools/setup-libs.sh', 'exhume/tools/setup-emsdk.sh') }}
+      - name: Build SDL3 and libmt32emu for WebAssembly (when not cached)
+        run: |
+          # shellcheck source=/dev/null
+          . ~/emsdk/emsdk_env.sh >/dev/null 2>&1
+          SETUP_WEB=1 sh exhume/tools/setup-libs.sh uw1/tools/libs-web
+      - run: python3 -m venv exhume/.venv && exhume/.venv/bin/pip install -q -r exhume/tools/requirements.txt
+      - name: Fetch Nuked OPL3 (the web build has the FM music as the desktop one does)
+        run: sh exhume/tools/setup-sound.sh uw1/tools/nuked-opl3
+      - run: make -C uw1 web
+
   macos:
     runs-on: macos-latest
     timeout-minutes: 30
