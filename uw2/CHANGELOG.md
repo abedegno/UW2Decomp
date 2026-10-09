@@ -2,7 +2,7 @@
 
 For players. Each release's notes are drafted from here. Releases are tagged `uw2-vX.Y.Z` (before the move to Underworld Exhumed, `vX.Y.Z`).
 
-## 1.2.1 (unreleased)
+## 1.2.1 (9 October 2026)
 
 - **New:** optional enhancements, all off by default (`--enhance list`; docs/ENHANCEMENTS.md). The first is `skip-intro`, which starts at the main menu. A session played with one says so in its log and recording.
 - **New:** more optional enhancements: wrap-menu, fast-panels, free-heading, subtitles, skill-messages (`--enhance list`).

@@ -2,7 +2,7 @@
 
 For players. Each release's notes are drafted from here. Releases are tagged `uw1-vX.Y.Z`.
 
-## 1.0.0 (unreleased)
+## 1.0.0 (9 October 2026)
 
 The first release of the native port of *Ultima Underworld: The Stygian Abyss* for macOS, Windows and Linux.
 
