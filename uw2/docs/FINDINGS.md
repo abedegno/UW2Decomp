@@ -142,6 +142,24 @@ Each entry was re-read against the source before it was written here. The sectio
 - **Effect:** grass in the courtyard never changes.
 - **For a port:** a consideration only.
 
+### Weapon enchantments "of Accuracy" and "of Damage" do each other's job
+
+- **What happens:** a weapon enchantment (class 12) with effect 0 to 3 adds damage (2e + 1: +1, +3, +5, +7), and one with effect 4 to 7 adds to the attack skill (2e - 7: +1, +3, +5, +7). The names the game shows for those effects are the other way round: string block 6 entries 0x1C0 to 0x1C3 are "Minor/Major/Great/Unsurpassed Accuracy" and 0x1C4 to 0x1C7 "Minor/Major/Great/Unsurpassed Damage", and `do_of` names a weapon's enchantment by 0x1C0 + effect. So "of Accuracy" makes the weapon hit harder and "of Damage" makes it hit more often. UW1 has the same names in the same order, and there they are right: effects 0 to 7 add to hit, 8 to 15 add damage.
+- **Where:** `DoPlayerWeapon` in [combat/COMBAT.C](../src/combat/COMBAT.C) (the effects), `do_of` in [obj/LOOK.C](../src/obj/LOOK.C) (the names); `decode_obj_spell` in [obj/OBJUSE.C](../src/obj/OBJUSE.C) gives both the same effect number.
+- **Evidence:** code reading and the shipped `STRINGS.PAK` (block 6); not measured in play.
+- **Confidence:** certain that the names and the effects disagree; whether the code or the strings were meant to change is not known.
+- **Effect:** players who choose a weapon by its enchantment's name get the other bonus. Players have long reported the two as swapped, though usually for UW1, where they are not.
+- **For a port:** matching DOS keeps both; a fix belongs in the strings, so that the game's arithmetic is unchanged.
+
+### Item toughness on an item in a high slot goes to one location twice
+
+- **What happens:** for an item enchantment of class 12 with the 8 bit set (toughness) on an item in a slot above 4, `player_affected_by` loops over hit locations 0 and 1 but adds the toughness to `armour[slots[0]]` each time, so location 0 gets it twice and location 1 not at all. The to-hit protection in the same loop uses `slots[i]`.
+- **Where:** `player_affected_by` in [game/PLAYDATA.C](../src/game/PLAYDATA.C).
+- **Evidence:** code reading; both games (UW1's FINDINGS.md has the same entry).
+- **Confidence:** likely (the neighbouring line indexes by `i`).
+- **Effect:** such an item protects one hit location twice over and leaves the other bare. Which items carry such enchantments was not checked.
+- **For a port:** matching DOS means the doubled location.
+
 ### Mending's light-source exclusion compares the wrong field
 
 - **What happens:** `mendable` refuses lights in MAJOR_MISC minor class 1 by testing `OBJ_CLASS(obj) != 0x90 && OBJ_CLASS(obj) != 0x94`, but `OBJ_CLASS` is major * 4 + minor (9 here), so both tests always pass. 0x90 and 0x94 are the first unlit and the first lit light item ids, so the test was probably meant to limit Mending to the wands in that class.
@@ -335,7 +353,8 @@ Each rule links to the note that has the detail and the function names.
 
 - To hit: `skill_check(attack skill + hit angle, defence)`, the hit angle 0 face to face up to 4 from behind; a critical multiplies the damage by 1 or 2. A bad miss can wear the player's weapon. ([combat.md](subsystems/combat.md#melee))
 - Damage: `(d / 6)d6 + 1d(d % 6)`, scaled by the charged power / 128, plus the hit angle, less the armour at the hit location (5/3 of it for a powerful critter), and halved against the player on easy.
-- The player's attack skill is Attack / 2 + the weapon skill + Valor + dexterity / 7 (+7 on easy); damage is the weapon's for the swing kind + strength / 9, or bare handed 2/5 of the skill + strength / 6 + 4. Weapon enchantments add damage (2e + 1) or accuracy (2e - 7); higher effects are special weapons.
+- The player's attack skill is Attack / 2 + the weapon skill + Valor + dexterity / 7 (+7 on easy); damage is the weapon's for the swing kind + strength / 9, or bare handed 2/5 of the skill + strength / 6 + 4. Weapon enchantments add damage (2e + 1, effects 0 to 3, named "Accuracy") or accuracy (2e - 7, effects 4 to 7, named "Damage"; see [the swapped names](#weapon-enchantments-of-accuracy-and-of-damage-do-each-others-job)); higher effects are special weapons.
+- Armour enchantments (effects 0 to 7 "Protection", 8 to 15 "Toughness", each (e & 7) + 1): Protection is subtracted from an attacker's attack skill when the player is hit at that location, so blows miss more often; Toughness is added to the player's armour at that location, so blows that land do less damage. Neither changes how fast the item wears: the item-damage path (`DamageInventory`, `damage_item`) never reads an enchantment.
 - Critters perceive by hearing and sight ranges scaled by the target's noise and visibility; in reach they strike one time in four; casters cast within 8 tiles with chance caster / 128; archers shoot within 4 tiles; they flee by the damage taken and their nerve. ([critters.md](subsystems/critters.md#rules-found-in-the-code))
 
 ### Damage types and resistances

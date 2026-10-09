@@ -295,7 +295,8 @@ Smite Undead hits only a critter with resist bit 0x80; Summon Monster picks a cr
 
 ### Melee and damage
 
-- To hit: `skill_check(attack skill + hit angle, defence)`, the angle 0 face to face up to 4 from behind. Damage: `(d / 6)d6 + 1d(d % 6)`, scaled by the charged power / 128, less the armour at the hit location, halved against the player on easy. A weapon enchantment adds (effect & 7) + 1 to damage or to hit. ([combat.md](subsystems/combat.md#melee))
+- To hit: `skill_check(attack skill + hit angle, defence)`, the angle 0 face to face up to 4 from behind. Damage: `(d / 6)d6 + 1d(d % 6)`, scaled by the charged power / 128, less the armour at the hit location, halved against the player on easy. A weapon enchantment adds (effect & 7) + 1 to hit (effects 0 to 7, named "Accuracy") or to damage (8 to 15, "Damage"): in UW1 the names are right, though players often report them as swapped (in UW2 they are; its FINDINGS.md). ([combat.md](subsystems/combat.md#melee))
+- Armour enchantments (effects 0 to 7 "Protection", 8 to 15 "Toughness", each (e & 7) + 1): Protection is subtracted from an attacker's attack skill when the player is hit at that location, so blows miss more often; Toughness is added to the player's armour at that location, so blows that land do less damage. Neither changes how fast the item wears: the item-damage path (`DamageInventory`, `damage_item`) never reads an enchantment.
 - Damage types are a bit set (magic 0x03, physical 4, fire 8, poison 0x10, cold 0x20, missiles 0x40, undead 0x80 as a resist bit only); UW1 has no fire against cold doubling. Objects shift damage right by their quality class. ([combat.md](subsystems/combat.md#damage))
 - A kill gives 4 * exp + 2d(exp) from the creature record, 1.5 to 3 times that for a powerful critter. ([combat.md](subsystems/combat.md#melee))
 
