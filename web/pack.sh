@@ -10,9 +10,11 @@ g=$1; src=$2; roms=$3; site=$4
 # Never into a git work tree (this repository's or any other): the data would be one `git add` away
 # from a commit. The site is checked at its nearest folder that exists, before anything is written.
 d=$site; while [ ! -d "$d" ]; do d=$(dirname "$d"); done
-if git -C "$d" rev-parse --git-dir >/dev/null 2>&1; then
+command -v git >/dev/null || { echo "web/pack.sh: no git, so it cannot check $site is outside any repository" >&2; exit 1; }
+if err=$(LC_ALL=C git -C "$d" rev-parse --git-dir 2>&1); then
   echo "web/pack.sh: refusing $site: it is inside a git repository (use a folder outside any, e.g. mktemp -d)" >&2; exit 1
 fi
+case $err in *"not a git repository"*) ;; *) echo "web/pack.sh: cannot tell whether $site is in a git repository: $err" >&2; exit 1;; esac
 . "$HOME/emsdk/emsdk_env.sh" >/dev/null 2>&1
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 cp -R "$src"/. "$tmp/game"

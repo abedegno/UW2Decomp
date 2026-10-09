@@ -47,6 +47,8 @@ sh web/deploy.sh --push OWNER/NAME ~/UWGOG/UW1 ~/UWGOG/UW2 ROMS_DIR    # the dep
 
 `web/deploy.sh` runs `make web webcheck` for both games, assembles the site in a temporary folder as above, packs both games, runs `tools/webcheck.mjs` on it, and checks that no file in it names a local path (the home folder, any `/Users/` path or a temporary folder). Without `--push` it stops there: it lists the files it would push with their sizes, the repository and branch, and the URL, and contacts nothing. With `--push` it force-pushes the site as a single commit to the `gh-pages` branch of `git@github.com:OWNER/NAME.git`. The site is then at `https://OWNER.github.io/NAME/` once the repository's Pages settings serve the `gh-pages` branch.
 
+It refuses a repository that is the origin of this repository or of Exhume, and the project's own repositories by name (underworld-exhumed, Exhume, UW1Decomp, UW2Decomp, uw1-ci-assets, uw2-ci-assets, UWReverseEngineering, UnderworldGodot, emulators, dos-mcp, uw2-personal-notes), before it builds anything. Because the push is forced, `--push` also refuses a repository that already has a `gh-pages` branch unless `--replace` is given too.
+
 `--skip-replays` runs only `make web`, not `make webcheck`, for a quick redeploy of builds that have already been checked. The page checks always run.
 
 **The game data and the MT-32 ROMs are the deployer's own.** They go into the site and nowhere else: never into this repository or any other. `*.data` and `*.data.js` are ignored by git here, and both scripts refuse a site folder inside a git repository. The site repository should be one the deployer created for the purpose.
