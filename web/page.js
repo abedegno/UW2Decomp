@@ -54,12 +54,14 @@ async function startGame(name) {
     onRejection = ev => failNow(ev.reason);
     addEventListener('unhandledrejection', onRejection);
     let pending = 0, most = 0, done; const loaded = new Promise(r => { done = r; });
+    let unlisten = () => {};            // the page's own copy requests (below), removed at the game's end
     const M = await factory({
       canvas: document.getElementById('canvas'),
       locateFile,
       // the game has ended (the port's loop stopped): the menu, then a fresh page for the next game
       // (the port has closed its recording, written out its files and had the home copied first)
-      onGameExit: () => { restore('The game has ended.'); setTimeout(() => location.reload(), 300); },
+      // (and no copy starts after it: the runtime has ended, its file system with it)
+      onGameExit: () => { unlisten(); restore('The game has ended.'); setTimeout(() => location.reload(), 300); },
       preRun: [M => {
         M.FS_createPath = (...a) => M.FS.createPath(...a);
         M.FS_createDataFile = (...a) => M.FS.createDataFile(...a);
@@ -106,8 +108,10 @@ async function startGame(name) {
       syncHome = () => new Promise(ok => { waiting.push(ok); if (!running) run(); });
     }
     M.syncHome = done => { syncHome().then(() => done && done()); };     // the port's request; done when copied
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') syncHome(); });
-    addEventListener('pagehide', () => syncHome());
+    const onHidden = () => { if (document.visibilityState === 'hidden') syncHome(); }, onLeave = () => syncHome();
+    document.addEventListener('visibilitychange', onHidden);
+    addEventListener('pagehide', onLeave);
+    unlisten = () => { document.removeEventListener('visibilitychange', onHidden); removeEventListener('pagehide', onLeave); };
     if (!M.FS.analyzePath('/game').exists) M.FS.mkdir('/game');
     const args = ['--data', '/game'];
     if (M.FS.analyzePath('/game/roms').exists) args.push('--mt32-roms', '/game/roms');   // the port's search does not look in subfolders
