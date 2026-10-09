@@ -140,7 +140,7 @@ port-release:
 	@$(PY) tools/portbuild.py --release $(PORT_ARCHS)
 
 web:
-	@. $(HOME)/emsdk/emsdk_env.sh >/dev/null 2>&1; $(PY) tools/portbuild.py --web
+	@PATH="$(HOME)/emsdk:$(HOME)/emsdk/upstream/emscripten:$$PATH"; $(PY) tools/portbuild.py --web
 
 webcheck: web
 	@EXHUME_EXIT_AFTER=3600000 EXHUME_PORT=$(CURDIR)/build/web-node/uw2port $(PY) tools/replay.py verify all

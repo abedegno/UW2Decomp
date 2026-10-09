@@ -123,7 +123,7 @@ port-release:
 	@$(PORT)/portbuild.py --config exhume.toml --release $(PORT_ARCHS)
 
 web:
-	@. $(HOME)/emsdk/emsdk_env.sh >/dev/null 2>&1; $(PORT)/portbuild.py --config exhume.toml --web
+	@PATH="$(HOME)/emsdk:$(HOME)/emsdk/upstream/emscripten:$$PATH"; $(PORT)/portbuild.py --config exhume.toml --web
 
 webcheck: web
 	@EXHUME_EXIT_AFTER=3600000 EXHUME_PORT=$(CURDIR)/build/web-node/uw1port $(PORT)/replay.py --config exhume.toml verify all
