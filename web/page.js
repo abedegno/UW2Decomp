@@ -1,5 +1,6 @@
-const status = document.getElementById('status');
+const status = document.getElementById('status'), progress = document.getElementById('progress');
 if (!window.crossOriginIsolated && !navigator.serviceWorker) status.textContent = 'This browser cannot run the game here (no service workers: a private window?).';
+const LOAD_TIMEOUT_MS = 120000;     // a download that stalls this long brings the menu back
 // the port's script is a classic one (MODULARIZE without EXPORT_ES6) that defines window.uwNport;
 // its pthread workers load the same script again, from where document.currentScript says it came
 function loadScript(src) {
@@ -9,41 +10,73 @@ function loadScript(src) {
     document.head.appendChild(s);
   });
 }
+const mb = n => (n / 1048576).toFixed(1);
 // The game's files and the ROMs come from web/pack.sh: NAME/NAME.data, loaded by NAME/NAME.data.js,
-// Emscripten's file packager's script. That script hangs its loader on a global Module's preRun;
-// the loader is handed to the port's factory, and the run dependencies it counts are counted here,
-// as the port exports neither addRunDependency nor FS_createPath: the port's main runs (callMain)
-// only once the files are in /game.
+// Emscripten's file packager's script. That script hangs its loader on a global Module's preRun,
+// and reports the download through that Module's setStatus ("Downloading data... (x/y)", in
+// bytes; nothing when the files come from its cache in IndexedDB); the loader is handed to the
+// port's factory, and the run dependencies it counts (one a file) are counted here, as the port
+// exports neither addRunDependency nor FS_createPath: the port's main runs (callMain) only once the
+// files are in /game. The menu, with the progress under its buttons, stays until then.
 async function startGame(name) {
   const menu = document.getElementById('menu'), game = document.getElementById('game');
-  menu.hidden = true; game.hidden = false;
+  const buttons = [...menu.querySelectorAll('button')];
+  let onRejection = null;
+  const restore = message => {
+    if (onRejection) removeEventListener('unhandledrejection', onRejection);
+    game.hidden = true; menu.hidden = false; progress.textContent = '';
+    for (const b of buttons) b.disabled = false;
+    status.textContent = message;
+  };
+  for (const b of buttons) b.disabled = true;
+  status.textContent = ''; progress.textContent = 'Loading the game: 0%';
   try {
     // the packager's script reads the global Module as it loads (locateFile, for the .data's
     // address) and again as the data arrives, so it stays defined
     const locateFile = f => `./${name}/${f}`;
-    window.Module = { locateFile };
+    window.Module = {
+      locateFile,
+      setStatus: t => {
+        const m = /\((\d+)\/(\d+)\)/.exec(t || '');
+        if (m && +m[2]) progress.textContent = `Downloading the game: ${mb(+m[1])} of ${mb(+m[2])} MB (${Math.floor(100 * m[1] / m[2])}%)`;
+      },
+    };
     await loadScript(`./${name}/${name}.data.js`);
     const loaders = window.Module.preRun || [];
     await loadScript(`./${name}/${name}port.js`);
     const factory = window[`${name}port`];
     if (typeof factory !== 'function') throw new Error(`${name}port.js did not define ${name}port`);
-    let pending = 0, done; const loaded = new Promise(r => { done = r; });
+    // the packager's loader fails out of sight (a rejected promise nobody holds): the first such
+    // failure while the files load is the game's. Listened for before the factory runs the loader,
+    // and no longer once the files are in.
+    let failNow; const failed = new Promise((_, no) => { failNow = no; });
+    failed.catch(() => {});
+    onRejection = ev => failNow(ev.reason);
+    addEventListener('unhandledrejection', onRejection);
+    let pending = 0, most = 0, done; const loaded = new Promise(r => { done = r; });
     const M = await factory({
       canvas: document.getElementById('canvas'),
       locateFile,
-      onGameExit: () => location.reload(),
+      // the game has ended (the port's loop stopped): the menu, then a fresh page for the next game
+      onGameExit: () => { restore('The game has ended.'); setTimeout(() => location.reload(), 300); },
       preRun: [M => {
         M.FS_createPath = (...a) => M.FS.createPath(...a);
         M.FS_createDataFile = (...a) => M.FS.createDataFile(...a);
-        M.addRunDependency = () => { pending++; };
-        M.removeRunDependency = () => { if (--pending === 0) done(); };
+        M.addRunDependency = () => { most = Math.max(most, ++pending); };
+        M.removeRunDependency = () => {
+          if (most) progress.textContent = `Loading the game: ${Math.floor(100 * (most - pending + 1) / most)}%`;
+          if (--pending === 0) done();
+        };
       }, ...loaders],
     });
-    // the packager's loader fails out of sight (a rejected promise nobody holds): the first such
-    // failure while the files load is the game's
-    const failed = new Promise((_, no) => addEventListener('unhandledrejection', ev => no(ev.reason), { once: true }));
-    failed.catch(() => {});
-    if (pending) await Promise.race([loaded, failed]);
+    window.__exhumeModule = M;      // for tools/webcheck.mjs
+    if (pending) {
+      let timer;
+      const stalled = new Promise((_, no) => { timer = setTimeout(() => no(new Error(`the game's files did not arrive in ${LOAD_TIMEOUT_MS / 1000} s`)), LOAD_TIMEOUT_MS); });
+      stalled.catch(() => {});
+      try { await Promise.race([loaded, failed, stalled]); } finally { clearTimeout(timer); }
+    }
+    removeEventListener('unhandledrejection', onRejection); onRejection = null;
     // the home (the port's $HOME/.NAMEport) kept in the browser's IndexedDB; a first visit's is
     // seeded with settings-at-start=0, so the game starts at its title, the settings screen a key away
     const home = `/home/web_user/.${name}port`;
@@ -54,10 +87,20 @@ async function startGame(name) {
     if (!M.FS.analyzePath('/game').exists) M.FS.mkdir('/game');
     const args = ['--data', '/game'];
     if (M.FS.analyzePath('/game/roms').exists) args.push('--mt32-roms', '/game/roms');   // the port's search does not look in subfolders
-    M.callMain(args);
+    menu.hidden = true; game.hidden = false;
+    document.getElementById('gear').onclick = () => { document.exitPointerLock(); M._web_open_settings(); document.getElementById('canvas').focus(); };
+    document.getElementById('fullscreen').onclick = () => game.requestFullscreen();
+    // a port that cannot start says why in a message box (SDL's alert(), from main, on this
+    // thread) and main returns its failure, which callMain returns: the message goes to the
+    // status line under the menu instead of a box over a black page
+    let said = '';
+    const alert = window.alert;
+    window.alert = t => { said = String(t); console.error(said); };
+    let ret;
+    try { ret = M.callMain(args); } finally { window.alert = alert; }
+    if (ret) throw new Error(said ? said.replace(/\n+/g, ' ') : `the port stopped at its start (status ${ret})`);
   } catch (e) {
-    game.hidden = true; menu.hidden = false;
-    status.textContent = `The game could not start: ${e && e.message ? e.message : e}`;
+    restore(`The game could not start: ${e && e.message ? e.message : e}`);
     console.error(e);
   }
 }
