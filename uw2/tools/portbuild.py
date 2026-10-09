@@ -349,7 +349,9 @@ def main(argv):
         OUT = os.path.join(root, 'build', 'web')
         portcheck.OUT = OUT
         EXE = os.path.join(OUT, 'uw2port.js')
-        WEB = ['-pthread']
+        # the build's own paths kept out of the program (__FILE__ in the null traps): the page is
+        # published (web/deploy.sh refuses a site naming a local path)
+        WEB = ['-pthread', f'-ffile-prefix-map={root}/=', f'-ffile-prefix-map={exhume.EXHUME}/=exhume/']
         portcheck.FLAGS = portcheck.FLAGS + WEB + ['-O2']
         PORT_FLAGS.extend(WEB)
         LIBS = os.path.join(root, 'tools', 'libs-web')

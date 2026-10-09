@@ -59,6 +59,8 @@ uw1/build/port/uw1port --data ~/UWGOG/UW1   # or names it
 
 Each game's BUILDING.md has its options, its sound cards and where it keeps saves and recordings. [PORT.md](PORT.md) is how the ports work.
 
+The ports also build to WebAssembly for a web page, and a site with them can be deployed: see [WEB.md](WEB.md).
+
 ## Input scripts
 
 The ports take `--input-script FILE`, for tests: keys and mouse events at set times, fed in as a player's would be (Exhume's `runtime/port/sys/inscript.c`), so a hidden run can record a session with no one at the keyboard. One event a line, at a time in milliseconds of the game's PIT clock (18.2 Hz, so about 55 ms apart at best) from the start; `#` starts a comment:

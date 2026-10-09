@@ -14,3 +14,7 @@ tools/nuked-opl3/
 
 # superpowers plan workspaces (ledgers, test logs): local only
 .superpowers/
+
+# the web site's packed game data (web/pack.sh): the user's own files, never committed
+*.data
+*.data.js
