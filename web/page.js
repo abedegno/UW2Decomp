@@ -127,6 +127,14 @@ async function startGame(name) {
     let ret;
     try { ret = M.callMain(args); } finally { window.alert = alert; }
     if (ret) throw new Error(said ? said.replace(/\n+/g, ' ') : `the port stopped at its start (status ${ret})`);
+    // the times the sound ran dry (audio_underruns), in the console every 10 s while it changes
+    let last = 0;
+    const watch = setInterval(() => {
+      let n;
+      try { n = M._audio_underruns(); } catch { clearInterval(watch); return; }     // the runtime has ended
+      if (n !== last) console.log(`audio: ${n} underruns`);
+      last = n;
+    }, 10000);
   } catch (e) {
     restore(`The game could not start: ${e && e.message ? e.message : e}`);
     console.error(e);
