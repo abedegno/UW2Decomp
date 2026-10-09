@@ -58,6 +58,7 @@ async function startGame(name) {
       canvas: document.getElementById('canvas'),
       locateFile,
       // the game has ended (the port's loop stopped): the menu, then a fresh page for the next game
+      // (the port has closed its recording, written out its files and had the home copied first)
       onGameExit: () => { restore('The game has ended.'); setTimeout(() => location.reload(), 300); },
       preRun: [M => {
         M.FS_createPath = (...a) => M.FS.createPath(...a);
@@ -84,6 +85,29 @@ async function startGame(name) {
     await new Promise((ok, no) => M.FS.syncfs(true, e => e ? no(new Error(`cannot read the saved files (${e})`)) : ok()));
     const cfg = `${home}/${name}port.cfg`;
     if (!M.FS.analyzePath(cfg).exists) M.FS.writeFile(cfg, 'settings-at-start=0\n');
+    // and written back (FS.syncfs(false)): when the port asks, after it writes a setting
+    // (port_config_set) and once a second while the game is changing its files (a save), when the
+    // page is hidden or left, and at the game's end (the port waits for that one before it stops
+    // and its runtime closes the storage). One copy at a time: a request made while one is running
+    // waits for the next, which starts when that one ends. The promise says when a copy begun
+    // after the request is done (true, or false if it failed).
+    let syncHome;
+    {
+      let running = false, waiting = [];
+      const run = () => {
+        const these = waiting; waiting = []; running = true;
+        M.FS.syncfs(false, e => {
+          if (e) console.error(`the saved files could not be kept (${e})`);
+          running = false;
+          for (const f of these) f(!e);
+          if (waiting.length) run();
+        });
+      };
+      syncHome = () => new Promise(ok => { waiting.push(ok); if (!running) run(); });
+    }
+    M.syncHome = done => { syncHome().then(() => done && done()); };     // the port's request; done when copied
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') syncHome(); });
+    addEventListener('pagehide', () => syncHome());
     if (!M.FS.analyzePath('/game').exists) M.FS.mkdir('/game');
     const args = ['--data', '/game'];
     if (M.FS.analyzePath('/game/roms').exists) args.push('--mt32-roms', '/game/roms');   // the port's search does not look in subfolders
