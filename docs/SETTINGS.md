@@ -18,7 +18,7 @@ The first time you run a port, and on every start after that unless you turn it 
 
 The mouse works too: click a tab, click a row to change it, drag a slider (Volume, Mouse-look speed).
 
-Every change is written to the settings file at once. A row marked "Restart to apply" on the screen is saved but only used from the next start; the others take effect immediately. The settings file is `uw1port.cfg` or `uw2port.cfg` in the port's home folder (`~/.uw1port` or `~/.uw2port` on macOS and Linux, `%APPDATA%\uw1port` or `%APPDATA%\uw2port` on Windows). The two sound card rows are the exception: they are kept in `DATA\UW.CFG` in the home folder, the file the original install program wrote, so they have no key.
+Every change is written to the settings file at once. A row marked "Restart to apply" on the screen is saved but only used from the next start; the others take effect immediately. The settings file is `uw1port.cfg` or `uw2port.cfg` in the port's home folder (`~/.uw1port` or `~/.uw2port` on macOS and Linux, `%APPDATA%\uw1port` or `%APPDATA%\uw2port` on Windows). On a Mac the folder is hidden, as its name starts with a dot: in Finder press Cmd+Shift+G and type `~/.uw2port`. The home folder also holds your saved games, so to start the port afresh rename it rather than delete it. The two sound card rows are the exception: they are kept in `DATA\UW.CFG` in the home folder, the file the original install program wrote, so they have no key.
 
 ## The options
 
@@ -69,6 +69,6 @@ One switch for each enhancement the game has, all off by default. The selected o
 
 ## The command line and the file
 
-A command-line option beats the settings file for that run, and the screen shows the values the run really has. Using the screen during the run does not undo the option: `--scale 4` stays at 4 for that run even if the file says 2. Most options are for that run only and leave the file alone (`--scale`, `--no-aspect`, `--no-integer`, `--no-recording`, `--no-audio`).
+A command-line option beats the settings file for that run, and the screen shows the values the run really has. Using the screen during the run does not undo the option: `--scale 3` stays at 3 for that run even if the file says 2. Most options are for that run only and leave the file alone (`--scale`, `--no-aspect`, `--no-integer`, `--no-recording`, `--no-audio`).
 
 Five options are also remembered, as if you had set them on the screen: `--enhance` (and `--no-enhance`), `--sound`, `--mt32-roms`, `--data` and `--mouse`.
