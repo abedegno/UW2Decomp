@@ -9,5 +9,6 @@ fmtowns/*
 node_modules/
 tools/emu2/
 tools/libs/
+tools/libs-web/
 tools/nuked-opl3/
 .exhume/
