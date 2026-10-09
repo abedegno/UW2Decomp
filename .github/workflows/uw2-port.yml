@@ -70,20 +70,19 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/emsdk
-          key: emsdk-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('exhume/tools/setup-emsdk.sh') }}
+          key: emsdk-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('exhume/tools/setup-emsdk.sh') }}-4.0.15
       - name: Install Emscripten
         run: EMSDK_VERSION=4.0.15 sh exhume/tools/setup-emsdk.sh
       - name: Cache the web libraries
         uses: actions/cache@v6
         with:
           path: uw2/tools/libs-web
-          key: libs-web-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('exhume/tools/setup-libs.sh', 'exhume/tools/setup-emsdk.sh') }}
+          key: libs-web-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('exhume/tools/setup-libs.sh', 'exhume/tools/setup-emsdk.sh') }}-4.0.15
       - name: Build SDL3 and libmt32emu for WebAssembly (when not cached)
         run: |
           # shellcheck source=/dev/null
           . ~/emsdk/emsdk_env.sh >/dev/null 2>&1
           SETUP_WEB=1 sh exhume/tools/setup-libs.sh uw2/tools/libs-web
-      - run: python3 -m venv uw2/.venv && uw2/.venv/bin/pip install -q -r uw2/tools/requirements.txt
       - name: Fetch Nuked OPL3 (the web build has the FM music as the desktop one does)
         run: make -C uw2 setup-sound
       - run: make -C uw2 web
