@@ -20,6 +20,10 @@ build/port/uw2port.
                                         build/port-cov/uw2port: each run writes a .profraw
                                         (LLVM_PROFILE_FILE), for llvm-profdata and llvm-cov, to
                                         see which of the port's routines the replays run
+    python3 tools/portbuild.py --frame-single  the EMS frame's 64 KB mapped once, as the web
+                                        build has it, in build/port-single/uw2port; the 64 KB
+                                        after it fault, so a pointer the game's C runs past the
+                                        frame's end is reported where it happens
 
 The port's own C is compiled with its headers and the game's: UW2's bindings and headers in
 src/port first, then the runtime's (docs/PORT.md, "The runtime"); the platform backend (SDL3,
@@ -229,6 +233,7 @@ def main(argv):
     ap.add_argument('--run', action='store_true')
     ap.add_argument('--debug', action='store_true')
     ap.add_argument('--coverage', action='store_true')
+    ap.add_argument('--frame-single', action='store_true', help='the EMS frame mapped once, as WebAssembly has it (a desktop check)')
     ap.add_argument('--release', action='store_true')
     ap.add_argument('--arch', action='append', default=[])
     a = ap.parse_args(argv)
@@ -252,6 +257,12 @@ def main(argv):
         portcheck.FLAGS = portcheck.FLAGS + cov
         PORT_FLAGS.extend(cov)
         link_extra = ['-fprofile-instr-generate']
+    if a.frame_single:
+        OUT = os.path.join(root, 'build', 'port-single')
+        EXE = os.path.join(OUT, 'uw2port')
+        portcheck.OUT = OUT
+        portcheck.FLAGS = portcheck.FLAGS + ['-DPORT_FRAME_SINGLE']
+        PORT_FLAGS.append('-DPORT_FRAME_SINGLE')
     if a.release:
         RELEASE = True
         OUT = os.path.join(root, 'build', 'port-release')

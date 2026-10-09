@@ -430,7 +430,7 @@ int far readlpinc(unsigned page, struct LpDesc far *desc, unsigned n, void far *
     if (lp_left == 0) return 0;
     if (n > lp_left) n = lp_left;
     amount = intoFarBuffer_ovr167_5DA(STDAT.anm_fd,
-             target + out_size - lp_left, n);
+             EMS_ADD(target, out_size - lp_left), n);
     lp_left -= amount;
     return amount;
 }
@@ -1262,17 +1262,17 @@ int far cuts_process_lp(register struct CutsState *st, struct AnmHdr far *anm,
             int hb;
             int wd;
             int off;
-            hb = data[1];
-            wd = (*(uint16 far *)(data + 2) + 1) & ~1;
+            hb = EMS_WRAP(data)[1];
+            wd = (*(uint16 far *)(EMS_WRAP(data) + 2) + 1) & ~1;
             off = hb ? wd + 4 : 2;
             if (!st->flags.bit.b0) {
                 if (splity == -1 && st->vscr4F == 0 && !flipped) grSoftPageFlip();
-                if (data[off] == 0)
-                    show(st->x + (focus_x & 3), st->y, data + off + 2, 200 - (splity + 1),
+                if (EMS_WRAP(data)[off] == 0)
+                    show(st->x + (focus_x & 3), st->y, EMS_WRAP(data) + off + 2, 200 - (splity + 1),
                         320, 320 - st->w, 200 - st->h);
-                else if (data[off] == 1) {
+                else if (EMS_WRAP(data)[off] == 1) {
                     if (splity == -1 && st->vscr4F == 0 && !flipped) copy_visible_to_hidden();
-                    draw_rsd(data + off + 2, st->x + (focus_x & 3), st->y,
+                    draw_rsd(EMS_WRAP(data) + off + 2, st->x + (focus_x & 3), st->y,
                         320, 200 - (splity + 1), 320 - st->w, 200 - st->h);
                 }
                 if (splity == -1 && st->vscr4F == 0 && !flipped) {
