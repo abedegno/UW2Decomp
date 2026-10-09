@@ -305,6 +305,7 @@ def log_summary(path):
     parts = [f'stopped at call {stop}' if stop else 'never stopped']
     for k, v in runs.items():
         if k == 'MISC': parts.append('MISC ' + ' '.join(f'{a}:{b:X}' for a, b in v)); continue
+        if k == 'ENH': parts.append('enhancements ' + (', '.join(v) or 'none')); continue   # names (format 5), not runs
         parts.append(f'{k} {sum(r[0] for r in v)} calls in {len(v)} runs')
     keys = [r for c, r in runs.get('KEY', []) if r]
     if keys: parts.append('keys ' + ' '.join(f'{k:04X}' for k in keys))
