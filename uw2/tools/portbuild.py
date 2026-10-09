@@ -24,6 +24,13 @@ build/port/uw2port.
                                         build has it, in build/port-single/uw2port; the 64 KB
                                         after it fault, so a pointer the game's C runs past the
                                         frame's end is reported where it happens
+    python3 tools/portbuild.py --web    the WebAssembly build (make web), with Emscripten's emcc
+                                        (Exhume's tools/setup-emsdk.sh) and the libraries in
+                                        tools/libs-web (SETUP_WEB=1 tools/setup-libs.sh): the
+                                        page's program in build/web (uw2port.js and .wasm), and
+                                        the same objects linked for Node.js in build/web-node,
+                                        with uw2port there a script that runs it, so
+                                        tools/replay.py replays the sessions in it (EXHUME_PORT)
 
 The port's own C is compiled with its headers and the game's: UW2's bindings and headers in
 src/port first, then the runtime's (docs/PORT.md, "The runtime"); the platform backend (SDL3,
@@ -75,6 +82,7 @@ BACKEND = 'sdl3'
 LIBS = os.path.join(root, 'tools', 'libs')
 RELEASE = False
 ARCHS = []      # -arch flags for a universal macOS build
+WEB = []        # --web: the flags every object is compiled with (threads: shared memory)
 
 
 def pkg_env():
@@ -208,7 +216,7 @@ def compile_port(cc, path, sound_cflags=()):
             return path, r.returncode, r.stderr if r.returncode else '', 'opl3-shared' if r.returncode == 0 else None
         obj = os.path.join(OUT, 'deps', os.path.basename(path)[:-2] + '.o')
         os.makedirs(os.path.dirname(obj), exist_ok=True)
-        r = subprocess.run([cc] + ARCHS + ['-x', 'c', '-std=c99', '-O2', '-w', '-c', '-o', obj, path],
+        r = subprocess.run([cc] + ARCHS + WEB + ['-x', 'c', '-std=c99', '-O2', '-w', '-c', '-o', obj, path],
                            capture_output=True, text=True, cwd=root)
         return path, r.returncode, r.stderr if r.returncode else '', obj if r.returncode == 0 else None
     obj = port_object(OUT, path)
@@ -227,6 +235,39 @@ def compile_port(cc, path, sound_cflags=()):
     return path, r.returncode, r.stderr, obj if r.returncode == 0 else None
 
 
+def link_web(cc, objs, libs):
+    """--web's link, twice from the same objects: the page's program (EXE, uw2port.js and .wasm
+    in build/web: a module the page starts itself, with the file system's IDBFS for the saved
+    games) and a Node.js one in build/web-node, which reads and writes the host's files
+    (NODERAWFS), with the script uw2port beside it that runs it under node. As Exhume's
+    tools/portbuild.py --web."""
+    # EMULATE_FUNCTION_POINTER_CASTS: the game's C calls functions through pointers of other
+    # types, which Turbo C's and the desktop's calling conventions let through and
+    # WebAssembly's call_indirect traps on ("function signature mismatch")
+    common = ['-pthread', '-O2', '-sPTHREAD_POOL_SIZE=4', '-sALLOW_MEMORY_GROWTH=1', '-sINITIAL_MEMORY=128MB',
+              '-sSTACK_SIZE=1MB', '-sDEFAULT_PTHREAD_STACK_SIZE=1MB', '-sEXIT_RUNTIME=1', '-lidbfs.js',
+              '-sEMULATE_FUNCTION_POINTER_CASTS=1']
+    name = os.path.basename(EXE)
+    page = [cc, '-o', EXE] + objs + libs + common + ['-sENVIRONMENT=web,worker', '-sMODULARIZE=1',
+            '-sEXPORT_NAME=uw2port', '-sEXPORTED_RUNTIME_METHODS=FS,IDBFS,callMain',
+            '-sINVOKE_RUN=0', '-sEXPORTED_FUNCTIONS=_main']
+    nodeout = os.path.join(root, 'build', 'web-node'); os.makedirs(nodeout, exist_ok=True)
+    node = [cc, '-o', os.path.join(nodeout, name)] + objs + libs + common + ['-sENVIRONMENT=node', '-sNODERAWFS=1']
+    for cmd in (page, node):
+        r = subprocess.run(cmd, capture_output=True, text=True, cwd=root)
+        if r.returncode:
+            print(f'link failed ({os.path.relpath(cmd[2], root)})\n' + r.stderr[-3000:])
+            return 1
+    # Emscripten's output is CommonJS, which node reads as an ES module under a package.json
+    # that says "type": "module" (UW2's, for its tools' .mjs): this directory says otherwise
+    with open(os.path.join(nodeout, 'package.json'), 'w') as f: f.write('{"type": "commonjs"}\n')
+    wrap = os.path.join(nodeout, 'uw2port')
+    with open(wrap, 'w') as f: f.write(f'#!/bin/sh\nexec node "{os.path.join(nodeout, name)}" "$@"\n')
+    os.chmod(wrap, 0o755)
+    print(f'linked {os.path.relpath(EXE, root)} and {os.path.relpath(wrap, root)}')
+    return 0
+
+
 def main(argv):
     ap = argparse.ArgumentParser(description='Build and link the native port.')
     ap.add_argument('--cc', default=portcheck.host_cc())
@@ -236,8 +277,9 @@ def main(argv):
     ap.add_argument('--frame-single', action='store_true', help='the EMS frame mapped once, as WebAssembly has it (a desktop check)')
     ap.add_argument('--release', action='store_true')
     ap.add_argument('--arch', action='append', default=[])
+    ap.add_argument('--web', action='store_true', help='the WebAssembly build (emcc): the page\'s and a Node.js one')
     a = ap.parse_args(argv)
-    global OUT, EXE, RELEASE, ARCHS
+    global OUT, EXE, RELEASE, ARCHS, LIBS, WEB
     link_extra = []
     global OPT
     if a.debug or a.coverage: OPT = []
@@ -271,6 +313,24 @@ def main(argv):
     if a.arch:
         ARCHS = [f for x in a.arch for f in ('-arch', x)]
         portcheck.FLAGS = portcheck.FLAGS + ARCHS
+    if a.web and (a.debug or a.coverage or a.release or a.arch or a.frame_single or a.run):
+        sys.exit('portbuild.py: --web is a build of its own (no --debug, --coverage, --release, --arch, --frame-single or --run)')
+    if a.web:
+        # the EMS frame mapped once (port.h turns PORT_FRAME_SINGLE on under __EMSCRIPTEN__);
+        # threads (the PIT, sound) are Web Workers on shared memory, which every object must
+        # be compiled for; everything -O2
+        import shutil
+        a.cc = shutil.which('emcc') or sys.exit('portbuild.py: --web needs emcc (. ~/emsdk/emsdk_env.sh; Exhume\'s tools/setup-emsdk.sh)')
+        OUT = os.path.join(root, 'build', 'web')
+        portcheck.OUT = OUT
+        EXE = os.path.join(OUT, 'uw2port.js')
+        WEB = ['-pthread']
+        portcheck.FLAGS = portcheck.FLAGS + WEB + ['-O2']
+        PORT_FLAGS.extend(WEB)
+        LIBS = os.path.join(root, 'tools', 'libs-web')
+        if not os.path.isdir(os.path.join(LIBS, 'lib', 'pkgconfig')):
+            sys.exit('portbuild.py: --web needs SDL3 and libmt32emu built for the web in tools/libs-web '
+                     '(SETUP_WEB=1 sh ../exhume/tools/setup-libs.sh tools/libs-web)')
     exhume.need()
     os.makedirs(OUT, exist_ok=True)
     game = [p for p in sources.all_sources() if p.upper().endswith('.C') and not portcheck.dos_only(p)]
@@ -307,6 +367,7 @@ def main(argv):
     elif sys.platform.startswith('linux') and any(f.startswith('-L' + LIBS) for f in pkg_config('--libs') + snd_libs):
         rpath = ['-Wl,-rpath,' + os.path.join(LIBS, 'lib')]     # runs without LD_LIBRARY_PATH
     libs = pkg_config('--libs') + snd_libs
+    if a.web: return link_web(a.cc, objs, libs)
     if RELEASE and sys.platform.startswith('linux'): libs = strip_rpaths(libs)
     objs += windows_resource(a.cc)
     r = subprocess.run([a.cc, '-o', EXE] + ARCHS + link_extra + objs + libs + threads + rpath,

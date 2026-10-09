@@ -111,6 +111,20 @@ for = ["sound/audio.c", "sound/mt32roms.c"]
 label = "libmt32emu"
 missing = "no libmt32emu (brew install mt32emu, or make setup-libs)"
 
+# The web build (portbuild.py --web): the calls whose declaration in the calling file differs from
+# the function's definition, as the original's do (Turbo C and the desktop let a call with more or
+# fewer arguments, or another return type, through; WebAssembly's linker makes each a trap), are
+# renamed in that file to an adapter of the caller's type, in src/port/sys/webcalls.c, which
+# calls the definition. The arguments the adapters drop or supply are ones the function never
+# reads.
+[port.web.renames]
+"src/conv/CONVERSE.C" = ["grfx_load_font=web_grfx_load_font_void", "mantra_advance=web_mantra_advance_int"]
+"src/conv/BARTER.C" = ["grfx_load_font=web_grfx_load_font_void"]
+"src/obj/USEITEMS.C" = ["ExplodingBook_ovr107_1259=web_ExplodingBook_void", "mantra_advance=web_mantra_advance_int"]
+"src/ui/MAINMENU.C" = ["player_setup=web_player_setup_how"]
+"src/combat/SPELLS.C" = ["player_setup=web_player_setup_how"]
+"src/game/UWEDIT.C" = ["player_setup=web_player_setup_how"]
+
 [port.stub_notes]
 # what each generated stub file's names are, for its header (tools/portstubs.py)
 "exedata.c" = "the far data tools/extract.py takes from UW.EXE"

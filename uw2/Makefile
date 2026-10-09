@@ -21,6 +21,10 @@
 #   make port-debug    the same with -g and UBSan's -fsanitize=null: build/port-debug/uw2port
 #   make port-release  the build the release packages use: build/port-release/uw2port, with Nuked
 #                      OPL3 a shared library beside it (tools/portbuild.py --release)
+#   make web           the WebAssembly build (tools/portbuild.py --web, with emsdk in ~/emsdk and
+#                      the libraries SETUP_WEB=1 setup-libs.sh built in tools/libs-web): build/web
+#                      for the page, build/web-node/uw2port for Node.js
+#   make webcheck      make web, then every session against its golden in the Node.js build
 #   make package       package build/port-release for this OS into build/dist (tools/package.py)
 #   make test          check + port + routine fuzzing (quick) + every session against its golden
 #                      (docs/BUILDING.md, Testing); the pre-push hook runs it
@@ -61,7 +65,7 @@ TC_DISKS ?=
 TASM_DISKS ?=
 
 .PHONY: game exact check check-all boot setup setup-emu2 setup-exhume setup-sound setup-libs setup-port hooks port-check port port-debug \
-        port-release package help \
+        port-release web webcheck package help \
         test test-full verify golden fuzz vectors coverage
 .DEFAULT_GOAL := game
 
@@ -133,6 +137,12 @@ port-debug:
 
 port-release:
 	@$(PY) tools/portbuild.py --release $(PORT_ARCHS)
+
+web:
+	@. $(HOME)/emsdk/emsdk_env.sh >/dev/null 2>&1; $(PY) tools/portbuild.py --web
+
+webcheck: web
+	@EXHUME_PORT=$(CURDIR)/build/web-node/uw2port $(PY) tools/replay.py verify all
 
 package:
 	@$(PY) tools/package.py $(PACKAGE_ARGS)

@@ -43,13 +43,26 @@
 #define SECTION ".data\n"
 #define HERE ".Lport_far_block"
 #endif
-#define AT(n, off) ".globl " S(n) "\n" ALT(n) ".org " HERE " + " #off "\n" S(n) ":\n"
+/* Each block's length: the end its last label runs to. */
+#define FAR_BLOCK_LEN "0x1C820"
+#define CODE_BLOCK_LEN "0x2F3A0"
+#ifdef __EMSCRIPTEN__
+/* WebAssembly's objects (the web build): a data symbol has a segment, an offset in it and a
+   size, which must be set (.size: each label to its block's end), and .org does not grow a
+   data segment, so each block is a section of its own, filled with .skip. */
+#define BLOCK(n, here, len) ".section .data." #n ",\"\",@\n" ".p2align 4\n" ".globl " S(n) "\n" \
+                            ".type " S(n) ",@object\n" ".size " S(n) ", " len "\n" S(n) ":\n" here ":\n"
+#define TO(here, off) ".skip " here " + " off " - .\n"
+#define SIZE(n, len, off) ".type " S(n) ",@object\n" ".size " S(n) ", " len " - " off "\n"
+#else
+#define BLOCK(n, here, len) SECTION ".p2align 4\n" ".globl " S(n) "\n" S(n) ":\n" here ":\n"
+#define TO(here, off) ".org " here " + " off "\n"
+#define SIZE(n, len, off) ""
+#endif
+#define AT(n, off) ".globl " S(n) "\n" ALT(n) TO(HERE, #off) S(n) ":\n" SIZE(n, FAR_BLOCK_LEN, #off)
 
 __asm__(
-    SECTION
-    ".p2align 4\n"
-    ".globl " S(port_far_block) "\n"
-    S(port_far_block) ":\n" HERE ":\n"
+    BLOCK(port_far_block, HERE, FAR_BLOCK_LEN)
     AT(checkerboard1, 0x0)                      /* 395B:0000 */
     AT(seg048, 0x80)                            /* 3963:0000 */
     AT(smooth_div, 0x6CC)                       /* 3963:064C */
@@ -90,7 +103,7 @@ __asm__(
     AT(seg053, 0x1B160)                         /* 5471:0000 */
     AT(sp_inf_tab, 0x1B1C8)                     /* 5477:0008 */
     AT(seg055, 0x1B7CC)                         /* 54D7:000C */
-    ".org " HERE " + 0x1C820\n"
+    TO(HERE, FAR_BLOCK_LEN)
     ".p2align 4\n"
 );
 
@@ -106,15 +119,12 @@ __asm__(
 #else
 #define HEREC ".Lport_code_block"
 #endif
-#define ATC(n, off) ".globl " S(n) "\n" ALT(n) ".org " HEREC " + " #off "\n" S(n) ":\n"
+#define ATC(n, off) ".globl " S(n) "\n" ALT(n) TO(HEREC, #off) S(n) ":\n" SIZE(n, CODE_BLOCK_LEN, #off)
 __asm__(
-    SECTION
-    ".p2align 4\n"
-    ".globl " S(port_code_block) "\n"
-    S(port_code_block) ":\n" HEREC ":\n"
+    BLOCK(port_code_block, HEREC, CODE_BLOCK_LEN)
     ATC(cXfer, 0x2101)                          /* 0090:1201 */
     ATC(lightabs, 0xD7DE)                       /* 06E7:696E, PGCACHE.ASM's shading rows */
-    ".org " HEREC " + 0x2F3A0\n"
+    TO(HEREC, CODE_BLOCK_LEN)
     ".p2align 4\n"
 );
 extern unsigned char port_code_block[];
