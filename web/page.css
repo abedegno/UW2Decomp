@@ -1,0 +1,1 @@
+[hidden]{display:none!important}body{margin:0;background:#2a2318;color:#e8d9b5;font:16px system-ui}#menu{display:grid;place-items:center;gap:1rem;padding:4rem}button{font-size:1.4rem;padding:.8rem 2rem;background:#f2c66d;border:0;border-radius:6px;cursor:pointer}#game,#canvas{width:100vw;height:100vh;display:block;background:#000}
