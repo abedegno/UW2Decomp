@@ -273,8 +273,8 @@ def link_web(cc, objs, libs):
               '-sEMULATE_FUNCTION_POINTER_CASTS=1']
     name = os.path.basename(EXE)
     page = [cc, '-o', EXE] + objs + libs + common + ['-lidbfs.js', '-sENVIRONMENT=web,worker', '-sMODULARIZE=1',
-            '-sEXPORT_NAME=uw2port', '-sEXPORTED_RUNTIME_METHODS=FS,IDBFS,callMain',
-            '-sINVOKE_RUN=0', '-sEXPORTED_FUNCTIONS=_main,_web_open_settings,_exhume_quit,_audio_underruns']
+            '-sEXPORT_NAME=uw2port', '-sEXPORTED_RUNTIME_METHODS=FS,IDBFS,callMain,UTF8ToString',
+            '-sINVOKE_RUN=0', '-sEXPORTED_FUNCTIONS=_main,_web_open_settings,_exhume_quit,_audio_underruns,_web_test_stop']
     nodeout = os.path.join(root, 'build', 'web-node'); os.makedirs(nodeout, exist_ok=True)
     node = [cc, '-o', os.path.join(nodeout, name)] + objs + libs + common + ['-sENVIRONMENT=node', '-sNODERAWFS=1']
     for cmd in (page, node):

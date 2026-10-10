@@ -3,20 +3,24 @@
 # page, and with --push force-pushes the site to SITE_REPO's gh-pages branch (docs/WEB.md). The
 # game data goes there and nowhere else. Without --push it is a dry run: it builds, assembles and
 # checks the site, says what it would push and where, and contacts nothing.
-# usage: web/deploy.sh [--push [--replace]] [--skip-replays] OWNER/NAME UW1_DIR UW2_DIR ROMS_DIR
+# usage: web/deploy.sh [--push [--replace] [--own-identity]] [--skip-replays] OWNER/NAME UW1_DIR UW2_DIR ROMS_DIR
 #   --replace       with --push: replace a gh-pages branch the repository already has (without
 #                   it, an existing gh-pages is refused: the push is forced and would destroy it)
+#   --own-identity  with --push: the site's commit made as the deployer's own git user.name and
+#                   user.email; without it the commit is made as "Underworld Exhumed site"
+#                   <site@invalid>, so a public repository of the game's files names no one
 #   --skip-replays  only make web, not make webcheck (every session replayed under Node.js,
 #                   minutes): for a quick redeploy of builds already checked. The page checks
 #                   (tools/webcheck.mjs) always run.
 set -e
-usage() { echo "usage: web/deploy.sh [--push [--replace]] [--skip-replays] OWNER/NAME UW1_DIR UW2_DIR ROMS_DIR" >&2; exit 2; }
-push=; replace=; replays=1
+usage() { echo "usage: web/deploy.sh [--push [--replace] [--own-identity]] [--skip-replays] OWNER/NAME UW1_DIR UW2_DIR ROMS_DIR" >&2; exit 2; }
+push=; replace=; replays=1; own=
 while [ $# -gt 0 ]; do
-  case $1 in --push) push=1;; --replace) replace=1;; --skip-replays) replays=;; -*) usage;; *) break;; esac; shift
+  case $1 in --push) push=1;; --replace) replace=1;; --own-identity) own=1;; --skip-replays) replays=;; -*) usage;; *) break;; esac; shift
 done
 [ $# -eq 4 ] || usage
 [ -z "$replace" ] || [ -n "$push" ] || usage
+[ -z "$own" ] || [ -n "$push" ] || usage
 repo=${1%.git}; uw1=$2; uw2=$3; roms=$4
 case $repo in */*/*|/*|*/|*[!A-Za-z0-9._/-]*) usage;; */*) ;; *) usage;; esac
 for d in "$uw1" "$uw2" "$roms"; do [ -d "$d" ] || { echo "web/deploy.sh: no folder $d" >&2; exit 2; }; done
@@ -75,11 +79,20 @@ echo "path check: no local path in the site"
 
 rev=$(git -C "$here" describe --always --dirty)
 target="git@github.com:$repo.git"
+# the site's commit: a neutral author and committer unless --own-identity
+# (set as both author and committer, over any GIT_AUTHOR_* or GIT_COMMITTER_* already set)
+if [ -n "$own" ]; then who="your own git identity ($(git config user.name) <$(git config user.email)>)"
+else
+  who='"Underworld Exhumed site" <site@invalid>'
+  GIT_AUTHOR_NAME="Underworld Exhumed site"; GIT_AUTHOR_EMAIL=site@invalid
+  GIT_COMMITTER_NAME=$GIT_AUTHOR_NAME; GIT_COMMITTER_EMAIL=$GIT_AUTHOR_EMAIL
+  export GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
+fi
 if [ -z "$push" ]; then
   echo "dry run: nothing pushed. With --push this would force-push to $target, branch gh-pages:"
   (cd "$site" && find . -type f | sed 's#^\./##' | sort | while read -r f; do
      printf '  %10s  %s\n' "$(wc -c < "$f" | tr -d ' ')" "$f"; done)
-  echo "  total $(du -sh "$site" | cut -f1), commit \"Site build $rev\""
+  echo "  total $(du -sh "$site" | cut -f1), commit \"Site build $rev\" as $who"
   echo "and the site would be at $url (once Pages serves the gh-pages branch)"
   exit 0
 fi

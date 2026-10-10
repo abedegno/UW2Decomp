@@ -48,6 +48,17 @@ void port_fatal(const char *fmt, ...)
     vfprintf(stderr, fmt, ap);
     fputc('\n', stderr);
     va_end(ap);
+#ifdef __EMSCRIPTEN__
+    {
+        /* in a browser the page's end runs (plat_game_stop): an exit on the game's thread would
+           only stop that thread, leaving the picture frozen and the files unwritten */
+        char why[512];
+        va_start(ap, fmt);
+        vsnprintf(why, sizeof why, fmt, ap);
+        va_end(ap);
+        plat_game_stop(1, why);
+    }
+#endif
     exit(1);
 }
 
@@ -60,11 +71,21 @@ void rp_halt(void);
 void port_halt(const char *why)
 {
     rp_halt();
+#ifdef __EMSCRIPTEN__
+    fprintf(stderr, "uw1port: %s; the game stops here\n", why);
+#else
     fprintf(stderr, "uw1port: %s; the game stops here%s\n", why, exit_on_halt ? "" : " (the window stays)");
+#endif
     if (port_trace) port_backtrace();
     fflush(stdout);
+#ifdef __EMSCRIPTEN__
+    /* in a browser the game ends as if it had quit, its files written out and the menu back
+       (plat_game_stop, with the reason for the page), whatever --exit-on-halt says */
+    plat_game_stop(3, why);
+#else
     if (exit_on_halt) plat_game_exit(3);
     plat_game_park();
+#endif
 }
 
 /* --shot-at-flip K:FILE: the scan-out right after the game's K-th grPageFlip, so a screen
