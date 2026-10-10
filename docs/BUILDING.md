@@ -34,7 +34,7 @@ The top-level Makefile runs a target in both games, or in one with `GAME=uw1` or
 | --- | --- |
 | `make setup` | Exhume and its Python environment (`exhume/.venv`, with iced-x86 and Unicorn), then each game's setup |
 | `make check` | each game's gate: every source matches and verifies, `symbols.tsv` rebuilds, the exact link is the original EXE, and the modding build with no change is the same |
-| `make test` | the gate, the port, the quick routine fuzzing, every recorded session in the port against its DOS golden, and the enhancements (Exhume's `tools/enhcheck.py all`: the options and settings, presentation ones keeping DOS's game state, and the port-made baselines under `tests/replay/enhanced/`; [ENHANCEMENTS.md](ENHANCEMENTS.md)) |
+| `make test` | the gate, the port, the quick routine fuzzing, every recorded session in the port against its DOS golden, and the enhancements (Exhume's `tools/enhcheck.py all`: the options and settings, presentation ones keeping DOS's game state, and the port-made baselines under `tests/replay/enhanced/`; [ENHANCEMENTS.md](ENHANCEMENTS.md)), and the player's movement in live runs (Exhume's `tools/movecheck.py`: sidestepping both ways and walking backwards at five headings go the way the key says, the 3D frames 8 or more ticks apart; issue 6) |
 | `make test-full` | the long tier: goldens made again from DOS, the UBSan build, the sound drivers against the real ones, the deep fuzzing, the coverage report |
 | `make port` | each game's native port: `uw1/build/port/uw1port` and `uw2/build/port/uw2port` |
 | `make port-release`, `make package` | the players' builds and packages, into each game's `build/dist` |
@@ -75,7 +75,7 @@ The ports take `--input-script FILE`, for tests: keys and mouse events at set ti
 8500 look 200 -40      relative motion, as a captured mouse gives (mouse-look): right and up
 ```
 
-A bad line stops the run, naming it. (Related test switches: `UW1PORT_TEXTURE_PROBE` makes UW1's texture mappers draw each face in a colour of its own, for Exhume's `tools/enhcheck.py coverage`; `UWnPORT_HOLE_PROBE=N` clears the 3D view to colour N before each frame and reports the pixels still N after it on stderr, and `UWnPORT_NO_BACK_PASS` leaves out `wide-pitch`'s drawing behind the player, for `tools/enhcheck.py holes`.) The enhancements' sessions are made this way (`tests/replay/enhanced/*/session.script`; Exhume's `tools/enhcheck.py baseline record NAME`). Two recordings of one script differ in timing, since the events arrive between frames while the game reads its input on its own thread; a recording's replay is what is exact.
+A bad line stops the run, naming it. (Related test switches: `UW1PORT_TEXTURE_PROBE` makes UW1's texture mappers draw each face in a colour of its own, for Exhume's `tools/enhcheck.py coverage`; `UWnPORT_HOLE_PROBE=N` clears the 3D view to colour N before each frame and reports the pixels still N after it on stderr, and `UWnPORT_NO_BACK_PASS` leaves out `wide-pitch`'s drawing behind the player, for `tools/enhcheck.py holes`; `UWnPORT_POS_LOG` prints the player's position and facing at the end of the run, with how many 3D frames came under 8 ticks apart, for `tools/movecheck.py`.) The enhancements' sessions are made this way (`tests/replay/enhanced/*/session.script`; Exhume's `tools/enhcheck.py baseline record NAME`). Two recordings of one script differ in timing, since the events arrive between frames while the game reads its input on its own thread; a recording's replay is what is exact.
 
 ## Continuous integration
 

@@ -45,6 +45,16 @@ def setcheck():
                            os.path.join(EXHUME, 'examples', 'uw2', 'exhume.toml'), 'all'], env=env).returncode
 
 
+def movecheck():
+    """Exhume's tools/movecheck.py (the player moves the way the keys say in a live run, the 3D
+    frames paced: issue 6), as enhcheck is run."""
+    sys.path.insert(0, here)
+    from exhume import EXHUME
+    env = dict(os.environ, UW2DECOMP=os.path.dirname(here))
+    return subprocess.run([PY, os.path.join(EXHUME, 'tools', 'movecheck.py'), '--config',
+                           os.path.join(EXHUME, 'examples', 'uw2', 'exhume.toml')], env=env).returncode
+
+
 def ailcheck():
     """The port's music drivers against the real .ADV files: each sound session replayed in the
     port with its logs, then tools/ailcheck.py (replay.py's driver_check)."""
@@ -70,7 +80,8 @@ def main(argv):
         steps += [('fuzzing, quick', tool('fuzzasm.py'), 'port build'),
                   ('sessions against the goldens', tool('replay.py', 'verify', 'all'), 'port build'),
                   ('enhancements', enhcheck, 'port build'),
-                  ('settings screen', setcheck, 'port build')]
+                  ('settings screen', setcheck, 'port build'),
+                  ('player movement', movecheck, 'port build')]
     else:
         steps += [('port-debug build', tool('portbuild.py', '--debug'), None),
                   ('goldens from DOS, twice each', tool('replay.py', 'golden', 'all'), None),
@@ -80,6 +91,7 @@ def main(argv):
                   ('fuzzing, deep', tool('fuzzasm.py', '--deep'), 'port build'),
                   ('enhancements', enhcheck, 'port build'),
                   ('settings screen', setcheck, 'port build'),
+                  ('player movement', movecheck, 'port build'),
                   ('coverage report', tool('coverage.py'), 'port build')]
     results = []; failed = set(); t0 = time.time()
     for name, cmd, needs in steps:

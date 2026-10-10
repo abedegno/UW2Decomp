@@ -4,7 +4,11 @@
    pushes the C arguments as Turbo C's far call did and runs the translation (x86/entry.c); the
    near pointers cFstSinCos and cSinCos write through are slots of the C stack, copied back. The
    offsets are symbols.tsv's (the link's map). */
+#include <stdio.h>
 #include "compat.h"
+#include "motion.h"
+#include "player.h"
+#include "port.h"
 #include "sys.h"
 #include "view3d.h"
 #include "x86/asmrt.h"
@@ -57,7 +61,36 @@ void cPlaceFB(int x, int y, int w_, int h)
     port_far_entry(SEG019, 0x0D1D, w, 4);
 }
 
-void cRender(void) { port_far_entry(SEG019, 0x0D7A, 0, 0); }
+/* The 3D frames drawn, those drawn under PORT_FRAME_TICKS ticks after the one before, and the
+   game clock at the first and the last (port_report_motion). */
+static unsigned long frames, short_frames;
+static uint32_t first_tick, last_tick;
+
+/* cRender waits first until 8 ticks have passed since the last 3D frame (the runtime's
+   sys/pace.c, which says why): UW1's physics rounds once a frame, and at a frame a tick it
+   lost every slow move towards +x or +y, so that sidestepping and walking backwards stalled or
+   drifted by the way the player faced (issue 6). UW1's port had drawn as fast as the host
+   could since it began; UW2's paced from rc8. */
+void cRender(void)
+{
+    port_pace_frame((volatile uint32_t *)Time);
+    if (!frames++) first_tick = *Time;
+    else if (*Time - last_tick < PORT_FRAME_TICKS) short_frames++;
+    last_tick = *Time;
+    port_far_entry(SEG019, 0x0D7A, 0, 0);
+}
+
+/* UW1PORT_POS_LOG in the environment (main.c, at the end of a run): the player's position
+   (PN's x and y in 1/256 tiles, and z), the way they face (PlayerFacing, a full turn in
+   0x10000) and the way they last moved (PN.heading), and the 3D frames drawn over how many
+   ticks of the 1/256 s clock and how many of them came early, for Exhume's tools/movecheck.py. */
+void port_report_motion(void)
+{
+    fprintf(stderr, "uw1port: motion: x %d y %d z %d facing %u heading %u frames %lu ticks %lu short %lu\n",
+            PN.x, PN.y, PN.z, (unsigned)(uint16_t)PlayerFacing, (unsigned)(uint16_t)PN.heading,
+            frames, frames ? (unsigned long)(last_tick - first_tick) : 0ul, short_frames);
+}
+
 void cInit3d(void) { port_far_entry(SEG019, 0x0E1A, 0, 0); }
 
 void cFstSinCos(int angle, int16 *a, int16 *b)

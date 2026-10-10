@@ -4,7 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "compat.h"
+#include "motion.h"
 #include "object.h"
+#include "player.h"
+#include "port.h"
 #include "sys.h"
 #include "view3d.h"
 #include "x86/asmrt.h"
@@ -66,39 +69,33 @@ static int counting_hook(const struct uw_sprite_draw *d)
     return 0;
 }
 
-/* The game moves the player by the time since the last frame (PLAYMOVE.C's check_physics,
-   on the 256 Hz clock *Time) and writes the position back in whole 1/256 tiles each frame,
-   dropping the fraction: down for a move in a positive direction, up for a negative one. A PC
-   of 1992 took 10 to 15 ticks to draw a frame, and the loss was small; the host draws one in
-   under a tick, and a slow move in a positive direction (walking backwards with x at 0.7 of a
-   unit a tick) went nowhere at all (rc8: "struggling to walk back whilst in the corridors").
-   DOSBox at high cycles does the same. So a 3D frame waits until FRAME_TICKS ticks have passed
-   since the last, 32 frames a second at most. Not under replay, whose clock is the
-   recording's. */
-#define FRAME_TICKS 8
-extern int16_t rp_request;
-void plat_sleep_ns(uint64_t ns);
+/* The 3D frames drawn, those drawn under PORT_FRAME_TICKS ticks after the one before, and the
+   game clock at the first and the last (port_report_motion). */
+static unsigned long frames, short_frames;
+static uint32_t first_tick, last_tick;
 
-static void pace_frame(void)
+/* UW2PORT_POS_LOG in the environment (main.c, at the end of a run): the player's position
+   (PN's x and y in 1/256 tiles, and z), the way they face (PlayerFacing, a full turn in
+   0x10000) and the way they last moved (PN.heading), and the 3D frames drawn over how many
+   ticks of the 1/256 s clock and how many of them came early, for Exhume's tools/movecheck.py. */
+void port_report_motion(void)
 {
-    static uint32_t last;
-    static int started;
-    volatile uint32_t *now = (volatile uint32_t *)Time;     /* the timer thread advances it */
-    int ms;
-    if (rp_request == 2) return;
-    /* at most 40 ms, should the clock ever stand still */
-    if (started)
-        for (ms = 0; *now - last < FRAME_TICKS && ms < 40; ms++)
-            plat_sleep_ns(1000000);
-    started = 1;
-    last = *now;
+    fprintf(stderr, "uw2port: motion: x %d y %d z %d facing %u heading %u frames %lu ticks %lu short %lu\n",
+            PN.x, PN.y, PN.z, (unsigned)(uint16_t)PlayerFacing, (unsigned)(uint16_t)PN.heading,
+            frames, frames ? (unsigned long)(last_tick - first_tick) : 0ul, short_frames);
 }
 
+/* cRender waits first until 8 ticks have passed since the last 3D frame (the runtime's
+   sys/pace.c, which says why: at a frame a tick the game lost every slow move towards +x or
+   +y, rc8's "struggling to walk back whilst in the corridors"). */
 void cRender(void)
 {
     struct uw_framebuffer fb;
     static int checked;
-    pace_frame();
+    port_pace_frame((volatile uint32_t *)Time);
+    if (!frames++) first_tick = *Time;
+    else if (*Time - last_tick < PORT_FRAME_TICKS) short_frames++;
+    last_tick = *Time;
     if (!checked) {
         checked = 1;
         if (getenv("UW2PORT_SPRITEHOOK")) port_set_sprite_hook(counting_hook);

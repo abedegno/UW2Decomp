@@ -26,6 +26,7 @@ extern const struct enhance_flag enhance_table[];   /* src/port/sys/enhtab.c */
 int uw1_main(int argc, char *argv[]);
 void borland_init(void);
 void port_crash_handlers(void);
+void port_report_motion(void);          /* src/port/sys/c3dentry.c */
 
 int port_trace;
 extern int16_t rp_request;              /* the runtime's replay/replay.c: 0 off, 1 record, 2 replay */
@@ -568,5 +569,6 @@ int main(int argc, char *argv[])
        runs and chunks, which only the game's own exit or a fault wrote before, so that a
        replay of it does not end at a stream it never got */
     port_blackbox_close(0);
+    if (getenv("UW1PORT_POS_LOG")) port_report_motion();
     return status;
 }
