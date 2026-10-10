@@ -4,6 +4,7 @@
 # game data goes there and nowhere else. Without --push it is a dry run: it builds, assembles and
 # checks the site, says what it would push and where, and contacts nothing.
 # usage: web/deploy.sh [--push [--replace] [--own-identity] [--https]] [--skip-replays] OWNER/NAME UW1_DIR UW2_DIR ROMS_DIR
+#   the options come before the arguments: one after OWNER/NAME is refused
 #   --replace       with --push: replace a gh-pages branch the repository already has (without
 #                   it, an existing gh-pages is refused: the push is forced and would destroy it)
 #   --own-identity  with --push: the site's commit made as the deployer's own git user.name and
@@ -13,7 +14,8 @@
 #                   minutes): for a quick redeploy of builds already checked. The page checks
 #                   (tools/webcheck.mjs) always run.
 set -e
-usage() { echo "usage: web/deploy.sh [--push [--replace] [--own-identity] [--https]] [--skip-replays] OWNER/NAME UW1_DIR UW2_DIR ROMS_DIR" >&2; exit 2; }
+usage() { echo "usage: web/deploy.sh [--push [--replace] [--own-identity] [--https]] [--skip-replays] OWNER/NAME UW1_DIR UW2_DIR ROMS_DIR" >&2
+          echo "  (the options come before the arguments)" >&2; exit 2; }
 push=; replace=; replays=1; own=; https=
 while [ $# -gt 0 ]; do
   case $1 in --push) push=1;; --replace) replace=1;; --own-identity) own=1;; --https) https=1;; --skip-replays) replays=;; -*) usage;; *) break;; esac; shift

@@ -65,6 +65,14 @@ async function startGame(name) {
   }
   for (const b of buttons) b.disabled = true;
   status.textContent = ''; progress.textContent = 'Loading the game: 0%';
+  // The saves and settings are in the site's IndexedDB, which a browser may clear on its own:
+  // Safari deletes a site's script-written storage after 7 days of use without a visit, unless the
+  // storage is persistent. Asked for at each start (a browser that has said no, or yes, says the
+  // same again); the answer goes to the console.
+  try {
+    navigator.storage.persist().then(ok => console.log(`storage: ${ok ? 'persistent' : 'not persistent (the browser may clear the saves)'}`),
+                                     e => console.log(`storage: persistence not available (${e})`));
+  } catch (e) { console.log(`storage: persistence not available (${e})`); }
   // The load gives up only when it has stopped moving: no byte of the download and no file
   // unpacked for LOAD_STALL_MS (window.__exhumeStallMs, for tools/webcheck.mjs), however long a
   // slow connection takes in all. A stalled load reloads the page, with what happened kept for
@@ -150,12 +158,14 @@ async function startGame(name) {
     clearTimeout(stallTimer);
     removeEventListener('unhandledrejection', onRejection); onRejection = null;
     // the home (the port's $HOME/.NAMEport) kept in the browser's IndexedDB; a first visit's is
-    // seeded with settings-at-start=0, so the game starts at its title, the settings screen a key away
+    // seeded with settings-at-start=0, so the game starts at its title, the settings screen a key
+    // away, and integer=0, so the picture fills the window at 4:3 rather than the largest whole
+    // multiple that fits (960x720 in a 1280x900 window); the player can turn whole-number scaling on
     const home = `/home/web_user/.${name}port`;
     M.FS.mkdirTree(home); M.FS.mount(M.IDBFS, {}, home);
     await new Promise((ok, no) => M.FS.syncfs(true, e => e ? no(new Error(`cannot read the saved files (${e})`)) : ok()));
     const cfg = `${home}/${name}port.cfg`;
-    if (!M.FS.analyzePath(cfg).exists) M.FS.writeFile(cfg, 'settings-at-start=0\n');
+    if (!M.FS.analyzePath(cfg).exists) M.FS.writeFile(cfg, 'settings-at-start=0\ninteger=0\n');
     // and written back (FS.syncfs(false)): when the port asks, after it writes a setting
     // (port_config_set) and once a second while the game is changing its files (a save), when the
     // page is hidden or left, and at the game's end (the port waits for that one before it stops

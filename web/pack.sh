@@ -20,7 +20,14 @@ if err=$(LC_ALL=C git -C "$d" rev-parse --git-dir 2>&1); then
   echo "web/pack.sh: refusing $site: it is inside a git repository (use a folder outside any, e.g. mktemp -d)" >&2; exit 1
 fi
 case $err in *"not a git repository"*) ;; *) echo "web/pack.sh: cannot tell whether $site is in a git repository: $err" >&2; exit 1;; esac
-. "$HOME/emsdk/emsdk_env.sh" >/dev/null 2>&1
+# The Emscripten SDK (exhume/tools/setup-emsdk.sh puts it in ~/emsdk), put on PATH directly as the
+# Makefiles' web recipe does: emsdk_env.sh finds its own folder only when bash sources it, and this
+# is a /bin/sh script
+emsdk=$HOME/emsdk
+if [ ! -f "$emsdk/emsdk_env.sh" ] || [ ! -x "$emsdk/upstream/emscripten/emcc" ]; then
+  echo "web/pack.sh: no Emscripten SDK in $emsdk (install it with sh exhume/tools/setup-emsdk.sh, docs/WEB.md)" >&2; exit 1
+fi
+PATH=$emsdk:$emsdk/upstream/emscripten:$PATH; export PATH
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 cp -R "$src"/. "$tmp/game"
 rm -rf "$tmp"/game/SAVE* "$tmp"/game/*.pristine
@@ -48,6 +55,6 @@ mkdir -p "$site/$g"
 # Module's preRun, which page.js hands to the port's factory (page.js, startGame). Its warning
 # about -sFORCE_FILESYSTEM is shown only on a failure: the port's FS is exported, which is what
 # that warning asks for.
-(cd "$site/$g" && python3 "$EMSDK/upstream/emscripten/tools/file_packager.py" "$g.data" --preload "$tmp/game@/game" \
+(cd "$site/$g" && python3 "$emsdk/upstream/emscripten/tools/file_packager.py" "$g.data" --preload "$tmp/game@/game" \
   --js-output="$g.data.js" --use-preload-cache --no-node --export-name=Module) >/dev/null 2>"$tmp/err" || { cat "$tmp/err" >&2; exit 1; }
 echo "packed $g: $(du -h "$site/$g/$g.data" | cut -f1)"
