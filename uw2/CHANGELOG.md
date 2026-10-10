@@ -4,7 +4,7 @@ For players. Each release's notes are drafted from here. Releases are tagged `uw
 
 ## 1.2.2 (unreleased)
 
-- **Fixed:** each play session's recording is now kept in its own folder under `recordings/`, the newest five, as the documentation says. Before, there was one recording a day (in a `RECORDIN` folder), overwritten by each later session that day. An old `RECORDIN` folder is left alone; you can delete it.
+- **Fixed:** each play session's recording is now kept in its own folder under `recordings/` in the port's home folder, the newest five, as the documentation says. Before, there was one recording a day (in a `RECORDIN` folder), overwritten by each later session that day. An old `RECORDIN` folder there is no longer used and can be large: it is safe to delete.
 
 ## 1.2.1 (9 October 2026)
 
