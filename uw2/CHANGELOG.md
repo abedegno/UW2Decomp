@@ -2,6 +2,10 @@
 
 For players. Each release's notes are drafted from here. Releases are tagged `uw2-vX.Y.Z` (before the move to Underworld Exhumed, `vX.Y.Z`).
 
+## 1.2.2 (unreleased)
+
+- **Fixed:** each play session's recording is now kept in its own folder under `recordings/`, the newest five, as the documentation says. Before, there was one recording a day (in a `RECORDIN` folder), overwritten by each later session that day. An old `RECORDIN` folder is left alone; you can delete it.
+
 ## 1.2.1 (9 October 2026)
 
 - **New:** optional enhancements, all off by default (`--enhance list`; docs/ENHANCEMENTS.md). The first is `skip-intro`, which starts at the main menu. A session played with one says so in its log and recording.
