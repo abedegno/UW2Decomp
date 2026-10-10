@@ -27,7 +27,14 @@ emsdk=$HOME/emsdk
 if [ ! -f "$emsdk/emsdk_env.sh" ] || [ ! -x "$emsdk/upstream/emscripten/emcc" ]; then
   echo "web/pack.sh: no Emscripten SDK in $emsdk (install it with sh exhume/tools/setup-emsdk.sh, docs/WEB.md)" >&2; exit 1
 fi
-PATH=$emsdk:$emsdk/upstream/emscripten:$PATH; export PATH
+PATH=$emsdk:$emsdk/upstream/emscripten:$PATH
+# and the SDK's own Node.js (the newest, if it has several), which emsdk_env.sh would have put on
+# PATH: romsel runs under node, and a machine may have no other
+nodever=$(ls "$emsdk/node" 2>/dev/null | sort -t. -k1,1n -k2,2n -k3,3n |
+          while IFS= read -r v; do [ -x "$emsdk/node/$v/bin/node" ] && echo "$v"; done | tail -n 1)
+[ -z "$nodever" ] || PATH=$emsdk/node/$nodever/bin:$PATH
+export PATH
+command -v node >/dev/null || { echo "web/pack.sh: no Node.js (neither in $emsdk/node nor on PATH): install the SDK's (sh exhume/tools/setup-emsdk.sh) or Node.js" >&2; exit 1; }
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 cp -R "$src"/. "$tmp/game"
 rm -rf "$tmp"/game/SAVE* "$tmp"/game/*.pristine

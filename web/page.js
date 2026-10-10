@@ -29,6 +29,20 @@ function reloadWith(message) {
   try { sessionStorage.setItem('exhume-message', message); } catch {}
   setTimeout(() => location.reload(), 300);
 }
+// navigator.storage.persist(), only when the storage is not persistent and the page has not asked
+// in this browser before (startGame)
+async function persistStorage() {
+  const ASKED = 'exhume-persist-asked';
+  try {
+    if (await navigator.storage.persisted()) { console.log('storage: persistent'); return; }
+    let asked = false;
+    try { asked = localStorage.getItem(ASKED) !== null; } catch {}
+    if (asked) { console.log('storage: not persistent (asked before; the browser may clear the saves)'); return; }
+    try { localStorage.setItem(ASKED, '1'); } catch {}
+    const ok = await navigator.storage.persist();
+    console.log(`storage: ${ok ? 'persistent' : 'not persistent (the browser may clear the saves)'}`);
+  } catch (e) { console.log(`storage: persistence not available (${e})`); }
+}
 // the port's script is a classic one (MODULARIZE without EXPORT_ES6) that defines window.uwNport;
 // its pthread workers load the same script again, from where document.currentScript says it came
 function loadScript(src) {
@@ -67,12 +81,10 @@ async function startGame(name) {
   status.textContent = ''; progress.textContent = 'Loading the game: 0%';
   // The saves and settings are in the site's IndexedDB, which a browser may clear on its own:
   // Safari deletes a site's script-written storage after 7 days of use without a visit, unless the
-  // storage is persistent. Asked for at each start (a browser that has said no, or yes, says the
-  // same again); the answer goes to the console.
-  try {
-    navigator.storage.persist().then(ok => console.log(`storage: ${ok ? 'persistent' : 'not persistent (the browser may clear the saves)'}`),
-                                     e => console.log(`storage: persistence not available (${e})`));
-  } catch (e) { console.log(`storage: persistence not available (${e})`); }
+  // storage is persistent. Asked for once in a browser (Firefox shows the player a prompt for it,
+  // and could again after a dismissal), and not when the storage is persistent already; that it
+  // was asked is kept in localStorage. The answer goes to the console.
+  persistStorage();
   // The load gives up only when it has stopped moving: no byte of the download and no file
   // unpacked for LOAD_STALL_MS (window.__exhumeStallMs, for tools/webcheck.mjs), however long a
   // slow connection takes in all. A stalled load reloads the page, with what happened kept for
