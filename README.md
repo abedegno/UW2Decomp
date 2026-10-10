@@ -8,10 +8,11 @@
 
 - **Source code that rebuilds the original program byte for byte.** It compiles with the original Borland tools to exactly the shipped `UW.EXE` and `UW2.EXE`, with readable names, shared headers and notes on what each file does in the game.
 - **A native port** for macOS, Windows and Linux, built from that same source. It plays the game in a window with its music, speech and effects, and is checked against recorded DOS sessions for every change.
+- **A web build** of the same port, compiled to WebAssembly: **[play both games in your browser](https://abedegno.github.io/underworld-exhumed-web/)**, with nothing to install.
 
 *Arrived from a UW2Decomp or UW1Decomp link?* Those repositories are now [`uw2/`](uw2/README.md) and [`uw1/`](uw1/README.md) here, with their full history; an old link to a shared page (this README, `docs/BUILDING.md`) lands on the page for both games, which links to each game's own.
 
-No game data is included: you need your own copy of each game (the GOG releases). This is a fan research project, not affiliated with or endorsed by the rights holders; see [Licence and legal notice](#licence-and-legal-notice).
+This repository holds no game data: the native ports need your own copy of each game (the GOG releases). The web page is a separate site, with its own copy. This is a fan research project, not affiliated with or endorsed by the rights holders; see [Licence and legal notice](#licence-and-legal-notice).
 
 ## Play
 
@@ -40,6 +41,10 @@ The first run gets a Sound Blaster with FM music and digitised speech or effects
 
 Optional enhancements, all off by default, are listed in [docs/ENHANCEMENTS.md](docs/ENHANCEMENTS.md).
 
+### In a browser
+
+**[https://abedegno.github.io/underworld-exhumed-web/](https://abedegno.github.io/underworld-exhumed-web/)** plays both games in a desktop browser, with MT-32 music. Choose a game; the page reloads itself once on a first visit to turn on the threads the port needs. The settings screen opens with the gear at the page's corner (or F11), the button beside it goes full screen, and with the mouse locked Esc frees the pointer. Saved games and settings are kept in the browser's storage, which is not as safe as a desktop's saves. [docs/WEB.md](docs/WEB.md) has the details and how the page is built and checked.
+
 ## Study and modify
 
 Both games are byte-matching decompilations, made and checked with [Exhume](https://github.com/abedegno/Exhume), the toolkit both were built with. It is included here as a submodule.
@@ -63,6 +68,7 @@ What there is to read:
 | [docs/FORMATS.md](docs/FORMATS.md) | every data file both games read and write, from the code that reads it |
 | [docs/UW1-UW2-DIFFERENCES.md](docs/UW1-UW2-DIFFERENCES.md) | where the two games' rules differ, routine by routine |
 | [docs/PORT.md](docs/PORT.md) | how the ports work and how they are proved against DOS |
+| [docs/WEB.md](docs/WEB.md) | the web build: building it, checking it and deploying the page |
 | [uw1/docs/FINDINGS.md](uw1/docs/FINDINGS.md), [uw2/docs/FINDINGS.md](uw2/docs/FINDINGS.md) | what matching revealed: likely bugs in the originals, game rules, engine details |
 | `uw1/vectors/`, `uw2/vectors/` | input and output tables for game rules, made by running the original programs' code |
 | `uw1/map/crosswalk.tsv`, `uw2/map/crosswalk.tsv` | every function by the IDA listing's name and address, with its matched source (`tools/crosswalk.py --find`) |
@@ -75,8 +81,9 @@ Each game folder (`uw1/`, `uw2/`) is self-contained: its sources, maps, tests an
 | --- | --- | --- |
 | Code matched | every code segment: 89 C files and 50 assembly modules | every code segment: 99 C files and the assembly |
 | Exact link | identical to `UW.EXE` | identical to `UW2.EXE` |
-| Port | ten recorded sessions identical to DOS on macOS, Linux and Windows | ten recorded sessions identical to DOS on macOS, Linux and Windows |
-| Releases | release candidates (`uw1-v1.0.0-rc…`) | 1.2.0, published |
+| Port | ten recorded sessions identical to DOS on macOS, Linux and Windows, and the web build's under Node.js | ten recorded sessions identical to DOS on macOS, Linux and Windows, and the web build's under Node.js |
+| Releases | 1.0.1, published | 1.2.2, published |
+| In a browser | [the web page](https://abedegno.github.io/underworld-exhumed-web/) | [the web page](https://abedegno.github.io/underworld-exhumed-web/) |
 
 ## Licence and legal notice
 
