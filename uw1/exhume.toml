@@ -302,6 +302,12 @@ lo = 0x5588
 hi = 0x558C
 scope = "cross"
 why = "GRDISP.ASM's saved SP (5588) and SS (558A)"
+[[replay.mask]]
+section = "NULL"
+lo = 0x6F                              # 33h + 4 * 0Fh
+hi = 0x73
+scope = "always"
+why = "IRQ 7's vector (int 0Fh): SBDIG.ADV points it at its handler while a buffer plays (the introduction's speech in the sound session), so whether a checkpoint catches it depends on the emulator's DMA timing, not on game state (as UW2's config masks it); two DOS runs of sound differed only here, one night in three"
 
 [[replay.string_junk]]
 # GRCORE's string entries copy the string, its 0 and one byte more to 3963:4FA6
