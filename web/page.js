@@ -187,10 +187,16 @@ async function startGame(name) {
           || /RuntimeError|Aborted\(|unreachable/.test(text))
         stopped(`it failed (${text.replace(/^Uncaught /, '').replace(/\s+/g, ' ')})`);
     };
+    // a right click on the game is the game's (SDL gives it mouse button 3), not the browser's
+    // context menu: the menu took the button's release, and the game went on holding the button
+    // (the port also lets go of every button and key the game holds when the page loses the focus)
+    const onMenu = ev => ev.preventDefault();
     document.addEventListener('visibilitychange', onHidden);
     addEventListener('pagehide', onLeave);
     addEventListener('error', onError);
-    unlisten = () => { document.removeEventListener('visibilitychange', onHidden); removeEventListener('pagehide', onLeave); removeEventListener('error', onError); };
+    game.addEventListener('contextmenu', onMenu);
+    unlisten = () => { document.removeEventListener('visibilitychange', onHidden); removeEventListener('pagehide', onLeave); removeEventListener('error', onError);
+                       game.removeEventListener('contextmenu', onMenu); };
     if (!M.FS.analyzePath('/game').exists) M.FS.mkdir('/game');
     const args = ['--data', '/game'];
     if (M.FS.analyzePath('/game/roms').exists) args.push('--mt32-roms', '/game/roms');   // the port's search does not look in subfolders
